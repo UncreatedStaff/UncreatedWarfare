@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UncreatedWarfare", "UncreatedWarfare\UncreatedWarfare.csproj", "{D152471B-6551-476C-9C44-063D6D803FCC}"
 EndProject
-Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\..\..\SteamCMD\unturned\Unturned.exe", "{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}"
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "C:\SteamCMD\unturned\Unturned.exe", "{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
 		Executable = C:\SteamCMD\unturned\Unturned.exe

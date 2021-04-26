@@ -7,9 +7,19 @@ namespace UncreatedWarfare
     {
         [XmlElement("Modules")]
         public Modules Modules;
+        [XmlElement("Flags")]
+        public FlagSettings FlagSettings;
+        [XmlElement("AdminLogger")]
+        public AdminLoggerSettings AdminLoggerSettings;
+        public ulong Team1ID;
+        public ulong Team2ID;
         public void LoadDefaults()
         {
             Modules = new Modules();
+            FlagSettings = new FlagSettings();
+            AdminLoggerSettings = new AdminLoggerSettings();
+            Team1ID = 1;
+            Team2ID = 2;
         }
     }
     public class Modules
@@ -23,6 +33,7 @@ namespace UncreatedWarfare
         public bool UI;
         public bool AdminLogging;
         public bool MainCampPrevention;
+        public bool Flags;
         public Modules()
         {
             this.PlayerList = true;
@@ -34,6 +45,57 @@ namespace UncreatedWarfare
             this.UI = true;
             this.AdminLogging = true;
             this.MainCampPrevention = true;
+            this.Flags = true;
+        }
+    }
+    public class FlagSettings
+    {
+        public string NeutralColor;
+        public string CurrentGamePreset;
+        public float PlayerCheckSpeedSeconds;
+
+        public bool UseUI;
+        public bool UseChat;
+        public ushort UIID;
+        public string charactersForUI;
+
+        public string CapturingText;
+        public string LosingText;
+        public string ClearingText;
+        public string ContestedText;
+        public string SecuredText;
+        public string NoCapText;
+        public FlagSettings()
+        {
+            NeutralColor = "ffffff";
+            CurrentGamePreset = "default";
+            PlayerCheckSpeedSeconds = 0.5f;
+
+            UseUI = false;
+            UseChat = true;
+            UIID = 32366;
+            charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+            CapturingText = "CAPTURING";
+            LosingText = "LOSING";
+            ClearingText = "CLEARING";
+            ContestedText = "CONTESTED";
+            SecuredText = "SECURED";
+            NoCapText = "NOT OBJECTIVE";
+        }
+    }
+    public class AdminLoggerSettings
+    {
+        public string AdminOffDutyGroup;
+        public string AdminOnDutyGroup;
+        public string InternOffDutyGroup;
+        public string InternOnDutyGroup;
+        public AdminLoggerSettings()
+        {
+            this.InternOnDutyGroup = "intern";
+            this.InternOffDutyGroup = "intern-od";
+            this.AdminOnDutyGroup = "admin";
+            this.AdminOffDutyGroup = "admin-od";
         }
     }
 }
