@@ -19,7 +19,7 @@ namespace UncreatedWarfare
             foreach(IEnumerator<WaitForSeconds> coroutine in Coroutines)
             {
                 StartCoroutine(coroutine);
-            }
+            } 
         }
         internal IEnumerator<WaitForSeconds> CheckPlayers()
         {

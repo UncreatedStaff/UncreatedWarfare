@@ -17,7 +17,7 @@ namespace UncreatedWarfare
         public string key;
         public string color_hex;
         [JsonIgnore]
-        public Color color { get => color_hex.Hex(); }
+        public Color Color { get => color_hex.Hex(); }
         [JsonConstructor]
         public ColorData(string key, string color_hex)
         {
@@ -240,7 +240,7 @@ namespace UncreatedWarfare
                 Dictionary<string, string> NewDefaultsHex = new Dictionary<string, string>();
                 foreach(ColorData data in DefaultColors)
                 {
-                    NewDefaults.Add(data.key, data.color);
+                    NewDefaults.Add(data.key, data.Color);
                     NewDefaultsHex.Add(data.key, data.color_hex);
                 }
                 HexValues = NewDefaultsHex;
@@ -257,7 +257,7 @@ namespace UncreatedWarfare
             Dictionary<string, string> NewColorsHex = new Dictionary<string, string>();
             foreach (ColorData data in Colors ?? DefaultColors)
             {
-                NewColors.Add(data.key, data.color);
+                NewColors.Add(data.key, data.Color);
                 NewColorsHex.Add(data.key, data.color_hex);
             }
             HexValues = NewColorsHex;

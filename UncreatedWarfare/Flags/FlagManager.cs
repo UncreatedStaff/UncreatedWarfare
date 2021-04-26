@@ -97,7 +97,7 @@ namespace UncreatedWarfare.Flags
                 {
                     foreach (Player player in flag.PlayersOnFlag)
                     {
-                        ulong team = player.GetTeam();
+                        ulong team = player.GetTeam(); 
                         ITransportConnection Channel = player.channel.owner.transportConnection;
                         if (team == 1)
                         {
