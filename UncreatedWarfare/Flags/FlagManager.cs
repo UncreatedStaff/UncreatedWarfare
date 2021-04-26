@@ -1,19 +1,32 @@
-﻿using SDG.Unturned;
+﻿using SDG.NetTransport;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using UncreatedWarfare.Teams;
 
 namespace UncreatedWarfare.Flags
 {
     public class FlagManager
     {
         public List<Flag> FlagRotation { get; private set; }
-        public string Preset { get; private set; }
+        public string Preset { 
+            get => _preset; 
+            set 
+            {
+                this.Preset = value;
+                LoadNewFlags();
+            } 
+        }
+        private string _preset;
         public Dictionary<ulong, int> OnFlag { get; private set; }
-        public int ObjectiveT1;
-        public int ObjectiveT2;
+        public int ObjectiveT1Index;
+        public int ObjectiveT2Index;
+        public Flag ObjectiveTeam1 { get => FlagRotation[ObjectiveT1Index]; }
+        public Flag ObjectiveTeam2 { get => FlagRotation[ObjectiveT2Index]; }
         public FlagManager(string Preset = "default")
         {
-            this.Preset = Preset;
+            this._preset = Preset;
             FlagRotation = new List<Flag>();
             OnFlag = new Dictionary<ulong, int>();
             LoadNewFlags();
@@ -35,6 +48,7 @@ namespace UncreatedWarfare.Flags
         public void LoadNewFlags()
         {
             FlagRotation.Clear();
+            OnFlag.Clear();
             List<FlagData> flags = JSONMethods.ReadFlags(Preset);
             int i;
             flags.Sort((FlagData a, FlagData b) => a.id.CompareTo(b.id));
@@ -48,38 +62,70 @@ namespace UncreatedWarfare.Flags
                 FlagRotation.Add(flag);
             }
             CommandWindow.Log("Loaded " + i.ToString() + " flags into memory and cleared any existing old lists.");
-            ObjectiveT1 = 0;
-            ObjectiveT2 = FlagRotation.Count - 1;
+            ObjectiveT1Index = 0;
+            ObjectiveT2Index = FlagRotation.Count - 1;
         }
 
         private void FlagPointsChanged(object sender, CaptureChangeEventArgs e)
         {
             Flag flag = sender as Flag;
-            // points value changed
+            if (flag.Points < Flag.MaxPoints)
+            {
+                if(flag.Points > 0) 
+                {
+                    foreach (Player player in flag.PlayersOnFlag)
+                    {
+                        ulong team = player.GetTeam();
+                        ITransportConnection Channel = player.channel.owner.transportConnection;
+                        if (team == 1)
+                        {
+                            F.UIOrChat(team, F.UIOption.Capturing, "team_capturing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points, 
+                                formatting: new object[] { UCWarfare.I.T1.LocalizedName, UCWarfare.I.T1.TeamColorHex, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints  });
+                            UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
+                        }
+                        else
+                        {
+                            F.UIOrChat(team, F.UIOption.Losing, "team_capturing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points,
+                                formatting: new object[] { UCWarfare.I.T1.LocalizedName, UCWarfare.I.T1.TeamColorHex, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints });
+                        }
+                    }
+                } else if (flag.Points == 0)
+                {
+                    flag.Owner = Team.Neutral;
+                    F.Broadcast("flag_neutralized", UCWarfare.I.Colors["flag_neutralized"], flag.Name, flag.TeamSpecificColor);
+                } else
+                {
+                    foreach (Player player in flag.PlayersOnFlag)
+                    {
+                        ulong team = player.GetTeam();
+                        ITransportConnection Channel = player.channel.owner.transportConnection;
+                        if (team == 1)
+                        {
+                            F.UIOrChat(team, F.UIOption.Clearing, "clearing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points);
+                            UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
+                        }
+                        else
+                        {
+                            F.UIOrChat(team, F.UIOption.Losing, "losing", UCWarfare.I.Colors[team == 2 ? "capturing_team_2_chat" : "default"], Channel, player.channel.owner, flag.Points);
+                        }
+                    }
+                }
+            }
         }
-
         private void FlagOwnerChanged(object sender, OwnerChangeEventArgs e)
         {
             Flag flag = sender as Flag;
             // owner of flag changed (full caputure or loss)
         }
-
         private void PlayerLeftFlagRadius(object sender, PlayerEventArgs e)
         {
             Flag flag = sender as Flag;
             // player walked out of flag
         }
-
         private void PlayerEnteredFlagRadius(object sender, PlayerEventArgs e)
         {
             Flag flag = sender as Flag;
             // player walked into flag
-        }
-
-        public void ChangePreset(string NewPreset)
-        {
-            this.Preset = NewPreset;
-            LoadNewFlags();
         }
         public void Dispose()
         {
@@ -92,6 +138,13 @@ namespace UncreatedWarfare.Flags
             }
             FlagRotation.Clear();
             GC.SuppressFinalize(this);
+        }
+        public void EvaluatePoints(List<SteamPlayer> OnlinePlayers)
+        {
+            foreach (Flag flag in FlagRotation.Where(f => f.PlayersOnFlag.Count > 0))
+            {
+
+            }
         }
     }
 }

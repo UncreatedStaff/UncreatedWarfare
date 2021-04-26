@@ -11,7 +11,7 @@ using UnityEngine;
 namespace UncreatedWarfare.Flags
 {
     public class PlayerEventArgs : EventArgs { public Player player; }
-    public class CaptureChangeEventArgs : EventArgs { public int capture; }
+    public class CaptureChangeEventArgs : EventArgs { public int NewPoints; public int OldPoints; }
     public class OwnerChangeEventArgs : EventArgs { public Team OldOwner; public Team NewOwner; }
     public class Flag
     {
@@ -76,11 +76,23 @@ namespace UncreatedWarfare.Flags
         public string ColorString { get => _color; set => _color = value; }
         private string _color;
         public Color Color { get => _color.Hex(); }
+        public Color TeamSpecificColor { 
+            get
+            {
+                if (_owner.ID == UCWarfare.I.T1.ID)
+                    return UCWarfare.I.Colors["team_1_color"];
+                else if (_owner.ID == UCWarfare.I.T2.ID)
+                    return UCWarfare.I.Colors["team_2_color"];
+                else return UCWarfare.I.Colors["neutral_color"];
+            } 
+        }
+        private Team _owner;
+        public Team Owner { get => _owner; set => _owner = value; }
         public float SizeX { get => _sizeX; set => _sizeX = value; }
         public float SizeZ { get => _sizeZ; set => _sizeZ = value; }
         private float _sizeX;
         private float _sizeZ;
-        public Team Owner { 
+        public Team FullOwner { 
             get
             {
                 if (_points >= MaxPoints)
@@ -97,9 +109,9 @@ namespace UncreatedWarfare.Flags
                     return;
                 }
                 if (UCWarfare.Instance.T1.ID == value.ID)
-                    _points = MaxPoints;
+                    Points = MaxPoints;
                 else if (UCWarfare.Instance.T2.ID == value.ID)
-                    _points = MaxPoints * -1;
+                    Points = MaxPoints * -1;
                 else CommandWindow.LogError($"Tried to set owner of flag {_id} to an invalid team: {value.ID}.");
             }
         }
@@ -109,20 +121,26 @@ namespace UncreatedWarfare.Flags
             set
             {
                 Team OldOwner;
+                int OldPoints = _points;
                 if (_points >= MaxPoints)
                     OldOwner = UCWarfare.Instance.T1;
                 else if (_points <= MaxPoints * -1)
                     OldOwner = UCWarfare.Instance.T2;
                 else OldOwner = Team.Neutral;
-                _points = value;
-                OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { capture = _points });
-                Team NewOwner;
-                if (_points >= MaxPoints)
-                    NewOwner = UCWarfare.Instance.T1;
-                else if (_points <= MaxPoints * -1)
-                    NewOwner = UCWarfare.Instance.T2;
-                else NewOwner = Team.Neutral;
-                if (OldOwner.ID != NewOwner.ID) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
+                if (value > MaxPoints) _points = MaxPoints;
+                else if (value < MaxPoints * -1) _points = MaxPoints * -1;
+                else _points = value;
+                if(OldPoints != _points)
+                {
+                    OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
+                    Team NewOwner;
+                    if (_points >= MaxPoints)
+                        NewOwner = UCWarfare.Instance.T1;
+                    else if (_points <= MaxPoints * -1)
+                        NewOwner = UCWarfare.Instance.T2;
+                    else NewOwner = Team.Neutral;
+                    if (OldOwner.ID != NewOwner.ID) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
+                }
             }
         }
         public event EventHandler<PlayerEventArgs> OnPlayerEntered;
@@ -142,6 +160,7 @@ namespace UncreatedWarfare.Flags
             this._color = data.color;
             this._sizeX = data.sizeX;
             this._sizeZ = data.sizeY;
+            this._owner = Team.Neutral;
         }
         public bool PlayerInRange(Vector3 PlayerPosition) => PlayerPosition.x > _x - _sizeX / 2 && PlayerPosition.x < _x + _sizeX / 2 && PlayerPosition.z > _z - _sizeZ / 2 && PlayerPosition.z < _z + _sizeZ / 2;
         public bool PlayerInRange(Vector2 PlayerPosition) => PlayerPosition.x > _x - _sizeX / 2 && PlayerPosition.x < _x + _sizeX / 2 && PlayerPosition.y > _z - _sizeZ / 2 && PlayerPosition.y < _x + _sizeZ / 2;
@@ -157,6 +176,44 @@ namespace UncreatedWarfare.Flags
         {
             OnPlayerLeft?.Invoke(this, new PlayerEventArgs { player = player });
             PlayersOnFlag.Remove(player);
+        }
+        public bool IsFriendly(ulong GroupID) => GroupID == FullOwner.ID;
+        public bool IsFriendly(Player player) => IsFriendly(player.quests.groupID.m_SteamID);
+        public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
+        public bool IsFriendly(UnturnedPlayer player) => IsFriendly(player.Player.quests.groupID.m_SteamID);
+        public bool IsNeutral() => FullOwner.ID == Team.Neutral.ID;
+        public void EvaluatePoints(List<SteamPlayer> OnlinePlayers, out List<SteamPlayer> PlayersOnFlag)
+        {
+            List<SteamPlayer> Cappers = OnlinePlayers.Where(player => this.PlayerInRange(player)).ToList();
+            int PlayersCappingCount = Cappers.Count;
+
+            if(PlayersCappingCount != 0)
+            {
+                List<SteamPlayer> Team1Cappers = Cappers.Where(player => player.player.quests.groupID.m_SteamID == UCWarfare.Config.Team1ID).ToList();
+                int PlayersCappingT1Count = Team1Cappers.Count;
+                List<SteamPlayer> Team2Cappers = Cappers.Where(player => player.player.quests.groupID.m_SteamID == UCWarfare.Config.Team2ID).ToList();
+                int PlayersCappingT2Count = Team2Cappers.Count;
+
+                if(ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID)
+                {
+                    if(PlayersCappingT1Count - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= PlayersCappingT2Count || (PlayersCappingT1Count > 0 && PlayersCappingT2Count == 0))
+                    {
+
+                    }
+                }
+            }
+
+            PlayersOnFlag = Cappers;
+        }
+        public void IncreasePoints(List<SteamPlayer> PlayersOnFlag, int amount = 1)
+        {
+            if(Points < MaxPoints)
+            {
+                if(Points > 0)
+                {
+                    Points += amount;
+                }
+            }
         }
     }
 }

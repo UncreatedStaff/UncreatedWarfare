@@ -59,12 +59,7 @@ namespace UncreatedWarfare
         public ushort UIID;
         public string charactersForUI;
 
-        public string CapturingText;
-        public string LosingText;
-        public string ClearingText;
-        public string ContestedText;
-        public string SecuredText;
-        public string NoCapText;
+        public int RequiredPlayerDifferenceToCapture;
         public FlagSettings()
         {
             NeutralColor = "ffffff";
@@ -76,12 +71,7 @@ namespace UncreatedWarfare
             UIID = 32366;
             charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-            CapturingText = "CAPTURING";
-            LosingText = "LOSING";
-            ClearingText = "CLEARING";
-            ContestedText = "CONTESTED";
-            SecuredText = "SECURED";
-            NoCapText = "NOT OBJECTIVE";
+            RequiredPlayerDifferenceToCapture = 2;
         }
     }
     public class AdminLoggerSettings

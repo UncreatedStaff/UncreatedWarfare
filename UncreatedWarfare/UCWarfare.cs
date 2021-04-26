@@ -30,7 +30,10 @@ namespace UncreatedWarfare
         public List<Team> Teams;
         public Dictionary<string, Color> Colors;
         public Dictionary<string, string> ColorsHex;
+        public Dictionary<EXPGainType, int> XPData;
+        public Dictionary<ECreditsGainType, int> CreditsData;
         private bool InitialLoadEventSubscription;
+        public DatabaseManager DB { get; private set; }
         protected override void Load()
         {
             Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
@@ -48,11 +51,14 @@ namespace UncreatedWarfare
                     UnloadPlugin();
                 }
             }
+            DB = new DatabaseManager();
             if(Config.Modules.Flags)
             {
                 FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
             }
             Colors = JSONMethods.LoadColors(out ColorsHex);
+            XPData = JSONMethods.LoadXP();
+            CreditsData = JSONMethods.LoadCredits();
             CommandWindow.Log("Starting Coroutines...");
             if(Level.isLoaded)
             {

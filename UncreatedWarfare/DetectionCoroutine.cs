@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UncreatedWarfare.Flags;
 using SDG.NetTransport;
+using Flag = UncreatedWarfare.Flags.Flag;
 
 namespace UncreatedWarfare
 {
@@ -22,7 +23,6 @@ namespace UncreatedWarfare
         }
         internal IEnumerator<WaitForSeconds> CheckPlayers()
         {
-
             while(Instance.State == Rocket.API.PluginState.Loaded)
             {
                 List<SteamPlayer> OnlinePlayers = Provider.clients;
@@ -37,23 +37,75 @@ namespace UncreatedWarfare
                     foreach(SteamPlayer player in OnlinePlayers)
                     {
                         ITransportConnection Channel = player.player.channel.owner.transportConnection;
-                        if(flag.PlayerInRange(player))
+                        ulong team = player.GetTeam();
+                        if (flag.PlayerInRange(player))
                         {
-                            if(!FlagManager.OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
+                            if (!FlagManager.OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
                             {
                                 FlagManager.AddPlayerOnFlag(player.player, flag);
-                                player.SendChat("entered_cap_radius", Colors["entered_cap_radius"], flag.Name, flag.Color);
-                                F.UIOrChat(player.GetTeam(), F.UIOption.Blank, "", Colors["default"], Channel, player, 0, false, true); // LEFT OFF HERE COME BACK TO HERE
-                                if(flag.ID == FlagManager.FlagRotation[FlagManager.ObjectiveT1].ID && player.GetTeam() == 1)
+                                player.SendChat("entered_cap_radius", Colors[team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")], flag.Name, flag.Color);
+                                F.UIOrChat(team, F.UIOption.Blank, "", Colors["default"], Channel, player, 0, false, true);
+                                if (flag.ID == FlagManager.ObjectiveTeam1.ID && team == 1)
                                 {
-
-                                } else if (flag.ID == FlagManager.FlagRotation[FlagManager.ObjectiveT2].ID && player.GetTeam() == 2)
+                                    if (Team1TotalPlayers - Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
+                                    // if theres enough t1 players to capture or only t1 players CAPTURING/LOSING
+                                    {
+                                        if (flag.IsFriendly(player) || flag.IsNeutral()) {
+                                            F.UIOrChat(team, F.UIOption.Capturing, "capturing", Colors[team == 1 ? "capturing_team_1_chat" : (team == 2 ? "capturing_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        } else {
+                                            F.UIOrChat(team, F.UIOption.Losing, "losing", Colors[team == 1 ? "losing_team_1_chat" : (team == 2 ? "losing_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        }
+                                    } else if (Team1TotalPlayers != 0 && Team2TotalPlayers != 0)
+                                    //if there are close to the same amount of players on both teams capturing (controlled by the config option) CONTESTED
+                                    {
+                                        foreach (SteamPlayer Capper in Cappers)
+                                        {
+                                            ulong CapperTeam = Capper.GetTeam();
+                                            F.UIOrChat(team, F.UIOption.Contested, "contested", Colors[team == 1 ? "contested_team_1_chat" : (team == 2 ? "contested_team_2_chat" : "default")], Capper, flag.Points, formatting: new object[] { flag.Name, flag.ColorString });
+                                        }
+                                    } else if (flag.IsFriendly(player))
+                                    {
+                                        if (flag.Points < Flag.MaxPoints) {
+                                            F.UIOrChat(team, F.UIOption.Clearing, "clearing", Colors[team == 1 ? "clearing_team_1_chat" : (team == 2 ? "clearing_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        } else {
+                                            F.UIOrChat(team, F.UIOption.Clearing, "secured", Colors[team == 1 ? "secured_team_1_chat" : (team == 2 ? "secured_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        }
+                                    }
+                                } else if (flag.ID == FlagManager.ObjectiveTeam2.ID && team == 2)
                                 {
-
-                                } else
-                                {
-
+                                    if (Team2TotalPlayers - Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
+                                    {
+                                        if (flag.IsFriendly(player) || flag.IsNeutral()) {
+                                            F.UIOrChat(team, F.UIOption.Capturing, "capturing", Colors[team == 1 ? "capturing_team_1_chat" : (team == 2 ? "capturing_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        } else {
+                                            F.UIOrChat(team, F.UIOption.Losing, "losing", Colors[team == 1 ? "losing_team_1_chat" : (team == 2 ? "losing_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        }
+                                    } else if (Team2TotalPlayers != 0 && Team1TotalPlayers != 0)
+                                    {
+                                        foreach (SteamPlayer Capper in Cappers)
+                                        {
+                                            ulong CapperTeam = Capper.GetTeam();
+                                            F.UIOrChat(team, F.UIOption.Contested, "contested", Colors[team == 1 ? "contested_team_1_chat" : (team == 2 ? "contested_team_2_chat" : "default")], Capper, flag.Points, formatting: new object[] { flag.Name, flag.ColorString });
+                                        }
+                                    } else if (flag.IsFriendly(player))
+                                    {
+                                        if (flag.Points > -1 * Flag.MaxPoints) {
+                                            F.UIOrChat(team, F.UIOption.Clearing, "clearing", Colors[team == 1 ? "clearing_team_1_chat" : (team == 2 ? "clearing_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        }
+                                        else {
+                                            F.UIOrChat(team, F.UIOption.Clearing, "secured", Colors[team == 1 ? "secured_team_1_chat" : (team == 2 ? "secured_team_2_chat" : "default")], Channel, player, flag.Points);
+                                        }
+                                    }
                                 }
+                            }
+                        } else if (FlagManager.OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
+                        {
+                            if(!FlagManager.FlagRotation.Exists(f => f.PlayerInRange(player))) 
+                            { 
+                                player.SendChat("left_cap_radius", Colors[team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")]);
+                                FlagManager.RemovePlayerFromFlag(player.player, flag);
+                                if (Config.FlagSettings.UseUI)
+                                    EffectManager.askEffectClearByID(Config.FlagSettings.UIID, Channel);
                             }
                         }
                     }
