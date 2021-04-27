@@ -105,7 +105,8 @@ namespace UncreatedWarfare.Flags
         }
         public bool IsIntersecting(float playerY, float playerX)
         {
-            if (playerY < Math.Min(pt1.y, pt2.y) || playerY > Math.Max(pt1.y, pt2.y)) return false; // if input value is out of vertical range of line
+            if (playerY < Math.Min(pt1.y, pt2.y) || playerY >= Math.Max(pt1.y, pt2.y)) return false; // if input value is out of vertical range of line
+            if (pt1.x == pt2.x) return pt1.x >= playerX; // checks for undefined sloped (a completely vertical line)
             float x = GetX(playerY); // solve for y
             return x >= playerX; // if output value is in front of player
         }

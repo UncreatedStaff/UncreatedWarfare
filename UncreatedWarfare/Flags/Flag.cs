@@ -16,7 +16,6 @@ namespace UncreatedWarfare.Flags
     public class Flag
     {
         public const int MaxPoints = 64;
-
         public Zone ZoneData { get; private set; }
         public Vector3 Position { 
             get => _position; 
@@ -94,6 +93,35 @@ namespace UncreatedWarfare.Flags
         public float SizeZ { get => _sizeZ; set => _sizeZ = value; }
         private float _sizeX;
         private float _sizeZ;
+        public List<Player> PlayersOnFlagTeam1;
+        public int Team1TotalPlayers;
+        public List<Player> PlayersOnFlagTeam2;
+        public int Team2TotalPlayers;
+        public void RecalcCappers(bool RecalcOnFlag = false) => RecalcCappers(Provider.clients, RecalcOnFlag);
+        public void RecalcCappers(List<SteamPlayer> OnlinePlayers, bool RecalcOnFlag = false)
+        {
+            if(RecalcOnFlag)
+            {
+                PlayersOnFlag.Clear();
+                foreach(SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
+                {
+                    PlayersOnFlag.Add(player.player);
+                }
+            }
+            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == UCWarfare.I.T1.ID).ToList();
+            Team1TotalPlayers = PlayersOnFlagTeam1.Count;
+            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == UCWarfare.I.T2.ID).ToList();
+            Team2TotalPlayers = PlayersOnFlagTeam2.Count;
+        }
+        /// <param name="NewPlayers">New Players</param>
+        /// <returns>Old Players</returns>
+        public List<Player> GetUpdatedPlayers(List<SteamPlayer> OnlinePlayers, out List<Player> NewPlayers)
+        {
+            List<Player> OldPlayers = PlayersOnFlag.ToList();
+            RecalcCappers(OnlinePlayers, true);
+            NewPlayers = PlayersOnFlag.Where(p => !OldPlayers.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
+            return OldPlayers.Where(p => !PlayersOnFlag.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
+        }
         public Team FullOwner { 
             get
             {
@@ -185,7 +213,7 @@ namespace UncreatedWarfare.Flags
         public void EnterPlayer(Player player)
         {
             OnPlayerEntered?.Invoke(this, new PlayerEventArgs { player = player });
-            PlayersOnFlag.Add(player);
+            if(!PlayersOnFlag.Exists(p => p.channel.owner.playerID.steamID.m_SteamID == player.channel.owner.playerID.steamID.m_SteamID)) PlayersOnFlag.Add(player);
         }
         public void ExitPlayer(Player player)
         {
@@ -197,36 +225,42 @@ namespace UncreatedWarfare.Flags
         public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
         public bool IsFriendly(UnturnedPlayer player) => IsFriendly(player.Player.quests.groupID.m_SteamID);
         public bool IsNeutral() => FullOwner.ID == Team.Neutral.ID;
-        public void EvaluatePoints(List<SteamPlayer> OnlinePlayers, out List<SteamPlayer> PlayersOnFlag)
+        public void CapT1(int amount = 1)
         {
-            List<SteamPlayer> Cappers = OnlinePlayers.Where(player => this.PlayerInRange(player)).ToList();
-            int PlayersCappingCount = Cappers.Count;
-
-            if(PlayersCappingCount != 0)
+            Points += amount;
+        }
+        public void CapT2(int amount = 1)
+        {
+            Points -= amount;
+        }
+        public bool T1Obj() => ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID;
+        public bool T2Obj() => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID;
+        public void EvaluatePoints(List<SteamPlayer> PlayersOnFlag)
+        {
+            if(T1Obj())
             {
-                List<SteamPlayer> Team1Cappers = Cappers.Where(player => player.player.quests.groupID.m_SteamID == UCWarfare.Config.Team1ID).ToList();
-                int PlayersCappingT1Count = Team1Cappers.Count;
-                List<SteamPlayer> Team2Cappers = Cappers.Where(player => player.player.quests.groupID.m_SteamID == UCWarfare.Config.Team2ID).ToList();
-                int PlayersCappingT2Count = Team2Cappers.Count;
-
-                if(ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID)
+                if(Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
                 {
-                    if(PlayersCappingT1Count - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= PlayersCappingT2Count || (PlayersCappingT1Count > 0 && PlayersCappingT2Count == 0))
-                    {
-
-                    }
+                    CapT1();
+                } else if (
+                    (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers || 
+                    (Team2TotalPlayers > 0 && Team1TotalPlayers == 0)) &&
+                    Owner.ID == UCWarfare.Config.Team2ID && _points > -1 * MaxPoints)
+                {
+                    CapT2();
                 }
             }
-
-            PlayersOnFlag = Cappers;
-        }
-        public void IncreasePoints(List<SteamPlayer> PlayersOnFlag, int amount = 1)
-        {
-            if(Points < MaxPoints)
+            if(T2Obj())
             {
-                if(Points > 0)
+                if(Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
                 {
-                    Points += amount;
+                    CapT2();
+                } else if (
+                    (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers ||
+                    (Team1TotalPlayers > 0 && Team2TotalPlayers == 0)) && 
+                    Owner.ID == UCWarfare.Config.Team1ID && _points < MaxPoints)
+                {
+                    CapT1();
                 }
             }
         }

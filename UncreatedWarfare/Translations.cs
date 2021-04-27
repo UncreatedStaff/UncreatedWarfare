@@ -33,7 +33,19 @@ namespace UncreatedWarfare
             { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
             { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}), out of {3} registered flags." },
             { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
-            { "player_disconnected", "<color=#{1}>{0}</color> left the server." }
+            { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
+            { "current_group", "Group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+            { "cant_create_group", "You can't create a group right now." },
+            { "created_group", "Created group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+            { "created_group_console", "{0} ({1}) created group \"{2}\": \"{3}\"" },
+            { "rename_not_in_group", "You must be in a group to rename it." },
+            { "renamed_group", "Renamed group <color=#{1}>{0}</color>: <color=#{3}>{2}</color> -> <color=#{5}>{4}</color>." },
+            { "renamed_group_console", "{0} ({1}) renamed group \"{2}\": \"{3}\" -> \"{4}\"." },
+            { "group_not_found", "A group with that ID was not found. Are you sure you entered an existing group ID?" },
+            { "joined_group", "You have joined group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+            { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
+            { "deleted_group", "Deleted group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+            { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" }
         };
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
         {
@@ -130,7 +142,29 @@ namespace UncreatedWarfare
             new ColorData("nocap_team_2_chat", "e6e3d5"),
 
             // Other Flag Chats
-            new ColorData("flag_neutralized", "e6e3d5")
+            new ColorData("flag_neutralized", "e6e3d5"),
+
+            // Group Command
+            new ColorData("current_group", "e6e3d5"),
+            new ColorData("current_group_id", "4785ff"),
+            new ColorData("current_group_name", "4785ff"),
+            new ColorData("created_group", "e6e3d5"),
+            new ColorData("created_group_id", "4785ff"),
+            new ColorData("created_group_name", "4785ff"),
+            new ColorData("cant_create_group", "ff0000"),
+            new ColorData("rename_not_in_group", "ff0000"),
+            new ColorData("group_not_found", "ff0000"),
+            new ColorData("renamed_group", "e6e3d5"),
+            new ColorData("renamed_group_id", "4785ff"),
+            new ColorData("renamed_group_old_name", "f53b3b"),
+            new ColorData("renamed_group_new_name", "4785ff"),
+            new ColorData("joined_group", "e6e3d5"),
+            new ColorData("joined_group_id", "4785ff"),
+            new ColorData("joined_group_name", "4785ff"),
+            new ColorData("deleted_group", "e6e3d5"),
+            new ColorData("deleted_group_id", "4785ff"),
+            new ColorData("deleted_group_name", "4785ff")
+
 
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
@@ -148,6 +182,12 @@ namespace UncreatedWarfare
         {
             new CreditsData(ECreditsGainType.CAPTURE, 250),
             new CreditsData(ECreditsGainType.WIN, 600)
+        };
+        public static readonly List<TeamData> DefaultTeamData = new List<TeamData>
+        {
+            new TeamData(1, new List<ulong>()),
+            new TeamData(2, new List<ulong>()),
+            new TeamData(3, new List<ulong>()) //admin group for structures.
         };
     }
 }

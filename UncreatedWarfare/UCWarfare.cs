@@ -38,7 +38,6 @@ namespace UncreatedWarfare
         public Dictionary<ECreditsGainType, int> CreditsData;
         public DatabaseManager DB { get; private set; }
         private bool InitialLoadEventSubscription;
-        public DatabaseManager DB { get; private set; }
         private void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))

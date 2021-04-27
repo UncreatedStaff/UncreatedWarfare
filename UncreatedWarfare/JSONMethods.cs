@@ -25,6 +25,17 @@ namespace UncreatedWarfare
             this.color_hex = color_hex;
         }
     }
+    public class TeamData
+    {
+        public ulong team_id;
+        public List<ulong> players;
+        [JsonConstructor]
+        public TeamData(ulong team_id, List<ulong> players)
+        {
+            this.team_id = team_id;
+            this.players = players;
+        }
+    }
     public class XPData
     {
         public string key;
@@ -284,6 +295,10 @@ namespace UncreatedWarfare
                 translationDict.Add(data.key, data.value);
             }
             return translationDict;
+        }
+        public static List<TeamData> ReadTeams()
+        {
+
         }
     }
 }

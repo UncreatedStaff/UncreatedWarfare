@@ -64,7 +64,7 @@ namespace UncreatedWarfare
         {
             NeutralColor = "ffffff";
             CurrentGamePreset = "default";
-            PlayerCheckSpeedSeconds = 0.5f;
+            PlayerCheckSpeedSeconds = 0.25f;
 
             UseUI = true;
             UseChat = true;
