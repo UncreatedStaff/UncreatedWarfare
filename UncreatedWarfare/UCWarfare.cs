@@ -22,9 +22,11 @@ namespace UncreatedWarfare
         public static Config Config { get => Instance.Configuration.Instance; }
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
+        public KitManager KitManager;
         public FlagManager FlagManager;
         public const string DataDirectory = @"Plugins\UCData\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
+        public static readonly string KitsStorage = DataDirectory + @"Kits\";
         public Team T1 { get => Teams.Count > 0 ? Teams[0] : null; }
         public Team T2 { get => Teams.Count > 1 ? Teams[1] : null; }
         public List<Team> Teams;
@@ -32,8 +34,8 @@ namespace UncreatedWarfare
         public Dictionary<string, string> ColorsHex;
         public Dictionary<EXPGainType, int> XPData;
         public Dictionary<ECreditsGainType, int> CreditsData;
-        private bool InitialLoadEventSubscription;
         public DatabaseManager DB { get; private set; }
+        private bool InitialLoadEventSubscription;
         protected override void Load()
         {
             Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
@@ -56,6 +58,13 @@ namespace UncreatedWarfare
             {
                 FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
             }
+            if (Config.Modules.Kits)
+            {
+                KitManager = new KitManager();
+            }
+
+
+
             Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
