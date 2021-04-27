@@ -9,7 +9,7 @@ namespace UncreatedWarfare.Teams
 {
     public class Team
     {
-        public static readonly Team Neutral = new Team { ID = ulong.MaxValue, Name = "Neutral" };
+        public static readonly Team Neutral = new Team(ulong.MaxValue, "Neutral");
         public ulong ID { get; private set; }
         public string Name { get; protected set; }
         public string LocalizedName { 
@@ -43,6 +43,11 @@ namespace UncreatedWarfare.Teams
                     return UCWarfare.I.Colors["team_2_color"];
                 else return UCWarfare.I.Colors["neutral_color"];
             }
+        }
+        public Team(ulong id, string name)
+        {
+            this.ID = id;
+            this.Name = name;
         }
     }
 }

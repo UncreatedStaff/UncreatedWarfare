@@ -69,6 +69,7 @@ namespace UncreatedWarfare.Flags
         private void FlagPointsChanged(object sender, CaptureChangeEventArgs e)
         {
             Flag flag = sender as Flag;
+            CommandWindow.LogWarning("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString() + " to " + e.NewPoints.ToString());
             if (flag.Points < Flag.MaxPoints)
             {
                 if(flag.Points > 0) 
@@ -115,17 +116,20 @@ namespace UncreatedWarfare.Flags
         private void FlagOwnerChanged(object sender, OwnerChangeEventArgs e)
         {
             Flag flag = sender as Flag;
+            CommandWindow.LogWarning("Owner changed of flag " + flag.Name);
             // owner of flag changed (full caputure or loss)
         }
         private void PlayerLeftFlagRadius(object sender, PlayerEventArgs e)
         {
             Flag flag = sender as Flag;
             // player walked out of flag
+            CommandWindow.LogWarning("Player " + e.player.channel.owner.playerID.playerName + " left flag " + flag.Name);
         }
         private void PlayerEnteredFlagRadius(object sender, PlayerEventArgs e)
         {
             Flag flag = sender as Flag;
             // player walked into flag
+            CommandWindow.LogWarning("Player " + e.player.channel.owner.playerID.playerName + " entered flag " + flag.Name);
         }
         public void Dispose()
         {

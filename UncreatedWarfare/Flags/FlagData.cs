@@ -8,32 +8,38 @@ using UnityEngine;
 
 namespace UncreatedWarfare.Flags
 {
+    // +x > right, +y > up
     public class FlagData
     {
         public int id;
         public string name;
         public float x;
         public float y;
-        public float z;
-        public float sizeX;
-        public float sizeY;
+        public ZoneData zone;
         [JsonIgnore]
         public string color;
         [JsonIgnore]
-        public Vector3 Position { get => new Vector3(x, y, z); }
-        [JsonIgnore]
-        public Vector3 Position2D { get => new Vector2(x, z); }
+        public Vector2 Position2D { get => new Vector2(x, y); }
         [JsonConstructor]
-        public FlagData(int id, string name, float x, float y, float z, float sizeX, float sizeY)
+        public FlagData(int id, string name, float x, float y, ZoneData zone)
         {
             this.id = id;
             this.name = name;
             this.x = x;
             this.y = y;
-            this.z = z;
-            this.sizeX = sizeX;
-            this.sizeY = sizeY;
+            this.zone = zone;
             this.color = UCWarfare.Config.FlagSettings.NeutralColor;
+        }
+    }
+    public class ZoneData
+    {
+        public string type;
+        public string data;
+        [JsonConstructor]
+        public ZoneData(string type, string data)
+        {
+            this.type = type;
+            this.data = data;
         }
     }
 }

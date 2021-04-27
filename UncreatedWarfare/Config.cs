@@ -66,7 +66,7 @@ namespace UncreatedWarfare
             CurrentGamePreset = "default";
             PlayerCheckSpeedSeconds = 0.5f;
 
-            UseUI = false;
+            UseUI = true;
             UseChat = true;
             UIID = 32366;
             charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

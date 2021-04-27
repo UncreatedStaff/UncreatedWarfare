@@ -82,7 +82,7 @@ namespace UncreatedWarfare
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-        public static string Translate(string key, params object[] formatting) => UCWarfare.I.Translations.Instance.Translate(key, formatting);
+        public static string Translate(string key, params object[] formatting) => string.Format(UCWarfare.I.Localization[key], formatting);
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
@@ -285,14 +285,14 @@ namespace UncreatedWarfare
         }
         public static string An(this string word) => (word.Length > 0 && vowels.Contains(word[0].ToString().ToLower()[0])) ? "n" : "";
         public static string An(this char letter) => vowels.Contains(letter.ToString().ToLower()[0]) ? "n" : "";
-        public static string S(this int number) => number == 1 ? "n" : "";
-        public static string S(this uint number) => number == 1 ? "n" : "";
-        public static string S(this sbyte number) => number == 1 ? "n" : "";
-        public static string S(this byte number) => number == 1 ? "n" : "";
-        public static string S(this short number) => number == 1 ? "n" : "";
-        public static string S(this ushort number) => number == 1 ? "n" : "";
-        public static string S(this long number) => number == 1 ? "n" : "";
-        public static string S(this ulong number) => number == 1 ? "n" : "";
+        public static string S(this int number) => number == 1 ? "" : "s";
+        public static string S(this uint number) => number == 1 ? "" : "s";
+        public static string S(this sbyte number) => number == 1 ? "" : "s";
+        public static string S(this byte number) => number == 1 ? "" : "s";
+        public static string S(this short number) => number == 1 ? "" : "s";
+        public static string S(this ushort number) => number == 1 ? "" : "s";
+        public static string S(this long number) => number == 1 ? "" : "s";
+        public static string S(this ulong number) => number == 1 ? "" : "s";
         public enum UIOption
         {
             Capturing,

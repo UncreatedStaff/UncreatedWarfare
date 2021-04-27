@@ -16,6 +16,8 @@ namespace UncreatedWarfare.Flags
     public class Flag
     {
         public const int MaxPoints = 64;
+
+        public Zone ZoneData { get; private set; }
         public Vector3 Position { 
             get => _position; 
             set
@@ -153,17 +155,30 @@ namespace UncreatedWarfare.Flags
             this._id = data.id;
             this._x = data.x;
             this._y = data.y;
-            this._z = data.z;
-            this._position = data.Position;
             this._position2d = data.Position2D;
             this._name = data.name;
             this._color = data.color;
-            this._sizeX = data.sizeX;
-            this._sizeZ = data.sizeY;
             this._owner = Team.Neutral;
+            PlayersOnFlag = new List<Player>();
+            switch(data.zone.type)
+            {
+                case "rectangle":
+                    ZoneData = new RectZone(data.Position2D, data.zone);
+                    break;
+                case "circle":
+                    ZoneData = new CircleZone(data.Position2D, data.zone);
+                    break;
+                case "polygon":
+                    ZoneData = new PolygonZone(data.Position2D, data.zone);
+                    break;
+                default:
+                    ZoneData = new RectZone(data.Position2D, new ZoneData("rectangle", "100, 100"));
+                    break;
+            }
+            CommandWindow.LogWarning($"{_id}, {X}, {Y}, {_name}, {_color}, {TeamSpecificColor}, {_owner}, {ZoneData.SucessfullyParsed}, {ZoneData.GetType()}, {data.zone.data}, {data.zone.type}.");
         }
-        public bool PlayerInRange(Vector3 PlayerPosition) => PlayerPosition.x > _x - _sizeX / 2 && PlayerPosition.x < _x + _sizeX / 2 && PlayerPosition.z > _z - _sizeZ / 2 && PlayerPosition.z < _z + _sizeZ / 2;
-        public bool PlayerInRange(Vector2 PlayerPosition) => PlayerPosition.x > _x - _sizeX / 2 && PlayerPosition.x < _x + _sizeX / 2 && PlayerPosition.y > _z - _sizeZ / 2 && PlayerPosition.y < _x + _sizeZ / 2;
+        public bool PlayerInRange(Vector3 PlayerPosition) => ZoneData.IsInside(PlayerPosition);
+        public bool PlayerInRange(Vector2 PlayerPosition) => ZoneData.IsInside(PlayerPosition);
         public bool PlayerInRange(UnturnedPlayer player) => PlayerInRange(player.Position);
         public bool PlayerInRange(SteamPlayer player) => PlayerInRange(player.player.transform.position);
         public bool PlayerInRange(Player player) => PlayerInRange(player.transform.position);
