@@ -22,6 +22,7 @@ namespace UncreatedWarfare
         public static Config Config { get => Instance.Configuration.Instance; }
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
+        public KitManager KitManager;
         public FlagManager FlagManager;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
@@ -35,6 +36,7 @@ namespace UncreatedWarfare
         public Dictionary<string, string> Localization;
         public Dictionary<EXPGainType, int> XPData;
         public Dictionary<ECreditsGainType, int> CreditsData;
+        public DatabaseManager DB { get; private set; }
         private bool InitialLoadEventSubscription;
         public DatabaseManager DB { get; private set; }
         private void CheckDir(string path)
@@ -73,6 +75,16 @@ namespace UncreatedWarfare
             {
                 FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
             }
+            if (Config.Modules.Kits)
+            {
+                KitManager = new KitManager();
+            }
+
+
+
+            Colors = JSONMethods.LoadColors(out ColorsHex);
+            XPData = JSONMethods.LoadXP();
+            CreditsData = JSONMethods.LoadCredits();
             CommandWindow.Log("Starting Coroutines...");
             if(Level.isLoaded)
             {
