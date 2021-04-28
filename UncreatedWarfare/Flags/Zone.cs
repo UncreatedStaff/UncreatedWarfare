@@ -13,47 +13,57 @@ namespace UncreatedWarfare.Flags
     {
         public const float EffectiveImageScalingSize = 1920;
         public const float FullImageSize = 2048;
-        internal float Multiplier = EffectiveImageScalingSize / FullImageSize;
+        internal float Multiplier;
         public Vector2 Center;
         internal bool SucessfullyParsed = false;
+        internal ZoneData data;
         public abstract bool IsInside(Vector2 location);
         public abstract bool IsInside(Vector3 location);
-        public Zone(Vector2 Center)
+        public abstract void Init();
+        public Zone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier)
         {
+            this.Multiplier = useMapSizeMultiplier ? EffectiveImageScalingSize / FullImageSize : 1.0f;
             this.Center = new Vector2(Center.x * Multiplier, Center.y * Multiplier);
+            this.data = data;
+            Init();
         }
     }
     public class RectZone : Zone
     {
         public Vector2 Size;
-        public RectZone(Vector2 Center, ZoneData data) : base(Center)
+        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier) : base(Center, data, useMapSizeMultiplier) { }
+        public override void Init()
         {
             string[] size = data.data.Split(',');
-            if(size.Length != 2)
+            if (size.Length != 2)
             {
                 CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
                 return;
-            } else
+            }
+            else
             {
-                if(float.TryParse(size[0], out float SizeX) && float.TryParse(size[1], out float SizeY))
+                if (float.TryParse(size[0], out float SizeX) && float.TryParse(size[1], out float SizeY))
                 {
                     Size = new Vector2(SizeX * Multiplier, SizeY * Multiplier);
                     SucessfullyParsed = true;
-                } else
+                }
+                else
                 {
                     CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
                     return;
                 }
             }
-
         }
+
         public override bool IsInside(Vector2 location) => location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.y > Center.y - Size.y / 2 && location.y < Center.y + Size.y / 2;
         public override bool IsInside(Vector3 location) => location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.z > Center.y - Size.y / 2 && location.z < Center.y + Size.y / 2;
     }
     public class CircleZone : Zone
     {
         public float Radius;
-        public CircleZone(Vector2 Center, ZoneData data) : base(Center)
+        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier) : base(Center, data, useMapSizeMultiplier) { }
+
+        public override void Init()
         {
             string[] size = data.data.Split(',');
             if (size.Length != 1)
@@ -75,6 +85,7 @@ namespace UncreatedWarfare.Flags
                 }
             }
         }
+
         public override bool IsInside(Vector2 location)
         {
             float difX = location.x - Center.x;
@@ -129,7 +140,9 @@ namespace UncreatedWarfare.Flags
         public Vector2[] Points;
         public Line[] Lines;
         public float Width;
-        public PolygonZone(Vector2 Center, ZoneData data) : base(Center)
+        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier) : base(Center, data, useMapSizeMultiplier) { }
+
+        public override void Init()
         {
             string[] size = data.data.Split(',');
             if (size.Length < 6 || size.Length % 2 == 1)
@@ -155,6 +168,7 @@ namespace UncreatedWarfare.Flags
             for (int i = 0; i < Points.Length; i++)
                 Lines[i] = new Line(Points[i], Points[i == Points.Length - 1 ? 0 : i + 1]);
         }
+
         public override bool IsInside(Vector2 location)
         {
             int intersects = 0;

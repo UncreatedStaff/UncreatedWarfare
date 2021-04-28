@@ -45,17 +45,33 @@ namespace UncreatedWarfare
             { "joined_group", "You have joined group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
             { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
             { "deleted_group", "Deleted group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
-            { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" }
+            { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" },
+            { "join_not_in_lobby", "You must be in the lobby to join a new team: <color={0}>/deploy lobby</color>." },
+            { "joined_team_must_rejoin", "You have joined <color=#{1}>{0}</color>. You must rejoin the server to update your name." },
+            { "joined_team", "You have joined <color=#{1}>{0}</color>. " },
+            { "join_already_in_team", "You are already a member of <color=#{1}>{0}</color>." },
+            { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch. Type <color=#{2}>/queue {3}</color> to join when there is room." },
+            { "join_group_has_no_space", "<color=#{1}>{0}</color> has surpassed the server's max group size. This should be tweaked by an admin." },
+            { "join_command_no_args_provided", "Do <b>/join <color=#{1}>{0}</color></b> or <b>/join <color=#{3}>{2}</color></b>." }
+
         };
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
         {
-            new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68")),
-            new FlagData(2, "Hilltop", 258, 497, new ZoneData("rectangle", "66,72")),
-            new FlagData(3, "Papanov", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645")),
-            new FlagData(4, "Verto", 624, 469, new ZoneData("polygon", "500,446,514,527,710,492,748,466,710,411")),
-            new FlagData(5, "Hill123", 631, 139, new ZoneData("rectangle", "44,86")),
-            new FlagData(6, "Hill13", 338, -15, new ZoneData("circle", "35")),
-            new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"))
+            new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68"), true),
+            new FlagData(2, "Hilltop", 258, 497, new ZoneData("rectangle", "66,72"), true),
+            new FlagData(3, "Papanov", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645"), true),
+            new FlagData(4, "Verto", 624, 469, new ZoneData("polygon", "500,446,514,527,710,492,748,466,710,411"), true),
+            new FlagData(5, "Hill123", 631, 139, new ZoneData("rectangle", "44,86"), true),
+            new FlagData(6, "Hill13", 338, -15, new ZoneData("circle", "35"), true),
+            new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true)
+        };
+        public static List<FlagData> DefaultOtherZones = new List<FlagData>
+        {
+            new FlagData(0, "Lobby", 0, 0, new ZoneData("rectangle", ""), false),
+            new FlagData(0, "USMain", 823, -880.5f, new ZoneData("rectangle", "120,189"), true),
+            new FlagData(0, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true),
+            new FlagData(0, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true),
+            new FlagData(0, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true),
         };
         public static readonly List<ColorData> DefaultColors = new List<ColorData>
         {
@@ -163,7 +179,14 @@ namespace UncreatedWarfare
             new ColorData("joined_group_name", "4785ff"),
             new ColorData("deleted_group", "e6e3d5"),
             new ColorData("deleted_group_id", "4785ff"),
-            new ColorData("deleted_group_name", "4785ff")
+            new ColorData("deleted_group_name", "4785ff"),
+            new ColorData("join_not_in_lobby", "ff0000"),
+            new ColorData("joined_team_must_rejoin", "e6e3d5"),
+            new ColorData("joined_team", "e6e3d5"),
+            new ColorData("join_already_in_team", "f53b3b"),
+            new ColorData("join_auto_balance_cant_switch", "f53b3b"),
+            new ColorData("join_auto_balance_cant_switch_queue_command", "e6e3d5"),
+            new ColorData("join_group_has_no_space", "f53b3b"),
 
 
         };
@@ -185,9 +208,9 @@ namespace UncreatedWarfare
         };
         public static readonly List<TeamData> DefaultTeamData = new List<TeamData>
         {
-            new TeamData(1, new List<ulong>()),
-            new TeamData(2, new List<ulong>()),
-            new TeamData(3, new List<ulong>()) //admin group for structures.
+            new TeamData(1, "US", new List<ulong>()),
+            new TeamData(2, "Russia", new List<ulong>()),
+            new TeamData(3, "Admins", new List<ulong>()) //admin group for structures.
         };
     }
 }

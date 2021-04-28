@@ -31,15 +31,22 @@ namespace UncreatedWarfare.Commands
                 player.SendChat("current_group", UCWarfare.I.Colors["current_group"], player.quests.groupID.m_SteamID, UCWarfare.I.ColorsHex["current_group_id"], GroupManager.getGroupInfo(player.quests.groupID).name, UCWarfare.I.ColorsHex["current_group_name"]);
             } else if (command.Length == 1)
             {
-                if(command[0] == "create")
+                if (command[0].ToLower() == "create")
                 {
-                    if(!player.quests.hasPermissionToCreateGroup)
+
+                }
+            } else if (command.Length == 3)
+            {
+                if (command[0].ToLower() == "create")
+                {
+                    if (!player.quests.hasPermissionToCreateGroup)
                     {
                         player.SendChat("cant_create_group", UCWarfare.I.Colors["cant_create_group"]);
                         return;
                     }
                     player.quests.ReceiveCreateGroupRequest();
                     GroupManager.save();
+                    JSONMethods.AddTeam(new TeamData(player.quests.groupID.m_SteamID, command[2], new List<ulong> { player.channel.owner.playerID.steamID.m_SteamID }));
                 }
             }
         }

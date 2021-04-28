@@ -9,6 +9,7 @@ using System.IO;
 using UnityEngine;
 using SDG.Unturned;
 using FlagData = UncreatedWarfare.Flags.FlagData;
+using UncreatedWarfare.Teams;
 
 namespace UncreatedWarfare
 {
@@ -28,11 +29,13 @@ namespace UncreatedWarfare
     public class TeamData
     {
         public ulong team_id;
+        public string name;
         public List<ulong> players;
         [JsonConstructor]
-        public TeamData(ulong team_id, List<ulong> players)
+        public TeamData(ulong team_id, string name, List<ulong> players)
         {
             this.team_id = team_id;
+            this.name = name;
             this.players = players;
         }
     }
@@ -95,7 +98,7 @@ namespace UncreatedWarfare
                 Reader.Close();
                 Reader.Dispose();
             }
-            return Flags ?? new List<FlagData>();
+            return Flags ?? DefaultFlags;
         }
         public static void SaveFlags(this List<FlagData> Flags, string Preset)
         {
@@ -298,7 +301,104 @@ namespace UncreatedWarfare
         }
         public static List<TeamData> ReadTeams()
         {
-
+            if (!File.Exists(UCWarfare.DataDirectory + "teams.json"))
+            {
+                SaveTeams(DefaultTeamData);
+                return DefaultTeamData;
+            }
+            List<TeamData> Teams;
+            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "teams.json"))
+            {
+                Teams = JsonConvert.DeserializeObject<List<TeamData>>(Reader.ReadToEnd());
+                Reader.Close();
+                Reader.Dispose();
+            }
+            return Teams ?? DefaultTeamData;
+        }
+        public static void SaveTeams(List<TeamData> Teams)
+        {
+            using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "teams.json"))
+            {
+                using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                {
+                    JsonSerializer Serializer = new JsonSerializer();
+                    Serializer.Serialize(JsonWriter, Teams);
+                    JsonWriter.Close();
+                    TextWriter.Close();
+                    TextWriter.Dispose();
+                }
+            }
+        }
+        public static void AddTeam(TeamData Team)
+        {
+            List<TeamData> data = ReadTeams();
+            data.Add(Team);
+            UCWarfare.I.TeamManager.Teams.Add(new Team(Team));
+            SaveTeams(data);
+        }
+        public static bool RenameTeam(ulong teamID, string newName, out string oldName)
+        {
+            List<TeamData> data = ReadTeams();
+            int team = data.FindIndex(t => t.team_id == teamID);
+            if (team != -1)
+            {
+                oldName = data[team].name;
+                data[team].name = newName;
+                SaveTeams(data);
+                return true;
+            }
+            else
+            {
+                oldName = "FAILURE";
+                return false;
+            }
+        }
+        public static bool DeleteTeam(ulong teamID, out TeamData teamRemoved)
+        {
+            List<TeamData> data = ReadTeams();
+            int team = data.FindIndex(t => t.team_id == teamID);
+            if (team != -1)
+            {
+                teamRemoved = data[team];
+                data.RemoveAt(team);
+                SaveTeams(data);
+                return true;
+            }
+            else
+            {
+                teamRemoved = null;
+                return false;
+            }
+        }
+        public static bool AddPlayerToTeam(ulong teamID, ulong playerID)
+        {
+            List<TeamData> data = ReadTeams();
+            int team = data.FindIndex(t => t.team_id == teamID);
+            if (team != -1)
+            {
+                if(!data[team].players.Contains(playerID))
+                {
+                    data[team].players.Add(playerID);
+                    SaveTeams(data);
+                }
+                return true;
+            }
+            else return false;
+        }
+        public static bool RemovePlayerFromTeam(ulong teamID, ulong playerID)
+        {
+            List<TeamData> data = ReadTeams();
+            int team = data.FindIndex(t => t.team_id == teamID);
+            if (team != -1)
+            {
+                if (data[team].players.Contains(playerID))
+                {
+                    data[team].players.Remove(playerID);
+                    SaveTeams(data);
+                }
+                return true;
+            }
+            else return false;
         }
     }
 }

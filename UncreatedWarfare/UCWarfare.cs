@@ -24,13 +24,11 @@ namespace UncreatedWarfare
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
         public FlagManager FlagManager;
+        public TeamManager TeamManager;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
-        public Team T1 { get => Teams.Count > 0 ? Teams[0] : null; }
-        public Team T2 { get => Teams.Count > 1 ? Teams[1] : null; }
-        public List<Team> Teams = new List<Team> { new Team(1, "us"), new Team(2, "ru") };
         public Dictionary<string, Color> Colors;
         public Dictionary<string, string> ColorsHex;
         public Dictionary<string, string> Localization;
@@ -62,6 +60,8 @@ namespace UncreatedWarfare
             Instance = this;
             DB = new DatabaseManager();
 
+            TeamManager = new TeamManager();
+
             CheckDir(DataDirectory);
             CheckDir(FlagStorage);
             CheckDir(LangStorage);
@@ -78,12 +78,6 @@ namespace UncreatedWarfare
             {
                 KitManager = new KitManager();
             }
-
-
-
-            Colors = JSONMethods.LoadColors(out ColorsHex);
-            XPData = JSONMethods.LoadXP();
-            CreditsData = JSONMethods.LoadCredits();
             CommandWindow.Log("Starting Coroutines...");
             if(Level.isLoaded)
             {
@@ -111,10 +105,12 @@ namespace UncreatedWarfare
         private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
+            TeamManager?.PlayerJoinProcess(player.Player.channel.owner);
         }
         private void OnPlayerConnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
+            TeamManager?.PlayerLeaveProcess(player.Player.channel.owner);
         }
 
         protected override void Unload()

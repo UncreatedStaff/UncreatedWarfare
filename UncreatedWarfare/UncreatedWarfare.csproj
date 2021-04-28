@@ -31,6 +31,12 @@
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Command_blank.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Command_blank.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>

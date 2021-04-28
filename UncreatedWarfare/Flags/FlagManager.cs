@@ -100,13 +100,13 @@ namespace UncreatedWarfare.Flags
                         if (team == 1)
                         {
                             F.UIOrChat(team, F.UIOption.Capturing, "team_capturing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points, 
-                                formatting: new object[] { UCWarfare.I.T1.LocalizedName, UCWarfare.I.T1.TeamColorHex, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints  });
+                                formatting: new object[] { UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.TeamManager.T1.TeamColorHex, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints  });
                             UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
                         }
                         else
                         {
                             F.UIOrChat(team, F.UIOption.Losing, "team_capturing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points,
-                                formatting: new object[] { UCWarfare.I.T1.LocalizedName, UCWarfare.I.T1.TeamColorHex, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints });
+                                formatting: new object[] { UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.TeamManager.T1.TeamColorHex, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints });
                         }
                     }
                 } else if (flag.Points == 0)
@@ -243,7 +243,7 @@ namespace UncreatedWarfare.Flags
         {
             foreach (Flag flag in FlagRotation.Where(f => f.PlayersOnFlag.Count > 0))
             {
-                flag.EvaluatePoints(OnlinePlayers);
+                flag.EvaluatePoints();
             }
         }
     }
