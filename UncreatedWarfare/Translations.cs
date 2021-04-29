@@ -24,6 +24,7 @@ namespace UncreatedWarfare
             { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
             { "team_1", "USA" },
             { "team_2", "Russia" },
+            { "team_3", "Admin" },
             { "ui_capturing", "CAPTURING" },
             { "ui_losing", "LOSING" },
             { "ui_clearing", "CLEARING" },
@@ -40,9 +41,12 @@ namespace UncreatedWarfare
             { "created_group_console", "{0} ({1}) created group \"{2}\": \"{3}\"" },
             { "rename_not_in_group", "You must be in a group to rename it." },
             { "renamed_group", "Renamed group <color=#{1}>{0}</color>: <color=#{3}>{2}</color> -> <color=#{5}>{4}</color>." },
+            { "renamed_group_already_named_that", "The group is already named that." },
             { "renamed_group_console", "{0} ({1}) renamed group \"{2}\": \"{3}\" -> \"{4}\"." },
             { "group_not_found", "A group with that ID was not found. Are you sure you entered an existing group ID?" },
             { "joined_group", "You have joined group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+            { "joined_already_in_group", "You are already in that group." },
+            { "joined_group_not_found", "Could not find group <color=#{1}>{0}</color>." },
             { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
             { "deleted_group", "Deleted group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
             { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" },
@@ -57,7 +61,8 @@ namespace UncreatedWarfare
             { "player_switched_groups_console_must_rejoin", "{0} ({1}) joined {2} and must rejoin." },
             { "player_switched_groups_console", "{0} ({1}) joined {2}." },
             { "from_lobby_teleport_failed", "Failed to teleport you to your main base. Do <color=#{0}>/deploy main</color> to try again." },
-            { "no_permissions", "You do not have permission to use this command." }
+            { "no_permissions", "You do not have permission to use this command." },
+            { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" }
 
         };
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
@@ -89,6 +94,7 @@ namespace UncreatedWarfare
             // Team Colors
             new ColorData("team_1_color", "4785ff"),
             new ColorData("team_2_color", "f53b3b"),
+            new ColorData("team_3_color", "00ffff"),
             new ColorData("neutral_color", "c2c2c2"),
 
             // Team 1 Circle
@@ -176,10 +182,14 @@ namespace UncreatedWarfare
             new ColorData("rename_not_in_group", "ff0000"),
             new ColorData("group_not_found", "ff0000"),
             new ColorData("renamed_group", "e6e3d5"),
+            new ColorData("renamed_group_already_named_that", "ff0000"),
             new ColorData("renamed_group_id", "4785ff"),
             new ColorData("renamed_group_old_name", "f53b3b"),
             new ColorData("renamed_group_new_name", "4785ff"),
             new ColorData("joined_group", "e6e3d5"),
+            new ColorData("joined_already_in_group", "ff0000"),
+            new ColorData("joined_group_not_found", "ff0000"),
+            new ColorData("joined_group_not_found_group_id", "4785ff"),
             new ColorData("joined_group_id", "4785ff"),
             new ColorData("joined_group_name", "4785ff"),
             new ColorData("deleted_group", "e6e3d5"),

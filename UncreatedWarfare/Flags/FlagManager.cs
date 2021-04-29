@@ -111,7 +111,7 @@ namespace UncreatedWarfare.Flags
                     }
                 } else if (flag.Points == 0)
                 {
-                    flag.Owner = Team.Neutral;
+                    flag.Owner = TeamManager.Neutral;
                     F.Broadcast("flag_neutralized", UCWarfare.I.Colors["flag_neutralized"], flag.Name, flag.TeamSpecificColor);
                 } else
                 {

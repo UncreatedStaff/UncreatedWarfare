@@ -11,6 +11,7 @@ namespace UncreatedWarfare.Teams
 {
     public class TeamManager
     {
+        public static readonly Team Neutral = new Team(new TeamData(ulong.MaxValue, "Neutral", new List<ulong>(), 0, 0, 0), true);
         public List<Team> Teams;
         List<TeamData> Data;
         public Team T1 { get => Teams.Count > 0 ? Teams[0] : null; }
@@ -28,18 +29,30 @@ namespace UncreatedWarfare.Teams
             Data = JSONMethods.ReadTeams();
             Teams = new List<Team>();
             ExtraZones = JSONMethods.ReadExtraZones();
-            if (LobbyZone != null && T3 != null)
-                LobbySpawn = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
-            else LobbySpawn = new Vector3(0, 100, 0);
             foreach (TeamData data in Data)
             {
                 Team team = new Team(data);
                 Teams.Add(team);
             }
+            if (LobbyZone != null && T3 != null)
+                LobbySpawn = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
+            else LobbySpawn = new Vector3(0, 100, 0);
         }
         public void AddTeam(TeamData data) => JSONMethods.AddTeam(data);
-        public bool RenameTeam(ulong teamID, string newName, out string oldName) => JSONMethods.RenameTeam(teamID, newName, out oldName);
-        public bool DeleteTeam(ulong teamID, out TeamData deletedTeam) => JSONMethods.DeleteTeam(teamID, out deletedTeam);
+        public bool RenameTeam(ulong teamID, string newName, out string oldName) 
+        {
+            int i = Teams.FindIndex(x => x.ID == teamID);
+            if (i != -1)
+                Teams[i].ChangeName(newName, false);
+            return JSONMethods.RenameTeam(teamID, newName, out oldName); 
+        }
+        public bool DeleteTeam(ulong teamID, out TeamData deletedTeam)
+        {
+            int i = Teams.FindIndex(x => x.ID == teamID);
+            if (i != -1)
+                Teams.RemoveAt(i);
+            return JSONMethods.DeleteTeam(teamID, out deletedTeam);
+        }
         public bool AddPlayerToTeam(ulong teamID, ulong playerID) => JSONMethods.AddPlayerToTeam(teamID, playerID);
         public bool RemovePlayerFromTeam(ulong teamID, ulong playerID) => JSONMethods.RemovePlayerFromTeam(teamID, playerID);
         public void PlayerJoinProcess(SteamPlayer player)

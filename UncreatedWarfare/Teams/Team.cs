@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,6 @@ namespace UncreatedWarfare.Teams
 {
     public class Team
     {
-        public static readonly Team Neutral = new Team(ulong.MaxValue, "Neutral");
         public ulong ID { get; private set; }
         public string Name { get; protected set; }
         public string LocalizedName {
@@ -20,7 +20,13 @@ namespace UncreatedWarfare.Teams
                     return F.Translate("team_1");
                 else if (ID == 2)
                     return F.Translate("team_2");
-                else return Name;
+                else if (ID == 3)
+                    return F.Translate("team_3");
+                else
+                {
+                    if (Name == null)
+                        return Name;
+                    }
             }
         }
         public string TeamColorHex
@@ -48,6 +54,7 @@ namespace UncreatedWarfare.Teams
         public List<ulong> OfflinePlayers { get; private set; }
         public List<SteamPlayer> OnlinePlayers { get; private set; }
         public Vector3 Spawnpoint { get; private set; }
+        public GroupInfo GMInfo;
         public Team(ulong id, string name)
         {
             this.ID = id;
@@ -58,7 +65,7 @@ namespace UncreatedWarfare.Teams
                 this.Spawnpoint = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
             else this.Spawnpoint = new Vector3(0, 100, 0);
         }
-        public Team(TeamData team)
+        public Team(TeamData team, bool DummyGroup = false)
         {
             this.ID = team.team_id;
             this.Name = team.name;
@@ -68,6 +75,25 @@ namespace UncreatedWarfare.Teams
             foreach (ulong player in team.players)
             {
                 AddPlayer(player, false);
+            }
+            if(!DummyGroup)
+            {
+                CSteamID cid = new CSteamID(ID);
+                CommandWindow.LogWarning(Name);
+                CommandWindow.LogWarning(cid.ToString());
+                GroupInfo info = null; 
+                try
+                {
+                    info = GroupManager.getGroupInfo(cid);
+                    GMInfo = info;
+                    CommandWindow.LogWarning($"GroupManager group for group {GMInfo.name} : {LocalizedName} : {Name} ({GMInfo.groupID.m_SteamID}) found from previous save, loading into memory.");
+                    CommandWindow.LogError((info == null).ToString());
+                } 
+                catch (NullReferenceException ex)
+                {
+                    GMInfo = GroupManager.addGroup(cid, LocalizedName);
+                    CommandWindow.LogWarning(F.Translate("created_group_console", "Team -> TeamData()", Provider.server.m_SteamID, GMInfo.name, GMInfo.groupID.m_SteamID.ToString()));
+                }
             }
         }
         /// <summary>
@@ -158,6 +184,12 @@ namespace UncreatedWarfare.Teams
             if (!OnlinePlayers.Contains(player))
                 OnlinePlayers.Add(player);
             return removed;
+        }
+        public void ChangeName(string NewName, bool UpdateInJSON = true)
+        {
+            this.Name = NewName;
+            if (UpdateInJSON)
+                JSONMethods.RenameTeam(ID, NewName, out _);
         }
     }
 }
