@@ -379,5 +379,13 @@ namespace UncreatedWarfare
         {
             return input;
         }
+        public static Vector3 GetBaseSpawn(this SteamPlayer player)
+        {
+            ulong team = player.GetTeam();
+            if (team == 1) return UCWarfare.I.TeamManager.T1.Spawnpoint;
+            else if (team == 2) return UCWarfare.I.TeamManager.T2.Spawnpoint;
+            else if (team == 3) return UCWarfare.I.TeamManager.T3.Spawnpoint;
+            else return UCWarfare.I.TeamManager.LobbySpawn;
+        }
     }
 }

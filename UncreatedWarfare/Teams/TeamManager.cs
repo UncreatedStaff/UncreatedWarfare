@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UncreatedWarfare.Flags;
+using UnityEngine;
 
 namespace UncreatedWarfare.Teams
 {
@@ -14,16 +15,23 @@ namespace UncreatedWarfare.Teams
         List<TeamData> Data;
         public Team T1 { get => Teams.Count > 0 ? Teams[0] : null; }
         public Team T2 { get => Teams.Count > 1 ? Teams[1] : null; }
-        public Zone LobbyZone;
-        public Zone T1Zone;
-        public Zone T2Zone;
-        public Zone T1AMCZone;
-        public Zone T2AMCZone;
+        public Team T3 { get => Teams.Count > 2 ? Teams[2] : null; }
+        public Vector3 LobbySpawn { get; private set; }
+        public Zone LobbyZone { get => ExtraZones[-69]; }
+        public Zone T1Zone { get => ExtraZones[-1]; }
+        public Zone T2Zone { get => ExtraZones[-2]; }
+        public Zone T1AMCZone { get => ExtraZones[-101]; }
+        public Zone T2AMCZone { get => ExtraZones[-102]; }
+        public Dictionary<int, Zone> ExtraZones;
         public TeamManager()
         {
             Data = JSONMethods.ReadTeams();
             Teams = new List<Team>();
-            foreach(TeamData data in Data)
+            ExtraZones = JSONMethods.ReadExtraZones();
+            if (LobbyZone != null && T3 != null)
+                LobbySpawn = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
+            else LobbySpawn = new Vector3(0, 100, 0);
+            foreach (TeamData data in Data)
             {
                 Team team = new Team(data);
                 Teams.Add(team);

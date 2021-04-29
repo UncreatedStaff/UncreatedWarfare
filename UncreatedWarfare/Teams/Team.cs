@@ -47,12 +47,16 @@ namespace UncreatedWarfare.Teams
         }
         public List<ulong> OfflinePlayers { get; private set; }
         public List<SteamPlayer> OnlinePlayers { get; private set; }
+        public Vector3 Spawnpoint { get; private set; }
         public Team(ulong id, string name)
         {
             this.ID = id;
             this.Name = name;
             this.OfflinePlayers = new List<ulong>();
             this.OnlinePlayers = new List<SteamPlayer>();
+            if (UCWarfare.I.TeamManager.LobbyZone != null && UCWarfare.I.TeamManager.T3 != null)
+                this.Spawnpoint = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
+            else this.Spawnpoint = new Vector3(0, 100, 0);
         }
         public Team(TeamData team)
         {
@@ -60,6 +64,7 @@ namespace UncreatedWarfare.Teams
             this.Name = team.name;
             this.OfflinePlayers = new List<ulong>();
             this.OnlinePlayers = new List<SteamPlayer>();
+            this.Spawnpoint = new Vector3(team.spawnpoint_x, team.spawnpoint_y, team.spawnpoint_z);
             foreach (ulong player in team.players)
             {
                 AddPlayer(player, false);
@@ -69,10 +74,10 @@ namespace UncreatedWarfare.Teams
         /// Add a player to the correct list (OfflinePlayers or OnlinePlayers).
         /// </summary>
         /// <returns><para>true: Player is online</para><para>false: Player is offline</para></returns>
-        public bool AddPlayer(ulong PlayerID, bool UpdateJSON = true)
+        public bool AddPlayer(ulong PlayerID, bool UpdateJSON = true, bool forceOffline = false)
         {
             SteamPlayer player = PlayerTool.getSteamPlayer(PlayerID);
-            if (player == null)
+            if (player == null || forceOffline)
             {
                 if (!OfflinePlayers.Contains(PlayerID))
                 {

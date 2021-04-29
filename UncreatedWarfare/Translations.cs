@@ -48,12 +48,16 @@ namespace UncreatedWarfare
             { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" },
             { "join_not_in_lobby", "You must be in the lobby to join a new team: <color={0}>/deploy lobby</color>." },
             { "joined_team_must_rejoin", "You have joined <color=#{1}>{0}</color>. You must rejoin the server to update your name." },
-            { "joined_team", "You have joined <color=#{1}>{0}</color>. " },
+            { "joined_team", "You have joined <color=#{1}>{0}</color>. Deploying you to main base." },
             { "join_already_in_team", "You are already a member of <color=#{1}>{0}</color>." },
-            { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch. Type <color=#{3}>/queue {2}</color> to join when there is room." },
+            { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch." },
             { "join_group_has_no_space", "<color=#{1}>{0}</color> has surpassed the server's max group size. This should be tweaked by an admin." },
             { "join_command_no_args_provided", "Do <b>/join <color=#{1}>{0}</color></b> or <b>/join <color=#{3}>{2}</color></b>." },
-            { "join_group_not_found", "Could not find group <color=#{1}>{0}</color> (ID: <color=#{3}>{2}</color>). Tell an admin about this." }
+            { "join_group_not_found", "Could not find group <color=#{1}>{0}</color> (ID: <color=#{3}>{2}</color>). Tell an admin about this." },
+            { "player_switched_groups_console_must_rejoin", "{0} ({1}) joined {2} and must rejoin." },
+            { "player_switched_groups_console", "{0} ({1}) joined {2}." },
+            { "from_lobby_teleport_failed", "Failed to teleport you to your main base. Do <color=#{0}>/deploy main</color> to try again." },
+            { "no_permissions", "You do not have permission to use this command." }
 
         };
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
@@ -66,13 +70,13 @@ namespace UncreatedWarfare
             new FlagData(6, "Hill13", 338, -15, new ZoneData("circle", "35"), true),
             new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true)
         };
-        public static List<FlagData> DefaultOtherZones = new List<FlagData>
+        public static List<FlagData> DefaultExtraZones = new List<FlagData>
         {
-            new FlagData(0, "Lobby", 0, 0, new ZoneData("rectangle", ""), false),
-            new FlagData(0, "USMain", 823, -880.5f, new ZoneData("rectangle", "120,189"), true),
-            new FlagData(0, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true),
-            new FlagData(0, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true),
-            new FlagData(0, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true),
+            new FlagData(-69, "Lobby", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false),
+            new FlagData(-1, "USMain", 823, -880.5f, new ZoneData("rectangle", "120,189"), true),
+            new FlagData(-101, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true),
+            new FlagData(-2, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true),
+            new FlagData(-102, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true),
         };
         public static readonly List<ColorData> DefaultColors = new List<ColorData>
         {
@@ -191,6 +195,9 @@ namespace UncreatedWarfare
             new ColorData("join_group_has_no_space", "f53b3b"),
             new ColorData("join_group_not_found", "f53b3b"),
             new ColorData("join_group_not_found_group_id", "4785ff"),
+            new ColorData("from_lobby_teleport_failed", "ff0000"),
+            new ColorData("from_lobby_teleport_failed_command", "4785ff"),
+            new ColorData("no_permissions", "ff0000"),
 
 
         };
@@ -212,9 +219,9 @@ namespace UncreatedWarfare
         };
         public static readonly List<TeamData> DefaultTeamData = new List<TeamData>
         {
-            new TeamData(1, "US", new List<ulong>()),
-            new TeamData(2, "Russia", new List<ulong>()),
-            new TeamData(3, "Admins", new List<ulong>()) //admin group for structures.
+            new TeamData(1, "US", new List<ulong>(), 777.5f, 33.5f, -800f),
+            new TeamData(2, "Russia", new List<ulong>(), -782f, 50f, 850f),
+            new TeamData(3, "Admins", new List<ulong>(), 719f, 39f, -1017f) //admin group for structures.
         };
     }
 }

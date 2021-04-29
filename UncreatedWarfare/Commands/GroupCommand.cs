@@ -25,13 +25,13 @@ namespace UncreatedWarfare.Commands
 
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            Player player = ((UnturnedPlayer)caller).Player;
+            UnturnedPlayer player = caller as UnturnedPlayer;
             if (command.Length == 0)
             {
-                player.SendChat("current_group", UCWarfare.I.Colors["current_group"], player.quests.groupID.m_SteamID, UCWarfare.I.ColorsHex["current_group_id"], GroupManager.getGroupInfo(player.quests.groupID).name, UCWarfare.I.ColorsHex["current_group_name"]);
+                player.Player.SendChat("current_group", UCWarfare.I.Colors["current_group"], player.Player.quests.groupID.m_SteamID, UCWarfare.I.ColorsHex["current_group_id"], GroupManager.getGroupInfo(player.quests.groupID).name, UCWarfare.I.ColorsHex["current_group_name"]);
             } else if (command.Length == 1)
             {
-                if (command[0].ToLower() == "create")
+                if (command[0].ToLower() == "delete")
                 {
 
                 }
@@ -39,14 +39,31 @@ namespace UncreatedWarfare.Commands
             {
                 if (command[0].ToLower() == "create")
                 {
-                    if (!player.quests.hasPermissionToCreateGroup)
+                    if(player.HasPermission("uc.group.create"))
                     {
-                        player.SendChat("cant_create_group", UCWarfare.I.Colors["cant_create_group"]);
-                        return;
+                        if (!player.Player.quests.hasPermissionToCreateGroup)
+                        {
+                            player.Player.SendChat("cant_create_group", UCWarfare.I.Colors["cant_create_group"]);
+                            return;
+                        }
+                        player.Player.quests.ReceiveCreateGroupRequest();
+                        GroupManager.save();
+                        JSONMethods.AddTeam(new TeamData(player.Player.quests.groupID.m_SteamID, command[2], new List<ulong> { player.Player.channel.owner.playerID.steamID.m_SteamID },
+                            player.Player.transform.position.x, player.Player.transform.position.y + 1, player.Player.transform.position.z));
+                        player.Player.SendChat("created_group", UCWarfare.I.Colors["created_group"],
+                            command[2], UCWarfare.I.ColorsHex["created_group_name"], player.Player.quests.groupID.m_SteamID, UCWarfare.I.ColorsHex["created_group_id"]);
+                        CommandWindow.LogWarning(F.Translate("created_group_console", player.Player.channel.owner.playerID.playerName,
+                            player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), player.Player.quests.groupID.m_SteamID, command[2]));
+                    } else
+                        player.Player.SendChat("no_permissions", UCWarfare.I.Colors["no_permissions"]);
+                } else if (command[0].ToLower() == "join")
+                {
+                    if(player.HasPermission("uc.group.join"))
+                    {
+                        GroupInfo groupInfo = GroupManager.getGroupInfo(player.Player.quests.groupID);
+                        if (groupInfo == null)
+                            player.SendChat("join_group_not_found", UCWarfare.I.Colors["join_group_not_found"]);
                     }
-                    player.quests.ReceiveCreateGroupRequest();
-                    GroupManager.save();
-                    JSONMethods.AddTeam(new TeamData(player.quests.groupID.m_SteamID, command[2], new List<ulong> { player.channel.owner.playerID.steamID.m_SteamID }));
                 }
             }
         }
