@@ -37,7 +37,7 @@ namespace UncreatedWarfare
                 foreach (Player player in NewPlayers)
                     FlagManager.AddPlayerOnFlag(player, flag);
             }
-            CommandWindow.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
+            //CommandWindow.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
             yield return new WaitForSeconds(Config.FlagSettings.PlayerCheckSpeedSeconds);
             StartCoroutine(CheckPlayers());
         }

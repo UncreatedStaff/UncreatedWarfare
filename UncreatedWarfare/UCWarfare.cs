@@ -25,6 +25,7 @@ namespace UncreatedWarfare
         public KitManager KitManager;
         public FlagManager FlagManager;
         public TeamManager TeamManager;
+        public WebInterface WebInterface;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
@@ -59,7 +60,7 @@ namespace UncreatedWarfare
                 "Please stop using this plugin now.");
             Instance = this;
             DB = new DatabaseManager();
-
+            WebInterface = new WebInterface();
             TeamManager = new TeamManager();
 
             CheckDir(DataDirectory);
@@ -79,7 +80,7 @@ namespace UncreatedWarfare
                 KitManager = new KitManager();
             }
             CommandWindow.Log("Starting Coroutines...");
-            if(Level.isLoaded)
+            if (Level.isLoaded)
             {
                 StartAllCoroutines();
                 Log("Subscribing to events...");
@@ -91,6 +92,7 @@ namespace UncreatedWarfare
                 InitialLoadEventSubscription = false;
                 R.Plugins.OnPluginsLoaded += OnPluginsLoaded;
             }
+            WebInterface.SendPlayerList();
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
@@ -101,22 +103,24 @@ namespace UncreatedWarfare
             U.Events.OnPlayerConnected += OnPlayerConnected;
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
         }
-
-        private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
-        {
-            F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
-            TeamManager?.PlayerJoinProcess(player.Player.channel.owner);
-        }
         private void OnPlayerConnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
+            TeamManager?.PlayerJoinProcess(player.Player.channel.owner);
+            WebInterface?.SendPlayerJoined(player.Player.channel.owner);
+        }
+        private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
+        {
+            F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
             TeamManager?.PlayerLeaveProcess(player.Player.channel.owner);
+            WebInterface?.SendPlayerLeft(player.Player.channel.owner);
         }
 
         protected override void Unload()
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
+            WebInterface?.Dispose();
             CommandWindow.LogWarning("Unloading " + Name);
             CommandWindow.Log("Stopping Coroutines...");
             StopAllCoroutines();

@@ -70,6 +70,11 @@ namespace UncreatedWarfare
             return items;
         }
 
+        public void ClearInventory(SteamPlayer player)
+        {
+            // put something here plz need it for /join
+        }
+
         public List<KitClothing> ClothesFromInventory(UnturnedPlayer player)
         {
             PlayerClothing playerClothes = player.Player.clothing;

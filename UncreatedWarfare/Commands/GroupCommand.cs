@@ -17,11 +17,11 @@ namespace UncreatedWarfare.Commands
 
         public string Help => "Join a group";
 
-        public string Syntax => throw new NotImplementedException();
+        public string Syntax => "/group <join|create|rename|delete> [name]";
 
-        public List<string> Aliases => throw new NotImplementedException();
+        public List<string> Aliases => new List<string>();
 
-        public List<string> Permissions => throw new NotImplementedException();
+        public List<string> Permissions => new List<string> { "uc.group" }; //.join, .create, .delete, .rename
 
         public void Execute(IRocketPlayer caller, string[] command)
         {

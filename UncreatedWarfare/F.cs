@@ -374,5 +374,10 @@ namespace UncreatedWarfare
                     player.SendChat(translation_key, color, formatting);
             }
         }
+        public static string EncodeURIComponent(this string input) => Uri.EscapeUriString(input);
+        public static string ShortenName(this string input)
+        {
+            return input;
+        }
     }
 }

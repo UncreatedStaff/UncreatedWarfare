@@ -52,5 +52,33 @@ namespace UncreatedWarfare.Teams
                 CommandWindow.LogWarning(player.playerID.playerName + " left team " + team.LocalizedName);
             }
         }
+        public bool CanAddToTeam(ulong Team)
+        {
+            if (UCWarfare.Config.TeamSettings.BalanceTeams)
+            {
+                if (Team == 1)
+                {
+                    if (T1.OnlinePlayers.Count <= T2.OnlinePlayers.Count) return true;
+                    List<SteamPlayer> OnlinePlayers = Provider.clients;
+                    int MaxDifference = (int)Math.Round(UCWarfare.Config.TeamSettings.AllowedDifferencePercent / 100f * OnlinePlayers.Count);
+                    if (MaxDifference < 1) MaxDifference = 1;
+                    if (T1.OnlinePlayers.Count - MaxDifference > T2.OnlinePlayers.Count) return false;
+                    else return true;
+                }
+                else if (Team == 2)
+                {
+                    if (T2.OnlinePlayers.Count <= T1.OnlinePlayers.Count) return true;
+                    List<SteamPlayer> OnlinePlayers = Provider.clients;
+                    int MaxDifference = (int)Math.Round(UCWarfare.Config.TeamSettings.AllowedDifferencePercent / 100f * OnlinePlayers.Count);
+                    if (MaxDifference < 1) MaxDifference = 1;
+                    if (T2.OnlinePlayers.Count - MaxDifference > T1.OnlinePlayers.Count) return false;
+                    else return true;
+                }
+                else return true;
+            }
+            else return true;
+        }
+        public bool CanAddToTeam1() => CanAddToTeam(1);
+        public bool CanAddToTeam2() => CanAddToTeam(2);
     }
 }

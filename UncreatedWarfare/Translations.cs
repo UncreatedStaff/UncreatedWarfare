@@ -50,9 +50,10 @@ namespace UncreatedWarfare
             { "joined_team_must_rejoin", "You have joined <color=#{1}>{0}</color>. You must rejoin the server to update your name." },
             { "joined_team", "You have joined <color=#{1}>{0}</color>. " },
             { "join_already_in_team", "You are already a member of <color=#{1}>{0}</color>." },
-            { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch. Type <color=#{2}>/queue {3}</color> to join when there is room." },
+            { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch. Type <color=#{3}>/queue {2}</color> to join when there is room." },
             { "join_group_has_no_space", "<color=#{1}>{0}</color> has surpassed the server's max group size. This should be tweaked by an admin." },
-            { "join_command_no_args_provided", "Do <b>/join <color=#{1}>{0}</color></b> or <b>/join <color=#{3}>{2}</color></b>." }
+            { "join_command_no_args_provided", "Do <b>/join <color=#{1}>{0}</color></b> or <b>/join <color=#{3}>{2}</color></b>." },
+            { "join_group_not_found", "Could not find group <color=#{1}>{0}</color> (ID: <color=#{3}>{2}</color>). Tell an admin about this." }
 
         };
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
@@ -181,12 +182,15 @@ namespace UncreatedWarfare
             new ColorData("deleted_group_id", "4785ff"),
             new ColorData("deleted_group_name", "4785ff"),
             new ColorData("join_not_in_lobby", "ff0000"),
+            new ColorData("join_not_in_lobby_command", "e6e3d5"),
             new ColorData("joined_team_must_rejoin", "e6e3d5"),
             new ColorData("joined_team", "e6e3d5"),
             new ColorData("join_already_in_team", "f53b3b"),
             new ColorData("join_auto_balance_cant_switch", "f53b3b"),
             new ColorData("join_auto_balance_cant_switch_queue_command", "e6e3d5"),
             new ColorData("join_group_has_no_space", "f53b3b"),
+            new ColorData("join_group_not_found", "f53b3b"),
+            new ColorData("join_group_not_found_group_id", "4785ff"),
 
 
         };
