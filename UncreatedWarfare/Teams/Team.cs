@@ -25,8 +25,9 @@ namespace UncreatedWarfare.Teams
                 else
                 {
                     if (Name == null)
-                        return Name;
-                    }
+                        return ID.ToString();
+                    else return Name;
+                }
             }
         }
         public string TeamColorHex
@@ -55,16 +56,6 @@ namespace UncreatedWarfare.Teams
         public List<SteamPlayer> OnlinePlayers { get; private set; }
         public Vector3 Spawnpoint { get; private set; }
         public GroupInfo GMInfo;
-        public Team(ulong id, string name)
-        {
-            this.ID = id;
-            this.Name = name;
-            this.OfflinePlayers = new List<ulong>();
-            this.OnlinePlayers = new List<SteamPlayer>();
-            if (UCWarfare.I.TeamManager.LobbyZone != null && UCWarfare.I.TeamManager.T3 != null)
-                this.Spawnpoint = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
-            else this.Spawnpoint = new Vector3(0, 100, 0);
-        }
         public Team(TeamData team, bool DummyGroup = false)
         {
             this.ID = team.team_id;
@@ -78,21 +69,36 @@ namespace UncreatedWarfare.Teams
             }
             if(!DummyGroup)
             {
-                CSteamID cid = new CSteamID(ID);
+                CommandWindow.LogWarning("_0");
                 CommandWindow.LogWarning(Name);
+                CommandWindow.LogWarning(LocalizedName);
+                CSteamID cid = new CSteamID(ID);
+                //CommandWindow.LogWarning(Name);
+                CommandWindow.LogWarning("_0.25");
                 CommandWindow.LogWarning(cid.ToString());
-                GroupInfo info = null; 
+                CommandWindow.LogWarning("_0.5");
                 try
                 {
-                    info = GroupManager.getGroupInfo(cid);
-                    GMInfo = info;
-                    CommandWindow.LogWarning($"GroupManager group for group {GMInfo.name} : {LocalizedName} : {Name} ({GMInfo.groupID.m_SteamID}) found from previous save, loading into memory.");
-                    CommandWindow.LogError((info == null).ToString());
+                    CommandWindow.LogWarning("_1");
+                    GMInfo = GroupManager.getGroupInfo(cid);
+                    CommandWindow.LogWarning("_2");
+                    if (GMInfo != null)
+                    {
+                        CommandWindow.LogWarning("_3");
+                        CommandWindow.LogWarning($"GroupManager group for group {Name} : {LocalizedName} : {Name} ({ID}) found from previous save, loading into memory.");
+                        CommandWindow.LogWarning("_4");
+                    } else
+                    {
+                        CommandWindow.LogWarning("_5");
+                        GMInfo = GroupManager.addGroup(cid, LocalizedName);
+                        CommandWindow.LogWarning("_6");
+                        CommandWindow.LogWarning(F.Translate("created_group_console", "Team -> TeamData()", Provider.server.m_SteamID, Name, ID.ToString()));
+                        CommandWindow.LogWarning("_7");
+                    }
                 } 
                 catch (NullReferenceException ex)
                 {
-                    GMInfo = GroupManager.addGroup(cid, LocalizedName);
-                    CommandWindow.LogWarning(F.Translate("created_group_console", "Team -> TeamData()", Provider.server.m_SteamID, GMInfo.name, GMInfo.groupID.m_SteamID.ToString()));
+                    CommandWindow.LogWarning($"Failed to create group.");
                 }
             }
         }
