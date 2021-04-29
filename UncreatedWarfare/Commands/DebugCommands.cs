@@ -11,7 +11,7 @@ using Flag = UncreatedWarfare.Flags.Flag;
 
 namespace UncreatedWarfare.Commands
 {
-    class ZoneCommand : IRocketCommand
+    internal class ZoneCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
 

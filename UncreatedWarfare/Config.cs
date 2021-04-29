@@ -11,6 +11,10 @@ namespace UncreatedWarfare
         public FlagSettings FlagSettings;
         [XmlElement("AdminLogger")]
         public AdminLoggerSettings AdminLoggerSettings;
+        [XmlElement("PlayerStats")]
+        public PlayerStatsSettings PlayerStatsSettings;
+        [XmlElement("Teams")]
+        public TeamSettings TeamSettings;
         public ulong Team1ID;
         public ulong Team2ID;
         public void LoadDefaults()
@@ -18,6 +22,8 @@ namespace UncreatedWarfare
             Modules = new Modules();
             FlagSettings = new FlagSettings();
             AdminLoggerSettings = new AdminLoggerSettings();
+            PlayerStatsSettings = new PlayerStatsSettings();
+            TeamSettings = new TeamSettings();
             Team1ID = 1;
             Team2ID = 2;
         }
@@ -64,7 +70,7 @@ namespace UncreatedWarfare
         {
             NeutralColor = "ffffff";
             CurrentGamePreset = "default";
-            PlayerCheckSpeedSeconds = 0.5f;
+            PlayerCheckSpeedSeconds = 0.25f;
 
             UseUI = true;
             UseChat = true;
@@ -86,6 +92,26 @@ namespace UncreatedWarfare
             this.InternOffDutyGroup = "intern-od";
             this.AdminOnDutyGroup = "admin";
             this.AdminOffDutyGroup = "admin-od";
+        }
+    }
+    public class PlayerStatsSettings
+    {
+        public bool EnablePlayerList;
+        public string NJS_ServerURL;
+        public PlayerStatsSettings()
+        {
+            EnablePlayerList = true;
+            NJS_ServerURL = "http://localhost:8080/";
+        }
+    }
+    public class TeamSettings 
+    {
+        public bool BalanceTeams;
+        public int AllowedDifferencePercent;
+        public TeamSettings()
+        {
+            this.BalanceTeams = true;
+            this.AllowedDifferencePercent = 15;
         }
     }
 }
