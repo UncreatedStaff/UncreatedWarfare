@@ -9,9 +9,12 @@ using static Rocket.Core.Logging.Logger;
 using System.IO;
 using UncreatedWarfare.Flags;
 using UncreatedWarfare.Teams;
+using UncreatedWarfare.Kits;
+using UncreatedWarfare.Vehicles;
 using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
+
 
 namespace UncreatedWarfare
 {
@@ -23,11 +26,13 @@ namespace UncreatedWarfare
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
+        public VehicleBay VehicleBay;
         public FlagManager FlagManager;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
+        public static readonly string VehicleStorage = DataDirectory + @"Vehicles\";
         public Team T1 { get => Teams.Count > 0 ? Teams[0] : null; }
         public Team T2 { get => Teams.Count > 1 ? Teams[1] : null; }
         public List<Team> Teams = new List<Team> { new Team(1, "us"), new Team(2, "ru") };
@@ -38,7 +43,6 @@ namespace UncreatedWarfare
         public Dictionary<ECreditsGainType, int> CreditsData;
         public DatabaseManager DB { get; private set; }
         private bool InitialLoadEventSubscription;
-        public DatabaseManager DB { get; private set; }
         private void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))
@@ -63,6 +67,8 @@ namespace UncreatedWarfare
             Instance = this;
             DB = new DatabaseManager();
 
+            Patches.InternalPatches.DoPatching();
+
             CheckDir(DataDirectory);
             CheckDir(FlagStorage);
             CheckDir(LangStorage);
@@ -79,8 +85,10 @@ namespace UncreatedWarfare
             {
                 KitManager = new KitManager();
             }
-
-
+            if (Config.Modules.VehicleSpawning)
+            {
+                VehicleBay = new VehicleBay();
+            }
 
             Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
@@ -131,5 +139,6 @@ namespace UncreatedWarfare
             if(!InitialLoadEventSubscription) R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
             FlagManager.Dispose();
         }
+
     }
 }

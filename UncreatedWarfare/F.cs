@@ -136,12 +136,15 @@ namespace UncreatedWarfare
                 }
             }
         }
+
+        public static void Message(this UnturnedPlayer player, string message, params object[] formatting) => SendChat(player, message, Color.white, formatting);
         /// <summary>
         /// Send a message in chat to everyone.
         /// </summary>
         /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// 
         public static void Broadcast(string text, Color textColor, params object[] formatting)
         {
             bool isRich = false;
@@ -164,80 +167,6 @@ namespace UncreatedWarfare
                 }
             }
         }
-        /// <summary>
-        /// Send a message in chat to everyone except one person.
-        /// </summary>
-        /// <param name="LeaveOut">The one person not to send a message to.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-        public static void BroadcastToAllExceptOne(CSteamID LeaveOut, string text, Color textColor, params object[] formatting)
-        {
-            bool isRich = false;
-            if (Translate(text, formatting).Contains("</"))
-                isRich = true;
-            try
-            {
-                foreach (SteamPlayer player in Provider.clients)
-                    if (player.playerID.steamID.m_SteamID != LeaveOut.m_SteamID)
-                        ChatManager.say(player.playerID.steamID, Translate(text, formatting), textColor, isRich);
-            }
-            catch
-            {
-                try
-                {
-                    Log($"'{Translate(text, formatting)}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                    foreach (SteamPlayer player in Provider.clients)
-                        if (player.playerID.steamID.m_SteamID != LeaveOut.m_SteamID)
-                            ChatManager.say(player.playerID.steamID, Translate(text, formatting), textColor, isRich);
-                }
-                catch (FormatException)
-                {
-                    Log("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
-                }
-            }
-        }
-        /// <summary>
-        /// Send a message in chat to everyone except two people.
-        /// </summary>
-        /// <param name="LeaveOut">The one person not to send a message to.</param>
-        /// <param name="LeaveOut2">The one person not to send a message to.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-        public static void BroadcastToAllExceptTwo(CSteamID LeaveOut, CSteamID LeaveOut2, string text, Color textColor, params object[] formatting)
-        {
-            bool isRich = false;
-            if (Translate(text, formatting).Contains("</"))
-                isRich = true;
-            try
-            {
-                foreach (SteamPlayer player in Provider.clients)
-                    if (player.playerID.steamID.m_SteamID != LeaveOut.m_SteamID && player.playerID.steamID.m_SteamID != LeaveOut2.m_SteamID)
-                        ChatManager.say(player.playerID.steamID, Translate(text, formatting), textColor, isRich);
-            }
-            catch
-            {
-                try
-                {
-                    Log($"'{Translate(text, formatting)}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                    foreach (SteamPlayer player in Provider.clients)
-                        if (player.playerID.steamID.m_SteamID != LeaveOut.m_SteamID && player.playerID.steamID.m_SteamID != LeaveOut2.m_SteamID)
-                            ChatManager.say(player.playerID.steamID, Translate(text, formatting), textColor, isRich);
-                }
-                catch (FormatException)
-                {
-                    Log("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
-                }
-            }
-        }
-        /// <summary>
-        /// Send a message in chat to everyone except a list of people. Somewhat ineffecient.
-        /// </summary>
-        /// <param name="Excluded">List of people to exclude the message from.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
         public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, Color textColor, params object[] formatting)
         {
             bool isRich = false;

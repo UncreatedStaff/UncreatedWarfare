@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using UncreatedWarfare.Vehicles;
 
 namespace UncreatedWarfare
 {
@@ -158,6 +159,16 @@ namespace UncreatedWarfare
                 return true;
             else
                 return false;
+        }
+        public bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
+        {
+            if (Enum.TryParse<TEnum>(name.ToString(), out var p))
+            {
+                property = p;
+                return true;
+            }
+            property = p;
+            return false;
         }
 
         protected class TypeArgumentException : Exception

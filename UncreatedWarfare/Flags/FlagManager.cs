@@ -10,7 +10,7 @@ namespace UncreatedWarfare.Flags
     public class FlagManager
     {
         public List<Flag> FlagRotation { get; private set; }
-        public string Preset { 
+        public string Preset {
             get => _preset; 
             set 
             {
@@ -72,7 +72,7 @@ namespace UncreatedWarfare.Flags
             CommandWindow.LogWarning("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString() + " to " + e.NewPoints.ToString());
             if (flag.Points < Flag.MaxPoints)
             {
-                if(flag.Points > 0) 
+                if(flag.Points > 0)
                 {
                     foreach (Player player in flag.PlayersOnFlag)
                     {
@@ -147,7 +147,7 @@ namespace UncreatedWarfare.Flags
         {
             foreach (Flag flag in FlagRotation.Where(f => f.PlayersOnFlag.Count > 0))
             {
-
+                
             }
         }
     }

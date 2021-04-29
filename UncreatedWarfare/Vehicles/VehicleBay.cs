@@ -1,0 +1,340 @@
+﻿using Rocket.API;
+using SDG.Unturned;
+using Steamworks;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UncreatedWarfare.FOBs;
+using UncreatedWarfare.Kits;
+using UnityEngine;
+
+namespace UncreatedWarfare.Vehicles
+{
+    public class VehicleBay : JSONSaver<VehicleData>
+    {
+        private VehicleSpawnSaver _spawnManager;
+
+        public VehicleBay()
+            : base(UCWarfare.VehicleStorage + "vehiclebay.json")
+        {
+            VehicleManager.OnVehicleExploded += OnVehicleExploded;
+            VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
+            VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
+            Level.onLevelLoaded += OnLevelLoaded;
+
+            _spawnManager = new VehicleSpawnSaver();
+        }
+
+
+        public void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
+        public void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
+        public void RemoveAllVehicles() => RemoveAllObjectsFromSave();
+        public void GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
+        public bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
+        {
+            bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
+            vehicleData = v;
+            return result;
+        }
+        public bool SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
+        {
+            propertyIsValid = false;
+            vehicleExists = false;
+            argIsValid = false;
+
+            if (!IsPropertyValid<EVehicleProperty>(property, out var p))
+            {
+                return false;
+            }
+            propertyIsValid = true;
+
+            var vehicles = GetExistingObjects();
+            foreach (var data in vehicles)
+            {
+                if (data.VehicleID == vehicleID)
+                {
+                    vehicleExists = true;
+
+                    switch (p)
+                    {
+                        case EVehicleProperty.TEAM:
+                            if (UInt64.TryParse(newValue.ToString(), out var team))
+                            {
+                                argIsValid = true;
+                                data.Team = team;
+                            } break;
+                        case EVehicleProperty.RESPAWNTIME:
+                            if (UInt16.TryParse(newValue.ToString(), out var time))
+                            {
+                                argIsValid = true;
+                                data.RespawnTime = time;
+                            }
+                            break;
+                        case EVehicleProperty.COST:
+                            if (UInt16.TryParse(newValue.ToString(), out var cost))
+                            {
+                                argIsValid = true;
+                                data.Cost = cost;
+                            }
+                            break;
+                        case EVehicleProperty.LEVEL:
+                            if (UInt16.TryParse(newValue.ToString(), out var level))
+                            {
+                                argIsValid = true;
+                                data.RequiredLevel = level;
+                            }
+                            break;
+                        case EVehicleProperty.TICKETS:
+                            if (UInt16.TryParse(newValue.ToString(), out var tickets))
+                            {
+                                argIsValid = true;
+                                data.TicketCost = tickets;
+                            }
+                            break;
+                        case EVehicleProperty.COOLDOWN:
+                            if (UInt16.TryParse(newValue.ToString(), out var cooldown))
+                            {
+                                argIsValid = true;
+                                data.Cooldown = cooldown;
+                            }
+                            break;
+                        case EVehicleProperty.BRANCH:
+                            if (Enum.TryParse<Kit.EBranch>(newValue.ToString(), out var branch))
+                            {
+                                argIsValid = true;
+                                data.RequiredBranch = branch;
+                            }
+                            break;
+                        case EVehicleProperty.CLASS:
+                            if (Enum.TryParse<Kit.EClass>(newValue.ToString(), out var kitclass))
+                            {
+                                argIsValid = true;
+                                data.RequiredClass = kitclass;
+                            }
+                            break;
+                        case EVehicleProperty.REARMCOST:
+                            if (byte.TryParse(newValue.ToString(), out var rearmCost))
+                            {
+                                argIsValid = true;
+                                data.RearmCost = rearmCost;
+                            }
+                            break;
+                        case EVehicleProperty.REPAIRCOST:
+                            if (byte.TryParse(newValue.ToString(), out var repairCost))
+                            {
+                                argIsValid = true;
+                                data.RepairCost = repairCost;
+                            }
+                            break;
+                    }
+                    if (argIsValid)
+                    {
+                        OverwriteSavedList(vehicles);
+                        return true;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public void SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
+        {
+            instanceID = 0;
+
+            if (!Level.isLoaded)
+                return;
+
+            if (VehicleExists(vehicleID, out var vehicleData))
+            {
+                InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
+                instanceID = vehicle.instanceID;
+
+                if (vehicleData.Metadata != null)
+                {
+                    foreach (var vBarricade in vehicleData.Metadata.Barricades)
+                    {
+                        Barricade newBarricade = new Barricade(vBarricade.BarricadeID);
+                        newBarricade.state = Convert.FromBase64String(vBarricade.State);
+
+                        Quaternion quarternion = Quaternion.Euler(vBarricade.AngleX * 2, vBarricade.AngleY * 2, vBarricade.AngleZ * 2);
+
+                        BarricadeManager.dropPlantedBarricade(vehicle.transform, newBarricade, new Vector3(vBarricade.PosX, vBarricade.PosY, vBarricade.PosZ), quarternion, vBarricade.OwnerID, vBarricade.GroupID);
+                    }
+                }
+
+                if (vehicle.asset.canBeLocked)
+                {
+                    vehicle.tellLocked(CSteamID.Nil, CSteamID.Nil, true);
+
+                    VehicleManager.ServerSetVehicleLock(vehicle, CSteamID.Nil, CSteamID.Nil, true);
+
+                    vehicle.updateVehicle();
+                    vehicle.updatePhysics();
+                }
+            }
+        }
+
+        public bool TryRespawnVehicle(uint vehicleInstanceID)
+        {
+            if (_spawnManager.HasLinkedSpawn(vehicleInstanceID, out var spawn))
+            {
+                var spawnLocation = UCBarricadeManager.GetBarricadeByInstanceID(spawn.BarricadeInstanceID);
+                if (spawnLocation == null)
+                    return false;
+
+                SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out var newInstanceID);
+                _spawnManager.LinkVehicleToSpawn(vehicleInstanceID, spawn.BarricadeInstanceID);
+
+                return true;
+            }
+            return false;
+        }
+
+        public bool TrySpawnNewVehicle(VehicleSpawn spawn)
+        {
+            if (_spawnManager.HasLinkedVehicle(spawn, out var vehicle))
+            {
+                if (!(vehicle.isDead || vehicle.isDrowned))
+                    return false;
+            }
+
+            var spawnLocation = UCBarricadeManager.GetBarricadeByInstanceID(spawn.BarricadeInstanceID);
+            if (spawnLocation == null)
+                return false;
+
+            SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out uint instancID);
+            _spawnManager.LinkVehicleToSpawn(vehicle.instanceID, spawn.BarricadeInstanceID);
+
+                return true;
+        }
+
+        private void OnVehicleExploded(InteractableVehicle vehicle)
+        {
+            UCWarfare.I.StartCoroutine(StartVehicleRespawnTimer(vehicle));
+        }
+
+        private void OnVehicleEnterRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
+        {
+
+        }
+
+        private void OnVehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
+        {
+
+        }
+        private void OnLevelLoaded(int level)
+        {
+            var allspawns = _spawnManager.GetAllSpawns();
+            foreach (var spawn in allspawns)
+                TrySpawnNewVehicle(spawn);
+        }
+
+        private IEnumerator<WaitForSeconds> StartVehicleRespawnTimer(InteractableVehicle vehicle)
+        {
+            if (!VehicleExists(vehicle.id, out var vehicleData))
+                yield break;
+
+            yield return new WaitForSeconds(vehicleData.RespawnTime);
+
+            if (UCWarfare.I.State != PluginState.Loaded)
+                yield break;
+
+            TryRespawnVehicle(vehicle.instanceID);
+        }
+
+        public enum EVehicleProperty
+        {
+            TEAM,
+            RESPAWNTIME,
+            COST,
+            LEVEL,
+            TICKETS,
+            BRANCH,
+            COOLDOWN,
+            CLASS,
+            REARMCOST,
+            REPAIRCOST
+        }
+    }
+
+    public class VehicleData
+    {
+        public ushort VehicleID;
+        public ulong Team;
+        public ushort RespawnTime;
+        public ushort Cost;
+        public ushort RequiredLevel;
+        public ushort TicketCost;
+        public ushort Cooldown;
+        public Kit.EBranch RequiredBranch;
+        public Kit.EClass RequiredClass;
+        public byte RearmCost;
+        public byte RepairCost;
+        Dictionary<ushort, byte> Items;
+        public List<byte> CrewSeats;
+        public MetaSave Metadata;
+
+        public VehicleData(ushort vehicleID)
+        {
+            VehicleID = vehicleID;
+            Team = 0;
+            RespawnTime = 600;
+            Cost = 0;
+            RequiredLevel = 0;
+            TicketCost = 0;
+            Cooldown = 0;
+            RequiredBranch = Kit.EBranch.DEFAULT;
+            RequiredClass = Kit.EClass.NONE;
+            RearmCost = 3;
+            RepairCost = 3;
+            Items = new Dictionary<ushort, byte>() { { 1440, 1 }, { 277, 1 } };
+            CrewSeats = new List<byte>();
+            Metadata = null;
+        }
+    }
+
+    public class MetaSave
+    {
+        public ushort VehicleID;
+        public List<VBarricade> Barricades;
+
+        public MetaSave(ushort vehicleID, List<VBarricade> barricades)
+        {
+            VehicleID = vehicleID;
+            Barricades = barricades;
+        }
+    }
+
+    public class VBarricade
+    {
+        public ushort BarricadeID;
+        public ushort Health;
+        public ulong OwnerID;
+        public ulong GroupID;
+        public float PosX;
+        public float PosY;
+        public float PosZ;
+        public float AngleX;
+        public float AngleY;
+        public float AngleZ;
+        public string State;
+
+        public VBarricade(ushort barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
+        {
+            BarricadeID = barricadeID;
+            Health = health;
+            OwnerID = ownerID;
+            GroupID = groupID;
+            PosX = posX;
+            PosY = posY;
+            PosZ = posZ;
+            AngleX = angleX;
+            AngleY = angleY;
+            AngleZ = angleZ;
+            State = state;
+        }
+    }
+}

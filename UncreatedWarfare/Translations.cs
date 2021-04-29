@@ -33,7 +33,22 @@ namespace UncreatedWarfare
             { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
             { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}), out of {3} registered flags." },
             { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
-            { "player_disconnected", "<color=#{1}>{0}</color> left the server." }
+            { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
+
+            // Kits
+
+            { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
+            { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
+            { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
+            { "kit_setprop", "<color=#a0ad8e>Set {0} for kit <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
+            { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
+            { "kit_accessremoved", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
+            { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
+            { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'class', 'cost', 'clearinv' etc.</color>" },
+            { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
+            { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
+            { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
+            { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
         };
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
         {
