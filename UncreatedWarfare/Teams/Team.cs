@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace UncreatedWarfare.Teams
 {
-    public class Team
+    public class TeamOld
     {
         public ulong ID { get; private set; }
         public string Name { get; protected set; }
@@ -25,8 +25,9 @@ namespace UncreatedWarfare.Teams
                 else
                 {
                     if (Name == null)
-                        return Name;
-                    }
+                        return ID.ToString();
+                    else return Name;
+                }
             }
         }
         public string TeamColorHex
@@ -55,17 +56,7 @@ namespace UncreatedWarfare.Teams
         public List<SteamPlayer> OnlinePlayers { get; private set; }
         public Vector3 Spawnpoint { get; private set; }
         public GroupInfo GMInfo;
-        public Team(ulong id, string name)
-        {
-            this.ID = id;
-            this.Name = name;
-            this.OfflinePlayers = new List<ulong>();
-            this.OnlinePlayers = new List<SteamPlayer>();
-            if (UCWarfare.I.TeamManager.LobbyZone != null && UCWarfare.I.TeamManager.T3 != null)
-                this.Spawnpoint = new Vector3(UCWarfare.I.TeamManager.LobbyZone.Center.x, UCWarfare.I.TeamManager.T3.Spawnpoint.y, UCWarfare.I.TeamManager.LobbyZone.Center.y);
-            else this.Spawnpoint = new Vector3(0, 100, 0);
-        }
-        public Team(TeamData team, bool DummyGroup = false)
+        public TeamOld(TeamData team, bool DummyGroup = false)
         {
             this.ID = team.team_id;
             this.Name = team.name;

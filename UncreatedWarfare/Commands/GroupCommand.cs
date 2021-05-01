@@ -84,7 +84,7 @@ namespace UncreatedWarfare.Commands
                                 ID.ToString(), UCWarfare.I.ColorsHex["joined_group_not_found_group_id"]);
                             return;
                         }
-                        Team t = UCWarfare.I.TeamManager.Teams.FirstOrDefault(x => x.ID == ID);
+                        TeamOld t = UCWarfare.I.TeamManager.Teams.FirstOrDefault(x => x.ID == ID);
                         bool updatedInJSON = t != null && t.Name == command[2];
                         bool updatedInGroupManager = group.name == command[2];
                         if (updatedInJSON && updatedInGroupManager)
@@ -147,7 +147,7 @@ namespace UncreatedWarfare.Commands
                         if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                         if (team == 1)
                         {
-                            foreach (Team t in UCWarfare.I.TeamManager.Teams)
+                            foreach (TeamOld t in UCWarfare.I.TeamManager.Teams)
                                 if (t.ID != team)
                                     t.RemovePlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
                             UCWarfare.I.TeamManager.T1.AddPlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
@@ -156,7 +156,7 @@ namespace UncreatedWarfare.Commands
                                 groupInfo.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["joined_group_id"]);
                         } else if (team == 2)
                         {
-                            foreach (Team t in UCWarfare.I.TeamManager.Teams)
+                            foreach (TeamOld t in UCWarfare.I.TeamManager.Teams)
                                 if (t.ID != team)
                                     t.RemovePlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
                             UCWarfare.I.TeamManager.T1.AddPlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
@@ -165,7 +165,7 @@ namespace UncreatedWarfare.Commands
                                 groupInfo.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["joined_group_id"]);
                         } else if (team == 3)
                         {
-                            foreach (Team t in UCWarfare.I.TeamManager.Teams)
+                            foreach (TeamOld t in UCWarfare.I.TeamManager.Teams)
                                 if (t.ID != team)
                                     t.RemovePlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
                             UCWarfare.I.TeamManager.T1.AddPlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
@@ -174,8 +174,8 @@ namespace UncreatedWarfare.Commands
                                 groupInfo.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["joined_group_id"]);
                         } else
                         {
-                            Team data = null;
-                            foreach (Team t in UCWarfare.I.TeamManager.Teams)
+                            TeamOld data = null;
+                            foreach (TeamOld t in UCWarfare.I.TeamManager.Teams)
                             {
                                 if (t.ID != team)
                                     t.RemovePlayer(player.Player.channel.owner.playerID.steamID.m_SteamID, true);
@@ -216,7 +216,7 @@ namespace UncreatedWarfare.Commands
                         UCWarfare.I.TeamManager.DeleteTeam(group.groupID.m_SteamID, out TeamData deleted);
                         string color = UCWarfare.I.ColorsHex["deleted_group_name"];
                         string name = group.name;
-                        Team t = UCWarfare.I.TeamManager.Teams.FirstOrDefault(x => x.ID == group.groupID.m_SteamID || (deleted != null && x.ID == deleted.team_id));
+                        TeamOld t = UCWarfare.I.TeamManager.Teams.FirstOrDefault(x => x.ID == group.groupID.m_SteamID || (deleted != null && x.ID == deleted.team_id));
                         if(t != null)
                         {
                             color = t.TeamColorHex;

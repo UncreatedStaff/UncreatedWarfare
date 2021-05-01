@@ -1,5 +1,6 @@
 ﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,18 +11,18 @@ namespace UncreatedWarfare.Kits
 {
     public class KitManager : JSONSaver<Kit>
     {
-        public Dictionary<UnturnedPlayer, Kit> ActiveKits;
+        private KitSaver _kitSaver;
 
         public KitManager()
             : base(UCWarfare.KitsStorage + "kits.json")
         {
-            ActiveKits = new Dictionary<UnturnedPlayer, Kit>();
+            _kitSaver = new KitSaver();
         }
 
         public void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public void DeleteAllKits() => RemoveAllObjectsFromSave();
-        public void GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
+        public List<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
         public bool KitExists(string kitName, out Kit kit)
         {
             bool result = ObjectExists(i => i.Name.ToLower() == kitName.ToLower(), out var k);
@@ -147,7 +148,7 @@ namespace UncreatedWarfare.Kits
                         jar.y,
                         jar.rot,
                         jar.item.quality,
-                        System.Convert.ToBase64String(jar.item.metadata),
+                        Convert.ToBase64String(jar.item.metadata),
                         jar.item.amount,
                         page
                     ));
@@ -171,6 +172,62 @@ namespace UncreatedWarfare.Kits
             clothes.Add(new KitClothing(playerClothes.glasses, playerClothes.glassesQuality, Convert.ToBase64String(playerClothes.glassesState), KitClothing.EClothingType.GLASSES));
 
             return clothes;
+        }
+
+        public void GiveKit(UnturnedPlayer player, Kit kit)
+        {
+            if (kit == null)
+                return;
+
+            if (kit.ShouldClearInventory)
+            {
+                UCInventoryManager.ClearInventory(player);
+            }
+            foreach (var clothing in kit.Clothes)
+            {
+                if (clothing.type == KitClothing.EClothingType.SHIRT)
+                    player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (clothing.type == KitClothing.EClothingType.PANTS)
+                    player.Player.clothing.askWearPants(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (clothing.type == KitClothing.EClothingType.VEST)
+                    player.Player.clothing.askWearVest(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (clothing.type == KitClothing.EClothingType.HAT)
+                    player.Player.clothing.askWearHat(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (clothing.type == KitClothing.EClothingType.MASK)
+                    player.Player.clothing.askWearMask(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (clothing.type == KitClothing.EClothingType.BACKPACK)
+                    player.Player.clothing.askWearBackpack(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (clothing.type == KitClothing.EClothingType.GLASSES)
+                    player.Player.clothing.askWearGlasses(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+            }
+
+            foreach (KitItem k in kit.Items)
+            {
+                var item = new Item(k.ID, k.amount, k.quality);
+                item.metadata = Convert.FromBase64String(k.metadata);
+
+                if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                    player.Inventory.tryAddItem(item, true);
+            }
+
+            _kitSaver.RemoveSaveOfPlayer(player);
+            _kitSaver.AddSaveForPlayer(player, kit.Name);
+        }
+
+        public bool HasKit(CSteamID steamID, out Kit kit)
+        {
+            bool result = _kitSaver.HasSave(steamID, out string kitName);
+            kit = GetKitsWhere(k => k.Name == kitName).FirstOrDefault();
+            if (kit == null)
+                return false;
+            return result;
+        }
+
+        public bool HasKit(UnturnedPlayer player, out Kit kit)
+        {
+            bool result = HasKit(player.CSteamID, out Kit k);
+            kit = k;
+            return result;
         }
 
         public bool HasAccess(ulong playerID, string kitName)

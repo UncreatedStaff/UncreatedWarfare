@@ -62,8 +62,7 @@ namespace UncreatedWarfare
             { "player_switched_groups_console", "{0} ({1}) joined {2}." },
             { "from_lobby_teleport_failed", "Failed to teleport you to your main base. Do <color=#{0}>/deploy main</color> to try again." },
             { "no_permissions", "You do not have permission to use this command." },
-            { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" }
-
+            { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" },
             { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
 
             // Kits
