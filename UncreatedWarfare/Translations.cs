@@ -63,10 +63,8 @@ namespace UncreatedWarfare
             { "from_lobby_teleport_failed", "Failed to teleport you to your main base. Do <color=#{0}>/deploy main</color> to try again." },
             { "no_permissions", "You do not have permission to use this command." },
             { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" },
-            { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
 
             // Kits
-
             { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
             { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
             { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
@@ -223,8 +221,6 @@ namespace UncreatedWarfare
             new ColorData("from_lobby_teleport_failed", "ff0000"),
             new ColorData("from_lobby_teleport_failed_command", "4785ff"),
             new ColorData("no_permissions", "ff0000"),
-
-
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {

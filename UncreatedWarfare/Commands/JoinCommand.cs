@@ -22,7 +22,8 @@ namespace UncreatedWarfare.Commands
         public List<string> Permissions => new List<string>() { "uc.join" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            SteamPlayer steamplayer = ((UnturnedPlayer)caller).Player.channel.owner;
+            UnturnedPlayer player = (UnturnedPlayer)caller;
+            SteamPlayer steamplayer = player.Player.channel.owner;
 
             // TODO
             if(command.Length == 1)
@@ -41,7 +42,7 @@ namespace UncreatedWarfare.Commands
                                     UCWarfare.I.TeamManager.T1.ID.ToString(), UCWarfare.I.ColorsHex["join_group_not_found_group_id"]);
                                 return;
                             }
-                            UCWarfare.I.KitManager.ClearInventory(steamplayer);
+                            Kits.UCInventoryManager.ClearInventory(player);
                             if(!group.hasSpaceForMoreMembersInGroup)
                             {
                                 steamplayer.SendChat("join_group_has_no_space", UCWarfare.I.Colors["join_group_has_no_space"],
@@ -96,7 +97,7 @@ namespace UncreatedWarfare.Commands
                                     UCWarfare.I.TeamManager.T2.ID.ToString(), UCWarfare.I.ColorsHex["join_group_not_found_group_id"]);
                                 return;
                             }
-                            UCWarfare.I.KitManager.ClearInventory(steamplayer);
+                            Kits.UCInventoryManager.ClearInventory(player);
                             if (!group.hasSpaceForMoreMembersInGroup)
                             {
                                 steamplayer.SendChat("join_group_has_no_space", UCWarfare.I.Colors["join_group_has_no_space"],

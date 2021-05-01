@@ -65,9 +65,6 @@ namespace UncreatedWarfare
             CommandWindow.LogWarning("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.");
             Instance = this;
-            DB = new DatabaseManager();
-            WebInterface = new WebInterface();
-            TeamManager = new TeamManager();
 
             Patches.InternalPatches.DoPatching();
 
@@ -79,6 +76,11 @@ namespace UncreatedWarfare
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
             Localization = JSONMethods.LoadTranslations();
+
+            DB = new DatabaseManager();
+            WebInterface = new WebInterface();
+            TeamManager = new TeamManager();
+
             if (Config.Modules.Flags)
             {
                 FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
