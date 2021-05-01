@@ -65,7 +65,6 @@ namespace UncreatedWarfare
             { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" },
 
             // Kits
-
             { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
             { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
             { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
@@ -222,8 +221,6 @@ namespace UncreatedWarfare
             new ColorData("from_lobby_teleport_failed", "ff0000"),
             new ColorData("from_lobby_teleport_failed_command", "4785ff"),
             new ColorData("no_permissions", "ff0000"),
-
-
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {
