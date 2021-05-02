@@ -22,7 +22,7 @@ namespace UncreatedWarfare
 
         protected void CreateFileIfNotExists()
         {
-            if (File.Exists(directory))
+            if (!File.Exists(directory))
             {
                 StreamWriter creator = File.CreateText(directory);
                 creator.WriteLine("[]");
