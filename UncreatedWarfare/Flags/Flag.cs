@@ -12,7 +12,7 @@ namespace UncreatedWarfare.Flags
 {
     public class PlayerEventArgs : EventArgs { public Player player; }
     public class CaptureChangeEventArgs : EventArgs { public int NewPoints; public int OldPoints; }
-    public class OwnerChangeEventArgs : EventArgs { public Team OldOwner; public Team NewOwner; }
+    public class OwnerChangeEventArgs : EventArgs { public TeamOld OldOwner; public TeamOld NewOwner; }
     public class Flag
     {
         public const int MaxPoints = 64;
@@ -87,8 +87,8 @@ namespace UncreatedWarfare.Flags
                 else return UCWarfare.I.Colors["neutral_color"];
             } 
         }
-        private Team _owner;
-        public Team Owner { get => _owner; set => _owner = value; }
+        private TeamOld _owner;
+        public TeamOld Owner { get => _owner; set => _owner = value; }
         public float SizeX { get => _sizeX; set => _sizeX = value; }
         public float SizeZ { get => _sizeZ; set => _sizeZ = value; }
         private float _sizeX;
@@ -122,14 +122,14 @@ namespace UncreatedWarfare.Flags
             NewPlayers = PlayersOnFlag.Where(p => !OldPlayers.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
             return OldPlayers.Where(p => !PlayersOnFlag.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
         }
-        public Team FullOwner { 
+        public TeamOld FullOwner { 
             get
             {
                 if (_points >= MaxPoints)
                     return UCWarfare.Instance.TeamManager.T1;
                 else if (_points <= MaxPoints * -1)
                     return UCWarfare.Instance.TeamManager.T2;
-                else return TeamManager.Neutral;
+                else return TeamManagerOld.Neutral;
             } 
             set
             {
@@ -150,25 +150,25 @@ namespace UncreatedWarfare.Flags
             get => _points; 
             set
             {
-                Team OldOwner;
+                TeamOld OldOwner;
                 int OldPoints = _points;
                 if (_points >= MaxPoints)
                     OldOwner = UCWarfare.Instance.TeamManager.T1;
                 else if (_points <= MaxPoints * -1)
                     OldOwner = UCWarfare.Instance.TeamManager.T2;
-                else OldOwner = TeamManager.Neutral;
+                else OldOwner = TeamManagerOld.Neutral;
                 if (value > MaxPoints) _points = MaxPoints;
                 else if (value < MaxPoints * -1) _points = MaxPoints * -1;
                 else _points = value;
                 if(OldPoints != _points)
                 {
                     OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
-                    Team NewOwner;
+                    TeamOld NewOwner;
                     if (_points >= MaxPoints)
                         NewOwner = UCWarfare.Instance.TeamManager.T1;
                     else if (_points <= MaxPoints * -1)
                         NewOwner = UCWarfare.Instance.TeamManager.T2;
-                    else NewOwner = TeamManager.Neutral;
+                    else NewOwner = TeamManagerOld.Neutral;
                     if (OldOwner.ID != NewOwner.ID) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
                 }
             }
@@ -186,7 +186,7 @@ namespace UncreatedWarfare.Flags
             this._position2d = data.Position2D;
             this._name = data.name;
             this._color = data.color;
-            this._owner = TeamManager.Neutral;
+            this._owner = TeamManagerOld.Neutral;
             PlayersOnFlag = new List<Player>();
             this.ZoneData = ComplexifyZone(data);
         }
@@ -224,7 +224,7 @@ namespace UncreatedWarfare.Flags
         public bool IsFriendly(Player player) => IsFriendly(player.quests.groupID.m_SteamID);
         public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
         public bool IsFriendly(UnturnedPlayer player) => IsFriendly(player.Player.quests.groupID.m_SteamID);
-        public bool IsNeutral() => FullOwner.ID == TeamManager.Neutral.ID;
+        public bool IsNeutral() => FullOwner.ID == TeamManagerOld.Neutral.ID;
         public void CapT1(int amount = 1)
         {
             Points += amount;

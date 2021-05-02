@@ -113,11 +113,11 @@ namespace UncreatedWarfare
     public class TeamSettings 
     {
         public bool BalanceTeams;
-        public int AllowedDifferencePercent;
+        public float AllowedDifferencePercent;
         public TeamSettings()
         {
             this.BalanceTeams = true;
-            this.AllowedDifferencePercent = 15;
+            this.AllowedDifferencePercent = 0.15F;
         }
     }
     public class DiscordSettings

@@ -31,7 +31,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected void AddObjectToSave(object item)
+        protected void AddObjectToSave(T item)
         {
             if (item.GetType() != typeof(T))
             {
@@ -151,6 +151,11 @@ namespace UncreatedWarfare
             return GetExistingObjects().Where(predicate).ToList();
         }
 
+        protected T GetObject(Func<T, bool> predicate)
+        {
+            return GetExistingObjects().Where(predicate).FirstOrDefault();
+        }
+
         protected bool ObjectExists(Predicate<T> match, out T item)
         {
             var list = GetExistingObjects();
@@ -160,6 +165,31 @@ namespace UncreatedWarfare
             else
                 return false;
         }
+
+        protected void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation)
+        {
+            var list = GetExistingObjects();
+            list.Where(selector).ToList().ForEach(operation);
+
+            StreamWriter file = File.CreateText(directory);
+            JsonWriter writer = new JsonTextWriter(file);
+
+            JsonSerializer serializer = new JsonSerializer();
+
+            serializer.Formatting = Formatting.Indented;
+
+            try
+            {
+                serializer.Serialize(writer, list);
+                writer.Close();
+            }
+            catch (Exception ex)
+            {
+                writer.Close();
+                throw ex;
+            }
+        }
+
         public bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
         {
             if (Enum.TryParse<TEnum>(name.ToString(), out var p))

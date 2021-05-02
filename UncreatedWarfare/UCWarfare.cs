@@ -32,6 +32,7 @@ namespace UncreatedWarfare
         public WebInterface WebInterface;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
+        public static readonly string TeamStorage = DataDirectory + @"Teams\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
         public static readonly string VehicleStorage = DataDirectory + @"Vehicles\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";

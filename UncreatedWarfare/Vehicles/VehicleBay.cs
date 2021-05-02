@@ -1,4 +1,5 @@
 ﻿using Rocket.API;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -31,7 +32,7 @@ namespace UncreatedWarfare.Vehicles
         public void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
         public void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
         public void RemoveAllVehicles() => RemoveAllObjectsFromSave();
-        public void GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
+        public List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
         public bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
         {
             bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
@@ -216,14 +217,147 @@ namespace UncreatedWarfare.Vehicles
             UCWarfare.I.StartCoroutine(StartVehicleRespawnTimer(vehicle));
         }
 
-        private void OnVehicleEnterRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
+        private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
+            UnturnedPlayer player = UnturnedPlayer.FromPlayer(nelsonplayer);
 
+            // TODO: if vehicle is an emplacement, return
+
+            bool isOwnerOnline = Provider.clients.Exists(sp => sp.playerID.steamID == vehicle.lockedOwner);
+            bool isOwnerInVehicle = false;
+            float OwnerDistanceFromVehicle = 0;
+
+            if (!isOwnerOnline)
+                return;
+
+            foreach (Passenger passenger in vehicle.passengers)
+            {
+                if (passenger.player != null)
+                {
+                    if (passenger.player.playerID.steamID == vehicle.lockedOwner)
+                    {
+                        isOwnerInVehicle = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!isOwnerInVehicle)
+                OwnerDistanceFromVehicle = (UnturnedPlayer.FromCSteamID(vehicle.lockedOwner).Position - vehicle.transform.position).magnitude;
+
+            if (isOwnerOnline && vehicle.isLocked && !(vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil) && !isOwnerInVehicle && OwnerDistanceFromVehicle <= 150)
+            {
+                // "Wait for the owner of this vehicle to get in before swapping seats."
+                shouldAllow = false;
+                return;
+            }
+
+            if (!VehicleExists(vehicle.id, out var vehicleData))
+                return;
+
+            if (vehicleData.RequiredClass == Kit.EClass.NONE)
+                return;
+            
+            if (!UCWarfare.I.KitManager.HasKit(player, out var kit))
+            {
+                // "You must get a kit before you can enter vehicles."
+                shouldAllow = false;
+                return;
+            }
+
+            bool HasCrewman = true;
+
+            foreach (byte i in vehicleData.CrewSeats)
+            {
+                if (vehicle.passengers[i].player == null)
+                    HasCrewman = false;
+            }
+
+            if (vehicleData.RequiredClass != kit.Class && !HasCrewman)
+            {
+                // "You need a {kitname} kit in order to man this vehicle. Wait for its crew to get in first if you just want to ride as passenger.";
+                shouldAllow = false;
+                return;
+            }
         }
 
-        private void OnVehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
+        private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
+            UnturnedPlayer player = UnturnedPlayer.FromPlayer(nelsonplayer);
 
+            // TODO: if vehicle is an emplacement, return
+
+            bool isOwnerOnline = Provider.clients.Exists(sp => sp.playerID.steamID == vehicle.lockedOwner);
+            bool isOwnerInVehicle = false;
+            float OwnerDistanceFromVehicle = 0;
+
+            if (isOwnerOnline)
+            {
+                foreach (Passenger passenger in vehicle.passengers)
+                {
+                    if (passenger.player != null)
+                    {
+                        if (passenger.player.playerID.steamID == vehicle.lockedOwner)
+                        {
+                            isOwnerInVehicle = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isOwnerInVehicle)
+                {
+                    OwnerDistanceFromVehicle = (UnturnedPlayer.FromCSteamID(vehicle.lockedOwner).Position - vehicle.transform.position).magnitude;
+                }
+            }
+
+            if (isOwnerOnline && vehicle.isLocked && !(vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil) && !isOwnerInVehicle && OwnerDistanceFromVehicle <= 150)
+            {
+                // "Wait for the owner of this vehicle to get in before swapping seats."
+                shouldAllow = false;
+                return;
+            }
+
+            if (!VehicleExists(vehicle.id, out var vehicleData))
+                return;
+
+            if (vehicleData.RequiredClass == Kit.EClass.NONE)
+                return;
+
+            if (!UCWarfare.I.KitManager.HasKit(player, out var kit))
+            {
+                // "How did you even get in here without a kit?"
+                shouldAllow = false;
+                return;
+            }
+
+            if (vehicleData.CrewSeats.Contains(toSeatIndex) && kit.Class != vehicleData.RequiredClass)
+            {
+                // "You need a {kitname} kit in order to man this vehicle."
+                shouldAllow = false;
+                return;
+            }
+
+            bool isThereAnotherCrewman = false;
+            foreach (Passenger passenger in vehicle.passengers)
+            {
+                if (passenger.player == null)
+                    continue;
+                if (passenger.player.playerID.steamID == player.CSteamID)
+                    continue;
+                if (UCWarfare.I.KitManager.HasKit(passenger.player.playerID.steamID, out var pKit) && pKit.Class == vehicleData.RequiredClass)
+                {
+                    isThereAnotherCrewman = true;
+                    break;
+                }
+            }
+
+            if (!isThereAnotherCrewman && vehicleData.CrewSeats.Contains(toSeatIndex) && toSeatIndex != 0)
+            {
+                // "You must have ONE OTHER {kitname} in this vehicle before you can enter the gunner's seat."
+                shouldAllow = false;
+                return;
+            }
         }
         private void OnLevelLoaded(int level)
         {

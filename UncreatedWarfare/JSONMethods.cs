@@ -386,7 +386,7 @@ namespace UncreatedWarfare
         {
             List<TeamData> data = ReadTeams();
             data.Add(Team);
-            UCWarfare.I.TeamManager.Teams.Add(new Team(Team));
+            UCWarfare.I.TeamManager.Teams.Add(new TeamOld(Team));
             SaveTeams(data);
         }
         public static bool RenameTeam(ulong teamID, string newName, out string oldName)
