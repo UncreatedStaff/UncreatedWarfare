@@ -15,6 +15,8 @@ namespace UncreatedWarfare
         public PlayerStatsSettings PlayerStatsSettings;
         [XmlElement("Teams")]
         public TeamSettings TeamSettings;
+        [XmlElement("Discord_Integration")]
+        public DiscordSettings DiscordSettings;
         public ulong Team1ID;
         public ulong Team2ID;
         public void LoadDefaults()
@@ -98,10 +100,14 @@ namespace UncreatedWarfare
     {
         public bool EnablePlayerList;
         public string NJS_ServerURL;
+        public string ServerName;
+        public float StatUpdateFrequency;
         public PlayerStatsSettings()
         {
             EnablePlayerList = true;
             NJS_ServerURL = "http://localhost:8080/";
+            ServerName = "warfare";
+            StatUpdateFrequency = 30.0f;
         }
     }
     public class TeamSettings 
@@ -112,6 +118,14 @@ namespace UncreatedWarfare
         {
             this.BalanceTeams = true;
             this.AllowedDifferencePercent = 15;
+        }
+    }
+    public class DiscordSettings
+    {
+        public bool SendPlayerList;
+        public DiscordSettings()
+        {
+            SendPlayerList = true;
         }
     }
 }
