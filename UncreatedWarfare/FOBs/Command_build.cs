@@ -71,7 +71,7 @@ namespace UncreatedWarfare.FOBs
             }
             else
             {
-                Emplacement emplacement = FOBManager.config.Emplacements.Find(e => e.base_id == foundation.barricade.id);
+                Emplacement emplacement = FOBManager.config.Emplacements.Find(e => e.baseID == foundation.barricade.id);
 
                 if (emplacement != null)
                 {

@@ -211,7 +211,6 @@ namespace UncreatedWarfare.Vehicles
 
                 return true;
         }
-
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
             UCWarfare.I.StartCoroutine(StartVehicleRespawnTimer(vehicle));

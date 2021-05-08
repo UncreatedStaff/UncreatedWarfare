@@ -16,6 +16,7 @@ using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
 using UncreatedWarfare.Stats;
+using UncreatedWarfare.Revives;
 
 namespace UncreatedWarfare
 {
@@ -28,10 +29,11 @@ namespace UncreatedWarfare
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
         public VehicleBay VehicleBay;
-        public FlagManager FlagManager;
+        //public FlagManager FlagManager;
         public TeamManager TeamManager;
         public FOBManager FOBManager;
         public BuildManager BuildManager;
+        public ReviveManager reviveManager;
         public WebInterface WebInterface;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
@@ -87,7 +89,7 @@ namespace UncreatedWarfare
 
             if (Config.Modules.Flags)
             {
-                FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
+                //FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
             }
             if (Config.Modules.Kits)
             {
@@ -101,6 +103,10 @@ namespace UncreatedWarfare
             {
                 FOBManager = new FOBManager();
                 BuildManager = new BuildManager();
+            }
+            if (Config.Modules.Revives)
+            {
+                reviveManager = new ReviveManager();
             }
 
             Colors = JSONMethods.LoadColors(out ColorsHex);

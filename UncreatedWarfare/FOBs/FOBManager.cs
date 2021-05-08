@@ -140,7 +140,7 @@ namespace UncreatedWarfare.FOBs
             b.barricade.id == config.AmmoCrateBaseID ||
             b.barricade.id == config.RepairStationID ||
             b.barricade.id == config.RepairStationBaseID) ||
-            config.Emplacements.Exists(e => e.base_id == b.barricade.id) ||
+            config.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
             config.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
             config.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
             ).ToList();
@@ -262,7 +262,6 @@ namespace UncreatedWarfare.FOBs
         public int Number;
         public BarricadeData Structure;
         public DateTime DateCreated;
-
         public FOB(string Name, int number, BarricadeData Structure)
         {
             this.Name = Name;

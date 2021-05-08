@@ -315,10 +315,10 @@ namespace UncreatedWarfare.FOBs
 
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             VehicleManager.getVehiclesInRadius(NearbyFOBs.FirstOrDefault().point, (float)Math.Pow(50, 2), vehicles);
-            int similar_vehicles_count = vehicles.Where(v => v.id == emplacement.vehicle_id).Count();
+            int similar_vehicles_count = vehicles.Where(v => v.id == emplacement.vehicleID).Count();
 
             int allowed_vehicles = 2;
-            if (emplacement.vehicle_id == 38314 || emplacement.vehicle_id == 38315)
+            if (emplacement.vehicleID == 38314 || emplacement.vehicleID == 38315)
                 allowed_vehicles = 1;
             if (similar_vehicles_count >= allowed_vehicles)
             {
@@ -336,18 +336,18 @@ namespace UncreatedWarfare.FOBs
 
             NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
 
-            if (NearbyBuild.Count < emplacement.required_build)
+            if (NearbyBuild.Count < emplacement.requiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, emplacement.required_build);
+                player.Message("build_error_notenoughbuild", NearbyBuild.Count, emplacement.requiredBuild);
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, emplacement.required_build, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, emplacement.requiredBuild, player.Position, 400, regions);
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
-            for (int i = 0; i < emplacement.ammo_amount; i++)
-                ItemManager.dropItem(new Item(emplacement.ammo_id, true), player.Position, true, true, true);
+            for (int i = 0; i < emplacement.ammoAmount; i++)
+                ItemManager.dropItem(new Item(emplacement.ammoID, true), player.Position, true, true, true);
 
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
@@ -360,7 +360,7 @@ namespace UncreatedWarfare.FOBs
 
             Quaternion rotation = foundationDrop.model.rotation;
             rotation.eulerAngles = new Vector3(rotation.eulerAngles.x + 90, rotation.eulerAngles.y, rotation.eulerAngles.z);
-            InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(emplacement.vehicle_id, new Vector3(foundation.point.x, foundation.point.y + 1, foundation.point.z), rotation);
+            InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(emplacement.vehicleID, new Vector3(foundation.point.x, foundation.point.y + 1, foundation.point.z), rotation);
 
             if (vehicle.asset.canBeLocked)
             {

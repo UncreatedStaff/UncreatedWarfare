@@ -15,6 +15,8 @@ namespace UncreatedWarfare.FOBs
 
         public ushort Team1BuildID;
         public ushort Team2BuildID;
+        public ushort Team1AmmoID;
+        public ushort Team2AmmoID;
         public ushort FOBBaseID;
         public ushort FOBID;
         public ushort FOBRequiredBuild;
@@ -53,11 +55,11 @@ namespace UncreatedWarfare.FOBs
 
         public class Emplacement
         {
-            public ushort vehicle_id;
-            public ushort base_id;
-            public ushort ammo_id;
-            public ushort ammo_amount;
-            public ushort required_build;
+            public ushort vehicleID;
+            public ushort baseID;
+            public ushort ammoID;
+            public ushort ammoAmount;
+            public ushort requiredBuild;
         }
 
         public class Fortification
@@ -82,6 +84,8 @@ namespace UncreatedWarfare.FOBs
         {
             Team1BuildID = 38312;
             Team2BuildID = 38313;
+            Team1AmmoID = 38314;
+            Team2AmmoID = 38315;
             FOBBaseID = 38310;
             FOBID = 38311;
             FOBRequiredBuild = 20;
@@ -127,43 +131,43 @@ namespace UncreatedWarfare.FOBs
             Emplacements = new List<Emplacement>() {
                 new Emplacement
                 {
-                    base_id = 38345,
-                    vehicle_id = 38316,
-                    ammo_id = 38302,
-                    ammo_amount = 2,
-                    required_build = 6
+                    baseID = 38345,
+                    vehicleID = 38316,
+                    ammoID = 38302,
+                    ammoAmount = 2,
+                    requiredBuild = 6
                 },
                 new Emplacement
                 {
-                    base_id = 38346,
-                    vehicle_id = 38317,
-                    ammo_id = 38305,
-                    ammo_amount = 2,
-                    required_build = 6
+                    baseID = 38346,
+                    vehicleID = 38317,
+                    ammoID = 38305,
+                    ammoAmount = 2,
+                    requiredBuild = 6
                 },
                 new Emplacement
                 {
-                    base_id = 38342,
-                    vehicle_id = 38315,
-                    ammo_id = 38341,
-                    ammo_amount = 1,
-                    required_build = 10
+                    baseID = 38342,
+                    vehicleID = 38315,
+                    ammoID = 38341,
+                    ammoAmount = 1,
+                    requiredBuild = 10
                 },
                 new Emplacement
                 {
-                    base_id = 38339,
-                    vehicle_id = 38314,
-                    ammo_id = 38338,
-                    ammo_amount = 1,
-                    required_build = 10
+                    baseID = 38339,
+                    vehicleID = 38314,
+                    ammoID = 38338,
+                    ammoAmount = 1,
+                    requiredBuild = 10
                 },
                 new Emplacement
                 {
-                    base_id = 38336,
-                    vehicle_id = 38313,
-                    ammo_id = 38330,
-                    ammo_amount = 3,
-                    required_build = 8
+                    baseID = 38336,
+                    vehicleID = 38313,
+                    ammoID = 38330,
+                    ammoAmount = 3,
+                    requiredBuild = 8
                 },
             };
 
