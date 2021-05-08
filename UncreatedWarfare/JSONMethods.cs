@@ -114,6 +114,7 @@ namespace UncreatedWarfare
                 using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                 {
                     JsonSerializer Serializer = new JsonSerializer();
+                    Serializer.Formatting = Formatting.Indented;
                     Serializer.Serialize(JsonWriter, Flags);
                     JsonWriter.Close();
                     TextWriter.Close();
@@ -151,6 +152,7 @@ namespace UncreatedWarfare
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
                         JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
                         Serializer.Serialize(JsonWriter, DefaultColors);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -193,6 +195,7 @@ namespace UncreatedWarfare
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
                         JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
                         Serializer.Serialize(JsonWriter, DefaultCreditData);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -236,6 +239,7 @@ namespace UncreatedWarfare
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
                         JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
                         Serializer.Serialize(JsonWriter, DefaultXPData);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -278,6 +282,7 @@ namespace UncreatedWarfare
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
                         JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
                         List<Translation> t = new List<Translation>();
                         foreach(KeyValuePair<string, string> translation in DefaultTranslations)
                         {
@@ -331,6 +336,7 @@ namespace UncreatedWarfare
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
                         JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
                         Serializer.Serialize(JsonWriter, DefaultExtraZones);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -368,6 +374,7 @@ namespace UncreatedWarfare
                 using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                 {
                     JsonSerializer Serializer = new JsonSerializer();
+                    Serializer.Formatting = Formatting.Indented;
                     Serializer.Serialize(JsonWriter, Teams);
                     JsonWriter.Close();
                     TextWriter.Close();

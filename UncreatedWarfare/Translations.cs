@@ -10,6 +10,30 @@ namespace UncreatedWarfare
 {
     partial class JSONMethods
     {
+        public enum ECall : byte
+        {
+            SEND_PLAYER_LIST,
+            SEND_PLAYER_JOINED,
+            SEND_PLAYER_LEFT,
+            GET_PLAYER_LIST,
+            GET_USERNAME,
+            PING_SERVER,
+            SEND_PLAYER_LOCATION_DATA,
+            PLAYER_KILLED,
+            INVOKE_BAN
+        }
+        public static readonly Dictionary<ECall, string> NodeJSCalls = new Dictionary<ECall, string>
+        {
+            { ECall.SEND_PLAYER_LIST, "sendPlayerList" },
+            { ECall.SEND_PLAYER_JOINED, "sendPlayerJoin" },
+            { ECall.SEND_PLAYER_LEFT, "sendPlayerLeave" },
+            { ECall.GET_PLAYER_LIST, "getPlayerList" },
+            { ECall.GET_USERNAME, "getUsername" },
+            { ECall.PING_SERVER, "ping" },
+            { ECall.SEND_PLAYER_LOCATION_DATA, "sendPlayerLocationData" },
+            { ECall.INVOKE_BAN, "invokeBan" }
+
+        };
         public static readonly Dictionary<string, string> DefaultTranslations = new Dictionary<string, string>
         {
             { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },

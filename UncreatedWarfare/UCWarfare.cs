@@ -15,7 +15,7 @@ using UncreatedWarfare.FOBs;
 using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
-
+using UncreatedWarfare.Stats;
 
 namespace UncreatedWarfare
 {
@@ -66,8 +66,8 @@ namespace UncreatedWarfare
         protected override void Load()
         {
             Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
-            CommandWindow.LogWarning("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
-                "Please stop using this plugin now.");
+            CommandWindow.LogWarning("\x1b[41m\x1b[37mStarted loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
+                "Please stop using this plugin now.\x1b[0m");
             Instance = this;
 
             Patches.InternalPatches.DoPatching();

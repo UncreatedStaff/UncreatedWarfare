@@ -5,8 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using static UncreatedWarfare.JSONMethods;
 
-namespace UncreatedWarfare
+namespace UncreatedWarfare.Stats
 {
     public class WebClientWithTimeout : WebClient
     {
@@ -23,15 +24,6 @@ namespace UncreatedWarfare
     {
         public const string InvalidCallResponse = "INVALID CALL";
         public const string PlayerDataSent = "Playerdata sent!";
-        public enum ENodeCall : byte
-        {
-            sendPlayerList,
-            sendPlayerJoin,
-            sendPlayerLeave,
-            getPlayerList,
-            getUsername,
-            ping
-        }
         public string URL => UCWarfare.I.Configuration.Instance.PlayerStatsSettings.NJS_ServerURL;
         private WebClientWithTimeout _client;
         public WebInterface()
@@ -47,8 +39,8 @@ namespace UncreatedWarfare
             else
                 CommandWindow.LogError("Failed to ping NodeJS Server!");
         }
-        public bool Ping(out string response) => BasicQuery(ENodeCall.ping, new Dictionary<string, string> { { "dt", DateTime.UtcNow.ToString("o") } }, "No time provided.", out response);
-        public bool BasicQuery(ENodeCall function, Dictionary<string, string> data, string failureResponse, out string response) => 
+        public bool Ping(out string response) => BasicQuery(ECall.PING_SERVER, new Dictionary<string, string> { { "dt", DateTime.UtcNow.ToString("o") } }, "No time provided.", out response);
+        public bool BasicQuery(ECall function, Dictionary<string, string> data, string failureResponse, out string response) => 
             BasicQuery(function.ToString(), data, failureResponse, out response);
         public bool BasicQuery(string function, Dictionary<string, string> data, string failureResponse, out string response)
         {
@@ -106,7 +98,7 @@ namespace UncreatedWarfare
                 { "ids", "_" + ids },
                 { "teams", "_" + teams },
             };
-            bool success = BasicQuery(ENodeCall.sendPlayerList, Parameters, "FAILURE", out string response);
+            bool success = BasicQuery(ECall.SEND_PLAYER_LIST, Parameters, "FAILURE", out string response);
             if (response == PlayerDataSent && success) return true;
             else return false;
         }
@@ -118,7 +110,7 @@ namespace UncreatedWarfare
                 { "id", "_" + player.playerID.steamID.m_SteamID.ToString() },
                 { "team", "_" + player.player.quests.groupID.m_SteamID.ToString() }
             };
-            bool success = BasicQuery(ENodeCall.sendPlayerJoin, Parameters, "FAILURE", out string response);
+            bool success = BasicQuery(ECall.SEND_PLAYER_JOINED, Parameters, "FAILURE", out string response);
             if (response == PlayerDataSent && success) return true;
             else return false;
         }
@@ -128,7 +120,7 @@ namespace UncreatedWarfare
                 { "server", "warfare" },
                 { "id", "_" + player.playerID.steamID.m_SteamID.ToString() }
             };
-            bool success = BasicQuery(ENodeCall.sendPlayerLeave, Parameters, "FAILURE", out string response);
+            bool success = BasicQuery(ECall.SEND_PLAYER_LEFT, Parameters, "FAILURE", out string response);
             if (response == PlayerDataSent && success) return true;
             else return false;
         }
