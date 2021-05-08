@@ -86,7 +86,14 @@ namespace UncreatedWarfare.Teams
             return new Team(ETeam.NEUTRAL, 0, "null");
         }
 
+        public bool hasTeam(UnturnedPlayer player) => GetTeam(player) != null;
+
         public bool IsTeam(ulong steamID, ETeam team) => GetTeam(steamID).ID == team;
+        public bool IsTeam(UnturnedPlayer player, ETeam team) => IsTeam(player.Player.quests.groupID.m_SteamID, team);
+
+        public bool IsFriendly(ulong steamID1, ulong steamID2) => steamID1 == steamID2;
+        public bool IsFriendly(UnturnedPlayer player, ulong steamID) => player.Player.quests.groupID.m_SteamID == steamID;
+        public bool IsFriendly(CSteamID steamID1, CSteamID steamID2) => IsFriendly(steamID1.m_SteamID, steamID2.m_SteamID);
 
         public bool CanJoinTeam(ETeam team)
         {

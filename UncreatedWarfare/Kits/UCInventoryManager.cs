@@ -95,5 +95,22 @@ namespace UncreatedWarfare.Kits
             player.Player.equipment.ReceiveSlot(0, 0, new byte[0]);
             player.Player.equipment.ReceiveSlot(0, 1, new byte[0]);
         }
+
+        public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
+        {
+            int counter = 0;
+
+            for (byte i = (byte)(storage.items.getItemCount() - 1); i >= 0; i--)
+            {
+                if (storage.items.getItem(i).item.id == itemID)
+                {
+                    counter++;
+                    storage.items.removeItem(i);
+
+                    if (counter == amount)
+                        return;
+                }
+            }
+        }
     }
 }

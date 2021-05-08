@@ -11,10 +11,12 @@ using UncreatedWarfare.Flags;
 using UncreatedWarfare.Teams;
 using UncreatedWarfare.Kits;
 using UncreatedWarfare.Vehicles;
+using UncreatedWarfare.FOBs;
 using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
 using UncreatedWarfare.Stats;
+using UncreatedWarfare.Revives;
 using System.Threading;
 using Rocket.Unturned.Player;
 
@@ -29,14 +31,18 @@ namespace UncreatedWarfare
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
         public VehicleBay VehicleBay;
-        public FlagManager FlagManager;
+        //public FlagManager FlagManager;
         public TeamManager TeamManager;
+        public FOBManager FOBManager;
+        public BuildManager BuildManager;
+        public ReviveManager reviveManager;
         public WebInterface WebInterface;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
         public static readonly string TeamStorage = DataDirectory + @"Teams\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
         public static readonly string VehicleStorage = DataDirectory + @"Vehicles\";
+        public static readonly string FOBStorage = DataDirectory + @"FOBs\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
         public Dictionary<string, Color> Colors;
         public Dictionary<string, string> ColorsHex;
@@ -100,14 +106,28 @@ namespace UncreatedWarfare
             DB = new DatabaseManager();
             WebInterface = new WebInterface();
             TeamManager = new TeamManager();
-            FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
-            KitManager = new KitManager();
-            VehicleBay = new VehicleBay();
 
-            
-
-            CommandWindow.Log("Starting Listen Thread...");
-            ListenerThread = new Thread(StartListening);
+            if (Config.Modules.Flags)
+            {
+                //FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
+            }
+            if (Config.Modules.Kits)
+            {
+                KitManager = new KitManager();
+            }
+            if (Config.Modules.VehicleSpawning)
+            {
+                VehicleBay = new VehicleBay();
+            }
+            if (Config.Modules.FOBs)
+            {
+                FOBManager = new FOBManager();
+                BuildManager = new BuildManager();
+            }
+            if (Config.Modules.Revives)
+            {
+                reviveManager = new ReviveManager();
+            }
 
             CommandWindow.Log("Starting Coroutines...");
             if (Level.isLoaded)

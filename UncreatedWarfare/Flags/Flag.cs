@@ -17,8 +17,9 @@ namespace UncreatedWarfare.Flags
     {
         public const int MaxPoints = 64;
         public Zone ZoneData { get; private set; }
-        public Vector3 Position { 
-            get => _position; 
+        public Vector3 Position
+        {
+            get => _position;
             set
             {
                 _position = value;
@@ -45,8 +46,9 @@ namespace UncreatedWarfare.Flags
         private int _id;
         public string Name { get => _name; }
         private string _name;
-        public float X { 
-            get => _x; 
+        public float X
+        {
+            get => _x;
             set
             {
                 _x = value;
@@ -54,7 +56,8 @@ namespace UncreatedWarfare.Flags
                 _position2d = new Vector2(_x, _z);
             }
         }
-        public float Y { 
+        public float Y
+        {
             get => _y;
             set
             {
@@ -62,7 +65,8 @@ namespace UncreatedWarfare.Flags
                 _position = new Vector3(_x, _y, _z);
             }
         }
-        public float Z { 
+        public float Z
+        {
             get => _z;
             set
             {
@@ -77,7 +81,8 @@ namespace UncreatedWarfare.Flags
         public string ColorString { get => _color; set => _color = value; }
         private string _color;
         public Color Color { get => _color.Hex(); }
-        public Color TeamSpecificColor { 
+        public Color TeamSpecificColor
+        {
             get
             {
                 if (_owner.ID == UCWarfare.I.TeamManager.Team1.ID)
@@ -85,7 +90,7 @@ namespace UncreatedWarfare.Flags
                 else if (_owner.ID == UCWarfare.I.TeamManager.Team2.ID)
                     return UCWarfare.I.Colors["team_2_color"];
                 else return UCWarfare.I.Colors["neutral_color"];
-            } 
+            }
         }
         private Team _owner;
         public Team Owner { get => _owner; set => _owner = value; }
@@ -100,10 +105,10 @@ namespace UncreatedWarfare.Flags
         public void RecalcCappers(bool RecalcOnFlag = false) => RecalcCappers(Provider.clients, RecalcOnFlag);
         public void RecalcCappers(List<SteamPlayer> OnlinePlayers, bool RecalcOnFlag = false)
         {
-            if(RecalcOnFlag)
+            if (RecalcOnFlag)
             {
                 PlayersOnFlag.Clear();
-                foreach(SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
+                foreach (SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
                 {
                     PlayersOnFlag.Add(player.player);
                 }
@@ -148,8 +153,9 @@ namespace UncreatedWarfare.Flags
             }
         }
         private int _points;
-        public int Points { 
-            get => _points; 
+        public int Points
+        {
+            get => _points;
             set
             {
                 Team OldOwner;
@@ -162,7 +168,7 @@ namespace UncreatedWarfare.Flags
                 if (value > MaxPoints) _points = MaxPoints;
                 else if (value < MaxPoints * -1) _points = MaxPoints * -1;
                 else _points = value;
-                if(OldPoints != _points)
+                if (OldPoints != _points)
                 {
                     OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
                     Team NewOwner;
@@ -215,7 +221,7 @@ namespace UncreatedWarfare.Flags
         public void EnterPlayer(Player player)
         {
             OnPlayerEntered?.Invoke(this, new PlayerEventArgs { player = player });
-            if(!PlayersOnFlag.Exists(p => p.channel.owner.playerID.steamID.m_SteamID == player.channel.owner.playerID.steamID.m_SteamID)) PlayersOnFlag.Add(player);
+            if (!PlayersOnFlag.Exists(p => p.channel.owner.playerID.steamID.m_SteamID == player.channel.owner.playerID.steamID.m_SteamID)) PlayersOnFlag.Add(player);
         }
         public void ExitPlayer(Player player)
         {
@@ -239,9 +245,9 @@ namespace UncreatedWarfare.Flags
         public bool T2Obj() => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID;
         public void EvaluatePoints()
         {
-            if(T1Obj())
+            if (T1Obj())
             {
-                if(Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
+                if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
                 {
                     CapT1();
                 } else if (
@@ -252,9 +258,9 @@ namespace UncreatedWarfare.Flags
                     CapT2();
                 }
             }
-            if(T2Obj())
+            if (T2Obj())
             {
-                if(Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
+                if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
                 {
                     CapT2();
                 } else if (

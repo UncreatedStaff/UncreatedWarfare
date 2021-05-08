@@ -207,11 +207,52 @@ namespace UncreatedWarfare.Kits
                 item.metadata = Convert.FromBase64String(k.metadata);
 
                 if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                    player.Inventory.tryAddItem(item, true);
+                    if (player.Inventory.tryAddItem(item, true))
+                        ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
             _kitSaver.RemoveSaveOfPlayer(player);
             _kitSaver.AddSaveForPlayer(player, kit.Name);
+        }
+
+        public void ResupplyKit(UnturnedPlayer player, Kit kit)
+        {
+            List<ItemJar> nonKitItems = new List<ItemJar>();
+
+            for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+            {
+                if (page == PlayerInventory.AREA)
+                    continue;
+
+                byte count = player.Player.inventory.getItemCount(page);
+
+                for (byte index = 0; index < count; index++)
+                {
+                    ItemJar jar = player.Inventory.getItem(page, 0);
+
+                    if (!kit.HasItemOfID(jar.item.id) && !(jar.item.id == 38324 || jar.item.id == 38322))
+                    {
+                        nonKitItems.Add(jar);
+                    }
+                    player.Player.inventory.removeItem(page, 0);
+                }
+            }
+
+            foreach (var i in kit.Items)
+            {
+                var item = new Item(i.ID, i.amount, i.quality);
+                item.metadata = System.Convert.FromBase64String(i.metadata);
+
+                if (!player.Inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
+                    player.Inventory.tryAddItem(item, true);
+            }
+
+            foreach (var jar in nonKitItems)
+            {
+                player.Inventory.tryAddItem(jar.item, true);
+            }
+
+            EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
         }
 
         public bool HasKit(CSteamID steamID, out Kit kit)
@@ -345,6 +386,7 @@ namespace UncreatedWarfare.Kits
             IsPremium = false;
             ShouldClearInventory = true;
         }
+        public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
 
         public enum EClothingType
         {
