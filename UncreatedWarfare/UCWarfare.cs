@@ -11,6 +11,7 @@ using UncreatedWarfare.Flags;
 using UncreatedWarfare.Teams;
 using UncreatedWarfare.Kits;
 using UncreatedWarfare.Vehicles;
+using UncreatedWarfare.FOBs;
 using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
@@ -29,12 +30,15 @@ namespace UncreatedWarfare
         public VehicleBay VehicleBay;
         public FlagManager FlagManager;
         public TeamManager TeamManager;
+        public FOBManager FOBManager;
+        public BuildManager BuildManager;
         public WebInterface WebInterface;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
         public static readonly string TeamStorage = DataDirectory + @"Teams\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
         public static readonly string VehicleStorage = DataDirectory + @"Vehicles\";
+        public static readonly string FOBStorage = DataDirectory + @"FOBs\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
         public Dictionary<string, Color> Colors;
         public Dictionary<string, string> ColorsHex;
@@ -93,6 +97,11 @@ namespace UncreatedWarfare
             {
                 VehicleBay = new VehicleBay();
             }
+            if (Config.Modules.FOBs)
+            {
+                FOBManager = new FOBManager();
+                BuildManager = new BuildManager();
+            }
 
             Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
@@ -124,13 +133,13 @@ namespace UncreatedWarfare
         private void OnPlayerConnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
-            TeamManager?.PlayerJoinProcess(player.Player.channel.owner);
+            //TeamManager?.PlayerJoinProcess(player.Player.channel.owner);
             WebInterface?.SendPlayerJoined(player.Player.channel.owner);
         }
         private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
-            TeamManager?.PlayerLeaveProcess(player.Player.channel.owner);
+            //TeamManager?.PlayerLeaveProcess(player.Player.channel.owner);
             WebInterface?.SendPlayerLeft(player.Player.channel.owner);
         }
 

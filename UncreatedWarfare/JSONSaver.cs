@@ -33,11 +33,6 @@ namespace UncreatedWarfare
 
         protected void AddObjectToSave(T item)
         {
-            if (item.GetType() != typeof(T))
-            {
-                throw new TypeArgumentException(MethodBase.GetCurrentMethod(), item);
-            }
-
             var list = GetExistingObjects();
             list.Add((T)item);
 
@@ -212,7 +207,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected class JSONReadException : Exception
+        public class JSONReadException : Exception
         {
             public JSONReadException() { }
 

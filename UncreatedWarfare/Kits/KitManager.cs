@@ -207,7 +207,8 @@ namespace UncreatedWarfare.Kits
                 item.metadata = Convert.FromBase64String(k.metadata);
 
                 if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                    player.Inventory.tryAddItem(item, true);
+                    if (player.Inventory.tryAddItem(item, true))
+                        ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
             _kitSaver.RemoveSaveOfPlayer(player);
