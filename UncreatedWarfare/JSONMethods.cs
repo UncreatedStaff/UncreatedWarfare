@@ -11,6 +11,7 @@ using SDG.Unturned;
 using FlagData = UncreatedWarfare.Flags.FlagData;
 using UncreatedWarfare.Teams;
 using Flag = UncreatedWarfare.Flags.Flag;
+using UncreatedWarfare.Stats;
 
 namespace UncreatedWarfare
 {
@@ -62,6 +63,23 @@ namespace UncreatedWarfare
             this.xp = xp;
         }
     }
+    public class Point3D
+    {
+        public string name;
+        public float x;
+        public float y;
+        public float z;
+        [JsonIgnore]
+        public Vector3 Vector3 { get => new Vector3(x, y, z); }
+        [JsonConstructor]
+        public Point3D(string name, float x, float y, float z)
+        {
+            this.name = name;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
     public class CreditsData
     {
         public string key;
@@ -78,6 +96,22 @@ namespace UncreatedWarfare
             this.credits = xp;
         }
     }
+    public class CallData
+    {
+        public string key;
+        public string call;
+        [JsonConstructor]
+        public CallData(string key, string call)
+        {
+            this.key = key;
+            this.call = call;
+        }
+        public CallData(ECall key, string call)
+        {
+            this.key = key.ToString();
+            this.call = call;
+        }
+    }
     public class Translation
     {
         public string key;
@@ -87,6 +121,44 @@ namespace UncreatedWarfare
         {
             this.key = key;
             this.value = value;
+        }
+    }
+    public class MySqlColumnData
+    {
+        public string key;
+        public string name;
+        [JsonConstructor]
+        public MySqlColumnData(string key, string name)
+        {
+            this.key = key;
+            this.name = name;
+        }
+    }
+    public class MySqlTableData
+    {
+        public string TableName;
+        public string key;
+        public List<MySqlColumnData> Columns;
+        [JsonConstructor]
+        public MySqlTableData(string key, string tableName, List<MySqlColumnData> columns)
+        {
+            this.key = key;
+            this.TableName = tableName;
+            this.Columns = columns;
+        }
+    }
+    public class MySqlTableLang
+    {
+        public string TableName;
+        public Dictionary<string, string> Columns;
+        public MySqlTableLang(string tableName, Dictionary<string,string> columns)
+        {
+            this.TableName = tableName;
+            this.Columns = columns;
+        }
+        public override string ToString()
+        {
+            return TableName;
         }
     }
     public static partial class JSONMethods
@@ -311,23 +383,7 @@ namespace UncreatedWarfare
             }
             return translationDict;
         }
-        public static List<TeamData> ReadTeams()
-        {
-            if (!File.Exists(UCWarfare.DataDirectory + "teams.json"))
-            {
-                SaveTeams(DefaultTeamData);
-                return DefaultTeamData;
-            }
-            List<TeamData> Teams;
-            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "teams.json"))
-            {
-                Teams = JsonConvert.DeserializeObject<List<TeamData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
-            }
-            return Teams ?? DefaultTeamData;
-        }
-        public static Dictionary<int, Zone> ReadExtraZones()
+        public static Dictionary<int, Zone> LoadExtraZones()
         {
             if (!File.Exists(UCWarfare.DataDirectory + "extra_zones.json"))
             {
@@ -367,91 +423,147 @@ namespace UncreatedWarfare
                 NewZones.Add(zone.id, Flag.ComplexifyZone(zone));
             return NewZones;
         }
-        public static void SaveTeams(List<TeamData> Teams)
+        public static Dictionary<string, Vector3> LoadExtraPoints()
         {
-            using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "teams.json"))
+            if (!File.Exists(UCWarfare.DataDirectory + "extra_points.json"))
             {
-                using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "extra_points.json"))
                 {
-                    JsonSerializer Serializer = new JsonSerializer();
-                    Serializer.Formatting = Formatting.Indented;
-                    Serializer.Serialize(JsonWriter, Teams);
-                    JsonWriter.Close();
-                    TextWriter.Close();
-                    TextWriter.Dispose();
+                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    {
+                        JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
+                        Serializer.Serialize(JsonWriter, DefaultExtraPoints);
+                        JsonWriter.Close();
+                        TextWriter.Close();
+                        TextWriter.Dispose();
+                    }
                 }
+                Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
+                foreach (Point3D point in DefaultExtraPoints)
+                    NewDefaultPoints.Add(point.name, point.Vector3);
+                return NewDefaultPoints;
             }
+            List<Point3D> Points;
+            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "extra_points.json"))
+            {
+                Points = JsonConvert.DeserializeObject<List<Point3D>>(Reader.ReadToEnd());
+                Reader.Close();
+                Reader.Dispose();
+            }
+            if (Points == null)
+            {
+                Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
+                foreach (Point3D point in DefaultExtraPoints)
+                    NewDefaultPoints.Add(point.name, point.Vector3);
+                return NewDefaultPoints;
+            }
+            Dictionary<string, Vector3> NewPoints = new Dictionary<string, Vector3>();
+            foreach (Point3D point in Points)
+                NewPoints.Add(point.name, point.Vector3);
+            return NewPoints;
         }
-        public static void AddTeam(TeamData Team)
+        public static Dictionary<string, MySqlTableLang> LoadTables()
         {
-            List<TeamData> data = ReadTeams();
-            data.Add(Team);
-            UCWarfare.I.TeamManager.Teams.Add(new TeamOld(Team));
-            SaveTeams(data);
-        }
-        public static bool RenameTeam(ulong teamID, string newName, out string oldName)
-        {
-            List<TeamData> data = ReadTeams();
-            int team = data.FindIndex(t => t.team_id == teamID);
-            if (team != -1)
+            if (!File.Exists(UCWarfare.DataDirectory + "tables.json"))
             {
-                oldName = data[team].name;
-                data[team].name = newName;
-                SaveTeams(data);
-                return true;
-            }
-            else
-            {
-                oldName = "FAILURE";
-                return false;
-            }
-        }
-        public static bool DeleteTeam(ulong teamID, out TeamData teamRemoved)
-        {
-            List<TeamData> data = ReadTeams();
-            int team = data.FindIndex(t => t.team_id == teamID);
-            if (team != -1)
-            {
-                teamRemoved = data[team];
-                data.RemoveAt(team);
-                SaveTeams(data);
-                return true;
-            }
-            else
-            {
-                teamRemoved = null;
-                return false;
-            }
-        }
-        public static bool AddPlayerToTeam(ulong teamID, ulong playerID)
-        {
-            List<TeamData> data = ReadTeams();
-            int team = data.FindIndex(t => t.team_id == teamID);
-            if (team != -1)
-            {
-                if(!data[team].players.Contains(playerID))
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "tables.json"))
                 {
-                    data[team].players.Add(playerID);
-                    SaveTeams(data);
+                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    {
+                        JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
+                        Serializer.Serialize(JsonWriter, DefaultMySQLTableData);
+                        JsonWriter.Close();
+                        TextWriter.Close();
+                        TextWriter.Dispose();
+                    }
                 }
-                return true;
-            }
-            else return false;
-        }
-        public static bool RemovePlayerFromTeam(ulong teamID, ulong playerID)
-        {
-            List<TeamData> data = ReadTeams();
-            int team = data.FindIndex(t => t.team_id == teamID);
-            if (team != -1)
-            {
-                if (data[team].players.Contains(playerID))
+                Dictionary<string, MySqlTableLang> NewDefaultTables = new Dictionary<string, MySqlTableLang>();
+                foreach (MySqlTableData table in DefaultMySQLTableData)
                 {
-                    data[team].players.Remove(playerID);
-                    SaveTeams(data);
+                    Dictionary<string, string> columns = new Dictionary<string, string>();
+                    foreach (MySqlColumnData column in table.Columns)
+                        columns.Add(column.key, column.name);
+                    NewDefaultTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
                 }
-                return true;
+                return NewDefaultTables;
             }
-            else return false;
+            List<MySqlTableData> Tables;
+            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "tables.json"))
+            {
+                Tables = JsonConvert.DeserializeObject<List<MySqlTableData>>(Reader.ReadToEnd());
+                Reader.Close();
+                Reader.Dispose();
+            }
+            if (Tables == null)
+            {
+                Dictionary<string, MySqlTableLang> NewDefaultTables = new Dictionary<string, MySqlTableLang>();
+                foreach (MySqlTableData table in DefaultMySQLTableData)
+                {
+                    Dictionary<string, string> columns = new Dictionary<string, string>();
+                    foreach (MySqlColumnData column in table.Columns)
+                        columns.Add(column.key, column.name);
+                    NewDefaultTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
+                }
+                return NewDefaultTables;
+            }
+            Dictionary<string, MySqlTableLang> NewTables = new Dictionary<string, MySqlTableLang>();
+            foreach (MySqlTableData table in Tables)
+            {
+                Dictionary<string, string> columns = new Dictionary<string, string>();
+                foreach (MySqlColumnData column in table.Columns)
+                    columns.Add(column.key, column.name);
+                NewTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
+            }
+            return NewTables;
+        }
+        public static Dictionary<ECall, string> LoadCalls()
+        {
+            if (!File.Exists(UCWarfare.DataDirectory + "node-calls.json"))
+            {
+                
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "node-calls.json"))
+                {
+                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    {
+                        JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
+                        Serializer.Serialize(JsonWriter, DefaultNodeCalls);
+                        JsonWriter.Close();
+                        TextWriter.Close();
+                        TextWriter.Dispose();
+                    }
+                }
+                Dictionary<ECall, string> DefaultNewCalls = new Dictionary<ECall, string>();
+                foreach (CallData call in DefaultNodeCalls)
+                {
+                    DefaultNewCalls.Add((ECall)Enum.Parse(typeof(ECall), call.key), call.call);
+                }
+                return DefaultNewCalls;
+            }
+            List<CallData> Calls;
+            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "node-calls.json"))
+            {
+                Calls = JsonConvert.DeserializeObject<List<CallData>>(Reader.ReadToEnd());
+                Reader.Close();
+                Reader.Dispose();
+            }
+            if (Calls == null)
+            {
+                Dictionary<ECall, string> DefaultNewCalls = new Dictionary<ECall, string>();
+                foreach (CallData call in DefaultNodeCalls)
+                {
+                    DefaultNewCalls.Add((ECall)Enum.Parse(typeof(ECall), call.key), call.call);
+                }
+                return DefaultNewCalls;
+            }
+            Dictionary<ECall, string> NewCalls = new Dictionary<ECall, string>();
+            foreach (CallData call in Calls)
+            {
+                NewCalls.Add((ECall)Enum.Parse(typeof(ECall), call.key), call.call);
+            }
+            return NewCalls;
         }
     }
 }

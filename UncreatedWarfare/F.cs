@@ -1,4 +1,5 @@
-﻿using Rocket.Core;
+﻿using Newtonsoft.Json;
+using Rocket.Core;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -311,10 +312,12 @@ namespace UncreatedWarfare
         public static Vector3 GetBaseSpawn(this SteamPlayer player)
         {
             ulong team = player.GetTeam();
-            if (team == 1) return UCWarfare.I.TeamManager.T1.Spawnpoint;
-            else if (team == 2) return UCWarfare.I.TeamManager.T2.Spawnpoint;
-            else if (team == 3) return UCWarfare.I.TeamManager.T3.Spawnpoint;
-            else return UCWarfare.I.TeamManager.LobbySpawn;
+            if (team == 1) return UCWarfare.I.TeamManager.Team1.Main.GetPosition();
+            else if (team == 2) return UCWarfare.I.TeamManager.Team2.Main.GetPosition();
+            else if (team == 3) return UCWarfare.I.TeamManager.Neutral.Main.GetPosition();
+            else return UCWarfare.I.ExtraPoints["lobby_spawn"];
         }
+        public static string QuickSerialize(object obj) => JsonConvert.SerializeObject(obj);
+        public static T QuickDeserialize<T>(string json) => JsonConvert.DeserializeObject<T>(json);
     }
 }

@@ -17,8 +17,13 @@ namespace UncreatedWarfare
         public TeamSettings TeamSettings;
         [XmlElement("Discord_Integration")]
         public DiscordSettings DiscordSettings;
+        [XmlElement("FOBs")]
+        public FOBSettings FobSettings;
+        [XmlElement("MySQL")]
+        public MySqlData SQL;
         public ulong Team1ID;
         public ulong Team2ID;
+        public bool Debug;
         public void LoadDefaults()
         {
             Modules = new Modules();
@@ -26,8 +31,11 @@ namespace UncreatedWarfare
             AdminLoggerSettings = new AdminLoggerSettings();
             PlayerStatsSettings = new PlayerStatsSettings();
             TeamSettings = new TeamSettings();
+            FobSettings = new FOBSettings();
+            SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin" };
             Team1ID = 1;
             Team2ID = 2;
+            Debug = true;
         }
     }
     public class Modules
@@ -127,5 +135,24 @@ namespace UncreatedWarfare
         {
             SendPlayerList = true;
         }
+    }
+    public class FOBSettings
+    {
+        public ushort FOBID;
+        public ushort FOBID_Unbuilt;
+        public FOBSettings()
+        {
+            FOBID_Unbuilt = 38310;
+            FOBID = 38311;
+        }
+    }
+    public struct MySqlData
+    {
+        public string Host;
+        public string Database;
+        public string Password;
+        public string Username;
+        public ushort Port;
+        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};"; }
     }
 }

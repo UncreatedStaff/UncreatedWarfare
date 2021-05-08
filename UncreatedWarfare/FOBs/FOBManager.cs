@@ -13,7 +13,7 @@ namespace UncreatedWarfare.FOBs
         List<FOB> FOBsTeam1;
         List<FOB> FOBsTeam2;
 
-        private TeamManager TeamManager = UCWarfare.I.TeamManager;
+        private TeamManager TeamManager { get => UCWarfare.I.TeamManager; }
 
         public FOBManager()
         {
@@ -53,11 +53,11 @@ namespace UncreatedWarfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             FOBStructures_Team1 = barricadeDatas.Where(b =>
-                b.barricade.id == UCWarfare.Config.FOBID &&   // All barricades that are FOB structures
+                b.barricade.id == UCWarfare.Config.FobSettings.FOBID &&   // All barricades that are FOB structures
                 TeamManager.IsTeam(b.group, ETeam.TEAM1)      // All barricades that are friendly
                 ).ToList();
             FOBStructures_Team2 = barricadeDatas.Where(b =>
-                b.barricade.id == UCWarfare.Config.FOBID &&   // All barricades that are FOB structures
+                b.barricade.id == UCWarfare.Config.FobSettings.FOBID &&   // All barricades that are FOB structures
                 TeamManager.IsTeam(b.group, ETeam.TEAM2)     // All barricades that are friendly
                 ).ToList();
         }

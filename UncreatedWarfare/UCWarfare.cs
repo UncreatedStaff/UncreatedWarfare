@@ -15,6 +15,8 @@ using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
 using UncreatedWarfare.Stats;
+using System.Threading;
+using Rocket.Unturned.Player;
 
 namespace UncreatedWarfare
 {
@@ -41,8 +43,14 @@ namespace UncreatedWarfare
         public Dictionary<string, string> Localization;
         public Dictionary<EXPGainType, int> XPData;
         public Dictionary<ECreditsGainType, int> CreditsData;
+        public Dictionary<int, Zone> ExtraZones;
+        public Dictionary<string, Vector3> ExtraPoints;
+        public Dictionary<string, MySqlTableLang> TableData;
+        public Dictionary<ECall, string> NodeCalls;
         public DatabaseManager DB { get; private set; }
         private bool InitialLoadEventSubscription;
+        internal Thread ListenerThread;
+        internal AsyncListenServer ListenServer;
         private void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))
@@ -62,45 +70,51 @@ namespace UncreatedWarfare
         protected override void Load()
         {
             Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
-            CommandWindow.LogWarning("\x1b[41m\x1b[37mStarted loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
-                "Please stop using this plugin now.\x1b[0m");
+            CommandWindow.LogWarning("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
+                "Please stop using this plugin now.");
             Instance = this;
 
+            CommandWindow.Log("Patching methods...");
             Patches.InternalPatches.DoPatching();
 
+            CommandWindow.Log("Validating directories...");
             CheckDir(DataDirectory);
             CheckDir(FlagStorage);
             CheckDir(LangStorage);
             CheckDir(KitsStorage);
+            CheckDir(VehicleStorage);
+            CheckDir(TeamStorage);
+
+            CommandWindow.Log("Loading JSON Data...");
             Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
             Localization = JSONMethods.LoadTranslations();
+            ExtraZones = JSONMethods.LoadExtraZones();
+            ExtraPoints = JSONMethods.LoadExtraPoints();
+            TableData = JSONMethods.LoadTables();
+            NodeCalls = JSONMethods.LoadCalls();
 
+            // Managers
+            CommandWindow.Log("Instantiating Framework...");
             DB = new DatabaseManager();
             WebInterface = new WebInterface();
             TeamManager = new TeamManager();
+            FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
+            KitManager = new KitManager();
+            VehicleBay = new VehicleBay();
 
-            if (Config.Modules.Flags)
-            {
-                FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
-            }
-            if (Config.Modules.Kits)
-            {
-                KitManager = new KitManager();
-            }
-            if (Config.Modules.VehicleSpawning)
-            {
-                VehicleBay = new VehicleBay();
-            }
+            
 
-            Colors = JSONMethods.LoadColors(out ColorsHex);
-            XPData = JSONMethods.LoadXP();
-            CreditsData = JSONMethods.LoadCredits();
+            CommandWindow.Log("Starting Listen Thread...");
+            ListenerThread = new Thread(StartListening);
+
             CommandWindow.Log("Starting Coroutines...");
             if (Level.isLoaded)
             {
                 StartAllCoroutines();
+                CommandWindow.Log("Sending assets...");
+                WebInterface.SendAssetUpdate();
                 Log("Subscribing to events...");
                 InitialLoadEventSubscription = true;
                 U.Events.OnPlayerConnected += OnPlayerConnected;
@@ -108,12 +122,26 @@ namespace UncreatedWarfare
             } else
             {
                 InitialLoadEventSubscription = false;
+                Level.onLevelLoaded += OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded += OnPluginsLoaded;
             }
-            WebInterface.SendPlayerList();
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
+
+        private void OnLevelLoaded(int level)
+        {
+            CommandWindow.Log("Sending assets...");
+            WebInterface.SendAssetUpdate();
+        }
+
+        private void StartListening()
+        {
+            ListenServer = new AsyncListenServer();
+            ListenServer.ListenerResultHeard += ReceivedResponeFromListenServer;
+            ListenServer.StartListening();
+        }
+
         private void OnPluginsLoaded()
         {
             StartAllCoroutines();
@@ -124,14 +152,12 @@ namespace UncreatedWarfare
         private void OnPlayerConnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
-            TeamManager?.PlayerJoinProcess(player.Player.channel.owner);
-            WebInterface?.SendPlayerJoined(player.Player.channel.owner);
+            WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
         }
         private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
         {
             F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
-            TeamManager?.PlayerLeaveProcess(player.Player.channel.owner);
-            WebInterface?.SendPlayerLeft(player.Player.channel.owner);
+            WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
         }
 
         protected override void Unload()
@@ -139,14 +165,20 @@ namespace UncreatedWarfare
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
             WebInterface?.Dispose();
+            FlagManager?.Dispose();
             CommandWindow.LogWarning("Unloading " + Name);
             CommandWindow.Log("Stopping Coroutines...");
             StopAllCoroutines();
             CommandWindow.Log("Unsubscribing from events...");
             U.Events.OnPlayerConnected -= OnPlayerConnected;
             U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
-            if(!InitialLoadEventSubscription) R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
-            FlagManager.Dispose();
+            if(ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
+            if (!InitialLoadEventSubscription)
+            {
+                Level.onLevelLoaded -= OnLevelLoaded;
+                R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
+            }
+            DB.Close();
         }
 
     }

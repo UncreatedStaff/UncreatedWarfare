@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UncreatedWarfare.Flags;
+using UnityEngine;
 
 namespace UncreatedWarfare.Teams
 {
@@ -15,7 +17,8 @@ namespace UncreatedWarfare.Teams
         public Team Team1;
         public Team Team2;
         public Team Neutral;
-
+        public Zone LobbyZone;
+        public Vector3 LobbySpawn { get => UCWarfare.I.ExtraPoints["lobby_spawn"]; }
 
         public TeamManager()
             : base(UCWarfare.TeamStorage + "teams.json")
@@ -23,6 +26,7 @@ namespace UncreatedWarfare.Teams
             Team1 = GetObject(t => t.ID == ETeam.TEAM1);
             Team2 = GetObject(t => t.ID == ETeam.TEAM2);
             Neutral = GetObject(t => t.ID == ETeam.NEUTRAL);
+            LobbyZone = UCWarfare.I.ExtraZones?[-69];
         }
 
         public void CreateTeams()
@@ -113,12 +117,6 @@ namespace UncreatedWarfare.Teams
             Team team = GetTeam(player);
             player.Player.teleportToLocation(team.Main.GetPosition(), team.Main.rotation);
         }
-        public void PlayerLeaveProcess(SteamPlayer player)
-        {
-            var team = GetTeam(player.playerID.steamID);
-            if (team != null)
-                CommandWindow.LogWarning(player.playerID.playerName + " left team " + team.LocalizedName);
-        }
     }
 
     public class Team
@@ -164,6 +162,11 @@ namespace UncreatedWarfare.Teams
                 }
                 return UCWarfare.I.ColorsHex["neutral_color"];
             }
+        }
+        [JsonIgnore]
+        public UnityEngine.Color UnityColor
+        {
+            get => Color.Hex();
         }
 
         public Team(ETeam teamID, ulong groupID, string name)

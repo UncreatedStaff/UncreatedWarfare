@@ -5,33 +5,29 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UncreatedWarfare.Flags;
+using UncreatedWarfare.Kits;
+using UncreatedWarfare.Stats;
 
 namespace UncreatedWarfare
 {
     partial class JSONMethods
     {
-        public enum ECall : byte
+        public static readonly List<CallData> DefaultNodeCalls = new List<CallData>
         {
-            SEND_PLAYER_LIST,
-            SEND_PLAYER_JOINED,
-            SEND_PLAYER_LEFT,
-            GET_PLAYER_LIST,
-            GET_USERNAME,
-            PING_SERVER,
-            SEND_PLAYER_LOCATION_DATA,
-            PLAYER_KILLED,
-            INVOKE_BAN
-        }
-        public static readonly Dictionary<ECall, string> NodeJSCalls = new Dictionary<ECall, string>
-        {
-            { ECall.SEND_PLAYER_LIST, "sendPlayerList" },
-            { ECall.SEND_PLAYER_JOINED, "sendPlayerJoin" },
-            { ECall.SEND_PLAYER_LEFT, "sendPlayerLeave" },
-            { ECall.GET_PLAYER_LIST, "getPlayerList" },
-            { ECall.GET_USERNAME, "getUsername" },
-            { ECall.PING_SERVER, "ping" },
-            { ECall.SEND_PLAYER_LOCATION_DATA, "sendPlayerLocationData" },
-            { ECall.INVOKE_BAN, "invokeBan" }
+            new CallData(ECall.SEND_PLAYER_LIST, "sendPlayerList"),
+            new CallData(ECall.SEND_PLAYER_JOINED, "sendPlayerJoin"),
+            new CallData(ECall.SEND_PLAYER_LEFT, "sendPlayerLeave"),
+            new CallData(ECall.GET_PLAYER_LIST, "getPlayerList"),
+            new CallData(ECall.GET_USERNAME, "getUsername"),
+            new CallData(ECall.PING_SERVER, "ping" ),
+            new CallData(ECall.SEND_PLAYER_LOCATION_DATA, "sendPlayerLocationData"),
+            new CallData(ECall.INVOKE_BAN, "invokeBan"),
+            new CallData(ECall.SEND_VEHICLE_DATA, "sendVehicleData"),
+            new CallData(ECall.SEND_ITEM_DATA, "sendItemData"),
+            new CallData(ECall.SEND_SKIN_DATA, "sendSkinData"),
+            new CallData(ECall.REPORT_VEHICLE_ERROR, "reportVehicleError"),
+            new CallData(ECall.REPORT_ITEM_ERROR, "reportItemError"),
+            new CallData(ECall.REPORT_SKIN_ERROR, "reportSkinError"),
 
         };
         public static readonly Dictionary<string, string> DefaultTranslations = new Dictionary<string, string>
@@ -119,6 +115,10 @@ namespace UncreatedWarfare
             new FlagData(-101, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true),
             new FlagData(-2, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true),
             new FlagData(-102, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true),
+        };
+        public static List<Point3D> DefaultExtraPoints = new List<Point3D>
+        {
+            new Point3D("lobby_spawn", 713.1f, 39f, -991)
         };
         public static readonly List<ColorData> DefaultColors = new List<ColorData>
         {
@@ -262,11 +262,117 @@ namespace UncreatedWarfare
             new CreditsData(ECreditsGainType.CAPTURE, 250),
             new CreditsData(ECreditsGainType.WIN, 600)
         };
+        public static readonly List<MySqlTableData> DefaultMySQLTableData = new List<MySqlTableData>
+        {
+            new MySqlTableData("discord_accounts", "discord_accounts", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64","Steam64"),
+                new MySqlColumnData("DiscordID","DiscordID")
+            }),
+            new MySqlTableData("usernames", "usernames", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64","Steam64"),
+                new MySqlColumnData("Username","Username")
+            }),
+            new MySqlTableData("lastloggedin", "lastloggedin", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64","Steam64"),
+                new MySqlColumnData("LastLoggedOn","LastLoggedOn"),
+                new MySqlColumnData("LastIPConnectedFrom","LastIPConnectedFrom"),
+                new MySqlColumnData("IPData","IPData")
+            }),
+            new MySqlTableData("xp", "xp", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64","Steam64"),
+                new MySqlColumnData("Team","Team"),
+                new MySqlColumnData("Username","Username"),
+                new MySqlColumnData("Balance","Balance")
+            }),
+            new MySqlTableData("credits", "credits", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64","Steam64"),
+                new MySqlColumnData("Team","Team"),
+                new MySqlColumnData("Username","Username"),
+                new MySqlColumnData("Balance","Balance")
+            }),
+            new MySqlTableData("playerstats", "playerstats", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64","Steam64"),
+                new MySqlColumnData("Team","Team"),
+                new MySqlColumnData("Username","Username"),
+                new MySqlColumnData("Kills","Kills"),
+                new MySqlColumnData("Deaths","Deaths"),
+                new MySqlColumnData("Teamkills","Teamkills")
+            })
+        };
+        /*
         public static readonly List<TeamData> DefaultTeamData = new List<TeamData>
         {
             new TeamData(1, "US", new List<ulong>(), 777.5f, 33.5f, -800f),
             new TeamData(2, "Russia", new List<ulong>(), -782f, 50f, 850f),
             new TeamData(3, "Admins", new List<ulong>(), 719f, 39f, -1017f) //admin group for structures.
+        };
+        */
+        public static List<Kit> DefaultKits = new List<Kit>
+        {
+            new Kit("usrif1", new List<KitItem> {
+                new KitItem(81, 0, 0, 0, 100, "", 1, 3),
+                new KitItem(394, 0, 2, 0, 100, "", 1, 2),
+                new KitItem(394, 1, 2, 0, 100, "", 1, 2),
+                new KitItem(394, 2, 2, 0, 100, "", 1, 2),
+                new KitItem(1176, 1, 0, 0, 100, "", 1, 3),
+                new KitItem(31343, 0, 0, 0, 100, "", 30, 2),
+                new KitItem(31343, 1, 0, 0, 100, "", 30, 2),
+                new KitItem(31343, 2, 0, 0, 100, "", 30, 2),
+                new KitItem(31343, 3, 0, 0, 100, "", 30, 2),
+                new KitItem(31343, 4, 0, 0, 100, "", 30, 2),
+                new KitItem(31475, 2, 0, 0, 100, "", 30, 3),
+                new KitItem(31477, 3, 2, 0, 100, "", 30, 2),
+                new KitItem(32326, 0, 0, 0, 100, "6HoAAO56AABveh4BAWRkZGRk", 1, 0)
+        },
+            new List<KitClothing> {
+                new KitClothing(30710, 100, "", KitClothing.EClothingType.SHIRT),
+                new KitClothing(30711, 100, "", KitClothing.EClothingType.PANTS),
+                new KitClothing(30715, 100, "", KitClothing.EClothingType.HAT),
+                new KitClothing(30718, 100, "", KitClothing.EClothingType.BACKPACK),
+                new KitClothing(31251, 100, "", KitClothing.EClothingType.GLASSES)
+        })
+            {
+                ShouldClearInventory = true,
+                RequiredLevel = 0,
+                Cost = 0,
+                Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
+                Branch = Kit.EBranch.INFANTRY
+            },
+            new Kit("rurif1", new List<KitItem> {
+                new KitItem(81, 0, 0, 0, 100, "", 1, 3),
+                new KitItem(394, 0, 2, 0, 100, "", 1, 2),
+                new KitItem(394, 1, 2, 0, 100, "", 1, 2),
+                new KitItem(394, 2, 2, 0, 100, "", 1, 2),
+                new KitItem(1176, 1, 0, 0, 100, "", 1, 3),
+                new KitItem(31413, 0, 0, 0, 100, "", 30, 2),
+                new KitItem(31413, 1, 0, 0, 100, "", 30, 2),
+                new KitItem(31413, 2, 0, 0, 100, "", 30, 2),
+                new KitItem(31413, 3, 0, 0, 100, "", 30, 2),
+                new KitItem(31413, 4, 0, 0, 100, "", 30, 2),
+                new KitItem(31438, 1, 1, 0, 100, "", 8, 3),
+                new KitItem(31438, 2, 1, 0, 100, "", 8, 3),
+                new KitItem(31438, 3, 1, 0, 100, "", 8, 3),
+                new KitItem(31475, 2, 0, 0, 100, "", 1, 3),
+                new KitItem(31477, 3, 2, 0, 100, "", 1, 3),
+                new KitItem(31477, 3, 2, 0, 100, "", 1, 3),
+                new KitItem(31412, 0, 0, 0, 100, "4HsAAAAAAAC1eh4CAWRkZGRk", 1, 0),
+                new KitItem(31437, 0, 0, 0, 100, "AAAAAAAAAADOeggBAWRkZGRk", 1, 1)
+        },
+            new List<KitClothing> {
+                new KitClothing(30700, 100, "", KitClothing.EClothingType.SHIRT),
+                new KitClothing(30701, 100, "", KitClothing.EClothingType.PANTS),
+                new KitClothing(31123, 100, "", KitClothing.EClothingType.VEST),
+                new KitClothing(30704, 100, "", KitClothing.EClothingType.HAT),
+                new KitClothing(434, 100, "", KitClothing.EClothingType.MASK),
+                new KitClothing(31156, 100, "", KitClothing.EClothingType.BACKPACK)
+        })
+            {
+                ShouldClearInventory = true,
+                RequiredLevel = 0,
+                Cost = 0,
+                Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
+                Branch = Kit.EBranch.INFANTRY
+            }
         };
     }
 }

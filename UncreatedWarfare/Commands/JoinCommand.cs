@@ -34,45 +34,45 @@ namespace UncreatedWarfare.Commands
                     {
                         if(command[0].ToLower() == "us" || command[0].ToLower() == "usa")
                         {
-                            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(UCWarfare.I.TeamManager.T1.ID));
+                            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(UCWarfare.I.TeamManager.Team1.GroupID));
                             if(group == null)
                             {
                                 steamplayer.SendChat("join_group_not_found", UCWarfare.I.Colors["join_group_not_found"],
-                                    UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"],
-                                    UCWarfare.I.TeamManager.T1.ID.ToString(), UCWarfare.I.ColorsHex["join_group_not_found_group_id"]);
+                                    UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"],
+                                    UCWarfare.I.TeamManager.Team1.GroupID.ToString(), UCWarfare.I.ColorsHex["join_group_not_found_group_id"]);
                                 return;
                             }
                             Kits.UCInventoryManager.ClearInventory(player);
                             if(!group.hasSpaceForMoreMembersInGroup)
                             {
                                 steamplayer.SendChat("join_group_has_no_space", UCWarfare.I.Colors["join_group_has_no_space"],
-                                    UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
+                                    UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
                                 return;
                             }
-                            if(!UCWarfare.I.TeamManager.CanAddToTeam1())
+                            if(!UCWarfare.I.TeamManager.CanJoinTeam(ETeam.TEAM1))
                             {
                                 steamplayer.SendChat("join_auto_balance_cant_switch", UCWarfare.I.Colors["join_auto_balance_cant_switch"],
-                                    UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
+                                    UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
                                 return;
                             }
                             if(!steamplayer.playerID.characterName.StartsWith("[US"))
                             {
                                 steamplayer.SendChat("joined_team_must_rejoin", UCWarfare.I.Colors["joined_team_must_rejoin"],
-                                    UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
-                                UCWarfare.I.TeamManager.T2.RemovePlayer(steamplayer.playerID.steamID.m_SteamID, true);
-                                UCWarfare.I.TeamManager.T1.AddPlayer(steamplayer.playerID.steamID.m_SteamID, true, true);
+                                    UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
+                                UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
+                                UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM1, steamplayer.playerID.steamID);
                                 CommandWindow.LogWarning(F.Translate("player_switched_groups_console_must_rejoin", 
-                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.T1.LocalizedName));
+                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team1.LocalizedName));
                                 return;
                             }
                             steamplayer.player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
                             GroupManager.save();
                             steamplayer.SendChat("joined_team", UCWarfare.I.Colors["joined_team"], 
-                                UCWarfare.I.TeamManager.T1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
+                                UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
                             CommandWindow.LogWarning(F.Translate("player_switched_groups_console",
-                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.T1.LocalizedName));
-                            UCWarfare.I.TeamManager.T2.RemovePlayer(steamplayer.playerID.steamID.m_SteamID, true);
-                            UCWarfare.I.TeamManager.T1.AddPlayer(steamplayer.playerID.steamID.m_SteamID, true, true);
+                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team1.LocalizedName));
+                            UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
+                            UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM1, steamplayer.playerID.steamID);
                             if (steamplayer.player.TryGetComponent(out TeleportPlayerComponent component))
                             {
                                 if(!component.InstantlyTeleportPlayer(steamplayer.GetBaseSpawn(), true))
@@ -89,45 +89,45 @@ namespace UncreatedWarfare.Commands
                             }
                         } else if (command[0].ToLower() == "ru" || command[0].ToLower() == "russia")
                         {
-                            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(UCWarfare.I.TeamManager.T2.ID));
+                            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(UCWarfare.I.TeamManager.Team2.GroupID));
                             if (group == null)
                             {
                                 steamplayer.SendChat("join_group_not_found", UCWarfare.I.Colors["join_group_not_found"],
-                                    UCWarfare.I.TeamManager.T2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"],
-                                    UCWarfare.I.TeamManager.T2.ID.ToString(), UCWarfare.I.ColorsHex["join_group_not_found_group_id"]);
+                                    UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"],
+                                    UCWarfare.I.TeamManager.Team2.ID.ToString(), UCWarfare.I.ColorsHex["join_group_not_found_group_id"]);
                                 return;
                             }
                             Kits.UCInventoryManager.ClearInventory(player);
                             if (!group.hasSpaceForMoreMembersInGroup)
                             {
                                 steamplayer.SendChat("join_group_has_no_space", UCWarfare.I.Colors["join_group_has_no_space"],
-                                    UCWarfare.I.TeamManager.T2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
+                                    UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
                                 return;
                             }
-                            if (!UCWarfare.I.TeamManager.CanAddToTeam1())
+                            if (!UCWarfare.I.TeamManager.CanJoinTeam(ETeam.TEAM2))
                             {
                                 steamplayer.SendChat("join_auto_balance_cant_switch", UCWarfare.I.Colors["join_auto_balance_cant_switch"],
-                                    UCWarfare.I.TeamManager.T2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
+                                    UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
                                 return;
                             }
                             if (!steamplayer.playerID.characterName.StartsWith("[US"))
                             {
                                 steamplayer.SendChat("joined_team_must_rejoin", UCWarfare.I.Colors["joined_team_must_rejoin"],
-                                    UCWarfare.I.TeamManager.T2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
-                                UCWarfare.I.TeamManager.T1.RemovePlayer(steamplayer.playerID.steamID.m_SteamID, true);
-                                UCWarfare.I.TeamManager.T2.AddPlayer(steamplayer.playerID.steamID.m_SteamID, true, true);
+                                    UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
+                                UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
+                                UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM2, steamplayer.playerID.steamID);
                                 CommandWindow.LogWarning(F.Translate("player_switched_groups_console_must_rejoin",
-                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.T2.LocalizedName));
+                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team2.LocalizedName));
                                 return;
                             }
                             steamplayer.player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
                             GroupManager.save();
                             steamplayer.SendChat("joined_team", UCWarfare.I.Colors["joined_team"],
-                                UCWarfare.I.TeamManager.T2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
+                                UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
                             CommandWindow.LogWarning(F.Translate("player_switched_groups_console",
-                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.T2.LocalizedName)); // player joined T2
-                            UCWarfare.I.TeamManager.T2.RemovePlayer(steamplayer.playerID.steamID.m_SteamID, true);
-                            UCWarfare.I.TeamManager.T1.AddPlayer(steamplayer.playerID.steamID.m_SteamID, true, true);
+                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team2.LocalizedName)); // player joined T2
+                            UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
+                            UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM2, steamplayer.playerID.steamID);
                             if (steamplayer.player.TryGetComponent(out TeleportPlayerComponent component))
                             {
                                 if (!component.InstantlyTeleportPlayer(steamplayer.GetBaseSpawn(), true))
