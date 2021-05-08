@@ -50,6 +50,7 @@ namespace UncreatedWarfare
         public bool AdminLogging;
         public bool MainCampPrevention;
         public bool Flags;
+        public bool Revives;
         public Modules()
         {
             this.PlayerList = true;
@@ -62,7 +63,9 @@ namespace UncreatedWarfare
             this.AdminLogging = true;
             this.MainCampPrevention = true;
             this.Flags = true;
+            this.Revives = true;
         }
+
     }
     public class FlagSettings
     {

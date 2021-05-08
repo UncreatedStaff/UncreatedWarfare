@@ -31,7 +31,7 @@ namespace UncreatedWarfare
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
         public VehicleBay VehicleBay;
-        //public FlagManager FlagManager;
+        public FlagManager FlagManager;
         public TeamManager TeamManager;
         public FOBManager FOBManager;
         public BuildManager BuildManager;
@@ -105,11 +105,14 @@ namespace UncreatedWarfare
             CommandWindow.Log("Instantiating Framework...");
             DB = new DatabaseManager();
             WebInterface = new WebInterface();
+
+            StartListening();
+
             TeamManager = new TeamManager();
 
             if (Config.Modules.Flags)
             {
-                //FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
+                FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
             }
             if (Config.Modules.Kits)
             {
