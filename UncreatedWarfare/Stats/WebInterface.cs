@@ -92,7 +92,7 @@ namespace UncreatedWarfare.Stats
         public const string InvalidCallResponse = "INVALID CALL";
         public const string PlayerDataSent = "Playerdata sent!";
         public string URL => UCWarfare.I.Configuration.Instance.PlayerStatsSettings.NJS_ServerURL;
-        public DatabaseManager SQL { get => UCWarfare.I.DB; }
+        //public DatabaseManager SQL { get => UCWarfare.I.DB; }
         private readonly WebClientWithTimeout _client;
         public WebInterface()
         {
@@ -230,8 +230,8 @@ namespace UncreatedWarfare.Stats
             Dictionary<string, string> Parameters = new Dictionary<string, string> {
                 { "server", "warfare" },
                 { "name", "_" + player.playerID.playerName.ShortenName().EncodeURIComponent() },
-                { "id", "_" + player.playerID.steamID.m_SteamID.ToString() },
-                { "team", "_" + player.player.quests.groupID.m_SteamID.ToString() }
+                { "id", "_" + player.playerID.steamID.m_SteamID.ToString().EncodeURIComponent() },
+                { "team", "_" + player.player.quests.groupID.m_SteamID.ToString().EncodeURIComponent() }
             };
             BasicQueryAsync(ECall.SEND_PLAYER_JOINED, Parameters, "FAILURE", new AsyncCallback(WebCallbacks.SendPlayerJoin));
         }
@@ -239,9 +239,20 @@ namespace UncreatedWarfare.Stats
         {
             Dictionary<string, string> Parameters = new Dictionary<string, string> {
                 { "server", "warfare" },
-                { "id", "_" + player.playerID.steamID.m_SteamID.ToString() }
+                { "id", "_" + player.playerID.steamID.m_SteamID.ToString().EncodeURIComponent() }
             };
             BasicQueryAsync(ECall.SEND_PLAYER_LEFT, Parameters, "FAILURE", new AsyncCallback(WebCallbacks.SendPlayerLeft));
+        }
+        public void SendUpdatedUsername(ulong Steam64, FPlayerName NewName)
+        {
+            Dictionary<string, string> Parameters = new Dictionary<string, string> {
+                { "server", "warfare" },
+                { "id", "_" + Steam64.ToString().EncodeURIComponent() },
+                { "playername", "_" + NewName.PlayerName.EncodeURIComponent() },
+                { "charactername", "_" + NewName.CharacterName.EncodeURIComponent() },
+                { "nickname", "_" + NewName.NickName.EncodeURIComponent() },
+            };
+            BasicQueryAsync(ECall.SEND_UPDATED_USERNAME, Parameters, "FAILURE", new AsyncCallback(WebCallbacks.Default));
         }
         public void SendCoroutinePlayerData(List<PlayerStatsCoroutineData> data)
         {
@@ -260,7 +271,6 @@ namespace UncreatedWarfare.Stats
             DateTime StartTimestamp = DateTime.Now;
             string vehicleData = GetVehicleAssets();
             string itemData = GetItemAssets();
-            string skinData = GetSkinAssets();
             int VehicleIntervals = (int)Math.Ceiling(vehicleData.Length / (decimal)StringSendLengthAtATime);
             for (int i = 0; i < VehicleIntervals; i ++)
             {
@@ -312,32 +322,6 @@ namespace UncreatedWarfare.Stats
                     break;
                 }
             }
-            int SkinIntervals = (int)Math.Ceiling(skinData.Length / (decimal)StringSendLengthAtATime);
-            for (int i = 0; i < SkinIntervals; i++)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.Append("call=" + UCWarfare.I.NodeCalls[ECall.SEND_SKIN_DATA]);
-                sb.Append("&server=warfare");
-                sb.Append("&index=" + i.ToString());
-                sb.Append("&final=" + (i == SkinIntervals - 1 ? "1" : "0"));
-                int position = i * StringSendLengthAtATime;
-                string data;
-                if (position + StringSendLengthAtATime >= skinData.Length)
-                    data = skinData.Substring(position);
-                else
-                    data = skinData.Substring(position, StringSendLengthAtATime);
-                data = data.EncodeURIComponent();
-                sb.Append("&data=" + data.Replace('\u000D', '\0').Replace('\u000A', '\0'));
-                sb.Append("&e=1");
-                string send = sb.ToString();
-                Response r = BasicQuerySync(send, "INVALID DATA");
-                if (!r.Success)
-                {
-                    BasicQuerySync("call=" + UCWarfare.I.NodeCalls[ECall.REPORT_SKIN_ERROR] + "&server=warfare", "INVALID DATA");
-                    CommandWindow.LogError("Failed to send skin data to server: " + r.Reply);
-                    break;
-                }
-            }
             _client.Timeout = timeout;
             CommandWindow.LogWarning("Completed sending assets in " + (DateTime.Now - StartTimestamp).TotalMilliseconds.ToString() + "ms.");
         }
@@ -385,25 +369,6 @@ namespace UncreatedWarfare.Stats
             sb.Append("]");
             return sb.ToString();
         }
-        private string GetSkinAssets()
-        {
-            List<SkinAsset> a = new List<SkinAsset>(Assets.find(EAssetType.SKIN).Cast<SkinAsset>());
-            a.Sort(delegate (SkinAsset i1, SkinAsset i2) {
-                return i1.id.CompareTo(i2.id);
-            });
-            StringBuilder sb = new StringBuilder();
-            sb.Append("[");
-            for (int i = 0; i < a.Count; i++)
-            {
-                if (i != 0) sb.Append(",");
-                string name = a[i].name;
-                if (name == null || name == "#NAME") name = "Unknown";
-                else name = name.Replace("#", "").Replace("&", " and ").Replace("\"", "\\\"");
-                sb.Append($"{{\"id\":{a[i].name},\"name\":\"{name}\"}}");
-            }
-            sb.Append("]");
-            return sb.ToString();
-        }
     }
     public enum EResponseFromAsyncSocketEvent : byte
     {
@@ -429,6 +394,7 @@ namespace UncreatedWarfare.Stats
         SEND_SKIN_DATA,
         REPORT_VEHICLE_ERROR,
         REPORT_ITEM_ERROR,
-        REPORT_SKIN_ERROR
+        REPORT_SKIN_ERROR,
+        SEND_UPDATED_USERNAME
     }
 }

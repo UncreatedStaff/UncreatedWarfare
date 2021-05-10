@@ -140,11 +140,11 @@ namespace UncreatedWarfare.Teams
             get
             {
                 if (GroupID == 1)
-                    return F.Translate("team_1");
+                    return F.Translate("team_1", 0);
                 else if (GroupID == 2)
-                    return F.Translate("team_2");
+                    return F.Translate("team_2", 0);
                 else if (GroupID == 3)
-                    return F.Translate("team_3");
+                    return F.Translate("team_3", 0);
                 else
                 {
                     if (Name == null)

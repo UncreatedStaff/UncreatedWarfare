@@ -7,6 +7,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using UncreatedWarfare.Flags;
 using UnityEngine;
 using static Rocket.Core.Logging.Logger;
@@ -82,115 +83,177 @@ namespace UncreatedWarfare
         /// Tramslate an unlocalized string to a localized string using the Rocket translations file.
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-        public static string Translate(string key, params object[] formatting) => string.Format(UCWarfare.I.Localization[key], formatting);
+        /// <returns>A localized string based on the player's language.</returns>
+        public static string Translate(string key, ulong player, params object[] formatting)
+        {
+            if (player == 0)
+            {
+                if (!UCWarfare.I.Localization.ContainsKey(JSONMethods.DefaultLanguage))
+                {
+                    if (UCWarfare.I.Localization.Count > 0)
+                    {
+                        if (UCWarfare.I.Localization.ElementAt(0).Value.ContainsKey(key))
+                        {
+                            try
+                            {
+                                return string.Format(UCWarfare.I.Localization.ElementAt(0).Value[key], formatting);
+                            }
+                            catch (FormatException)
+                            {
+                                return UCWarfare.I.Localization.ElementAt(0).Value[key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                } else
+                {
+                    if (UCWarfare.I.Localization[JSONMethods.DefaultLanguage].ContainsKey(key))
+                    {
+                        try
+                        {
+                            return string.Format(UCWarfare.I.Localization[JSONMethods.DefaultLanguage][key], formatting);
+                        }
+                        catch (FormatException)
+                        {
+                            return UCWarfare.I.Localization[JSONMethods.DefaultLanguage][key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else 
+            {
+                string lang = JSONMethods.DefaultLanguage;
+                if (UCWarfare.I.Languages.ContainsKey(player))
+                {
+                    lang = UCWarfare.I.Languages[player];
+                    if (!UCWarfare.I.Localization.ContainsKey(lang))
+                        lang = JSONMethods.DefaultLanguage;
+                }
+                if (!UCWarfare.I.Localization.ContainsKey(lang))
+                {
+                    if (UCWarfare.I.Localization.Count > 0)
+                    {
+                        if (UCWarfare.I.Localization.ElementAt(0).Value.ContainsKey(key))
+                        {
+                            try
+                            {
+                                return string.Format(UCWarfare.I.Localization.ElementAt(0).Value[key], formatting);
+                            }
+                            catch (FormatException)
+                            {
+                                return UCWarfare.I.Localization.ElementAt(0).Value[key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                    else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                } else if (UCWarfare.I.Localization[lang].ContainsKey(key))
+                {
+                    try
+                    {
+                        return string.Format(UCWarfare.I.Localization[lang][key], formatting);
+                    } catch (FormatException)
+                    {
+                        return UCWarfare.I.Localization[lang][key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
-        /// <param name="player">UnturnedPlayer to send the chat to.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void SendChat(this UnturnedPlayer player, string text, Color textColor, params object[] formatting) => SendChat(player.CSteamID, text, textColor, formatting);
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
-        /// <param name="player">Player to send the chat to.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player"><see cref="Player"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void SendChat(this Player player, string text, Color textColor, params object[] formatting) => SendChat(player.channel.owner.playerID.steamID, text, textColor, formatting);
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
-        /// <param name="player">SteamPlayer to send the chat to.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player"><see cref="SteamPlayer"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void SendChat(this SteamPlayer player, string text, Color textColor, params object[] formatting) => SendChat(player.player.channel.owner.playerID.steamID, text, textColor, formatting);
+        /// <summary>
+        /// Max amount of bytes that can be sent in an Unturned Chat Message.
+        /// </summary>
+        const int MaxChatSizeAmount = 2047;
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
-        /// <param name="player">CSteamID to send the chat to.</param>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player"><see cref="CSteamID"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void SendChat(this CSteamID player, string text, Color textColor, params object[] formatting)
         {
+            string localizedString = Translate(text, player.m_SteamID, formatting);
             bool isRich = false;
-            if (Translate(text, formatting).Contains("</"))
+            if (localizedString.Contains("</"))
                 isRich = true;
-            try
+            if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
+                ChatManager.say(player, localizedString, textColor, isRich);
+            else
             {
-                ChatManager.say(player, Translate(text, formatting), textColor, isRich);
-            }
-            catch
-            {
+                Log($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                string defaultMessage = text;
+                string newMessage;
+                if (JSONMethods.DefaultTranslations.ContainsKey(text))
+                    defaultMessage = JSONMethods.DefaultTranslations[text];
                 try
                 {
-                    Log($"'{Translate(text, formatting)}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                    ChatManager.say(player, UCWarfare.I.DefaultTranslations.Translate(text, formatting), textColor, isRich);
+                    newMessage = string.Format(defaultMessage, formatting);
                 }
                 catch (FormatException)
                 {
-                    Log("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                    newMessage = defaultMessage + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    CommandWindow.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                 }
+                if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
+                    ChatManager.say(player, newMessage, textColor, isRich);
+                else
+                    CommandWindow.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                        + MaxChatSizeAmount.ToString() + " bytes in UTF-8. Arguments may be too long.");
             }
         }
-
+        /// <summary>
+        /// Send a white message in chat using the RocketMod translation file.
+        /// </summary>
+        /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
+        /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void Message(this UnturnedPlayer player, string message, params object[] formatting) => SendChat(player, message, Color.white, formatting);
         /// <summary>
         /// Send a message in chat to everyone.
         /// </summary>
-        /// <param name="text">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-        /// 
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void Broadcast(string text, Color textColor, params object[] formatting)
         {
-            bool isRich = false;
-            if (Translate(text, formatting).Contains("</"))
-                isRich = true;
-            try
-            {
-                ChatManager.say(Translate(text, formatting), textColor, isRich);
-            }
-            catch
-            {
-                try
-                {
-                    Log($"'{Translate(text, formatting)}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                    ChatManager.say(UCWarfare.I.DefaultTranslations.Translate(text, formatting), textColor, isRich);
-                }
-                catch (FormatException)
-                {
-                    Log("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
-                }
-            }
+            foreach(SteamPlayer player in Provider.clients)
+                SendChat(player.playerID.steamID, text, textColor, formatting);
         }
+        /// <summary>
+        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, Color textColor, params object[] formatting)
         {
-            bool isRich = false;
-            if (Translate(text, formatting).Contains("</"))
-                isRich = true;
-            try
-            {
-                foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
-                    ChatManager.say(player.playerID.steamID, Translate(text, formatting), textColor, isRich);
-            }
-            catch
-            {
-                try
-                {
-                    Log($"'{Translate(text, formatting)}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                    foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
-                        ChatManager.say(player.playerID.steamID, Translate(text, formatting), textColor, isRich);
-                }
-                catch (FormatException)
-                {
-                    Log("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
-                }
-            }
+            foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
+                SendChat(player.playerID.steamID, text, textColor, formatting);
         }
         public static bool OnDuty(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
         public static bool OffDuty(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup);
@@ -215,14 +278,7 @@ namespace UncreatedWarfare
         }
         public static string An(this string word) => (word.Length > 0 && vowels.Contains(word[0].ToString().ToLower()[0])) ? "n" : "";
         public static string An(this char letter) => vowels.Contains(letter.ToString().ToLower()[0]) ? "n" : "";
-        public static string S(this int number) => number == 1 ? "" : "s";
-        public static string S(this uint number) => number == 1 ? "" : "s";
-        public static string S(this sbyte number) => number == 1 ? "" : "s";
-        public static string S(this byte number) => number == 1 ? "" : "s";
-        public static string S(this short number) => number == 1 ? "" : "s";
-        public static string S(this ushort number) => number == 1 ? "" : "s";
-        public static string S(this long number) => number == 1 ? "" : "s";
-        public static string S(this ulong number) => number == 1 ? "" : "s";
+        public static string S<T>(this T number) where T : IComparable => number.CompareTo(1) == 0 ? "" : "s";
         public enum UIOption
         {
             Capturing,
@@ -254,9 +310,9 @@ namespace UncreatedWarfare
                 {
                     case UIOption.Capturing:
                         if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1_words"]}>{Translate("ui_capturing")}</color>", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["capturing_team_1_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1_words"]}>{Translate("ui_capturing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["capturing_team_1_bkgr"]);
                         else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2_words"]}>{Translate("ui_capturing")}</color>", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["capturing_team_2_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2_words"]}>{Translate("ui_capturing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["capturing_team_2_bkgr"]);
                         break;
                     case UIOption.Blank:
                         if (team == UCWarfare.Config.Team1ID)
@@ -266,33 +322,33 @@ namespace UncreatedWarfare
                         break;
                     case UIOption.Losing:
                         if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["losing_team_1_words"]}>{Translate("ui_losing")}</color>", $"<color=#{UCWarfare.I.ColorsHex["losing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["losing_team_1_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["losing_team_1_words"]}>{Translate("ui_losing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["losing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["losing_team_1_bkgr"]);
                         else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["losing_team_2_words"]}>{Translate("ui_losing")}</color>", $"<color=#{UCWarfare.I.ColorsHex["losing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["losing_team_2_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["losing_team_2_words"]}>{Translate("ui_losing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["losing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["losing_team_2_bkgr"]);
                         break;
                     case UIOption.Secured:
                         if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["secured_team_1_words"]}>{Translate("ui_secured")}</color>", $"<color=#{UCWarfare.I.ColorsHex["secured_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["secured_team_1_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["secured_team_1_words"]}>{Translate("ui_secured", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["secured_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["secured_team_1_bkgr"]);
                         else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["secured_team_2_words"]}>{Translate("ui_secured")}</color>", $"<color=#{UCWarfare.I.ColorsHex["secured_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["secured_team_2_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["secured_team_2_words"]}>{Translate("ui_secured", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["secured_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["secured_team_2_bkgr"]);
                         break;
                     case UIOption.Contested:
                         if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["contested_team_1_words"]}>{Translate("ui_contested")}</color>", $"<color=#{UCWarfare.I.ColorsHex["contested_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["contested_team_1_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["contested_team_1_words"]}>{Translate("ui_contested", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["contested_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["contested_team_1_bkgr"]);
                         else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["contested_team_2_words"]}>{Translate("ui_contested")}</color>", $"<color=#{UCWarfare.I.ColorsHex["contested_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["contested_team_2_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["contested_team_2_words"]}>{Translate("ui_contested", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["contested_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["contested_team_2_bkgr"]);
                         break;
                     case UIOption.NoCap:
                         if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["nocap_team_1_words"]}>{Translate("ui_nocap")}</color>", $"<color=#{UCWarfare.I.ColorsHex["nocap_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["nocap_team_1_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["nocap_team_1_words"]}>{Translate("ui_nocap", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["nocap_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["nocap_team_1_bkgr"]);
                         else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["nocap_team_2_words"]}>{Translate("ui_nocap")}</color>", $"<color=#{UCWarfare.I.ColorsHex["nocap_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["nocap_team_2_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["nocap_team_2_words"]}>{Translate("ui_nocap", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["nocap_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["nocap_team_2_bkgr"]);
                         break;
                     case UIOption.Clearing:
                         if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["clearing_team_1_words"]}>{Translate("ui_clearing")}</color>", $"<color=#{UCWarfare.I.ColorsHex["clearing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["clearing_team_1_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["clearing_team_1_words"]}>{Translate("ui_clearing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["clearing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["clearing_team_1_bkgr"]);
                         else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["clearing_team_2_words"]}>{Translate("ui_clearing")}</color>", $"<color=#{UCWarfare.I.ColorsHex["clearing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["clearing_team_2_bkgr"]);
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["clearing_team_2_words"]}>{Translate("ui_clearing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["clearing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["clearing_team_2_bkgr"]);
                         break;
                 }
             }

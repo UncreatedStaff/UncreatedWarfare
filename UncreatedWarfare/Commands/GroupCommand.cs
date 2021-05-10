@@ -54,7 +54,7 @@ namespace UncreatedWarfare.Commands
                         GroupManager.save();
                         player.Player.SendChat("created_group", UCWarfare.I.Colors["created_group"],
                             command[1], UCWarfare.I.ColorsHex["created_group_name"], player.Player.quests.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["created_group_id"]);
-                        CommandWindow.LogWarning(F.Translate("created_group_console", player.Player.channel.owner.playerID.playerName,
+                        CommandWindow.LogWarning(F.Translate("created_group_console", 0, player.Player.channel.owner.playerID.playerName,
                             player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), player.Player.quests.groupID.m_SteamID.ToString(), command[1]));
                     }
                     else
@@ -96,7 +96,7 @@ namespace UncreatedWarfare.Commands
                                 player.SendChat("joined_group", UCWarfare.I.Colors["joined_group"],
                                     UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"],
                                     groupInfo.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["joined_group_id"]);
-                                CommandWindow.LogWarning(F.Translate("joined_group_console", player.Player.channel.owner.playerID.playerName,
+                                CommandWindow.LogWarning(F.Translate("joined_group_console", 0, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team1.LocalizedName,
                                     groupInfo.groupID.m_SteamID.ToString()));
                             }
@@ -107,7 +107,7 @@ namespace UncreatedWarfare.Commands
                                 player.SendChat("joined_group", UCWarfare.I.Colors["joined_group"],
                                     UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"],
                                     groupInfo.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["joined_group_id"]);
-                                CommandWindow.LogWarning(F.Translate("joined_group_console", player.Player.channel.owner.playerID.playerName,
+                                CommandWindow.LogWarning(F.Translate("joined_group_console", 0, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team2.LocalizedName,
                                     groupInfo.groupID.m_SteamID.ToString()));
                             }
@@ -118,7 +118,7 @@ namespace UncreatedWarfare.Commands
                                 player.SendChat("joined_group", UCWarfare.I.Colors["joined_group"],
                                     UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_3_color"],
                                     groupInfo.groupID.m_SteamID.ToString(), UCWarfare.I.ColorsHex["joined_group_id"]);
-                                CommandWindow.LogWarning(F.Translate("joined_group_console", player.Player.channel.owner.playerID.playerName,
+                                CommandWindow.LogWarning(F.Translate("joined_group_console", 0, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Neutral.LocalizedName,
                                     groupInfo.groupID.m_SteamID.ToString()));
                             }

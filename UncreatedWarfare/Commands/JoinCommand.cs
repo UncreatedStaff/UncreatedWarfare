@@ -61,7 +61,7 @@ namespace UncreatedWarfare.Commands
                                     UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
                                 UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
                                 UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM1, steamplayer.playerID.steamID);
-                                CommandWindow.LogWarning(F.Translate("player_switched_groups_console_must_rejoin", 
+                                CommandWindow.LogWarning(F.Translate("player_switched_groups_console_must_rejoin", 0,
                                     steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team1.LocalizedName));
                                 return;
                             }
@@ -69,7 +69,7 @@ namespace UncreatedWarfare.Commands
                             GroupManager.save();
                             steamplayer.SendChat("joined_team", UCWarfare.I.Colors["joined_team"], 
                                 UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.ColorsHex["team_1_color"]);
-                            CommandWindow.LogWarning(F.Translate("player_switched_groups_console",
+                            CommandWindow.LogWarning(F.Translate("player_switched_groups_console", 0,
                                 steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team1.LocalizedName));
                             UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
                             UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM1, steamplayer.playerID.steamID);
@@ -116,7 +116,7 @@ namespace UncreatedWarfare.Commands
                                     UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
                                 UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
                                 UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM2, steamplayer.playerID.steamID);
-                                CommandWindow.LogWarning(F.Translate("player_switched_groups_console_must_rejoin",
+                                CommandWindow.LogWarning(F.Translate("player_switched_groups_console_must_rejoin", 0,
                                     steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team2.LocalizedName));
                                 return;
                             }
@@ -124,7 +124,7 @@ namespace UncreatedWarfare.Commands
                             GroupManager.save();
                             steamplayer.SendChat("joined_team", UCWarfare.I.Colors["joined_team"],
                                 UCWarfare.I.TeamManager.Team2.LocalizedName, UCWarfare.I.ColorsHex["team_2_color"]);
-                            CommandWindow.LogWarning(F.Translate("player_switched_groups_console",
+                            CommandWindow.LogWarning(F.Translate("player_switched_groups_console", 0,
                                 steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), UCWarfare.I.TeamManager.Team2.LocalizedName)); // player joined T2
                             UCWarfare.I.TeamManager.RemovePlayerFromTeam(steamplayer.playerID.steamID);
                             UCWarfare.I.TeamManager.AddPlayerToTeam(ETeam.TEAM2, steamplayer.playerID.steamID);

@@ -19,6 +19,8 @@ using UncreatedWarfare.Stats;
 using UncreatedWarfare.Revives;
 using System.Threading;
 using Rocket.Unturned.Player;
+using Newtonsoft.Json;
+using Steamworks;
 
 namespace UncreatedWarfare
 {
@@ -27,6 +29,15 @@ namespace UncreatedWarfare
         public static UCWarfare Instance;
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
+        private MySqlData _sqlElsewhere;
+        public MySqlData SQL { 
+            get
+            {
+                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(null))) return _sqlElsewhere;
+                else return Configuration.Instance.SQL;
+            }
+        }
+        public const bool LoadMySQLDataFromElsewhere = true;
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
@@ -44,19 +55,24 @@ namespace UncreatedWarfare
         public static readonly string VehicleStorage = DataDirectory + @"Vehicles\";
         public static readonly string FOBStorage = DataDirectory + @"FOBs\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
+        public static readonly string ElseWhereSQLPath = @"C:\SteamCMD\unturned\Servers\UncreatedRewrite\sql.json";
         public Dictionary<string, Color> Colors;
         public Dictionary<string, string> ColorsHex;
-        public Dictionary<string, string> Localization;
+        public Dictionary<string, Dictionary<string, string>> Localization;
         public Dictionary<EXPGainType, int> XPData;
         public Dictionary<ECreditsGainType, int> CreditsData;
         public Dictionary<int, Zone> ExtraZones;
         public Dictionary<string, Vector3> ExtraPoints;
         public Dictionary<string, MySqlTableLang> TableData;
         public Dictionary<ECall, string> NodeCalls;
-        public DatabaseManager DB { get; private set; }
+        public Dictionary<ulong, string> DefaultPlayerNames;
+        public Dictionary<ulong, FPlayerName> OriginalNames;
+        public Dictionary<ulong, string> Languages;
+        public Dictionary<string, LanguageAliasSet> LanguageAliases;
         private bool InitialLoadEventSubscription;
         internal Thread ListenerThread;
         internal AsyncListenServer ListenServer;
+        internal AsyncDatabase DatabaseManager;
         private void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))
@@ -81,17 +97,64 @@ namespace UncreatedWarfare
             Instance = this;
 
             CommandWindow.Log("Patching methods...");
-            Patches.InternalPatches.DoPatching();
+            //Patches.InternalPatches.DoPatching();
 
+            if(LoadMySQLDataFromElsewhere)
+            {
+                if (!File.Exists(ElseWhereSQLPath))
+                {
+                    TextWriter w = File.CreateText(ElseWhereSQLPath);
+                    JsonTextWriter wr = new JsonTextWriter(w);
+                    JsonSerializer s = new JsonSerializer();
+                    s.Formatting = Formatting.Indented;
+                    s.Serialize(wr, Config.SQL);
+                    wr.Close();
+                    w.Close();
+                    w.Dispose();
+                    _sqlElsewhere = Config.SQL;
+                } else
+                {
+                    string json = File.ReadAllText(ElseWhereSQLPath);
+                    _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
+                }
+            }
             CommandWindow.Log("Validating directories...");
             CheckDir(DataDirectory);
             CheckDir(FlagStorage);
             CheckDir(LangStorage);
             CheckDir(KitsStorage);
             CheckDir(VehicleStorage);
+            CheckDir(FOBStorage);
             CheckDir(TeamStorage);
 
+            void DuplicateKeyError(Exception ex)
+            {
+                string[] stuff = ex.Message.Split(':');
+                string badKey = "unknown";
+                if (stuff.Length >= 2) badKey = stuff[1].Trim();
+                CommandWindow.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
+                Level.onLevelLoaded += (int level) =>
+                {
+                    CommandWindow.LogError("!!UNCREATED WARFARE DID NOT LOAD!!!");
+                    CommandWindow.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
+                };
+                UnloadPlugin();
+            }
             CommandWindow.Log("Loading JSON Data...");
+            try
+            {
+                JSONMethods.CreateDefaultTranslations();
+            } catch (TypeInitializationException ex)
+            {
+                DuplicateKeyError(ex);
+                return;
+            } catch (ArgumentException ex)
+            {
+                DuplicateKeyError(ex);
+                return;
+            }
+
+            OriginalNames = new Dictionary<ulong, FPlayerName>();
             Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
@@ -100,13 +163,15 @@ namespace UncreatedWarfare
             ExtraPoints = JSONMethods.LoadExtraPoints();
             TableData = JSONMethods.LoadTables();
             NodeCalls = JSONMethods.LoadCalls();
+            Languages = JSONMethods.LoadLanguagePreferences();
+            LanguageAliases = JSONMethods.LoadLangAliases();
 
             // Managers
             CommandWindow.Log("Instantiating Framework...");
-            DB = new DatabaseManager();
+            DatabaseManager = new AsyncDatabase();
+            DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             WebInterface = new WebInterface();
-
-            StartListening();
+            ListenerThread = new Thread(StartListening);
 
             TeamManager = new TeamManager();
 
@@ -137,11 +202,13 @@ namespace UncreatedWarfare
             {
                 StartAllCoroutines();
                 CommandWindow.Log("Sending assets...");
-                WebInterface.SendAssetUpdate();
+                if(Configuration.Instance.SendAssetsOnStartup)
+                    WebInterface.SendAssetUpdate();
                 Log("Subscribing to events...");
                 InitialLoadEventSubscription = true;
-                U.Events.OnPlayerConnected += OnPlayerConnected;
+                U.Events.OnPlayerConnected += OnPostPlayerConnected;
                 U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
+                Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
             } else
             {
                 InitialLoadEventSubscription = false;
@@ -152,10 +219,21 @@ namespace UncreatedWarfare
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
 
+        private void OnPrePlayerConnect(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
+        {
+            SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == callback.m_SteamID.m_SteamID);
+            if (player == default(SteamPending)) return;
+            if (OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
+                OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
+            else
+                OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
+        }
+
         private void OnLevelLoaded(int level)
         {
             CommandWindow.Log("Sending assets...");
-            WebInterface.SendAssetUpdate();
+            if (Configuration.Instance.SendAssetsOnStartup)
+                WebInterface.SendAssetUpdate();
         }
 
         private void StartListening()
@@ -169,16 +247,23 @@ namespace UncreatedWarfare
         {
             StartAllCoroutines();
             Log("Subscribing to events...");
-            U.Events.OnPlayerConnected += OnPlayerConnected;
+            U.Events.OnPlayerConnected += OnPostPlayerConnected;
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
         }
-        private void OnPlayerConnected(Rocket.Unturned.Player.UnturnedPlayer player)
+        private void OnPostPlayerConnected(UnturnedPlayer player)
         {
             F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
             WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
+            FPlayerName names;
+            if (OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                names = OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
+            else names = new FPlayerName(player);
+            DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
         }
-        private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
+        private void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            if (OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
             WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
         }
@@ -187,13 +272,15 @@ namespace UncreatedWarfare
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
+            IAsyncResult CloseSQLAsyncResult = DatabaseManager.CloseAsync(AsyncDatabaseCallbacks.ClosedOnUnload);
             WebInterface?.Dispose();
             FlagManager?.Dispose();
+            DatabaseManager?.Dispose();
             CommandWindow.LogWarning("Unloading " + Name);
             CommandWindow.Log("Stopping Coroutines...");
             StopAllCoroutines();
             CommandWindow.Log("Unsubscribing from events...");
-            U.Events.OnPlayerConnected -= OnPlayerConnected;
+            U.Events.OnPlayerConnected -= OnPostPlayerConnected;
             U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
             if(ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
             if (!InitialLoadEventSubscription)
@@ -201,8 +288,11 @@ namespace UncreatedWarfare
                 Level.onLevelLoaded -= OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
             }
-            DB.Close();
+            try
+            {
+                CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
+            }
+            catch (ObjectDisposedException) { }
         }
-
     }
 }

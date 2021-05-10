@@ -101,7 +101,7 @@ namespace UncreatedWarfare.Flags
                         {
                             F.UIOrChat(team, F.UIOption.Capturing, "team_capturing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points, 
                                 formatting: new object[] { UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificColor, Math.Abs(flag.Points), Flag.MaxPoints  });
-                            UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
+                            //UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
                         }
                         else
                         {
@@ -122,7 +122,7 @@ namespace UncreatedWarfare.Flags
                         if (team == 1)
                         {
                             F.UIOrChat(team, F.UIOption.Clearing, "clearing", UCWarfare.I.Colors[team == 1 ? "capturing_team_1_chat" : "default"], Channel, player.channel.owner, flag.Points);
-                            UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
+                            //UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
                         }
                         else
                         {

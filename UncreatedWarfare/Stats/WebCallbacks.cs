@@ -30,8 +30,12 @@ namespace UncreatedWarfare.Stats
         }
         internal static void Dispose(this IAsyncResult ar)
         {
-            ar.AsyncWaitHandle.Close();
-            ar.AsyncWaitHandle.Dispose();
+            try
+            {
+                ar.AsyncWaitHandle.Close();
+                ar.AsyncWaitHandle.Dispose();
+            }
+            catch (ObjectDisposedException) { }
         }
         private static void GetResponse(this IAsyncResult ar, out Response r)
         {
