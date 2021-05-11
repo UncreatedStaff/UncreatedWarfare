@@ -10,22 +10,22 @@ using UncreatedWarfare.Vehicles;
 
 namespace UncreatedWarfare
 {
-    public class JSONSaver<T>
+    public abstract class JSONSaver<T>
     {
         protected string directory;
 
         public JSONSaver(string directory)
         {
             this.directory = directory;
-            CreateFileIfNotExists();
+            CreateFileIfNotExists(LoadDefaults());
         }
-
-        protected void CreateFileIfNotExists()
+        protected abstract string LoadDefaults();
+        protected void CreateFileIfNotExists(string text = "[]")
         {
             if (!File.Exists(directory))
             {
                 StreamWriter creator = File.CreateText(directory);
-                creator.WriteLine("[]");
+                creator.WriteLine(text);
                 creator.Close();
                 creator.Dispose();
             }

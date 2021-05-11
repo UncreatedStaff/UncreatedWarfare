@@ -14,7 +14,7 @@ namespace UncreatedWarfare.Vehicles
         {
 
         }
-
+        protected override string LoadDefaults() => "[]";
         public void CreateSpawn(ushort vehicleID, uint barricadeInstanceID) => AddObjectToSave(new VehicleSpawn(vehicleID, barricadeInstanceID));
         public void DeleteSpawn(uint barricadeInstanceID)
         {
@@ -62,6 +62,7 @@ namespace UncreatedWarfare.Vehicles
             vehicle = v;
             return v != null;
         }
+
     }
 
     public class VehicleSpawn

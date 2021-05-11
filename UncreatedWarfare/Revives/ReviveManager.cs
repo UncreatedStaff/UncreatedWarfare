@@ -19,6 +19,8 @@ namespace UncreatedWarfare.Revives
             DamageTool.damagePlayerRequested += OnPlayerDamagedRequested;
             PlayerStance.OnStanceChanged_Global += OnStanceChanged;
 
+            DownedPlayers = new List<ulong>();
+
             U.Events.OnPlayerConnected += OnPlayerConnected;
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
         }

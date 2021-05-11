@@ -71,8 +71,12 @@ namespace UncreatedWarfare
         public void Dispose()
         {
             IAsyncResult ar = CloseAsync(null);
-            ar.AsyncWaitHandle.WaitOne();
-            ar.AsyncWaitHandle.Dispose();
+            try
+            {
+                ar.AsyncWaitHandle.WaitOne();
+                ar.AsyncWaitHandle.Dispose();
+            }
+            catch (ObjectDisposedException) { }
             SQL.Dispose();
         }
         /// <summary>
@@ -85,6 +89,15 @@ namespace UncreatedWarfare
         {
             DbCaller.D_UpdateUsernameAsync caller = new DbCaller.D_UpdateUsernameAsync(_dbCaller.UpdateUsername);
             caller.BeginInvoke(this, Steam64, player, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        /// <summary>
+        /// Add a kill (default 1) to the "playerstats" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add a kill to.</param>
+        /// <param name="amount">Amount of kills to add, default 1.</param>
+        public void AddKill(ulong Steam64, int amount = 1)
+        {
+
         }
 
     }
@@ -165,6 +178,7 @@ namespace UncreatedWarfare
         internal delegate void D_SelectAsync(SQLSelectCallStructure Data, AsyncCallback callback);
         internal delegate void D_InsertOrUpdateAsync(SQLInsertOrUpdateStructure Data, AsyncCallback callback);
         internal delegate void D_UpdateUsernameAsync(AsyncDatabase DatabaseManager, ulong Steam64, FPlayerName player);
+        internal delegate void D_DatabaseQuery<T>(T Data, out MySqlResponse Output) where T : SQLCallStructure;
 
         private readonly Dictionary<EComparisonType, string> OperatorTranslations = new Dictionary<EComparisonType, string>
         {
@@ -275,18 +289,18 @@ namespace UncreatedWarfare
         /// Gets a <see cref="MySqlResponse"/> from an IAsyncResult then disposes of it, calling WaitOne() if it is not already completed.
         /// </summary>
         /// <typeparam name="AsyncStateType"><see cref="SQLCallStructure"/> child type.</typeparam>
-        /// <param name="ar"><see cref="IAsyncResult"/> of a async function using the <see cref="DatabaseQuery{T}"/> delegate.</param>
+        /// <param name="ar"><see cref="IAsyncResult"/> of a async function using the <see cref="D_DatabaseQuery{T}"/> delegate.</param>
         /// <returns><see cref="MySqlResponse"/> from the provided SQL type.</returns>
         private MySqlResponse GetResponse<AsyncStateType>(IAsyncResult ar) where AsyncStateType : SQLCallStructure
         {
-            DatabaseQuery<AsyncStateType> rtn;
+            D_DatabaseQuery<AsyncStateType> rtn;
             try
             {
-                rtn = (DatabaseQuery<AsyncStateType>)ar.AsyncState;
+                rtn = (D_DatabaseQuery<AsyncStateType>)ar.AsyncState;
             }
             catch (InvalidCastException)
             {
-                rtn = default(DatabaseQuery<AsyncStateType>);
+                rtn = default(D_DatabaseQuery<AsyncStateType>);
             }
             rtn.EndInvoke(out MySqlResponse response, ar);
             ar.AsyncWaitHandle.WaitOne();
@@ -312,7 +326,6 @@ namespace UncreatedWarfare
                 CommandWindow.LogError("\nTrace\n" + ex.StackTrace);
             }
         }
-
         internal void Open(AsyncDatabase DatabaseManager, out bool bSuccess)
         {
             try
@@ -351,12 +364,12 @@ namespace UncreatedWarfare
                 {
                     if (type == typeof(SQLSelectCallStructure))
                     {
-                        DatabaseQuery<SQLSelectCallStructure> SelectCaller = new DatabaseQuery<SQLSelectCallStructure>(SelectDataAsyncCall);
+                        D_DatabaseQuery<SQLSelectCallStructure> SelectCaller = new D_DatabaseQuery<SQLSelectCallStructure>(SelectDataAsyncCall);
                         SelectCaller.BeginInvoke((SQLSelectCallStructure)Data, out _, Function, SelectCaller);
                     }
                     else if (type == typeof(SQLInsertOrUpdateStructure))
                     {
-                        DatabaseQuery<SQLInsertOrUpdateStructure> InsertOnDuplicateKeyUpdateCaller = new DatabaseQuery<SQLInsertOrUpdateStructure>(InsertIfDuplicateUpdateAsyncCall);
+                        D_DatabaseQuery<SQLInsertOrUpdateStructure> InsertOnDuplicateKeyUpdateCaller = new D_DatabaseQuery<SQLInsertOrUpdateStructure>(InsertIfDuplicateUpdateAsyncCall);
                         InsertOnDuplicateKeyUpdateCaller.BeginInvoke((SQLInsertOrUpdateStructure)Data, out _, Function, InsertOnDuplicateKeyUpdateCaller);
                     } else
                     {
@@ -398,7 +411,6 @@ namespace UncreatedWarfare
                 else throw ex;
             }
         }
-        public delegate void DatabaseQuery<T>(T Data, out MySqlResponse Output) where T : SQLCallStructure;
         public class SQLCallStructure
         {
             public AsyncDatabase DatabaseManager;
@@ -605,31 +617,18 @@ namespace UncreatedWarfare
             }
             Output = rtn;
         }
-        /// <param name="callback">Cast AsyncState to <see cref="DatabaseQuery{SQLSelectCallStructure}">DatabaseQuery&lt;SQLInsertOrUpdateStructure&gt;</see></param>
+        /// <param name="callback">Cast AsyncState to <see cref="D_DatabaseQuery{SQLSelectCallStructure}">DatabaseQuery&lt;SQLInsertOrUpdateStructure&gt;</see></param>
         internal void InsertOrUpdateAsync(SQLInsertOrUpdateStructure Data, AsyncCallback callback)
         {
             WaitUntilFinishedReadingDelegate caller = new WaitUntilFinishedReadingDelegate(WaitUntilFinishedReading);
             caller.BeginInvoke(Data, callback, out _, out _, out _, FinishedReading, caller);
         }
-        /// <param name="callback">Cast AsyncState to <see cref="DatabaseQuery{SQLSelectCallStructure}">DatabaseQuery&lt;SQLSelectCallStructure&gt;</see></param>
+        /// <param name="callback">Cast AsyncState to <see cref="D_DatabaseQuery{SQLSelectCallStructure}">DatabaseQuery&lt;SQLSelectCallStructure&gt;</see></param>
         internal void SelectDataAsync(SQLSelectCallStructure Data, AsyncCallback callback)
         {
             WaitUntilFinishedReadingDelegate caller = new WaitUntilFinishedReadingDelegate(WaitUntilFinishedReading);
             caller.BeginInvoke(Data, callback, out _, out _, out _, FinishedReading, caller);
         }
-        internal void SelectDataAsync(
-            AsyncDatabase DatabaseManager,
-            AsyncCallback callback,
-            Dictionary<string, Type> Columns,
-            string tableName,
-            bool selectAll = false,
-            string ConditionVariable = "none",
-            EComparisonType comparison = EComparisonType.NOCOMPARISON,
-            string condition = "none",
-            int limit = -1
-            ) => SelectDataAsync(
-                new SQLSelectCallStructure(DatabaseManager, Columns, tableName, selectAll, ConditionVariable, comparison, condition, limit), callback
-                );
     }
     public class MySqlResponse
     {
@@ -644,7 +643,7 @@ namespace UncreatedWarfare
         public EExecutionStatus executionstatus = EExecutionStatus.UNSET;
         public MySqlResponse(string command)
         {
-            CommandWindow.LogWarning(command);
+            //CommandWindow.LogWarning(command);
             this.command = command;
         }
     }

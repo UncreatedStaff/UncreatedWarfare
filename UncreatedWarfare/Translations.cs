@@ -44,6 +44,8 @@ namespace UncreatedWarfare
                 { "contested", "<color=#{1}>{0}</color> is contested! Eliminate all enemies to secure it." },
                 { "clearing", "Your team is busy clearing this point." },
                 { "secured", "This point is secure for now. Keep up the defense." },
+                { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
+                { "notowned", "This point is owned by <color=#{1}>{0}</color>. Get more players to capture it." },
                 { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
                 { "team_1", "USA" },
                 { "team_2", "Russia" },
@@ -54,6 +56,7 @@ namespace UncreatedWarfare
                 { "ui_contested", "CONTESTED" },
                 { "ui_secured", "SECURED" },
                 { "ui_nocap", "NOT OBJECTIVE" },
+                { "ui_notowned", "TAKEN" },
                 { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
                 { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}), out of {3} registered flags." },
                 { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
@@ -67,6 +70,7 @@ namespace UncreatedWarfare
                 { "renamed_group_already_named_that", "The group is already named that." },
                 { "renamed_group_console", "{0} ({1}) renamed group \"{2}\": \"{3}\" -> \"{4}\"." },
                 { "group_not_found", "A group with that ID was not found. Are you sure you entered an existing group ID?" },
+                { "not_in_group", "You aren't in a group." },
                 { "joined_group", "You have joined group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
                 { "joined_already_in_group", "You are already in that group." },
                 { "joined_group_not_found", "Could not find group <color=#{1}>{0}</color>." },
@@ -90,9 +94,11 @@ namespace UncreatedWarfare
                 // Lang
                 { "language_list", "Languages: <color=#{1}>{0}</color>." },
                 { "changed_language", "Changed your language to <color=#{1}>{0}</color>" },
+                { "change_language_not_needed", "You are already set to <color=#{1}>{0}</color>." },
                 { "reset_language", "Reset your language to <color=#{1}>{0}</color>" },
                 { "reset_language_how", "Do <color=#{0}>/lang reset</color> to reset back to default language." },
                 { "dont_have_language", "We don't have translations for <color=#{1}>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations." },
+                { "reset_language_not_needed", "You are already on the default language: <color=#{1}>{0}</color>." },
 
                 // Kits
                 { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
@@ -158,7 +164,11 @@ namespace UncreatedWarfare
                 // /ammo
                 { "ammo_error_nocrate", "<color=#FFAB87>Look at a placed Ammo Crate or vehicle in order to resupply.</color>" },
                 { "ammo_error_nokit", "<color=#FFAB87>You don't have a kit yet. Go and request one at main.</color>" },
-                { "ammo_success", "<color=#FFAB87>Your kit has been resupplied. <color=#d1c597>-1x Ammo crate</color>.</color>" }
+                { "ammo_success", "<color=#FFAB87>Your kit has been resupplied. <color=#d1c597>-1x Ammo crate</color>.</color>" },
+
+
+                // SIGNS - must prefix with "sign_" for them to work
+                { "sign_test", "<color=#ff00ff>This is the english translation for that sign.</color>" }
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -205,6 +215,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1", "ffff1a"),
             new ColorData("secured_team_1", "00ff00"),
             new ColorData("nocap_team_1", "ff0000"),
+            new ColorData("notowned_team_1", "ff0000"),
 
             // Team 1 Background Circle
             new ColorData("capturing_team_1_bkgr", "002266"),
@@ -213,6 +224,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1_bkgr", "666600"),
             new ColorData("secured_team_1_bkgr", "006600"),
             new ColorData("nocap_team_1_bkgr", "660000"),
+            new ColorData("notowned_team_1_bkgr", "660000"),
 
             // Team 1 Words
             new ColorData("capturing_team_1_words", "4785ff"),
@@ -221,7 +233,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1_words", "ffff1a"),
             new ColorData("secured_team_1_words", "00ff00"),
             new ColorData("nocap_team_1_words", "ff0000"),
-            new ColorData("entered_cap_radius", "e6e3d5"),
+            new ColorData("notowned_team_1_words", "ff0000"),
 
             // Team 2 Circle
             new ColorData("capturing_team_2", "f53b3b"),
@@ -230,6 +242,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2", "ffff1a"),
             new ColorData("secured_team_2", "00ff00"),
             new ColorData("nocap_team_2", "ff0000"),
+            new ColorData("notowned_team_2", "ff0000"),
 
             // Team 2 Background Circle
             new ColorData("capturing_team_2_bkgr", "610505"),
@@ -238,6 +251,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2_bkgr", "666600"),
             new ColorData("secured_team_2_bkgr", "006600"),
             new ColorData("nocap_team_2_bkgr", "660000"),
+            new ColorData("notowned_team_2_bkgr", "660000"),
 
             // Team 2 Words
             new ColorData("capturing_team_2_words", "f53b3b"),
@@ -246,6 +260,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2_words", "ffff1a"),
             new ColorData("secured_team_2_words", "00ff00"),
             new ColorData("nocap_team_2_words", "ff0000"),
+            new ColorData("notowned_team_2_words", "ff0000"),
 
             // Flag Chats
             new ColorData("entered_cap_radius_team_1", "e6e3d5"),
@@ -260,6 +275,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1_chat", "e6e3d5"),
             new ColorData("secured_team_1_chat", "e6e3d5"),
             new ColorData("nocap_team_1_chat", "e6e3d5"),
+            new ColorData("notowned_team_1_chat", "e6e3d5"),
 
             // Team 2 Chat
             new ColorData("capturing_team_2_chat", "e6e3d5"),
@@ -268,11 +284,13 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2_chat", "e6e3d5"),
             new ColorData("secured_team_2_chat", "e6e3d5"),
             new ColorData("nocap_team_2_chat", "e6e3d5"),
+            new ColorData("notowned_team_2_chat", "e6e3d5"),
 
             // Other Flag Chats
             new ColorData("flag_neutralized", "e6e3d5"),
 
             // Group Command
+            new ColorData("not_in_group", "e6e3d5"),
             new ColorData("current_group", "e6e3d5"),
             new ColorData("current_group_id", "4785ff"),
             new ColorData("current_group_name", "4785ff"),
@@ -315,8 +333,12 @@ namespace UncreatedWarfare
             new ColorData("language_list_list", "e6e3d5"),
             new ColorData("changed_language", "f53b3b"),
             new ColorData("changed_language_language", "e6e3d5"),
+            new ColorData("change_language_not_needed", "f53b3b"),
+            new ColorData("change_language_not_needed_language", "e6e3d5"),
             new ColorData("reset_language", "f53b3b"),
             new ColorData("reset_language_language", "e6e3d5"),
+            new ColorData("reset_language_not_needed", "f53b3b"),
+            new ColorData("reset_language_not_needed_language", "e6e3d5"),
             new ColorData("reset_language_how", "f53b3b"),
             new ColorData("reset_language_how_command", "e6e3d5"),
             new ColorData("dont_have_language", "dd1111"),

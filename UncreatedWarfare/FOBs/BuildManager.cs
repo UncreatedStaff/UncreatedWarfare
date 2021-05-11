@@ -505,5 +505,13 @@ namespace UncreatedWarfare.FOBs
                 ? hit.transform
                 : null;
         }
+        public static T GetInteractableFromLook<T>(PlayerLook look) where T : Interactable
+        {
+            Transform barricadeTransform = GetBarricadeTransformFromLook(look);
+            if (barricadeTransform == null) return null;
+            if (barricadeTransform.TryGetComponent(out T interactable))
+                return interactable;
+            else return null;
+        }
     }
 }

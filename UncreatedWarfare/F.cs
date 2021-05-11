@@ -287,7 +287,8 @@ namespace UncreatedWarfare
             Contested,
             NoCap,
             Clearing,
-            Blank
+            Blank,
+            NotOwned
         }
         public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
@@ -298,61 +299,100 @@ namespace UncreatedWarfare
             else if (groupID == UCWarfare.Config.Team2ID) return 2;
             else return 0;
         }
-        public static void UIOrChat(ulong team, UIOption type, string chatmessage, Color color, SteamPlayer player, int circleAmount, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, object[] formatting = null)
-            => UIOrChat(team, type, chatmessage, color, Provider.findTransportConnection(player.playerID.steamID), player, circleAmount, SendChatIfConfiged, SendUIIfConfiged, absolute, formatting);
-        public static void UIOrChat(ulong team, UIOption type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player, int c, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, object[] formatting = null)
+        public static void UIOrChat(ulong team, UIOption type, string translation_key, Color color, SteamPlayer player, int circleAmount, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, bool sendChatOverride = false, object[] formatting = null)
+            => UIOrChat(team, type, translation_key, color, Provider.findTransportConnection(player.playerID.steamID), player, circleAmount, playerID, SendChatIfConfiged, SendUIIfConfiged, absolute, sendChatOverride, formatting);
+        public static void UIOrChat(ulong team, UIOption type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player, int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
+            bool absolute = true, bool sendChatOverride = false, object[] formatting = null)
         {
-            int circleAmount = Math.Abs(c);
+            int circleAmount = absolute ? Math.Abs(c) : c;
             if (UCWarfare.Config.FlagSettings.UseUI && SendUIIfConfiged)
             {
                 EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, PlayerConnection);
                 switch (type)
                 {
                     case UIOption.Capturing:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1_words"]}>{Translate("ui_capturing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["capturing_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2_words"]}>{Translate("ui_capturing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["capturing_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1_words")}>{Translate("ui_capturing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("capturing_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("capturing_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2_words")}>{Translate("ui_capturing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("capturing_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("capturing_team_2_bkgr"));
                         break;
                     case UIOption.Blank:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(0)]}</color>", UCWarfare.I.ColorsHex["capturing_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"", $"<color=#{UCWarfare.I.ColorsHex["capturing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(0)]}</color>", UCWarfare.I.ColorsHex["capturing_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"", 
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(0)]}</color>", UCWarfare.GetColorHex("capturing_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"", 
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(0)]}</color>", UCWarfare.GetColorHex("capturing_team_2_bkgr"));
                         break;
                     case UIOption.Losing:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["losing_team_1_words"]}>{Translate("ui_losing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["losing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["losing_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["losing_team_2_words"]}>{Translate("ui_losing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["losing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["losing_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_1_words")}>{Translate("ui_losing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("losing_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("losing_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_2_words")}>{Translate("ui_losing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("losing_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("losing_team_2_bkgr"));
                         break;
                     case UIOption.Secured:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["secured_team_1_words"]}>{Translate("ui_secured", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["secured_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["secured_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["secured_team_2_words"]}>{Translate("ui_secured", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["secured_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["secured_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_1_words")}>{Translate("ui_secured", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("secured_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("secured_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_2_words")}>{Translate("ui_secured", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("secured_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("secured_team_2_bkgr"));
                         break;
                     case UIOption.Contested:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["contested_team_1_words"]}>{Translate("ui_contested", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["contested_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["contested_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["contested_team_2_words"]}>{Translate("ui_contested", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["contested_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["contested_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_1_words")}>{Translate("ui_contested", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("contested_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("contested_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_2_words")}>{Translate("ui_contested", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("contested_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("contested_team_2_bkgr"));
                         break;
                     case UIOption.NoCap:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["nocap_team_1_words"]}>{Translate("ui_nocap", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["nocap_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["nocap_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["nocap_team_2_words"]}>{Translate("ui_nocap", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["nocap_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["nocap_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_1_words")}>{Translate("ui_nocap", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("nocap_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("nocap_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_2_words")}>{Translate("ui_nocap", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("nocap_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("nocap_team_2_bkgr"));
                         break;
                     case UIOption.Clearing:
-                        if (team == UCWarfare.Config.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["clearing_team_1_words"]}>{Translate("ui_clearing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["clearing_team_1"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["clearing_team_1_bkgr"]);
-                        else if (team == UCWarfare.Config.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"<color=#{UCWarfare.I.ColorsHex["clearing_team_2_words"]}>{Translate("ui_clearing", 0)}</color>", $"<color=#{UCWarfare.I.ColorsHex["clearing_team_2"]}>{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.I.ColorsHex["clearing_team_2_bkgr"]);
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_1_words")}>{Translate("ui_clearing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("clearing_team_1")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("clearing_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, 
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_2_words")}>{Translate("ui_clearing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("clearing_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("clearing_team_2_bkgr"));
+                        break;
+                    case UIOption.NotOwned:
+                        if (team == UCWarfare.I.TeamManager.Team1.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_1_words")}>{Translate("ui_notowned", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("notowned_team_1_bkgr"));
+                        else if (team == UCWarfare.I.TeamManager.Team2.GroupID)
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2_words")}>{Translate("ui_notowned", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
+                                $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("notowned_team_2_bkgr"));
                         break;
                 }
             }
-            if (UCWarfare.Config.FlagSettings.UseChat && SendChatIfConfiged)
+            if (sendChatOverride || (UCWarfare.Config.FlagSettings.UseChat && SendChatIfConfiged))
             {
                 if(formatting == null)
                     player.SendChat(translation_key, color);
@@ -375,5 +415,88 @@ namespace UncreatedWarfare
         }
         public static string QuickSerialize(object obj) => JsonConvert.SerializeObject(obj);
         public static T QuickDeserialize<T>(string json) => JsonConvert.DeserializeObject<T>(json);
+        public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, string text)
+        {
+            string newtext = text;
+            if (text.StartsWith("sign_"))
+                newtext = Translate(text, client.playerID.steamID.m_SteamID);
+            CommandWindow.LogWarning("Invoking sign update for " + client.playerID.playerName + "\n" + text + " -> " + newtext);
+            UCWarfare.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
+        }
+        public static void InvokeSignUpdateForAll(byte x, byte y, ushort plant, ushort index, string text, BarricadeRegion region)
+        {
+            Dictionary<string, List<SteamPlayer>> playergroups = new Dictionary<string, List<SteamPlayer>>();
+            foreach(SteamPlayer client in Provider.clients)
+            {
+                if(UCWarfare.I.Languages.ContainsKey(client.playerID.steamID.m_SteamID))
+                {
+                    if (playergroups.ContainsKey(UCWarfare.I.Languages[client.playerID.steamID.m_SteamID]))
+                        playergroups[UCWarfare.I.Languages[client.playerID.steamID.m_SteamID]].Add(client);
+                    else
+                        playergroups.Add(UCWarfare.I.Languages[client.playerID.steamID.m_SteamID], new List<SteamPlayer> { client });
+                } else
+                {
+                    if (playergroups.ContainsKey(JSONMethods.DefaultLanguage))
+                        playergroups[JSONMethods.DefaultLanguage].Add(client);
+                    else
+                        playergroups.Add(JSONMethods.DefaultLanguage, new List<SteamPlayer> { client });
+                }
+            }
+            CommandWindow.LogWarning("Invoking sign update for " + Provider.clients.Count + " player" + S(Provider.clients.Count) + ": \n" + text);
+            foreach(KeyValuePair<string, List<SteamPlayer>> languageGroup in playergroups)
+            {
+                if(languageGroup.Value.Count > 0)
+                {
+                    string newtext = text;
+                    if (text.StartsWith("sign_"))
+                        newtext = Translate(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
+                    List<ITransportConnection> connections = new List<ITransportConnection>();
+                    languageGroup.Value.ForEach(l => connections.Add(l.transportConnection));
+                    CommandWindow.LogWarning("Invoking sign update for " + languageGroup.Value.Count.ToString() + " players in language " + languageGroup.Key + "\n" + text + " -> " + newtext);
+                    UCWarfare.SendUpdateSign.Invoke(ENetReliability.Unreliable, connections, x, y, plant, index, newtext);
+                    CommandWindow.LogWarning("looped back: " + languageGroup.Key);
+                }
+            }
+        }
+        public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
+        {
+            string newtext;
+            string oldtext = text;
+            if (!changeText)
+            {
+                newtext = GetSignText(index, region);
+                oldtext = newtext;
+            }
+            else newtext = text;
+            CommandWindow.LogWarning("Invoking sign update for " + client.playerID.playerName + "\n" + newtext);
+            if (newtext.StartsWith("sign_"))
+                newtext = Translate(newtext ?? "", client.playerID.steamID.m_SteamID);
+            CommandWindow.LogWarning("Translated \"" + (changeText ? text : oldtext) + "\" -> \"" + newtext + '\"');
+            UCWarfare.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
+        }
+        public static string GetSignText(ushort index, BarricadeRegion region)
+        {
+            if (region.drops[index].model.TryGetComponent(out InteractableSign sign))
+                return sign.text;
+            else return string.Empty;
+        }
+        public static string GetSignText(Transform transform)
+        {
+            if (BarricadeManager.tryGetInfo(transform, out byte _, out byte _, out ushort _, out ushort index, out BarricadeRegion region))
+                return GetSignText(index, region);
+            else return string.Empty;
+        }
+        public static bool IsSign(this BarricadeDrop barricade) => barricade.model.TryGetComponent(out InteractableSign _);
+        public static bool IsSign(this BarricadeData barricade, BarricadeRegion region)
+        {
+            int index = region.barricades.FindIndex(b => b.instanceID == barricade.instanceID);
+            if (index < region.drops.Count)
+            {
+                BarricadeDrop drop = region.drops[index];
+                if (drop.interactable.GetType() == typeof(InteractableSign)) return true;
+                else return false;
+            }
+            else return false;
+        }
     }
 }

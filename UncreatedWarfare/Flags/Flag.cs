@@ -86,10 +86,21 @@ namespace UncreatedWarfare.Flags
             get
             {
                 if (_owner.ID == UCWarfare.I.TeamManager.Team1.ID)
-                    return UCWarfare.I.Colors["team_1_color"];
+                    return UCWarfare.GetColor("team_1_color");
                 else if (_owner.ID == UCWarfare.I.TeamManager.Team2.ID)
-                    return UCWarfare.I.Colors["team_2_color"];
-                else return UCWarfare.I.Colors["neutral_color"];
+                    return UCWarfare.GetColor("team_2_color");
+                else return UCWarfare.GetColor("neutral_color");
+            }
+        }
+        public string TeamSpecificHexColor
+        {
+            get
+            {
+                if (_owner.ID == UCWarfare.I.TeamManager.Team1.ID)
+                    return UCWarfare.GetColorHex("team_1_color");
+                else if (_owner.ID == UCWarfare.I.TeamManager.Team2.ID)
+                    return UCWarfare.GetColorHex("team_2_color");
+                else return UCWarfare.GetColorHex("neutral_color");
             }
         }
         private Team _owner;
@@ -109,17 +120,15 @@ namespace UncreatedWarfare.Flags
             {
                 PlayersOnFlag.Clear();
                 foreach (SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
-                {
                     PlayersOnFlag.Add(player.player);
-                }
             }
             PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == UCWarfare.I.TeamManager.Team1.GroupID).ToList();
             Team1TotalPlayers = PlayersOnFlagTeam1.Count;
             PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == UCWarfare.I.TeamManager.Team2.GroupID).ToList();
             Team2TotalPlayers = PlayersOnFlagTeam2.Count;
         }
-        /// <param name="NewPlayers">New Players</param>
-        /// <returns>Old Players</returns>
+        /// <param name="NewPlayers">Players that have entered the flag since last check.</param>
+        /// <returns>Players that have left the flag since last check.</returns>
         public List<Player> GetUpdatedPlayers(List<SteamPlayer> OnlinePlayers, out List<Player> NewPlayers)
         {
             List<Player> OldPlayers = PlayersOnFlag.ToList();
@@ -241,33 +250,38 @@ namespace UncreatedWarfare.Flags
         {
             Points -= amount;
         }
-        public bool T1Obj() => ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID;
-        public bool T2Obj() => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID;
+        public bool T1Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID; }
+        public bool T2Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID; }
         public void EvaluatePoints()
         {
-            if (T1Obj())
+            CommandWindow.Log("Evaluating " + this.Name);
+            if (T1Obj)
             {
                 if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
                 {
+                    CommandWindow.Log("Capping team 1");
                     CapT1();
                 } else if (
                     (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers || 
                     (Team2TotalPlayers > 0 && Team1TotalPlayers == 0)) &&
                     Owner.ID == ETeam.TEAM2 && _points > -1 * MaxPoints)
                 {
+                    CommandWindow.Log("Capping team 2");
                     CapT2();
                 }
             }
-            if (T2Obj())
+            if (T2Obj)
             {
                 if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
                 {
+                    CommandWindow.Log("Capping team 2");
                     CapT2();
                 } else if (
                     (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers ||
                     (Team1TotalPlayers > 0 && Team2TotalPlayers == 0)) && 
                     Owner.ID == ETeam.TEAM1 && _points < MaxPoints)
                 {
+                    CommandWindow.Log("Capping team 1");
                     CapT1();
                 }
             }

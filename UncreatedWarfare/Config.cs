@@ -26,6 +26,7 @@ namespace UncreatedWarfare
         public ulong Team2ID;
         public bool Debug;
         public bool SendAssetsOnStartup;
+        public float DelayAfterConnectionToSendTranslations;
         public void LoadDefaults()
         {
             Modules = new Modules();
@@ -39,6 +40,7 @@ namespace UncreatedWarfare
             Team2ID = 2;
             Debug = true;
             SendAssetsOnStartup = false;
+            DelayAfterConnectionToSendTranslations = 0.5f;
         }
     }
     public class Modules
@@ -89,7 +91,7 @@ namespace UncreatedWarfare
             PlayerCheckSpeedSeconds = 0.25f;
 
             UseUI = true;
-            UseChat = true;
+            UseChat = false;
             UIID = 32366;
             charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 

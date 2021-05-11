@@ -73,6 +73,8 @@ namespace UncreatedWarfare
         internal Thread ListenerThread;
         internal AsyncListenServer ListenServer;
         internal AsyncDatabase DatabaseManager;
+        internal static readonly ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign = ClientStaticMethod<byte, byte, ushort, ushort, string>.Get(new ClientStaticMethod<byte, byte, ushort, ushort, string>.ReceiveDelegate(BarricadeManager.ReceiveUpdateSign));
+        internal static readonly ClientStaticMethod SendMultipleBarricades = ClientStaticMethod.Get(new ClientStaticMethod.ReceiveDelegateWithContext(BarricadeManager.ReceiveMultipleBarricades));
         private void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))
@@ -97,7 +99,7 @@ namespace UncreatedWarfare
             Instance = this;
 
             CommandWindow.Log("Patching methods...");
-            //Patches.InternalPatches.DoPatching();
+            Patches.InternalPatches.DoPatching();
 
             if(LoadMySQLDataFromElsewhere)
             {
@@ -168,12 +170,12 @@ namespace UncreatedWarfare
 
             // Managers
             CommandWindow.Log("Instantiating Framework...");
+            TeamManager = new TeamManager();
             DatabaseManager = new AsyncDatabase();
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             WebInterface = new WebInterface();
             ListenerThread = new Thread(StartListening);
 
-            TeamManager = new TeamManager();
 
             if (Config.Modules.Flags)
             {
@@ -196,7 +198,7 @@ namespace UncreatedWarfare
             {
                 reviveManager = new ReviveManager();
             }
-
+            
             CommandWindow.Log("Starting Coroutines...");
             if (Level.isLoaded)
             {
@@ -206,9 +208,7 @@ namespace UncreatedWarfare
                     WebInterface.SendAssetUpdate();
                 Log("Subscribing to events...");
                 InitialLoadEventSubscription = true;
-                U.Events.OnPlayerConnected += OnPostPlayerConnected;
-                U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
-                Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
+                SubscribeToEvents();
             } else
             {
                 InitialLoadEventSubscription = false;
@@ -218,15 +218,62 @@ namespace UncreatedWarfare
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
+        private void SubscribeToEvents()
+        {
+            U.Events.OnPlayerConnected += OnPostPlayerConnected;
+            U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
+            Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
+            Commands.LangCommand.OnPlayerChangedLanguage += LangCommand_OnPlayerChangedLanguage;
+        }
+
+
+        private void OnPluginsLoaded()
+        {
+            StartAllCoroutines();
+            Log("Subscribing to events...");
+            SubscribeToEvents();
+        }
+        private void UpdateLangs(SteamPlayerID player)
+        {
+            SteamPlayer steamPlayer = PlayerTool.getSteamPlayer(player.steamID.m_SteamID);
+            if (steamPlayer != null) UpdateLangs(steamPlayer);
+            else CommandWindow.LogError("Couldn't get SteamPlayer from " + player.steamID.m_SteamID.ToString());
+        }
+        private void UpdateLangs(SteamPlayer player)
+        {
+            foreach (BarricadeRegion region in BarricadeManager.regions)
+            {
+                List<BarricadeDrop> signs = new List<BarricadeDrop>();
+                foreach (BarricadeDrop drop in region.drops)
+                {
+                    if (drop.model.TryGetComponent(out InteractableSign sign))
+                    {
+                        if (sign.text.StartsWith("sign_"))
+                        {
+                            if (BarricadeManager.tryGetInfo(drop.model, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion _))
+                                F.InvokeSignUpdateFor(player, x, y, plant, index, region, false);
+                        }
+                    }
+                }
+            }
+            
+        }
+        private void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UpdateLangs(e.player.Player.channel.owner);
 
         private void OnPrePlayerConnect(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
         {
             SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == callback.m_SteamID.m_SteamID);
             if (player == default(SteamPending)) return;
+            CommandWindow.Log(player.playerID.playerName);
             if (OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
                 OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
             else
                 OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
+            const string prefix = "[TEAM] ";
+            if (!player.playerID.characterName.StartsWith(prefix))
+                player.playerID.characterName = prefix + player.playerID.characterName;
+            if (!player.playerID.nickName.StartsWith(prefix))
+                player.playerID.nickName = prefix + player.playerID.nickName;
         }
 
         private void OnLevelLoaded(int level)
@@ -243,16 +290,9 @@ namespace UncreatedWarfare
             ListenServer.StartListening();
         }
 
-        private void OnPluginsLoaded()
-        {
-            StartAllCoroutines();
-            Log("Subscribing to events...");
-            U.Events.OnPlayerConnected += OnPostPlayerConnected;
-            U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
-        }
         private void OnPostPlayerConnected(UnturnedPlayer player)
         {
-            F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
+            F.Broadcast("player_connected", GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, GetColorHex("join_message_name"));
             WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
             FPlayerName names;
             if (OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -264,7 +304,7 @@ namespace UncreatedWarfare
         {
             if (OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
+            F.Broadcast("player_disconnected", GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, GetColorHex("leave_message_name"));
             WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
         }
 
@@ -283,6 +323,7 @@ namespace UncreatedWarfare
             U.Events.OnPlayerConnected -= OnPostPlayerConnected;
             U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
             if(ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
+            Commands.LangCommand.OnPlayerChangedLanguage -= LangCommand_OnPlayerChangedLanguage;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;
@@ -293,6 +334,18 @@ namespace UncreatedWarfare
                 CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
             }
             catch (ObjectDisposedException) { }
+        }
+        public static Color GetColor(string key)
+        {
+            if (I.Colors.ContainsKey(key)) return I.Colors[key];
+            else if (I.Colors.ContainsKey("default")) return I.Colors["default"];
+            else return Color.white;
+        }
+        public static string GetColorHex(string key)
+        {
+            if (I.ColorsHex.ContainsKey(key)) return I.ColorsHex[key];
+            else if (I.ColorsHex.ContainsKey("default")) return I.ColorsHex["default"];
+            else return "ffffff";
         }
     }
 }

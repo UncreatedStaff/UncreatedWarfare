@@ -19,6 +19,7 @@ namespace UncreatedWarfare.Kits
             _kitSaver = new KitSaver();
         }
 
+        protected override string LoadDefaults() => "[]";
         public void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public void DeleteAllKits() => RemoveAllObjectsFromSave();
