@@ -162,7 +162,6 @@ namespace UncreatedWarfare
                 }
                 else return true; // no barricades
             }
-
             [HarmonyPatch(typeof(BarricadeManager), "dropBarricadeIntoRegionInternal")]
             [HarmonyPostfix]
             [UsedImplicitly]
@@ -177,7 +176,6 @@ namespace UncreatedWarfare
                     barricadeSpawnedHandler?.Invoke(region, data);
                 }
             }
-
             [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade")]
             [HarmonyPrefix]
             static void DestroyBarricadePostFix(ref BarricadeRegion region, byte x, byte y, ushort plant, ref ushort index)

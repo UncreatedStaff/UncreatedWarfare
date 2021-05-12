@@ -107,8 +107,7 @@ namespace UncreatedWarfare
                 {
                     TextWriter w = File.CreateText(ElseWhereSQLPath);
                     JsonTextWriter wr = new JsonTextWriter(w);
-                    JsonSerializer s = new JsonSerializer();
-                    s.Formatting = Formatting.Indented;
+                    JsonSerializer s = new JsonSerializer { Formatting = Formatting.Indented };
                     s.Serialize(wr, Config.SQL);
                     wr.Close();
                     w.Close();
@@ -233,12 +232,6 @@ namespace UncreatedWarfare
             Log("Subscribing to events...");
             SubscribeToEvents();
         }
-        private void UpdateLangs(SteamPlayerID player)
-        {
-            SteamPlayer steamPlayer = PlayerTool.getSteamPlayer(player.steamID.m_SteamID);
-            if (steamPlayer != null) UpdateLangs(steamPlayer);
-            else CommandWindow.LogError("Couldn't get SteamPlayer from " + player.steamID.m_SteamID.ToString());
-        }
         private void UpdateLangs(SteamPlayer player)
         {
             foreach (BarricadeRegion region in BarricadeManager.regions)
@@ -274,6 +267,9 @@ namespace UncreatedWarfare
                 player.playerID.characterName = prefix + player.playerID.characterName;
             if (!player.playerID.nickName.StartsWith(prefix))
                 player.playerID.nickName = prefix + player.playerID.nickName;
+            // remove any "staff" from player's names.
+            player.playerID.characterName = player.playerID.characterName.ReplaceCaseInsensitive("staff");
+            player.playerID.nickName = player.playerID.nickName.ReplaceCaseInsensitive("staff");
         }
 
         private void OnLevelLoaded(int level)

@@ -499,8 +499,8 @@ namespace UncreatedWarfare.FOBs
 
         public static Transform GetBarricadeTransformFromLook(PlayerLook look)
         {
-            return Physics.Raycast(look.aim.position, look.aim.forward, out var collision, Mathf.Infinity, RayMasks.BLOCK_COLLISION) &&
-                   Physics.Raycast(look.aim.position, look.aim.forward, out var hit, Mathf.Infinity, RayMasks.BARRICADE) &&
+            return Physics.Raycast(look.aim.position, look.aim.forward, out var collision, 4, RayMasks.BLOCK_COLLISION) &&
+                   Physics.Raycast(look.aim.position, look.aim.forward, out var hit, 4, RayMasks.BARRICADE) &&
                    collision.transform == hit.transform
                 ? hit.transform
                 : null;

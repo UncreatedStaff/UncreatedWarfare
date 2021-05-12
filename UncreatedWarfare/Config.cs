@@ -27,6 +27,7 @@ namespace UncreatedWarfare
         public bool Debug;
         public bool SendAssetsOnStartup;
         public float DelayAfterConnectionToSendTranslations;
+        public float MaxMapHeight;
         public void LoadDefaults()
         {
             Modules = new Modules();
@@ -41,6 +42,7 @@ namespace UncreatedWarfare
             Debug = true;
             SendAssetsOnStartup = false;
             DelayAfterConnectionToSendTranslations = 0.5f;
+            MaxMapHeight = 150;
         }
     }
     public class Modules

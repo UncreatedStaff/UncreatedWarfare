@@ -67,6 +67,12 @@ namespace UncreatedWarfare
                 return $"{years} year{(years == 1 ? "" : "s")}{(monthOverflow == 0 ? "" : $" and {monthOverflow} month{(monthOverflow == 1 ? "" : "s")}")}";
             }
         }
+        public static int DivideRemainder(float divisor, float dividend, out int remainder)
+        {
+            float answer = divisor / dividend;
+            remainder = (int)Mathf.Round((answer - Mathf.Floor(answer)) * dividend);
+            return (int)Mathf.Floor(answer);
+        }
         public static uint DivideRemainder(uint divisor, uint dividend, out uint remainder)
         {
             decimal answer = (decimal)divisor / dividend;
@@ -489,14 +495,53 @@ namespace UncreatedWarfare
         public static bool IsSign(this BarricadeDrop barricade) => barricade.model.TryGetComponent(out InteractableSign _);
         public static bool IsSign(this BarricadeData barricade, BarricadeRegion region)
         {
-            int index = region.barricades.FindIndex(b => b.instanceID == barricade.instanceID);
+            if (barricade == null || region == null) return false;
+            int index = region.barricades.FindIndex(b => b != null && b.instanceID == barricade.instanceID);
             if (index < region.drops.Count)
             {
                 BarricadeDrop drop = region.drops[index];
-                if (drop.interactable.GetType() == typeof(InteractableSign)) return true;
+                if (drop != null && drop.interactable != null && drop.interactable.GetType() == typeof(InteractableSign)) return true;
                 else return false;
             }
             else return false;
+        }
+        public static float GetTerrainHeightAt2DPoint(Vector2 position) => GetTerrainHeightAt2DPoint(position.x, position.y);
+        public static float GetTerrainHeightAt2DPoint(float x, float z, float defaultY = 0)
+        {
+            if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.GROUND | RayMasks.GROUND2))
+                return h.point.y;
+            else return defaultY;
+        }
+        public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
+        {
+            if (source.Length == 0 || replaceIf.Length == 0 || replaceIf == null || replaceWith == null) return source;
+            if (source == null) return null;
+            char[] chars = source.ToCharArray();
+            char[] lowerchars = source.ToLower().ToCharArray();
+            char[] replaceIfChars = replaceIf.ToLower().ToCharArray();
+            StringBuilder buffer = new StringBuilder();
+            int replaceIfLength = replaceIfChars.Length;
+            StringBuilder newString = new StringBuilder();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (buffer.Length < replaceIfLength)
+                {
+                    if (lowerchars[i] == replaceIfChars[buffer.Length]) buffer.Append(chars[i]);
+                    else
+                    {
+                        if (buffer.Length != 0)
+                            newString.Append(buffer.ToString());
+                        buffer.Clear();
+                        newString.Append(chars[i]);
+                    }
+                }
+                else
+                {
+                    if (replaceWith.Length != 0) newString.Append(replaceWith);
+                    newString.Append(chars[i]);
+                }
+            }
+            return newString.ToString();
         }
     }
 }
