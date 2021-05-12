@@ -1,4 +1,5 @@
-﻿using Rocket.API;
+﻿using Newtonsoft.Json;
+using Rocket.API;
 using System.Xml.Serialization;
 
 namespace UncreatedWarfare
@@ -24,6 +25,9 @@ namespace UncreatedWarfare
         public ulong Team1ID;
         public ulong Team2ID;
         public bool Debug;
+        public bool SendAssetsOnStartup;
+        public float DelayAfterConnectionToSendTranslations;
+        public float MaxMapHeight;
         public void LoadDefaults()
         {
             Modules = new Modules();
@@ -32,10 +36,13 @@ namespace UncreatedWarfare
             PlayerStatsSettings = new PlayerStatsSettings();
             TeamSettings = new TeamSettings();
             FobSettings = new FOBSettings();
-            SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin" };
+            SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
             Team1ID = 1;
             Team2ID = 2;
             Debug = true;
+            SendAssetsOnStartup = false;
+            DelayAfterConnectionToSendTranslations = 0.5f;
+            MaxMapHeight = 150;
         }
     }
     public class Modules
@@ -86,7 +93,7 @@ namespace UncreatedWarfare
             PlayerCheckSpeedSeconds = 0.25f;
 
             UseUI = true;
-            UseChat = true;
+            UseChat = false;
             UIID = 32366;
             charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -156,6 +163,8 @@ namespace UncreatedWarfare
         public string Password;
         public string Username;
         public ushort Port;
-        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};"; }
+        public string CharSet;
+        [JsonIgnore]
+        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
     }
 }

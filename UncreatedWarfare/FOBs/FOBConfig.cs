@@ -71,6 +71,7 @@ namespace UncreatedWarfare.FOBs
 
         public FOBConfig(string directory)
         {
+            this.directory = directory;
             if (!File.Exists(directory))
             {
                 StreamWriter creator = File.CreateText(directory);

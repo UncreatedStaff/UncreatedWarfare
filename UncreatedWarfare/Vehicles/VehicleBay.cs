@@ -28,7 +28,7 @@ namespace UncreatedWarfare.Vehicles
             _spawnManager = new VehicleSpawnSaver();
         }
 
-
+        protected override string LoadDefaults() => "[]";
         public void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
         public void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
         public void RemoveAllVehicles() => RemoveAllObjectsFromSave();

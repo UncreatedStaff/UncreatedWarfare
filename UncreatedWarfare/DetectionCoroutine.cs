@@ -23,9 +23,10 @@ namespace UncreatedWarfare
         }
         internal IEnumerator<WaitForSeconds> CheckPlayers()
         {
-            DateTime start = DateTime.Now;
+            //DateTime start = DateTime.Now;
             List<SteamPlayer> OnlinePlayers = Provider.clients;
-            if(FlagManager.TimeToCheck)
+            bool ttc = FlagManager.TimeToCheck;
+            if (ttc)
             {
                 FlagManager.EvaluatePoints(OnlinePlayers);
             }
@@ -37,7 +38,10 @@ namespace UncreatedWarfare
                 foreach (Player player in NewPlayers)
                     FlagManager.AddPlayerOnFlag(player, flag);
             }
-            //CommandWindow.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
+            /*
+            if(ttc)
+                CommandWindow.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
+            */
             yield return new WaitForSeconds(Config.FlagSettings.PlayerCheckSpeedSeconds);
             StartCoroutine(CheckPlayers());
         }

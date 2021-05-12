@@ -15,7 +15,7 @@ using UncreatedWarfare.Stats;
 
 namespace UncreatedWarfare
 {
-    public class ColorData
+    public struct ColorData
     {
         public string key;
         public string color_hex;
@@ -28,7 +28,7 @@ namespace UncreatedWarfare
             this.color_hex = color_hex;
         }
     }
-    public class TeamData
+    public struct TeamData
     {
         public ulong team_id;
         public string name;
@@ -47,7 +47,7 @@ namespace UncreatedWarfare
             this.spawnpoint_z = spawnpoint_z;
         }
     }
-    public class XPData
+    public struct XPData
     {
         public string key;
         public int xp;
@@ -63,7 +63,7 @@ namespace UncreatedWarfare
             this.xp = xp;
         }
     }
-    public class Point3D
+    public struct Point3D
     {
         public string name;
         public float x;
@@ -80,7 +80,7 @@ namespace UncreatedWarfare
             this.z = z;
         }
     }
-    public class CreditsData
+    public struct CreditsData
     {
         public string key;
         public int credits;
@@ -96,7 +96,18 @@ namespace UncreatedWarfare
             this.credits = xp;
         }
     }
-    public class CallData
+    public struct LangData
+    {
+        public ulong player;
+        public string language;
+        [JsonConstructor]
+        public LangData(ulong player, string language)
+        {
+            this.player = player;
+            this.language = language;
+        }
+    }
+    public struct CallData
     {
         public string key;
         public string call;
@@ -112,7 +123,20 @@ namespace UncreatedWarfare
             this.call = call;
         }
     }
-    public class Translation
+    public struct LanguageAliasSet
+    {
+        public string key;
+        public string display_name;
+        public List<string> values;
+        [JsonConstructor]
+        public LanguageAliasSet(string key, string display_name, List<string> values)
+        {
+            this.key = key;
+            this.display_name = display_name;
+            this.values = values;
+        }
+    }
+    public struct Translation
     {
         public string key;
         public string value;
@@ -123,7 +147,7 @@ namespace UncreatedWarfare
             this.value = value;
         }
     }
-    public class MySqlColumnData
+    public struct MySqlColumnData
     {
         public string key;
         public string name;
@@ -134,7 +158,7 @@ namespace UncreatedWarfare
             this.name = name;
         }
     }
-    public class MySqlTableData
+    public struct MySqlTableData
     {
         public string TableName;
         public string key;
@@ -147,7 +171,7 @@ namespace UncreatedWarfare
             this.Columns = columns;
         }
     }
-    public class MySqlTableLang
+    public struct MySqlTableLang
     {
         public string TableName;
         public Dictionary<string, string> Columns;
@@ -156,13 +180,11 @@ namespace UncreatedWarfare
             this.TableName = tableName;
             this.Columns = columns;
         }
-        public override string ToString()
-        {
-            return TableName;
-        }
+        public override string ToString() => TableName;
     }
     public static partial class JSONMethods
     {
+        public const string DefaultLanguage = "en-us";
         public static List<FlagData> ReadFlags(string Preset)
         {
             if(!File.Exists(UCWarfare.FlagStorage + Preset + ".json"))
@@ -345,18 +367,20 @@ namespace UncreatedWarfare
             }
             return NewXPs;
         }
-        public static Dictionary<string, string> LoadTranslations(string language = "en-us")
+        public static Dictionary<string, Dictionary<string, string>> LoadTranslations()
         {
-            if (!File.Exists(UCWarfare.LangStorage + language + ".json"))
+            string[] langFiles = Directory.GetFiles(UCWarfare.LangStorage, "*.json", SearchOption.TopDirectoryOnly);
+            Dictionary<string, Dictionary<string, string>> languages = new Dictionary<string, Dictionary<string, string>>();
+            if (!File.Exists(UCWarfare.LangStorage + DefaultLanguage + ".json"))
             {
-                using (StreamWriter TextWriter = File.CreateText(UCWarfare.LangStorage + language + ".json"))
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.LangStorage + DefaultLanguage + ".json"))
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
                         JsonSerializer Serializer = new JsonSerializer();
                         Serializer.Formatting = Formatting.Indented;
                         List<Translation> t = new List<Translation>();
-                        foreach(KeyValuePair<string, string> translation in DefaultTranslations)
+                        foreach (KeyValuePair<string, string> translation in DefaultTranslations)
                         {
                             t.Add(new Translation(translation.Key, translation.Value));
                         }
@@ -366,22 +390,37 @@ namespace UncreatedWarfare
                         TextWriter.Dispose();
                     }
                 }
-                return DefaultTranslations;
+                languages.Add(DefaultLanguage, DefaultTranslations);
             }
-            List<Translation> Translations;
-            using (StreamReader Reader = File.OpenText(UCWarfare.LangStorage + language + ".json"))
+            foreach (string file in langFiles)
             {
-                Translations = JsonConvert.DeserializeObject<List<Translation>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
+                FileInfo info = new FileInfo(file);
+                List<Translation> Translations;
+                using (StreamReader Reader = File.OpenText(file))
+                {
+                    Translations = JsonConvert.DeserializeObject<List<Translation>>(Reader.ReadToEnd());
+                    Reader.Close();
+                    Reader.Dispose();
+                }
+                if (Translations == null) continue;
+                Dictionary<string, string> translationDict = new Dictionary<string, string>();
+                foreach (Translation data in Translations)
+                {
+                    try
+                    {
+                        translationDict.Add(data.key, data.value);
+                    }
+                    catch
+                    {
+                        CommandWindow.LogWarning("\"" + data.key + "\" has a duplicate key in translation file: (" + info.Name + ")!");
+                    }
+                }
+                string langName = info.Name;
+                if (langName.Length > 5)
+                    langName = langName.Substring(0, langName.Length - 5);
+                languages.Add(langName, translationDict);
             }
-            if(Translations == null) return DefaultTranslations;
-            Dictionary<string, string> translationDict = new Dictionary<string, string>();
-            foreach (Translation data in Translations)
-            {
-                translationDict.Add(data.key, data.value);
-            }
-            return translationDict;
+            return languages;
         }
         public static Dictionary<int, Zone> LoadExtraZones()
         {
@@ -565,5 +604,128 @@ namespace UncreatedWarfare
             }
             return NewCalls;
         }
+        public static Dictionary<ulong, string> LoadLanguagePreferences()
+        {
+            if (!File.Exists(UCWarfare.LangStorage + "preferences.json"))
+            {
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.LangStorage + "preferences.json"))
+                {
+                    TextWriter.Write("[]");
+                    TextWriter.Close();
+                    TextWriter.Dispose();
+                }
+                return new Dictionary<ulong, string>();
+            }
+            List<LangData> Languages;
+            using (StreamReader Reader = File.OpenText(UCWarfare.LangStorage + "preferences.json"))
+            {
+                Languages = JsonConvert.DeserializeObject<List<LangData>>(Reader.ReadToEnd());
+                Reader.Close();
+                Reader.Dispose();
+            }
+            if (Languages == null) return new Dictionary<ulong, string>();
+            Dictionary<ulong, string> NewLanguages = new Dictionary<ulong, string>();
+            foreach (LangData player in Languages)
+                NewLanguages.Add(player.player, player.language);
+            return NewLanguages;
+        }
+        public static void SaveLangs(Dictionary<ulong, string> Languages)
+        {
+            if (Languages == null) return;
+            List<LangData> data = new List<LangData>();
+            foreach (KeyValuePair<ulong, string> player in Languages)
+                data.Add(new LangData(player.Key, player.Value));
+            using (StreamWriter TextWriter = File.CreateText(UCWarfare.LangStorage + "preferences.json"))
+            {
+                if (data.Count == 0) TextWriter.Write("[]");
+                else
+                {
+                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    {
+                        JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
+                        Serializer.Serialize(JsonWriter, data);
+                        JsonWriter.Close();
+                        TextWriter.Close();
+                        TextWriter.Dispose();
+                    }
+                }
+            }
+        }
+        public static void SetLanguage(ulong player, string language)
+        {
+            if(UCWarfare.I.Languages.ContainsKey(player))
+            {
+                UCWarfare.I.Languages[player] = language;
+                SaveLangs(UCWarfare.I.Languages);
+            } else
+            {
+                UCWarfare.I.Languages.Add(player, language);
+                SaveLangs(UCWarfare.I.Languages);
+            }
+        }
+        public static Dictionary<string, LanguageAliasSet> LoadLangAliases()
+        {
+            if (!File.Exists(UCWarfare.LangStorage + "aliases.json"))
+            {
+
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.LangStorage + "aliases.json"))
+                {
+                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    {
+                        JsonSerializer Serializer = new JsonSerializer();
+                        Serializer.Formatting = Formatting.Indented;
+                        Serializer.Serialize(JsonWriter, DefaultLanguageAliasSets);
+                        JsonWriter.Close();
+                        TextWriter.Close();
+                        TextWriter.Dispose();
+                    }
+                }
+                Dictionary<string, LanguageAliasSet> DefaultNewAliases = new Dictionary<string, LanguageAliasSet>();
+                foreach (LanguageAliasSet set in DefaultLanguageAliasSets)
+                {
+                    DefaultNewAliases.Add(set.key, set);
+                }
+                return DefaultNewAliases;
+            }
+            List<LanguageAliasSet> Sets;
+            using (StreamReader Reader = File.OpenText(UCWarfare.LangStorage + "aliases.json"))
+            {
+                Sets = JsonConvert.DeserializeObject<List<LanguageAliasSet>>(Reader.ReadToEnd());
+                Reader.Close();
+                Reader.Dispose();
+            }
+            if (Sets == null)
+            {
+                Dictionary<string, LanguageAliasSet> DefaultNewAliases = new Dictionary<string, LanguageAliasSet>();
+                foreach (LanguageAliasSet set in DefaultLanguageAliasSets)
+                {
+                    DefaultNewAliases.Add(set.key, set);
+                }
+                return DefaultNewAliases;
+            }
+            Dictionary<string, LanguageAliasSet> NewAliases = new Dictionary<string, LanguageAliasSet>();
+            foreach (LanguageAliasSet set in Sets)
+            {
+                NewAliases.Add(set.key, set);
+            }
+            return NewAliases;
+        }
+    }
+    public enum EXPGainType : byte
+    {
+        CAP_INCREASE,
+        WIN,
+        KILL,
+        DEFENCE_KILL,
+        OFFENCE_KILL,
+        CAPTURE_KILL,
+        CAPTURE,
+        HOLDING_POINT
+    }
+    public enum ECreditsGainType : byte
+    {
+        CAPTURE,
+        WIN
     }
 }

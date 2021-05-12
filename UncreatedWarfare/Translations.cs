@@ -28,128 +28,150 @@ namespace UncreatedWarfare
             new CallData(ECall.REPORT_VEHICLE_ERROR, "reportVehicleError"),
             new CallData(ECall.REPORT_ITEM_ERROR, "reportItemError"),
             new CallData(ECall.REPORT_SKIN_ERROR, "reportSkinError"),
+            new CallData(ECall.SEND_UPDATED_USERNAME, "sendUpdatedUsername"),
 
         };
-        public static readonly Dictionary<string, string> DefaultTranslations = new Dictionary<string, string>
+        public static void CreateDefaultTranslations()
         {
-            { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
-            { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
-            { "capturing", "Your team is capturing this point!" },
-            { "team_capturing", "<color=#{1}>{0}</color> is capturing <color=#{3}>{2}</color>: <color=#{1}>{4}/{5}</color>" },
-            { "team_clearing", "<color=#{1}>{0}</color> is clearing <color=#{3}>{2}</color>: <color=#{1}>{4}/{5}</color>" },
-            { "losing", "Your team is losing this point!" },
-            { "contested", "<color=#{1}>{0}</color> is contested! Eliminate all enemies to secure it." },
-            { "clearing", "Your team is busy clearing this point." },
-            { "secured", "This point is secure for now. Keep up the defense." },
-            { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
-            { "team_1", "USA" },
-            { "team_2", "Russia" },
-            { "team_3", "Admin" },
-            { "ui_capturing", "CAPTURING" },
-            { "ui_losing", "LOSING" },
-            { "ui_clearing", "CLEARING" },
-            { "ui_contested", "CONTESTED" },
-            { "ui_secured", "SECURED" },
-            { "ui_nocap", "NOT OBJECTIVE" },
-            { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
-            { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}), out of {3} registered flags." },
-            { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
-            { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
-            { "current_group", "Group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
-            { "cant_create_group", "You can't create a group right now." },
-            { "created_group", "Created group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
-            { "created_group_console", "{0} ({1}) created group \"{2}\": \"{3}\"" },
-            { "rename_not_in_group", "You must be in a group to rename it." },
-            { "renamed_group", "Renamed group <color=#{1}>{0}</color>: <color=#{3}>{2}</color> -> <color=#{5}>{4}</color>." },
-            { "renamed_group_already_named_that", "The group is already named that." },
-            { "renamed_group_console", "{0} ({1}) renamed group \"{2}\": \"{3}\" -> \"{4}\"." },
-            { "group_not_found", "A group with that ID was not found. Are you sure you entered an existing group ID?" },
-            { "joined_group", "You have joined group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
-            { "joined_already_in_group", "You are already in that group." },
-            { "joined_group_not_found", "Could not find group <color=#{1}>{0}</color>." },
-            { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
-            { "deleted_group", "Deleted group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
-            { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" },
-            { "join_not_in_lobby", "You must be in the lobby to join a new team: <color={0}>/deploy lobby</color>." },
-            { "joined_team_must_rejoin", "You have joined <color=#{1}>{0}</color>. You must rejoin the server to update your name." },
-            { "joined_team", "You have joined <color=#{1}>{0}</color>. Deploying you to main base." },
-            { "join_already_in_team", "You are already a member of <color=#{1}>{0}</color>." },
-            { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch." },
-            { "join_group_has_no_space", "<color=#{1}>{0}</color> has surpassed the server's max group size. This should be tweaked by an admin." },
-            { "join_command_no_args_provided", "Do <b>/join <color=#{1}>{0}</color></b> or <b>/join <color=#{3}>{2}</color></b>." },
-            { "join_group_not_found", "Could not find group <color=#{1}>{0}</color> (ID: <color=#{3}>{2}</color>). Tell an admin about this." },
-            { "player_switched_groups_console_must_rejoin", "{0} ({1}) joined {2} and must rejoin." },
-            { "player_switched_groups_console", "{0} ({1}) joined {2}." },
-            { "from_lobby_teleport_failed", "Failed to teleport you to your main base. Do <color=#{0}>/deploy main</color> to try again." },
-            { "no_permissions", "You do not have permission to use this command." },
-            { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" },
+            DefaultTranslations = new Dictionary<string, string>
+            {
+                { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
+                { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
+                { "capturing", "Your team is capturing this point!" },
+                { "team_capturing", "<color=#{1}>{0}</color> is capturing <color=#{3}>{2}</color>: <color=#{1}>{4}/{5}</color>" },
+                { "team_clearing", "<color=#{1}>{0}</color> is clearing <color=#{3}>{2}</color>: <color=#{1}>{4}/{5}</color>" },
+                { "losing", "Your team is losing this point!" },
+                { "contested", "<color=#{1}>{0}</color> is contested! Eliminate all enemies to secure it." },
+                { "clearing", "Your team is busy clearing this point." },
+                { "secured", "This point is secure for now. Keep up the defense." },
+                { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
+                { "notowned", "This point is owned by <color=#{1}>{0}</color>. Get more players to capture it." },
+                { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
+                { "team_1", "USA" },
+                { "team_2", "Russia" },
+                { "team_3", "Admin" },
+                { "ui_capturing", "CAPTURING" },
+                { "ui_losing", "LOSING" },
+                { "ui_clearing", "CLEARING" },
+                { "ui_contested", "CONTESTED" },
+                { "ui_secured", "SECURED" },
+                { "ui_nocap", "NOT OBJECTIVE" },
+                { "ui_notowned", "TAKEN" },
+                { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
+                { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}), out of {3} registered flags." },
+                { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
+                { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
+                { "current_group", "Group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+                { "cant_create_group", "You can't create a group right now." },
+                { "created_group", "Created group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+                { "created_group_console", "{0} ({1}) created group \"{2}\": \"{3}\"" },
+                { "rename_not_in_group", "You must be in a group to rename it." },
+                { "renamed_group", "Renamed group <color=#{1}>{0}</color>: <color=#{3}>{2}</color> -> <color=#{5}>{4}</color>." },
+                { "renamed_group_already_named_that", "The group is already named that." },
+                { "renamed_group_console", "{0} ({1}) renamed group \"{2}\": \"{3}\" -> \"{4}\"." },
+                { "group_not_found", "A group with that ID was not found. Are you sure you entered an existing group ID?" },
+                { "not_in_group", "You aren't in a group." },
+                { "joined_group", "You have joined group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+                { "joined_already_in_group", "You are already in that group." },
+                { "joined_group_not_found", "Could not find group <color=#{1}>{0}</color>." },
+                { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
+                { "deleted_group", "Deleted group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
+                { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" },
+                { "join_not_in_lobby", "You must be in the lobby to join a new team: <color={0}>/deploy lobby</color>." },
+                { "joined_team_must_rejoin", "You have joined <color=#{1}>{0}</color>. You must rejoin the server to update your name." },
+                { "joined_team", "You have joined <color=#{1}>{0}</color>. Deploying you to main base." },
+                { "join_already_in_team", "You are already a member of <color=#{1}>{0}</color>." },
+                { "join_auto_balance_cant_switch", "<color=#{1}>{0}</color> has too many players on it to switch." },
+                { "join_group_has_no_space", "<color=#{1}>{0}</color> has surpassed the server's max group size. This should be tweaked by an admin." },
+                { "join_command_no_args_provided", "Do <b>/join <color=#{1}>{0}</color></b> or <b>/join <color=#{3}>{2}</color></b>." },
+                { "join_group_not_found", "Could not find group <color=#{1}>{0}</color> (ID: <color=#{3}>{2}</color>). Tell an admin about this." },
+                { "player_switched_groups_console_must_rejoin", "{0} ({1}) joined {2} and must rejoin." },
+                { "player_switched_groups_console", "{0} ({1}) joined {2}." },
+                { "from_lobby_teleport_failed", "Failed to teleport you to your main base. Do <color=#{0}>/deploy main</color> to try again." },
+                { "no_permissions", "You do not have permission to use this command." },
+                { "group_usage", "/group [create <ID> <Name> | rename <ID> <NewName> | join <ID> | delete <ID>]" },
 
-            // Kits
-            { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_setprop", "<color=#a0ad8e>Set {0} for kit <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
-            { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_accessremoved", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
-            { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'class', 'cost', 'clearinv' etc.</color>" },
-            { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
-            { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
-            { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
-            { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
+                // Lang
+                { "language_list", "Languages: <color=#{1}>{0}</color>." },
+                { "changed_language", "Changed your language to <color=#{1}>{0}</color>" },
+                { "change_language_not_needed", "You are already set to <color=#{1}>{0}</color>." },
+                { "reset_language", "Reset your language to <color=#{1}>{0}</color>" },
+                { "reset_language_how", "Do <color=#{0}>/lang reset</color> to reset back to default language." },
+                { "dont_have_language", "We don't have translations for <color=#{1}>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations." },
+                { "reset_language_not_needed", "You are already on the default language: <color=#{1}>{0}</color>." },
 
-            // fobs
-            { "time_left", "<color=#FFAA42>Time left: <color=#FFE4B5>{0}</color><color=#FFAA42></color>" },
-            { "build_error_noteam", "<color=#FFAB87>You must be looking at a friendly structure base in order to build it.</color>" },
-            { "build_error_notfriendly", "<color=#FFAB87>That FOB foundation is not friendly.</color>" },
-            { "build_error_nofoundation", "<color=#FFAB87>You must be looking at a friendly structure base in order to build it.</color>" },
-            { "build_error_notenoughbuild", "<color=#FAE69C>You are missing build! <color=#d1c597>Nearby Build: </color><color=#d1c597>{0}/{1}</color></color>" },
-            { "build_error_fobtoofar", "<color=#FAE69C>You must be next to a friendly FOB to build this structure.</color>" },
-            { "build_error_tooclosetomain", "<color=#FAE69C>You cannot build too close to main.</color>" },
-            { "build_error_maxemplacements", "<color=#d1c597>This FOB already has {0} {1}s.</color>" },
-            { "build_error_notbuildable", "<color=#d1c597>That barricade is not buildable.</color>" },
-            { "fob_nofobs", "<color=#b5a591>Your team has no active FOBs. Take a Logi Truck and go and build some!</color>" },
-            { "fob_built", "<color=#b0ffa8>Successfully built FOB! Your team may now spawn on it.</color>" },
-            { "fob_teleported", "<color=#FAE69C>You have been deployed to <color=#54e3ff>{0}</color>.</color>" },
-            { "fob_error_nologi", "<color=#FFAB87>You need to be near a friendly logistics truck in order to build a FOB!</color>" },
-            { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing friendly fob! You need to be 300m away from it to construct a new fob.</color>" },
-            { "fob_error_limitreached", "<color=#ffa238>The number of FOBs allowed on the map has been reached.</color>" },
-            { "ammocrate_built", "<color=#b0ffa8>Successfully built ammo crate. Your team may now resupply from it.</color>" },
-            { "ammocrate_error_alreadyexists", "<color=#ffa238>This FOB already has an ammo crate.</color>" },
-            { "repairstation_built", "<color=#b0ffa8>Successfully built repair station. Your team may now repair damaged vehicles at this FOB.</color>" },
-            { "repairstation_error_alreadyexists", "<color=#ffa238>This FOB already has a repair station.</color>" },
-            { "emplacement_built", "<color=#b0ffa8>Successfully built {0}. Do /ammo on it to resupply.</color>" },
+                // Kits
+                { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
+                { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
+                { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
+                { "kit_setprop", "<color=#a0ad8e>Set {0} for kit <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
+                { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
+                { "kit_accessremoved", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
+                { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
+                { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'class', 'cost', 'clearinv' etc.</color>" },
+                { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
+                { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
+                { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
+                { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
 
-            // deployment
-            { "deploy_error_routine_fobdamaged", "<color=#ffa238>The FOB you were deploying to is now too damaged!</color>" },
-            { "deploy_error_routine_fobdead", "<color=#ffa238>The FOB you were deploying to was detroyed!</color>" },
-            { "deploy_error_routine_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
-            { "deploy_error_routine_combat", "<color=#ffa238>You are now in combat and can no longer deploy!</color>" },
-            { "deploy_error_routine_dead", "<color=#ffa238>You died and can no longer deploy!</color>!" },
-            { "deploy_error_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
-            { "deploy_error_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to redeploy to another location.</color>" },
-            { "deploy_error_fobnotbuilt", "<color=#ffa238>That FOB is not built! Your team must build it first before it can become spawnable.</color>" },
-            { "deploy_error_fobdamaged", "<color=#ffa238>That FOB is damaged! Your team must repair it first before it can become spawnable again.</color>" },
-            { "deploy_error_cooldown", "<color=#b5a591>You can't redeploy again so quickly! Time left to deploy: <color=#e3c27f>{0}</color></color>" },
-            { "deploy_error_incombat", "<color=#ffaa42>You are in combat, soldier! Wait until you are safe before you can redploy.</color>" },
-            { "deploy_standby", "<color=#FAE69C>Now deploying to <color=#54e3ff>{0}</color>. You will arrive in <color=#EEEEEE>{1} seconds</color>. </color>" },
-            { "deploy_standby_nomove", "<color=#FAE69C>Now deploying to <color=#54e3ff>{0}</color>. Stand still for <color=#EEEEEE>{1} seconds</color>. </color>" },
-            { "mainbase_standby", "<color=#FAE69C>Now deploying to <color=#bdbab1>{0}</color>. You will arrive in <color=#EEEEEE>{1} seconds</color>. </color>" },
-            { "mainbase_standby_nomove", "<color=#FAE69C>Now deploying to <color=#bdbab1>{0}</color>. Stand still for <color=#EEEEEE>{1} seconds</color>. </color>" },
-            { "mainbase_teleported", "<color=#FAE69C>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
-            { "mainbase_created", "<color=#dbcfb6>Successfully created the main base '<color=#ffac40>{0}</color>'.</color>" },
-            { "mainbase_removed", "<color=#dbcfb6>Successfully removed the main base <color=#ffac40>{0}</color></color>" },
-            { "mainbase_clear", "<color=#dbcfb6>Successfully removed all existing main bases.</color>" },
-            { "mainbase_error_noexist", "<color=#FFAB87>There is no existing main bases by the name of '{0}'!</color>" },
-            { "mainbase_error_exists", "<color=#FFAB87>A main base by the name of '{0}' already exists!</color>" },
-            { "mainbase_error_noexistteam", "<color=#FFAB87>Your team does not have a main base!</color>" },
-            { "mainbase_error_nolobby", "<color=#FFAB87>There is no lobby to deploy to!</color>" },
+                // fobs
+                { "time_left", "<color=#FFAA42>Time left: <color=#FFE4B5>{0}</color><color=#FFAA42></color>" },
+                { "build_error_noteam", "<color=#FFAB87>You must be looking at a friendly structure base in order to build it.</color>" },
+                { "build_error_notfriendly", "<color=#FFAB87>That FOB foundation is not friendly.</color>" },
+                { "build_error_nofoundation", "<color=#FFAB87>You must be looking at a friendly structure base in order to build it.</color>" },
+                { "build_error_notenoughbuild", "<color=#FAE69C>You are missing build! <color=#d1c597>Nearby Build: </color><color=#d1c597>{0}/{1}</color></color>" },
+                { "build_error_fobtoofar", "<color=#FAE69C>You must be next to a friendly FOB to build this structure.</color>" },
+                { "build_error_tooclosetomain", "<color=#FAE69C>You cannot build too close to main.</color>" },
+                { "build_error_maxemplacements", "<color=#d1c597>This FOB already has {0} {1}s.</color>" },
+                { "build_error_notbuildable", "<color=#d1c597>That barricade is not buildable.</color>" },
+                { "fob_nofobs", "<color=#b5a591>Your team has no active FOBs. Take a Logi Truck and go and build some!</color>" },
+                { "fob_built", "<color=#b0ffa8>Successfully built FOB! Your team may now spawn on it.</color>" },
+                { "fob_teleported", "<color=#FAE69C>You have been deployed to <color=#54e3ff>{0}</color>.</color>" },
+                { "fob_error_nologi", "<color=#FFAB87>You need to be near a friendly logistics truck in order to build a FOB!</color>" },
+                { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing friendly fob! You need to be 300m away from it to construct a new fob.</color>" },
+                { "fob_error_limitreached", "<color=#ffa238>The number of FOBs allowed on the map has been reached.</color>" },
+                { "ammocrate_built", "<color=#b0ffa8>Successfully built ammo crate. Your team may now resupply from it.</color>" },
+                { "ammocrate_error_alreadyexists", "<color=#ffa238>This FOB already has an ammo crate.</color>" },
+                { "repairstation_built", "<color=#b0ffa8>Successfully built repair station. Your team may now repair damaged vehicles at this FOB.</color>" },
+                { "repairstation_error_alreadyexists", "<color=#ffa238>This FOB already has a repair station.</color>" },
+                { "emplacement_built", "<color=#b0ffa8>Successfully built {0}. Do /ammo on it to resupply.</color>" },
 
-            // /ammo
-            { "ammo_error_nocrate", "<color=#FFAB87>Look at a placed Ammo Crate or vehicle in order to resupply.</color>" },
-            { "ammo_error_nokit", "<color=#FFAB87>You don't have a kit yet. Go and request one at main.</color>" },
-            { "ammo_success", "<color=#FFAB87>Your kit has been resupplied. <color=#d1c597>-1x Ammo crate</color>.</color>" },
-        };
+                // deployment
+                { "deploy_error_routine_fobdamaged", "<color=#ffa238>The FOB you were deploying to is now too damaged!</color>" },
+                { "deploy_error_routine_fobdead", "<color=#ffa238>The FOB you were deploying to was detroyed!</color>" },
+                { "deploy_error_routine_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
+                { "deploy_error_routine_combat", "<color=#ffa238>You are now in combat and can no longer deploy!</color>" },
+                { "deploy_error_routine_dead", "<color=#ffa238>You died and can no longer deploy!</color>!" },
+                { "deploy_error_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
+                { "deploy_error_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to redeploy to another location.</color>" },
+                { "deploy_error_fobnotbuilt", "<color=#ffa238>That FOB is not built! Your team must build it first before it can become spawnable.</color>" },
+                { "deploy_error_fobdamaged", "<color=#ffa238>That FOB is damaged! Your team must repair it first before it can become spawnable again.</color>" },
+                { "deploy_error_cooldown", "<color=#b5a591>You can't redeploy again so quickly! Time left to deploy: <color=#e3c27f>{0}</color></color>" },
+                { "deploy_error_incombat", "<color=#ffaa42>You are in combat, soldier! Wait until you are safe before you can redploy.</color>" },
+                { "deploy_standby", "<color=#FAE69C>Now deploying to <color=#54e3ff>{0}</color>. You will arrive in <color=#EEEEEE>{1} seconds</color>. </color>" },
+                { "deploy_standby_nomove", "<color=#FAE69C>Now deploying to <color=#54e3ff>{0}</color>. Stand still for <color=#EEEEEE>{1} seconds</color>. </color>" },
+                { "mainbase_standby", "<color=#FAE69C>Now deploying to <color=#bdbab1>{0}</color>. You will arrive in <color=#EEEEEE>{1} seconds</color>. </color>" },
+                { "mainbase_standby_nomove", "<color=#FAE69C>Now deploying to <color=#bdbab1>{0}</color>. Stand still for <color=#EEEEEE>{1} seconds</color>. </color>" },
+                { "mainbase_teleported", "<color=#FAE69C>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
+                { "mainbase_created", "<color=#dbcfb6>Successfully created the main base '<color=#ffac40>{0}</color>'.</color>" },
+                { "mainbase_removed", "<color=#dbcfb6>Successfully removed the main base <color=#ffac40>{0}</color></color>" },
+                { "mainbase_clear", "<color=#dbcfb6>Successfully removed all existing main bases.</color>" },
+                { "mainbase_error_noexist", "<color=#FFAB87>There is no existing main bases by the name of '{0}'!</color>" },
+                { "mainbase_error_exists", "<color=#FFAB87>A main base by the name of '{0}' already exists!</color>" },
+                { "mainbase_error_noexistteam", "<color=#FFAB87>Your team does not have a main base!</color>" },
+                { "mainbase_error_nolobby", "<color=#FFAB87>There is no lobby to deploy to!</color>" },
+
+                // /ammo
+                { "ammo_error_nocrate", "<color=#FFAB87>Look at a placed Ammo Crate or vehicle in order to resupply.</color>" },
+                { "ammo_error_nokit", "<color=#FFAB87>You don't have a kit yet. Go and request one at main.</color>" },
+                { "ammo_success", "<color=#FFAB87>Your kit has been resupplied. <color=#d1c597>-1x Ammo crate</color>.</color>" },
+
+
+                // SIGNS - must prefix with "sign_" for them to work
+                { "sign_test", "<color=#ff00ff>This is the english translation for that sign.</color>" }
+            };
+        }
+        public static Dictionary<string, string> DefaultTranslations;
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
         {
             new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68"), true),
@@ -193,6 +215,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1", "ffff1a"),
             new ColorData("secured_team_1", "00ff00"),
             new ColorData("nocap_team_1", "ff0000"),
+            new ColorData("notowned_team_1", "ff0000"),
 
             // Team 1 Background Circle
             new ColorData("capturing_team_1_bkgr", "002266"),
@@ -201,6 +224,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1_bkgr", "666600"),
             new ColorData("secured_team_1_bkgr", "006600"),
             new ColorData("nocap_team_1_bkgr", "660000"),
+            new ColorData("notowned_team_1_bkgr", "660000"),
 
             // Team 1 Words
             new ColorData("capturing_team_1_words", "4785ff"),
@@ -209,7 +233,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1_words", "ffff1a"),
             new ColorData("secured_team_1_words", "00ff00"),
             new ColorData("nocap_team_1_words", "ff0000"),
-            new ColorData("entered_cap_radius", "e6e3d5"),
+            new ColorData("notowned_team_1_words", "ff0000"),
 
             // Team 2 Circle
             new ColorData("capturing_team_2", "f53b3b"),
@@ -218,6 +242,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2", "ffff1a"),
             new ColorData("secured_team_2", "00ff00"),
             new ColorData("nocap_team_2", "ff0000"),
+            new ColorData("notowned_team_2", "ff0000"),
 
             // Team 2 Background Circle
             new ColorData("capturing_team_2_bkgr", "610505"),
@@ -226,6 +251,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2_bkgr", "666600"),
             new ColorData("secured_team_2_bkgr", "006600"),
             new ColorData("nocap_team_2_bkgr", "660000"),
+            new ColorData("notowned_team_2_bkgr", "660000"),
 
             // Team 2 Words
             new ColorData("capturing_team_2_words", "f53b3b"),
@@ -234,6 +260,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2_words", "ffff1a"),
             new ColorData("secured_team_2_words", "00ff00"),
             new ColorData("nocap_team_2_words", "ff0000"),
+            new ColorData("notowned_team_2_words", "ff0000"),
 
             // Flag Chats
             new ColorData("entered_cap_radius_team_1", "e6e3d5"),
@@ -248,6 +275,7 @@ namespace UncreatedWarfare
             new ColorData("contested_team_1_chat", "e6e3d5"),
             new ColorData("secured_team_1_chat", "e6e3d5"),
             new ColorData("nocap_team_1_chat", "e6e3d5"),
+            new ColorData("notowned_team_1_chat", "e6e3d5"),
 
             // Team 2 Chat
             new ColorData("capturing_team_2_chat", "e6e3d5"),
@@ -256,11 +284,13 @@ namespace UncreatedWarfare
             new ColorData("contested_team_2_chat", "e6e3d5"),
             new ColorData("secured_team_2_chat", "e6e3d5"),
             new ColorData("nocap_team_2_chat", "e6e3d5"),
+            new ColorData("notowned_team_2_chat", "e6e3d5"),
 
             // Other Flag Chats
             new ColorData("flag_neutralized", "e6e3d5"),
 
             // Group Command
+            new ColorData("not_in_group", "e6e3d5"),
             new ColorData("current_group", "e6e3d5"),
             new ColorData("current_group_id", "4785ff"),
             new ColorData("current_group_name", "4785ff"),
@@ -297,6 +327,22 @@ namespace UncreatedWarfare
             new ColorData("from_lobby_teleport_failed", "ff0000"),
             new ColorData("from_lobby_teleport_failed_command", "4785ff"),
             new ColorData("no_permissions", "ff0000"),
+
+            // Lang Command
+            new ColorData("language_list", "f53b3b"),
+            new ColorData("language_list_list", "e6e3d5"),
+            new ColorData("changed_language", "f53b3b"),
+            new ColorData("changed_language_language", "e6e3d5"),
+            new ColorData("change_language_not_needed", "f53b3b"),
+            new ColorData("change_language_not_needed_language", "e6e3d5"),
+            new ColorData("reset_language", "f53b3b"),
+            new ColorData("reset_language_language", "e6e3d5"),
+            new ColorData("reset_language_not_needed", "f53b3b"),
+            new ColorData("reset_language_not_needed_language", "e6e3d5"),
+            new ColorData("reset_language_how", "f53b3b"),
+            new ColorData("reset_language_how_command", "e6e3d5"),
+            new ColorData("dont_have_language", "dd1111"),
+            new ColorData("dont_have_language_language", "e6e3d5")
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {
@@ -322,13 +368,14 @@ namespace UncreatedWarfare
             }),
             new MySqlTableData("usernames", "usernames", new List<MySqlColumnData> {
                 new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("Username","Username")
+                new MySqlColumnData("PlayerName","PlayerName"),
+                new MySqlColumnData("CharacterName","CharacterName"),
+                new MySqlColumnData("NickName","NickName")
             }),
-            new MySqlTableData("lastloggedin", "lastloggedin", new List<MySqlColumnData> {
+            new MySqlTableData("logindata", "logindata", new List<MySqlColumnData> {
                 new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("LastLoggedOn","LastLoggedOn"),
-                new MySqlColumnData("LastIPConnectedFrom","LastIPConnectedFrom"),
-                new MySqlColumnData("IPData","IPData")
+                new MySqlColumnData("IP","IP"),
+                new MySqlColumnData("LastLoggedIn","LastLoggedIn")
             }),
             new MySqlTableData("xp", "xp", new List<MySqlColumnData> {
                 new MySqlColumnData("Steam64","Steam64"),
@@ -426,5 +473,29 @@ namespace UncreatedWarfare
                 Branch = Kit.EBranch.INFANTRY
             }
         };
+        public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
+        {
+            new LanguageAliasSet("en-us", "English", new List<string> { "english", "enus", "en", "us", "inglés", "inglesa", "ingles", 
+                "en-au", "en-bz", "en-ca", "en-cb", "en-ie", "en-jm", "en-nz", "en-ph", "en-tt", "en-za", "en-zw", 
+                "enau", "enbz", "enca", "encb", "enie", "enjm", "ennz", "enph", "entt", "enza", "enzw" } ),
+            new LanguageAliasSet("ru-ru", "Russian", new List<string> { "russian", "ruru", "ru", "russia", "cyrillic", "русский", "russkiy", "российский" } ),
+            new LanguageAliasSet("es-es", "Spanish", new List<string> { "spanish", "español", "española", "espanol", "espanola", "es", "eses",
+                "es-ar", "es-bo", "es-cl", "es-co", "es-cr", "es-do", "es-ec", "es-gt", "es-hn", "es-mx", "es-ni", "es-pa", "es-pe", "es-pr", "es-py", "es-sv", "es-uy", "es-ve",
+                "esar", "esbo", "escl", "esco", "escr", "esdo", "esec", "esgt", "eshn", "esmx", "esni", "espa", "espe", "espr", "espy", "essv", "esuy", "esve" } ),
+            new LanguageAliasSet("de-de", "German", new List<string> { "german", "deutsche", "de", "de-at", "de-ch", "de-li", "de-lu", "deat", "dech", "deli", "delu", "dede" } ),
+            new LanguageAliasSet("ar-sa", "Arabic", new List<string> { "arabic", "ar", "arab", "عربى", "eurbaa",
+                "ar-ae", "ar-bh", "ar-dz", "ar-eg", "ar-iq", "ar-jo", "ar-kw", "ar-lb", "ar-ly", "ar-ma", "ar-om", "ar-qa", "ar-sy", "ar-tn", "ar-ye",
+                "arae", "arbh", "ardz", "areg", "ariq", "arjo", "arkw", "arlb", "arly", "arma", "arom", "arqa", "arsy", "artn", "arye"}),
+            new LanguageAliasSet("fr-fr", "French", new List<string> { "french", "fr", "française", "français", "francaise", "francais", 
+                "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc", 
+                "frbe", "frca", "frch", "frlu", "frmc" }),
+            new LanguageAliasSet("zh-cn", "Chinese (Simplified)", new List<string> { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple", 
+                "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
+                "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
+            new LanguageAliasSet("zh-tw", "Chinese (Traditional)", new List<string> { "traditional chinese", "chinese traditional",
+                "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
+            new LanguageAliasSet("en-gb", "Bri'ish", new List<string> { "british", "great british", "gb", "engb"})
+        };
+
     }
 }

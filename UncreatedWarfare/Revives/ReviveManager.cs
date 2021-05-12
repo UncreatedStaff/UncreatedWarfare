@@ -22,6 +22,8 @@ namespace UncreatedWarfare.Revives
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerUpdateStance += OnStanceChanged;
 
+            DownedPlayers = new List<ulong>();
+
             U.Events.OnPlayerConnected += OnPlayerConnected;
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
         }

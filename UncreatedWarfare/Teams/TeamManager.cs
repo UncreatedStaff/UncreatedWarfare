@@ -19,7 +19,10 @@ namespace UncreatedWarfare.Teams
         public Team Neutral;
         public Zone LobbyZone;
         public Vector3 LobbySpawn { get => UCWarfare.I.ExtraPoints["lobby_spawn"]; }
-
+        public readonly List<Team> DefaultTeams = new List<Team>
+        {
+            new Team(ETeam.TEAM1, 1, "USA"), new Team(ETeam.TEAM2, 2, "Russia"), new Team(ETeam.NEUTRAL, 3, "Neutral")
+        };
         public TeamManager()
             : base(UCWarfare.TeamStorage + "teams.json")
         {
@@ -28,29 +31,24 @@ namespace UncreatedWarfare.Teams
             Neutral = GetObject(t => t.ID == ETeam.NEUTRAL);
             LobbyZone = UCWarfare.I.ExtraZones?[-69];
         }
-
-        public void CreateTeams()
+        protected override string LoadDefaults()
         {
-            RemoveAllObjectsFromSave();
-            AddObjectToSave(new Team(ETeam.TEAM1, 1, "USA"));
-            AddObjectToSave(new Team(ETeam.TEAM2, 2, "Russia"));
-            AddObjectToSave(new Team(ETeam.NEUTRAL, 3, "Neutral"));
+            return F.QuickSerialize(DefaultTeams);
         }
-
         public void RenameTeam(ETeam team, string newName)
         {
             UpdateObjectsWhere(t => t.ID == team, t => t.Name = newName);
             ReloadTeam(team);
         }
-        public void AddPlayerToTeam(ETeam team, CSteamID steamID)
+        public void AddPlayerToTeam(ETeam team, SteamPlayer steamID)
         {
-            UpdateObjectsWhere(t => t.ID == team, t => t.Players.Add(steamID.m_SteamID));
+            UpdateObjectsWhere(t => t.ID == team, t => t.Players.Add(steamID.playerID.steamID.m_SteamID));
             ReloadTeam(team);
         }
-        public void RemovePlayerFromTeam(CSteamID steamID)
+        public void RemovePlayerFromTeam(SteamPlayer steamID)
         {
-            UpdateObjectsWhere(t => t.Players.Contains(steamID.m_SteamID), t => t.Players.Remove(steamID.m_SteamID));
-            ReloadTeam(GetTeam(steamID).ID);
+            UpdateObjectsWhere(t => t.Players.Contains(steamID.playerID.steamID.m_SteamID), t => t.Players.Remove(steamID.playerID.steamID.m_SteamID));
+            ReloadTeam(GetTeam(steamID.player.quests.groupID.m_SteamID).ID);
         }
 
         public void ReloadTeam(ETeam team)
@@ -77,11 +75,11 @@ namespace UncreatedWarfare.Teams
         public Team GetTeam(CSteamID steamID) => GetTeam(steamID.m_SteamID);
         public Team GetTeam(ulong steamID)
         {
-            if (steamID == Team1.GroupID)
+            if (Team1 != null && steamID == Team1.GroupID)
                 return Team1;
-            if (steamID == Team2.GroupID)
+            if (Team2 != null && steamID == Team2.GroupID)
                 return Team2;
-            if (steamID == Neutral.GroupID)
+            if (Neutral != null && steamID == Neutral.GroupID)
                 return Neutral;
             return new Team(ETeam.NEUTRAL, 0, "null");
         }
@@ -124,6 +122,7 @@ namespace UncreatedWarfare.Teams
             Team team = GetTeam(player);
             player.Player.teleportToLocation(team.Main.GetPosition(), team.Main.rotation);
         }
+
     }
 
     public class Team
@@ -140,17 +139,37 @@ namespace UncreatedWarfare.Teams
             get
             {
                 if (GroupID == 1)
-                    return F.Translate("team_1");
+                    return F.Translate("team_1", 0);
                 else if (GroupID == 2)
-                    return F.Translate("team_2");
+                    return F.Translate("team_2", 0);
                 else if (GroupID == 3)
-                    return F.Translate("team_3");
+                    return F.Translate("team_3", 0);
                 else
                 {
                     if (Name == null)
                         return GroupID.ToString();
                     else return Name;
                 }
+            }
+        }
+        /// <summary>
+        /// Language specific team name.
+        /// </summary>
+        /// <param name="PlayerID">Reference player</param>
+        /// <returns></returns>
+        public string TranslateName(ulong PlayerID)
+        {
+            if (GroupID == 1)
+                return F.Translate("team_1", PlayerID);
+            else if (GroupID == 2)
+                return F.Translate("team_2", PlayerID);
+            else if (GroupID == 3)
+                return F.Translate("team_3", PlayerID);
+            else
+            {
+                if (Name == null)
+                    return GroupID.ToString();
+                else return Name;
             }
         }
         [JsonIgnore]
@@ -161,13 +180,13 @@ namespace UncreatedWarfare.Teams
                 switch (ID)
                 {
                     case ETeam.TEAM1:
-                        return UCWarfare.I.ColorsHex["team_1_color"];
+                        return UCWarfare.GetColorHex("team_1_color");
                     case ETeam.TEAM2:
-                        return UCWarfare.I.ColorsHex["team_2_color"];
+                        return UCWarfare.GetColorHex("team_2_color");
                     case ETeam.NEUTRAL:
-                        return UCWarfare.I.ColorsHex["neutral_color"];
+                        return UCWarfare.GetColorHex("neutral_color");
                 }
-                return UCWarfare.I.ColorsHex["neutral_color"];
+                return UCWarfare.GetColorHex("neutral_color");
             }
         }
         [JsonIgnore]

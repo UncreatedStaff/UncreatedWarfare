@@ -19,6 +19,8 @@ using UncreatedWarfare.Stats;
 using UncreatedWarfare.Revives;
 using System.Threading;
 using Rocket.Unturned.Player;
+using Newtonsoft.Json;
+using Steamworks;
 
 namespace UncreatedWarfare
 {
@@ -27,6 +29,15 @@ namespace UncreatedWarfare
         public static UCWarfare Instance;
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
+        private MySqlData _sqlElsewhere;
+        public MySqlData SQL { 
+            get
+            {
+                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(null))) return _sqlElsewhere;
+                else return Configuration.Instance.SQL;
+            }
+        }
+        public const bool LoadMySQLDataFromElsewhere = true;
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public KitManager KitManager;
@@ -44,19 +55,26 @@ namespace UncreatedWarfare
         public static readonly string VehicleStorage = DataDirectory + @"Vehicles\";
         public static readonly string FOBStorage = DataDirectory + @"FOBs\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
+        public static readonly string ElseWhereSQLPath = @"C:\SteamCMD\unturned\Servers\UncreatedRewrite\sql.json";
         public Dictionary<string, Color> Colors;
         public Dictionary<string, string> ColorsHex;
-        public Dictionary<string, string> Localization;
+        public Dictionary<string, Dictionary<string, string>> Localization;
         public Dictionary<EXPGainType, int> XPData;
         public Dictionary<ECreditsGainType, int> CreditsData;
         public Dictionary<int, Zone> ExtraZones;
         public Dictionary<string, Vector3> ExtraPoints;
         public Dictionary<string, MySqlTableLang> TableData;
         public Dictionary<ECall, string> NodeCalls;
-        public DatabaseManager DB { get; private set; }
+        public Dictionary<ulong, string> DefaultPlayerNames;
+        public Dictionary<ulong, FPlayerName> OriginalNames;
+        public Dictionary<ulong, string> Languages;
+        public Dictionary<string, LanguageAliasSet> LanguageAliases;
         private bool InitialLoadEventSubscription;
         internal Thread ListenerThread;
         internal AsyncListenServer ListenServer;
+        internal AsyncDatabase DatabaseManager;
+        internal static readonly ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign = ClientStaticMethod<byte, byte, ushort, ushort, string>.Get(new ClientStaticMethod<byte, byte, ushort, ushort, string>.ReceiveDelegate(BarricadeManager.ReceiveUpdateSign));
+        internal static readonly ClientStaticMethod SendMultipleBarricades = ClientStaticMethod.Get(new ClientStaticMethod.ReceiveDelegateWithContext(BarricadeManager.ReceiveMultipleBarricades));
         private void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))
@@ -83,16 +101,62 @@ namespace UncreatedWarfare
             CommandWindow.Log("Patching methods...");
             Patches.InternalPatches.DoPatching();
 
+            if(LoadMySQLDataFromElsewhere)
+            {
+                if (!File.Exists(ElseWhereSQLPath))
+                {
+                    TextWriter w = File.CreateText(ElseWhereSQLPath);
+                    JsonTextWriter wr = new JsonTextWriter(w);
+                    JsonSerializer s = new JsonSerializer { Formatting = Formatting.Indented };
+                    s.Serialize(wr, Config.SQL);
+                    wr.Close();
+                    w.Close();
+                    w.Dispose();
+                    _sqlElsewhere = Config.SQL;
+                } else
+                {
+                    string json = File.ReadAllText(ElseWhereSQLPath);
+                    _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
+                }
+            }
             CommandWindow.Log("Validating directories...");
             CheckDir(DataDirectory);
             CheckDir(FlagStorage);
             CheckDir(LangStorage);
             CheckDir(KitsStorage);
             CheckDir(VehicleStorage);
+            CheckDir(FOBStorage);
             CheckDir(TeamStorage);
             CheckDir(FOBStorage);
 
+            void DuplicateKeyError(Exception ex)
+            {
+                string[] stuff = ex.Message.Split(':');
+                string badKey = "unknown";
+                if (stuff.Length >= 2) badKey = stuff[1].Trim();
+                CommandWindow.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
+                Level.onLevelLoaded += (int level) =>
+                {
+                    CommandWindow.LogError("!!UNCREATED WARFARE DID NOT LOAD!!!");
+                    CommandWindow.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
+                };
+                UnloadPlugin();
+            }
             CommandWindow.Log("Loading JSON Data...");
+            try
+            {
+                JSONMethods.CreateDefaultTranslations();
+            } catch (TypeInitializationException ex)
+            {
+                DuplicateKeyError(ex);
+                return;
+            } catch (ArgumentException ex)
+            {
+                DuplicateKeyError(ex);
+                return;
+            }
+
+            OriginalNames = new Dictionary<ulong, FPlayerName>();
             Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
@@ -101,15 +165,17 @@ namespace UncreatedWarfare
             ExtraPoints = JSONMethods.LoadExtraPoints();
             TableData = JSONMethods.LoadTables();
             NodeCalls = JSONMethods.LoadCalls();
+            Languages = JSONMethods.LoadLanguagePreferences();
+            LanguageAliases = JSONMethods.LoadLangAliases();
 
             // Managers
             CommandWindow.Log("Instantiating Framework...");
-            DB = new DatabaseManager();
+            TeamManager = new TeamManager();
+            DatabaseManager = new AsyncDatabase();
+            DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             WebInterface = new WebInterface();
-
             ListenerThread = new Thread(StartListening);
 
-            TeamManager = new TeamManager();
 
             if (Config.Modules.Flags)
             {
@@ -132,17 +198,16 @@ namespace UncreatedWarfare
             {
                 reviveManager = new ReviveManager();
             }
-
             CommandWindow.Log("Starting Coroutines...");
             if (Level.isLoaded)
             {
                 StartAllCoroutines();
                 CommandWindow.Log("Sending assets...");
-                WebInterface.SendAssetUpdate();
+                if(Configuration.Instance.SendAssetsOnStartup)
+                    WebInterface.SendAssetUpdate();
                 Log("Subscribing to events...");
                 InitialLoadEventSubscription = true;
-                U.Events.OnPlayerConnected += OnPlayerConnected;
-                U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
+                SubscribeToEvents();
             } else
             {
                 InitialLoadEventSubscription = false;
@@ -152,11 +217,85 @@ namespace UncreatedWarfare
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
+        private void SubscribeToEvents()
+        {
+            U.Events.OnPlayerConnected += OnPostPlayerConnected;
+            U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
+            Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
+            Commands.LangCommand.OnPlayerChangedLanguage += LangCommand_OnPlayerChangedLanguage;
+            Commands.ReloadCommand.onTranslationsReloaded += ReloadCommand_onTranslationsReloaded;
+        }
+        private void UnsubscribeFromEvents()
+        {
+            Commands.ReloadCommand.onTranslationsReloaded -= ReloadCommand_onTranslationsReloaded;
+            U.Events.OnPlayerConnected -= OnPostPlayerConnected;
+            U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
+            if (ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
+            Commands.LangCommand.OnPlayerChangedLanguage -= LangCommand_OnPlayerChangedLanguage;
+            if (!InitialLoadEventSubscription)
+            {
+                Level.onLevelLoaded -= OnLevelLoaded;
+                R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
+            }
+        }
+
+        private void ReloadCommand_onTranslationsReloaded(object sender, EventArgs e)
+        {
+            foreach(SteamPlayer player in Provider.clients)
+                UpdateLangs(player);
+        }
+
+        private void OnPluginsLoaded()
+        {
+            StartAllCoroutines();
+            Log("Subscribing to events...");
+            SubscribeToEvents();
+        }
+        private void UpdateLangs(SteamPlayer player)
+        {
+            foreach (BarricadeRegion region in BarricadeManager.regions)
+            {
+                List<BarricadeDrop> signs = new List<BarricadeDrop>();
+                foreach (BarricadeDrop drop in region.drops)
+                {
+                    if (drop.model.TryGetComponent(out InteractableSign sign))
+                    {
+                        if (sign.text.StartsWith("sign_"))
+                        {
+                            if (BarricadeManager.tryGetInfo(drop.model, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion _))
+                                F.InvokeSignUpdateFor(player, x, y, plant, index, region, false);
+                        }
+                    }
+                }
+            }
+            
+        }
+        private void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UpdateLangs(e.player.Player.channel.owner);
+
+        private void OnPrePlayerConnect(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
+        {
+            SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == callback.m_SteamID.m_SteamID);
+            if (player == default(SteamPending)) return;
+            CommandWindow.Log(player.playerID.playerName);
+            if (OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
+                OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
+            else
+                OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
+            const string prefix = "[TEAM] ";
+            if (!player.playerID.characterName.StartsWith(prefix))
+                player.playerID.characterName = prefix + player.playerID.characterName;
+            if (!player.playerID.nickName.StartsWith(prefix))
+                player.playerID.nickName = prefix + player.playerID.nickName;
+            // remove any "staff" from player's names.
+            player.playerID.characterName = player.playerID.characterName.ReplaceCaseInsensitive("staff");
+            player.playerID.nickName = player.playerID.nickName.ReplaceCaseInsensitive("staff");
+        }
 
         private void OnLevelLoaded(int level)
         {
             CommandWindow.Log("Sending assets...");
-            //WebInterface.SendAssetUpdate();
+            if (Configuration.Instance.SendAssetsOnStartup)
+                WebInterface.SendAssetUpdate();
         }
 
         private void StartListening()
@@ -166,21 +305,21 @@ namespace UncreatedWarfare
             ListenServer.StartListening();
         }
 
-        private void OnPluginsLoaded()
+        private void OnPostPlayerConnected(UnturnedPlayer player)
         {
-            StartAllCoroutines();
-            Log("Subscribing to events...");
-            U.Events.OnPlayerConnected += OnPlayerConnected;
-            U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
-        }
-        private void OnPlayerConnected(Rocket.Unturned.Player.UnturnedPlayer player)
-        {
-            F.Broadcast("player_connected", Colors["join_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["join_message_name"]);
+            F.Broadcast("player_connected", GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, GetColorHex("join_message_name"));
             WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
+            FPlayerName names;
+            if (OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                names = OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
+            else names = new FPlayerName(player);
+            DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
         }
-        private void OnPlayerDisconnected(Rocket.Unturned.Player.UnturnedPlayer player)
+        private void OnPlayerDisconnected(UnturnedPlayer player)
         {
-            F.Broadcast("player_disconnected", Colors["leave_message_background"], player.Player.channel.owner.playerID.playerName, ColorsHex["leave_message_name"]);
+            if (OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            F.Broadcast("player_disconnected", GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, GetColorHex("leave_message_name"));
             WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
         }
 
@@ -188,22 +327,32 @@ namespace UncreatedWarfare
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
+            IAsyncResult CloseSQLAsyncResult = DatabaseManager.CloseAsync(AsyncDatabaseCallbacks.ClosedOnUnload);
             WebInterface?.Dispose();
             FlagManager?.Dispose();
+            DatabaseManager?.Dispose();
             CommandWindow.LogWarning("Unloading " + Name);
             CommandWindow.Log("Stopping Coroutines...");
             StopAllCoroutines();
             CommandWindow.Log("Unsubscribing from events...");
-            U.Events.OnPlayerConnected -= OnPlayerConnected;
-            U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
-            if(ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
-            if (!InitialLoadEventSubscription)
+            UnsubscribeFromEvents();
+            try
             {
-                Level.onLevelLoaded -= OnLevelLoaded;
-                R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
+                CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
             }
-            //DB.Close();
-        }   
-
+            catch (ObjectDisposedException) { }
+        }
+        public static Color GetColor(string key)
+        {
+            if (I.Colors.ContainsKey(key)) return I.Colors[key];
+            else if (I.Colors.ContainsKey("default")) return I.Colors["default"];
+            else return Color.white;
+        }
+        public static string GetColorHex(string key)
+        {
+            if (I.ColorsHex.ContainsKey(key)) return I.ColorsHex[key];
+            else if (I.ColorsHex.ContainsKey("default")) return I.ColorsHex["default"];
+            else return "ffffff";
+        }
     }
 }
