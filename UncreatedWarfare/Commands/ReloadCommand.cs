@@ -10,6 +10,7 @@ namespace UncreatedWarfare.Commands
 {
     public class ReloadCommand : IRocketCommand
     {
+        public static event EventHandler onTranslationsReloaded;
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "reload";
         public string Help => "Reload certain parts of UCWarfare.";
@@ -41,13 +42,13 @@ namespace UncreatedWarfare.Commands
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 }
             }
-
             void ReloadTranslations()
             {
                 UCWarfare.I.LanguageAliases = JSONMethods.LoadLangAliases();
                 UCWarfare.I.Languages = JSONMethods.LoadLanguagePreferences();
                 UCWarfare.I.Localization = JSONMethods.LoadTranslations();
                 UCWarfare.I.Colors = JSONMethods.LoadColors(out UCWarfare.I.ColorsHex);
+                onTranslationsReloaded?.Invoke(this, EventArgs.Empty);
             }
         }
     }

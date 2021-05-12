@@ -197,7 +197,6 @@ namespace UncreatedWarfare
             {
                 reviveManager = new ReviveManager();
             }
-            
             CommandWindow.Log("Starting Coroutines...");
             if (Level.isLoaded)
             {
@@ -223,8 +222,27 @@ namespace UncreatedWarfare
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
             Commands.LangCommand.OnPlayerChangedLanguage += LangCommand_OnPlayerChangedLanguage;
+            Commands.ReloadCommand.onTranslationsReloaded += ReloadCommand_onTranslationsReloaded;
+        }
+        private void UnsubscribeFromEvents()
+        {
+            Commands.ReloadCommand.onTranslationsReloaded -= ReloadCommand_onTranslationsReloaded;
+            U.Events.OnPlayerConnected -= OnPostPlayerConnected;
+            U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
+            if (ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
+            Commands.LangCommand.OnPlayerChangedLanguage -= LangCommand_OnPlayerChangedLanguage;
+            if (!InitialLoadEventSubscription)
+            {
+                Level.onLevelLoaded -= OnLevelLoaded;
+                R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
+            }
         }
 
+        private void ReloadCommand_onTranslationsReloaded(object sender, EventArgs e)
+        {
+            foreach(SteamPlayer player in Provider.clients)
+                UpdateLangs(player);
+        }
 
         private void OnPluginsLoaded()
         {
@@ -316,15 +334,7 @@ namespace UncreatedWarfare
             CommandWindow.Log("Stopping Coroutines...");
             StopAllCoroutines();
             CommandWindow.Log("Unsubscribing from events...");
-            U.Events.OnPlayerConnected -= OnPostPlayerConnected;
-            U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
-            if(ListenServer != null) ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
-            Commands.LangCommand.OnPlayerChangedLanguage -= LangCommand_OnPlayerChangedLanguage;
-            if (!InitialLoadEventSubscription)
-            {
-                Level.onLevelLoaded -= OnLevelLoaded;
-                R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
-            }
+            UnsubscribeFromEvents();
             try
             {
                 CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();

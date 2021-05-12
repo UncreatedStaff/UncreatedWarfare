@@ -35,11 +35,9 @@ namespace UncreatedWarfare
             [HarmonyPrefix]
             static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, ushort index, string trimmedText)
             {
-                CommandWindow.LogError("Updating sign with text " + trimmedText);
                 if (trimmedText.StartsWith("sign_"))
                 {
                     F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText, region);
-                    CommandWindow.LogError("skipping original");
                     byte[] state = region.barricades[index].barricade.state;
                     byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
@@ -53,7 +51,6 @@ namespace UncreatedWarfare
                     return false;
                 } else
                 {
-                    CommandWindow.LogError("running original");
                     return true;
                 }
             }

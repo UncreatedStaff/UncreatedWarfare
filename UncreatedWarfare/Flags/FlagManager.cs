@@ -7,7 +7,7 @@ using UncreatedWarfare.Teams;
 
 namespace UncreatedWarfare.Flags
 {
-    public class FlagManager
+    public class FlagManager : IDisposable
     {
         public List<Flag> FlagRotation { get; private set; }
         public string Preset {
@@ -322,6 +322,7 @@ namespace UncreatedWarfare.Flags
                 flag.OnPlayerLeft -= PlayerLeftFlagRadius;
                 flag.OnOwnerChanged -= FlagOwnerChanged;
                 flag.OnPointsChanged -= FlagPointsChanged;
+                flag.Dispose();
             }
             FlagRotation.Clear();
             GC.SuppressFinalize(this);

@@ -154,7 +154,7 @@ namespace UncreatedWarfare.Commands
                     if(command.Length == 2)
                     {
 
-                    }
+                    } 
                 }
             }
         }

@@ -458,9 +458,7 @@ namespace UncreatedWarfare
                         newtext = Translate(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
                     List<ITransportConnection> connections = new List<ITransportConnection>();
                     languageGroup.Value.ForEach(l => connections.Add(l.transportConnection));
-                    CommandWindow.LogWarning("Invoking sign update for " + languageGroup.Value.Count.ToString() + " players in language " + languageGroup.Key + "\n" + text + " -> " + newtext);
                     UCWarfare.SendUpdateSign.Invoke(ENetReliability.Unreliable, connections, x, y, plant, index, newtext);
-                    CommandWindow.LogWarning("looped back: " + languageGroup.Key);
                 }
             }
         }
@@ -491,7 +489,7 @@ namespace UncreatedWarfare
             if (BarricadeManager.tryGetInfo(transform, out byte _, out byte _, out ushort _, out ushort index, out BarricadeRegion region))
                 return GetSignText(index, region);
             else return string.Empty;
-        }
+        } 
         public static bool IsSign(this BarricadeDrop barricade) => barricade.model.TryGetComponent(out InteractableSign _);
         public static bool IsSign(this BarricadeData barricade, BarricadeRegion region)
         {
