@@ -74,9 +74,11 @@ namespace UncreatedWarfare.FOBs
             if (!File.Exists(directory))
             {
                 StreamWriter creator = File.CreateText(directory);
-                creator.WriteLine("[]");
+                creator.WriteLine("");
                 creator.Close();
                 creator.Dispose();
+
+                LoadDefaults();
             }
         }
 

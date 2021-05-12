@@ -63,19 +63,6 @@ namespace UncreatedWarfare
                     barricadeHealthChangedHandler?.Invoke(region.barricades[index]);
                 }
             }
-
-            [HarmonyPatch(typeof(BarricadeManager), "repair")]
-            [HarmonyPrefix]
-            static void RepairBarricadePrefix(Transform barricade, float damage, float times)
-            {
-                if (BarricadeManager.tryGetInfo(barricade, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                {
-                    if (region.barricades[index] != null && !region.barricades[(int)index].barricade.isDead)
-                    {
-                        barricadeHealthChangedHandler?.Invoke(region.barricades[index]);
-                    }
-                }
-            }
         }
     }
 }

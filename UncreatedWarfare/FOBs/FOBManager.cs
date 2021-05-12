@@ -22,15 +22,14 @@ namespace UncreatedWarfare.FOBs
 
         public FOBManager()
         {
+            config = new FOBConfig(UCWarfare.FOBStorage + "config.json");
+
             Team1FOBs = new List<FOB>();
             Team2FOBs = new List<FOB>();
             Level.onLevelLoaded += OnLevelLoaded;
-
-            config = new FOBConfig(UCWarfare.FOBStorage + "config.json");
-            config.LoadDefaults();
         }
 
-        private void OnLevelLoaded(int level)
+        private void OnLevelLoaded(int level)   
         {
             LoadFobs();
         }

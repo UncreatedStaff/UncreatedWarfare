@@ -90,6 +90,7 @@ namespace UncreatedWarfare
             CheckDir(KitsStorage);
             CheckDir(VehicleStorage);
             CheckDir(TeamStorage);
+            CheckDir(FOBStorage);
 
             CommandWindow.Log("Loading JSON Data...");
             Colors = JSONMethods.LoadColors(out ColorsHex);
@@ -106,7 +107,7 @@ namespace UncreatedWarfare
             DB = new DatabaseManager();
             WebInterface = new WebInterface();
 
-            StartListening();
+            ListenerThread = new Thread(StartListening);
 
             TeamManager = new TeamManager();
 
@@ -155,7 +156,7 @@ namespace UncreatedWarfare
         private void OnLevelLoaded(int level)
         {
             CommandWindow.Log("Sending assets...");
-            WebInterface.SendAssetUpdate();
+            //WebInterface.SendAssetUpdate();
         }
 
         private void StartListening()
@@ -201,8 +202,8 @@ namespace UncreatedWarfare
                 Level.onLevelLoaded -= OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
             }
-            DB.Close();
-        }
+            //DB.Close();
+        }   
 
     }
 }
