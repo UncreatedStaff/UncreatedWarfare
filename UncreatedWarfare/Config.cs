@@ -89,7 +89,7 @@ namespace UncreatedWarfare
         public FlagSettings()
         {
             NeutralColor = "ffffff";
-            CurrentGamePreset = "default";
+            CurrentGamePreset = "goose_bay";
             PlayerCheckSpeedSeconds = 0.25f;
 
             UseUI = true;

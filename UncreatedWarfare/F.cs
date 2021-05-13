@@ -1,16 +1,20 @@
 ﻿using Newtonsoft.Json;
 using Rocket.Core;
 using Rocket.Unturned.Player;
+using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using UncreatedWarfare.Flags;
+using UncreatedWarfare.Teams;
 using UnityEngine;
 using static Rocket.Core.Logging.Logger;
+using Color = UnityEngine.Color;
 
 namespace UncreatedWarfare
 {
@@ -296,6 +300,12 @@ namespace UncreatedWarfare
             Blank,
             NotOwned
         }
+        public static Team GetTeam(this ETeam team)
+        {
+            if (team == ETeam.TEAM1) return UCWarfare.I.TeamManager.Team1;
+            else if (team == ETeam.TEAM2) return UCWarfare.I.TeamManager.Team2;
+            else return UCWarfare.I.TeamManager.Neutral;
+        }
         public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this UnturnedPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
@@ -540,6 +550,95 @@ namespace UncreatedWarfare
                 }
             }
             return newString.ToString();
+        }
+        public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 Position)
+        {
+            TriggerEffectParameters p = new TriggerEffectParameters(ID)
+            {
+                position = Position,
+                reliable = true,
+                relevantPlayerID = player
+            };
+            EffectManager.triggerEffect(p);
+        }
+        public static void SendTextureToPlayer(Player destination, Texture2D image)
+        {
+            if (image == null || destination == null) return;
+            byte[] data = image.EncodeToJPG(50);
+            if(data.Length > ushort.MaxValue)
+            {
+                CommandWindow.LogError("Screenshot too large: " + data.Length.ToString() + " bytes.");
+                return;
+            }
+            ITransportConnection transportConnection = destination.channel.owner.transportConnection;
+            if (transportConnection != null)
+            {
+                UCWarfare.SendScreenshotDestination.Invoke(destination.GetNetId(), ENetReliability.Reliable, transportConnection, writer =>
+                {
+                    writer.WriteUInt16((ushort)data.Length);
+                    writer.WriteBytes(data);
+                });
+                CommandWindow.Log("invoked function");
+            }
+            else CommandWindow.Log("transport connection was null");
+        }
+        public static bool SavePhotoToDisk(string path, Texture2D texture)
+        {
+            byte[] data = texture.EncodeToPNG();
+            try
+            {
+                FileStream stream = File.Create(path);
+                stream.Write(data, 0, data.Length);
+                stream.Close();
+                stream.Dispose();
+                return true;
+            } catch { return false; }
+        }
+        // https://answers.unity.com/questions/244417/create-line-on-a-texture.html
+        public static void DrawLine(Texture2D texture, Line line, Color color, bool apply = true)
+        {
+            Vector2 point1 = new Vector2(line.pt1.x + texture.width / 2, line.pt1.y + texture.height / 2);
+            Vector2 point2 = new Vector2(line.pt2.x + texture.width / 2, line.pt2.y + texture.height / 2);
+            Vector2 t = point1;
+            float frac = 1 / Mathf.Sqrt(Mathf.Pow(point2.x - point1.x, 2) + Mathf.Pow(point2.y - point1.y, 2));
+            float ctr = 0;
+
+            while ((int)t.x != (int)point2.x || (int)t.y != (int)point2.y)
+            {
+                t = Vector2.Lerp(point1, point2, ctr);
+                ctr += frac;
+                texture.SetPixel((int)t.x, (int)t.y, color);
+            }
+            if (apply)
+                texture.Apply();
+        }
+        // https://stackoverflow.com/questions/30410317/how-to-draw-circle-on-texture-in-unity
+        public static void DrawCircle(Texture2D texture, float x, float y, float radius, Color color, bool apply = true)
+        {
+            float rSquared = radius * radius;
+
+            for (float u = x - radius; u < x + radius + 1; u++)
+                for (float v = y - radius; v < y + radius + 1; v++)
+                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
+                        texture.SetPixel((int)Math.Round(u), (int)Math.Round(v), color);
+            if (apply)
+                texture.Apply();
+        }
+        public static Texture2D FlipVertical(Texture2D original)
+        {
+            Texture2D rtn = new Texture2D(original.width, original.height);
+            for (int i = 0; i < original.height; i++)
+                rtn.SetPixels(0, original.height - 1 - i, original.width, 1, original.GetPixels(0, i, original.width, 1));
+            rtn.Apply();
+            return rtn;
+        }
+        public static Texture2D FlipHorizontal(Texture2D original)
+        {
+            Texture2D rtn = new Texture2D(original.width, original.height);
+            for (int i = 0; i < original.width; i++)
+                rtn.SetPixels(original.width - 1 - i, 9, 1, original.height, original.GetPixels(i, 0, 1, original.height));
+            rtn.Apply();
+            return rtn;
         }
     }
 }

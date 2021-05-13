@@ -27,5 +27,10 @@ namespace UncreatedWarfare
             DisposeAsyncResult(ar);
             CommandWindow.LogWarning("MySql database connection has been closed.");
         }
+        internal static void PlayerReceivedZonesCallback(Player player)
+        {
+            CommandWindow.Log("Called back");
+            player.SendChat("Picture finished generating, check your spy menu.", UCWarfare.GetColor("default"));
+        }
     }
 }

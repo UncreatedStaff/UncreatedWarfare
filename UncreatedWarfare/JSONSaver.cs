@@ -30,7 +30,6 @@ namespace UncreatedWarfare
                 creator.Dispose();
             }
         }
-
         protected void AddObjectToSave(T item)
         {
             var list = GetExistingObjects();

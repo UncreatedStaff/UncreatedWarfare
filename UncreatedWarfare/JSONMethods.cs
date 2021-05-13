@@ -187,13 +187,14 @@ namespace UncreatedWarfare
         public const string DefaultLanguage = "en-us";
         public static List<FlagData> ReadFlags(string Preset)
         {
-            if(!File.Exists(UCWarfare.FlagStorage + Preset + ".json"))
+            UCWarfare.I.CheckDir(UCWarfare.FlagStorage + Preset + '\\');
+            if(!File.Exists(UCWarfare.FlagStorage + Preset + "\\flags.json"))
             {
                 SaveFlags(DefaultFlags, Preset);
                 return DefaultFlags;
             }
             List<FlagData> Flags;
-            using (StreamReader Reader = File.OpenText(UCWarfare.FlagStorage + Preset + ".json"))
+            using (StreamReader Reader = File.OpenText(UCWarfare.FlagStorage + Preset + "\\flags.json"))
             {
                 Flags = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd());
                 Reader.Close();
@@ -203,7 +204,7 @@ namespace UncreatedWarfare
         }
         public static void SaveFlags(this List<FlagData> Flags, string Preset)
         {
-            using(StreamWriter TextWriter = File.CreateText(UCWarfare.FlagStorage + Preset + ".json"))
+            using (StreamWriter TextWriter = File.CreateText(UCWarfare.FlagStorage + Preset + "\\flags.json"))
             {
                 using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                 {
@@ -422,11 +423,12 @@ namespace UncreatedWarfare
             }
             return languages;
         }
-        public static Dictionary<int, Zone> LoadExtraZones()
+        public static Dictionary<int, Zone> LoadExtraZones(string Preset)
         {
-            if (!File.Exists(UCWarfare.DataDirectory + "extra_zones.json"))
+            UCWarfare.I.CheckDir(UCWarfare.FlagStorage + Preset + '\\');
+            if (!File.Exists(UCWarfare.FlagStorage + Preset + "\\extra_zones.json"))
             {
-                using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "extra_zones.json"))
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.FlagStorage + Preset + "\\extra_zones.json"))
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
@@ -444,7 +446,7 @@ namespace UncreatedWarfare
                 return NewDefaultZones;
             }
             List<FlagData> Zones;
-            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "extra_zones.json"))
+            using (StreamReader Reader = File.OpenText(UCWarfare.FlagStorage + Preset + "\\extra_zones.json"))
             {
                 Zones = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd());
                 Reader.Close();
@@ -462,11 +464,12 @@ namespace UncreatedWarfare
                 NewZones.Add(zone.id, Flag.ComplexifyZone(zone));
             return NewZones;
         }
-        public static Dictionary<string, Vector3> LoadExtraPoints()
+        public static Dictionary<string, Vector3> LoadExtraPoints(string Preset)
         {
-            if (!File.Exists(UCWarfare.DataDirectory + "extra_points.json"))
+            UCWarfare.I.CheckDir(UCWarfare.FlagStorage + Preset + '\\');
+            if (!File.Exists(UCWarfare.FlagStorage + Preset + "\\extra_points.json"))
             {
-                using (StreamWriter TextWriter = File.CreateText(UCWarfare.DataDirectory + "extra_points.json"))
+                using (StreamWriter TextWriter = File.CreateText(UCWarfare.FlagStorage + Preset + "\\extra_points.json"))
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
@@ -484,7 +487,7 @@ namespace UncreatedWarfare
                 return NewDefaultPoints;
             }
             List<Point3D> Points;
-            using (StreamReader Reader = File.OpenText(UCWarfare.DataDirectory + "extra_points.json"))
+            using (StreamReader Reader = File.OpenText(UCWarfare.FlagStorage + Preset + "\\extra_points.json"))
             {
                 Points = JsonConvert.DeserializeObject<List<Point3D>>(Reader.ReadToEnd());
                 Reader.Close();

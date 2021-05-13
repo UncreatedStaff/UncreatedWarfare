@@ -69,13 +69,19 @@ namespace UncreatedWarfare
         public Dictionary<ulong, FPlayerName> OriginalNames;
         public Dictionary<ulong, string> Languages;
         public Dictionary<string, LanguageAliasSet> LanguageAliases;
+        public bool CoroutineTiming = false;
         private bool InitialLoadEventSubscription;
         internal Thread ListenerThread;
         internal AsyncListenServer ListenServer;
         internal AsyncDatabase DatabaseManager;
-        internal static readonly ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign = ClientStaticMethod<byte, byte, ushort, ushort, string>.Get(new ClientStaticMethod<byte, byte, ushort, ushort, string>.ReceiveDelegate(BarricadeManager.ReceiveUpdateSign));
-        internal static readonly ClientStaticMethod SendMultipleBarricades = ClientStaticMethod.Get(new ClientStaticMethod.ReceiveDelegateWithContext(BarricadeManager.ReceiveMultipleBarricades));
-        private void CheckDir(string path)
+        internal static readonly ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign = 
+            ClientStaticMethod<byte, byte, ushort, ushort, string>.Get(
+                new ClientStaticMethod<byte, byte, ushort, ushort, string>.ReceiveDelegate(BarricadeManager.ReceiveUpdateSign));
+        internal static readonly ClientStaticMethod SendMultipleBarricades = 
+            ClientStaticMethod.Get(new ClientStaticMethod.ReceiveDelegateWithContext(BarricadeManager.ReceiveMultipleBarricades));
+        internal static readonly ClientInstanceMethod SendScreenshotDestination = 
+            ClientInstanceMethod.Get(typeof(Player), "ReceiveScreenshotDestination");
+        public void CheckDir(string path)
         {
             if (!System.IO.Directory.Exists(path))
             {
@@ -161,8 +167,7 @@ namespace UncreatedWarfare
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
             Localization = JSONMethods.LoadTranslations();
-            ExtraZones = JSONMethods.LoadExtraZones();
-            ExtraPoints = JSONMethods.LoadExtraPoints();
+            ExtraPoints = JSONMethods.LoadExtraPoints(Config.FlagSettings.CurrentGamePreset);
             TableData = JSONMethods.LoadTables();
             NodeCalls = JSONMethods.LoadCalls();
             Languages = JSONMethods.LoadLanguagePreferences();
@@ -177,10 +182,7 @@ namespace UncreatedWarfare
             ListenerThread = new Thread(StartListening);
 
 
-            if (Config.Modules.Flags)
-            {
-                FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
-            }
+            FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
             if (Config.Modules.Kits)
             {
                 KitManager = new KitManager();
@@ -208,6 +210,8 @@ namespace UncreatedWarfare
                 Log("Subscribing to events...");
                 InitialLoadEventSubscription = true;
                 SubscribeToEvents();
+                FlagManager.LoadFlags();
+                ExtraZones = JSONMethods.LoadExtraZones(Config.FlagSettings.CurrentGamePreset);
             } else
             {
                 InitialLoadEventSubscription = false;
@@ -296,6 +300,8 @@ namespace UncreatedWarfare
             CommandWindow.Log("Sending assets...");
             if (Configuration.Instance.SendAssetsOnStartup)
                 WebInterface.SendAssetUpdate();
+            FlagManager.LoadFlags();
+            ExtraZones = JSONMethods.LoadExtraZones(Config.FlagSettings.CurrentGamePreset);
         }
 
         private void StartListening()

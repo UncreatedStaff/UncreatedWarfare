@@ -13,10 +13,12 @@ namespace UncreatedWarfare.Flags
     public class PlayerEventArgs : EventArgs { public Player player; }
     public class CaptureChangeEventArgs : EventArgs { public int NewPoints; public int OldPoints; }
     public class OwnerChangeEventArgs : EventArgs { public Team OldOwner; public Team NewOwner; }
-    public class Flag
+    public class Flag : IDisposable
     {
         public const int MaxPoints = 64;
         public Zone ZoneData { get; private set; }
+        public int Level { get => _level; }
+        private readonly int _level;
         public Vector3 Position
         {
             get => _position;
@@ -103,6 +105,10 @@ namespace UncreatedWarfare.Flags
                 else return UCWarfare.GetColorHex("neutral_color");
             }
         }
+        public void Dispose()
+        {
+            OnDisposed?.Invoke(this, EventArgs.Empty);
+        }
         private Team _owner;
         public Team Owner { get => _owner; set => _owner = value; }
         public float SizeX { get => _sizeX; set => _sizeX = value; }
@@ -114,7 +120,7 @@ namespace UncreatedWarfare.Flags
         public List<Player> PlayersOnFlagTeam2;
         public int Team2TotalPlayers;
         public void RecalcCappers(bool RecalcOnFlag = false) => RecalcCappers(Provider.clients, RecalcOnFlag);
-        public void RecalcCappers(List<SteamPlayer> OnlinePlayers, bool RecalcOnFlag = false)
+        public void RecalcCappers(List<SteamPlayer> OnlinePlayers, bool RecalcOnFlag = true)
         {
             if (RecalcOnFlag)
             {
@@ -183,7 +189,7 @@ namespace UncreatedWarfare.Flags
                     Team NewOwner;
                     if (_points >= MaxPoints)
                         NewOwner = UCWarfare.Instance.TeamManager.Team1;
-                    else if (_points <= MaxPoints * -1)
+                    else if (_points <= -MaxPoints)
                         NewOwner = UCWarfare.Instance.TeamManager.Team2;
                     else NewOwner = UCWarfare.Instance.TeamManager.Neutral;
                     if (OldOwner.ID != NewOwner.ID) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
@@ -194,6 +200,7 @@ namespace UncreatedWarfare.Flags
         public event EventHandler<PlayerEventArgs> OnPlayerLeft;
         public event EventHandler<CaptureChangeEventArgs> OnPointsChanged;
         public event EventHandler<OwnerChangeEventArgs> OnOwnerChanged;
+        public event EventHandler OnDisposed;
         public List<Player> PlayersOnFlag { get; private set; }
         public Flag(FlagData data)
         {
@@ -201,6 +208,7 @@ namespace UncreatedWarfare.Flags
             this._x = data.x;
             this._y = data.y;
             this._position2d = data.Position2D;
+            this._level = data.level;
             this._name = data.name;
             this._color = data.color;
             this._owner = UCWarfare.Instance.TeamManager.Neutral;
@@ -212,14 +220,14 @@ namespace UncreatedWarfare.Flags
             switch (data.zone.type)
             {
                 case "rectangle":
-                    return new RectZone(data.Position2D, data.zone, data.use_map_size_multiplier);
+                    return new RectZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
                 case "circle":
-                    return new CircleZone(data.Position2D, data.zone, data.use_map_size_multiplier);
+                    return new CircleZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
                 case "polygon":
-                    return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier);
+                    return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
                 default:
                     CommandWindow.LogError("Invalid zone data at flag ID: " + data.id.ToString() + ", name: " + data.name);
-                    return new RectZone(data.Position2D, new ZoneData("rectangle", "100, 100"), data.use_map_size_multiplier);
+                    return new RectZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name);
             }
         }
         public bool PlayerInRange(Vector3 PlayerPosition) => ZoneData.IsInside(PlayerPosition);
@@ -254,19 +262,19 @@ namespace UncreatedWarfare.Flags
         public bool T2Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID; }
         public void EvaluatePoints()
         {
-            CommandWindow.Log("Evaluating " + this.Name);
+            //CommandWindow.Log("Evaluating " + this.Name);
             if (T1Obj)
             {
                 if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
                 {
-                    CommandWindow.Log("Capping team 1");
+                    //CommandWindow.Log("Capping team 1");
                     CapT1();
                 } else if (
                     (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers || 
                     (Team2TotalPlayers > 0 && Team1TotalPlayers == 0)) &&
                     Owner.ID == ETeam.TEAM2 && _points > -1 * MaxPoints)
                 {
-                    CommandWindow.Log("Capping team 2");
+                    //CommandWindow.Log("Capping team 2");
                     CapT2();
                 }
             }
@@ -274,14 +282,14 @@ namespace UncreatedWarfare.Flags
             {
                 if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
                 {
-                    CommandWindow.Log("Capping team 2");
+                    //CommandWindow.Log("Capping team 2");
                     CapT2();
                 } else if (
                     (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers ||
                     (Team1TotalPlayers > 0 && Team2TotalPlayers == 0)) && 
                     Owner.ID == ETeam.TEAM1 && _points < MaxPoints)
                 {
-                    CommandWindow.Log("Capping team 1");
+                    //CommandWindow.Log("Capping team 1");
                     CapT1();
                 }
             }
