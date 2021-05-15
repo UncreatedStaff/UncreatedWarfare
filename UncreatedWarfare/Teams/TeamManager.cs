@@ -17,7 +17,11 @@ namespace UncreatedWarfare.Teams
         public Team Team1;
         public Team Team2;
         public Team Neutral;
-        public Zone LobbyZone;
+        public Zone LobbyZone { get => UCWarfare.I.ExtraZones?[-69]; }
+        public Zone Team1Main { get => UCWarfare.I.ExtraZones?[-1]; }
+        public Zone Team2Main { get => UCWarfare.I.ExtraZones?[-2]; }
+        public Zone Team1AMC { get => UCWarfare.I.ExtraZones?[-101]; }
+        public Zone Team2AMC { get => UCWarfare.I.ExtraZones?[-102]; }
         public Vector3 LobbySpawn { get => UCWarfare.I.ExtraPoints["lobby_spawn"]; }
         public readonly List<Team> DefaultTeams = new List<Team>
         {
@@ -29,7 +33,6 @@ namespace UncreatedWarfare.Teams
             Team1 = GetObject(t => t.ID == ETeam.TEAM1);
             Team2 = GetObject(t => t.ID == ETeam.TEAM2);
             Neutral = GetObject(t => t.ID == ETeam.NEUTRAL);
-            LobbyZone = UCWarfare.I.ExtraZones?[-69];
         }
         protected override string LoadDefaults()
         {

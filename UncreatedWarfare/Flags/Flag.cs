@@ -17,6 +17,7 @@ namespace UncreatedWarfare.Flags
     {
         public const int MaxPoints = 64;
         public Zone ZoneData { get; private set; }
+        public FlagManager manager { get; private set; }
         public int Level { get => _level; }
         private readonly int _level;
         public Vector3 Position
@@ -108,6 +109,7 @@ namespace UncreatedWarfare.Flags
         public void Dispose()
         {
             OnDisposed?.Invoke(this, EventArgs.Empty);
+            GC.SuppressFinalize(this);
         }
         private Team _owner;
         public Team Owner { get => _owner; set => _owner = value; }
@@ -202,8 +204,9 @@ namespace UncreatedWarfare.Flags
         public event EventHandler<OwnerChangeEventArgs> OnOwnerChanged;
         public event EventHandler OnDisposed;
         public List<Player> PlayersOnFlag { get; private set; }
-        public Flag(FlagData data)
+        public Flag(FlagData data, FlagManager manager)
         {
+            this.manager = manager;
             this._id = data.id;
             this._x = data.x;
             this._y = data.y;
@@ -260,37 +263,29 @@ namespace UncreatedWarfare.Flags
         }
         public bool T1Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID; }
         public bool T2Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID; }
-        public void EvaluatePoints()
+        public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
-            //CommandWindow.Log("Evaluating " + this.Name);
-            if (T1Obj)
+            if (manager.State == EState.ACTIVE || overrideInactiveCheck)
             {
-                if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
+                if (T1Obj)
                 {
-                    //CommandWindow.Log("Capping team 1");
-                    CapT1();
-                } else if (
-                    (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers || 
-                    (Team2TotalPlayers > 0 && Team1TotalPlayers == 0)) &&
-                    Owner.ID == ETeam.TEAM2 && _points > -1 * MaxPoints)
-                {
-                    //CommandWindow.Log("Capping team 2");
-                    CapT2();
+                    if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
+                        CapT1();
+                    else if (
+                      (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers ||
+                      (Team2TotalPlayers > 0 && Team1TotalPlayers == 0)) &&
+                      Owner.ID == ETeam.TEAM2 && _points > -1 * MaxPoints)
+                        CapT2();
                 }
-            }
-            if (T2Obj)
-            {
-                if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
+                else if (T2Obj)
                 {
-                    //CommandWindow.Log("Capping team 2");
-                    CapT2();
-                } else if (
-                    (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers ||
-                    (Team1TotalPlayers > 0 && Team2TotalPlayers == 0)) && 
-                    Owner.ID == ETeam.TEAM1 && _points < MaxPoints)
-                {
-                    //CommandWindow.Log("Capping team 1");
-                    CapT1();
+                    if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
+                        CapT2();
+                    else if (
+                      (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers ||
+                      (Team1TotalPlayers > 0 && Team2TotalPlayers == 0)) &&
+                      Owner.ID == ETeam.TEAM1 && _points < MaxPoints)
+                        CapT1();
                 }
             }
         }

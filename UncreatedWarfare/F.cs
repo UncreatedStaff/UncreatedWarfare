@@ -44,7 +44,38 @@ namespace UncreatedWarfare
                 temp += (i == startIndex ? "" : deliminator) + array[i];
             return temp;
         }
-        public static string GetTime(this uint minutes)
+        public static string GetTimeFromSeconds(this uint seconds)
+        {
+            if (seconds < 60) // < 1 minute
+            {
+                return seconds.ToString() + " seconds" + seconds.S();
+            } else if (seconds < 3600) // < 1 hour
+            {
+                int minutes = DivideRemainder(seconds, 60, out int secondOverflow);
+                return $"{minutes} minute{minutes.S()}{(secondOverflow == 0 ? "" : $" and {secondOverflow} second{secondOverflow.S()}")}";
+            }
+            else if (seconds < 86400) // < 1 day 
+            {
+                int hours = DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
+                return $"{hours} hour{hours.S()}{(minutesOverflow == 0 ? "" : $" and {minutesOverflow} minute{minutesOverflow.S()}")}";
+            }
+            else if (seconds < 2628000) // < 1 month (30.4166667 days) (365/12)
+            {
+                uint days = DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out uint hoursOverflow);
+                return $"{days} day{days.S()}{(hoursOverflow == 0 ? "" : $" and {hoursOverflow} hour{hoursOverflow.S()}")}";
+            }
+            else if (seconds < 31536000) // < 1 year
+            {
+                uint months = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.4166667m, out uint daysOverflow);
+                return $"{months} month{months.S()}{(daysOverflow == 0 ? "" : $" and {daysOverflow} day{daysOverflow.S()}")}";
+            }
+            else // > 1 year
+            {
+                uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.4166667m, out _), 12, out uint monthOverflow);
+                return $"{years} year{years.S()}{(monthOverflow == 0 ? "" : $" and {monthOverflow} month{monthOverflow.S()}")}";
+            }
+        }
+        public static string GetTimeFromMinutes(this uint minutes)
         {
             if (minutes < 60) // < 1 hour
             {
@@ -53,22 +84,22 @@ namespace UncreatedWarfare
             else if (minutes < 1440) // < 1 day 
             {
                 uint hours = DivideRemainder(minutes, 60, out uint minutesOverflow);
-                return $"{hours} hour{(hours == 1 ? "" : "s")}{(minutesOverflow == 0 ? "" : $" and {minutesOverflow} minute{(minutesOverflow == 1 ? "" : "s")}")}";
+                return $"{hours} hour{hours.S()}{(minutesOverflow == 0 ? "" : $" and {minutesOverflow} minute{minutesOverflow.S()}")}";
             }
             else if (minutes < 43800) // < 1 month (30.4166667 days)
             {
                 uint days = DivideRemainder(DivideRemainder(minutes, 60, out uint minutesOverflow), 24, out uint hoursOverflow);
-                return $"{days} day{(days == 1 ? "" : "s")}{(hoursOverflow == 0 ? "" : $" and {hoursOverflow} hour{(hoursOverflow == 1 ? "" : "s")}")}";
+                return $"{days} day{days.S()}{(hoursOverflow == 0 ? "" : $" and {hoursOverflow} hour{hoursOverflow.S()}")}";
             }
             else if (minutes < 525600) // < 1 year
             {
                 uint months = DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out uint minutesOverflow), 24, out uint hoursOverflow), 30.4166667m, out uint daysOverflow);
-                return $"{months} month{(months == 1 ? "" : "s")}{(daysOverflow == 0 ? "" : $" and {daysOverflow} day{(daysOverflow == 1 ? "" : "s")}")}";
+                return $"{months} month{months.S()}{(daysOverflow == 0 ? "" : $" and {daysOverflow} day{daysOverflow.S()}")}";
             }
             else // > 1 year
             {
                 uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out uint minutesOverflow), 24, out uint hoursOverflow), 30.4166667m, out uint daysOverflow), 12, out uint monthOverflow);
-                return $"{years} year{(years == 1 ? "" : "s")}{(monthOverflow == 0 ? "" : $" and {monthOverflow} month{(monthOverflow == 1 ? "" : "s")}")}";
+                return $"{years} year{years.S()}{(monthOverflow == 0 ? "" : $" and {monthOverflow} month{monthOverflow.S()}")}";
             }
         }
         public static int DivideRemainder(float divisor, float dividend, out int remainder)
@@ -89,6 +120,9 @@ namespace UncreatedWarfare
             remainder = (uint)Math.Round((answer - Math.Floor(answer)) * dividend);
             return (uint)Math.Floor(answer);
         }
+        public static string Translate(string key, SteamPlayer player, params object[] formatting) => Translate(key, player.playerID.steamID.m_SteamID, formatting);
+        public static string Translate(string key, Player player, params object[] formatting) => Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
+        public static string Translate(string key, UnturnedPlayer player, params object[] formatting) => Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, formatting);
         /// <summary>
         /// Tramslate an unlocalized string to a localized string using the Rocket translations file.
         /// </summary>
@@ -110,8 +144,9 @@ namespace UncreatedWarfare
                             {
                                 return string.Format(UCWarfare.I.Localization.ElementAt(0).Value[key], formatting);
                             }
-                            catch (FormatException)
+                            catch (FormatException ex)
                             {
+                                CommandWindow.Log(ex);
                                 return UCWarfare.I.Localization.ElementAt(0).Value[key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                             }
                         } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
@@ -124,8 +159,9 @@ namespace UncreatedWarfare
                         {
                             return string.Format(UCWarfare.I.Localization[JSONMethods.DefaultLanguage][key], formatting);
                         }
-                        catch (FormatException)
+                        catch (FormatException ex)
                         {
+                            CommandWindow.Log(ex);
                             return UCWarfare.I.Localization[JSONMethods.DefaultLanguage][key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                         }
                     } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
@@ -150,8 +186,9 @@ namespace UncreatedWarfare
                             {
                                 return string.Format(UCWarfare.I.Localization.ElementAt(0).Value[key], formatting);
                             }
-                            catch (FormatException)
+                            catch (FormatException ex)
                             {
+                                CommandWindow.Log(ex);
                                 return UCWarfare.I.Localization.ElementAt(0).Value[key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                             }
                         }
@@ -163,8 +200,9 @@ namespace UncreatedWarfare
                     try
                     {
                         return string.Format(UCWarfare.I.Localization[lang][key], formatting);
-                    } catch (FormatException)
+                    } catch (FormatException ex)
                     {
+                        CommandWindow.Log(ex);
                         return UCWarfare.I.Localization[lang][key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                     }
                 } else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
@@ -288,7 +326,9 @@ namespace UncreatedWarfare
         }
         public static string An(this string word) => (word.Length > 0 && vowels.Contains(word[0].ToString().ToLower()[0])) ? "n" : "";
         public static string An(this char letter) => vowels.Contains(letter.ToString().ToLower()[0]) ? "n" : "";
-        public static string S<T>(this T number) where T : IComparable => number.CompareTo(1) == 0 ? "" : "s";
+        public static string S(this int number) => number == 1 ? "" : "s";
+        public static string S(this float number) => number == 1 ? "" : "s";
+        public static string S(this uint number) => number == 1 ? "" : "s";
         public enum UIOption
         {
             Capturing,
@@ -305,6 +345,22 @@ namespace UncreatedWarfare
             if (team == ETeam.TEAM1) return UCWarfare.I.TeamManager.Team1;
             else if (team == ETeam.TEAM2) return UCWarfare.I.TeamManager.Team2;
             else return UCWarfare.I.TeamManager.Neutral;
+        }
+        public static Color GetTeamColor(this SteamPlayer player) => GetTeamColor(player.player.quests.groupID.m_SteamID);
+        public static Color GetTeamColor(this Player player) => GetTeamColor(player.quests.groupID.m_SteamID);
+        public static Color GetTeamColor(this ulong groupID)
+        {
+            if (groupID == UCWarfare.Config.Team1ID) return UCWarfare.I.TeamManager.Team1.UnityColor;
+            else if (groupID == UCWarfare.Config.Team2ID) return UCWarfare.I.TeamManager.Team2.UnityColor;
+            else return UCWarfare.I.TeamManager.Neutral.UnityColor;
+        }
+        public static string GetTeamColorHex(this SteamPlayer player) => GetTeamColorHex(player.player.quests.groupID.m_SteamID);
+        public static string GetTeamColorHex(this Player player) => GetTeamColorHex(player.quests.groupID.m_SteamID);
+        public static string GetTeamColorHex(this ulong groupID)
+        {
+            if (groupID == UCWarfare.Config.Team1ID) return UCWarfare.I.TeamManager.Team1.Color;
+            else if (groupID == UCWarfare.Config.Team2ID) return UCWarfare.I.TeamManager.Team2.Color;
+            else return UCWarfare.I.TeamManager.Neutral.Color;
         }
         public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
@@ -640,5 +696,25 @@ namespace UncreatedWarfare
             rtn.Apply();
             return rtn;
         }
+        public static float GetCurrentPlaytime(Player player)
+        {
+            if (player.transform.TryGetComponent(out Stats.PlaytimeComponent playtimeObj))
+                return playtimeObj.CurrentTimeSeconds;
+            else return 0f;
+        }
+        public static FPlayerName GetPlayerOriginalNames(Player player)
+        {
+            if (UCWarfare.I.OriginalNames.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
+                return UCWarfare.I.OriginalNames[player.channel.owner.playerID.steamID.m_SteamID];
+            else return new FPlayerName(player);
+        }
+        public static bool IsInMain(this Player player)
+        {
+            ulong team = player.GetTeam();
+            if (team == 1) return UCWarfare.I.TeamManager.Team1Main.IsInside(player.transform.position);
+            else if (team == 2) return UCWarfare.I.TeamManager.Team2Main.IsInside(player.transform.position);
+            else return false;
+        }
+        public static bool IsOnFlag(this Player player) => UCWarfare.I.FlagManager.FlagRotation.Exists(F => F.ZoneData.IsInside(player.transform.position));
     }
 }

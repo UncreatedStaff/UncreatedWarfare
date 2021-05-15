@@ -28,6 +28,7 @@ namespace UncreatedWarfare
         public bool SendAssetsOnStartup;
         public float DelayAfterConnectionToSendTranslations;
         public float MaxMapHeight;
+        public ushort EndScreenUI;
         public void LoadDefaults()
         {
             Modules = new Modules();
@@ -43,6 +44,7 @@ namespace UncreatedWarfare
             SendAssetsOnStartup = false;
             DelayAfterConnectionToSendTranslations = 0.5f;
             MaxMapHeight = 150;
+            EndScreenUI = 10000;
         }
     }
     public class Modules

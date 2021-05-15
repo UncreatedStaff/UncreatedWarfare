@@ -232,6 +232,24 @@ namespace UncreatedWarfare.Commands
                     else if (team == 2)
                         flag.CapT2(Flag.MaxPoints - flag.Points - 1);
                     else player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
+                } else if (command[0] == "quickwin")
+                {
+                    ulong team = F.GetTeam(player);
+                    if(team != 1 && team != 2)
+                    {
+                        player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
+                        return;
+                    }
+                    foreach(Flag flag in UCWarfare.I.FlagManager.FlagRotation)
+                    {
+                        if (team == 1)
+                            flag.CapT1(Flag.MaxPoints - flag.Points);
+                        else if (team == 2)
+                            flag.CapT2(Flag.MaxPoints - flag.Points);
+                    }
+                } else if (command[0] == "playtime")
+                {
+                    player.SendChat("Playtime: " + F.GetTimeFromSeconds((uint)Mathf.Round(Mathf.Abs(F.GetCurrentPlaytime(player)))) + '.', UCWarfare.GetColor("default"));
                 }
             }
         }

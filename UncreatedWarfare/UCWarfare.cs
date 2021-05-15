@@ -46,7 +46,7 @@ namespace UncreatedWarfare
         public TeamManager TeamManager;
         public FOBManager FOBManager;
         public BuildManager BuildManager;
-        public ReviveManager reviveManager;
+        public ReviveManager ReviveManager;
         public WebInterface WebInterface;
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string FlagStorage = DataDirectory + @"Flags\Presets\";
@@ -74,6 +74,7 @@ namespace UncreatedWarfare
         internal Thread ListenerThread;
         internal AsyncListenServer ListenServer;
         internal AsyncDatabase DatabaseManager;
+        public WarStatsTracker GameStats;
         internal static readonly ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign = 
             ClientStaticMethod<byte, byte, ushort, ushort, string>.Get(
                 new ClientStaticMethod<byte, byte, ushort, ushort, string>.ReceiveDelegate(BarricadeManager.ReceiveUpdateSign));
@@ -175,7 +176,6 @@ namespace UncreatedWarfare
 
             // Managers
             CommandWindow.Log("Instantiating Framework...");
-            TeamManager = new TeamManager();
             DatabaseManager = new AsyncDatabase();
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             WebInterface = new WebInterface();
@@ -183,6 +183,7 @@ namespace UncreatedWarfare
 
 
             FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
+            FlagManager.OnReady += OnFlagManagerReady;
             if (Config.Modules.Kits)
             {
                 KitManager = new KitManager();
@@ -198,7 +199,7 @@ namespace UncreatedWarfare
             }
             if (Config.Modules.Revives)
             {
-                reviveManager = new ReviveManager();
+                ReviveManager = new ReviveManager();
             }
             CommandWindow.Log("Starting Coroutines...");
             if (Level.isLoaded)
@@ -210,8 +211,12 @@ namespace UncreatedWarfare
                 Log("Subscribing to events...");
                 InitialLoadEventSubscription = true;
                 SubscribeToEvents();
-                FlagManager.LoadFlags();
+                TeamManager = new TeamManager();
                 ExtraZones = JSONMethods.LoadExtraZones(Config.FlagSettings.CurrentGamePreset);
+                FlagManager.Load();
+                // Start new game.
+
+                GameStats = gameObject.AddComponent<WarStatsTracker>();
             } else
             {
                 InitialLoadEventSubscription = false;
@@ -220,7 +225,14 @@ namespace UncreatedWarfare
             }
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
+
         }
+
+        private void OnFlagManagerReady(object sender, EventArgs e)
+        {
+            FlagManager.StartNextGame();
+        }
+
         private void SubscribeToEvents()
         {
             U.Events.OnPlayerConnected += OnPostPlayerConnected;
@@ -300,8 +312,12 @@ namespace UncreatedWarfare
             CommandWindow.Log("Sending assets...");
             if (Configuration.Instance.SendAssetsOnStartup)
                 WebInterface.SendAssetUpdate();
-            FlagManager.LoadFlags();
+            TeamManager = new TeamManager();
             ExtraZones = JSONMethods.LoadExtraZones(Config.FlagSettings.CurrentGamePreset);
+            FlagManager.Load();
+
+            //Start new game
+            GameStats = gameObject.AddComponent<WarStatsTracker>();
         }
 
         private void StartListening()
@@ -320,6 +336,7 @@ namespace UncreatedWarfare
                 names = OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
             else names = new FPlayerName(player);
             DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
+            GameStats.AddPlayer(player.Player);
         }
         private void OnPlayerDisconnected(UnturnedPlayer player)
         {

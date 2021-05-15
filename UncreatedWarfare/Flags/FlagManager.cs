@@ -4,7 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UncreatedWarfare.Stats;
 using UncreatedWarfare.Teams;
+using UnityEngine;
+using Random = System.Random;
 
 namespace UncreatedWarfare.Flags
 {
@@ -46,8 +49,18 @@ namespace UncreatedWarfare.Flags
         public int ObjectiveT2Index;
         public Flag ObjectiveTeam1 { get => FlagRotation[ObjectiveT1Index]; }
         public Flag ObjectiveTeam2 { get => FlagRotation[ObjectiveT2Index]; }
+        private EndScreenLeaderboard EndScreen;
+        public EState State { get => _state; set
+            {
+                EState oldState = _state;
+                _state = value;
+                OnStateChanged?.Invoke(this, new OnStateChangedEventArgs() { NewState = _state, OldState = oldState });
+            } 
+        }
+        private EState _state;
         public FlagManager(string Preset = "default")
         {
+            this._state = EState.LOADING;
             this._preset = Preset;
             FlagRotation = new List<Flag>();
             AllFlags = new List<Flag>();
@@ -56,14 +69,16 @@ namespace UncreatedWarfare.Flags
         }
         private void OnObjectiveChangeAction(object sender, OnObjectiveChangeEventArgs e)
         {
+            if(UCWarfare.I.GameStats != null)
+                UCWarfare.I.GameStats.totalFlagOwnerChanges++;
             F.Broadcast("Objective changed for team " + e.Team.ToString() + " from " + e.oldFlagObj.Name + " to " + e.newFlagObj.Name, UCWarfare.GetColor("default"));
             CommandWindow.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name);
         }
-
-        public void LoadFlags()
+        public void Load()
         {
             LoadAllFlags();
-            LoadNewFlags();
+            this.State = EState.PAUSED;
+            OnReady?.Invoke(this, EventArgs.Empty);
         }
         public void AddPlayerOnFlag(Player player, Flag flag) {
             if(OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
@@ -90,9 +105,9 @@ namespace UncreatedWarfare.Flags
         public void ClearPlayersOnFlag() => OnFlag.Clear();
         public void LoadNewFlags()
         {
-            FlagRotation.Clear();
-            OnFlag.Clear();
             if (AllFlags == null) return;
+            DisposeFlags();
+            OnFlag.Clear();
             List<KeyValuePair<int, List<Flag>>> lvls = new List<KeyValuePair<int, List<Flag>>>();
             for(int i = 0; i < AllFlags.Count; i++)
             {
@@ -138,7 +153,7 @@ namespace UncreatedWarfare.Flags
             int i;
             for (i = 0; i < flags.Count; i++)
             {
-                AllFlags.Add(new Flag(flags[i]));
+                AllFlags.Add(new Flag(flags[i], this));
             }
             CommandWindow.Log("Loaded " + i.ToString() + " flags into memory and cleared any existing old flags.");
         }
@@ -239,7 +254,11 @@ namespace UncreatedWarfare.Flags
         public class OnTeamWinEventArgs : EventArgs { public Team team; }
         public event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
         public class OnObjectiveChangeEventArgs : EventArgs { public Flag oldFlagObj; public Flag newFlagObj; public ETeam Team; public int OldObj; public int NewObj; }
+        public class OnStateChangedEventArgs : EventArgs { public EState NewState; public EState OldState; }
         public event EventHandler<OnObjectiveChangeEventArgs> OnObjectiveChange;
+        public event EventHandler<OnStateChangedEventArgs> OnStateChanged;
+        public event EventHandler OnReady;
+        public event EventHandler OnNewGameStarting;
         public void DeclareWin(ETeam Team)
         {
             Team t = F.GetTeam(Team);
@@ -247,9 +266,30 @@ namespace UncreatedWarfare.Flags
             CommandWindow.LogWarning(t.LocalizedName + " just won the game!");
             foreach (SteamPlayer client in Provider.clients)
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), t.TranslateName(client.playerID.steamID.m_SteamID), t.Color);
+            this.State = EState.FINISHED;
             OnTeamWinGame?.Invoke(this, new OnTeamWinEventArgs { team = t });
+            EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
+            EndScreen.OnLeaderboardExpired += EndScreen_OnLeaderboardExpired;
+            EndScreen.winner = Team;
+            EndScreen.EndGame();
+
         }
-        
+        public void StartNextGame()
+        {
+            CommandWindow.LogWarning("LOADING NEW GAME");
+            LoadNewFlags();
+            State = EState.ACTIVE;
+            EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.FlagSettings.UIID);
+            OnNewGameStarting?.Invoke(this, EventArgs.Empty);
+        }
+        private void EndScreen_OnLeaderboardExpired(object sender, EventArgs e)
+        {
+            EndScreen.OnLeaderboardExpired -= EndScreen_OnLeaderboardExpired;
+            UnityEngine.Object.Destroy(EndScreen);
+            EndScreen = null;
+            StartNextGame();
+        }
+
         private void FlagOwnerChanged(object sender, OwnerChangeEventArgs e)
         {
             Flag flag = sender as Flag;
@@ -420,7 +460,12 @@ namespace UncreatedWarfare.Flags
         }
         public void Dispose()
         {
-            foreach(Flag flag in FlagRotation)
+            DisposeFlags();
+            GC.SuppressFinalize(this);
+        }
+        public void DisposeFlags()
+        {
+            foreach (Flag flag in FlagRotation)
             {
                 flag.OnPlayerEntered -= PlayerEnteredFlagRadius;
                 flag.OnPlayerLeft -= PlayerLeftFlagRadius;
@@ -429,14 +474,19 @@ namespace UncreatedWarfare.Flags
                 flag.Dispose();
             }
             FlagRotation.Clear();
-            GC.SuppressFinalize(this);
         }
         public void EvaluatePoints()
         {
-            foreach (Flag flag in FlagRotation.Where(f => f.PlayersOnFlag.Count > 0))
-            {
-                flag.EvaluatePoints();
-            }
+            if(State == EState.ACTIVE)
+                foreach (Flag flag in FlagRotation.Where(f => f.PlayersOnFlag.Count > 0))
+                    flag.EvaluatePoints();
         }
+    }
+    public enum EState : byte
+    {
+        ACTIVE,
+        PAUSED,
+        FINISHED,
+        LOADING
     }
 }
