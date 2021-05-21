@@ -1,4 +1,5 @@
 ﻿using Rocket.API.Collections;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using UncreatedWarfare.Flags;
 using UncreatedWarfare.Kits;
 using UncreatedWarfare.Stats;
+using FlagData = UncreatedWarfare.Flags.FlagData;
 
 namespace UncreatedWarfare
 {
@@ -170,7 +172,7 @@ namespace UncreatedWarfare
 
                 // End UI
                 { "game_over", "Game Over!" },
-                { "winner", "<color=#{1}>{0}</color>" },
+                { "winner", "<color=#{1}>{0}</color> Won!" },
                 { "lb_header_1", "Most Kills" },
                 { "lb_header_2", "K/D Ratio" },
                 { "lb_header_3", "Time On Point" },
@@ -214,7 +216,93 @@ namespace UncreatedWarfare
                 { "next_game_starting_format", "{0:mm\\:ss}" },
 
                 // SIGNS - must prefix with "sign_" for them to work
-                { "sign_test", "<color=#ff00ff>This is the english translation for that sign.</color>" }
+                { "sign_test", "<color=#ff00ff>This is the english translation for that sign.</color>" },
+                { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
+
+                // Admin Commands
+                { "NotRunningErrorText", "This is not a server." },
+                { "InvalidParameterErrorText", "Invalid parameter count. Quotes should be around any parameters with spaces." },
+                // kick
+                { "kick_ErrorNoReasonProvided_Console", "You must provide a reason." },
+                { "kick_ErrorNoReasonProvided", "You must provide a reason." },
+                { "kick_NoPlayerErrorText", "No player found from <color=#d8addb>{0}</color>." },
+                { "kick_NoPlayerErrorText_Console", "No player found from \"{0}\"." },
+                { "kick_KickedPlayer", "You kicked <color=#d8addb>{0}</color>." },
+                { "kick_KickedPlayer_Broadcast", "<color=#d8addb>{0}</color> was kicked by <color=#00ffff>{1}</color>." },
+                { "kick_KickedPlayerFromConsole_Broadcast", "<color=#d8addb>{0}</color> was kicked by an operator." },
+                { "kick_KickedPlayerFromConsole_Console", "{0} ({1}) was kicked by an operator because: {2}." },
+                { "kick_KickedPlayer_Console", "{0} ({1}) was kicked by {2} ({3}) because: {4}." },
+                // ban
+                { "ban_BanTextPermanent", "<color=#d8addb>{0}</color> was <b>permanently</b> banned." },
+                { "ban_BanTextPermanent_Broadcast", "<color=#d8addb>{0}</color> was <b>permanently</b> banned by <color=#00ffff>{1}</color>." },
+                { "ban_BanTextPermanentFromConsole_Broadcast", "<color=#d8addb>{0}</color> was <b>permanently</b> banned by an operator." },
+                { "ban_BanTextPermanentFromConsole_Console", "{0} ({1}) was permanently banned by an operator because: {2}." },
+                { "ban_BanTextPermanent_Console", "{0} ({1}) was permanently banned by {2} ({3}) because: {4}." },
+                { "ban_BanText", "<color=#d8addb>{0}</color> was banned for <color=#9cffb3>{2}</color>." },
+                { "ban_BanText_Broadcast", "<color=#d8addb>{0}</color> was banned by <color=#00ffff>{1}</color> for <color=#9cffb3>{2}</color>." },
+                { "ban_BanTextFromConsole_Broadcast", "<color=#d8addb>{0}</color> was banned by an operator for <color=#9cffb3>{1}</color>." },
+                { "ban_BanTextFromConsole_Console", "{0} ({1}) was banned by an operator for {3} because: {2}." },
+                { "ban_BanText_Console", "{0} ({1}) was banned by {2} ({3}) for {5} because: {4}." },
+                { "ban_NoPlayerErrorText", "No player found from <color=#d8addb>{0}</color>." },
+                { "ban_NoPlayerErrorText_Console", "No player found from \"{0}\"." },
+                { "ban_InvalidNumberErrorText", "<color=#9cffb3>{0}</color> should be between <color=#9cffb3>0</color> and <color=#9cffb3>4294967295</color>." },
+                { "ban_InvalidNumberErrorText_Console", "Failed to cast \"{0}\" to a UInt32 (0 to 4294967295)." },
+                { "ban_ErrorNoReasonProvided_Console", "You must provide a reason." },
+                { "ban_ErrorNoReasonProvided", "You must provide a reason." },
+                // warn
+                { "warn_NoPlayerErrorText", "No player found from <color=#d8addb>{0}</color>." },
+                { "warn_NoPlayerErrorText_Console", "No player found from \"{0}\"." },
+                { "warn_ErrorNoReasonProvided_Console", "You must provide a reason." },
+                { "warn_ErrorNoReasonProvided", "You must provide a reason." },
+                { "warn_WarnedPlayerFromConsole_DM", "An operator warned you for: <b>{0}</b>." },
+                { "warn_WarnedPlayerFromConsole_Console", "Warned {0} ({1}) for: {2}" },
+                { "warn_WarnedPlayerFromConsole_Broadcast", "<color=#d8addb>{0}</color> was warned by an operator." },
+                { "warn_WarnedPlayer_Feedback", "You warned <color=#d8addb>{0}</color>." },
+                { "warn_WarnedPlayer_DM", "<color=#00ffff>{0}</color> warned you for: <b>{1}</b>" },
+                { "warn_WarnedPlayer_Console", "{0} ({1}) was warned by {2} ({3}) for: {4}" },
+                { "warn_WarnedPlayer_Broadcast", "<color=#d8addb>{0}</color> was warned by <color=#00ffff>{1}</color>." },
+                // amc
+                { "amc_ReverseDamage", "Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you." },
+                { "amc_MainCampLogged", "Stop <b><color=#ff3300>main-camping</color></b>!" },
+                // unban
+                { "unban_NoPlayerErrorText", "No player ID found from <color=#d8addb>{0}</color>." },
+                { "unban_NoPlayerErrorText_Console", "No player ID found from \"{0}\"." },
+                { "unban_PlayerIsNotBanned", "Player <color=#d8addb>{0}</color> is not banned. You must use Steam64's for /unban." },
+                { "unban_PlayerIsNotBanned_Console", "Player \"{0}\" is not banned. You must use Steam64's for /unban." },
+                { "unban_UnbanTextFromConsole_WithName_Console", "Sucessfully unbanned {0} ({1})." },
+                { "unban_UnbanTextFromConole_NoName_Console", "Sucessfully unbanned {0}." },
+                { "unban_UnbanTextFromConsole_WithName_Broadcast", "<color=#d8addb>{0}</color> was unbanned by an operator." },
+                { "unban_UnbanTextFromConsole_NoName_Broadcast", "<color=#d8addb>{0}</color> was unbanned by an operator." },
+                { "unban_UnbanText_WithName_Console", "{0} ({1}) was unbanned by {2} ({3})." },
+                { "unban_UnbanText_NoName_Console", "{0} was unbanned by {1} ({2})." },
+                { "unban_UnbanText_WithName_Broadcast", "<color=#d8addb>{0}</color> was unbanned by <color=#00ffff>{1}</color>." },
+                { "unban_UnbanText_NoName_Broadcast", "<color=#d8addb>{0}</color> was unbanned by <color=#00ffff>{1}</color>." },
+                { "unban_UnbanText_WithName_Feedback", "You unbanned <color=#d8addb>{0}</color>." },
+                { "unban_UnbanText_NoName_Feedback", "You unbanned <color=#d8addb>{0}</color>." },
+                // loadbans
+                { "loadbans_NoBansErrorText", "There are no banned players." },
+                { "loadbans_LogBansDisabled", "Can't upload, Logging bans is disabled." },
+                { "loadbans_UploadedBans", "Uploaded {0} ban{1} to the MySQL database and logged them." },
+                // duty
+                { "duty_GoOnDuty_Console", "{0} ({1}) went on duty." },
+                { "duty_GoOffDuty_Console", "{0} ({1}) went off duty." },
+                { "duty_GoOnDuty_Feedback", "You are now <color=#95ff4a>on duty</color>." },
+                { "duty_GoOffDuty_Feedback", "You are now <color=#ff8c4a>off duty</color>." },
+                { "duty_GoOnDuty_Broadcast", "<color=#d9e882>{0}</color> is now <color=#95ff4a>on duty</color>." },
+                { "duty_GoOffDuty_Broadcast", "<color=#d9e882>{0}</color> is now <color=#ff8c4a>off duty</color>." },
+                { "duty_KilledOnDuty_Broadcast", "<color=#cdff42>{0}</color> killed someone while <color=#ff6d24>on duty</color>! Perhaps they are abusing?" },
+                { "duty_KilledOnDuty_Console", "{0} ({1}) killed {2} ({3}) while on duty!!" },
+                // tk system
+                { "tk_Teamkilled_Console", "{0} ({1}) teamkilled {2} ({3})!!" },
+                // vehicle placement
+                { "no_placement_on_vehicle", "You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!" },
+                // battleye
+                { "battleye_kicked_Console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
+                { "battleye_kicked_Broadcast", "<color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>." },
+
+                // Deaths
+                { "no_murderer_name", "Unapplicable" },
+                { "zombie", "a zombie" },
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -243,7 +331,7 @@ namespace UncreatedWarfare
         public static readonly List<ColorData> DefaultColors = new List<ColorData>
         {
             new ColorData("default", "ffffff"),
-            new ColorData("defaulterror", "ff0000"),
+            new ColorData("defaulterror", "ff3300"),
             new ColorData("join_message_background", "e6e3d5"),
             new ColorData("join_message_name", "ffff1a"),
             new ColorData("leave_message_background", "e6e3d5"),
@@ -391,7 +479,32 @@ namespace UncreatedWarfare
             new ColorData("reset_language_how", "f53b3b"),
             new ColorData("reset_language_how_command", "e6e3d5"),
             new ColorData("dont_have_language", "dd1111"),
-            new ColorData("dont_have_language_language", "e6e3d5")
+            new ColorData("dont_have_language_language", "e6e3d5"),
+
+            // Ban
+            new ColorData("ban_broadcast", "00ffff"),
+            new ColorData("ban_feedback", "00ffff"),
+
+            // Unban
+            new ColorData("unban_broadcast", "00ffff"),
+            new ColorData("unban_feedback", "00ffff"),
+
+            // Warn
+            new ColorData("warn_broadcast", "ffff00"),
+            new ColorData("warn_feedback", "ffff00"),
+            new ColorData("warn_message", "ffff00"),
+
+            // Kick
+            new ColorData("kick_broadcast", "00ffff"),
+            new ColorData("kick_feedback", "00ffff"),
+
+            // Duty
+            new ColorData("duty_broadcast", "c6d4b8"),
+            new ColorData("duty_feedback", "c6d4b8"),
+
+            // Deaths
+            new ColorData("death_background", "ffffff"),
+            new ColorData("death_zombie_name_color", "788c5a"),
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {
@@ -545,6 +658,94 @@ namespace UncreatedWarfare
                 "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
             new LanguageAliasSet("en-gb", "Bri'ish", new List<string> { "british", "great british", "gb", "engb"})
         };
-
+        public static readonly Dictionary<string, string> DefaultDeathTranslations = new Dictionary<string, string> {
+            { "ACID", "{0} was burned by an acid zombie." },
+            { "ANIMAL", "{0} was attacked by an animal." },
+            { "ARENA", "{0} stepped outside the arena boundary." },
+            { "BLEEDING", "{0} bled out from {1}." },
+            { "BLEEDING_SUICIDE", "{0} bled out." },
+            { "BONES", "{0} fell to their death." },
+            { "BOULDER", "{0} was crushed by a mega zombie." },
+            { "BREATH", "{0} asphyxiated." },
+            { "BURNER", "{0} was burned by a mega zombie." },
+            { "BURNING", "{0} burned to death." },
+            { "CHARGE", "{0} was blown up by {1}'s demolition charge." },
+            { "CHARGE_SUICIDE", "{0} was blown up by their own demolition charge." },
+            { "FOOD", "{0} starved to death." },
+            { "FREEZING", "{0} froze to death." },
+            { "GRENADE", "{0} was blown up by {1}'s {3}." },
+            { "GRENADE_SUICIDE", "{0} blew themselves up with their {3}." },
+            { "GRENADE_SUICIDE_UNKNOWN", "{0} blew themselves up with a grenade." },
+            { "GRENADE_UNKNOWN", "{0} was blown up by {1}'s grenade." },
+            { "GUN", "{0} was shot by {1} in the {2} with a {3} from {4} away." },
+            { "GUN_UNKNOWN", "{0} was shot by {1} in the {2} from {4} away." },
+            { "GUN_SUICIDE_UNKNOWN", "{0} shot themselves in the {2}." },
+            { "GUN_SUICIDE", "{0} shot themselves with a {3} in the {2}." },
+            { "INFECTION", "{0} got infected." },
+            { "KILL", "{0} was killed by an admin, {1}." },
+            { "KILL_SUICIDE", "{0} killed themselves as an admin." },
+            { "LANDMINE", "{0} got blown up by {1}'s {3}." },
+            { "LANDMINE_SUICIDE", "{0} blew themselves up with their {3}." },
+            { "LANDMINE_SUICIDE_UNKNOWN", "{0} blew themselves up with a landmine." },
+            { "LANDMINE_UNKNOWN", "{0} got blown up by {1}'s landmine." },
+            { "LANDMINE_TRIGGERED", "{0} got blown up by {1}'s {3} that triggered from {5}." },
+            { "LANDMINE_SUICIDE_TRIGGERED", "{0} was blown up by their {3} that triggered from {5}." },
+            { "LANDMINE_SUICIDE_UNKNOWN_TRIGGERED", "{0} was blown up by their landmine that triggered from {5}." },
+            { "LANDMINE_UNKNOWN_TRIGGERED", "{0} got blown up by {1}'s landmine that triggered from {5}." },
+            { "LANDMINE_UNKNOWNKILLER", "{0} got blown up by a {3}." },
+            { "LANDMINE_UNKNOWN_UNKNOWNKILLER", "{0} got blown up by a landmine." },
+            { "LANDMINE_TRIGGERED_UNKNOWNKILLER", "{0} got blown up by a {3} that triggered from {5}." },
+            { "LANDMINE_UNKNOWN_TRIGGERED_UNKNOWNKILLER", "{0} got blown up by a landmine that triggered from {5}." },
+            { "MELEE", "{0} was meleed by {1} with a {3} in the {2}." },
+            { "MELEE_UNKNOWN", "{0} was meleed by {1} in the {2}." },
+            { "MISSILE", "{0} was blown up by {1}'s {3} from {4} away." },
+            { "MISSILE_UNKNOWN", "{0} was blown up by {1}'s missile from {4} away." },
+            { "MISSILE_SUICIDE_UNKNOWN", "{0} blew themselves up." },
+            { "MISSILE_SUICIDE", "{0} blew themselves up with a {3}." },
+            { "PUNCH", "{0} was punched by {1}." },
+            { "ROADKILL", "{0} was ran over by {1}." },
+            { "SENTRY", "{0} was killed by a sentry." },
+            { "SHRED", "{0} was shredded by barbed wire." },
+            { "SPARK", "{0} was shocked by a mega zombie." },
+            { "SPIT", "{0} was killed by a spitter zombie." },
+            { "SPLASH", "{0} died to splash damage by {1} with a {3}." },
+            { "SPLASH_UNKNOWN", "{0} died to splash damage by {1}." },
+            { "SPLASH_SUICIDE_UNKNOWN", "{0} killed theirself with splash damage." },
+            { "SPLASH_SUICIDE", "{0} killed theirself with splash damage from a {3}." },
+            { "SUICIDE", "{0} committed suicide." },
+            { "VEHICLE", "{0} was blown up by {1}'s {3}." },
+            { "VEHICLE_SUICIDE", "{0} blew themselves up with a {3}." },
+            { "VEHICLE_SUICIDE_UNKNOWN", "{0} blew themselves up with a vehicle." },
+            { "VEHICLE_UNKNOWN", "{0} was blown up by {1}'s vehicle." },
+            { "VEHICLE_UNKNOWNKILLER", "{0} blown up by a {3}." },
+            { "VEHICLE_UNKNOWN_UNKNOWNKILLER", "{0} was blown up by a vehicle." },
+            { "WATER", "{0} dehydrated." },
+            { "ZOMBIE", "{0} was killed by a zombie." },
+            { "MAINCAMP", "{0} tried to main-camp {1} from {2} away and died." },
+            { "38328", "{0} was blown up by a mortar by {1} from {4} away." },  // 81mm mortar turret item id
+            { "38328_SUICIDE", "{0} blew themselves up with a mortar." },       // 81mm mortar turret item id
+            { "v38310", "{0} was blown up by {1}'s bradley (brad is uncool)." },
+            { "v38310_SUICIDE", "{0} was blown up by their bradley (brad is uncool)." }
+        };
+        public static readonly Dictionary<ELimb, string> DefaultLimbTranslations = new Dictionary<ELimb, string> {
+            { ELimb.LEFT_ARM, "Left Arm" },
+            { ELimb.LEFT_BACK, "Left Back" },
+            { ELimb.LEFT_FOOT, "Left Foot" },
+            { ELimb.LEFT_FRONT, "Left Front" },
+            { ELimb.LEFT_HAND, "Left Hand" },
+            { ELimb.LEFT_LEG, "Left Leg" },
+            { ELimb.RIGHT_ARM, "Right Arm" },
+            { ELimb.RIGHT_BACK, "Right Back" },
+            { ELimb.RIGHT_FOOT, "Right Foot" },
+            { ELimb.RIGHT_FRONT, "Right Front" },
+            { ELimb.RIGHT_HAND, "Right Hand" },
+            { ELimb.RIGHT_LEG, "Right Leg" },
+            { ELimb.SKULL, "Head" },
+            { ELimb.SPINE, "Spine" }
+        };
+        public const string DeathsTranslationDescription = "Translations | Key, space, value with unlimited spaces. " +
+            "Formatting: Dead player name, Murderer name when applicable, Limb, Gun name when applicable, distance when applicable. /reload translations to reload";
+        public const string DeathsLimbTranslationsDescription = "Translations | Key, space, value with unlimited spaces. " +
+            "Must match SDG.Unturned.ELimb enumerator list <LEFT|RIGHT>_<ARM|LEG|BACK|FOOT|FRONT|HAND>, SPINE, SKULL. ex. LEFT_ARM, RIGHT_FOOT";
     }
 }

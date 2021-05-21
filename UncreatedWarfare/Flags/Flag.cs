@@ -88,9 +88,9 @@ namespace UncreatedWarfare.Flags
         {
             get
             {
-                if (_owner.ID == UCWarfare.I.TeamManager.Team1.ID)
+                if (_owner.ID == Data.TeamManager.Team1.ID)
                     return UCWarfare.GetColor("team_1_color");
-                else if (_owner.ID == UCWarfare.I.TeamManager.Team2.ID)
+                else if (_owner.ID == Data.TeamManager.Team2.ID)
                     return UCWarfare.GetColor("team_2_color");
                 else return UCWarfare.GetColor("neutral_color");
             }
@@ -99,12 +99,18 @@ namespace UncreatedWarfare.Flags
         {
             get
             {
-                if (_owner.ID == UCWarfare.I.TeamManager.Team1.ID)
+                if (_owner.ID == Data.TeamManager.Team1.ID)
                     return UCWarfare.GetColorHex("team_1_color");
-                else if (_owner.ID == UCWarfare.I.TeamManager.Team2.ID)
+                else if (_owner.ID == Data.TeamManager.Team2.ID)
                     return UCWarfare.GetColorHex("team_2_color");
                 else return UCWarfare.GetColorHex("neutral_color");
             }
+        }
+        public void ResetFlag()
+        {
+            this.FullOwner = Data.TeamManager.Neutral;
+            this._owner = Data.TeamManager.Neutral;
+            OnReset?.Invoke(this, EventArgs.Empty);
         }
         public void Dispose()
         {
@@ -130,9 +136,9 @@ namespace UncreatedWarfare.Flags
                 foreach (SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
                     PlayersOnFlag.Add(player.player);
             }
-            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == UCWarfare.I.TeamManager.Team1.GroupID).ToList();
+            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == Data.TeamManager.Team1.GroupID).ToList();
             Team1TotalPlayers = PlayersOnFlagTeam1.Count;
-            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == UCWarfare.I.TeamManager.Team2.GroupID).ToList();
+            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == Data.TeamManager.Team2.GroupID).ToList();
             Team2TotalPlayers = PlayersOnFlagTeam2.Count;
         }
         /// <param name="NewPlayers">Players that have entered the flag since last check.</param>
@@ -148,25 +154,25 @@ namespace UncreatedWarfare.Flags
             get
             {
                 if (_points >= MaxPoints)
-                    return UCWarfare.Instance.TeamManager.Team1;
+                    return Data.TeamManager.Team1;
                 else if (_points <= MaxPoints * -1)
-                    return UCWarfare.Instance.TeamManager.Team2;
-                else return UCWarfare.Instance.TeamManager.Neutral;
+                    return Data.TeamManager.Team2;
+                else return Data.TeamManager.Neutral;
             } 
             set
             {
                 if (value == null)
                 {
-                    CommandWindow.LogError($"Tried to set owner of flag {_id} to a null team.");
+                    F.LogError($"Tried to set owner of flag {_id} to a null team.");
                     return;
                 }
-                if (UCWarfare.Instance.TeamManager.Team1.ID == value.ID)
+                if (Data.TeamManager.Team1.ID == value.ID)
                     Points = MaxPoints;
-                else if (UCWarfare.Instance.TeamManager.Team2.ID == value.ID)
+                else if (Data.TeamManager.Team2.ID == value.ID)
                     Points = MaxPoints * -1;
-                else if (UCWarfare.Instance.TeamManager.Neutral.ID == value.ID)
+                else if (Data.TeamManager.Neutral.ID == value.ID)
                     Points = 0;
-                else CommandWindow.LogError($"Tried to set owner of flag {_id} to an invalid team: {value.ID}.");
+                else F.LogError($"Tried to set owner of flag {_id} to an invalid team: {value.ID}.");
             }
         }
         private int _points;
@@ -178,10 +184,10 @@ namespace UncreatedWarfare.Flags
                 Team OldOwner;
                 int OldPoints = _points;
                 if (_points >= MaxPoints)
-                    OldOwner = UCWarfare.Instance.TeamManager.Team1;
+                    OldOwner = Data.TeamManager.Team1;
                 else if (_points <= MaxPoints * -1)
-                    OldOwner = UCWarfare.Instance.TeamManager.Team2;
-                else OldOwner = UCWarfare.Instance.TeamManager.Neutral;
+                    OldOwner = Data.TeamManager.Team2;
+                else OldOwner = Data.TeamManager.Neutral;
                 if (value > MaxPoints) _points = MaxPoints;
                 else if (value < MaxPoints * -1) _points = MaxPoints * -1;
                 else _points = value;
@@ -190,10 +196,10 @@ namespace UncreatedWarfare.Flags
                     OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
                     Team NewOwner;
                     if (_points >= MaxPoints)
-                        NewOwner = UCWarfare.Instance.TeamManager.Team1;
+                        NewOwner = Data.TeamManager.Team1;
                     else if (_points <= -MaxPoints)
-                        NewOwner = UCWarfare.Instance.TeamManager.Team2;
-                    else NewOwner = UCWarfare.Instance.TeamManager.Neutral;
+                        NewOwner = Data.TeamManager.Team2;
+                    else NewOwner = Data.TeamManager.Neutral;
                     if (OldOwner.ID != NewOwner.ID) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
                 }
             }
@@ -203,6 +209,7 @@ namespace UncreatedWarfare.Flags
         public event EventHandler<CaptureChangeEventArgs> OnPointsChanged;
         public event EventHandler<OwnerChangeEventArgs> OnOwnerChanged;
         public event EventHandler OnDisposed;
+        public event EventHandler OnReset;
         public List<Player> PlayersOnFlag { get; private set; }
         public Flag(FlagData data, FlagManager manager)
         {
@@ -214,7 +221,7 @@ namespace UncreatedWarfare.Flags
             this._level = data.level;
             this._name = data.name;
             this._color = data.color;
-            this._owner = UCWarfare.Instance.TeamManager.Neutral;
+            this._owner = Data.TeamManager.Neutral;
             PlayersOnFlag = new List<Player>();
             this.ZoneData = ComplexifyZone(data);
         }
@@ -229,7 +236,7 @@ namespace UncreatedWarfare.Flags
                 case "polygon":
                     return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
                 default:
-                    CommandWindow.LogError("Invalid zone data at flag ID: " + data.id.ToString() + ", name: " + data.name);
+                    F.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString() + ", name: " + data.name);
                     return new RectZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name);
             }
         }
@@ -261,8 +268,8 @@ namespace UncreatedWarfare.Flags
         {
             Points -= amount;
         }
-        public bool T1Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam1.ID; }
-        public bool T2Obj { get => ID == UCWarfare.I.FlagManager.ObjectiveTeam2.ID; }
+        public bool T1Obj { get => ID == Data.FlagManager.ObjectiveTeam1.ID; }
+        public bool T2Obj { get => ID == Data.FlagManager.ObjectiveTeam2.ID; }
         public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
             if (manager.State == EState.ACTIVE || overrideInactiveCheck)

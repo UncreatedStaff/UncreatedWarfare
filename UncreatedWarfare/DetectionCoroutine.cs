@@ -27,31 +27,31 @@ namespace UncreatedWarfare
             {
                 DateTime start = DateTime.Now;
                 List<SteamPlayer> OnlinePlayers = Provider.clients;
-                bool ttc = FlagManager.TimeToCheck;
-                foreach (Flag flag in FlagManager.FlagRotation)
+                bool ttc = Data.FlagManager.TimeToCheck;
+                foreach (Flag flag in Data.FlagManager.FlagRotation)
                 {
                     if (flag == null)
                     {
-                        CommandWindow.Log("FLAG IS NULL");
+                        F.LogError("FLAG IS NULL");
                         continue;
                     }
                     List<Player> LeftPlayers = flag.GetUpdatedPlayers(OnlinePlayers, out List<Player> NewPlayers);
                     foreach (Player player in LeftPlayers)
-                        FlagManager.RemovePlayerFromFlag(player, flag);
+                        Data.FlagManager.RemovePlayerFromFlag(player, flag);
                     foreach (Player player in NewPlayers)
-                        FlagManager.AddPlayerOnFlag(player, flag);
+                        Data.FlagManager.AddPlayerOnFlag(player, flag);
                 }
                 if (ttc)
                 {
-                    FlagManager.EvaluatePoints();
+                    Data.FlagManager.EvaluatePoints();
                 }
                 
                 if(ttc && CoroutineTiming)
-                    CommandWindow.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
+                    F.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
                 
             } catch (Exception ex)
             {
-                CommandWindow.LogError("ERROR IN DetectionCoroutine.cs: internal IEnumerator<WaitForSeconds> CheckPlayers():\n" + ex.ToString());
+                F.LogError("ERROR IN DetectionCoroutine.cs: internal IEnumerator<WaitForSeconds> CheckPlayers():\n" + ex.ToString());
             }
             yield return new WaitForSeconds(Config.FlagSettings.PlayerCheckSpeedSeconds);
             StartCoroutine(CheckPlayers());

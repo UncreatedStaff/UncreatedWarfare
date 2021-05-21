@@ -33,8 +33,8 @@ namespace UncreatedWarfare.Flags
             this.x = x;
             this.y = y;
             this.zone = zone;
-            this.use_map_size_multiplier = use_map_size_multiplier;
             this.level = level;
+            this.use_map_size_multiplier = use_map_size_multiplier;
             this.color = UCWarfare.Config.FlagSettings.NeutralColor;
         }
     }

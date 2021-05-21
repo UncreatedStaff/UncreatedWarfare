@@ -9,15 +9,11 @@ using System.Threading.Tasks;
 using UncreatedWarfare.Teams;
 using UnityEngine;
 using static UncreatedWarfare.FOBs.FOBConfig;
-using Logger = Rocket.Core.Logging.Logger;
 
 namespace UncreatedWarfare.FOBs
 {
     public class BuildManager
     {
-        FOBConfig config => UCWarfare.I.FOBManager.config;
-        FOBManager fobs => UCWarfare.I.FOBManager;
-        TeamManager teams => UCWarfare.I.TeamManager;
 
         public BuildManager() { }
 
@@ -39,11 +35,11 @@ namespace UncreatedWarfare.FOBs
                 .ToList();
 
             List<BarricadeData> TotalFOBs = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&                                    // All barricades that are friendly
-                b.barricade.id == config.FOBID   // All barricades that are FOB structures
+                Data.TeamManager.IsFriendly(player, b.group) &&                         // All barricades that are friendly
+                b.barricade.id == Data.FOBManager.config.FOBID                          // All barricades that are FOB structures
                 ).ToList();
 
-            if (TotalFOBs.Count >= config.FobLimit)
+            if (TotalFOBs.Count >= Data.FOBManager.config.FobLimit)
             {
                 player.Message("fob_error_limitreached");
                 return false;
@@ -60,16 +56,16 @@ namespace UncreatedWarfare.FOBs
             }
 
             ushort BuildID = 0;
-            if (teams.IsTeam(player, ETeam.TEAM1))
-                BuildID = config.Team1BuildID;
-            else if (teams.IsTeam(player, ETeam.TEAM2))
-                BuildID = config.Team2BuildID;
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+                BuildID = Data.FOBManager.config.Team1BuildID;
+            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+                BuildID = Data.FOBManager.config.Team2BuildID;
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
             NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - player.Position).sqrMagnitude <= Mathf.Pow(50, 2)) && item.item.id == BuildID).ToList();
 
-            var logitrucks = vehicles.Where(v => config.LogiTruckIDs.Contains(v.id)).ToList();
+            List<InteractableVehicle> logitrucks = vehicles.Where(v => Data.FOBManager.config.LogiTruckIDs.Contains(v.id)).ToList();
 
             if (logitrucks == null || logitrucks.Count == 0)
             {
@@ -77,15 +73,15 @@ namespace UncreatedWarfare.FOBs
                 return false;
             }
 
-            if (NearbyBuild.Count < config.FOBRequiredBuild)
+            if (NearbyBuild.Count < Data.FOBManager.config.FOBRequiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, config.FOBRequiredBuild);
+                player.Message("build_error_notenoughbuild", NearbyBuild.Count, Data.FOBManager.config.FOBRequiredBuild);
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, config.FOBRequiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, Data.FOBManager.config.FOBRequiredBuild, player.Position, 400, regions);
 
-            Barricade barricade = new Barricade(config.FOBID);
+            Barricade barricade = new Barricade(Data.FOBManager.config.FOBID);
 
             UnityEngine.Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
@@ -103,11 +99,11 @@ namespace UncreatedWarfare.FOBs
 
             List<BarricadeData> FOBstructures = barricadeDatas.Where(b =>
                 (b.point - player.Position).sqrMagnitude <= Math.Pow(20, 2) &&
-                b.barricade.id == config.FOBID &&
-                teams.IsFriendly(player, b.group)
+                b.barricade.id == Data.FOBManager.config.FOBID &&
+                Data.TeamManager.IsFriendly(player, b.group)
             ).ToList();
 
-            fobs.RegisterNewFOB(FOBstructures.FirstOrDefault());
+            Data.FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault());
 
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
@@ -118,7 +114,7 @@ namespace UncreatedWarfare.FOBs
                 BarricadeManager.destroyBarricade(barricadeRegion, x, y, plant, index);
             }
 
-            fobs.UpdateUIAll();
+            Data.FOBManager.UpdateUIAll();
 
             return true;
         }
@@ -138,15 +134,15 @@ namespace UncreatedWarfare.FOBs
                 .ToList();
 
             List<BarricadeData> NearbyFOBs = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&
-                b.barricade.id == config.FOBID &&
+                Data.TeamManager.IsFriendly(player, b.group) &&
+                b.barricade.id == Data.FOBManager.config.FOBID &&
                 (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2)
                 ).OrderBy(b => (b.point - player.Position).magnitude)
                 .ToList();
 
             List<BarricadeData> NearbyAmmoCrates = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&
-                b.barricade.id == config.AmmoCrateID &&
+                Data.TeamManager.IsFriendly(player, b.group) &&
+                b.barricade.id == Data.FOBManager.config.AmmoCrateID &&
                 (b.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Math.Pow(100, 2)
                 ).ToList();
 
@@ -162,24 +158,24 @@ namespace UncreatedWarfare.FOBs
             }
 
             ushort BuildID = 0;
-            if (teams.IsTeam(player, ETeam.TEAM1))
-                BuildID = config.Team1BuildID;
-            else if (teams.IsTeam(player, ETeam.TEAM2))
-                BuildID = config.Team2BuildID;
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+                BuildID = Data.FOBManager.config.Team1BuildID;
+            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+                BuildID = Data.FOBManager.config.Team2BuildID;
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
             NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
 
-            if (NearbyBuild.Count < config.AmmoCrateRequiredBuild)
+            if (NearbyBuild.Count < Data.FOBManager.config.AmmoCrateRequiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, config.AmmoCrateRequiredBuild);
+                player.Message("build_error_notenoughbuild", NearbyBuild.Count, Data.FOBManager.config.AmmoCrateRequiredBuild);
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, config.AmmoCrateRequiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, Data.FOBManager.config.AmmoCrateRequiredBuild, player.Position, 400, regions);
 
-            Barricade barricade = new Barricade(config.AmmoCrateID);
+            Barricade barricade = new Barricade(Data.FOBManager.config.AmmoCrateID);
 
             UnityEngine.Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
@@ -220,15 +216,15 @@ namespace UncreatedWarfare.FOBs
                 .ToList();
 
             List<BarricadeData> NearbyFOBs = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&
-                b.barricade.id == config.FOBID &&
+                Data.TeamManager.IsFriendly(player, b.group) &&
+                b.barricade.id == Data.FOBManager.config.FOBID &&
                 (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2)
                 ).OrderBy(b => (b.point - player.Position).magnitude)
                 .ToList();
 
             List<BarricadeData> NearbyRepairStations = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&
-                b.barricade.id == config.RepairStationID &&
+                Data.TeamManager.IsFriendly(player, b.group) &&
+                b.barricade.id == Data.FOBManager.config.RepairStationID &&
                 (b.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Math.Pow(100, 2)
                 ).ToList();
 
@@ -244,24 +240,24 @@ namespace UncreatedWarfare.FOBs
             }
 
             ushort BuildID = 0;
-            if (teams.IsTeam(player, ETeam.TEAM1))
-                BuildID = config.Team1BuildID;
-            else if (teams.IsTeam(player, ETeam.TEAM2))
-                BuildID = config.Team2BuildID;
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+                BuildID = Data.FOBManager.config.Team1BuildID;
+            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+                BuildID = Data.FOBManager.config.Team2BuildID;
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
             NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
 
-            if (NearbyBuild.Count < config.RepairStationRequiredBuild)
+            if (NearbyBuild.Count < Data.FOBManager.config.RepairStationRequiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, config.RepairStationRequiredBuild);
+                player.Message("build_error_notenoughbuild", NearbyBuild.Count, Data.FOBManager.config.RepairStationRequiredBuild);
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, config.RepairStationRequiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, Data.FOBManager.config.RepairStationRequiredBuild, player.Position, 400, regions);
 
-            Barricade barricade = new Barricade(config.RepairStationID);
+            Barricade barricade = new Barricade(Data.FOBManager.config.RepairStationID);
 
             UnityEngine.Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
@@ -302,8 +298,8 @@ namespace UncreatedWarfare.FOBs
                 .ToList();
 
             List<BarricadeData> NearbyFOBs = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&
-                b.barricade.id == config.FOBID &&
+                Data.TeamManager.IsFriendly(player, b.group) &&
+                b.barricade.id == Data.FOBManager.config.FOBID &&
                 (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2)
                 ).OrderBy(b => (b.point - player.Position).magnitude).ToList();
 
@@ -327,10 +323,10 @@ namespace UncreatedWarfare.FOBs
             }
 
             ushort BuildID = 0;
-            if (teams.IsTeam(player, ETeam.TEAM1))
-                BuildID = config.Team1BuildID;
-            else if (teams.IsTeam(player, ETeam.TEAM2))
-                BuildID = config.Team2BuildID;
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+                BuildID = Data.FOBManager.config.Team1BuildID;
+            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+                BuildID = Data.FOBManager.config.Team2BuildID;
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
@@ -397,8 +393,8 @@ namespace UncreatedWarfare.FOBs
                 .ToList();
 
             List<BarricadeData> NearbyFOBs = barricadeDatas.Where(b =>
-                teams.IsFriendly(player, b.group) &&
-                b.barricade.id == config.FOBID &&
+                Data.TeamManager.IsFriendly(player, b.group) &&
+                b.barricade.id == Data.FOBManager.config.FOBID &&
                 (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2)
                 ).ToList();
 
@@ -409,10 +405,10 @@ namespace UncreatedWarfare.FOBs
             }
 
             ushort BuildID = 0;
-            if (teams.IsTeam(player, ETeam.TEAM1))
-                BuildID = config.Team1BuildID;
-            else if (teams.IsTeam(player, ETeam.TEAM2))
-                BuildID = config.Team2BuildID;
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+                BuildID = Data.FOBManager.config.Team1BuildID;
+            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+                BuildID = Data.FOBManager.config.Team2BuildID;
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 

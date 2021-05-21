@@ -14,7 +14,7 @@ namespace UncreatedWarfare.Kits
         private KitSaver _kitSaver;
 
         public KitManager()
-            : base(UCWarfare.KitsStorage + "kits.json")
+            : base(Data.KitsStorage + "kits.json")
         {
             _kitSaver = new KitSaver();
         }

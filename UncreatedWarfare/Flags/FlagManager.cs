@@ -69,10 +69,10 @@ namespace UncreatedWarfare.Flags
         }
         private void OnObjectiveChangeAction(object sender, OnObjectiveChangeEventArgs e)
         {
-            if(UCWarfare.I.GameStats != null)
-                UCWarfare.I.GameStats.totalFlagOwnerChanges++;
+            if(Data.GameStats != null)
+                Data.GameStats.totalFlagOwnerChanges++;
             F.Broadcast("Objective changed for team " + e.Team.ToString() + " from " + e.oldFlagObj.Name + " to " + e.newFlagObj.Name, UCWarfare.GetColor("default"));
-            CommandWindow.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name);
+            F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.Magenta);
         }
         public void Load()
         {
@@ -106,7 +106,7 @@ namespace UncreatedWarfare.Flags
         public void LoadNewFlags()
         {
             if (AllFlags == null) return;
-            DisposeFlags();
+            ResetFlags();
             OnFlag.Clear();
             List<KeyValuePair<int, List<Flag>>> lvls = new List<KeyValuePair<int, List<Flag>>>();
             for(int i = 0; i < AllFlags.Count; i++)
@@ -133,7 +133,7 @@ namespace UncreatedWarfare.Flags
             }
             ObjectiveT1Index = 0;
             ObjectiveT2Index = FlagRotation.Count - 1;
-            CommandWindow.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name);
+            F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.Green);
             StringBuilder sb = new StringBuilder();
             for(int i = 0; i < FlagRotation.Count; i++)
             {
@@ -143,7 +143,7 @@ namespace UncreatedWarfare.Flags
                 FlagRotation[i].OnPointsChanged += FlagPointsChanged;
                 sb.Append(i.ToString() + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString() + '\n');
             }
-            CommandWindow.Log(sb.ToString());
+            F.Log(sb.ToString(), ConsoleColor.Green);
         }
         private void LoadAllFlags()
         {
@@ -155,12 +155,12 @@ namespace UncreatedWarfare.Flags
             {
                 AllFlags.Add(new Flag(flags[i], this));
             }
-            CommandWindow.Log("Loaded " + i.ToString() + " flags into memory and cleared any existing old flags.");
+            F.Log("Loaded " + i.ToString() + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
         }
         private void FlagPointsChanged(object sender, CaptureChangeEventArgs e)
         {
             Flag flag = sender as Flag;
-            CommandWindow.LogWarning("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString() + " to " + e.NewPoints.ToString());
+            F.Log("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString() + " to " + e.NewPoints.ToString(), ConsoleColor.White);
             if (flag.Points < Flag.MaxPoints) // not fully capped by t1
             {
                 if(flag.Points > 0) // being capped by t1
@@ -173,19 +173,19 @@ namespace UncreatedWarfare.Flags
                         {
                             F.UIOrChat(team, F.UIOption.Capturing, "team_capturing", UCWarfare.GetColor(team == 1 ? "capturing_team_1_chat" : "default"), Channel, player.channel.owner, flag.Points, 
                                 player.channel.owner.playerID.steamID.m_SteamID,
-                                formatting: new object[] { UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
+                                formatting: new object[] { Data.TeamManager.Team1.LocalizedName, Data.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
                             //UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
                         }
                         else
                         {
                             F.UIOrChat(team, F.UIOption.Losing, "team_losing", UCWarfare.GetColor(team == 1 ? "losing_team_1_chat" : "default"), Channel, player.channel.owner, flag.Points, 
                                 player.channel.owner.playerID.steamID.m_SteamID,
-                                formatting: new object[] { UCWarfare.I.TeamManager.Team1.LocalizedName, UCWarfare.I.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
+                                formatting: new object[] { Data.TeamManager.Team1.LocalizedName, Data.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
                         }
                     }
                 } else if (flag.Points == 0) // flag uncaptured
                 {
-                    flag.Owner = UCWarfare.I.TeamManager.Neutral;
+                    flag.Owner = Data.TeamManager.Neutral;
                     F.Broadcast("flag_neutralized", UCWarfare.GetColor("flag_neutralized"), flag.Name, flag.TeamSpecificColor);
                 } else if (flag.Points > -Flag.MaxPoints) // not fully capped by t2 but being capped
                 {
@@ -263,7 +263,7 @@ namespace UncreatedWarfare.Flags
         {
             Team t = F.GetTeam(Team);
             if (t == null) return;
-            CommandWindow.LogWarning(t.LocalizedName + " just won the game!");
+            F.LogWarning(t.LocalizedName + " just won the game!", ConsoleColor.Green);
             foreach (SteamPlayer client in Provider.clients)
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), t.TranslateName(client.playerID.steamID.m_SteamID), t.Color);
             this.State = EState.FINISHED;
@@ -276,7 +276,7 @@ namespace UncreatedWarfare.Flags
         }
         public void StartNextGame()
         {
-            CommandWindow.LogWarning("LOADING NEW GAME");
+            F.Log("Loading new game.", ConsoleColor.Cyan);
             LoadNewFlags();
             State = EState.ACTIVE;
             EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.FlagSettings.UIID);
@@ -293,7 +293,7 @@ namespace UncreatedWarfare.Flags
         private void FlagOwnerChanged(object sender, OwnerChangeEventArgs e)
         {
             Flag flag = sender as Flag;
-            CommandWindow.LogWarning("Owner changed of flag " + flag.Name);
+            F.LogWarning("Owner changed of flag " + flag.Name, ConsoleColor.White);
             // owner of flag changed (full caputure or loss)
             if(e.NewOwner.ID == ETeam.TEAM1)
             {
@@ -303,7 +303,7 @@ namespace UncreatedWarfare.Flags
                     ObjectiveT1Index = FlagRotation.Count - 1;
                 } else
                 {
-                    flag.Owner = UCWarfare.I.TeamManager.Team1;
+                    flag.Owner = Data.TeamManager.Team1;
                     OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs 
                     { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index + 1], NewObj = ObjectiveT1Index + 1, OldObj = ObjectiveT1Index, Team = ETeam.TEAM1 });
                     ObjectiveT1Index++;
@@ -317,9 +317,9 @@ namespace UncreatedWarfare.Flags
                 }
                 else
                 {
-                    flag.Owner = UCWarfare.I.TeamManager.Team2;
+                    flag.Owner = Data.TeamManager.Team2;
                     OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs 
-                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index - 1], NewObj = ObjectiveT2Index - 1, OldObj = ObjectiveT2Index, Team = ETeam.TEAM2 });
+                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index - 1], NewObj = ObjectiveT2Index - 1, OldObj = ObjectiveT2Index, Team = ETeam.TEAM2 });
                     ObjectiveT2Index--;
                 }
             }
@@ -337,7 +337,7 @@ namespace UncreatedWarfare.Flags
             // player walked out of flag
             ITransportConnection Channel = e.player.channel.owner.transportConnection;
             ulong team = e.player.GetTeam();
-            CommandWindow.LogWarning("Player " + e.player.channel.owner.playerID.playerName + " left flag " + flag.Name);
+            F.Log("Player " + e.player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
             e.player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             if (UCWarfare.Config.FlagSettings.UseUI)
                 EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, Channel);
@@ -454,7 +454,7 @@ namespace UncreatedWarfare.Flags
             // player walked into flag
             ITransportConnection Channel = e.player.channel.owner.transportConnection;
             ulong team = e.player.GetTeam();
-            CommandWindow.LogWarning("Player " + e.player.channel.owner.playerID.playerName + " entered flag " + flag.Name);
+            F.LogWarning("Player " + e.player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             e.player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             RefreshStaticUI(team, Channel, e.player.channel.owner, flag);
         }
@@ -472,6 +472,18 @@ namespace UncreatedWarfare.Flags
                 flag.OnOwnerChanged -= FlagOwnerChanged;
                 flag.OnPointsChanged -= FlagPointsChanged;
                 flag.Dispose();
+            }
+            FlagRotation.Clear();
+        }
+        public void ResetFlags()
+        {
+            foreach (Flag flag in FlagRotation)
+            {
+                flag.OnPlayerEntered -= PlayerEnteredFlagRadius;
+                flag.OnPlayerLeft -= PlayerLeftFlagRadius;
+                flag.OnOwnerChanged -= FlagOwnerChanged;
+                flag.OnPointsChanged -= FlagPointsChanged;
+                flag.ResetFlag();
             }
             FlagRotation.Clear();
         }

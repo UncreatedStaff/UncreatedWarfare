@@ -12,7 +12,7 @@ namespace UncreatedWarfare.Kits
     {
         public List<KitSave> ActiveKits;
         public KitSaver()
-            : base(UCWarfare.KitsStorage + "savedkits.json")
+            : base(Data.KitsStorage + "savedkits.json")
         {
             ActiveKits = new List<KitSave>();
         }

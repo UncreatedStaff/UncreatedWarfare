@@ -17,18 +17,18 @@ namespace UncreatedWarfare.Teams
         public Team Team1;
         public Team Team2;
         public Team Neutral;
-        public Zone LobbyZone { get => UCWarfare.I.ExtraZones?[-69]; }
-        public Zone Team1Main { get => UCWarfare.I.ExtraZones?[-1]; }
-        public Zone Team2Main { get => UCWarfare.I.ExtraZones?[-2]; }
-        public Zone Team1AMC { get => UCWarfare.I.ExtraZones?[-101]; }
-        public Zone Team2AMC { get => UCWarfare.I.ExtraZones?[-102]; }
-        public Vector3 LobbySpawn { get => UCWarfare.I.ExtraPoints["lobby_spawn"]; }
+        public Zone LobbyZone { get => Data.ExtraZones?[-69]; }
+        public Zone Team1Main { get => Data.ExtraZones?[-1]; }
+        public Zone Team2Main { get => Data.ExtraZones?[-2]; }
+        public Zone Team1AMC { get => Data.ExtraZones?[-101]; }
+        public Zone Team2AMC { get => Data.ExtraZones?[-102]; }
+        public Vector3 LobbySpawn { get => Data.ExtraPoints["lobby_spawn"]; }
         public readonly List<Team> DefaultTeams = new List<Team>
         {
             new Team(ETeam.TEAM1, 1, "USA"), new Team(ETeam.TEAM2, 2, "Russia"), new Team(ETeam.NEUTRAL, 3, "Neutral")
         };
         public TeamManager()
-            : base(UCWarfare.TeamStorage + "teams.json")
+            : base(Data.TeamStorage + "teams.json")
         {
             Team1 = GetObject(t => t.ID == ETeam.TEAM1);
             Team2 = GetObject(t => t.ID == ETeam.TEAM2);
@@ -87,7 +87,7 @@ namespace UncreatedWarfare.Teams
             return new Team(ETeam.NEUTRAL, 0, "null");
         }
 
-        public bool hasTeam(UnturnedPlayer player) => GetTeam(player) != null;
+        public bool HasTeam(UnturnedPlayer player) => GetTeam(player) != null;
 
         public bool IsTeam(ulong steamID, ETeam team) => GetTeam(steamID).ID == team;
         public bool IsTeam(UnturnedPlayer player, ETeam team) => IsTeam(player.Player.quests.groupID.m_SteamID, team);
@@ -106,11 +106,11 @@ namespace UncreatedWarfare.Teams
                 switch (team)
                 {
                     case ETeam.TEAM1:
-                        if ((float)Team1Count / (float)Team2Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent)
+                        if (Team1Count / Team2Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent)
                             return false;
                         return true;
                     case ETeam.TEAM2:
-                        if ((float)Team2Count / (float)Team1Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent)
+                        if (Team2Count / Team1Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent)
                             return false;
                         return true;
                 }
@@ -193,7 +193,7 @@ namespace UncreatedWarfare.Teams
             }
         }
         [JsonIgnore]
-        public UnityEngine.Color UnityColor
+        public Color UnityColor
         {
             get => Color.Hex();
         }
@@ -207,10 +207,11 @@ namespace UncreatedWarfare.Teams
             Players = new List<ulong>();
         }
     }
-    public enum ETeam
+    public enum ETeam : byte
     {
         TEAM1 = 1,
         TEAM2 = 2,
-        NEUTRAL = 3
+        NEUTRAL = 3,
+        TURNED = 255 // added for death messages
     }
 }

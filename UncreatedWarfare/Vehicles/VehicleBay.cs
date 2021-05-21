@@ -18,7 +18,7 @@ namespace UncreatedWarfare.Vehicles
         private VehicleSpawnSaver _spawnManager;
 
         public VehicleBay()
-            : base(UCWarfare.VehicleStorage + "vehiclebay.json")
+            : base(Data.VehicleStorage + "vehiclebay.json")
         {
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
@@ -257,7 +257,7 @@ namespace UncreatedWarfare.Vehicles
             if (vehicleData.RequiredClass == Kit.EClass.NONE)
                 return;
             
-            if (!UCWarfare.I.KitManager.HasKit(player, out var kit))
+            if (!Data.KitManager.HasKit(player, out var kit))
             {
                 // "You must get a kit before you can enter vehicles."
                 shouldAllow = false;
@@ -323,7 +323,7 @@ namespace UncreatedWarfare.Vehicles
             if (vehicleData.RequiredClass == Kit.EClass.NONE)
                 return;
 
-            if (!UCWarfare.I.KitManager.HasKit(player, out var kit))
+            if (!Data.KitManager.HasKit(player, out var kit))
             {
                 // "How did you even get in here without a kit?"
                 shouldAllow = false;
@@ -344,7 +344,7 @@ namespace UncreatedWarfare.Vehicles
                     continue;
                 if (passenger.player.playerID.steamID == player.CSteamID)
                     continue;
-                if (UCWarfare.I.KitManager.HasKit(passenger.player.playerID.steamID, out var pKit) && pKit.Class == vehicleData.RequiredClass)
+                if (Data.KitManager.HasKit(passenger.player.playerID.steamID, out var pKit) && pKit.Class == vehicleData.RequiredClass)
                 {
                     isThereAnotherCrewman = true;
                     break;

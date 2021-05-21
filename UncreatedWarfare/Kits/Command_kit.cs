@@ -16,7 +16,6 @@ namespace UncreatedWarfare.Kits
         public string Syntax => "/kit";
         public List<string> Aliases => new List<string>() { "kit" };
         public List<string> Permissions => new List<string>() { "kit" };
-        public KitManager KitManager => UCWarfare.I.KitManager;
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
@@ -29,18 +28,20 @@ namespace UncreatedWarfare.Kits
 
             if (command.Length == 2)
             {
+                op = command[0];
+                kitName = command[1];
                 // create kit
                 if (op.ToLower() == "create" || op.ToLower() == "c")
                 {
-                    if (!KitManager.KitExists(kitName, out var kit)) // create kit
+                    if (!Data.KitManager.KitExists(kitName, out var kit)) // create kit
                     {
-                        KitManager.CreateKit(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        Data.KitManager.CreateKit(kit.Name, Data.KitManager.ItemsFromInventory(player), Data.KitManager.ClothesFromInventory(player));
                         player.Message("kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
-                        KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        Data.KitManager.OverwriteKitItems(kit.Name, Data.KitManager.ItemsFromInventory(player), Data.KitManager.ClothesFromInventory(player));
                         player.Message("kit_overwritten", kitName);
                         return;
                     }
@@ -48,9 +49,9 @@ namespace UncreatedWarfare.Kits
                 // delete kit
                 if (op.ToLower() == "delete" || op.ToLower() == "d")
                 {
-                    if (KitManager.KitExists(kitName, out var kit))
+                    if (Data.KitManager.KitExists(kitName, out _))
                     {
-                        KitManager.DeleteKit(kitName);
+                        Data.KitManager.DeleteKit(kitName);
                         player.Message("kit_deleted", kitName);
                         return;
                     }
@@ -74,7 +75,7 @@ namespace UncreatedWarfare.Kits
 
                 if (op.ToLower() == "set" || op.ToLower() == "s")
                 {
-                    if (KitManager.SetProperty(kitName, property, newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid))
+                    if (Data.KitManager.SetProperty(kitName, property, newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid))
                     {
                         if (!propertyIsValid) // error - invalid property name
                         {
@@ -106,7 +107,7 @@ namespace UncreatedWarfare.Kits
                 // give player access to kit
                 if (op.ToLower() == "giveaccess" || op.ToLower() == "givea")
                 {
-                    if (!KitManager.KitExists(kitName, out var kit))
+                    if (!Data.KitManager.KitExists(kitName, out var kit))
                     {
                         player.Message("kit_e_noexist", kitName);
                         return;
@@ -121,7 +122,7 @@ namespace UncreatedWarfare.Kits
                         return;
                     }
                     // error - player already has access
-                    if (KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
+                    if (Data.KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
                     {
                         player.Message("kit_e_alreadyaccess", targetPlayer, kitName);
                         return;
@@ -129,13 +130,13 @@ namespace UncreatedWarfare.Kits
 
                     //success
                     player.Message("kit_accessgiven", targetPlayer, kitName);
-                    KitManager.GiveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    Data.KitManager.GiveAccess(player.CSteamID.m_SteamID, kit.Name);
                     return;
                 }
                 // remove player access to kit
                 if (op.ToLower() == "removeaccess" || op.ToLower() == "removea")
                 {
-                    if (!KitManager.KitExists(kitName, out var kit))
+                    if (!Data.KitManager.KitExists(kitName, out var kit))
                     {
                         player.Message("kit_e_noexist", kitName);
                         return;
@@ -150,7 +151,7 @@ namespace UncreatedWarfare.Kits
                         return;
                     }
                     // error - player already has no access
-                    if (!KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
+                    if (!Data.KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
                     {
                         player.Message("kit_e_noaccess", targetPlayer, kitName);
                         return; 
@@ -158,7 +159,7 @@ namespace UncreatedWarfare.Kits
 
                     //success
                     player.Message("kit_accessremoved", targetPlayer, kitName);
-                    KitManager.RemoveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    Data.KitManager.RemoveAccess(player.CSteamID.m_SteamID, kit.Name);
                     return;
                 }
             }

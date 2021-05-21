@@ -10,7 +10,7 @@ namespace UncreatedWarfare.Vehicles
     public class VehicleSpawnSaver : JSONSaver<VehicleSpawn>
     {
         public VehicleSpawnSaver()
-            : base(UCWarfare.VehicleStorage + "vehiclespawns.json")
+            : base(Data.VehicleStorage + "vehiclespawns.json")
         {
 
         }

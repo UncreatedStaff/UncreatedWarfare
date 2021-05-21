@@ -12,7 +12,7 @@ namespace UncreatedWarfare.Stats
 {
     public class EndScreenLeaderboard : MonoBehaviour
     {
-        public const float SecondsEndGameLength = 60f;
+        public const float SecondsEndGameLength = 30f;
         public const short UiIdentifier = 10000;
         readonly string[] headers = new string[] { "MostKillsHeader", "HighestKDRHeader", "TimeOnPointHeader", "TimeDrivingHeader" };
         readonly string[] headerPrefixes = new string[] { "MK", "KD", "TP", "XP" };
@@ -61,16 +61,21 @@ namespace UncreatedWarfare.Stats
                 player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
                 player.player.movement.sendPluginSpeedMultiplier(0f);
                 player.player.life.serverModifyHealth(100);
+                player.player.life.serverModifyFood(100);
+                player.player.life.serverModifyWater(100);
+                player.player.life.serverModifyVirus(100);
+                player.player.life.serverModifyStamina(100);
                 player.player.movement.sendPluginJumpMultiplier(0f);
-                WarStatsTracker warstats = UCWarfare.I.GameStats;
+                player.player.teleportToLocation(F.GetBaseSpawn(player.player.channel.owner), winner == ETeam.TEAM1 ? 0f : (winner == ETeam.TEAM2 ? 85f : 0));
+                WarStatsTracker warstats = Data.GameStats;
                 KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
                 PlayerCurrentGameStats stats;
                 if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
                     stats = new PlayerCurrentGameStats(player.player);
                 else stats = statsvalue.Value;
                 string originalName;
-                if (UCWarfare.I.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
-                    originalName = UCWarfare.I.OriginalNames[player.playerID.steamID.m_SteamID].PlayerName;
+                if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
+                    originalName = Data.OriginalNames[player.playerID.steamID.m_SteamID].PlayerName;
                 else originalName = player.playerID.playerName;
                 ITransportConnection channel = player.transportConnection;
                 EffectManager.sendUIEffect(UCWarfare.Config.EndScreenUI, UiIdentifier, channel, true);
@@ -78,17 +83,17 @@ namespace UncreatedWarfare.Stats
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TitleWinner", F.Translate("winner", player, team.Name, teamcolor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
-                List<KeyValuePair<Player, int>> topkills = UCWarfare.I.GameStats.GetTop5MostKills();
-                List<KeyValuePair<Player, float>> topkdr = UCWarfare.I.GameStats.GetTop5KDR();
-                List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = UCWarfare.I.GameStats.GetTop5OnPointTime();
-                List<KeyValuePair<Player, int>> topxpgain = UCWarfare.I.GameStats.GetTop5XP();
+                List<KeyValuePair<Player, int>> topkills = Data.GameStats.GetTop5MostKills();
+                List<KeyValuePair<Player, float>> topkdr = Data.GameStats.GetTop5KDR();
+                List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = Data.GameStats.GetTop5OnPointTime();
+                List<KeyValuePair<Player, int>> topxpgain = Data.GameStats.GetTop5XP();
                 for (int h = 1; h <= 4; h++)
                     if (headers.Length > h-1)
                         EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h-1], F.Translate("lb_header_" + h.ToString(), player));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.Translate("player_name_header", player, originalName, F.GetTeamColorHex(player)));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player, 
-                    UCWarfare.I.TeamManager.Team1.TranslateName(player.playerID.steamID.m_SteamID), UCWarfare.I.TeamManager.Team1.Color, 
-                    UCWarfare.I.TeamManager.Team2.TranslateName(player.playerID.steamID.m_SteamID), UCWarfare.I.TeamManager.Team2.Color));
+                    Data.TeamManager.Team1.TranslateName(player.playerID.steamID.m_SteamID), Data.TeamManager.Team1.Color, 
+                    Data.TeamManager.Team2.TranslateName(player.playerID.steamID.m_SteamID), Data.TeamManager.Team2.Color));
                 for(int i = 0; i < 5; i++)
                 {
                     if(i >= topkills.Count)
@@ -107,7 +112,7 @@ namespace UncreatedWarfare.Stats
                             topkills[i].Value, F.GetTeamColorHex(player)));
                     }
                 }
-                for (int i = 0; i < topkdr.Count; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     if (i >= topkdr.Count)
                     {
@@ -127,7 +132,7 @@ namespace UncreatedWarfare.Stats
                             topkdr[i].Value, F.GetTeamColorHex(player)));
                     }
                 }
-                for (int i = 0; i < toptimeonpoint.Count; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     if (i >= toptimeonpoint.Count)
                     {
@@ -147,7 +152,7 @@ namespace UncreatedWarfare.Stats
                             toptimeonpoint[i].Value, F.GetTeamColorHex(player)));
                     }
                 }
-                for (int i = 0; i < topxpgain.Count; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     if (i >= topxpgain.Count)
                     {
@@ -345,8 +350,8 @@ namespace UncreatedWarfare.Stats
         {
             // checks for how many players are outside of main
             DateTime dt = DateTime.Now;
-            CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && !UCWarfare.I.TeamManager.Team1Main.IsInside(x.player.transform.position)));
-            CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && !UCWarfare.I.TeamManager.Team2Main.IsInside(x.player.transform.position)));
+            CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && !Data.TeamManager.Team1Main.IsInside(x.player.transform.position)));
+            CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && !Data.TeamManager.Team2Main.IsInside(x.player.transform.position)));
             yield return new WaitForSeconds(10f);
             StartCoroutine(CompileAverages());
         }
