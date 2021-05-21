@@ -15,8 +15,6 @@ namespace UncreatedWarfare.Vehicles
 {
     public class VehicleBay : JSONSaver<VehicleData>
     {
-        private VehicleSpawnSaver _spawnManager;
-
         public VehicleBay()
             : base(UCWarfare.VehicleStorage + "vehiclebay.json")
         {
@@ -24,22 +22,20 @@ namespace UncreatedWarfare.Vehicles
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             Level.onLevelLoaded += OnLevelLoaded;
-
-            _spawnManager = new VehicleSpawnSaver();
         }
 
         protected override string LoadDefaults() => "[]";
-        public void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
-        public void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
-        public void RemoveAllVehicles() => RemoveAllObjectsFromSave();
-        public List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
-        public bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
+        public static void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
+        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
+        public static void RemoveAllVehicles() => RemoveAllObjectsFromSave();
+        public static List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
+        public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
         {
             bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
             vehicleData = v;
             return result;
         }
-        public bool SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
+        public static bool SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
         {
             propertyIsValid = false;
             vehicleExists = false;
@@ -102,7 +98,7 @@ namespace UncreatedWarfare.Vehicles
                             }
                             break;
                         case EVehicleProperty.BRANCH:
-                            if (Enum.TryParse<Kit.EBranch>(newValue.ToString(), out var branch))
+                            if (Enum.TryParse<EBranch>(newValue.ToString(), out var branch))
                             {
                                 argIsValid = true;
                                 data.RequiredBranch = branch;
@@ -141,7 +137,7 @@ namespace UncreatedWarfare.Vehicles
             return true;
         }
 
-        public void SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
+        public static void SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
             instanceID = 0;
 
@@ -178,25 +174,25 @@ namespace UncreatedWarfare.Vehicles
             }
         }
 
-        public bool TryRespawnVehicle(uint vehicleInstanceID)
+        public static bool TryRespawnVehicle(uint vehicleInstanceID)
         {
-            if (_spawnManager.HasLinkedSpawn(vehicleInstanceID, out var spawn))
+            if (VehicleSpawnSaver.HasLinkedSpawn(vehicleInstanceID, out var spawn))
             {
                 var spawnLocation = UCBarricadeManager.GetBarricadeByInstanceID(spawn.BarricadeInstanceID);
                 if (spawnLocation == null)
                     return false;
 
                 SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out var newInstanceID);
-                _spawnManager.LinkVehicleToSpawn(vehicleInstanceID, spawn.BarricadeInstanceID);
+                VehicleSpawnSaver.LinkVehicleToSpawn(vehicleInstanceID, spawn.BarricadeInstanceID);
 
                 return true;
             }
             return false;
         }
 
-        public bool TrySpawnNewVehicle(VehicleSpawn spawn)
+        public static bool TrySpawnNewVehicle(VehicleSpawn spawn)
         {
-            if (_spawnManager.HasLinkedVehicle(spawn, out var vehicle))
+            if (VehicleSpawnSaver.HasLinkedVehicle(spawn, out var vehicle))
             {
                 if (!(vehicle.isDead || vehicle.isDrowned))
                     return false;
@@ -207,7 +203,7 @@ namespace UncreatedWarfare.Vehicles
                 return false;
 
             SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out uint instancID);
-            _spawnManager.LinkVehicleToSpawn(vehicle.instanceID, spawn.BarricadeInstanceID);
+            VehicleSpawnSaver.LinkVehicleToSpawn(vehicle.instanceID, spawn.BarricadeInstanceID);
 
                 return true;
         }
@@ -257,7 +253,7 @@ namespace UncreatedWarfare.Vehicles
             if (vehicleData.RequiredClass == Kit.EClass.NONE)
                 return;
             
-            if (!UCWarfare.I.KitManager.HasKit(player, out var kit))
+            if (!KitManager.HasKit(player, out var kit))
             {
                 // "You must get a kit before you can enter vehicles."
                 shouldAllow = false;
@@ -323,7 +319,7 @@ namespace UncreatedWarfare.Vehicles
             if (vehicleData.RequiredClass == Kit.EClass.NONE)
                 return;
 
-            if (!UCWarfare.I.KitManager.HasKit(player, out var kit))
+            if (!KitManager.HasKit(player, out var kit))
             {
                 // "How did you even get in here without a kit?"
                 shouldAllow = false;
@@ -344,7 +340,7 @@ namespace UncreatedWarfare.Vehicles
                     continue;
                 if (passenger.player.playerID.steamID == player.CSteamID)
                     continue;
-                if (UCWarfare.I.KitManager.HasKit(passenger.player.playerID.steamID, out var pKit) && pKit.Class == vehicleData.RequiredClass)
+                if (KitManager.HasKit(passenger.player.playerID.steamID, out var pKit) && pKit.Class == vehicleData.RequiredClass)
                 {
                     isThereAnotherCrewman = true;
                     break;
@@ -360,7 +356,7 @@ namespace UncreatedWarfare.Vehicles
         }
         private void OnLevelLoaded(int level)
         {
-            var allspawns = _spawnManager.GetAllSpawns();
+            var allspawns = VehicleSpawnSaver.GetAllSpawns();
             foreach (var spawn in allspawns)
                 TrySpawnNewVehicle(spawn);
         }
@@ -402,7 +398,7 @@ namespace UncreatedWarfare.Vehicles
         public ushort RequiredLevel;
         public ushort TicketCost;
         public ushort Cooldown;
-        public Kit.EBranch RequiredBranch;
+        public EBranch RequiredBranch;
         public Kit.EClass RequiredClass;
         public byte RearmCost;
         public byte RepairCost;
@@ -419,7 +415,7 @@ namespace UncreatedWarfare.Vehicles
             RequiredLevel = 0;
             TicketCost = 0;
             Cooldown = 0;
-            RequiredBranch = Kit.EBranch.DEFAULT;
+            RequiredBranch = EBranch.DEFAULT;
             RequiredClass = Kit.EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;

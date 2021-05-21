@@ -12,15 +12,15 @@ namespace UncreatedWarfare
 {
     public abstract class JSONSaver<T>
     {
-        protected string directory;
+        protected static string directory;
 
-        public JSONSaver(string directory)
+        public JSONSaver(string _directory)
         {
-            this.directory = directory;
+            directory = _directory;
             CreateFileIfNotExists(LoadDefaults());
         }
         protected abstract string LoadDefaults();
-        protected void CreateFileIfNotExists(string text = "[]")
+        protected static void CreateFileIfNotExists(string text = "[]")
         {
             if (!File.Exists(directory))
             {
@@ -31,7 +31,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected void AddObjectToSave(T item)
+        protected static void AddObjectToSave(T item)
         {
             var list = GetExistingObjects();
             list.Add((T)item);
@@ -55,7 +55,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected void RemoveFromSaveWhere(Predicate<T> match)
+        protected static void RemoveFromSaveWhere(Predicate<T> match)
         {
             var list = GetExistingObjects();
 
@@ -80,7 +80,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected void RemoveAllObjectsFromSave()
+        protected static void RemoveAllObjectsFromSave()
         {
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
@@ -101,7 +101,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected void OverwriteSavedList(List<T> newList)
+        protected static void OverwriteSavedList(List<T> newList)
         {
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
@@ -122,7 +122,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected List<T> GetExistingObjects()
+        protected static List<T> GetExistingObjects()
         {
             StreamReader r = File.OpenText(directory);
 
@@ -141,17 +141,17 @@ namespace UncreatedWarfare
             }
         }
 
-        protected List<T> GetObjectsWhere(Func<T, bool> predicate)
+        protected static List<T> GetObjectsWhere(Func<T, bool> predicate)
         {
             return GetExistingObjects().Where(predicate).ToList();
         }
 
-        protected T GetObject(Func<T, bool> predicate)
+        protected static T GetObject(Func<T, bool> predicate)
         {
             return GetExistingObjects().Where(predicate).FirstOrDefault();
         }
 
-        protected bool ObjectExists(Predicate<T> match, out T item)
+        protected static bool ObjectExists(Predicate<T> match, out T item)
         {
             var list = GetExistingObjects();
             item = list.Find(match);
@@ -161,7 +161,7 @@ namespace UncreatedWarfare
                 return false;
         }
 
-        protected void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation)
+        protected static void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation)
         {
             var list = GetExistingObjects();
             list.Where(selector).ToList().ForEach(operation);
@@ -185,7 +185,28 @@ namespace UncreatedWarfare
             }
         }
 
-        public bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
+        public static void WriteSingleObject(T item)
+        {
+            StreamWriter file = File.CreateText(directory);
+            JsonWriter writer = new JsonTextWriter(file);
+
+            JsonSerializer serializer = new JsonSerializer();
+
+            serializer.Formatting = Formatting.Indented;
+
+            try
+            {
+                serializer.Serialize(writer, new List<T>() { item });
+                writer.Close();
+            }
+            catch (Exception ex)
+            {
+                writer.Close();
+                throw ex;
+            }
+        }
+
+        public static bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
         {
             if (Enum.TryParse<TEnum>(name.ToString(), out var p))
             {

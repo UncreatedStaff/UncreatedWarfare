@@ -6,31 +6,32 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UncreatedWarfare.Teams;
 
 namespace UncreatedWarfare.Kits
 {
     public class KitManager : JSONSaver<Kit>
     {
-        private KitSaver _kitSaver;
+        
 
         public KitManager()
             : base(UCWarfare.KitsStorage + "kits.json")
         {
-            _kitSaver = new KitSaver();
+            
         }
 
         protected override string LoadDefaults() => "[]";
-        public void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
-        public void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
-        public void DeleteAllKits() => RemoveAllObjectsFromSave();
-        public List<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
-        public bool KitExists(string kitName, out Kit kit)
+        public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
+        public static void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
+        public static void DeleteAllKits() => RemoveAllObjectsFromSave();
+        public static List<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
+        public static bool KitExists(string kitName, out Kit kit)
         {
             bool result = ObjectExists(i => i.Name.ToLower() == kitName.ToLower(), out var k);
             kit = k;
             return result;
         }
-        public bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes)
+        public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes)
         {
             var kits = GetExistingObjects();
             foreach (var kit in kits)
@@ -45,7 +46,7 @@ namespace UncreatedWarfare.Kits
             }
             return false;
         }
-        public bool SetProperty(string kitName, object property, object newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid)
+        public static bool SetProperty(string kitName, object property, object newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid)
         {
             propertyIsValid = false;
             kitExists = false;
@@ -74,7 +75,7 @@ namespace UncreatedWarfare.Kits
                             }
                             break;
                         case Kit.EKitProperty.BRANCH:
-                            if (Enum.TryParse<Kit.EBranch>(newValue.ToString().ToUpper(), out var branch))
+                            if (Enum.TryParse<EBranch>(newValue.ToString().ToUpper(), out var branch))
                             {
                                 kit.Branch = branch;
                                 argIsValid = true;
@@ -133,7 +134,7 @@ namespace UncreatedWarfare.Kits
             }
             return false;
         }
-        public List<KitItem> ItemsFromInventory(UnturnedPlayer player)
+        public static List<KitItem> ItemsFromInventory(UnturnedPlayer player)
         {
             var items = new List<KitItem>();
 
@@ -158,7 +159,7 @@ namespace UncreatedWarfare.Kits
 
             return items;
         }
-        public List<KitClothing> ClothesFromInventory(UnturnedPlayer player)
+        public static List<KitClothing> ClothesFromInventory(UnturnedPlayer player)
         {
             PlayerClothing playerClothes = player.Player.clothing;
 
@@ -175,7 +176,7 @@ namespace UncreatedWarfare.Kits
             return clothes;
         }
 
-        public void GiveKit(UnturnedPlayer player, Kit kit)
+        public static void GiveKit(UnturnedPlayer player, Kit kit)
         {
             if (kit == null)
                 return;
@@ -212,11 +213,10 @@ namespace UncreatedWarfare.Kits
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
-            _kitSaver.RemoveSaveOfPlayer(player);
-            _kitSaver.AddSaveForPlayer(player, kit.Name);
+            LogoutSaver.UpdateSave(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
         }
 
-        public void ResupplyKit(UnturnedPlayer player, Kit kit)
+        public static void ResupplyKit(UnturnedPlayer player, Kit kit)
         {
             List<ItemJar> nonKitItems = new List<ItemJar>();
 
@@ -256,23 +256,21 @@ namespace UncreatedWarfare.Kits
             EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
         }
 
-        public bool HasKit(CSteamID steamID, out Kit kit)
+        public static bool HasKit(CSteamID steamID, out Kit kit)
         {
-            bool result = _kitSaver.HasSave(steamID, out string kitName);
-            kit = GetKitsWhere(k => k.Name == kitName).FirstOrDefault();
-            if (kit == null)
-                return false;
+            bool result = LogoutSaver.HasSave(steamID, out var save);
+            kit = GetObject(k => k.Name == save.KitName);
             return result;
         }
 
-        public bool HasKit(UnturnedPlayer player, out Kit kit)
+        public static bool HasKit(UnturnedPlayer player, out Kit kit)
         {
             bool result = HasKit(player.CSteamID, out Kit k);
             kit = k;
             return result;
         }
 
-        public bool HasAccess(ulong playerID, string kitName)
+        public static bool HasAccess(ulong playerID, string kitName)
         {
             var kits = GetExistingObjects();
             foreach (var kit in kits)
@@ -282,11 +280,11 @@ namespace UncreatedWarfare.Kits
             }
             return false;
         }
-        public List<Kit> GetAccessibleKits(ulong playerID)
+        public static List<Kit> GetAccessibleKits(ulong playerID)
         {
             return GetExistingObjects().Where(kit => kit.AllowedUsers.Contains(playerID)).ToList();
         }
-        public void GiveAccess(ulong playerID, string kitName)
+        public static void GiveAccess(ulong playerID, string kitName)
         {
             var kits = GetExistingObjects();
             foreach (var kit in kits)
@@ -302,7 +300,7 @@ namespace UncreatedWarfare.Kits
                 }
             }
         }
-        public void RemoveAccess(ulong playerID, string kitName)
+        public static void RemoveAccess(ulong playerID, string kitName)
         {
             var kits = GetExistingObjects();
             foreach (var kit in kits)
@@ -399,14 +397,6 @@ namespace UncreatedWarfare.Kits
             BACKPACK,
             GLASSES
         }
-        public enum EBranch
-        {
-            DEFAULT,
-            INFANTRY,
-            ARMOR,
-            AIRFORCE,
-            SPECOPS
-        }
         public enum EClass
         {
             NONE,
@@ -486,5 +476,14 @@ namespace UncreatedWarfare.Kits
             BACKPACK,
             GLASSES
         }
+    }
+
+    public enum EBranch
+    {
+        DEFAULT,
+        INFANTRY,
+        ARMOR,
+        AIRFORCE,
+        SPECOPS,
     }
 }
