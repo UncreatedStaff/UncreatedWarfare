@@ -23,25 +23,36 @@ namespace UncreatedWarfare
         }
         internal IEnumerator<WaitForSeconds> CheckPlayers()
         {
-            //DateTime start = DateTime.Now;
-            List<SteamPlayer> OnlinePlayers = Provider.clients;
-            bool ttc = FlagManager.TimeToCheck;
-            if (ttc)
+            try
             {
-                FlagManager.EvaluatePoints(OnlinePlayers);
-            }
-            foreach(Flag flag in FlagManager.FlagRotation)
+                DateTime start = DateTime.Now;
+                List<SteamPlayer> OnlinePlayers = Provider.clients;
+                bool ttc = Data.FlagManager.TimeToCheck;
+                foreach (Flag flag in Data.FlagManager.FlagRotation)
+                {
+                    if (flag == null)
+                    {
+                        F.LogError("FLAG IS NULL");
+                        continue;
+                    }
+                    List<Player> LeftPlayers = flag.GetUpdatedPlayers(OnlinePlayers, out List<Player> NewPlayers);
+                    foreach (Player player in LeftPlayers)
+                        Data.FlagManager.RemovePlayerFromFlag(player, flag);
+                    foreach (Player player in NewPlayers)
+                        Data.FlagManager.AddPlayerOnFlag(player, flag);
+                }
+                if (ttc)
+                {
+                    Data.FlagManager.EvaluatePoints();
+                }
+                
+                if(ttc && CoroutineTiming)
+                    F.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
+                
+            } catch (Exception ex)
             {
-                List<Player> LeftPlayers = flag.GetUpdatedPlayers(OnlinePlayers, out List<Player> NewPlayers);
-                foreach(Player player in LeftPlayers)
-                    FlagManager.RemovePlayerFromFlag(player, flag);
-                foreach (Player player in NewPlayers)
-                    FlagManager.AddPlayerOnFlag(player, flag);
+                F.LogError("ERROR IN DetectionCoroutine.cs: internal IEnumerator<WaitForSeconds> CheckPlayers():\n" + ex.ToString());
             }
-            /*
-            if(ttc)
-                CommandWindow.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
-            */
             yield return new WaitForSeconds(Config.FlagSettings.PlayerCheckSpeedSeconds);
             StartCoroutine(CheckPlayers());
         }

@@ -10,7 +10,6 @@ using UncreatedWarfare.FOBs;
 using UncreatedWarfare.Teams;
 using UnityEngine;
 using static UnityEngine.Physics;
-using Logger = Rocket.Core.Logging.Logger;
 
 namespace UncreatedWarfare.Kits
 {
@@ -36,10 +35,10 @@ namespace UncreatedWarfare.Kits
             }
         }
 
-        private TeamManager teams => UCWarfare.I.TeamManager;
+        private TeamManager teams => Data.TeamManager;
 
-        private KitManager kits => UCWarfare.I.KitManager;
-        private FOBManager FOBManager => UCWarfare.I.FOBManager;
+        private KitManager kits => Data.KitManager;
+        private FOBManager FOBManager => Data.FOBManager;
         //private BuildManager BuildManager => UCWarfare.I.BuildManager;
 
         public void Execute(IRocketPlayer caller, string[] arguments)

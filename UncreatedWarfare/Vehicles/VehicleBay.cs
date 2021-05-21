@@ -16,7 +16,7 @@ namespace UncreatedWarfare.Vehicles
     public class VehicleBay : JSONSaver<VehicleData>
     {
         public VehicleBay()
-            : base(UCWarfare.VehicleStorage + "vehiclebay.json")
+            : base(Data.VehicleStorage + "vehiclebay.json")
         {
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;

@@ -20,12 +20,12 @@ namespace UncreatedWarfare.Stats
         {
             if (r.Success)
             {
-                CommandWindow.LogWarning("Connected to NodeJS server successfully. Ping: " + r.Reply + "ms.");
+                F.Log("Connected to NodeJS server successfully. Ping: " + r.Reply + "ms.", ConsoleColor.Magenta);
                 if (int.TryParse(r.Reply, out int ping) && ping > 300)
-                    CommandWindow.LogError(r.Reply + "ms seems a bit high, is the connection to the Node server okay?");
+                    F.LogWarning(r.Reply + "ms seems a bit high, is the connection to the Node server stable?");
             }
             else
-                CommandWindow.LogError("Failed to ping NodeJS Server!");
+                F.LogError("Failed to ping NodeJS Server!");
             return r.Success;
         }
         internal static void Dispose(this IAsyncResult ar)
@@ -46,7 +46,7 @@ namespace UncreatedWarfare.Stats
             ar.GetResponse(out Response r);
             if(SendPingData(r))
             {
-                IAsyncResult res = UCWarfare.I.WebInterface.SendPlayerListAsync();
+                IAsyncResult res = Data.WebInterface.SendPlayerListAsync();
                 res.AsyncWaitHandle.WaitOne();
             }
             ar.Dispose();
@@ -55,44 +55,44 @@ namespace UncreatedWarfare.Stats
         {
             ar.GetResponse(out Response r);
             if (r.Success && UCWarfare.Config.Debug)
-                CommandWindow.LogWarning("Sent Player List to web server.");
+                F.Log("Sent Player List to web server.", ConsoleColor.DarkYellow);
             ar.Dispose();
         }
         internal static void SendPlayerJoin(IAsyncResult ar)
         {
             ar.GetResponse(out Response r);
             if (r.Success && UCWarfare.Config.Debug)
-                CommandWindow.LogWarning("Added player to player list on web server.");
+                F.Log("Added player to player list on web server.", ConsoleColor.DarkYellow);
             ar.Dispose();
         }
         internal static void SendPlayerLeft(IAsyncResult ar)
         {
             ar.GetResponse(out Response r);
             if (r.Success && UCWarfare.Config.Debug)
-                CommandWindow.LogWarning("Removed player from player list on web server.");
+                F.Log("Removed player from player list on web server.", ConsoleColor.DarkYellow);
             ar.Dispose();
         }
         internal static void SendPlayerLocationData(IAsyncResult ar)
         {
             ar.GetResponse(out Response r);
             if (r.Success && UCWarfare.Config.Debug)
-                CommandWindow.LogWarning("Removed player from player list on web server.");
+                F.Log("Removed player from player list on web server.", ConsoleColor.DarkYellow);
             ar.Dispose();
         }
         internal static void SendAssetUpdate(IAsyncResult ar)
         {
             ar.GetResponse(out Response r);
             if (r.Success)
-                CommandWindow.LogWarning("Sent assets to server.");
+                F.Log("Sent assets to server.", ConsoleColor.DarkYellow);
             else
-                CommandWindow.LogWarning("Failed to send assets to server, could be out of date.");
+                F.Log("Failed to send assets to server, could be out of date.", ConsoleColor.DarkYellow);
             ar.Dispose();
         }
         internal static void Default(IAsyncResult ar)
         {
             ar.GetResponse(out Response r);
             if (UCWarfare.Config.Debug)
-                CommandWindow.LogWarning(r.Reply);
+                F.Log(r.Reply, ConsoleColor.DarkYellow);
             ar.Dispose();
         }
     }

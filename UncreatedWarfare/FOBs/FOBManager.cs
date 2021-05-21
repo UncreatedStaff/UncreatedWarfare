@@ -18,11 +18,10 @@ namespace UncreatedWarfare.FOBs
         List<FOB> Team1FOBs;
         List<FOB> Team2FOBs;
 
-        TeamManager teams => UCWarfare.I.TeamManager;
 
         public FOBManager()
         {
-            config = new FOBConfig(UCWarfare.FOBStorage + "config.json");
+            config = new FOBConfig(Data.FOBStorage + "config.json");
 
             Team1FOBs = new List<FOB>();
             Team2FOBs = new List<FOB>();
@@ -56,7 +55,7 @@ namespace UncreatedWarfare.FOBs
 
         public void RegisterNewFOB(BarricadeData Structure)
         {
-            if (teams.IsTeam(Structure.group, ETeam.TEAM1))
+            if (Data.TeamManager.IsTeam(Structure.group, ETeam.TEAM1))
             {
                 for (int i = 0; i < Team1FOBs.Count; i++)
                 {
@@ -69,7 +68,7 @@ namespace UncreatedWarfare.FOBs
 
                 Team1FOBs.Add(new FOB("FOB" + (Team1FOBs.Count + 1).ToString(), Team1FOBs.Count + 1, Structure));
             }
-            else if (teams.IsTeam(Structure.group, ETeam.TEAM2))
+            else if (Data.TeamManager.IsTeam(Structure.group, ETeam.TEAM2))
             {
                 for (int i = 0; i < Team2FOBs.Count; i++)
                 {
@@ -92,11 +91,11 @@ namespace UncreatedWarfare.FOBs
 
         public List<FOB> GetAvailableFobs(UnturnedPlayer player)
         {
-            if (teams.IsTeam(player, ETeam.TEAM1))
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
             {
                 return Team1FOBs;
             }
-            else if (teams.IsTeam(player, ETeam.TEAM2))
+            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
             {
                 return Team2FOBs;
             }
@@ -116,11 +115,11 @@ namespace UncreatedWarfare.FOBs
 
             Team1Barricades = barricadeDatas.Where(b =>
                 b.barricade.id == config.FOBID &&   // All barricades that are FOB Structures
-                teams.IsTeam(b.group, ETeam.TEAM1)      // All barricades that are friendly
+                Data.TeamManager.IsTeam(b.group, ETeam.TEAM1)      // All barricades that are friendly
                 ).ToList();
             Team2Barricades = barricadeDatas.Where(b =>
                 b.barricade.id == config.FOBID &&   // All barricades that are FOB Structures
-                teams.IsTeam(b.group, ETeam.TEAM2)     // All barricades that are friendly
+                Data.TeamManager.IsTeam(b.group, ETeam.TEAM2)     // All barricades that are friendly
                 ).ToList();
         }
 
@@ -132,7 +131,7 @@ namespace UncreatedWarfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
-            (teams.IsTeam(b.group, ETeam.TEAM1) || teams.IsTeam(b.group, ETeam.TEAM2)) &&
+            (Data.TeamManager.IsTeam(b.group, ETeam.TEAM1) || Data.TeamManager.IsTeam(b.group, ETeam.TEAM2)) &&
             (b.barricade.id == config.FOBID ||
             b.barricade.id == config.FOBBaseID ||
             b.barricade.id == config.AmmoCrateID ||
@@ -165,11 +164,11 @@ namespace UncreatedWarfare.FOBs
 
             List<FOB> FOBList = new List<FOB>();
 
-            if (teams.IsTeam(player, ETeam.TEAM1))
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
             {
                 FOBList = Team1FOBs;
             }
-            if (teams.IsTeam(player, ETeam.TEAM2))
+            if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
             {
                 FOBList = Team2FOBs;
             }

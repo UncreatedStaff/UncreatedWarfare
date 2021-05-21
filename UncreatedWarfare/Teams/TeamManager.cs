@@ -15,7 +15,7 @@ namespace UncreatedWarfare.Teams
         private static TeamConfig _data;
 
         public TeamManager()
-            : base(UCWarfare.TeamStorage + "teams.json")
+            : base(Data.TeamStorage + "teams.json")
         {
             if (GetExistingObjects().Count == 0)
             {

@@ -11,6 +11,7 @@ namespace UncreatedWarfare.Commands
     public class ReloadCommand : IRocketCommand
     {
         public static event EventHandler onTranslationsReloaded;
+        public static event EventHandler onFlagsReloaded;
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "reload";
         public string Help => "Reload certain parts of UCWarfare.";
@@ -27,6 +28,7 @@ namespace UncreatedWarfare.Commands
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
                     ReloadTranslations();
+                    ReloadFlags();
                 }
                 else
                     player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
@@ -35,21 +37,30 @@ namespace UncreatedWarfare.Commands
                 if (command[0] == "translations")
                 {
                     if(isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
-                    {
                         ReloadTranslations();
-                    }
+                    else
+                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                } else if (command[0] == "flags")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.flags") || player.HasPermission("uc.reload.all"))
+                        ReloadFlags();
                     else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 }
             }
-            void ReloadTranslations()
-            {
-                UCWarfare.I.LanguageAliases = JSONMethods.LoadLangAliases();
-                UCWarfare.I.Languages = JSONMethods.LoadLanguagePreferences();
-                UCWarfare.I.Localization = JSONMethods.LoadTranslations();
-                UCWarfare.I.Colors = JSONMethods.LoadColors(out UCWarfare.I.ColorsHex);
-                onTranslationsReloaded?.Invoke(this, EventArgs.Empty);
-            }
+        }
+        void ReloadTranslations()
+        {
+            Data.LanguageAliases = JSONMethods.LoadLangAliases();
+            Data.Languages = JSONMethods.LoadLanguagePreferences();
+            Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
+            Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+            onTranslationsReloaded?.Invoke(this, EventArgs.Empty);
+        }
+        void ReloadFlags()
+        {
+            Data.FlagManager.StartNextGame();
+            onFlagsReloaded?.Invoke(this, EventArgs.Empty);
         }
     }
 }

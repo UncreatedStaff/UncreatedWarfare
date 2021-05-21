@@ -15,7 +15,7 @@ namespace UncreatedWarfare.Kits
         
 
         public KitManager()
-            : base(UCWarfare.KitsStorage + "kits.json")
+            : base(Data.KitsStorage + "kits.json")
         {
             
         }

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using UncreatedWarfare.Teams;
 using UnityEngine;
 using static UncreatedWarfare.FOBs.FOBConfig;
-using Logger = Rocket.Core.Logging.Logger;
 
 namespace UncreatedWarfare.FOBs
 {
@@ -35,15 +34,11 @@ namespace UncreatedWarfare.FOBs
             }
         }
 
-        private TeamManager teams => UCWarfare.I.TeamManager;
-        private FOBManager FOBManager => UCWarfare.I.FOBManager;
-        private BuildManager BuildManager => UCWarfare.I.BuildManager;
-
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            if (!teams.hasTeam(player))
+            if (!Data.TeamManager.HasTeam(player))
             {
                 player.Message("build_error_noteam");
                 return;
@@ -51,39 +46,39 @@ namespace UncreatedWarfare.FOBs
 
             BarricadeData foundation = BuildManager.GetBarricadeFromLook(player);
 
-            if (foundation == null || !teams.IsFriendly(player, foundation.group))
+            if (foundation == null || !Data.TeamManager.IsFriendly(player, foundation.group))
             {
                 player.Message("build_error_notfriendly");
                 return;
             }
 
-            if (foundation.barricade.id == FOBManager.config.FOBBaseID)
+            if (foundation.barricade.id == Data.FOBManager.config.FOBBaseID)
             {
-                BuildManager.TryBuildFOB(foundation, player);
+                Data.BuildManager.TryBuildFOB(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.AmmoCrateBaseID)
+            else if (foundation.barricade.id == Data.FOBManager.config.AmmoCrateBaseID)
             {
-                BuildManager.TryBuildAmmoCrate(foundation, player);
+                Data.BuildManager.TryBuildAmmoCrate(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.RepairStationBaseID)
+            else if (foundation.barricade.id == Data.FOBManager.config.RepairStationBaseID)
             {
-                BuildManager.TryBuildRepairStation(foundation, player);
+                Data.BuildManager.TryBuildRepairStation(foundation, player);
             }
             else
             {
-                Emplacement emplacement = FOBManager.config.Emplacements.Find(e => e.baseID == foundation.barricade.id);
+                Emplacement emplacement = Data.FOBManager.config.Emplacements.Find(e => e.baseID == foundation.barricade.id);
 
                 if (emplacement != null)
                 {
-                    BuildManager.TryBuildEmplacement(foundation, player, emplacement);
+                    Data.BuildManager.TryBuildEmplacement(foundation, player, emplacement);
                     return;
                 }
 
-                Fortification fortification = FOBManager.config.Fortifications.Find(f => f.base_id == foundation.barricade.id);
+                Fortification fortification = Data.FOBManager.config.Fortifications.Find(f => f.base_id == foundation.barricade.id);
 
                 if (fortification != null)
                 {
-                    BuildManager.TryBuildFortification(foundation, player, fortification);
+                    Data.BuildManager.TryBuildFortification(foundation, player, fortification);
                     return;
                 }
 

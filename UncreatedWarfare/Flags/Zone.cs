@@ -11,21 +11,27 @@ namespace UncreatedWarfare.Flags
 {
     public abstract class Zone
     {
-        public const float EffectiveImageScalingSize = 1920;
-        public const float FullImageSize = 2048;
+        private static readonly float EffectiveImageScalingSize = Level.size - (Level.border * 2);
+        private static readonly float FullImageSize = Level.size;
         protected float Multiplier;
         public Vector2 Center;
+        public Zone InverseZone;
         protected bool SucessfullyParsed = false;
         public ZoneData data;
         protected float spacing = -1;
         protected int perline = 10;
         public Vector2[] _particleSpawnPoints;
+        public string Name;
+        public Vector2 BoundsTLPos;
+        public Vector2 BoundsSize;
+        public float BoundsArea;
         public abstract bool IsInside(Vector2 location);
         public abstract bool IsInside(Vector3 location);
         public abstract Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1);
         public abstract void Init();
-        public Zone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier)
+        public Zone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false)
         {
+            this.Name = Name;
             this.Multiplier = useMapSizeMultiplier ? EffectiveImageScalingSize / FullImageSize : 1.0f;
             this.Center = new Vector2(Center.x * Multiplier, Center.y * Multiplier);
             this.data = data;
@@ -37,7 +43,12 @@ namespace UncreatedWarfare.Flags
         public Vector2 Size;
         public Line[] lines;
         public Vector2[] Corners;
-        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier) : base(Center, data, useMapSizeMultiplier) { }
+        public RectZone RectInverseZone { get => (RectZone)InverseZone; }
+        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false) : base(Center, data, useMapSizeMultiplier, Name, isInverse)
+        {
+            if(!isInverse)
+                this.InverseZone = new RectZone(Center, data, !useMapSizeMultiplier, Name, true);
+        }
 
         /// <param name="corners">Corners to spawn different points at.</param>
         /// <param name="spacing">Set to -1 to to use perline. Can not be &lt;0.1</param>
@@ -72,7 +83,7 @@ namespace UncreatedWarfare.Flags
             string[] size = data.data.Split(',');
             if (size.Length != 2)
             {
-                CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
+                F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
                 return;
             }
             else
@@ -87,6 +98,9 @@ namespace UncreatedWarfare.Flags
                         new Vector2(Center.x + Size.x / 2, Center.y + Size.y / 2), //br
                         new Vector2(Center.x - Size.x / 2, Center.y + Size.y / 2)  //bl
                     };
+                    BoundsTLPos = Corners[0];
+                    BoundsSize = Size;
+                    BoundsArea = Size.x * Size.y;
                     lines = new Line[4]
                     {
                         new Line(Corners[0], Corners[1]), // tl -> tr
@@ -99,7 +113,7 @@ namespace UncreatedWarfare.Flags
                 }
                 else
                 {
-                    CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
+                    F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
                     return;
                 }
             }
@@ -111,7 +125,12 @@ namespace UncreatedWarfare.Flags
     public class CircleZone : Zone
     {
         public float Radius;
-        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier) : base(Center, data, useMapSizeMultiplier) { }
+        public CircleZone CircleInverseZone { get => (CircleZone)InverseZone; }
+        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false) : base(Center, data, useMapSizeMultiplier, Name, isInverse)
+        {
+            if(!isInverse)
+                this.InverseZone = new CircleZone(Center, data, !useMapSizeMultiplier, Name, true);
+        }
 
         public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1)
         {
@@ -120,7 +139,6 @@ namespace UncreatedWarfare.Flags
             if (this.spacing == spacing && this.perline == perline && _particleSpawnPoints != null) return _particleSpawnPoints;
             float pi2F = 2f * Mathf.PI;
             float circumference = pi2F * Radius;
-            float normalizedSpacing = this.spacing;
             if (spacing >= 0.1f)
             {
                 this.spacing = spacing;
@@ -128,9 +146,9 @@ namespace UncreatedWarfare.Flags
                 if (remainder != 0)
                 {
                     if (remainder < this.spacing / 2)     // extend all others
-                        normalizedSpacing = circumference / canfit;
-                    else                                //add one more and subtend all others
-                        normalizedSpacing = circumference / (canfit + 1);
+                        this.spacing = circumference / canfit;
+                    else                                  //add one more and subtend all others
+                        this.spacing = circumference / (canfit + 1);
                 }
             }
             if (perline != 0f && perline != -1f) this.perline = perline;
@@ -150,7 +168,7 @@ namespace UncreatedWarfare.Flags
             string[] size = data.data.Split(',');
             if (size.Length != 1)
             {
-                CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid circle data. Format is: \"radius\".");
+                F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid circle data. Format is: \"radius\".");
                 return;
             }
             else
@@ -159,11 +177,14 @@ namespace UncreatedWarfare.Flags
                 {
                     this.Radius = Rad * Multiplier;
                     GetParticleSpawnPoints(out _, out _, 36, 15); // every 10 degrees
+                    BoundsTLPos = new Vector2(Center.x - Radius, Center.y - Radius);
+                    BoundsSize = new Vector2(Radius * 2, Radius * 2);
+                    BoundsArea = BoundsSize.x * BoundsSize.y;
                     SucessfullyParsed = true;
                 }
                 else
                 {
-                    CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid circle data. Format is: \"radius\".");
+                    F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid circle data. Format is: \"radius\".");
                     return;
                 }
             }
@@ -249,7 +270,37 @@ namespace UncreatedWarfare.Flags
         public Vector2[] Points;
         public Line[] Lines;
         public float Width;
-        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier) : base(Center, data, useMapSizeMultiplier) { }
+        public PolygonZone PolygonInverseZone { get => (PolygonZone)InverseZone; }
+        /// <param name="size">Size of bounds rectangle</param>
+        /// <returns>Top left corner of bounds rectangle</returns>
+        public static Vector2 GetBounds(Vector2[] points, out Vector2 size)
+        {
+            float? maxX = null, maxY = null, minX = null, minY = null;
+            if (points.Length == 0) throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
+            if (points.Length == 1)
+            {
+                size = new Vector2(0, 0);
+                return new Vector2(points[0].x, points[0].y);
+            }
+            foreach(Vector2 point in points)
+            {
+                if (!maxX.HasValue || maxX.Value > point.x) maxX = point.x;
+                if (!maxY.HasValue || maxY.Value > point.y) maxY = point.y;
+                if (!minX.HasValue || minX.Value < point.x) minX = point.x;
+                if (!minY.HasValue || minY.Value < point.y) minY = point.y;
+            }
+            if (maxX.HasValue && maxY.HasValue && minX.HasValue && maxX.HasValue)
+            {
+                size = new Vector2(maxX.Value - minX.Value, maxY.Value - minY.Value);
+                return new Vector2(minX.Value, minY.Value);
+            }
+            else throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
+        }
+        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false) : base(Center, data, useMapSizeMultiplier, Name, isInverse)
+        {
+            if(!isInverse)
+                this.InverseZone = new PolygonZone(Center, data, !useMapSizeMultiplier, Name, true);
+        }
 
         /// <param name="corners">Corners to spawn different points at.</param>
         /// <param name="spacing">Set to -1 to to use perline. Can not be &lt;0.1</param>
@@ -283,7 +334,7 @@ namespace UncreatedWarfare.Flags
             string[] size = data.data.Split(',');
             if (size.Length < 6 || size.Length % 2 == 1)
             {
-                CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid polygon data. Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.");
+                F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid polygon data - \"{Name}\". Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
                 return;
             }
             Points = new Vector2[size.Length / 2];
@@ -295,8 +346,8 @@ namespace UncreatedWarfare.Flags
                 }
                 else
                 {
-                    CommandWindow.LogError($"Zone at ({Center.x}, {Center.y}) has invalid polygon data. Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
-                    CommandWindow.LogError($"Couldn't parse ({size[i]}, {size[i + 1]}).");
+                    F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid polygon data - \"{Name}\". Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
+                    F.LogError($"Couldn't parse ({size[i]}, {size[i + 1]}).");
                     return;
                 }
             }
@@ -304,29 +355,46 @@ namespace UncreatedWarfare.Flags
             for (int i = 0; i < Points.Length; i++)
                 Lines[i] = new Line(Points[i], Points[i == Points.Length - 1 ? 0 : i + 1]);
             GetParticleSpawnPoints(out _, out _, 5, 15);
+            try
+            {
+                BoundsTLPos = GetBounds(Points, out BoundsSize);
+            } catch (NullReferenceException)
+            {
+                BoundsSize = new Vector2(0, 0);
+                BoundsTLPos = Center;
+            }
+            BoundsArea = BoundsSize.x * BoundsSize.y;
             SucessfullyParsed = true;
         }
 
         public override bool IsInside(Vector2 location)
         {
+            if (!this.SucessfullyParsed)
+            {
+                F.LogError(Name + " DIDN'T PARSE CORRECTLY");
+                return false;
+            }
             int intersects = 0;
             for (int i = 0; i < Lines.Length; i++)
             {
                 if (Lines[i].IsIntersecting(location.y, location.x)) intersects++;
-                if (intersects == 2) return false;
             }
-            if (intersects == 1) return true;
+            if (intersects % 2 == 1) return true; // is odd
             else return false;
         }
         public override bool IsInside(Vector3 location)
         {
+            if(!this.SucessfullyParsed)
+            {
+                F.LogError(Name + " DIDN'T PARSE CORRECTLY");
+                return false;
+            }
             int intersects = 0;
             for (int i = 0; i < Lines.Length; i++)
             {
                 if (Lines[i].IsIntersecting(location.z, location.x)) intersects++;
-                if (intersects == 2) return false;
             }
-            if (intersects == 1) return true;
+            if (intersects % 2 == 1) return true; // is odd
             else return false;
         }
     }

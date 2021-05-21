@@ -25,17 +25,17 @@ namespace UncreatedWarfare.Commands
             if(command.Length == 0)
             {
                 StringBuilder sb = new StringBuilder();
-                for(int i = 0; i < UCWarfare.I.LanguageAliases.Keys.Count; i++)
+                for(int i = 0; i < Data.LanguageAliases.Keys.Count; i++)
                 {
-                    string langInput = UCWarfare.I.LanguageAliases.Keys.ElementAt(i);
-                    if (!UCWarfare.I.Localization.ContainsKey(langInput)) continue;
+                    string langInput = Data.LanguageAliases.Keys.ElementAt(i);
+                    if (!Data.Localization.ContainsKey(langInput)) continue;
                     if (i != 0) sb.Append(", ");
                     sb.Append(langInput);
                     LanguageAliasSet aliases;
-                    if (UCWarfare.I.LanguageAliases.ContainsKey(langInput))
-                        aliases = UCWarfare.I.LanguageAliases[langInput];
+                    if (Data.LanguageAliases.ContainsKey(langInput))
+                        aliases = Data.LanguageAliases[langInput];
                     else
-                        aliases = UCWarfare.I.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
+                        aliases = Data.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
                     if (!aliases.Equals(default(LanguageAliasSet))) sb.Append(" : ").Append(aliases.display_name);
                 }
                 player.SendChat("language_list", UCWarfare.GetColor("language_list"), sb.ToString(), UCWarfare.GetColorHex("language_list_list"));
@@ -45,18 +45,18 @@ namespace UncreatedWarfare.Commands
                 {
                     string fullname = JSONMethods.DefaultLanguage;
                     LanguageAliasSet alias;
-                    if (UCWarfare.I.LanguageAliases.ContainsKey(JSONMethods.DefaultLanguage))
+                    if (Data.LanguageAliases.ContainsKey(JSONMethods.DefaultLanguage))
                     {
-                        alias = UCWarfare.I.LanguageAliases[JSONMethods.DefaultLanguage];
+                        alias = Data.LanguageAliases[JSONMethods.DefaultLanguage];
                         fullname = alias.display_name;
                     } else
                         alias = new LanguageAliasSet(fullname, fullname, new List<string>());
-                    if (UCWarfare.I.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                    if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                     {
-                        string OldLanguage = UCWarfare.I.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
+                        string OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
                         LanguageAliasSet oldSet;
-                        if (UCWarfare.I.LanguageAliases.ContainsKey(OldLanguage))
-                            oldSet = UCWarfare.I.LanguageAliases[OldLanguage];
+                        if (Data.LanguageAliases.ContainsKey(OldLanguage))
+                            oldSet = Data.LanguageAliases[OldLanguage];
                         else
                             oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
                         if (OldLanguage == JSONMethods.DefaultLanguage)
@@ -72,19 +72,19 @@ namespace UncreatedWarfare.Commands
                 } else
                 {
                     string OldLanguage = JSONMethods.DefaultLanguage;
-                    if (UCWarfare.I.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                        OldLanguage = UCWarfare.I.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
+                    if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                        OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
                     LanguageAliasSet oldSet;
-                    if (UCWarfare.I.LanguageAliases.ContainsKey(OldLanguage))
-                        oldSet = UCWarfare.I.LanguageAliases[OldLanguage];
+                    if (Data.LanguageAliases.ContainsKey(OldLanguage))
+                        oldSet = Data.LanguageAliases[OldLanguage];
                     else
                         oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
                     string langInput = command[0].ToLower().Trim();
                     LanguageAliasSet aliases;
-                    if (UCWarfare.I.LanguageAliases.ContainsKey(langInput))
-                        aliases = UCWarfare.I.LanguageAliases[langInput];
+                    if (Data.LanguageAliases.ContainsKey(langInput))
+                        aliases = Data.LanguageAliases[langInput];
                     else
-                        aliases = UCWarfare.I.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
+                        aliases = Data.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
                     if (!aliases.Equals(default(LanguageAliasSet)))
                     {
                         if (OldLanguage == aliases.key)

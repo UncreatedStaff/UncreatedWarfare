@@ -33,7 +33,7 @@ namespace UncreatedWarfare.Teams
                 {
                     if (!Player.Player.movement.forceRemoveFromVehicle())
                     {
-                        CommandWindow.LogError("Unable to remove " + Player.Player.channel.owner.playerID.playerName +
+                        F.LogError("Unable to remove " + Player.Player.channel.owner.playerID.playerName +
                             $" from their vehicle for teleport to ({Destination.x}, {Destination.y}, {Destination.z}) with a delay of {Seconds} seconds.");
                         success = false;
                     }
@@ -53,7 +53,7 @@ namespace UncreatedWarfare.Teams
             }
             else
             {
-                CommandWindow.LogError("Unable to teleport " + Player.Player.channel.owner.playerID.playerName +
+                F.LogError("Unable to teleport " + Player.Player.channel.owner.playerID.playerName +
                     $" to ({Destination.x}, {Destination.y}, {Destination.z}) with a delay of {Seconds} seconds, they are in a vehicle.");
             }
             return false;

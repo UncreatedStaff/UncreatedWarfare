@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Rocket.API;
+using System.Collections.Generic;
 using System.Xml.Serialization;
 
 namespace UncreatedWarfare
@@ -16,10 +17,14 @@ namespace UncreatedWarfare
         public PlayerStatsSettings PlayerStatsSettings;
         [XmlElement("Teams")]
         public TeamSettings TeamSettings;
-        [XmlElement("Discord_Integration")]
+        [XmlElement("DiscordIntegration")]
         public DiscordSettings DiscordSettings;
         [XmlElement("FOBs")]
         public FOBSettings FobSettings;
+        [XmlElement("DeathMessages")]
+        public DeathMesssagesSettings DeathMessages;
+        [XmlElement("Patches")]
+        public PatchToggles Patches;
         [XmlElement("MySQL")]
         public MySqlData SQL;
         public ulong Team1ID;
@@ -28,21 +33,27 @@ namespace UncreatedWarfare
         public bool SendAssetsOnStartup;
         public float DelayAfterConnectionToSendTranslations;
         public float MaxMapHeight;
+        public ushort EndScreenUI;
+        public bool UseColoredConsoleModule;
         public void LoadDefaults()
         {
-            Modules = new Modules();
-            FlagSettings = new FlagSettings();
-            AdminLoggerSettings = new AdminLoggerSettings();
-            PlayerStatsSettings = new PlayerStatsSettings();
-            TeamSettings = new TeamSettings();
-            FobSettings = new FOBSettings();
-            SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
-            Team1ID = 1;
-            Team2ID = 2;
-            Debug = true;
-            SendAssetsOnStartup = false;
-            DelayAfterConnectionToSendTranslations = 0.5f;
-            MaxMapHeight = 150;
+            this.Modules = new Modules();
+            this.FlagSettings = new FlagSettings();
+            this.AdminLoggerSettings = new AdminLoggerSettings();
+            this.PlayerStatsSettings = new PlayerStatsSettings();
+            this.TeamSettings = new TeamSettings();
+            this.FobSettings = new FOBSettings();
+            this.DeathMessages = new DeathMesssagesSettings();
+            this.Patches = new PatchToggles();
+            this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
+            this.Team1ID = 1;
+            this.Team2ID = 2;
+            this.Debug = true;
+            this.SendAssetsOnStartup = false;
+            this.DelayAfterConnectionToSendTranslations = 0.5f;
+            this.MaxMapHeight = 150;
+            this.EndScreenUI = 10000;
+            this.UseColoredConsoleModule = true;
         }
     }
     public class Modules
@@ -88,16 +99,59 @@ namespace UncreatedWarfare
         public int RequiredPlayerDifferenceToCapture;
         public FlagSettings()
         {
-            NeutralColor = "ffffff";
-            CurrentGamePreset = "default";
-            PlayerCheckSpeedSeconds = 0.25f;
+            this.NeutralColor = "ffffff";
+            this.CurrentGamePreset = "goose_bay";
+            this.PlayerCheckSpeedSeconds = 0.25f;
 
-            UseUI = true;
-            UseChat = false;
-            UIID = 32366;
-            charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            this.UseUI = true;
+            this.UseChat = false;
+            this.UIID = 32366;
+            this.charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-            RequiredPlayerDifferenceToCapture = 2;
+            this.RequiredPlayerDifferenceToCapture = 2;
+        }
+    }
+    public class PatchToggles
+    {
+        public bool SendRegion;
+        public bool ServerSetSignTextInternal;
+        public bool dropBarricadeIntoRegionInternal;
+        public bool destroyBarricade;
+        public bool sendHealthChanged;
+        /// <summary>
+        /// On PlayerLife
+        /// </summary>
+        public bool simulate;
+        /// <summary>
+        /// On landmine explosion.
+        /// </summary>
+        public bool UseableTrapOnTriggerEnter;
+        /// <summary>
+        /// On bumper hit car add carid to pt component.
+        /// </summary>
+        public bool BumperOnTriggerEnter;
+        /// <summary>
+        /// On VehicleTool.damage(..) to add the last player that damaged the vehicle.
+        /// </summary>
+        public bool damage;
+        /// <summary>
+        /// On InteractableVehicle.explode() to add explosion to player's compoenent.
+        /// </summary>
+        public bool explode;
+        public bool outputToConsole;
+
+        public PatchToggles()
+        {
+            this.SendRegion = true;
+            this.ServerSetSignTextInternal = true;
+            this.dropBarricadeIntoRegionInternal = true;
+            this.destroyBarricade = true;
+            this.sendHealthChanged = true;
+            this.simulate = true;
+            this.UseableTrapOnTriggerEnter = true;
+            this.BumperOnTriggerEnter = true;
+            this.damage = true;
+            this.outputToConsole = true;
         }
     }
     public class AdminLoggerSettings
@@ -106,12 +160,30 @@ namespace UncreatedWarfare
         public string AdminOnDutyGroup;
         public string InternOffDutyGroup;
         public string InternOnDutyGroup;
+        public bool LogTKs;
+        public bool LogBans;
+        public bool LogKicks;
+        public bool LogUnBans;
+        public bool LogWarning;
+        public bool LogMainCamping;
+        public bool LogBattleyeKick;
+        public bool LogLastJoinedTime;
+        public List<ushort> AllowedBarricadesOnVehicles;
         public AdminLoggerSettings()
         {
             this.InternOnDutyGroup = "intern";
             this.InternOffDutyGroup = "intern-od";
             this.AdminOnDutyGroup = "admin";
             this.AdminOffDutyGroup = "admin-od";
+            this.LogTKs = true;
+            this.LogBans = true;
+            this.LogKicks = true;
+            this.LogUnBans = true;
+            this.LogWarning = true;
+            this.LogMainCamping = false; // should be off if AntiMainCampingModule is on
+            this.LogBattleyeKick = true;
+            this.LogLastJoinedTime = true;
+            this.AllowedBarricadesOnVehicles = new List<ushort>();
         }
     }
     public class PlayerStatsSettings
@@ -122,10 +194,18 @@ namespace UncreatedWarfare
         public float StatUpdateFrequency;
         public PlayerStatsSettings()
         {
-            EnablePlayerList = true;
-            NJS_ServerURL = "http://localhost:8080/";
-            ServerName = "warfare";
-            StatUpdateFrequency = 30.0f;
+            this.EnablePlayerList = true;
+            this.NJS_ServerURL = "http://localhost:8080/";
+            this.ServerName = "warfare";
+            this.StatUpdateFrequency = 30.0f;
+        }
+    }
+    public class DeathMesssagesSettings
+    {
+        public bool ColorizeNames;
+        public DeathMesssagesSettings()
+        {
+            ColorizeNames = true;
         }
     }
     public class TeamSettings 
@@ -143,7 +223,7 @@ namespace UncreatedWarfare
         public bool SendPlayerList;
         public DiscordSettings()
         {
-            SendPlayerList = true;
+            this.SendPlayerList = true;
         }
     }
     public class FOBSettings
@@ -152,8 +232,8 @@ namespace UncreatedWarfare
         public ushort FOBID_Unbuilt;
         public FOBSettings()
         {
-            FOBID_Unbuilt = 38310;
-            FOBID = 38311;
+            this.FOBID_Unbuilt = 38310;
+            this.FOBID = 38311;
         }
     }
     public struct MySqlData

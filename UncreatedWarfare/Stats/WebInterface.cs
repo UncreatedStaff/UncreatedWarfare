@@ -73,22 +73,54 @@ namespace UncreatedWarfare.Stats
                     {
                         r.Reply = "TOO LONG";
                         r.Success = false;
-                        CommandWindow.LogError("Web Request Too long: \n" + Parameters.Substring(0, Parameters.Length > 200 ? 200 : Parameters.Length) + "...");
+                        F.LogError("Web Request Too long: \n" + Parameters.Substring(0, Parameters.Length > 200 ? 200 : Parameters.Length) + "...");
                         return;
                     }
-                    CommandWindow.LogWarning("Starting web request: \"" + url.Substring(0, url.Length > 200 ? 200 : url.Length) + '\"');
+                    F.Log("Starting web request: \"" + url.Substring(0, url.Length > 200 ? 200 : url.Length) + '\"', ConsoleColor.DarkYellow);
                     r.Reply = _client.UploadString(url, "");
                 }
                 catch (WebException ex)
                 {
+                    string msg = ex.Message;
+                    if (msg.StartsWith("Error: ConnectFailure"))
+                        msg = "Could not connect to Node server at \"" + UCWarfare.Config.PlayerStatsSettings.NJS_ServerURL + '\"';
                     r.Reply = ex.Message;
                     r.Success = false;
-                    CommandWindow.LogError("Web Request Error: " + ex.Message);
+                    F.LogError("Web Request Error: " + msg);
                     return;
                 }
                 r.Success = r.Reply != FailureReply && r.Reply != InvalidCallResponse;
             }
         }
+        public void LogWarning(ulong Violator, ulong Admin, string ViolatorName, string AdminName, byte WarnedTeam, string reason) =>
+            LogWarning(Violator, Admin, ViolatorName, AdminName, WarnedTeam, reason, DateTime.Now);
+        public void LogWarning(ulong Violator, ulong Admin, string ViolatorName, string AdminName, byte WarnedTeam, string reason, DateTime WarnTime)
+        {
+            throw new NotImplementedException();
+        }
+        public void LogUnban(ulong Pardoned, ulong Pardoner, string PardonedName, string PardonerName) =>
+            LogUnban(Pardoned, Pardoner, PardonedName, PardonerName, DateTime.Now);
+        public void LogUnban(ulong Pardoned, ulong Pardoner, string PardonedName, string PardonerName, DateTime UnbanTime)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void LogKick(ulong Violator, ulong Kicker, string ViolatorName, string AdminName, byte KickedTeam, string Reason) =>
+            LogKick(Violator, Kicker, ViolatorName, AdminName, KickedTeam, Reason, DateTime.Now);
+        public void LogKick(ulong Violator, ulong Kicker, string ViolatorName, string AdminName, byte KickedTeam, string Reason, DateTime KickTime)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncResult LogBan(ulong Violator, ulong Banner, string ViolatorName, string AdminName, byte BannedTeam, string Reason, uint Duration) =>
+            LogBan(Violator, Banner, ViolatorName, AdminName, BannedTeam, Reason, Duration, DateTime.Now);
+
+
+        public IAsyncResult LogBan(ulong Violator, ulong Banner, string ViolatorName, string AdminName, byte BannedTeam, string Reason, uint Duration, DateTime BanTime)
+        {
+            throw new NotImplementedException();
+        }
+
         public const string InvalidCallResponse = "INVALID CALL";
         public const string PlayerDataSent = "Playerdata sent!";
         public string URL => UCWarfare.I.Configuration.Instance.PlayerStatsSettings.NJS_ServerURL;
@@ -111,8 +143,8 @@ namespace UncreatedWarfare.Stats
             return BasicQueryAsync(ECall.PING_SERVER, new Dictionary<string, string> { { "dt", DateTime.UtcNow.ToString("o") } }, 
                 "No time provided.", new AsyncCallback(WebCallbacks.PingAndSend));
         }
-        public IAsyncResult BasicQueryAsync(ECall function, Dictionary<string, string> data, string failureResponse, AsyncCallback callback) => BasicQueryAsync(UCWarfare.I.NodeCalls[function], data, failureResponse, callback);
-        public void BasicQuerySync(ECall function, Dictionary<string, string> data, string failureResponse) => BasicQuerySync(UCWarfare.I.NodeCalls[function], data, failureResponse);
+        public IAsyncResult BasicQueryAsync(ECall function, Dictionary<string, string> data, string failureResponse, AsyncCallback callback) => BasicQueryAsync(Data.NodeCalls[function], data, failureResponse, callback);
+        public void BasicQuerySync(ECall function, Dictionary<string, string> data, string failureResponse) => BasicQuerySync(Data.NodeCalls[function], data, failureResponse);
         public IAsyncResult BasicQueryAsync(string function, Dictionary<string, string> data, string failureResponse, AsyncCallback callback)
         {
             Query q = new Query(URL, function, data, failureResponse);
@@ -121,7 +153,6 @@ namespace UncreatedWarfare.Stats
         }
         public void BasicQueryAsync(string data, string failureResponse, AsyncCallback callback)
         {
-            CommandWindow.Log(" in basicqueryasync.");
             Query q = new Query(URL, data, failureResponse);
             Query.AsyncQueryDelegate caller = new Query.AsyncQueryDelegate(q.ExecuteQueryAsync);
             caller.BeginInvoke(_client, out _, callback, caller);
@@ -138,17 +169,20 @@ namespace UncreatedWarfare.Stats
                 {
                     r.Reply = "TOO LONG";
                     r.Success = false;
-                    CommandWindow.LogError("Web Request Too long: \n" + data.Substring(0, 200) + "...");
+                    F.LogError("Web Request Too long: \n" + data.Substring(0, 200) + "...");
                     return r;
                 }
-                CommandWindow.LogWarning("Starting web request: \"" + url.Substring(0, url.Length > 200 ? 200 : url.Length) + '\"');
+                F.Log("Starting web request: \"" + url.Substring(0, url.Length > 200 ? 200 : url.Length) + '\"', ConsoleColor.DarkYellow);
                 r.Reply = _client.UploadString(url, "");
             }
             catch (WebException ex)
             {
+                string msg = ex.Message;
+                if (msg.StartsWith("Error: ConnectFailure"))
+                    msg = "Could not connect to Node server at \"" + UCWarfare.Config.PlayerStatsSettings.NJS_ServerURL + '\"';
                 r.Reply = ex.Message;
                 r.Success = false;
-                CommandWindow.LogError("Web Request Error: " + ex.Message);
+                F.LogError("Web Request Error: " + msg);
                 return r;
             }
             r.Success = r.Reply != failureResponse && r.Reply != InvalidCallResponse;
@@ -175,17 +209,20 @@ namespace UncreatedWarfare.Stats
                 {
                     r.Reply = "TOO LONG";
                     r.Success = false;
-                    CommandWindow.LogError("Web Request Too long: \n" + Parameters.Substring(0, Parameters.Length > 100 ? 100 : Parameters.Length) + "..." );
+                    F.LogError("Web Request Too long: \n" + Parameters.Substring(0, Parameters.Length > 100 ? 100 : Parameters.Length) + "..." );
                     return r;
                 }
-                CommandWindow.LogWarning("Starting web request: \"" + url.Substring(0, url.Length > 200 ? 200 : url.Length) + '\"');
+                F.Log("Starting web request: \"" + url.Substring(0, url.Length > 200 ? 200 : url.Length) + '\"', ConsoleColor.DarkYellow);
                 r.Reply = _client.UploadString(url, "");
             }
             catch (WebException ex)
             {
+                string msg = ex.Message;
+                if (msg.StartsWith("Error: ConnectFailure"))
+                    msg = "Could not connect to Node server at \"" + UCWarfare.Config.PlayerStatsSettings.NJS_ServerURL + '\"';
                 r.Reply = ex.Message;
                 r.Success = false;
-                CommandWindow.LogError("Web Request Error: " + ex.Message);
+                F.LogError("Web Request Error: " + msg);
                 return r;
             }
             r.Success = r.Reply != failureResponse && r.Reply != InvalidCallResponse;
@@ -209,7 +246,7 @@ namespace UncreatedWarfare.Stats
                     ids += ',';
                     teams += ',';
                 }
-                names += Provider.clients[i].playerID.playerName.ShortenName().EncodeURIComponent();
+                names += F.GetPlayerOriginalNames(Provider.clients[i]).CharacterName.EncodeURIComponent();
                 ids += Provider.clients[i].playerID.steamID.m_SteamID.ToString();
                 teams += Provider.clients[i].player.quests.groupID.m_SteamID.ToString();
             }
@@ -229,7 +266,7 @@ namespace UncreatedWarfare.Stats
         {
             Dictionary<string, string> Parameters = new Dictionary<string, string> {
                 { "server", "warfare" },
-                { "name", "_" + player.playerID.playerName.ShortenName().EncodeURIComponent() },
+                { "name", "_" + F.GetPlayerOriginalNames(player).CharacterName.EncodeURIComponent() },
                 { "id", "_" + player.playerID.steamID.m_SteamID.ToString().EncodeURIComponent() },
                 { "team", "_" + player.player.quests.groupID.m_SteamID.ToString().EncodeURIComponent() }
             };
@@ -275,7 +312,7 @@ namespace UncreatedWarfare.Stats
             for (int i = 0; i < VehicleIntervals; i ++)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append("call=" + UCWarfare.I.NodeCalls[ECall.SEND_VEHICLE_DATA]);
+                sb.Append("call=" + Data.NodeCalls[ECall.SEND_VEHICLE_DATA]);
                 sb.Append("&server=warfare");
                 sb.Append("&index=" + i.ToString());
                 sb.Append("&final=" + (i == VehicleIntervals -1 ? "1" : "0"));
@@ -291,8 +328,8 @@ namespace UncreatedWarfare.Stats
                 Response r = BasicQuerySync(send, "INVALID DATA");
                 if(!r.Success)
                 {
-                    BasicQuerySync("call=" + UCWarfare.I.NodeCalls[ECall.REPORT_VEHICLE_ERROR] + "&server=warfare", "INVALID DATA");
-                    CommandWindow.LogError("Failed to send vehicle data to server: " + r.Reply);
+                    BasicQuerySync("call=" + Data.NodeCalls[ECall.REPORT_VEHICLE_ERROR] + "&server=warfare", "INVALID DATA");
+                    F.LogError("Failed to send vehicle data to server: " + r.Reply);
                     break;
                 }
             }
@@ -300,7 +337,7 @@ namespace UncreatedWarfare.Stats
             for (int i = 0; i < ItemIntervals; i++)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append("call=" + UCWarfare.I.NodeCalls[ECall.SEND_ITEM_DATA]);
+                sb.Append("call=" + Data.NodeCalls[ECall.SEND_ITEM_DATA]);
                 sb.Append("&server=warfare");
                 sb.Append("&index=" + i.ToString());
                 sb.Append("&final=" + (i == ItemIntervals - 1 ? "1" : "0"));
@@ -317,13 +354,13 @@ namespace UncreatedWarfare.Stats
                 Response r = BasicQuerySync(send, "INVALID DATA");
                 if (!r.Success)
                 {
-                    BasicQuerySync("call=" + UCWarfare.I.NodeCalls[ECall.REPORT_ITEM_ERROR] + "&server=warfare", "INVALID DATA");
-                    CommandWindow.LogError("Failed to send item data to server: " + r.Reply);
+                    BasicQuerySync("call=" + Data.NodeCalls[ECall.REPORT_ITEM_ERROR] + "&server=warfare", "INVALID DATA");
+                    F.LogError("Failed to send item data to server: " + r.Reply);
                     break;
                 }
             }
             _client.Timeout = timeout;
-            CommandWindow.LogWarning("Completed sending assets in " + (DateTime.Now - StartTimestamp).TotalMilliseconds.ToString() + "ms.");
+            F.LogWarning("Completed sending assets in " + (DateTime.Now - StartTimestamp).TotalMilliseconds.ToString() + "ms.", ConsoleColor.DarkYellow);
         }
         private string GetVehicleAssets()
         {

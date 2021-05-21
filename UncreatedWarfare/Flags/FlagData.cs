@@ -17,18 +17,23 @@ namespace UncreatedWarfare.Flags
         public float y;
         public ZoneData zone;
         public bool use_map_size_multiplier;
+        /// <summary>
+        /// T1 (0) -&gt; T2 (max)
+        /// </summary>
+        public int level;
         [JsonIgnore]
         public string color;
         [JsonIgnore]
         public Vector2 Position2D { get => new Vector2(x, y); }
         [JsonConstructor]
-        public FlagData(int id, string name, float x, float y, ZoneData zone, bool use_map_size_multiplier)
+        public FlagData(int id, string name, float x, float y, ZoneData zone, bool use_map_size_multiplier, int level)
         {
             this.id = id;
             this.name = name;
             this.x = x;
             this.y = y;
             this.zone = zone;
+            this.level = level;
             this.use_map_size_multiplier = use_map_size_multiplier;
             this.color = UCWarfare.Config.FlagSettings.NeutralColor;
         }
