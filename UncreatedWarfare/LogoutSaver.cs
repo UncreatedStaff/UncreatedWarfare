@@ -16,7 +16,7 @@ namespace UncreatedWarfare
         public static List<LogoutSave> ActiveSaves;
 
         public LogoutSaver()
-            : base(UCWarfare.KitsStorage + "playersaves.json")
+            : base(Data.KitsStorage + "playersaves.json")
         {
             ActiveSaves = new List<LogoutSave>();
 

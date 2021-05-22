@@ -71,8 +71,7 @@ namespace UncreatedWarfare.Commands
                 {
                     if (player.HasPermission("uc.group.join"))
                     {
-                        ulong ID;
-                        if (!ulong.TryParse(command[1], out ID))
+                        if (!ulong.TryParse(command[1], out ulong ID))
                         {
                             player.SendChat("joined_group_not_found", UCWarfare.GetColor("joined_group_not_found"),
                                 command[1], UCWarfare.GetColorHex("joined_group_not_found_group_id"));
@@ -90,7 +89,6 @@ namespace UncreatedWarfare.Commands
                                 ID.ToString(), UCWarfare.GetColorHex("joined_group_not_found_group_id"));
                             return;
                         }
-                        ulong OldGroup = player.Player.quests.groupID.m_SteamID;
                         if(player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
                         {
                             GroupManager.save();
@@ -98,35 +96,29 @@ namespace UncreatedWarfare.Commands
                             if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                             if (team == 1)
                             {
-                                Data.TeamManager?.RemovePlayerFromTeam(player.Player.channel.owner);
-                                Data.TeamManager?.AddPlayerToTeam(ETeam.TEAM1, player.Player.channel.owner);
                                 player.SendChat("joined_group", UCWarfare.GetColor("joined_group"),
-                                    Data.TeamManager.Team1.LocalizedName, UCWarfare.GetColorHex("team_1_color"),
+                                    TeamManager.TranslateName(TeamManager.Team1ID, player), UCWarfare.GetColorHex("team_1_color"),
                                     groupInfo.groupID.m_SteamID.ToString(), UCWarfare.GetColorHex("joined_group_id"));
                                 F.Log(F.Translate("joined_group_console", 0, player.Player.channel.owner.playerID.playerName,
-                                    player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), Data.TeamManager.Team1.LocalizedName,
+                                    player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), TeamManager.TranslateName(TeamManager.Team1ID, 0),
                                     groupInfo.groupID.m_SteamID.ToString()), ConsoleColor.Cyan);
                             }
                             else if (team == 2)
                             {
-                                Data.TeamManager?.RemovePlayerFromTeam(player.Player.channel.owner);
-                                Data.TeamManager?.AddPlayerToTeam(ETeam.TEAM2, player.Player.channel.owner);
                                 player.SendChat("joined_group", UCWarfare.GetColor("joined_group"),
-                                    Data.TeamManager.Team2.LocalizedName, UCWarfare.GetColorHex("team_2_color"),
+                                    TeamManager.TranslateName(TeamManager.Team2ID, player), UCWarfare.GetColorHex("team_2_color"),
                                     groupInfo.groupID.m_SteamID.ToString(), UCWarfare.GetColorHex("joined_group_id"));
                                 F.Log(F.Translate("joined_group_console", 0, player.Player.channel.owner.playerID.playerName,
-                                    player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), Data.TeamManager.Team2.LocalizedName,
+                                    player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), TeamManager.TranslateName(TeamManager.Team2ID, 0),
                                     groupInfo.groupID.m_SteamID.ToString()), ConsoleColor.Cyan);
                             }
                             else if (team == 3)
                             {
-                                Data.TeamManager.RemovePlayerFromTeam(player.Player.channel.owner);
-                                Data.TeamManager.AddPlayerToTeam(ETeam.NEUTRAL, player.Player.channel.owner);
                                 player.SendChat("joined_group", UCWarfare.GetColor("joined_group"),
-                                    Data.TeamManager.Neutral.LocalizedName, UCWarfare.GetColorHex("team_3_color"),
+                                    TeamManager.TranslateName(TeamManager.AdminID, player), UCWarfare.GetColorHex("team_3_color"),
                                     groupInfo.groupID.m_SteamID.ToString(), UCWarfare.GetColorHex("joined_group_id"));
                                 F.Log(F.Translate("joined_group_console", 0, player.Player.channel.owner.playerID.playerName,
-                                    player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), Data.TeamManager.Neutral.LocalizedName,
+                                    player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(), TeamManager.TranslateName(TeamManager.AdminID, 0),
                                     groupInfo.groupID.m_SteamID.ToString()), ConsoleColor.Cyan);
                             }
                             else

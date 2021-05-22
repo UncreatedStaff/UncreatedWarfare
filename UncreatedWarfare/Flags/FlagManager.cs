@@ -43,7 +43,7 @@ namespace UncreatedWarfare.Flags
             }
         }
         private int _counter;
-        private string _preset;
+        private readonly string _preset;
         public Dictionary<ulong, int> OnFlag { get; private set; }
         public int ObjectiveT1Index;
         public int ObjectiveT2Index;
@@ -173,19 +173,19 @@ namespace UncreatedWarfare.Flags
                         {
                             F.UIOrChat(team, F.UIOption.Capturing, "team_capturing", UCWarfare.GetColor(team == 1 ? "capturing_team_1_chat" : "default"), Channel, player.channel.owner, flag.Points, 
                                 player.channel.owner.playerID.steamID.m_SteamID,
-                                formatting: new object[] { Data.TeamManager.Team1.LocalizedName, Data.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
+                                formatting: new object[] { TeamManager.TranslateName(TeamManager.Team1ID, player), TeamManager.Team1ColorHex, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
                             //UCWarfare.I.DB.AddXP(EXPGainType.CAP_INCREASE);
                         }
                         else
                         {
                             F.UIOrChat(team, F.UIOption.Losing, "team_losing", UCWarfare.GetColor(team == 1 ? "losing_team_1_chat" : "default"), Channel, player.channel.owner, flag.Points, 
                                 player.channel.owner.playerID.steamID.m_SteamID,
-                                formatting: new object[] { Data.TeamManager.Team1.LocalizedName, Data.TeamManager.Team1.Color, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
+                                formatting: new object[] { TeamManager.TranslateName(TeamManager.Team1ID, player), TeamManager.Team1ColorHex, flag.Name, flag.TeamSpecificHexColor, Math.Abs(flag.Points), Flag.MaxPoints });
                         }
                     }
                 } else if (flag.Points == 0) // flag uncaptured
                 {
-                    flag.Owner = Data.TeamManager.Neutral;
+                    flag.Owner = 0;
                     F.Broadcast("flag_neutralized", UCWarfare.GetColor("flag_neutralized"), flag.Name, flag.TeamSpecificColor);
                 } else if (flag.Points > -Flag.MaxPoints) // not fully capped by t2 but being capped
                 {
@@ -195,7 +195,7 @@ namespace UncreatedWarfare.Flags
                         ITransportConnection Channel = player.channel.owner.transportConnection;
                         if (team == 2)
                         {
-                            if(flag.Owner.GroupID == team)
+                            if(flag.Owner == team)
                             {
                                 F.UIOrChat(team, F.UIOption.Clearing, "clearing", UCWarfare.GetColor(team == 1 ? "clearing_team_1_chat" : "default"), Channel, player.channel.owner, flag.Points,
                                     player.channel.owner.playerID.steamID.m_SteamID);
@@ -251,23 +251,21 @@ namespace UncreatedWarfare.Flags
                 }
             }
         }
-        public class OnTeamWinEventArgs : EventArgs { public Team team; }
+        public class OnTeamWinEventArgs : EventArgs { public ulong team; }
         public event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
-        public class OnObjectiveChangeEventArgs : EventArgs { public Flag oldFlagObj; public Flag newFlagObj; public ETeam Team; public int OldObj; public int NewObj; }
+        public class OnObjectiveChangeEventArgs : EventArgs { public Flag oldFlagObj; public Flag newFlagObj; public ulong Team; public int OldObj; public int NewObj; }
         public class OnStateChangedEventArgs : EventArgs { public EState NewState; public EState OldState; }
         public event EventHandler<OnObjectiveChangeEventArgs> OnObjectiveChange;
         public event EventHandler<OnStateChangedEventArgs> OnStateChanged;
         public event EventHandler OnReady;
         public event EventHandler OnNewGameStarting;
-        public void DeclareWin(ETeam Team)
+        public void DeclareWin(ulong Team)
         {
-            Team t = F.GetTeam(Team);
-            if (t == null) return;
-            F.LogWarning(t.LocalizedName + " just won the game!", ConsoleColor.Green);
+            F.LogWarning(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Green);
             foreach (SteamPlayer client in Provider.clients)
-                client.SendChat("team_win", UCWarfare.GetColor("team_win"), t.TranslateName(client.playerID.steamID.m_SteamID), t.Color);
+                client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID));
             this.State = EState.FINISHED;
-            OnTeamWinGame?.Invoke(this, new OnTeamWinEventArgs { team = t });
+            OnTeamWinGame?.Invoke(this, new OnTeamWinEventArgs { team = Team });
             EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
             EndScreen.OnLeaderboardExpired += EndScreen_OnLeaderboardExpired;
             EndScreen.winner = Team;
@@ -295,31 +293,31 @@ namespace UncreatedWarfare.Flags
             Flag flag = sender as Flag;
             F.LogWarning("Owner changed of flag " + flag.Name, ConsoleColor.White);
             // owner of flag changed (full caputure or loss)
-            if(e.NewOwner.ID == ETeam.TEAM1)
+            if(e.NewOwner == 1)
             {
                 if(ObjectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
                 {
-                    DeclareWin(ETeam.TEAM1);
+                    DeclareWin(1);
                     ObjectiveT1Index = FlagRotation.Count - 1;
                 } else
                 {
-                    flag.Owner = Data.TeamManager.Team1;
+                    flag.Owner = 1;
                     OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs 
-                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index + 1], NewObj = ObjectiveT1Index + 1, OldObj = ObjectiveT1Index, Team = ETeam.TEAM1 });
+                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index + 1], NewObj = ObjectiveT1Index + 1, OldObj = ObjectiveT1Index, Team = 1 });
                     ObjectiveT1Index++;
                 }
-            } else if(e.NewOwner.ID == ETeam.TEAM2)
+            } else if(e.NewOwner == 2)
             {
                 if (ObjectiveT2Index <= 1) // if t1 just capped the last flag
                 {
-                    DeclareWin(ETeam.TEAM1);
+                    DeclareWin(1);
                     ObjectiveT2Index = 0;
                 }
                 else
                 {
-                    flag.Owner = Data.TeamManager.Team2;
+                    flag.Owner = 2;
                     OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs 
-                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index - 1], NewObj = ObjectiveT2Index - 1, OldObj = ObjectiveT2Index, Team = ETeam.TEAM2 });
+                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index - 1], NewObj = ObjectiveT2Index - 1, OldObj = ObjectiveT2Index, Team = 2 });
                     ObjectiveT2Index--;
                 }
             }
@@ -329,7 +327,7 @@ namespace UncreatedWarfare.Flags
                 RefreshStaticUI(player.GetTeam(), player.channel.owner.transportConnection, player.channel.owner, flag);
             }
             foreach (SteamPlayer client in Provider.clients)
-                client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), e.NewOwner.TranslateName(client.playerID.steamID.m_SteamID), e.NewOwner.Color, flag.Name, flag.TeamSpecificHexColor);
+                client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(e.NewOwner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(e.NewOwner), flag.Name, flag.TeamSpecificHexColor);
         }
         private void PlayerLeftFlagRadius(object sender, PlayerEventArgs e)
         {
@@ -346,7 +344,7 @@ namespace UncreatedWarfare.Flags
         {
             if (!flag.T1Obj && team == 1)
             {
-                if (flag.FullOwner.ID == ETeam.TEAM1)
+                if (flag.FullOwner == 1)
                     F.UIOrChat(team, F.UIOption.Secured, "secured", UCWarfare.GetColor("secured_team_1_chat"), Channel, player, Flag.MaxPoints, player.playerID.steamID.m_SteamID,
                         false, true, sendChatOverride: false);
                 else
@@ -355,9 +353,9 @@ namespace UncreatedWarfare.Flags
             }
             else if (!flag.T2Obj && team == 2)
             {
-                if (flag.FullOwner.GroupID == 2)
+                if (flag.FullOwner == 2)
                 {
-                    if (flag.Owner.ID == ETeam.TEAM2)
+                    if (flag.Owner == 2)
                         F.UIOrChat(team, F.UIOption.Secured, "secured", UCWarfare.GetColor("secured_team_2_chat"), Channel, player, Flag.MaxPoints, player.playerID.steamID.m_SteamID,
                             false, true, sendChatOverride: false);
                     else

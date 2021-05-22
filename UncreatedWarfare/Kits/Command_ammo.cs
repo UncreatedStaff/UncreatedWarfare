@@ -25,20 +25,7 @@ namespace UncreatedWarfare.Kits
 
         public List<string> Aliases => new List<string>();
 
-        public List<string> Permissions
-        {
-            get
-            {
-                List<string> perms = new List<string>();
-                perms.Add("ammo");
-                return perms;
-            }
-        }
-
-        private TeamManager teams => Data.TeamManager;
-
-        private KitManager kits => Data.KitManager;
-        private FOBManager FOBManager => Data.FOBManager;
+        public List<string> Permissions => new List<string>() { "uc.ammo" };
         //private BuildManager BuildManager => UCWarfare.I.BuildManager;
 
         public void Execute(IRocketPlayer caller, string[] arguments)
@@ -50,35 +37,36 @@ namespace UncreatedWarfare.Kits
 
             if (barricadeData != null)
             {
-                if (barricadeData.barricade.id != FOBManager.config.AmmoCrateID)
+                if (barricadeData.barricade.id != Data.FOBManager.config.AmmoCrateID)
                 {
                     player.Message("ammo_error_nocrate");
                     return;
                 }
-                if (!teams.IsTeam(player, ETeam.TEAM1) && !teams.IsTeam(player, ETeam.TEAM2))
+                if (!TeamManager.IsTeam1(player) && !TeamManager.IsTeam2(player))
                 {
                     player.Message("Join a team first and get a kit.");
                     return;
                 }
-                if ((teams.IsTeam(player, ETeam.TEAM1) && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Team1AmmoID)) || (teams.IsTeam(player, ETeam.TEAM2) && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Team2AmmoID)))
+                if ((TeamManager.IsTeam1(player) && !storage.items.items.Exists(j => j.item.id == Data.FOBManager.config.Team1AmmoID)) || 
+                    (TeamManager.IsTeam2(player) && !storage.items.items.Exists(j => j.item.id == Data.FOBManager.config.Team2AmmoID)))
                 {
                     player.Message("This ammo box has no ammo. If you have logistics truck, go and fetch some more crates from main.");
                     return;
                 }
-                if (!kits.HasKit(player.CSteamID, out var kit))
+                if (!KitManager.HasKit(player.CSteamID, out var kit))
                 {
                     player.Message("ammo_error_nokit");
                     return;
                 }
 
-                kits.ResupplyKit(player, kit);
+                KitManager.ResupplyKit(player, kit);
 
                 player.Message("ammo_success");
 
-                if (teams.IsTeam(player, ETeam.TEAM1))
-                    RemoveSingleItemFromStorage(storage, FOBManager.config.Team1AmmoID);
-                else if (teams.IsTeam(player, ETeam.TEAM2))
-                    RemoveSingleItemFromStorage(storage, FOBManager.config.Team2AmmoID);
+                if (TeamManager.IsTeam1(player))
+                    RemoveSingleItemFromStorage(storage, Data.FOBManager.config.Team1AmmoID);
+                else if (TeamManager.IsTeam2(player))
+                    RemoveSingleItemFromStorage(storage, Data.FOBManager.config.Team2AmmoID);
             }
             else
             {
@@ -203,7 +191,7 @@ namespace UncreatedWarfare.Kits
 
             Transform barricadeTransform = GetBarricadeTransformFromLook(look);
 
-            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out var x, out var y, out var plant, out var index,
+            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out _, out _, out _, out var index,
                 out var region))
                 return null;
             return region.barricades[index];

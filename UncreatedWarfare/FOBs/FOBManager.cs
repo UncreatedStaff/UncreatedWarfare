@@ -11,21 +11,21 @@ using UncreatedWarfare.Teams;
 
 namespace UncreatedWarfare.FOBs
 {
-    public class FOBManager
+    public class FOBManager : IDisposable
     {
         public FOBConfig config;
-
-        List<FOB> Team1FOBs;
-        List<FOB> Team2FOBs;
+        readonly List<FOB> Team1FOBs = new List<FOB>();
+        readonly List<FOB> Team2FOBs = new List<FOB>();
 
 
         public FOBManager()
         {
             config = new FOBConfig(Data.FOBStorage + "config.json");
 
-            Team1FOBs = new List<FOB>();
-            Team2FOBs = new List<FOB>();
-            Level.onLevelLoaded += OnLevelLoaded;
+            if (Level.isLoaded)
+                LoadFobs();
+            else
+                Level.onLevelLoaded += OnLevelLoaded;
         }
 
         private void OnLevelLoaded(int level)   
@@ -55,7 +55,7 @@ namespace UncreatedWarfare.FOBs
 
         public void RegisterNewFOB(BarricadeData Structure)
         {
-            if (Data.TeamManager.IsTeam(Structure.group, ETeam.TEAM1))
+            if (TeamManager.IsTeam1(Structure.group))
             {
                 for (int i = 0; i < Team1FOBs.Count; i++)
                 {
@@ -68,7 +68,7 @@ namespace UncreatedWarfare.FOBs
 
                 Team1FOBs.Add(new FOB("FOB" + (Team1FOBs.Count + 1).ToString(), Team1FOBs.Count + 1, Structure));
             }
-            else if (Data.TeamManager.IsTeam(Structure.group, ETeam.TEAM2))
+            else if (TeamManager.IsTeam2(Structure.group))
             {
                 for (int i = 0; i < Team2FOBs.Count; i++)
                 {
@@ -91,11 +91,11 @@ namespace UncreatedWarfare.FOBs
 
         public List<FOB> GetAvailableFobs(UnturnedPlayer player)
         {
-            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+            if (TeamManager.IsTeam1(player))
             {
                 return Team1FOBs;
             }
-            else if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+            else if (TeamManager.IsTeam2(player))
             {
                 return Team2FOBs;
             }
@@ -115,11 +115,11 @@ namespace UncreatedWarfare.FOBs
 
             Team1Barricades = barricadeDatas.Where(b =>
                 b.barricade.id == config.FOBID &&   // All barricades that are FOB Structures
-                Data.TeamManager.IsTeam(b.group, ETeam.TEAM1)      // All barricades that are friendly
+                TeamManager.IsTeam1(b.group)        // All barricades that are friendly
                 ).ToList();
             Team2Barricades = barricadeDatas.Where(b =>
                 b.barricade.id == config.FOBID &&   // All barricades that are FOB Structures
-                Data.TeamManager.IsTeam(b.group, ETeam.TEAM2)     // All barricades that are friendly
+                TeamManager.IsTeam2(b.group)        // All barricades that are friendly
                 ).ToList();
         }
 
@@ -131,7 +131,7 @@ namespace UncreatedWarfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
-            (Data.TeamManager.IsTeam(b.group, ETeam.TEAM1) || Data.TeamManager.IsTeam(b.group, ETeam.TEAM2)) &&
+            TeamManager.HasTeam(b.group) &&
             (b.barricade.id == config.FOBID ||
             b.barricade.id == config.FOBBaseID ||
             b.barricade.id == config.AmmoCrateID ||
@@ -164,11 +164,11 @@ namespace UncreatedWarfare.FOBs
 
             List<FOB> FOBList = new List<FOB>();
 
-            if (Data.TeamManager.IsTeam(player, ETeam.TEAM1))
+            if (TeamManager.IsTeam1(player))
             {
                 FOBList = Team1FOBs;
             }
-            if (Data.TeamManager.IsTeam(player, ETeam.TEAM2))
+            if (TeamManager.IsTeam2(player))
             {
                 FOBList = Team2FOBs;
             }
@@ -216,9 +216,7 @@ namespace UncreatedWarfare.FOBs
             StreamWriter file = File.CreateText(config.directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
             try
             {
@@ -251,7 +249,10 @@ namespace UncreatedWarfare.FOBs
             }
         }
 
-
+        public void Dispose()
+        {
+            Level.onLevelLoaded -= OnLevelLoaded;
+        }
     }
 
     public class FOB

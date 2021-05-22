@@ -184,7 +184,7 @@ namespace UncreatedWarfare
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
             Commands.LangCommand.OnPlayerChangedLanguage += LangCommand_OnPlayerChangedLanguage;
-            Commands.ReloadCommand.onTranslationsReloaded += ReloadCommand_onTranslationsReloaded;
+            Commands.ReloadCommand.OnTranslationsReloaded += ReloadCommand_onTranslationsReloaded;
             BarricadeManager.onDeployBarricadeRequested += OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
             UseableGun.onBulletSpawned += BulletSpawned;
@@ -196,7 +196,7 @@ namespace UncreatedWarfare
         }
         private void UnsubscribeFromEvents()
         {
-            Commands.ReloadCommand.onTranslationsReloaded -= ReloadCommand_onTranslationsReloaded;
+            Commands.ReloadCommand.OnTranslationsReloaded -= ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= OnPostPlayerConnected;
             U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
             if (Data.ListenServer != null) Data.ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
@@ -407,6 +407,7 @@ namespace UncreatedWarfare
             Data.FlagManager?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
+            Data.FOBManager?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);

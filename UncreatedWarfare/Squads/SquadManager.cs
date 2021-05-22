@@ -15,8 +15,6 @@ namespace UncreatedWarfare.Squads
     {
         public List<Squad> Squads;
 
-        private TeamManager teams => UCWarfare.I.TeamManager;
-
         public SquadManager()
         {
             Squads = new List<Squad>();
@@ -35,7 +33,7 @@ namespace UncreatedWarfare.Squads
                 
                 if (squad.Name == targetSquad.Name)
                 {
-                    foreach (var player in squad.Members)
+                    foreach (UnturnedPlayer player in squad.Members)
                     {
                         // send member count to this player's UI effect
                     }

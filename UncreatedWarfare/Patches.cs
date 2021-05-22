@@ -49,7 +49,7 @@ namespace UncreatedWarfare
                 if (!UCWarfare.Config.Patches.ServerSetSignTextInternal) return true;
                 if (trimmedText.StartsWith("sign_"))
                 {
-                    F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText, region);
+                    F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText);
                     byte[] state = region.barricades[index].barricade.state;
                     byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
@@ -184,7 +184,7 @@ namespace UncreatedWarfare
             /// </summary>
             [HarmonyPatch(typeof(Bumper), "OnTriggerEnter")]
             [HarmonyPrefix]
-            static bool TriggerEnterBumper(Collider other, Bumper __instance, InteractableVehicle ___vehicle)
+            static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
             {
                 if (!UCWarfare.Config.Patches.BumperOnTriggerEnter) return true;
                 if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
@@ -479,7 +479,7 @@ namespace UncreatedWarfare
             /// </summary>
             [HarmonyPatch(typeof(BarricadeManager), "sendHealthChanged")]
             [HarmonyPrefix]
-            static void DamageBarricadePrefix(byte x, byte y, ushort plant, ref ushort index, ref BarricadeRegion region)
+            static void DamageBarricadePrefix(ref ushort index, ref BarricadeRegion region)
             {
                 if (!UCWarfare.Config.Patches.sendHealthChanged) return;
                 if (region.barricades[index] != null)

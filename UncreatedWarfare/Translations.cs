@@ -51,7 +51,8 @@ namespace UncreatedWarfare
                 { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
                 { "team_1", "USA" },
                 { "team_2", "Russia" },
-                { "team_3", "Admin" },
+                { "team_3", "Admins" },
+                { "neutral", "Neutral" },
                 { "ui_capturing", "CAPTURING" },
                 { "ui_losing", "LOSING" },
                 { "ui_clearing", "CLEARING" },
@@ -319,10 +320,10 @@ namespace UncreatedWarfare
         public static List<FlagData> DefaultExtraZones = new List<FlagData>
         {
             new FlagData(-69, "Lobby", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false, 0),
-            new FlagData(-1, "USMain", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, 0),
-            new FlagData(-101, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, 0),
-            new FlagData(-2, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, 0),
-            new FlagData(-102, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, 0),
+            new FlagData(1, "USMain", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, 0),
+            new FlagData(101, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, 0),
+            new FlagData(2, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, 0),
+            new FlagData(102, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, 0),
         };
         public static List<Point3D> DefaultExtraPoints = new List<Point3D>
         {
@@ -597,7 +598,7 @@ namespace UncreatedWarfare
                 RequiredLevel = 0,
                 Cost = 0,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = Kit.EBranch.INFANTRY
+                Branch = EBranch.INFANTRY
             },
             new Kit("rurif1", new List<KitItem> {
                 new KitItem(81, 0, 0, 0, 100, "", 1, 3),
@@ -632,7 +633,7 @@ namespace UncreatedWarfare
                 RequiredLevel = 0,
                 Cost = 0,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = Kit.EBranch.INFANTRY
+                Branch = EBranch.INFANTRY
             }
         };
         public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>

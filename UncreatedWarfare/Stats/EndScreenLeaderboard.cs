@@ -20,7 +20,7 @@ namespace UncreatedWarfare.Stats
         private float secondsLeft;
         const float updateTimeFrequency = 1f;
         private readonly Dictionary<ulong, EPluginWidgetFlags> oldFlags = new Dictionary<ulong, EPluginWidgetFlags>();
-        public ETeam winner;
+        public ulong winner;
         public void EndGame()
         {
             SendEndScreen(winner);
@@ -50,10 +50,9 @@ namespace UncreatedWarfare.Stats
             else
                 StartCoroutine(UpdateTimer());
         }
-        public void SendEndScreen(ETeam winner)
+        public void SendEndScreen(ulong winner)
         {
-            string teamcolor = winner == ETeam.TEAM1 ? UCWarfare.GetColorHex("team_1_color") : (winner == ETeam.TEAM2 ? UCWarfare.GetColorHex("team_2_color") : (winner == ETeam.NEUTRAL ? UCWarfare.GetColorHex("team_3_color") : UCWarfare.GetColorHex("default")));
-            Team team = F.GetTeam(winner);
+            string teamcolor = TeamManager.GetTeamHexColor(winner);
             for (int players = 0; players < Provider.clients.Count; players++)
             {
                 SteamPlayer player = Provider.clients[players];
@@ -66,7 +65,7 @@ namespace UncreatedWarfare.Stats
                 player.player.life.serverModifyVirus(100);
                 player.player.life.serverModifyStamina(100);
                 player.player.movement.sendPluginJumpMultiplier(0f);
-                player.player.teleportToLocation(F.GetBaseSpawn(player.player.channel.owner), winner == ETeam.TEAM1 ? 0f : (winner == ETeam.TEAM2 ? 85f : 0));
+                player.player.teleportToLocation(F.GetBaseSpawn(player.player.channel.owner), winner == 1 ? 0f : (winner == 2 ? 85f : 0));
                 WarStatsTracker warstats = Data.GameStats;
                 KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
                 PlayerCurrentGameStats stats;
@@ -80,7 +79,7 @@ namespace UncreatedWarfare.Stats
                 ITransportConnection channel = player.transportConnection;
                 EffectManager.sendUIEffect(UCWarfare.Config.EndScreenUI, UiIdentifier, channel, true);
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "Title1", F.Translate("game_over", player));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TitleWinner", F.Translate("winner", player, team.Name, teamcolor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TitleWinner", F.Translate("winner", player, TeamManager.TranslateName(winner, player), teamcolor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
                 List<KeyValuePair<Player, int>> topkills = Data.GameStats.GetTop5MostKills();
@@ -92,8 +91,8 @@ namespace UncreatedWarfare.Stats
                         EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h-1], F.Translate("lb_header_" + h.ToString(), player));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.Translate("player_name_header", player, originalName, F.GetTeamColorHex(player)));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player, 
-                    Data.TeamManager.Team1.TranslateName(player.playerID.steamID.m_SteamID), Data.TeamManager.Team1.Color, 
-                    Data.TeamManager.Team2.TranslateName(player.playerID.steamID.m_SteamID), Data.TeamManager.Team2.Color));
+                    TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex, 
+                    TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
                 for(int i = 0; i < 5; i++)
                 {
                     if(i >= topkills.Count)
@@ -193,13 +192,13 @@ namespace UncreatedWarfare.Stats
                 // values
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsValue", F.Translate("stats_player_value", player, stats.kills, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DeathsValue", F.Translate("stats_player_value", player, stats.deaths, defaultColor));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KDRValue", F.Translate("stats_player_float_value", player, stats.kdr, defaultColor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KDRValue", F.Translate("stats_player_float_value", player, stats.KDR, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsOnPointValue", F.Translate("stats_player_value", player, stats.killsonpoint, defaultColor));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeDeployedValue", F.Translate("stats_player_time_value", player, stats.timeDeployed, defaultColor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeDeployedValue", F.Translate("stats_player_time_value", player, stats.TimeDeployed, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "XPGainedValue", F.Translate("stats_player_value", player, stats.xpgained, defaultColor));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeOnPointValue", F.Translate("stats_player_time_value", player, stats.timeOnPoint, defaultColor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeOnPointValue", F.Translate("stats_player_time_value", player, stats.TimeOnPoint, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CapturesValue", F.Translate("stats_player_value", player, stats.captures, defaultColor));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.Translate("stats_player_time_value", player, stats.timeDriving, defaultColor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.Translate("stats_player_time_value", player, stats.TimeDriving, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillsValue", F.Translate("stats_player_value", player, stats.teamkills, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "EnemyFOBsDestroyedValue", F.Translate("stats_player_value", player, stats.fobsdestroyed, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CreditsGainedValue", F.Translate("stats_player_value", player, stats.creditsgained, defaultColor));
@@ -221,7 +220,7 @@ namespace UncreatedWarfare.Stats
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTeamkillingCasualties", F.Translate("lblTeamkillingCasualties", player));
 
                 // values
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DurationValue", F.Translate("stats_war_time_value", player, warstats.duration, defaultColor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DurationValue", F.Translate("stats_war_time_value", player, warstats.Duration, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT1", F.Translate("stats_war_value", player, warstats.casualtiesT1, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT2", F.Translate("stats_war_value", player, warstats.casualtiesT2, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FlagCapturesValue", F.Translate("stats_war_value", player, warstats.totalFlagOwnerChanges, defaultColor));
@@ -248,18 +247,18 @@ namespace UncreatedWarfare.Stats
         public ulong id;
         public int kills;
         public int deaths;
-        public float kdr { get => deaths == 0 ? kills : kills / deaths; }
+        public float KDR { get => deaths == 0 ? kills : kills / deaths; }
         public int killsonpoint;
         public int xpgained;
         public int creditsgained;
-        public TimeSpan timeDeployed { get => TimeSpan.FromSeconds(timeDeployedCounter); }
+        public TimeSpan TimeDeployed { get => TimeSpan.FromSeconds(timeDeployedCounter); }
         private float timeDeployedCounter;
-        public TimeSpan timeOnPoint { get => TimeSpan.FromSeconds(timeOnPointCounter); }
+        public TimeSpan TimeOnPoint { get => TimeSpan.FromSeconds(timeOnPointCounter); }
         private float timeOnPointCounter;
         public int captures;
         public int teamkills;
         public int fobsdestroyed;
-        public TimeSpan timeDriving { get => TimeSpan.FromSeconds(timeDrivingCounter); }
+        public TimeSpan TimeDriving { get => TimeSpan.FromSeconds(timeDrivingCounter); }
         private float timeDrivingCounter;
         public PlayerCurrentGameStats(Player player)
         {
@@ -287,7 +286,7 @@ namespace UncreatedWarfare.Stats
     }
     public class WarStatsTracker : MonoBehaviour
     {
-        public TimeSpan duration { get => TimeSpan.FromSeconds(durationCounter); }
+        public TimeSpan Duration { get => TimeSpan.FromSeconds(durationCounter); }
         public Dictionary<ulong, PlayerCurrentGameStats> playerstats;
         private float durationCounter = 0;
         public int casualtiesT1;
@@ -350,8 +349,8 @@ namespace UncreatedWarfare.Stats
         {
             // checks for how many players are outside of main
             DateTime dt = DateTime.Now;
-            CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && !Data.TeamManager.Team1Main.IsInside(x.player.transform.position)));
-            CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && !Data.TeamManager.Team2Main.IsInside(x.player.transform.position)));
+            CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && !TeamManager.Team1Main.IsInside(x.player.transform.position)));
+            CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && !TeamManager.Team2Main.IsInside(x.player.transform.position)));
             yield return new WaitForSeconds(10f);
             StartCoroutine(CompileAverages());
         }
@@ -387,11 +386,11 @@ namespace UncreatedWarfare.Stats
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) =>
             {
-                return a.kdr.CompareTo(b.kdr);
+                return a.KDR.CompareTo(b.KDR);
             });
             List<KeyValuePair<Player, float>> rtnList = new List<KeyValuePair<Player, float>>();
             for (int i = 0; i < Math.Min(stats.Count, 5); i++)
-                rtnList.Add(new KeyValuePair<Player, float>(stats[i].player, stats[i].kdr));
+                rtnList.Add(new KeyValuePair<Player, float>(stats[i].player, stats[i].KDR));
             return rtnList;
         }
         public List<KeyValuePair<Player, TimeSpan>> GetTop5OnPointTime()
@@ -399,11 +398,11 @@ namespace UncreatedWarfare.Stats
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) =>
             {
-                return a.kdr.CompareTo(b.kdr);
+                return a.KDR.CompareTo(b.KDR);
             });
             List<KeyValuePair<Player, TimeSpan>> rtnList = new List<KeyValuePair<Player, TimeSpan>>();
             for (int i = 0; i < Math.Min(stats.Count, 5); i++)
-                rtnList.Add(new KeyValuePair<Player, TimeSpan>(stats[i].player, stats[i].timeOnPoint));
+                rtnList.Add(new KeyValuePair<Player, TimeSpan>(stats[i].player, stats[i].TimeOnPoint));
             return rtnList;
         }
         public List<KeyValuePair<Player, int>> GetTop5XP()

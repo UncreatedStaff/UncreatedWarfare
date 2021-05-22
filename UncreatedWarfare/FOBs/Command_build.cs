@@ -24,21 +24,13 @@ namespace UncreatedWarfare.FOBs
 
         public List<string> Aliases => new List<string>();
 
-        public List<string> Permissions
-        {
-            get
-            {
-                List<string> perms = new List<string>();
-                perms.Add("build");
-                return perms;
-            }
-        }
+        public List<string> Permissions => new List<string>() { "uc.build" };
 
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            if (!Data.TeamManager.HasTeam(player))
+            if (!TeamManager.HasTeam(player))
             {
                 player.Message("build_error_noteam");
                 return;
@@ -46,7 +38,7 @@ namespace UncreatedWarfare.FOBs
 
             BarricadeData foundation = BuildManager.GetBarricadeFromLook(player);
 
-            if (foundation == null || !Data.TeamManager.IsFriendly(player, foundation.group))
+            if (foundation == null || !TeamManager.IsFriendly(player, foundation.group))
             {
                 player.Message("build_error_notfriendly");
                 return;

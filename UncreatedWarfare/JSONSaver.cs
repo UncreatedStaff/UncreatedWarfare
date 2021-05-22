@@ -39,9 +39,7 @@ namespace UncreatedWarfare
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer { Formatting = Formatting.Indented };
 
             try
             {
@@ -64,9 +62,7 @@ namespace UncreatedWarfare
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
             try
             {
@@ -85,9 +81,7 @@ namespace UncreatedWarfare
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
             try
             {
@@ -106,9 +100,7 @@ namespace UncreatedWarfare
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
             try
             {
@@ -169,9 +161,7 @@ namespace UncreatedWarfare
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
             try
             {
@@ -190,9 +180,7 @@ namespace UncreatedWarfare
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
 
-            JsonSerializer serializer = new JsonSerializer();
-
-            serializer.Formatting = Formatting.Indented;
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
 
             try
             {

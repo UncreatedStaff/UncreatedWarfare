@@ -10,8 +10,8 @@ namespace UncreatedWarfare.Commands
 {
     public class ReloadCommand : IRocketCommand
     {
-        public static event EventHandler onTranslationsReloaded;
-        public static event EventHandler onFlagsReloaded;
+        public static event EventHandler OnTranslationsReloaded;
+        public static event EventHandler OnFlagsReloaded;
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "reload";
         public string Help => "Reload certain parts of UCWarfare.";
@@ -55,12 +55,12 @@ namespace UncreatedWarfare.Commands
             Data.Languages = JSONMethods.LoadLanguagePreferences();
             Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            onTranslationsReloaded?.Invoke(this, EventArgs.Empty);
+            OnTranslationsReloaded?.Invoke(this, EventArgs.Empty);
         }
         void ReloadFlags()
         {
             Data.FlagManager.StartNextGame();
-            onFlagsReloaded?.Invoke(this, EventArgs.Empty);
+            OnFlagsReloaded?.Invoke(this, EventArgs.Empty);
         }
     }
 }

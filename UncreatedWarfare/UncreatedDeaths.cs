@@ -32,17 +32,17 @@ namespace UncreatedWarfare
                 {
                     if (LandmineLinkedNonOffender == null)
                     {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeamEnum(), F.GetPlayerOriginalNames(killer), killer.GetTeamEnum(),
-                            new FPlayerName() { CharacterName = "Unknown", NickName = "Unknown", PlayerName = "Unknown", Steam64 = 0 }, ETeam.NEUTRAL, limb, itemName, out msg, false);
+                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
+                            new FPlayerName() { CharacterName = "Unknown", NickName = "Unknown", PlayerName = "Unknown", Steam64 = 0 }, 0, limb, itemName, out msg, false);
                     }
                     else
                     {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeamEnum(), F.GetPlayerOriginalNames(killer), killer.GetTeamEnum(),
-                            F.GetPlayerOriginalNames(LandmineLinkedNonOffender), LandmineLinkedNonOffender.GetTeamEnum(), limb, itemName, out msg, false);
+                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
+                            F.GetPlayerOriginalNames(LandmineLinkedNonOffender), LandmineLinkedNonOffender.GetTeam(), limb, itemName, out msg, false);
                     }
                 } else
                 {
-                    F.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeamEnum(), F.GetPlayerOriginalNames(killer), false, killer.GetTeamEnum(), limb, itemName, distance, out msg, false);
+                    F.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), false, killer.GetTeam(), limb, itemName, distance, out msg, false);
                 }
                 return msg;
             }
@@ -71,17 +71,17 @@ namespace UncreatedWarfare
                 {
                     if(LandmineLinkedAssistant == null)
                     {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeamEnum(), F.GetPlayerOriginalNames(killer), killer.GetTeamEnum(),
-                            new FPlayerName() { CharacterName = "Unknown", NickName = "Unknown", PlayerName = "Unknown", Steam64 = 0 }, ETeam.NEUTRAL, limb, itemName, out msg, false);
+                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
+                            new FPlayerName() { CharacterName = "Unknown", NickName = "Unknown", PlayerName = "Unknown", Steam64 = 0 }, 0, limb, itemName, out msg, false);
                     } else
                     {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeamEnum(), F.GetPlayerOriginalNames(killer), killer.GetTeamEnum(),
-                            F.GetPlayerOriginalNames(LandmineLinkedAssistant), LandmineLinkedAssistant.GetTeamEnum(), limb, itemName, out msg, false);
+                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
+                            F.GetPlayerOriginalNames(LandmineLinkedAssistant), LandmineLinkedAssistant.GetTeam(), limb, itemName, out msg, false);
                     }
                 }
                 else
                 {
-                    F.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeamEnum(), F.GetPlayerOriginalNames(killer), false, killer.GetTeamEnum(), limb, itemName, distance, out msg, false);
+                    F.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), false, killer.GetTeam(), limb, itemName, distance, out msg, false);
                 }
                 return msg;
             }
@@ -113,9 +113,9 @@ namespace UncreatedWarfare
                 FPlayerName triggererName;
                 bool foundPlacer;
                 bool foundTriggerer;
-                ETeam deadTeam = F.GetTeamEnum(dead);
-                ETeam placerTeam;
-                ETeam triggererTeam;
+                ulong deadTeam = F.GetTeam(dead);
+                ulong placerTeam;
+                ulong triggererTeam;
                 ushort landmineID;
                 LandmineDataForPostAccess landmine;
                 string landmineName;
@@ -127,8 +127,8 @@ namespace UncreatedWarfare
                     landmineID = 0;
                     landmineName = "Unknown";
                     landmine = default;
-                    placerTeam = ETeam.NEUTRAL;
-                    triggererTeam = ETeam.NEUTRAL;
+                    placerTeam = 0;
+                    triggererTeam = 0;
                     triggererName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                     triggerer = null;
                     foundTriggerer = false;
@@ -136,7 +136,7 @@ namespace UncreatedWarfare
                 else
                 {
                     placerName = F.GetPlayerOriginalNames(placer);
-                    placerTeam = F.GetTeamEnum(placer);
+                    placerTeam = F.GetTeam(placer);
                     foundPlacer = true;
                     if (F.TryGetPlaytimeComponent(placer.player, out PlaytimeComponent c))
                     {
@@ -174,20 +174,20 @@ namespace UncreatedWarfare
                         if (!pt.Equals(default))
                         {
                             triggerer = pt.Value.player;
-                            triggererTeam = F.GetTeamEnum(triggerer);
+                            triggererTeam = F.GetTeam(triggerer);
                             triggererName = F.GetPlayerOriginalNames(triggerer);
                             foundTriggerer = true;
                         } else
                         {
                             triggerer = null;
-                            triggererTeam = ETeam.NEUTRAL;
+                            triggererTeam = 0;
                             triggererName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                             foundTriggerer = false;
                         }
                     } else
                     {
                         triggerer = null;
-                        triggererTeam = ETeam.NEUTRAL;
+                        triggererTeam = 0;
                         triggererName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                         foundTriggerer = false;
                     }
@@ -359,7 +359,7 @@ namespace UncreatedWarfare
                 ushort item;
                 string itemName;
                 float distance = 0f;
-                ETeam killerTeam;
+                ulong killerTeam;
                 bool itemIsVehicle = cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL;
                 if (killer == null)
                 {
@@ -368,12 +368,12 @@ namespace UncreatedWarfare
                     foundKiller = false;
                     item = 0;
                     itemName = "Unknown";
-                    killerTeam = ETeam.NEUTRAL;
+                    killerTeam = 0;
                 }
                 else
                 {
                     killerName = F.GetPlayerOriginalNames(killer);
-                    killerTeam = F.GetTeamEnum(killer);
+                    killerTeam = F.GetTeam(killer);
                     foundKiller = true;
                     try
                     {
@@ -450,17 +450,17 @@ namespace UncreatedWarfare
             }
             OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
         }
-        private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ETeam killerGroup, ELimb limb, string itemName, float distance)
+        private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
         {
             F.Log(key, ConsoleColor.Blue);
-            F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), F.GetTeamEnum(dead), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
+            F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), F.GetTeam(dead), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
-        private void LogLandmineMessage(string key, Player dead, FPlayerName killerName, ETeam killerGroup, ELimb limb, string landmineName, FPlayerName triggererName, ETeam triggererTeam)
+        private void LogLandmineMessage(string key, Player dead, FPlayerName killerName, ulong killerGroup, ELimb limb, string landmineName, FPlayerName triggererName, ulong triggererTeam)
         {
             F.Log(key, ConsoleColor.Blue);
-            F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), F.GetTeamEnum(dead), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
-            F.LogWarning(message, ConsoleColor.Cyan);
+            F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), F.GetTeam(dead), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
+            F.Log(message, ConsoleColor.Cyan);
         }
     }
 }
