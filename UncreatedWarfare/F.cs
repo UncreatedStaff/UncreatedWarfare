@@ -381,8 +381,8 @@ namespace UncreatedWarfare
         public static byte GetTeamByte(this UnturnedPlayer player) => GetTeamByte(player.Player.quests.groupID.m_SteamID);
         public static byte GetTeamByte(this ulong groupID)
         {
-            if (groupID == UCWarfare.Config.Team1ID) return 1;
-            else if (groupID == UCWarfare.Config.Team2ID) return 2;
+            if (groupID == TeamManager.Team1ID) return 1;
+            else if (groupID == TeamManager.Team2ID) return 2;
             else if (groupID == TeamManager.AdminID) return 3;
             else return 0;
         }

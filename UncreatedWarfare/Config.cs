@@ -27,8 +27,6 @@ namespace UncreatedWarfare
         public PatchToggles Patches;
         [XmlElement("MySQL")]
         public MySqlData SQL;
-        public ulong Team1ID;
-        public ulong Team2ID;
         public bool Debug;
         public bool SendAssetsOnStartup;
         public float DelayAfterConnectionToSendTranslations;
@@ -46,8 +44,6 @@ namespace UncreatedWarfare
             this.DeathMessages = new DeathMesssagesSettings();
             this.Patches = new PatchToggles();
             this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
-            this.Team1ID = 1;
-            this.Team2ID = 2;
             this.Debug = true;
             this.SendAssetsOnStartup = false;
             this.DelayAfterConnectionToSendTranslations = 0.5f;
