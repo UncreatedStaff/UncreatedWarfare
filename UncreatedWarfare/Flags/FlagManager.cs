@@ -263,7 +263,7 @@ namespace UncreatedWarfare.Flags
         {
             F.LogWarning(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Green);
             foreach (SteamPlayer client in Provider.clients)
-                client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID));
+                client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(Team));
             this.State = EState.FINISHED;
             OnTeamWinGame?.Invoke(this, new OnTeamWinEventArgs { team = Team });
             EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();

@@ -1072,7 +1072,7 @@ namespace UncreatedWarfare
             else if (team == TeamManager.Team1ID) return $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>";
             else if (team == TeamManager.Team2ID) return $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>";
             else if (team == TeamManager.AdminID) return $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>";
-            else return $"<color=#{TeamManager.NeutralColor}>{innerText}</color>";
+            else return $"<color=#{TeamManager.NeutralColorHex}>{innerText}</color>";
         }
         /// <param name="backupcause">Used in case the key can not be found.</param>
         public static void BroadcastDeath(string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, bool translateKillerName, ulong killerTeam, ELimb limb, string itemName, float distance, out string message, bool broadcast = true)
@@ -1178,13 +1178,13 @@ namespace UncreatedWarfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || UnturnedThreadedColoredConsole.I == null || UnturnedThreadedColoredConsole.I.console == null)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
                 {
                     CommandWindow.Log(info);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.console.AddLine(info, color);
+                    UnturnedThreadedColoredConsole.I.AddLine(info, color);
                     UnturnedLog.info($"[IN] {info}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = info, RCON = true, Severity = Rocket.Core.Logging.ELogType.Info });
                 }
@@ -1198,13 +1198,13 @@ namespace UncreatedWarfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || UnturnedThreadedColoredConsole.I == null || UnturnedThreadedColoredConsole.I.console == null)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
                 {
                     CommandWindow.LogWarning(warning);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.console.AddLine(warning, color);
+                    UnturnedThreadedColoredConsole.I.AddLine(warning, color);
                     UnturnedLog.warn($"[WA] {warning}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = warning, RCON = true, Severity = Rocket.Core.Logging.ELogType.Warning });
                 }
@@ -1219,13 +1219,13 @@ namespace UncreatedWarfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || UnturnedThreadedColoredConsole.I == null || UnturnedThreadedColoredConsole.I.console == null)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
                 {
                     CommandWindow.LogError(error);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.console.AddLine(error, color);
+                    UnturnedThreadedColoredConsole.I.AddLine(error, color);
                     UnturnedLog.warn($"[ER] {error}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = error, RCON = true, Severity = Rocket.Core.Logging.ELogType.Error });
                 }
@@ -1244,13 +1244,13 @@ namespace UncreatedWarfare
             string message = $"EXCEPTION \n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || UnturnedThreadedColoredConsole.I == null || UnturnedThreadedColoredConsole.I.console == null)
+                if (!UCWarfare.Config.UseColoredConsoleModule || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
                 {
                     CommandWindow.LogError(message);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.console.AddLine(message, color);
+                    UnturnedThreadedColoredConsole.I.AddLine(message, color);
                     UnturnedLog.warn($"[EX] {ex.Message}");
                     UnturnedLog.warn($"[ST] {ex.StackTrace}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = message, RCON = true, Severity = Rocket.Core.Logging.ELogType.Exception });

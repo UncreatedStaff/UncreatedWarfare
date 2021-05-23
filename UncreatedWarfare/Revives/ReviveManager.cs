@@ -19,29 +19,45 @@ namespace UncreatedWarfare.Revives
 
             DamageTool.damagePlayerRequested += OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerUpdateStance += OnStanceChanged;
+            PlayerStance.OnStanceChanged_Global += OnStanceChanged;
             U.Events.OnPlayerConnected += OnPlayerConnected;
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
             foreach(SteamPlayer player in Provider.clients)
             {
+                player.player.stance.onStanceUpdated += delegate
+                {
+                    StanceUpdatedLocal(player);
+                };
+
                 player.player.equipment.onEquipRequested += OnEquipRequested;
             }
         }
+
+
         private void OnPlayerConnected(UnturnedPlayer player)
         {
             player.Player.equipment.onEquipRequested += OnEquipRequested;
+            player.Player.stance.onStanceUpdated += delegate
+            {
+                StanceUpdatedLocal(player.Player.channel.owner);
+            };
         }
         private void OnPlayerDisconnected(UnturnedPlayer player)
         {
             player.Player.equipment.onEquipRequested -= OnEquipRequested;
+            player.Player.stance.onStanceUpdated += delegate
+            {
+                StanceUpdatedLocal(player.Player.channel.owner);
+            };
         }
         private void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
+            F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString() + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
-                if (parameters.damage > parameters.player.life.health && parameters.damage < 100)
+                if (parameters.damage > parameters.player.life.health && parameters.damage < 100 && parameters.player.life.health > 0 && !parameters.player.life.isDead) // insta kills break this...
                 {
-                    F.Log(parameters.player.channel.owner.playerID.characterName + " was downed");
+                    F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
 
                     shouldAllow = false;
 
@@ -78,6 +94,7 @@ namespace UncreatedWarfare.Revives
         }
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
+            F.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
             player.Player.movement.sendPluginSpeedMultiplier(1);
             player.Player.movement.sendPluginJumpMultiplier(1);
             Reviver.TellStandDelayed(player.Player);
@@ -86,21 +103,26 @@ namespace UncreatedWarfare.Revives
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {
+            F.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
             if (DownedPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
             {   
                 shouldAllow = false;
             }
         }
-        private void OnStanceChanged(UnturnedPlayer player, byte stance)
+        private void OnStanceChanged(PlayerStance stance)
         {
-            F.Log(player.CharacterName + " tried to change stance");
-            if (DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
+            F.Log(stance.player.channel.owner.playerID.playerName + " tried to change stance.", ConsoleColor.DarkRed);
+            if (DownedPlayers.ContainsKey(stance.player.channel.owner.playerID.steamID.m_SteamID))
             {
-                if (player.Player.transform.TryGetComponent(out Reviver reviver))
+                if (stance.player.transform.TryGetComponent(out Reviver reviver))
                 {
                     reviver.TellProneDelayed();
                 }
             }
+        }
+        private void StanceUpdatedLocal(SteamPlayer player)
+        {
+            F.Log(player.playerID.playerName + " tried to change stance local function.", ConsoleColor.DarkRed);
         }
 
         public void Dispose()
@@ -113,13 +135,14 @@ namespace UncreatedWarfare.Revives
                     reviver.TellStandDelayed();
                 }
             }
-            foreach(SteamPlayer player in Provider.clients)
+            foreach (SteamPlayer player in Provider.clients)
             {
                 player.player.equipment.onEquipRequested -= OnEquipRequested;
+                player.player.stance.onStanceUpdated = null;
             }
             DamageTool.damagePlayerRequested -= OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerUpdateStance -= OnStanceChanged;
+            PlayerStance.OnStanceChanged_Global -= OnStanceChanged;
             U.Events.OnPlayerConnected -= OnPlayerConnected;
             U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
         }
@@ -138,6 +161,7 @@ namespace UncreatedWarfare.Revives
             {
                 yield return new WaitForSeconds(time);
                 Player.Player.stance.checkStance(stance, true);
+                F.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
             }
             public static void TellStandDelayed(Player player, float time = 0.5f)
             {
@@ -154,10 +178,13 @@ namespace UncreatedWarfare.Revives
             {
                 yield return new WaitForSeconds(10);
 
+                F.Log(Player.Player.channel.owner.playerID.playerName + " bled out or something.", ConsoleColor.DarkRed);
+                /*
                 if (reviveManager.DownedPlayers.ContainsKey(Player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
                     FinishKillingPlayer(reviveManager);
                 } // else player already died
+                */
             }
             public void FinishKillingPlayer(ReviveManager reviveManager)
             {

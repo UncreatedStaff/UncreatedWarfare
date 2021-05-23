@@ -130,8 +130,7 @@ namespace UncreatedWarfare.Stats
         {
             _client = new WebClientWithTimeout();
             _client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-            IAsyncResult r = PingAndSendAsync();
-            r.AsyncWaitHandle.WaitOne();
+            PingAndSendAsync();
         }
         public IAsyncResult PingAsync()
         {

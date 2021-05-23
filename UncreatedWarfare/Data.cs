@@ -45,6 +45,7 @@ namespace UncreatedWarfare
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
         public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
         public static KitManager KitManager;
+        public static VehicleSpawnSaver VehicleSpawnSaver;
         public static VehicleBay VehicleBay;
         public static FlagManager FlagManager;
         public static TeamManager TeamManager;

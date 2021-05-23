@@ -400,7 +400,7 @@ namespace UncreatedWarfare
             static bool ExplodeVehicle(InteractableVehicle __instance)
             {
                 if (!UCWarfare.Config.Patches.explode) return true;
-                if (!__instance.asset.isExplosive) return true;
+                if (!__instance.asset.ShouldExplosionCauseDamage) return true;
                 CSteamID instigator = CSteamID.Nil;
                 if (__instance.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
                 {

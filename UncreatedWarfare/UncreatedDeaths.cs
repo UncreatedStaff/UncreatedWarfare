@@ -359,16 +359,26 @@ namespace UncreatedWarfare
                 ushort item;
                 string itemName;
                 float distance = 0f;
+                bool translateName = false;
                 ulong killerTeam;
                 bool itemIsVehicle = cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL;
                 if (killer == null)
                 {
                     killer = dead.Player.channel.owner;
-                    killerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
+                    if(cause == EDeathCause.ZOMBIE)
+                    {
+                        killerName = new FPlayerName() { CharacterName = "zombie", PlayerName = "zombie", NickName = "zombie", Steam64 = 0 };
+                        killerTeam = TeamManager.ZombieTeamID;
+                        translateName = true;
+                    }
+                    else
+                    {
+                        killerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
+                        killerTeam = 0;
+                    }
                     foundKiller = false;
                     item = 0;
                     itemName = "Unknown";
-                    killerTeam = 0;
                 }
                 else
                 {
@@ -416,7 +426,6 @@ namespace UncreatedWarfare
                     else itemName = "Unknown";
                 }
                 string key = cause.ToString();
-                bool translateName = false;
                 if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
                 if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINCAMP")) key = "MAINCAMP";
                 if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL) && foundKiller)
@@ -453,13 +462,13 @@ namespace UncreatedWarfare
         private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
         {
             F.Log(key, ConsoleColor.Blue);
-            F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), F.GetTeam(dead), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
+            F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
         private void LogLandmineMessage(string key, Player dead, FPlayerName killerName, ulong killerGroup, ELimb limb, string landmineName, FPlayerName triggererName, ulong triggererTeam)
         {
             F.Log(key, ConsoleColor.Blue);
-            F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), F.GetTeam(dead), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
+            F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
     }

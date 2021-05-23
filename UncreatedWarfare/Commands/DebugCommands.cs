@@ -280,6 +280,31 @@ namespace UncreatedWarfare.Commands
                     {
                         player.SendChat("Could not find " + player.name + "'s PlaytimeComponent.", UCWarfare.GetColor("default"));
                     }
+                } else if (command[0] == "down")
+                {
+                    DamagePlayerParameters p = new DamagePlayerParameters()
+                    {
+                        applyGlobalArmorMultiplier = false,
+                        respectArmor = false,
+                        bleedingModifier = 0,
+                        bonesModifier = 0,
+                        cause = EDeathCause.KILL,
+                        damage = 99,
+                        direction = Vector3.down,
+                        killer = player.channel.owner.playerID.steamID,
+                        foodModifier = 0,
+                        hallucinationModifier = 0,
+                        limb = ELimb.SKULL,
+                        player = player,
+                        ragdollEffect = ERagdollEffect.GOLD,
+                        times = 1.0f,
+                        trackKill = false,
+                        virusModifier = 0,
+                        waterModifier = 0
+                    };
+                    DamageTool.damagePlayer(p, out _);
+                    DamageTool.damagePlayer(p, out _);
+                    player.SendChat("Applied 198 damage to player.", UCWarfare.GetColor("default"));
                 }
             }
         }

@@ -30,16 +30,14 @@ namespace UncreatedWarfare.Teams
 
         protected override string LoadDefaults()
         {
-            TeamConfig defaults = new TeamConfig
-            {
-            };
+            TeamConfig defaults = new TeamConfig();
 
             WriteSingleObject(defaults);
-
+            _data = defaults;
             return "";
         }
         public static ulong Team1ID { get => _data.Team1ID; }
-        public static ulong Team2ID { get => _data.Team1ID; }
+        public static ulong Team2ID { get => _data.Team2ID; }
         public static ulong AdminID { get => _data.AdminID; }
         public static string Team1Name { get => _data.Team1Name; }
         public static string Team2Name { get => _data.Team2Name; }
@@ -62,7 +60,7 @@ namespace UncreatedWarfare.Teams
                     return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[1]);
             } }
         public static Zone Team2Main { get {
-                if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(2))
+                if (Data.ExtraZones != default && Data.ExtraZones.ContainsKey(2))
                     return Data.ExtraZones[2];
                 else
                     return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[2]);
@@ -292,8 +290,6 @@ namespace UncreatedWarfare.Teams
                 else return "ffffff";
             }
         }
-        public MainBase Team1Main;
-        public MainBase Team2Main;
 
         public TeamConfig()
         {
@@ -306,8 +302,6 @@ namespace UncreatedWarfare.Teams
             Team1Code = "us";
             Team2Code = "ru";
             AdminCode = "ad";
-            Team1Main = new MainBase(0, 0, 0, 0);
-            Team2Main = new MainBase(0, 0, 0, 0);
         }
     }
 }

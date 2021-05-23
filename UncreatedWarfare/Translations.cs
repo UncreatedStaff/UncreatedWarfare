@@ -721,7 +721,7 @@ namespace UncreatedWarfare
             { "VEHICLE_UNKNOWNKILLER", "{0} blown up by a {3}." },
             { "VEHICLE_UNKNOWN_UNKNOWNKILLER", "{0} was blown up by a vehicle." },
             { "WATER", "{0} dehydrated." },
-            { "ZOMBIE", "{0} was killed by a zombie." },
+            { "ZOMBIE", "{0} was killed by {1}." },
             { "MAINCAMP", "{0} tried to main-camp {1} from {2} away and died." },
             { "38328", "{0} was blown up by a mortar by {1} from {4} away." },  // 81mm mortar turret item id
             { "38328_SUICIDE", "{0} blew themselves up with a mortar." },       // 81mm mortar turret item id

@@ -135,6 +135,7 @@ namespace UncreatedWarfare
             }
             if (Config.Modules.VehicleSpawning)
             {
+                Data.VehicleSpawnSaver = new VehicleSpawnSaver();
                 Data.VehicleBay = new VehicleBay();
             }
             if (Config.Modules.FOBs)
