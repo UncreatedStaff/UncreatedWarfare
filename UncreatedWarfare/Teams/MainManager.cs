@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace UncreatedWarfare.Teams
+namespace Uncreated.Warfare.Teams
 {
     public static class MainManager
     {

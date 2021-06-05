@@ -6,9 +6,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Vehicles;
+using Uncreated.Warfare.Vehicles;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public abstract class JSONSaver<T>
     {
@@ -31,7 +31,7 @@ namespace UncreatedWarfare
             }
         }
 
-        protected static void AddObjectToSave(T item)
+        protected static T AddObjectToSave(T item)
         {
             var list = GetExistingObjects();
             list.Add((T)item);
@@ -51,6 +51,7 @@ namespace UncreatedWarfare
                 writer.Close();
                 throw ex;
             }
+            return item;
         }
 
         protected static void RemoveFromSaveWhere(Predicate<T> match)

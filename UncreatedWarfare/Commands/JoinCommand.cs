@@ -8,9 +8,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Teams;
 
-namespace UncreatedWarfare.Commands
+namespace Uncreated.Warfare.Commands
 {
     public class JoinCommand : IRocketCommand
     {
@@ -51,7 +51,7 @@ namespace UncreatedWarfare.Commands
                                     t1name, TeamManager.Team1ColorHex);
                                 return;
                             }
-                            if(!TeamManager.CanJoinTeam(TeamManager.Team1ID))
+                            if(!TeamManager.CanJoinTeam(1))
                             {
                                 steamplayer.SendChat("join_auto_balance_cant_switch", UCWarfare.GetColor("join_auto_balance_cant_switch"),
                                     t1name, TeamManager.Team1ColorHex);
@@ -102,7 +102,7 @@ namespace UncreatedWarfare.Commands
                                     t2name, TeamManager.Team2ColorHex);
                                 return;
                             }
-                            if (!TeamManager.CanJoinTeam(TeamManager.Team2ID))
+                            if (!TeamManager.CanJoinTeam(2))
                             {
                                 steamplayer.SendChat("join_auto_balance_cant_switch", UCWarfare.GetColor("join_auto_balance_cant_switch"),
                                     t2name, TeamManager.Team2ColorHex);

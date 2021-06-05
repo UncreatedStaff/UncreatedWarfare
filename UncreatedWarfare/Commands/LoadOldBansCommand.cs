@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Commands
+namespace Uncreated.Warfare.Commands
 {
     class LoadCurrentBans : IRocketCommand
     {

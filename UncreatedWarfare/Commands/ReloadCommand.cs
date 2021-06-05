@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Commands
+namespace Uncreated.Warfare.Commands
 {
     public class ReloadCommand : IRocketCommand
     {
@@ -49,18 +49,18 @@ namespace UncreatedWarfare.Commands
                 }
             }
         }
-        void ReloadTranslations()
+        internal static void ReloadTranslations()
         {
             Data.LanguageAliases = JSONMethods.LoadLangAliases();
             Data.Languages = JSONMethods.LoadLanguagePreferences();
             Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            OnTranslationsReloaded?.Invoke(this, EventArgs.Empty);
+            OnTranslationsReloaded?.Invoke(null, EventArgs.Empty);
         }
-        void ReloadFlags()
+        internal static void ReloadFlags()
         {
             Data.FlagManager.StartNextGame();
-            OnFlagsReloaded?.Invoke(this, EventArgs.Empty);
+            OnFlagsReloaded?.Invoke(null, EventArgs.Empty);
         }
     }
 }

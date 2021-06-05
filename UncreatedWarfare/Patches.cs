@@ -10,20 +10,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Components;
+using Uncreated.Warfare.Components;
 using UnityEngine;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public static class Patches
     {
         public delegate void BarricadeDroppedEventArgs(BarricadeRegion region, BarricadeData data, ref Transform location);
         public delegate void BarricadeDestroyedEventArgs(BarricadeData data, uint instanceID);
         public delegate void BarricadeHealthEventArgs(BarricadeData data);
+        public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
+        public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
         public static event BarricadeHealthEventArgs BarricadeHealthChangedHandler;
+        public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
+        public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
 
         /// <summary>
         /// Stores all <see cref="Harmony"/> patches.
@@ -38,6 +42,35 @@ namespace UncreatedWarfare
                 harmony.PatchAll();
             }
 #pragma warning disable IDE0051
+            // SDG.Unturned.PlayerClothing
+            /// <summary>
+            /// Prefix of <see cref="PlayerClothing.ReceiveVisualToggleRequest(EVisualToggleType)"/> to use an event to cancel it.
+            /// </summary>
+            [HarmonyPatch(typeof(PlayerClothing), "ReceiveVisualToggleRequest")]
+            [HarmonyPrefix]
+            static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
+            {
+                if (!UCWarfare.Config.Patches.ReceiveVisualToggleRequest) return true;
+                EVisualToggleType newtype = type;
+                bool allow = true;
+                OnPlayerTogglesCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref allow);
+                return allow;
+            }
+            // SDG.Unturned.PlayerClothing
+            /// <summary>
+            /// Prefix of <see cref="PlayerClothing.ServerSetVisualToggleState(EVisualToggleType, bool)"/> to use an event to cancel it.
+            /// </summary>
+            [HarmonyPatch(typeof(PlayerClothing), "ServerSetVisualToggleState")]
+            [HarmonyPrefix]
+            static bool CancelCosmeticSetPrefix(EVisualToggleType type, ref bool isVisible, PlayerClothing __instance)
+            {
+                if (!UCWarfare.Config.Patches.ServerSetVisualToggleState) return true;
+                EVisualToggleType newtype = type;
+                bool allow = true;
+                OnPlayerSetsCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref isVisible, ref allow);
+                return allow;
+            }
+
             // SDG.Unturned.BarricadeManager
             /// <summary>
             /// Prefix of <see cref="BarricadeManager.ServerSetSignText(InteractableSign, string)"/> to set translation data of signs.
@@ -49,7 +82,14 @@ namespace UncreatedWarfare
                 if (!UCWarfare.Config.Patches.ServerSetSignTextInternal) return true;
                 if (trimmedText.StartsWith("sign_"))
                 {
-                    F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText);
+                    if(trimmedText.Length > 5)
+                    {
+                        if(Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
+                            F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText);
+                        else
+                            F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText);
+                    } else 
+                        F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText);
                     byte[] state = region.barricades[index].barricade.state;
                     byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
@@ -136,14 +176,23 @@ namespace UncreatedWarfare
                                 }
                                 else
                                 {
-                                    if (region.drops[index].interactable != null && region.drops[index].interactable.GetType() == typeof(InteractableSign))
+                                    if (region.drops[index].interactable != null && region.drops[index].interactable is InteractableSign sign)
                                     {
-                                        InteractableSign sign = region.drops[index].interactable as InteractableSign;
                                         string newtext = sign.text;
                                         if (newtext.StartsWith("sign_"))
-                                            newtext = F.Translate(newtext, client.playerID.steamID.m_SteamID);
+                                        {
+                                            newtext = F.TranslateSign(newtext, client.playerID.steamID.m_SteamID);
+                                            // size is not allowed in signs.
+                                            newtext.Replace("<size=", "");
+                                            newtext.Replace("</size>", "");
+                                        }
                                         byte[] state = region.barricades[index].barricade.state;
                                         byte[] bytes = Encoding.UTF8.GetBytes(newtext);
+                                        if (bytes.Length + 17 > byte.MaxValue)
+                                        {
+                                            F.LogError(sign.text + " sign translation is too long, must be <= 128 UTF8 bytes!");
+                                            bytes = Encoding.UTF8.GetBytes(sign.text);
+                                        }
                                         byte[] numArray1 = new byte[17 + bytes.Length];
                                         byte[] numArray2 = numArray1;
                                         Buffer.BlockCopy(state, 0, numArray2, 0, 16);
@@ -313,7 +362,7 @@ namespace UncreatedWarfare
             [HarmonyPrefix]
             static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding)
             {
-                if (!UCWarfare.Config.Patches.simulate) return true;
+                if (!UCWarfare.Config.Patches.simulatePlayerLife) return true;
                 if (Provider.isServer)
                 {
                     if (Level.info.type == ELevelType.SURVIVAL)
@@ -340,7 +389,7 @@ namespace UncreatedWarfare
             [HarmonyPostfix]
             static void SimulatePlayerLifePost(uint simulation, PlayerLife __instance, ref uint ___lastBleed, ref bool ____isBleeding)
             {
-                if (!UCWarfare.Config.Patches.simulate) return;
+                if (!UCWarfare.Config.Patches.simulatePlayerLife) return;
                 if (Provider.isServer)
                 {
                     if (Level.info.type == ELevelType.SURVIVAL)
@@ -364,7 +413,7 @@ namespace UncreatedWarfare
             [HarmonyPrefix]
             static bool DamageVehicle(InteractableVehicle vehicle, float damage, float times, bool canRepair, CSteamID instigatorSteamID, EDamageOrigin damageOrigin)
             {
-                if (!UCWarfare.Config.Patches.damage) return true;
+                if (!UCWarfare.Config.Patches.damageVehicleTool) return true;
                 if (vehicle == null || vehicle.asset == null || vehicle.isDead) return false;
                 if (!vehicle.asset.isVulnerable && !vehicle.asset.isVulnerableToExplosions && !vehicle.asset.isVulnerableToEnvironment)
                 {
@@ -399,7 +448,7 @@ namespace UncreatedWarfare
             [HarmonyPrefix]
             static bool ExplodeVehicle(InteractableVehicle __instance)
             {
-                if (!UCWarfare.Config.Patches.explode) return true;
+                if (!UCWarfare.Config.Patches.explodeInteractableVehicle) return true;
                 if (!__instance.asset.ShouldExplosionCauseDamage) return true;
                 CSteamID instigator = CSteamID.Nil;
                 if (__instance.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))

@@ -3,7 +3,7 @@ using Rocket.API;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public class Config : IRocketPluginConfiguration
     {
@@ -33,6 +33,7 @@ namespace UncreatedWarfare
         public float MaxMapHeight;
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
+        public bool AllowCosmetics;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -50,6 +51,7 @@ namespace UncreatedWarfare
             this.MaxMapHeight = 150;
             this.EndScreenUI = 10000;
             this.UseColoredConsoleModule = true;
+            this.AllowCosmetics = false;
         }
     }
     public class Modules
@@ -84,26 +86,34 @@ namespace UncreatedWarfare
     public class FlagSettings
     {
         public string NeutralColor;
-        public string CurrentGamePreset;
         public float PlayerCheckSpeedSeconds;
 
         public bool UseUI;
         public bool UseChat;
+        /// <summary>Alternative is level system.</summary>
+        public bool UseAutomaticLevelSensing;
         public ushort UIID;
+        public ushort FlagUIIdFirst;
         public string charactersForUI;
-
+        public bool EnablePlayerCount;
+        public bool ShowPointsOnUI;
+        public bool AllowPlayersToCaptureInVehicle;
+        public bool HideUnknownFlags;
         public int RequiredPlayerDifferenceToCapture;
         public FlagSettings()
         {
             this.NeutralColor = "ffffff";
-            this.CurrentGamePreset = "goose_bay";
             this.PlayerCheckSpeedSeconds = 0.25f;
-
+            this.UseAutomaticLevelSensing = true;
             this.UseUI = true;
             this.UseChat = false;
-            this.UIID = 32366;
+            this.UIID = 10001;
+            this.FlagUIIdFirst = 32351;
             this.charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
+            this.EnablePlayerCount = true;
+            this.ShowPointsOnUI = true;
+            this.HideUnknownFlags = true;
+            this.AllowPlayersToCaptureInVehicle = false;
             this.RequiredPlayerDifferenceToCapture = 2;
         }
     }
@@ -113,11 +123,13 @@ namespace UncreatedWarfare
         public bool ServerSetSignTextInternal;
         public bool dropBarricadeIntoRegionInternal;
         public bool destroyBarricade;
+        public bool ReceiveVisualToggleRequest;
         public bool sendHealthChanged;
+        public bool ServerSetVisualToggleState;
         /// <summary>
         /// On PlayerLife
         /// </summary>
-        public bool simulate;
+        public bool simulatePlayerLife;
         /// <summary>
         /// On landmine explosion.
         /// </summary>
@@ -129,11 +141,11 @@ namespace UncreatedWarfare
         /// <summary>
         /// On VehicleTool.damage(..) to add the last player that damaged the vehicle.
         /// </summary>
-        public bool damage;
+        public bool damageVehicleTool;
         /// <summary>
         /// On InteractableVehicle.explode() to add explosion to player's compoenent.
         /// </summary>
-        public bool explode;
+        public bool explodeInteractableVehicle;
         public bool outputToConsole;
 
         public PatchToggles()
@@ -142,13 +154,16 @@ namespace UncreatedWarfare
             this.ServerSetSignTextInternal = true;
             this.dropBarricadeIntoRegionInternal = true;
             this.destroyBarricade = true;
+            this.ReceiveVisualToggleRequest = true;
             this.sendHealthChanged = true;
-            this.simulate = true;
+            this.simulatePlayerLife = true;
+            this.ServerSetVisualToggleState = true;
             this.UseableTrapOnTriggerEnter = true;
             this.BumperOnTriggerEnter = true;
-            this.damage = true;
+            this.damageVehicleTool = true;
             this.outputToConsole = true;
         }
+
     }
     public class AdminLoggerSettings
     {
@@ -188,9 +203,12 @@ namespace UncreatedWarfare
         public string NJS_ServerURL;
         public string ServerName;
         public float StatUpdateFrequency;
+        public bool EnableListenServer;
+
         public PlayerStatsSettings()
         {
             this.EnablePlayerList = true;
+            this.EnableListenServer = true;
             this.NJS_ServerURL = "http://localhost:8080/";
             this.ServerName = "warfare";
             this.StatUpdateFrequency = 30.0f;

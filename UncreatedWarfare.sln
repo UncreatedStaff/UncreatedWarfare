@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UncreatedWarfare", "UncreatedWarfare\UncreatedWarfare.csproj", "{D152471B-6551-476C-9C44-063D6D803FCC}"
 EndProject
-Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "C:\SteamCMD\unturned\Unturned.exe", "{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8062F4B6-CF10-4BFC-AAE1-F633B0AD45CE}"
+EndProject
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\..\..\SteamCMD\unturned\Unturned.exe", "{2E799678-C219-45F2-940A-04662559D6DB}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
 		Executable = C:\SteamCMD\unturned\Unturned.exe
@@ -19,8 +21,6 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "C:\SteamCMD\unt
 		AttachLaunchAction = No
 		IORedirection = Auto
 	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8062F4B6-CF10-4BFC-AAE1-F633B0AD45CE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,10 +38,10 @@ Global
 		{D152471B-6551-476C-9C44-063D6D803FCC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D152471B-6551-476C-9C44-063D6D803FCC}.Release|x64.ActiveCfg = Release|Any CPU
 		{D152471B-6551-476C-9C44-063D6D803FCC}.Release|x64.Build.0 = Release|Any CPU
-		{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}.Debug|Any CPU.ActiveCfg = Release|x64
-		{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}.Debug|x64.ActiveCfg = Release|x64
-		{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}.Release|Any CPU.ActiveCfg = Release|x64
-		{71EB01AC-9AFD-4AA8-82E5-81963E9C3D83}.Release|x64.ActiveCfg = Release|x64
+		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|Any CPU.ActiveCfg = Release|x64
+		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|x64.ActiveCfg = Release|x64
+		{2E799678-C219-45F2-940A-04662559D6DB}.Release|Any CPU.ActiveCfg = Release|x64
+		{2E799678-C219-45F2-940A-04662559D6DB}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

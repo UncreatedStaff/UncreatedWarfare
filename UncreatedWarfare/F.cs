@@ -1,5 +1,4 @@
-﻿using ColoredConsolePatch;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Rocket.Core;
 using Rocket.Unturned.Player;
 using SDG.NetPak;
@@ -11,13 +10,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using UncreatedWarfare.Components;
-using UncreatedWarfare.Flags;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Flags;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Color = UnityEngine.Color;
+using System.Reflection;
+using Uncreated.Players;
+using Flag = Uncreated.Warfare.Flags.Flag;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public static class F
     {
@@ -179,7 +181,7 @@ namespace UncreatedWarfare
                 if (Data.Languages.ContainsKey(player))
                 {
                     lang = Data.Languages[player];
-                    if (!Data.Localization.ContainsKey(lang))
+                    if (!Data.Localization.ContainsKey(lang) || !Data.Localization[lang].ContainsKey(key))
                         lang = JSONMethods.DefaultLanguage;
                 }
                 if (!Data.Localization.ContainsKey(lang))
@@ -245,6 +247,7 @@ namespace UncreatedWarfare
         /// Max amount of bytes that can be sent in an Unturned Chat Message.
         /// </summary>
         const int MaxChatSizeAmount = 2047;
+
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
@@ -337,16 +340,17 @@ namespace UncreatedWarfare
         public static string S(this int number) => number == 1 ? "" : "s";
         public static string S(this float number) => number == 1 ? "" : "s";
         public static string S(this uint number) => number == 1 ? "" : "s";
-        public enum UIOption
+        public enum EFlagStatus
         {
-            Capturing,
-            Losing,
-            Secured,
-            Contested,
-            NoCap,
-            Clearing,
-            Blank,
-            NotOwned
+            CAPTURING,
+            LOSING,
+            SECURED,
+            CONTESTED,
+            NOT_OBJECTIVE,
+            CLEARING,
+            BLANK,
+            NOT_OWNED,
+            DONT_DISPLAY
         }
         public static Color GetTeamColor(this SteamPlayer player) => GetTeamColor(player.player.quests.groupID.m_SteamID);
         public static Color GetTeamColor(this Player player) => GetTeamColor(player.quests.groupID.m_SteamID);
@@ -365,6 +369,20 @@ namespace UncreatedWarfare
             else if (groupID == TeamManager.Team2ID) return TeamManager.Team2ColorHex;
             else if (groupID == TeamManager.AdminID) return TeamManager.AdminColorHex;
             else return TeamManager.NeutralColorHex;
+        }
+        public static string GetTeamNumberColorHex(this ulong team)
+        {
+            if (team == 1) return TeamManager.Team1ColorHex;
+            else if (team == 2) return TeamManager.Team2ColorHex;
+            else if (team == 3) return TeamManager.AdminColorHex;
+            else return TeamManager.NeutralColorHex;
+        }
+        public static Color GetTeamNumberColor(this ulong team)
+        {
+            if (team == 1) return TeamManager.Team1Color;
+            else if (team == 2) return TeamManager.Team2Color;
+            else if (team == 3) return TeamManager.AdminColor;
+            else return TeamManager.NeutralColor;
         }
         public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
@@ -386,97 +404,140 @@ namespace UncreatedWarfare
             else if (groupID == TeamManager.AdminID) return 3;
             else return 0;
         }
-        public static void UIOrChat(ulong team, UIOption type, string translation_key, Color color, SteamPlayer player, int circleAmount, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, bool sendChatOverride = false, object[] formatting = null)
-            => UIOrChat(team, type, translation_key, color, Provider.findTransportConnection(player.playerID.steamID), player, circleAmount, playerID, SendChatIfConfiged, SendUIIfConfiged, absolute, sendChatOverride, formatting);
-        public static void UIOrChat(ulong team, UIOption type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player, int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
-            bool absolute = true, bool sendChatOverride = false, object[] formatting = null)
+        public static void UIOrChat(FlagManager.SendUIParameters p, SteamPlayer player, ITransportConnection connection, ulong translationID) =>
+            UIOrChat(p.team, p.status, p.chatTranslation, p.chatColor, connection, player, p.points, translationID,
+                p.sendChat, p.sendUI, p.absoluteCap, p.overrideChatConfig, p.formatting, p.team1count, p.team2count);
+        public static void UIOrChat(ulong team, EFlagStatus type, string translation_key, Color color, SteamPlayer player, int circleAmount,
+            ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, bool sendChatOverride = false,
+            object[] formatting = null, int team1count = 0, int team2count = 0)
+            => UIOrChat(team, type, translation_key, color, Provider.findTransportConnection(player.playerID.steamID), player, circleAmount, playerID,
+                SendChatIfConfiged, SendUIIfConfiged, absolute, sendChatOverride, formatting, team1count, team2count);
+        public static void UIOrChat(ulong team, EFlagStatus type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player,
+            int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
+            bool absolute = true, bool sendChatOverride = false, object[] formatting = null, int team1count = 0, int team2count = 0)
         {
+            if (type == EFlagStatus.DONT_DISPLAY) return;
             int circleAmount = absolute ? Math.Abs(c) : c;
             if (UCWarfare.Config.FlagSettings.UseUI && SendUIIfConfiged)
             {
                 EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, PlayerConnection);
+                short key = (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue);
+                bool pts = UCWarfare.Config.FlagSettings.ShowPointsOnUI;
                 switch (type)
                 {
-                    case UIOption.Capturing:
+                    case EFlagStatus.CAPTURING:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1_words")}>{Translate("ui_capturing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("capturing_team_1")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1_words")}>{Translate("ui_capturing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("capturing_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2_words")}>{Translate("ui_capturing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("capturing_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2_words")}>{Translate("ui_capturing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("capturing_team_2_bkgr"));
                         break;
-                    case UIOption.Blank:
+                    default:
+                    case EFlagStatus.BLANK:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"",
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true, $"",
                                 $"<color=#{UCWarfare.GetColorHex("capturing_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(0)]}</color>", UCWarfare.GetColorHex("capturing_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true, $"",
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true, $"",
                                 $"<color=#{UCWarfare.GetColorHex("capturing_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(0)]}</color>", UCWarfare.GetColorHex("capturing_team_2_bkgr"));
                         break;
-                    case UIOption.Losing:
+                    case EFlagStatus.LOSING:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("losing_team_1_words")}>{Translate("ui_losing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("losing_team_1")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_1_words")}>{Translate("ui_losing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("losing_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("losing_team_2_words")}>{Translate("ui_losing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("losing_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_2_words")}>{Translate("ui_losing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("losing_team_2_bkgr"));
                         break;
-                    case UIOption.Secured:
+                    case EFlagStatus.SECURED:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("secured_team_1_words")}>{Translate("ui_secured", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("secured_team_1")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_1_words")}>{Translate("ui_secured", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("secured_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("secured_team_2_words")}>{Translate("ui_secured", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("secured_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_2_words")}>{Translate("ui_secured", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("secured_team_2_bkgr"));
                         break;
-                    case UIOption.Contested:
+                    case EFlagStatus.CONTESTED:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("contested_team_1_words")}>{Translate("ui_contested", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("contested_team_1")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_1_words")}>{Translate("ui_contested", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("contested_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("contested_team_2_words")}>{Translate("ui_contested", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("contested_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_2_words")}>{Translate("ui_contested", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("contested_team_2_bkgr"));
                         break;
-                    case UIOption.NoCap:
+                    case EFlagStatus.NOT_OBJECTIVE:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("nocap_team_1_words")}>{Translate("ui_nocap", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("nocap_team_1")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_1_words")}>{Translate("ui_nocap", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("nocap_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("nocap_team_2_words")}>{Translate("ui_nocap", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("nocap_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_2_words")}>{Translate("ui_nocap", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("nocap_team_2_bkgr"));
                         break;
-                    case UIOption.Clearing:
+                    case EFlagStatus.CLEARING:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("clearing_team_1_words")}>{Translate("ui_clearing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("clearing_team_1")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_1_words")}>{Translate("ui_clearing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_1")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("clearing_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("clearing_team_2_words")}>{Translate("ui_clearing", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("clearing_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_2_words")}>{Translate("ui_clearing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("clearing_team_2_bkgr"));
                         break;
-                    case UIOption.NotOwned:
+                    case EFlagStatus.NOT_OWNED:
                         if (team == TeamManager.Team1ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("notowned_team_1_words")}>{Translate("ui_notowned", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_1_words")}>{Translate("ui_notowned", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("notowned_team_1_bkgr"));
                         else if (team == TeamManager.Team2ID)
-                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, (short)(UCWarfare.Config.FlagSettings.UIID - short.MaxValue), PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2_words")}>{Translate("ui_notowned", playerID)}</color>", $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
+                            EffectManager.sendUIEffect(UCWarfare.Config.FlagSettings.UIID, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2_words")}>{Translate("ui_notowned", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
                                 $"{UCWarfare.Config.FlagSettings.charactersForUI[FlagManager.FromMax(circleAmount)]}</color>", UCWarfare.GetColorHex("notowned_team_2_bkgr"));
                         break;
+                }
+                if (team1count > 0 && UCWarfare.Config.FlagSettings.EnablePlayerCount)
+                {
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1CountIcon", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_1_icon")}>1</color>");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_1")}>{team1count}</color>");
+                } else
+                {
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1CountIcon", $"");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", $"");
+                }
+                if (team2count > 0 && UCWarfare.Config.FlagSettings.EnablePlayerCount)
+                {
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2CountIcon", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_2_icon")}>1</color>");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_2")}>{team2count}</color>");
+                } else
+                {
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2CountIcon", $"");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", $"");
                 }
             }
             if (sendChatOverride || (UCWarfare.Config.FlagSettings.UseChat && SendChatIfConfiged))
@@ -510,8 +571,7 @@ namespace UncreatedWarfare
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
-                newtext = Translate(text, client.playerID.steamID.m_SteamID);
-            Log("Invoking sign update for " + client.playerID.playerName + "\n" + text + " -> " + newtext, ConsoleColor.White);
+                newtext = TranslateSign(text, client.playerID.steamID.m_SteamID);
             Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
         }
         public static void InvokeSignUpdateForAll(byte x, byte y, ushort plant, ushort index, string text)
@@ -534,34 +594,40 @@ namespace UncreatedWarfare
                         playergroups.Add(JSONMethods.DefaultLanguage, new List<SteamPlayer> { client });
                 }
             }
-            Log("Invoking sign update for " + Provider.clients.Count + " player" + S(Provider.clients.Count) + ": \n" + text, ConsoleColor.White);
             foreach (KeyValuePair<string, List<SteamPlayer>> languageGroup in playergroups)
             {
                 if (languageGroup.Value.Count > 0)
                 {
                     string newtext = text;
                     if (text.StartsWith("sign_"))
-                        newtext = Translate(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
+                        newtext = TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
                     List<ITransportConnection> connections = new List<ITransportConnection>();
                     languageGroup.Value.ForEach(l => connections.Add(l.transportConnection));
                     Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, connections, x, y, plant, index, newtext);
                 }
             }
         }
+        /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
+        public static void InvokeSignUpdateForAllKits(byte x, byte y, ushort plant, ushort index, string text)
+        {
+            foreach (SteamPlayer player in Provider.clients)
+            {
+                string newtext = text;
+                if (text.StartsWith("sign_"))
+                    newtext = TranslateSign(text, player.playerID.steamID.m_SteamID);
+                Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, player.transportConnection, x, y, plant, index, newtext);
+            }
+        }
         public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
         {
             string newtext;
-            string oldtext = text;
             if (!changeText)
             {
                 newtext = GetSignText(index, region);
-                oldtext = newtext;
             }
             else newtext = text;
-            Log("Invoking sign update for " + client.playerID.playerName + "\n" + newtext, ConsoleColor.White);
             if (newtext.StartsWith("sign_"))
-                newtext = Translate(newtext ?? "", client.playerID.steamID.m_SteamID);
-            Log("Translated \"" + (changeText ? text : oldtext) + "\" -> \"" + newtext + '\"', ConsoleColor.White);
+                newtext = TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID);
             Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
         }
         public static string GetSignText(ushort index, BarricadeRegion region)
@@ -572,7 +638,7 @@ namespace UncreatedWarfare
         }
         public static string GetSignText(Transform transform)
         {
-            if (BarricadeManager.tryGetInfo(transform, out byte _, out byte _, out ushort _, out ushort index, out BarricadeRegion region))
+            if (BarricadeManager.tryGetInfo(transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
                 return GetSignText(index, region);
             else return string.Empty;
         }
@@ -598,8 +664,8 @@ namespace UncreatedWarfare
         }
         public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
         {
-            if (source.Length == 0 || replaceIf.Length == 0 || replaceIf == null || replaceWith == null) return source;
             if (source == null) return null;
+            if (replaceIf == null || replaceWith == null || source.Length == 0 || replaceIf.Length == 0) return source;
             char[] chars = source.ToCharArray();
             char[] lowerchars = source.ToLower().ToCharArray();
             char[] replaceIfChars = replaceIf.ToLower().ToCharArray();
@@ -627,6 +693,37 @@ namespace UncreatedWarfare
             }
             return newString.ToString();
         }
+        public static string RemoveMany(this string source, bool caseSensitive, params char[] replacables)
+        {
+            if (source == null) return null;
+            if (replacables.Length == 0) return source;
+            char[] chars = source.ToCharArray();
+            char[] lowerchars = caseSensitive ? chars : source.ToLower().ToCharArray();
+            char[] lowerrepls;
+            if (!caseSensitive)
+            {
+                lowerrepls = new char[replacables.Length];
+                for (int i = 0; i < replacables.Length; i++)
+                {
+                    lowerrepls[i] = char.ToLower(replacables[i]);
+                }
+            }
+            else lowerrepls = replacables;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                bool found = false;
+                for (int c = 0; c < lowerrepls.Length; c++)
+                {
+                    if (lowerrepls[c] == lowerchars[i])
+                    {
+                        found = true;
+                    }
+                }
+                if (!found) sb.Append(chars[i]);
+            }
+            return sb.ToString();
+        }
         public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 Position)
         {
             TriggerEffectParameters p = new TriggerEffectParameters(ID)
@@ -651,8 +748,9 @@ namespace UncreatedWarfare
             catch { return false; }
         }
         // https://answers.unity.com/questions/244417/create-line-on-a-texture.html
-        public static void DrawLine(Texture2D texture, Line line, Color color, bool apply = true)
+        public static void DrawLine(Texture2D texture, Line line, Color color, bool apply = true, float thickness = 1)
         {
+            if (thickness == 0) return;
             Vector2 point1 = new Vector2(line.pt1.x + texture.width / 2, line.pt1.y + texture.height / 2);
             Vector2 point2 = new Vector2(line.pt2.x + texture.width / 2, line.pt2.y + texture.height / 2);
             Vector2 t = point1;
@@ -663,23 +761,61 @@ namespace UncreatedWarfare
             {
                 t = Vector2.Lerp(point1, point2, ctr);
                 ctr += frac;
-                texture.SetPixel((int)t.x, (int)t.y, color);
+                texture.SetPixelClamp((int)t.x, (int)t.y, color);
+                if(thickness > 1)
+                {
+                    float distance = thickness / 2f;
+                    for(float i = -distance; i <= distance; i += 0.5f)
+                        texture.SetPixelClamp(Mathf.RoundToInt(t.x + i), Mathf.RoundToInt(t.y + i), color);
+                }
             }
             if (apply)
                 texture.Apply();
         }
         // https://stackoverflow.com/questions/30410317/how-to-draw-circle-on-texture-in-unity
-        public static void DrawCircle(Texture2D texture, float x, float y, float radius, Color color, bool apply = true)
+        public static void FillCircle(Texture2D texture, float x, float y, float radius, Color color, bool apply = true)
         {
             float rSquared = radius * radius;
 
             for (float u = x - radius; u < x + radius + 1; u++)
                 for (float v = y - radius; v < y + radius + 1; v++)
                     if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
-                        texture.SetPixel((int)Math.Round(u), (int)Math.Round(v), color);
+                        texture.SetPixelClamp((int)Math.Round(u), (int)Math.Round(v), color);
             if (apply)
                 texture.Apply();
         }
+        public static void SetPixelClamp(this Texture2D texture, int x, int y, Color color)
+        {
+            if (x <= texture.width && x >= 0 && y <= texture.height && y >= 0) texture.SetPixel(x, y, color);
+        }
+        public static void DrawCircle(Texture2D texture, float x, float y, float radius, Color color, float thickness = 1, bool apply = true, bool drawLineToOutside = false, float polygonResolutionScale = 1f)
+        {
+            if (thickness == 0) return;
+            float sides_radians = (Mathf.PI / 180) * polygonResolutionScale;
+            float increment = (Mathf.PI * 2) * sides_radians;
+            int x1 = 0;
+            int y1 = 0;            
+            int x2 = 0;
+            int y2 = 0;
+            x1 = Mathf.RoundToInt(x + radius);
+            y1 = Mathf.RoundToInt(y);
+            for (float r = 0; r < sides_radians; r += increment)
+            {
+                Vector2 p = GetPositionOnCircle(r, radius);
+                x2 = Mathf.RoundToInt(p.x + x);
+                y2 = Mathf.RoundToInt(p.y + y);
+                F.DrawLine(texture, new Line(new Vector2(x1, y1), new Vector2(x2, y2)), color, false, thickness);
+                x1 = x2;
+                y1 = y2;
+            }
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x + radius, y)), color, false, thickness);
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x - radius, y)), color, false, thickness);
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y + radius)), color, false, thickness);
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y - radius)), color, false, thickness);
+            if (apply)
+                texture.Apply();
+        }
+        public static Vector2 GetPositionOnCircle(float radians, float radius = 1) => new Vector2(Mathf.Cos(radians) * radius, Mathf.Sin(radians) * radius);
         public static Texture2D FlipVertical(Texture2D original)
         {
             Texture2D rtn = new Texture2D(original.width, original.height);
@@ -782,6 +918,118 @@ namespace UncreatedWarfare
             else return false;
         }
         public static bool IsOnFlag(this Player player) => Data.FlagManager.FlagRotation.Exists(F => F.ZoneData.IsInside(player.transform.position));
+        public static string TranslateSign(string key, ulong player, params object[] formatting)
+        {
+            string norm = Translate(key, player, formatting);
+            if (!key.StartsWith("sign_") || norm != key) return norm;
+            if (key.Length <= 5) return key;
+            string kitname = key.Substring(5);
+            if (Kits.KitManager.KitExists(kitname, out Kits.Kit kit))
+            {
+                string pricestring;
+                string pricecolor;
+                if(kit.IsPremium)
+                {
+                    if (kit.PremiumCost != 0)
+                    {
+                        pricecolor = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_price_credits"))
+                            : UCWarfare.GetColorHex("kit_price_dollars");
+                        pricestring = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? Translate("kit_owned", player) : Translate("kit_price_credits", player, kit.Cost))
+                            : Translate("kit_price_dollars", player, kit.PremiumCost);
+                    }
+                    else if (kit.Cost == 0)
+                    {
+                        pricestring = Translate("kit_free", player);
+                        pricecolor = UCWarfare.GetColorHex("kit_price_free");
+                    }
+                    else
+                    {
+                        pricestring = Translate("kit_price_credits", player, kit.Cost);
+                        pricecolor = UCWarfare.GetColorHex("kit_price_credits");
+                    }
+                }
+                else if (kit.Cost == 0)
+                {
+                    pricestring = Translate("kit_free", player);
+                    pricecolor = UCWarfare.GetColorHex("kit_price_free");
+                }
+                else
+                {
+                    pricestring = Translate("kit_price_credits", player, kit.Cost);
+                    pricecolor = UCWarfare.GetColorHex("kit_price_credits");
+                }
+                formatting = new object[3] { GetTeamNumberColorHex(kit.Team), pricestring, pricecolor };
+                if (player == 0)
+                {
+                    if (!kit.SignTexts.ContainsKey(JSONMethods.DefaultLanguage))
+                    {
+                        if (kit.SignTexts.Count > 0)
+                        {
+                            try
+                            {
+                                return string.Format(kit.SignTexts.ElementAt(0).Value, formatting);
+                            }
+                            catch (FormatException ex)
+                            {
+                                LogError(ex);
+                                return kit.SignTexts.ElementAt(0).Value + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            return string.Format(kit.SignTexts[JSONMethods.DefaultLanguage], formatting);
+                        }
+                        catch (FormatException ex)
+                        {
+                            F.LogError(ex);
+                            return kit.SignTexts[JSONMethods.DefaultLanguage] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                } else
+                {
+                    string lang = JSONMethods.DefaultLanguage;
+                    if (Data.Languages.ContainsKey(player))
+                    {
+                        lang = Data.Languages[player];
+                        if (!kit.SignTexts.ContainsKey(lang))
+                            lang = JSONMethods.DefaultLanguage;
+                    }
+                    if (!kit.SignTexts.ContainsKey(lang))
+                    {
+                        if (kit.SignTexts.Count > 0)
+                        {
+                            try
+                            {
+                                return string.Format(kit.SignTexts.ElementAt(0).Value, formatting);
+                            }
+                            catch (FormatException ex)
+                            {
+                                LogError(ex);
+                                return kit.SignTexts.ElementAt(0).Value + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            return string.Format(kit.SignTexts[lang], formatting);
+                        }
+                        catch (FormatException ex)
+                        {
+                            LogError(ex);
+                            return kit.SignTexts[lang] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                }
+            }
+            else return key;
+        }
         public static string TranslateLimb(ulong player, ELimb limb)
         {
             if (player == 0)
@@ -813,7 +1061,7 @@ namespace UncreatedWarfare
                 if (Data.Languages.ContainsKey(player))
                 {
                     lang = Data.Languages[player];
-                    if (!Data.LimbLocalization.ContainsKey(lang))
+                    if (!Data.LimbLocalization.ContainsKey(lang) || !Data.LimbLocalization[lang].ContainsKey(limb))
                         lang = JSONMethods.DefaultLanguage;
                 }
                 if (!Data.LimbLocalization.ContainsKey(lang))
@@ -912,7 +1160,7 @@ namespace UncreatedWarfare
                 if (Data.Languages.ContainsKey(player))
                 {
                     lang = Data.Languages[player];
-                    if (!Data.DeathLocalization.ContainsKey(lang))
+                    if (!Data.DeathLocalization.ContainsKey(lang) || !Data.DeathLocalization[lang].ContainsKey(key))
                         lang = JSONMethods.DefaultLanguage;
                 }
                 if (!Data.DeathLocalization.ContainsKey(lang))
@@ -1026,10 +1274,8 @@ namespace UncreatedWarfare
                 string lang = JSONMethods.DefaultLanguage;
                 if (Data.Languages.ContainsKey(player))
                 {
-                    if (Data.DeathLocalization.ContainsKey(lang))
+                    if (Data.DeathLocalization.ContainsKey(lang) && Data.DeathLocalization[lang].ContainsKey(key))
                         lang = Data.Languages[player];
-                    else
-                        lang = JSONMethods.DefaultLanguage;
                 }
                 if (!Data.DeathLocalization.ContainsKey(lang))
                 {
@@ -1174,17 +1420,43 @@ namespace UncreatedWarfare
             }
             else success = true;
         }
+        public static void AddLine(string text, ConsoleColor color)
+        {
+            try
+            {
+                if (Data.AppendConsoleMethod != null && Data.defaultIOHandler != null)
+                {
+                    Data.AppendConsoleMethod.Invoke(Data.defaultIOHandler, new object[] { text, color });
+                }
+            }
+            catch
+            {
+                switch (color)
+                {
+                    case ConsoleColor.Gray:
+                    default:
+                        CommandWindow.Log(text);
+                        break;
+                    case ConsoleColor.Yellow:
+                        CommandWindow.LogWarning(text);
+                        break;
+                    case ConsoleColor.Red:
+                        CommandWindow.LogError(text);
+                        break;
+                }
+            }
+        }
         public static void Log(string info, ConsoleColor color = ConsoleColor.Gray)
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || Data.AppendConsoleMethod == default)
                 {
                     CommandWindow.Log(info);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.AddLine(info, color);
+                    AddLine(info, color);
                     UnturnedLog.info($"[IN] {info}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = info, RCON = true, Severity = Rocket.Core.Logging.ELogType.Info });
                 }
@@ -1198,13 +1470,13 @@ namespace UncreatedWarfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || Data.AppendConsoleMethod == default)
                 {
                     CommandWindow.LogWarning(warning);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.AddLine(warning, color);
+                    AddLine(warning, color);
                     UnturnedLog.warn($"[WA] {warning}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = warning, RCON = true, Severity = Rocket.Core.Logging.ELogType.Warning });
                 }
@@ -1219,13 +1491,13 @@ namespace UncreatedWarfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.AppendConsoleMethod == default)
                 {
                     CommandWindow.LogError(error);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.AddLine(error, color);
+                    AddLine(error, color);
                     UnturnedLog.warn($"[ER] {error}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = error, RCON = true, Severity = Rocket.Core.Logging.ELogType.Error });
                 }
@@ -1244,13 +1516,13 @@ namespace UncreatedWarfare
             string message = $"EXCEPTION \n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || UnturnedThreadedColoredConsole.I == null || !UnturnedThreadedColoredConsole.I.IsReady)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.AppendConsoleMethod == default)
                 {
                     CommandWindow.LogError(message);
                 }
                 else
                 {
-                    UnturnedThreadedColoredConsole.I.AddLine(message, color);
+                    AddLine(message, color);
                     UnturnedLog.warn($"[EX] {ex.Message}");
                     UnturnedLog.warn($"[ST] {ex.StackTrace}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = message, RCON = true, Severity = Rocket.Core.Logging.ELogType.Exception });
@@ -1260,6 +1532,115 @@ namespace UncreatedWarfare
             {
                 CommandWindow.LogError($"{message}\nEXCEPTION LOGGING \n\n{ex2.Message}\n{ex2.StackTrace}\n\nFINISHED");
             }
+        }
+        public static string GetKitDisplayName(string kitname)
+        {
+            List<Kits.Kit> kits = Kits.KitManager.GetKitsWhere(x => x.Name == kitname);
+            if (kits.Count > 0) return kits[0].DisplayName;
+            else return kitname;
+        }
+        public static float GetDistanceFromClosestObjective(Vector3 position, out Flag objective, bool includeOutOfRotation = false) => Mathf.Sqrt(GetSqrDistanceFromClosestObjective(position, out objective, includeOutOfRotation));
+        public static float GetSqrDistanceFromClosestObjective(Vector3 position, out Flag objective, bool includeOutOfRotation = false)
+        {
+            Vector2 position2d = new Vector2(position.x, position.z);
+            Flag closestFlag = default;
+            float? closestSqrDistance = default;
+            foreach(Flag flag in includeOutOfRotation ? Data.FlagManager.AllFlags : Data.FlagManager.FlagRotation)
+            {
+                float distance = (flag.Position2D - position2d).sqrMagnitude;
+                if (!closestSqrDistance.HasValue) 
+                {
+                    closestFlag = flag;
+                    closestSqrDistance = distance;
+                }
+                else if (distance < closestSqrDistance)
+                {
+                    closestFlag = flag;
+                    closestSqrDistance = distance;
+                }
+            }
+            if (closestSqrDistance.HasValue)
+            {
+                objective = closestFlag;
+                return closestSqrDistance.Value;
+            }
+            else 
+            {
+                objective = default;
+                return float.NaN;
+            }
+        }
+        public static bool IsOnFlag(Player player, out Flag flag)
+        {
+            if(Data.FlagManager.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
+            {
+                flag = Data.FlagManager.FlagRotation.FirstOrDefault(x => x.ID == Data.FlagManager.OnFlag[player.channel.owner.playerID.steamID.m_SteamID]);
+                return flag != default;
+            } else
+            {
+                flag = default;
+                return false;
+            }
+        }
+        /// <summary>Dimensions controlled by <see cref="Stats.Playstyle.GRID_SIZE"/>.</summary>
+        public static Vector2 RoundLocationToGrid(Vector3 position) 
+        {
+            float gridSquareSize = Level.size / Stats.Playstyle.GRID_SIZE;
+            return new Vector2(Mathf.Floor(position.x / gridSquareSize) * gridSquareSize, Mathf.Floor(position.z / gridSquareSize) * gridSquareSize);
+        }
+        public static UncreatedPlayer GetPlayerStats(ulong player) => Data.Online.FirstOrDefault(x => x.steam_id == player) ?? UncreatedPlayer.Load(player);
+        public static void AddPlayerStatsAndLogIn(ulong id)
+        {
+            UncreatedPlayer player = Data.Online.FirstOrDefault(x => x.steam_id == id);
+            if (player == default)
+                Data.Online.Add(UncreatedPlayer.Load(id));
+            else
+            {
+                if (player != default && player.player.getIPv4Address(out uint ip))
+                {
+                    if (player.addresses == default) player.addresses = new Addresses();
+                    player.addresses.LogIn(Parser.getIPFromUInt32(ip));
+                }
+            }
+        }
+        /// <summary>Ineffecient</summary>
+        public static bool IsFlag(this Zone zone)
+        {
+            return Data.FlagManager.AllFlags.Exists(f => zone.data == f.ZoneData.data);
+        }
+        public static bool Between<T>(this T number, T highBound, T lowBound, bool inclusiveHigh = true, bool inclusiveLow = false) where T : IComparable
+        {
+            int high = number.CompareTo(highBound);
+            int low = number.CompareTo(lowBound);
+            return (low == 1 || (inclusiveLow && low == 0)) && (high == -1 || (inclusiveHigh && high == 0));
+        }
+        public static uint GetCredits(this Player player)
+        {
+            return 0;
+        }
+        public static void ChangeCredits(this Player player, int change)
+        {
+            return;
+        }
+        public static string GetClosestNode(this Vector3 position)
+        {
+            if (!Level.isLoaded) return string.Empty;
+            float? smallest = null;
+            int index = 0;
+            for(int i = 0; i < LevelNodes.nodes.Count; i++)
+            {
+                float distance = (position - LevelNodes.nodes[i].point).sqrMagnitude;
+                if (LevelNodes.nodes[i] is LocationNode)
+                {
+                    if (!smallest.HasValue || distance < smallest)
+                    {
+                        index = i;
+                        smallest = distance;
+                    }
+                }
+            }
+            if (LevelNodes.nodes[index] is LocationNode name) return name.name;
+            else return string.Empty;
         }
     }
 }

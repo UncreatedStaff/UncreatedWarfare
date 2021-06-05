@@ -1,4 +1,5 @@
-﻿using Rocket.Unturned.Player;
+﻿using Newtonsoft.Json;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -6,21 +7,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Teams;
 
-namespace UncreatedWarfare.Kits
+namespace Uncreated.Warfare.Kits
 {
     public class KitManager : JSONSaver<Kit>
     {
-        
-
-        public KitManager()
-            : base(Data.KitsStorage + "kits.json")
+        public KitManager() : base(Data.KitsStorage + "kits.json") { }
+        protected override string LoadDefaults() 
         {
-            
+            if (JSONMethods.DefaultKits != default)
+                return JsonConvert.SerializeObject(JSONMethods.DefaultKits, Formatting.Indented);
+            else return "[]";
         }
-
-        protected override string LoadDefaults() => "[]";
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public static void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public static void DeleteAllKits() => RemoveAllObjectsFromSave();
@@ -366,11 +365,15 @@ namespace UncreatedWarfare.Kits
         public ushort RequiredLevel;
         public ushort TicketCost;
         public bool IsPremium;
+        public float PremiumCost;
         public bool ShouldClearInventory;
         public List<KitItem> Items;
         public List<KitClothing> Clothes;
         public List<ulong> AllowedUsers { get; protected set; }
-
+        /// <summary>
+        /// {0} = Kit name color (team color), {1} = price, {2} = price color
+        /// </summary>
+        public Dictionary<string, string> SignTexts;
         public Kit(string name, List<KitItem> items, List<KitClothing> clothes)
         {
             Name = name;
@@ -383,7 +386,10 @@ namespace UncreatedWarfare.Kits
             RequiredLevel = 0;
             TicketCost = 0;
             IsPremium = false;
+            PremiumCost = 0;
             ShouldClearInventory = true;
+            AllowedUsers = new List<ulong>();
+            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, name } };
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
 
@@ -417,7 +423,7 @@ namespace UncreatedWarfare.Kits
             PILOT
         }
 
-         public enum EKitProperty
+        public enum EKitProperty
         {
             CLASS,
             BRANCH,

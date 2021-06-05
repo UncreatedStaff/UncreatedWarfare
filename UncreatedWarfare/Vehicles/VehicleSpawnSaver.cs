@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Vehicles
+namespace Uncreated.Warfare.Vehicles
 {
     public class VehicleSpawnSaver : JSONSaver<VehicleSpawn>
     {

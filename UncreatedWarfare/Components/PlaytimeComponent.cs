@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using UncreatedWarfare.Stats;
+using Uncreated.Warfare.Stats;
 
-namespace UncreatedWarfare.Components
+namespace Uncreated.Warfare.Components
 {
     public struct LandmineDataForPostAccess
     {

@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Kits;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 
-namespace UncreatedWarfare.Squads
+namespace Uncreated.Warfare.Squads
 {
     public class SquadManager
     {

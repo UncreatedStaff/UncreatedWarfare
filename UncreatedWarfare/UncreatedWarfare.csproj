@@ -23,12 +23,15 @@
     <PackageTags>Plugin</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <RootNamespace>Uncreated.Warfare</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Command_blank.txt" />
@@ -39,9 +42,6 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="ColoredConsolePatch">
-      <HintPath>..\..\..\..\Desktop\SteamCMD\steamapps\common\U3DS\Modules\ColoredConsolePatch\ColoredConsolePatch.dll</HintPath>
     </Reference>
     <Reference Include="Rocket.API">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.API.dll</HintPath>

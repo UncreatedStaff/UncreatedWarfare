@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using UncreatedWarfare.Flags;
+using Uncreated.Warfare.Flags;
 using SDG.NetTransport;
-using Flag = UncreatedWarfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Flags.Flag;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     partial class UCWarfare
     {
@@ -51,7 +51,7 @@ namespace UncreatedWarfare
                 
             } catch (Exception ex)
             {
-                F.LogError("ERROR IN DetectionCoroutine.cs: internal IEnumerator<WaitForSeconds> CheckPlayers():\n" + ex.ToString());
+                F.LogError("ERROR IN DetectionCoroutine.cs: CheckPlayers():\n" + ex.ToString());
             }
             yield return new WaitForSeconds(Config.FlagSettings.PlayerCheckSpeedSeconds);
             StartCoroutine(CheckPlayers());

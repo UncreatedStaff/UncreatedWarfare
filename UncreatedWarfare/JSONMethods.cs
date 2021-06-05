@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Flags;
+using Uncreated.Warfare.Flags;
 using System.IO;
 using UnityEngine;
 using SDG.Unturned;
-using FlagData = UncreatedWarfare.Flags.FlagData;
-using UncreatedWarfare.Teams;
-using Flag = UncreatedWarfare.Flags.Flag;
-using UncreatedWarfare.Stats;
+using FlagData = Uncreated.Warfare.Flags.FlagData;
+using Uncreated.Warfare.Teams;
+using Flag = Uncreated.Warfare.Flags.Flag;
+using Uncreated.Warfare.Stats;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public struct ColorData
     {
@@ -78,6 +78,119 @@ namespace UncreatedWarfare
             this.x = x;
             this.y = y;
             this.z = z;
+        }
+    }
+    public struct SerializableVector3
+    {
+        public float x;
+        public float y;
+        public float z;
+        [JsonIgnore]
+        public Vector3 Vector3 { 
+            get => new Vector3(x, y, z); 
+            set 
+            {
+                if (value == default)
+                {
+                    x = 0; y = 0; z = 0;
+                }
+                else
+                {
+                    x = value.x; y = value.y; z = value.z;
+                }
+            }
+        }
+        public static bool operator ==(SerializableVector3 a, SerializableVector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
+        public static bool operator ==(SerializableVector3 a, Vector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
+        public static bool operator !=(SerializableVector3 a, SerializableVector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
+        public static bool operator !=(SerializableVector3 a, Vector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
+        public override bool Equals(object obj)
+        {
+            if (obj == default) return false;
+            if (obj is SerializableVector3 v3)
+                return x == v3.x && y == v3.y && z == v3.z;
+            else if (obj is Vector3 uv3)
+                return x == uv3.x && y == uv3.y && z == uv3.z;
+            else return false;
+        }
+        public override int GetHashCode()
+        {
+            int hashCode = 373119288;
+            hashCode = hashCode * -1521134295 + x.GetHashCode();
+            hashCode = hashCode * -1521134295 + y.GetHashCode();
+            hashCode = hashCode * -1521134295 + z.GetHashCode();
+            return hashCode;
+        }
+        public SerializableVector3(Vector3 v)
+        {
+            if(v == default)
+            {
+                x = 0;
+                y = 0;
+                z = 0;
+            } else
+            {
+                x = v.x;
+                y = v.y;
+                z = v.z;
+            }
+        }
+        [JsonConstructor]
+        public SerializableVector3(float x, float y, float z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+    public struct SerializableTransform
+    {
+        public SerializableVector3 position;
+        public SerializableVector3 euler_angles;
+        [JsonIgnore]
+        public Quaternion Rotation { get => Quaternion.Euler(euler_angles.Vector3); }
+        [JsonIgnore]
+        public Vector3 Position { get => position.Vector3; }
+        public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.position == b.position && a.euler_angles == b.euler_angles;
+        public static bool operator ==(SerializableTransform a, Transform b) => a.position == b.position && a.euler_angles == b.eulerAngles;
+        public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.position != b.position || a.euler_angles != b.euler_angles;
+        public static bool operator !=(SerializableTransform a, Transform b) => a.position != b.position || a.euler_angles != b.eulerAngles;
+        public override bool Equals(object obj)
+        {
+            if (obj == default) return false;
+            if (obj is SerializableTransform t)
+                return position == t.position && euler_angles == t.euler_angles;
+            else if (obj is Transform ut)
+                return position == ut.position && euler_angles == ut.eulerAngles;
+            else return false;
+        }
+        public override int GetHashCode()
+        {
+            int hashCode = -1079335343;
+            hashCode = hashCode * -1521134295 + position.GetHashCode();
+            hashCode = hashCode * -1521134295 + euler_angles.GetHashCode();
+            return hashCode;
+        }
+        [JsonConstructor]
+        public SerializableTransform(SerializableVector3 position, SerializableVector3 euler_angles)
+        {
+            this.position = position;
+            this.euler_angles = euler_angles;
+        }
+        public SerializableTransform(Transform transform)
+        {
+            this.position = new SerializableVector3(transform.position);
+            this.euler_angles = new SerializableVector3(transform.rotation.eulerAngles);
+        }
+        public SerializableTransform(Vector3 position, Vector3 eulerAngles)
+        {
+            this.position = new SerializableVector3(position);
+            this.euler_angles = new SerializableVector3(eulerAngles);
+        }
+        public SerializableTransform(Vector3 position, Quaternion rotation)
+        {
+            this.position = new SerializableVector3(position);
+            this.euler_angles = new SerializableVector3(rotation.eulerAngles);
         }
     }
     public struct CreditsData
@@ -185,18 +298,18 @@ namespace UncreatedWarfare
     public static partial class JSONMethods
     {
         public const string DefaultLanguage = "en-us";
-        public static List<FlagData> ReadFlags(string Preset)
+        public static List<FlagData> ReadFlags()
         {
-            F.CheckDir(Data.FlagStorage + Preset + '\\', out bool madeFolder);
+            F.CheckDir(Data.FlagStorage, out bool madeFolder);
             if(madeFolder)
             {
-                if (!File.Exists(Data.FlagStorage + Preset + "\\flags.json"))
+                if (!File.Exists(Data.FlagStorage + "flags.json"))
                 {
-                    SaveFlags(DefaultFlags, Preset);
+                    SaveFlags(DefaultFlags);
                 } else
                 {
                     List<FlagData> Flags;
-                    using (StreamReader Reader = File.OpenText(Data.FlagStorage + Preset + "\\flags.json"))
+                    using (StreamReader Reader = File.OpenText(Data.FlagStorage + "flags.json"))
                     {
                         Flags = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd());
                         Reader.Close();
@@ -207,9 +320,9 @@ namespace UncreatedWarfare
             }
             return DefaultFlags;
         }
-        public static void SaveFlags(this List<FlagData> Flags, string Preset)
+        public static void SaveFlags(this List<FlagData> Flags)
         {
-            using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + Preset + "\\flags.json"))
+            using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + "flags.json"))
             {
                 using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                 {
@@ -222,25 +335,21 @@ namespace UncreatedWarfare
                 }
             }
         }
-        public static void AddFlag(this FlagData flag, string Preset)
+        public static void AddFlag(this FlagData flag)
         {
-            List<FlagData> Data = ReadFlags(Preset);
+            List<FlagData> Data = ReadFlags();
             Data.Add(flag);
-            Data.SaveFlags(Preset);
+            Data.SaveFlags();
         }
-        public static void RemoveFlag(this FlagData flag, string Preset)
+        public static void RemoveFlag(this FlagData flag)
         {
-            List<FlagData> Data = ReadFlags(Preset);
+            List<FlagData> Data = ReadFlags();
             Data.RemoveAll(x => x.id == flag.id);
-            Data.SaveFlags(Preset);
+            Data.SaveFlags();
         }
-        public static void ClearPreset(string Preset)
+        public static FlagData GetFlagInfo(int id)
         {
-            SaveFlags(new List<FlagData>(), Preset);
-        }
-        public static FlagData GetFlagInfo(int id, string Preset)
-        {
-            List<FlagData> Data = ReadFlags(Preset);
+            List<FlagData> Data = ReadFlags();
             return Data.FirstOrDefault(x => x.id == id);
         }
         public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
@@ -251,8 +360,7 @@ namespace UncreatedWarfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                         Serializer.Serialize(JsonWriter, DefaultColors);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -518,14 +626,14 @@ namespace UncreatedWarfare
             }
             return languages;
         }
-        public static Dictionary<int, Zone> LoadExtraZones(string Preset)
+        public static Dictionary<int, Zone> LoadExtraZones()
         {
-            F.CheckDir(Data.FlagStorage + Preset + '\\', out bool madeDir);
+            F.CheckDir(Data.FlagStorage, out bool madeDir);
             if(madeDir)
             {
-                if (!File.Exists(Data.FlagStorage + Preset + "\\extra_zones.json"))
+                if (!File.Exists(Data.FlagStorage + "extra_zones.json"))
                 {
-                    using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + Preset + "\\extra_zones.json"))
+                    using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + "extra_zones.json"))
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
@@ -543,7 +651,7 @@ namespace UncreatedWarfare
                     return NewDefaultZones;
                 }
                 List<FlagData> Zones;
-                using (StreamReader Reader = File.OpenText(Data.FlagStorage + Preset + "\\extra_zones.json"))
+                using (StreamReader Reader = File.OpenText(Data.FlagStorage + "extra_zones.json"))
                 {
                     Zones = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd());
                     Reader.Close();
@@ -569,14 +677,14 @@ namespace UncreatedWarfare
                 return NewDefaultZones;
             }
         }
-        public static Dictionary<string, Vector3> LoadExtraPoints(string Preset)
+        public static Dictionary<string, Vector3> LoadExtraPoints()
         {
-            F.CheckDir(Data.FlagStorage + Preset + '\\', out bool madeDirs);
+            F.CheckDir(Data.FlagStorage, out bool madeDirs);
             if(madeDirs)
             {
-                if (!File.Exists(Data.FlagStorage + Preset + "\\extra_points.json"))
+                if (!File.Exists(Data.FlagStorage + "extra_points.json"))
                 {
-                    using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + Preset + "\\extra_points.json"))
+                    using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + "extra_points.json"))
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
@@ -594,7 +702,7 @@ namespace UncreatedWarfare
                     return NewDefaultPoints;
                 }
                 List<Point3D> Points;
-                using (StreamReader Reader = File.OpenText(Data.FlagStorage + Preset + "\\extra_points.json"))
+                using (StreamReader Reader = File.OpenText(Data.FlagStorage + "extra_points.json"))
                 {
                     Points = JsonConvert.DeserializeObject<List<Point3D>>(Reader.ReadToEnd());
                     Reader.Close();

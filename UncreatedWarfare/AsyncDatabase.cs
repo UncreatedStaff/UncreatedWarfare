@@ -8,10 +8,14 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using UncreatedWarfare.Flags;
+using Uncreated.Players;
+using Uncreated.Warfare;
+using Uncreated.Warfare.Flags;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Data = Uncreated.Warfare.Data;
 
-namespace UncreatedWarfare
+namespace Uncreated.SQL
 {
     public class AsyncDatabase : IDisposable
     {
@@ -103,9 +107,9 @@ namespace UncreatedWarfare
 
         }
         private int overlayStep = 0;
-        public void CreateFlagTestAreaOverlay(Player player, List<Zone> zones)
+        public void CreateFlagTestAreaOverlay(Player player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool lockthreaduntildone = false, string filename = default)
         {
-            if(overlayStep == 0)
+            if(lockthreaduntildone)
             {
                 List<Zone> newZones = zones;
                 newZones.Sort(delegate (Zone a, Zone b)
@@ -121,24 +125,76 @@ namespace UncreatedWarfare
                         PointsToTest.Add(new Vector2(i, j));
                     }
                 }
-                UCWarfare.I.StartCoroutine(enumerator());
-                IEnumerator<WaitForSeconds> enumerator()
+                if (drawIsInTest)
                 {
-                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, overlayStep, out bool done);
-                    overlayStep++;
-                    yield return new WaitForSeconds(0.5f);
-                    if (!done)
-                        UCWarfare.I.StartCoroutine(enumerator());
-                    else
+                    int step = 0;
+                    bool done = false;
+                    while (!done)
                     {
-                        _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _);
-                        AsyncDatabaseCallbacks.PlayerReceivedZonesCallback(player);
-                        overlayStep = 0;
+                        _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, step, out done, filename);
+                        step++;
                     }
+                } else
+                {
+                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, 0, out _, filename);
                 }
+                if (drawrange)
+                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -3, out _, filename);
+                if (drawpath)
+                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
+                _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
+                AsyncDatabaseCallbacks.PlayerReceivedZonesCallback(player);
             } else
             {
-                player.SendChat("A player is already running this procedure, try again in a few minutes.", UCWarfare.GetColor("default"));
+                if (overlayStep == 0)
+                {
+                    List<Zone> newZones = zones;
+                    newZones.Sort(delegate (Zone a, Zone b)
+                    {
+                        return b.BoundsArea.CompareTo(a.BoundsArea);
+                    });
+                    Texture2D img = new Texture2D(Level.size, Level.size);
+                    List<Vector2> PointsToTest = new List<Vector2>();
+                    for (int i = -1 * img.width / 2; i < img.width / 2; i += 1)
+                    {
+                        for (int j = -1 * img.height / 2; j < img.height / 2; j += 1)
+                        {
+                            PointsToTest.Add(new Vector2(i, j));
+                        }
+                    }
+                    UCWarfare.I.StartCoroutine(enumerator());
+                    IEnumerator<WaitForSeconds> enumerator()
+                    {
+                        bool done = !drawIsInTest;
+                        if (drawIsInTest)
+                        {
+                            _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, overlayStep, out done, filename);
+                        }
+                        else if (overlayStep == 0)
+                        {
+                            _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, 0, out done, filename);
+                        }
+                        overlayStep++;
+                        yield return new WaitForSeconds(0.5f);
+                        if (!done)
+                            UCWarfare.I.StartCoroutine(enumerator());
+                        else
+                        {
+                            if (drawrange)
+                                _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -3, out _, filename);
+                            if (drawpath)
+                                _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
+                            _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
+                            AsyncDatabaseCallbacks.PlayerReceivedZonesCallback(player);
+                            overlayStep = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    if (player != default)
+                        player.SendChat("A player is already running this procedure, try again in a few minutes.", UCWarfare.GetColor("default"));
+                }
             }
         }
         public void GetUsernameAsync(ulong ID, DbCaller.D_UsernameReceived callback)
@@ -176,41 +232,6 @@ namespace UncreatedWarfare
     {
         QUERY,
         NONQUERY
-    }
-    public struct FPlayerName
-    {
-        public ulong Steam64;
-        public string PlayerName;
-        public string CharacterName;
-        public string NickName;
-        public FPlayerName(SteamPlayerID player)
-        {
-            this.PlayerName = player.playerName;
-            this.CharacterName = player.characterName;
-            this.NickName = player.nickName;
-            this.Steam64 = player.steamID.m_SteamID;
-        }
-        public FPlayerName(SteamPlayer player)
-        {
-            this.PlayerName = player.playerID.playerName;
-            this.CharacterName = player.playerID.characterName;
-            this.NickName = player.playerID.nickName;
-            this.Steam64 = player.playerID.steamID.m_SteamID;
-        }
-        public FPlayerName(UnturnedPlayer player)
-        {
-            this.PlayerName = player.Player.channel.owner.playerID.playerName;
-            this.CharacterName = player.Player.channel.owner.playerID.characterName;
-            this.NickName = player.Player.channel.owner.playerID.nickName;
-            this.Steam64 = player.Player.channel.owner.playerID.steamID.m_SteamID;
-        }
-        public FPlayerName(Player player)
-        {
-            this.PlayerName = player.channel.owner.playerID.playerName;
-            this.CharacterName = player.channel.owner.playerID.characterName;
-            this.NickName = player.channel.owner.playerID.nickName;
-            this.Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
-        }
     }
     public class DbCaller
     {
@@ -406,7 +427,7 @@ namespace UncreatedWarfare
         {
             IAsyncResult ar = DatabaseManager.CloseAsync(null);
             ar.AsyncWaitHandle.WaitOne();
-            Stats.WebCallbacks.Dispose(ar);
+            Warfare.Stats.WebCallbacks.Dispose(ar);
             DatabaseManager.SQL.Dispose();
         }
         internal void Close(AsyncDatabase DatabaseManager)
@@ -478,7 +499,7 @@ namespace UncreatedWarfare
             {
                 F.LogError("Failed to cast \"" + ar.AsyncState.GetType().ToString() + "\" to a valid delegate containing SQL information.");
             }
-            Stats.WebCallbacks.Dispose(ar);
+            Warfare.Stats.WebCallbacks.Dispose(ar);
         }
         private void WaitUntilFinishedReading(SQLCallStructure Data, AsyncCallback Function, out SQLCallStructure DataReturn, out AsyncCallback FunctionReturn, out Type TypeReturn)
         {
@@ -724,7 +745,7 @@ namespace UncreatedWarfare
             WaitUntilFinishedReadingDelegate caller = new WaitUntilFinishedReadingDelegate(WaitUntilFinishedReading);
             caller.BeginInvoke(Data, callback, out _, out _, out _, FinishedReading, caller);
         }
-        internal void SendPlayerZoneOverlay(Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete)
+        internal void SendPlayerZoneOverlay(Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename)
         {
             complete = false;
             F.Log("STEP " + step.ToString());
@@ -752,7 +773,7 @@ namespace UncreatedWarfare
                     else if (zone.GetType() == typeof(CircleZone))
                     {
                         CircleZone czone = (CircleZone)zone;
-                        F.DrawCircle(img, czone.InverseZone.Center.x + img.width / 2, czone.InverseZone.Center.y + img.height / 2, czone.CircleInverseZone.Radius, Color.black, false);
+                        F.FillCircle(img, czone.InverseZone.Center.x + img.width / 2, czone.InverseZone.Center.y + img.height / 2, czone.CircleInverseZone.Radius, Color.black, false);
                     }
                     else if (zone.GetType() == typeof(RectZone))
                     {
@@ -779,21 +800,40 @@ namespace UncreatedWarfare
                     {
                         if (zones[e].InverseZone.IsInside(new Vector2(PointsToTest[i].x, PointsToTest[i].y)))
                         {
-                            img.SetPixel((int)Math.Round(PointsToTest[i].x + img.width / 2), (int)Math.Round(PointsToTest[i].y + img.height / 2), zonecolor);
+                            img.SetPixelClamp((int)Math.Round(PointsToTest[i].x + img.width / 2), (int)Math.Round(PointsToTest[i].y + img.height / 2), zonecolor);
                         }
                     }
                 }
                 //player.SendChat("Completed step " + (step + 1).ToString(), UCWarfare.GetColor("default"));
                 img.Apply();
             }
-            else if (step == -1)
+            else if (step == -1) // finalizing image
             {
                 img.Apply();
                 Texture2D flipped = F.FlipVertical(img);
-                F.SavePhotoToDisk(Data.FlagStorage + "zonearea.png", flipped);
+                F.SavePhotoToDisk(Data.FlagStorage + (filename == default ? "zonearea.png" : filename + ".png"), flipped);
                 UnityEngine.Object.Destroy(flipped);
                 UnityEngine.Object.Destroy(img);
                 complete = true;
+            } else if (step == -2) // drawing path
+            {
+                for(int i = 0; i <= Data.FlagManager.FlagRotation.Count; i++)
+                {
+                    F.DrawLine(img, new Line(i == Data.FlagManager.FlagRotation.Count ? TeamManager.Team2Main.InverseZone.Center : Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center, 
+                        i == 0 ? TeamManager.Team1Main.InverseZone.Center : Data.FlagManager.FlagRotation[i - 1].ZoneData.InverseZone.Center), Color.cyan, false, 8);
+                }
+                img.Apply();
+            } else if (step == -3)
+            {
+                System.Random r = new System.Random();
+                for (int i = 0; i < Data.FlagManager.FlagRotation.Count; i++)
+                {
+                    Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
+                    F.DrawCircle(img, Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center.x, Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * Data.FlagManager.FlagRotation[i].ZoneData.CoordinateMultiplier, zonecolor, 5, false, true);
+                }
+                F.DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_RADIUS_SEARCH * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
+                F.DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_RADIUS_SEARCH * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
+                img.Apply();
             }
         }
     }

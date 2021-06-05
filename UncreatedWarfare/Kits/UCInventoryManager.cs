@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Kits
+namespace Uncreated.Warfare.Kits
 {
     public static class UCInventoryManager
     {

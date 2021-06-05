@@ -6,8 +6,9 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Players;
 
-namespace UncreatedWarfare.Stats
+namespace Uncreated.Warfare.Stats
 {
     
     public struct Response

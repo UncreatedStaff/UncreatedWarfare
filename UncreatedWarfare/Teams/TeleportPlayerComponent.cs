@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace UncreatedWarfare.Teams
+namespace Uncreated.Warfare.Teams
 {
     public class PlayerTeleportedEventArgs : EventArgs 
     { public Player player; public Vector3 OldPosition; public Vector3 NewPosition; public bool WasInVehicle; public float Delay; }

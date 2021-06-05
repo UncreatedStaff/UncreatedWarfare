@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Kits
+namespace Uncreated.Warfare.Kits
 {
     public class Command_blank : IRocketCommand
     {

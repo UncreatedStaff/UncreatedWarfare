@@ -7,8 +7,9 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using Uncreated.Players;
 
-namespace UncreatedWarfare.Commands
+namespace Uncreated.Warfare.Commands
 {
     class DutyCommand : IRocketCommand
     {

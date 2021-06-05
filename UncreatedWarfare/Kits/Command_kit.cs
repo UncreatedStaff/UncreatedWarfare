@@ -1,12 +1,13 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Kits
+namespace Uncreated.Warfare.Kits
 {
     public class Command_kit : IRocketCommand
     {
@@ -38,12 +39,14 @@ namespace UncreatedWarfare.Kits
                     if (!KitManager.KitExists(kitName, out var kit)) // create kit
                     {
                         KitManager.CreateKit(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        RequestSigns.UpdateSignsWithName(kitName);
                         player.Message("kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
                         KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        RequestSigns.UpdateSignsWithName(kitName);
                         player.Message("kit_overwritten", kitName);
                         return;
                     }
@@ -54,7 +57,26 @@ namespace UncreatedWarfare.Kits
                     if (KitManager.KitExists(kitName, out _))
                     {
                         KitManager.DeleteKit(kitName);
+                        if(RequestSigns.SignExists(kitName, out List<RequestSign> signs))
+                        {
+                            foreach (RequestSign sign in signs)
+                                RequestSigns.RemoveRequestSign(sign);
+                        }
                         player.Message("kit_deleted", kitName);
+                        return;
+                    }
+                    else // error
+                    {
+                        player.Message("kit_e_noexist", kitName);
+                        return;
+                    }
+                }
+                if(op.ToLower() == "give")
+                {
+                    if(KitManager.KitExists(kitName, out Kit kit))
+                    {
+                        KitManager.GiveKit(player, kit);
+                        player.Message("kit_given", kitName);
                         return;
                     }
                     else // error
@@ -96,6 +118,7 @@ namespace UncreatedWarfare.Kits
                         }
                         // success
                         player.Message("kit_setprop", property, kitName, newValue);
+                        RequestSigns.UpdateSignsWithName(kitName);
                         return;
                     }
                 }
@@ -133,6 +156,7 @@ namespace UncreatedWarfare.Kits
                     //success
                     player.Message("kit_accessgiven", targetPlayer, kitName);
                     KitManager.GiveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    RequestSigns.UpdateSignsWithName(target.Player.channel.owner, kitName);
                     return;
                 }
                 // remove player access to kit
@@ -162,6 +186,7 @@ namespace UncreatedWarfare.Kits
                     //success
                     player.Message("kit_accessremoved", targetPlayer, kitName);
                     KitManager.RemoveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    RequestSigns.UpdateSignsWithName(target.Player.channel.owner, kitName);
                     return;
                 }
             }

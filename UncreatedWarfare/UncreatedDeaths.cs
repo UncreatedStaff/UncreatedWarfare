@@ -4,12 +4,13 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UncreatedWarfare.Components;
-using UncreatedWarfare.Stats;
-using UncreatedWarfare.Teams;
+using Uncreated.Players;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     partial class UCWarfare
     {
@@ -90,6 +91,7 @@ namespace UncreatedWarfare
         private void Kill(KillEventArgs parameters)
         {
             F.Log(" __KILL__  -  " + parameters.ToString(), ConsoleColor.Blue);
+            F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
             OnKill?.Invoke(this, parameters);
         }
         public class SuicideEventArgs : EventArgs
@@ -456,6 +458,24 @@ namespace UncreatedWarfare
                     }
                 }
                 LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
+                if(foundKiller)
+                {
+                    if (killerTeam != F.GetTeam(dead))
+                    {
+                        Kill(new KillEventArgs()
+                        {
+                            LandmineLinkedAssistant = default,
+                            cause = cause,
+                            dead = dead.Player,
+                            distance = distance,
+                            item = item,
+                            itemName = itemName,
+                            key = key,
+                            killer = killer.player,
+                            limb = limb
+                        });
+                    }
+                }
             }
             OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
         }

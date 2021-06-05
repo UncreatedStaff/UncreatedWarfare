@@ -4,16 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Flags;
+using Uncreated.Warfare.Flags;
 using UnityEngine;
 
-namespace UncreatedWarfare.Flags
+namespace Uncreated.Warfare.Flags
 {
     public abstract class Zone
     {
         private static readonly float EffectiveImageScalingSize = Level.size - (Level.border * 2);
         private static readonly float FullImageSize = Level.size;
-        protected float Multiplier;
+        protected float _multiplier;
+        public float CoordinateMultiplier { get => _multiplier; }
         public Vector2 Center;
         public Zone InverseZone;
         protected bool SucessfullyParsed = false;
@@ -32,8 +33,8 @@ namespace UncreatedWarfare.Flags
         public Zone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false)
         {
             this.Name = Name;
-            this.Multiplier = useMapSizeMultiplier ? EffectiveImageScalingSize / FullImageSize : 1.0f;
-            this.Center = new Vector2(Center.x * Multiplier, Center.y * Multiplier);
+            this._multiplier = useMapSizeMultiplier ? EffectiveImageScalingSize / FullImageSize : 1.0f;
+            this.Center = new Vector2(Center.x * _multiplier, Center.y * _multiplier);
             this.data = data;
             Init();
         }
@@ -90,7 +91,7 @@ namespace UncreatedWarfare.Flags
             {
                 if (float.TryParse(size[0], out float SizeX) && float.TryParse(size[1], out float SizeY))
                 {
-                    Size = new Vector2(SizeX * Multiplier, SizeY * Multiplier);
+                    Size = new Vector2(SizeX * _multiplier, SizeY * _multiplier);
                     Corners = new Vector2[4]
                     {
                         new Vector2(Center.x - Size.x / 2, Center.y - Size.y / 2), //tl
@@ -175,7 +176,7 @@ namespace UncreatedWarfare.Flags
             {
                 if (float.TryParse(size[0], out float Rad))
                 {
-                    this.Radius = Rad * Multiplier;
+                    this.Radius = Rad * _multiplier;
                     GetParticleSpawnPoints(out _, out _, 36, 15); // every 10 degrees
                     BoundsTLPos = new Vector2(Center.x - Radius, Center.y - Radius);
                     BoundsSize = new Vector2(Radius * 2, Radius * 2);
@@ -342,7 +343,7 @@ namespace UncreatedWarfare.Flags
             {
                 if (float.TryParse(size[i], out float x) && float.TryParse(size[i + 1], out float y))
                 {
-                    Points[i / 2] = new Vector2(x * Multiplier, y * Multiplier);
+                    Points[i / 2] = new Vector2(x * _multiplier, y * _multiplier);
                 }
                 else
                 {
