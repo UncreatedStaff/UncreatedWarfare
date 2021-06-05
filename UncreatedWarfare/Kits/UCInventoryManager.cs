@@ -112,5 +112,25 @@ namespace Uncreated.Warfare.Kits
                 }
             }
         }
+
+        public static int CountItems(UnturnedPlayer player, ushort itemID)
+        {
+            int count = 0;
+
+            for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+            {
+                var pageCount = player.Player.inventory.getItemCount(page);
+
+                for (byte index = 0; index < pageCount; index++)
+                {
+                    if (player.Player.inventory.getItem(page, 0).item.id == itemID)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
     }
 }

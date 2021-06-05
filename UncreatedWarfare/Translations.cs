@@ -38,6 +38,7 @@ namespace Uncreated.Warfare
         {
             DefaultTranslations = new Dictionary<string, string>
             {
+                { "correct_usage", "<color=#ff8c69>Correct usage: {0}</color>" },
                 { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
                 { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
                 { "capturing", "Your team is capturing this point!" },
@@ -317,6 +318,23 @@ namespace Uncreated.Warfare
                 { "kit_owned", "OWNED" },
                 { "kit_price_dollars", "$ {0}" },
                 { "kit_price_credits", "C {0}" },
+
+                // whitelist
+
+                { "whitelist_added", "<color=#a0ad8e>Whitelisted item: <color=#ffffff>{0}</color></color>" },
+                { "whitelist_removed", "<color=#a0ad8e>Un-whitelisted item: <color=#ffffff>{0}</color></color>" },
+                { "whitelist_setamount", "<color=#a0ad8e>Set max allowed amount for item <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
+                { "whitelist_setsalvagable", "<color=#a0ad8e>Set salvagable property for item <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
+                { "whitelist_e_exist", "<color=#ff8c69>That item is already whitelisted.</color>" },
+                { "whitelist_e_noexist", "<color=#ff8c69>That item is not yet whitelisted.</color>" },
+                { "whitelist_e_invalidid", "<color=#ff8c69>{0} is not a valid item ID." },
+                { "whitelist_e_invalidamount", "<color=#ff8c69>{0} is not a valid number." },
+                { "whitelist_e_invalidsalvagable", "<color=#ff8c69>{0} is not a valid true or false value." },
+                { "whitelist_notwhitelisted", "<color=#ff8c69>The item is not allowed to be picked up." },
+                { "whitelist_notallowed", "<color=#ff8c69>Your kit does not allow you to have this item." },
+                { "whitelist_maxamount", "<color=#ff8c69>Your kit does not allow you to have any more of this item." },
+                { "whitelist_nokit", "<color=#ff8c69>Get a kit first before you can pick up items." },
+                { "whitelist_nosalvage", "<color=#ff8c69>You are not allowed to salvage this barricade." },
 
                 // Deaths
                 { "no_murderer_name", "Unapplicable" },
