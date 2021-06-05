@@ -96,6 +96,7 @@ namespace Uncreated.Warfare
         public static WebInterface WebInterface;
         public static RequestSigns RequestSignManager;
         public static StructureSaver StructureManager;
+        public static Whitelister Whitelister;
         internal static Thread ListenerThread;
         internal static AsyncListenServer ListenServer;
         internal static AsyncDatabase DatabaseManager;
@@ -158,6 +159,7 @@ namespace Uncreated.Warfare
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             WebInterface = new WebInterface();
             LogoutSaver = new LogoutSaver();
+            Whitelister = new Whitelister();
             CommandWindow.shouldLogDeaths = false;
 
 

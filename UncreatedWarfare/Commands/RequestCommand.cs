@@ -44,7 +44,7 @@ namespace Uncreated.Warfare.Kits
                     return;
                 } else if (command[0].ToLower() == "remove")
                 {
-                    if (player.HasPermission("uc.request.save"))
+                    if (player.HasPermission("uc.request.remove"))
                     {
                         InteractableSign sign = BuildManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
                         if (sign == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
@@ -54,7 +54,7 @@ namespace Uncreated.Warfare.Kits
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
                                 if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
-                                player.Player.SendChat("request_saved_sign", UCWarfare.GetColor("request_saved_sign"), requestsign.kit_name, teamcolor);
+                                player.Player.SendChat("request_removed_sign", UCWarfare.GetColor("request_removed_sign"), requestsign.kit_name, teamcolor);
                                 RequestSigns.RemoveRequestSign(requestsign);
                             }
                             else player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));

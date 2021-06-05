@@ -87,7 +87,7 @@ namespace Uncreated.Warfare.Kits
         {
             signs = ActiveSigns.Where(x => x.kit_name == kitName).ToList();
             return signs.Count > 0;
-        } 
+        }
         public static void UpdateSignsWithName(SteamPlayer player, string kitName)
         {
             if (SignExists(kitName, out List<RequestSign> signs))
@@ -152,7 +152,7 @@ namespace Uncreated.Warfare.Kits
             this.SignText = sign.text;
             this.group = sign.group.m_SteamID;
             this.owner = sign.owner.m_SteamID;
-            if (BarricadeManager.tryGetInfo(sign.transform, out _, out _, out ushort plant, out ushort index, out BarricadeRegion region))
+            if (BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
             {
                 this.sign_id = region.barricades[index].barricade.id;
             } else if (ushort.TryParse(sign.name, out ushort id))
