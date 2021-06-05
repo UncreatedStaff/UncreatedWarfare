@@ -1622,5 +1622,25 @@ namespace Uncreated.Warfare
         {
             return;
         }
+        public static string GetClosestNode(this Vector3 position)
+        {
+            if (!Level.isLoaded) return string.Empty;
+            float? smallest = null;
+            int index = 0;
+            for(int i = 0; i < LevelNodes.nodes.Count; i++)
+            {
+                float distance = (position - LevelNodes.nodes[i].point).sqrMagnitude;
+                if (LevelNodes.nodes[i] is LocationNode)
+                {
+                    if (!smallest.HasValue || distance < smallest)
+                    {
+                        index = i;
+                        smallest = distance;
+                    }
+                }
+            }
+            if (LevelNodes.nodes[index] is LocationNode name) return name.name;
+            else return string.Empty;
+        }
     }
 }
