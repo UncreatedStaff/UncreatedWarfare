@@ -13,7 +13,11 @@ namespace Uncreated.Warfare.Kits
 {
     public class KitManager : JSONSaver<Kit>
     {
-        public KitManager() : base(Data.KitsStorage + "kits.json") { }
+        public static List<Kit> ActiveKits;
+        public KitManager() : base(Data.KitsStorage + "kits.json") 
+        {
+            ActiveKits = GetExistingObjects();
+        }
         protected override string LoadDefaults() 
         {
             if (JSONMethods.DefaultKits != default)
@@ -22,24 +26,23 @@ namespace Uncreated.Warfare.Kits
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public static void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
+        public static void Refresh() => ActiveKits = GetExistingObjects();
         public static void DeleteAllKits() => RemoveAllObjectsFromSave();
-        public static List<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
+        public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => ActiveKits.Where(predicate);
         public static bool KitExists(string kitName, out Kit kit)
         {
-            bool result = ObjectExists(i => i.Name.ToLower() == kitName.ToLower(), out var k);
-            kit = k;
-            return result;
+            kit = ActiveKits.FirstOrDefault(i => i.Name.ToLower() == kitName.ToLower());
+            return kit == default;
         }
         public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes)
         {
-            var kits = GetExistingObjects();
-            foreach (var kit in kits)
+            foreach (var kit in ActiveKits)
             {
                 if (kit.Name.ToLower() == kitName.ToLower())
                 {
                     kit.Items = newItems;
                     kit.Clothes = newClothes;
-                    OverwriteSavedList(kits);
+                    OverwriteSavedList(ActiveKits);
                     return true;
                 }
             }
@@ -57,8 +60,7 @@ namespace Uncreated.Warfare.Kits
             }
             propertyIsValid = true;
 
-            var kits = GetExistingObjects();
-            foreach (var kit in kits)
+            foreach (var kit in ActiveKits)
             {
                 if (kit.Name.ToLower() == kitName.ToLower())
                 {
@@ -126,7 +128,7 @@ namespace Uncreated.Warfare.Kits
                     }
                     if (argIsValid)
                     {
-                        OverwriteSavedList(kits);
+                        OverwriteSavedList(ActiveKits);
                         return true;
                     }
                 }
@@ -257,8 +259,8 @@ namespace Uncreated.Warfare.Kits
 
         public static bool HasKit(CSteamID steamID, out Kit kit)
         {
-            bool result = LogoutSaver.HasSave(steamID, out var save);
-            kit = GetObject(k => k.Name == save.KitName);
+            bool result = LogoutSaver.HasSave(steamID, out LogoutSave save);
+            kit = ActiveKits.FirstOrDefault(k => k.Name == save.KitName);
             return result;
         }
 
@@ -271,29 +273,24 @@ namespace Uncreated.Warfare.Kits
 
         public static bool HasAccess(ulong playerID, string kitName)
         {
-            var kits = GetExistingObjects();
-            foreach (var kit in kits)
+            foreach (var kit in ActiveKits)
             {
                 if (kit.Name.ToLower() == kitName.ToLower())
                     return kit.AllowedUsers.Contains(playerID);
             }
             return false;
         }
-        public static List<Kit> GetAccessibleKits(ulong playerID)
-        {
-            return GetExistingObjects().Where(kit => kit.AllowedUsers.Contains(playerID)).ToList();
-        }
+        public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => ActiveKits.Where(kit => kit.AllowedUsers.Contains(playerID)).ToList();
         public static void GiveAccess(ulong playerID, string kitName)
         {
-            var kits = GetExistingObjects();
-            foreach (var kit in kits)
+            foreach (var kit in ActiveKits)
             {
                 if (kit.Name.ToLower() == kitName.ToLower())
                 {
                     if (!kit.AllowedUsers.Contains(playerID))
                     {
                         kit.AllowedUsers.Add(playerID);
-                        OverwriteSavedList(kits);
+                        OverwriteSavedList(ActiveKits);
                         return;
                     }
                 }
@@ -301,13 +298,12 @@ namespace Uncreated.Warfare.Kits
         }
         public static void RemoveAccess(ulong playerID, string kitName)
         {
-            var kits = GetExistingObjects();
-            foreach (var kit in kits)
+            foreach (var kit in ActiveKits)
             {
                 if (kit.Name == kitName.ToLower())
                 {
                     kit.AllowedUsers.RemoveAll(id => id == playerID);
-                    OverwriteSavedList(kits);
+                    OverwriteSavedList(ActiveKits);
                     return;
                 }
             }

@@ -36,16 +36,16 @@ namespace Uncreated.Warfare
             {
                 if (KitManager.HasKit(player.CSteamID, out var kit))
                 {
-                    int allowedItems = kit.Items.Where(k => k.ID == itemData.item.id).Count();
+                    int allowedItems = kit.Items.Count(k => k.ID == itemData.item.id);
                     if (allowedItems == 0)
-                        allowedItems = kit.Clothes.Where(k => k.ID == itemData.item.id).Count();
+                        allowedItems = kit.Clothes.Count(k => k.ID == itemData.item.id);
 
                     if (allowedItems == 0)
                     {
                         shouldAllow = false;
                         player.Message($"whitelist_notallowed");
                     }
-                    if (UCInventoryManager.CountItems(player, itemData.item.id) >= allowedItems)
+                    else if (UCInventoryManager.CountItems(player, itemData.item.id) >= allowedItems)
                     {
                         shouldAllow = false;
                         player.Message($"whitelist_maxamount");
@@ -102,7 +102,7 @@ namespace Uncreated.Warfare
         public static bool IsWhitelisted(ushort itemID, out WhitelistItem item)
         {
             item = items.Find(w => w.itemID == itemID);
-            return item == null;
+            return item != null;
         }
         public void Dispose()
         {

@@ -1535,8 +1535,8 @@ namespace Uncreated.Warfare
         }
         public static string GetKitDisplayName(string kitname)
         {
-            List<Kits.Kit> kits = Kits.KitManager.GetKitsWhere(x => x.Name == kitname);
-            if (kits.Count > 0) return kits[0].DisplayName;
+            IEnumerable<Kits.Kit> kits = Kits.KitManager.GetKitsWhere(x => x.Name == kitname);
+            if (kits.Count() > 0) return kits.ElementAt(0).DisplayName;
             else return kitname;
         }
         public static float GetDistanceFromClosestObjective(Vector3 position, out Flag objective, bool includeOutOfRotation = false) => Mathf.Sqrt(GetSqrDistanceFromClosestObjective(position, out objective, includeOutOfRotation));
