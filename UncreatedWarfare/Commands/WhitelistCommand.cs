@@ -32,14 +32,10 @@ namespace Uncreated.Warfare.Kits
                             player.Message("whitelist_added", arguments[1]);
                         }
                         else
-                        {
                             player.Message("whitelist_e_exist", arguments[1]);
-                        }
                     }
                     else
-                    {
-                        player.Message("whitelist_e_invalid", arguments[1]);
-                    }
+                        player.Message("whitelist_e_invalidid", arguments[1]);
                 }
                 if (arguments[0].ToLower() == "remove")
                 {
@@ -51,16 +47,13 @@ namespace Uncreated.Warfare.Kits
                             player.Message("whitelist_removed", arguments[1]);
                         }
                         else
-                        {
                             player.Message("whitelist_e_noexist", arguments[1]);
-                        }
                     }
                     else
-                    {
-                        player.Message("whitelist_e_invalid", arguments[1]);
-                    }
+                        player.Message("whitelist_e_invalidid", arguments[1]);
                 }
-                else { player.Message("correct_usage", "/whitelist <add|remove|set>"); }
+                else
+                    player.Message("correct_usage", "/whitelist <add|remove|set>");
             }
             else if (arguments.Length == 4)
             {
@@ -78,25 +71,22 @@ namespace Uncreated.Warfare.Kits
                                     player.Message("whitelist_removed", arguments[2]);
                                 }
                                 else
-                                {
                                     player.Message("whitelist_e_noexist", arguments[2]);
-                                }
                             }
                             else
-                            {
-                                player.Message("whitelist_e_invalamount", arguments[3]);
-                            }
+                                player.Message("whitelist_e_invalidamount", arguments[3]);
                         }
                         else
-                        {
-                            player.Message("whitelist_e_invalid", arguments[2]);
-                        }
+                            player.Message("whitelist_e_invalidid", arguments[2]);
                     }
-                    else { player.Message("correct_usage", "/whitelist set <amount|salvagable> <value>"); }
+                    else
+                        player.Message("correct_usage", "/whitelist set <amount|salvagable> <value>");
                 }
-                else { player.Message("correct_usage", "/whitelist <add|remove|set>"); }
+                else
+                    player.Message("correct_usage", "/whitelist <add|remove|set>");
             }
-            else { player.Message("correct_usage", "/whitelist <add|remove|set>"); }
+            else
+                player.Message("correct_usage", "/whitelist <add|remove|set>");
         }
     }
 }

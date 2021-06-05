@@ -318,9 +318,7 @@ namespace Uncreated.Warfare
                 { "kit_owned", "OWNED" },
                 { "kit_price_dollars", "$ {0}" },
                 { "kit_price_credits", "C {0}" },
-
                 // whitelist
-
                 { "whitelist_added", "<color=#a0ad8e>Whitelisted item: <color=#ffffff>{0}</color></color>" },
                 { "whitelist_removed", "<color=#a0ad8e>Un-whitelisted item: <color=#ffffff>{0}</color></color>" },
                 { "whitelist_setamount", "<color=#a0ad8e>Set max allowed amount for item <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
@@ -335,7 +333,6 @@ namespace Uncreated.Warfare
                 { "whitelist_maxamount", "<color=#ff8c69>Your kit does not allow you to have any more of this item." },
                 { "whitelist_nokit", "<color=#ff8c69>Get a kit first before you can pick up items." },
                 { "whitelist_nosalvage", "<color=#ff8c69>You are not allowed to salvage this barricade." },
-
                 // Deaths
                 { "no_murderer_name", "Unapplicable" },
                 { "zombie", "a zombie" }
