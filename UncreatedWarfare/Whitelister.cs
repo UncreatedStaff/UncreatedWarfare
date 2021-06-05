@@ -32,35 +32,37 @@ namespace Uncreated.Warfare
                 return;
             }
 
-            if (IsWhitelisted(itemData.item.id, out var whitelistedItem))
+            if (KitManager.HasKit(player.CSteamID, out var kit))
             {
-                if (KitManager.HasKit(player.CSteamID, out var kit))
-                {
-                    int allowedItems = kit.Items.Count(k => k.ID == itemData.item.id);
-                    if (allowedItems == 0)
-                        allowedItems = kit.Clothes.Count(k => k.ID == itemData.item.id);
+                int itemCount = UCInventoryManager.CountItems(player, itemData.item.id);
 
-                    if (allowedItems == 0)
+                int allowedItems = kit.Items.Where(k => k.ID == itemData.item.id).Count();
+                if (allowedItems == 0)
+                    allowedItems = kit.Clothes.Where(k => k.ID == itemData.item.id).Count();
+
+                if (allowedItems == 0)
+                {
+                    if (!IsWhitelisted(itemData.item.id, out var whitelistedItem))
                     {
                         shouldAllow = false;
                         player.Message($"whitelist_notallowed");
                     }
-                    else if (UCInventoryManager.CountItems(player, itemData.item.id) >= allowedItems)
+                    else if (itemCount >= whitelistedItem.amount)
                     {
                         shouldAllow = false;
                         player.Message($"whitelist_maxamount");
                     }
                 }
-                else
+                else if (itemCount >= allowedItems)
                 {
                     shouldAllow = false;
-                    player.Message($"whitelist_nokit");
+                    player.Message($"whitelist_kit_maxamount");
                 }
             }
             else
             {
                 shouldAllow = false;
-                player.Message($"whitelist_notwhitelisted");
+                player.Message($"whitelist_nokit");
             }
         }
         private void OnBarricadeSalvageRequested(Steamworks.CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
