@@ -9,7 +9,7 @@ using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare
 {
-    public class Whitelister : JSONSaver<WhitelistItem>
+    public class Whitelister : JSONSaver<WhitelistItem>, IDisposable
     {
         private static List<WhitelistItem> items;
 
@@ -103,6 +103,11 @@ namespace Uncreated.Warfare
         {
             item = items.Find(w => w.itemID == itemID);
             return item == null;
+        }
+        public void Dispose()
+        {
+            ItemManager.onTakeItemRequested -= OnItemPickup;
+            BarricadeManager.onSalvageBarricadeRequested -= OnBarricadeSalvageRequested;
         }
     }
     public class WhitelistItem

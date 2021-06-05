@@ -189,6 +189,7 @@ namespace Uncreated.Warfare
             Data.FOBManager?.Dispose();
             Data.ListenServer?.Dispose();
             Data.ListenerThread?.Abort();
+            Data.Whitelister?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);

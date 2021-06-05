@@ -6,20 +6,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Uncreated.Warfare.Kits
+namespace Uncreated.Warfare.Commands
 {
     public class Command_whitelist : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "whitelist";
-        public string Help => "whitelists items";
+        public string Help => "Whitelists items";
         public string Syntax => "/whitelist";
         public List<string> Aliases => new List<string>() { "wh" };
-        public List<string> Permissions => new List<string>() { "whitelist" };
+        public List<string> Permissions => new List<string>() { "uc.whitelist" };
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
-
             if (arguments.Length == 2)
             {
                 if (arguments[0].ToLower() == "add")
