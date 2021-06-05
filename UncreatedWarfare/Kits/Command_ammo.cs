@@ -6,12 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.FOBs;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using static UnityEngine.Physics;
 
-namespace UncreatedWarfare.Kits
+namespace Uncreated.Warfare.Kits
 {
     class Command_refill : IRocketCommand
     {

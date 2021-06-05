@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using static UnityEngine.Physics;
 
-namespace UncreatedWarfare.FOBs
+namespace Uncreated.Warfare.FOBs
 {
     public static class UCBarricadeManager
     {

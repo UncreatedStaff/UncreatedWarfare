@@ -5,8 +5,9 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Uncreated.Players;
 
-namespace UncreatedWarfare.Commands
+namespace Uncreated.Warfare.Commands
 {
     class BanOverrideCommand : IRocketCommand
     {

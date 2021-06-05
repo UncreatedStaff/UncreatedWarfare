@@ -5,12 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Flags;
-using UncreatedWarfare.Kits;
-using UncreatedWarfare.Stats;
-using FlagData = UncreatedWarfare.Flags.FlagData;
+using Uncreated.Warfare.Flags;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Stats;
+using FlagData = Uncreated.Warfare.Flags.FlagData;
+using Kit = Uncreated.Warfare.Kits.Kit;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     partial class JSONMethods
     {
@@ -47,12 +48,13 @@ namespace UncreatedWarfare
                 { "clearing", "Your team is busy clearing this point." },
                 { "secured", "This point is secure for now. Keep up the defense." },
                 { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
-                { "notowned", "This point is owned by <color=#{1}>{0}</color>. Get more players to capture it." },
+                { "notowned", "This point is owned by the enemies. Get more players to capture it." },
                 { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
                 { "team_1", "USA" },
                 { "team_2", "Russia" },
                 { "team_3", "Admins" },
                 { "neutral", "Neutral" },
+                { "undiscovered_flag", "? ? ?" },
                 { "ui_capturing", "CAPTURING" },
                 { "ui_losing", "LOSING" },
                 { "ui_clearing", "CLEARING" },
@@ -98,6 +100,7 @@ namespace UncreatedWarfare
 
                 // Lang
                 { "language_list", "Languages: <color=#{1}>{0}</color>." },
+                { "language_current", "Current language: <color=#{1}>{0}</color>." },
                 { "changed_language", "Changed your language to <color=#{1}>{0}</color>" },
                 { "change_language_not_needed", "You are already set to <color=#{1}>{0}</color>." },
                 { "reset_language", "Reset your language to <color=#{1}>{0}</color>" },
@@ -107,6 +110,7 @@ namespace UncreatedWarfare
 
                 // Kits
                 { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
+                { "kit_given", "<color=#a0ad8e>Received kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_setprop", "<color=#a0ad8e>Set {0} for kit <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
@@ -300,10 +304,23 @@ namespace UncreatedWarfare
                 // battleye
                 { "battleye_kicked_Console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kicked_Broadcast", "<color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>." },
+                // request
+                { "request_saved_sign", "Saved kit: <color=#{1}>{0}</color>." },
+                { "request_removed_sign", "Removed kit sign: <color=#{1}>{0}</color>." },
+                { "request_sign_exists", "A sign is already registered at that location, remove it with /request remove." },
+                { "request_kit_given_free", "Kit requested: <color=#{1}>{0}</color>." },
+                { "request_kit_given_credits", "Kit requested: <color=#{1}>{0}</color>. <color=#{3}>-{2}</color> credits." },
+                { "request_kit_given_credits_cant_afford", "You do not have <color=#{1}>{0}</color> credits." },
+                { "request_kit_given_not_owned", "You do not own <color=#{1}>{0}</color>." },
+                { "request_not_looking", "You must be looking at a request sign." },
+                { "kit_free", "FREE" },
+                { "kit_owned", "OWNED" },
+                { "kit_price_dollars", "$ {0}" },
+                { "kit_price_credits", "C {0}" },
 
                 // Deaths
                 { "no_murderer_name", "Unapplicable" },
-                { "zombie", "a zombie" },
+                { "zombie", "a zombie" }
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -337,6 +354,10 @@ namespace UncreatedWarfare
             new ColorData("join_message_name", "ffff1a"),
             new ColorData("leave_message_background", "e6e3d5"),
             new ColorData("leave_message_name", "ffff1a"),
+            new ColorData("team_count_ui_color_team_1", "ffffff"),
+            new ColorData("team_count_ui_color_team_2", "ffffff"),
+            new ColorData("team_count_ui_color_team_1_icon", "4785ff"),
+            new ColorData("team_count_ui_color_team_2_icon", "f53b3b"),
 
             // Team Colors
             new ColorData("team_1_color", "4785ff"),
@@ -469,6 +490,8 @@ namespace UncreatedWarfare
             // Lang Command
             new ColorData("language_list", "f53b3b"),
             new ColorData("language_list_list", "e6e3d5"),
+            new ColorData("language_current", "f53b3b"),
+            new ColorData("language_current_language", "e6e3d5"),
             new ColorData("changed_language", "f53b3b"),
             new ColorData("changed_language_language", "e6e3d5"),
             new ColorData("change_language_not_needed", "f53b3b"),
@@ -506,6 +529,22 @@ namespace UncreatedWarfare
             // Deaths
             new ColorData("death_background", "ffffff"),
             new ColorData("death_zombie_name_color", "788c5a"),
+
+            // Request
+            new ColorData("request_saved_sign", "00ffff"),
+            new ColorData("request_removed_sign", "00ffff"),
+            new ColorData("request_sign_exists", "00ffff"),
+            new ColorData("request_kit_given_free", "00fffff"),
+            new ColorData("request_kit_given_credits", "00fffff"),
+            new ColorData("request_kit_given_credits_credits", "c6d4b8"),
+            new ColorData("request_kit_given_credits_cant_afford", "00fffff"),
+            new ColorData("request_kit_given_credits_cant_afford_credits", "c6d4b8"),
+            new ColorData("request_kit_given_not_owned", "00fffff"),
+            new ColorData("request_not_looking", "ff0000"),
+            new ColorData("kit_price_free", "f53b3b"),
+            new ColorData("kit_price_credits", "f53b3b"),
+            new ColorData("kit_price_dollars", "f53b3b"),
+            new ColorData("kit_price_owned", "f53b3b")
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {
@@ -561,17 +600,72 @@ namespace UncreatedWarfare
                 new MySqlColumnData("Teamkills","Teamkills")
             })
         };
-        /*
-        public static readonly List<TeamData> DefaultTeamData = new List<TeamData>
-        {
-            new TeamData(1, "US", new List<ulong>(), 777.5f, 33.5f, -800f),
-            new TeamData(2, "Russia", new List<ulong>(), -782f, 50f, 850f),
-            new TeamData(3, "Admins", new List<ulong>(), 719f, 39f, -1017f) //admin group for structures.
-        };
-        */
         public static List<Kit> DefaultKits = new List<Kit>
         {
-            new Kit("usrif1", new List<KitItem> {
+            new Kit("default",
+                new List<KitItem> { },
+                new List<KitClothing> {
+                new KitClothing(184, 100, "", KitClothing.EClothingType.SHIRT),
+                new KitClothing(2, 100, "", KitClothing.EClothingType.PANTS),
+                new KitClothing(185, 100, "", KitClothing.EClothingType.MASK)
+            })
+            {
+                ShouldClearInventory = true,
+                RequiredLevel = 0,
+                Cost = 0,
+                Team = 0,
+                Class = Kit.EClass.UNARMED,
+                Branch = EBranch.DEFAULT,
+                SignTexts = new Dictionary<string, string> { 
+                    { DefaultLanguage, "<color=#{0}>Default Kit</color>\n<color=#{2}>{1}</color>" },
+                    { "ru-ru", "<color=#{0}>Комплект по умолчанию</color>\n<color=#{2}>{1}</color>" }
+                }
+            },
+            new Kit("usunarmed",
+                new List<KitItem> { },
+                new List<KitClothing> {
+                new KitClothing(30710, 100, "", KitClothing.EClothingType.SHIRT),
+                new KitClothing(30711, 100, "", KitClothing.EClothingType.PANTS),
+                new KitClothing(30715, 100, "", KitClothing.EClothingType.HAT),
+                new KitClothing(30718, 100, "", KitClothing.EClothingType.BACKPACK),
+                new KitClothing(31251, 100, "", KitClothing.EClothingType.GLASSES)
+            })
+            {
+                ShouldClearInventory = true,
+                RequiredLevel = 0,
+                Cost = 0,
+                Team = 1,
+                Class = Kit.EClass.UNARMED,
+                Branch = EBranch.DEFAULT,
+                SignTexts = new Dictionary<string, string> { 
+                    { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" }, 
+                    { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" } 
+                }
+            },
+            new Kit("ruunarmed",
+                new List<KitItem> { },
+                new List<KitClothing> {
+                new KitClothing(30700, 100, "", KitClothing.EClothingType.SHIRT),
+                new KitClothing(30701, 100, "", KitClothing.EClothingType.PANTS),
+                new KitClothing(31123, 100, "", KitClothing.EClothingType.VEST),
+                new KitClothing(30704, 100, "", KitClothing.EClothingType.HAT),
+                new KitClothing(434, 100, "", KitClothing.EClothingType.MASK),
+                new KitClothing(31156, 100, "", KitClothing.EClothingType.BACKPACK)
+            })
+            {
+                ShouldClearInventory = true,
+                RequiredLevel = 0,
+                Cost = 0,
+                Team = 2,
+                Class = Kit.EClass.UNARMED,
+                Branch = EBranch.DEFAULT,
+                SignTexts = new Dictionary<string, string> { 
+                    { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" } ,
+                    { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" }
+                }
+            },
+            new Kit("usrif1",
+                new List<KitItem> {
                 new KitItem(81, 0, 0, 0, 100, "", 1, 3),
                 new KitItem(394, 0, 2, 0, 100, "", 1, 2),
                 new KitItem(394, 1, 2, 0, 100, "", 1, 2),
@@ -585,22 +679,28 @@ namespace UncreatedWarfare
                 new KitItem(31475, 2, 0, 0, 100, "", 30, 3),
                 new KitItem(31477, 3, 2, 0, 100, "", 30, 2),
                 new KitItem(32326, 0, 0, 0, 100, "6HoAAO56AABveh4BAWRkZGRk", 1, 0)
-        },
-            new List<KitClothing> {
+            },
+                new List<KitClothing> {
                 new KitClothing(30710, 100, "", KitClothing.EClothingType.SHIRT),
                 new KitClothing(30711, 100, "", KitClothing.EClothingType.PANTS),
                 new KitClothing(30715, 100, "", KitClothing.EClothingType.HAT),
                 new KitClothing(30718, 100, "", KitClothing.EClothingType.BACKPACK),
                 new KitClothing(31251, 100, "", KitClothing.EClothingType.GLASSES)
-        })
+            })
             {
                 ShouldClearInventory = true,
                 RequiredLevel = 0,
                 Cost = 0,
+                Team = 1,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = EBranch.INFANTRY
+                Branch = EBranch.INFANTRY,
+                SignTexts = new Dictionary<string, string> { 
+                    { DefaultLanguage, "<color=#{0}>Rifleman 1</color>\n<color=#{2}>{1}</color>" },
+                    { "ru-ru", "<color=#{0}>Стрелок 1</color>\n<color=#{2}>{1}</color>" }
+                }
             },
-            new Kit("rurif1", new List<KitItem> {
+            new Kit("rurif1",
+                new List<KitItem> {
                 new KitItem(81, 0, 0, 0, 100, "", 1, 3),
                 new KitItem(394, 0, 2, 0, 100, "", 1, 2),
                 new KitItem(394, 1, 2, 0, 100, "", 1, 2),
@@ -619,21 +719,72 @@ namespace UncreatedWarfare
                 new KitItem(31477, 3, 2, 0, 100, "", 1, 3),
                 new KitItem(31412, 0, 0, 0, 100, "4HsAAAAAAAC1eh4CAWRkZGRk", 1, 0),
                 new KitItem(31437, 0, 0, 0, 100, "AAAAAAAAAADOeggBAWRkZGRk", 1, 1)
-        },
-            new List<KitClothing> {
+            },
+                new List<KitClothing> {
                 new KitClothing(30700, 100, "", KitClothing.EClothingType.SHIRT),
                 new KitClothing(30701, 100, "", KitClothing.EClothingType.PANTS),
                 new KitClothing(31123, 100, "", KitClothing.EClothingType.VEST),
                 new KitClothing(30704, 100, "", KitClothing.EClothingType.HAT),
                 new KitClothing(434, 100, "", KitClothing.EClothingType.MASK),
                 new KitClothing(31156, 100, "", KitClothing.EClothingType.BACKPACK)
-        })
+            })
             {
                 ShouldClearInventory = true,
                 RequiredLevel = 0,
                 Cost = 0,
+                Team = 2,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = EBranch.INFANTRY
+                Branch = EBranch.INFANTRY,
+                SignTexts = new Dictionary<string, string> { 
+                    { DefaultLanguage, "<color=#{0}>Rifleman 1</color>\n<color=#{2}>{1}</color>" },
+                    { "ru-ru", "<color=#{0}>Стрелок 1</color>\n<color=#{2}>{1}</color>" }
+                }
+            },
+            new Kit("africa1",
+                new List<KitItem> {
+                new KitItem(81, 3, 0, 0, 100, "", 1, 3),
+                new KitItem(333, 6, 0, 0, 100, "", 1, 3),
+                new KitItem(394, 2, 2, 0, 100, "", 1, 2),
+                new KitItem(394, 1, 2, 0, 100, "", 1, 2),
+                new KitItem(394, 0, 2, 0, 100, "", 1, 2),
+                new KitItem(1176, 5, 0, 0, 100, "", 1, 3),
+                new KitItem(30505, 2, 0, 0, 100, "", 1, 3),
+                new KitItem(30511, 0, 0, 0, 100, "", 1, 3),
+                new KitItem(30511, 1, 0, 0, 100, "", 1, 3),
+                new KitItem(31312, 0, 0, 0, 100, "", 20, 2),
+                new KitItem(31312, 1, 0, 0, 100, "", 20, 2),
+                new KitItem(31312, 2, 0, 0, 100, "", 20, 2),
+                new KitItem(31312, 3, 0, 0, 100, "", 20, 2),
+                new KitItem(31322, 0, 0, 0, 100, "TH4AAAAAAABQehQBAWRkZGRk", 1, 0),
+                new KitItem(31479, 3, 2, 0, 100, "", 1, 2),
+                new KitItem(31481, 4, 2, 0, 100, "", 1, 2),
+                new KitItem(31487, 0, 0, 0, 100, "AAAAAAAAAAABexEBAWRkZGRk", 1, 1),
+                new KitItem(31489, 4, 0, 0, 100, "", 17, 3),
+                new KitItem(31489, 3, 0, 0, 100, "", 17, 3),
+                new KitItem(38310, 0, 2, 0, 100, "", 1, 3),
+                new KitItem(38333, 6, 1, 0, 100, "vpW/lQAAAAAAAAABAWRkZGRk", 1, 3)
+            },
+                new List<KitClothing> {
+                new KitClothing(30960, 100, "", KitClothing.EClothingType.SHIRT),
+                new KitClothing(30961, 100, "", KitClothing.EClothingType.PANTS),
+                new KitClothing(30962, 100, "", KitClothing.EClothingType.VEST),
+                new KitClothing(30965, 100, "", KitClothing.EClothingType.HAT),
+                new KitClothing(31221, 100, "", KitClothing.EClothingType.MASK),
+                new KitClothing(30970, 100, "", KitClothing.EClothingType.BACKPACK)
+            })
+            {
+                ShouldClearInventory = true,
+                RequiredLevel = 0,
+                Cost = 0,
+                IsPremium = true,
+                PremiumCost = 6.00f,
+                Team = 2,
+                Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
+                Branch = EBranch.INFANTRY,
+                SignTexts = new Dictionary<string, string> { 
+                    { DefaultLanguage, "<color=#{0}>Africa 1</color>\n<color=#{2}>{1}</color>" },
+                    { "ru-ru", "<color=#{0}>Африка 1</color>\n<color=#{2}>{1}</color>" }
+                }
             }
         };
         public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>

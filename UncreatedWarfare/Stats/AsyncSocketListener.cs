@@ -7,127 +7,213 @@ using System.Threading;
 using System.Net;
 using System.Net.Sockets;
 
-namespace UncreatedWarfare.Stats
+namespace Uncreated.Warfare.Stats
 {
-    public class HeardResponseEventArgs : EventArgs
-    {
-        public string data;
-        public Socket handler;
-        public string response;
-
-        public HeardResponseEventArgs(string data, Socket handler)
-        {
-            this.data = data;
-            this.handler = handler;
-            this.response = data;
-        }
-    }
     internal class StateObject
     {
         public const int BufferSize = 2048; // 0x0000-0x007F use 1 byte, 0x0080-0x07FF use 2 bytes, 0x0800-0xFFFF use 3 bytes, 0x10000-0x10FFFF use 4 bytes.
         public byte[] buffer = new byte[BufferSize];
-        public StringBuilder builder = new StringBuilder();
+        public List<byte> allData = new List<byte>();
         public Socket workSocket = null;
-    }
-    // https://docs.microsoft.com/en-us/dotnet/framework/network-programming/asynchronous-server-socket-example
-    internal class AsyncListenServer
-    {
-        public event EventHandler<HeardResponseEventArgs> ListenerResultHeard;
-        public ManualResetEvent Done = new ManualResetEvent(false);
-        public AsyncListenServer()
+        public void AppendBuffer(int length)
         {
-            ConsoleColor oldColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Console.WriteLine("Created web listen server");
-            Console.ForegroundColor = oldColor;
+            byte[] temp = new byte[length];
+            Array.Copy(buffer, 0, temp, 0, length);
+            allData.AddRange(temp);
         }
-        public void StartListening()
+    }
+    public class AsyncListenServer : IDisposable
+    {
+        public class MessageReceivedEventArgs : EventArgs { public byte[] message; public string utf8; }
+        public event EventHandler<MessageReceivedEventArgs> OnMessageReceived;
+        public readonly byte[] EndOfFileUTF8 = new byte[] { 0x3c, 0x45, 0x4f, 0x46, 0x3e };
+        IPHostEntry host;
+        IPAddress address;
+        EndPoint endpoint;
+        Socket client;
+        public void Start()
         {
-            Socket Listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
             try
             {
-                Listener.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8081));
-                Listener.Listen(100);
-
-                while (true)
+                host = Dns.GetHostEntry("localhost");
+                address = host.AddressList[0];
+                endpoint = new IPEndPoint(address, 8081);
+                client = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
                 {
-                    Done.Reset();
-                    //Console.WriteLine("Waiting for a connection...");
-                    Listener.BeginAccept(new AsyncCallback(TriggerEvent), Listener);
-                    Done.WaitOne();
-                }
+                    SendTimeout = 5000
+                };
+                client.Bind(endpoint);
+                ReconnectSync(true);
+                MainThread(); // event loop
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                F.LogError(ex);
             }
         }
-        private void TriggerEvent(IAsyncResult ar)
+        public bool ReconnectSync(bool firstTime = false)
         {
-            Done.Set();
-            Socket listener = ar.AsyncState as Socket;
-            Socket handler = listener.EndAccept(ar);
-
-            StateObject state = new StateObject();
-            state.workSocket = handler;
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, SocketFlags.None, new AsyncCallback(Read), state);
-        }
-        private void Read(IAsyncResult ar)
-        {
-            string content = string.Empty;
-            StateObject state = ar.AsyncState as StateObject;
-            Socket handler = state.workSocket;
-
-            int bytesRead = handler.EndReceive(ar);
-            if (bytesRead > 0)
+            F.Log((firstTime ? "H" : "Reh") + "osting socket.", ConsoleColor.Cyan);
+            try
             {
-                state.builder.Append(Encoding.UTF8.GetString(state.buffer, 0, bytesRead));
-                content = state.builder.ToString();
-                if (content.IndexOf("<EOF>") != -1)
-                {
-                    //Console.WriteLine($"Read {bytesRead} bytes from socket: \n Data : {content}");
-                    Send(handler, content);
-                }
-                else
-                {
-                    //Console.WriteLine("String too big, sending what i have.");
-                    Send(handler, content);
-                }
+                client.Listen(10);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        public void MainThread()
+        {
+            while (true)
+            {
+                //F.Log("about to accept");
+                IAsyncResult ar = client.BeginAccept(AcceptedCallback, client);
+                ar.AsyncWaitHandle.WaitOne();
+                //F.Log("just accepted");
+            }
+        }
+        private void AcceptedCallback(IAsyncResult ar)
+        {
+            if (ar.AsyncState is Socket listener)
+            {
+                Socket handler = listener.EndAccept(ar);
+                StateObject state = new StateObject() { workSocket = handler };
+                StateDelegate st = ReceiveLoop;
+                st.BeginInvoke(state, DisposeReceiveLoopAsync, state);
             }
             else
             {
-                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, SocketFlags.None, new AsyncCallback(Read), state);
-                //ListenerResultHeard.BeginInvoke(state, new HeardResponseEventArgs(), new AsyncCallback(), state);
+                F.LogError("Invalid type in AcceptedCallback(IAsyncResult ar).");
             }
+            ar.AsyncWaitHandle.Close();
+            ar.AsyncWaitHandle.Dispose();
         }
-        private void Send(Socket handler, string content)
+        private void ReceiveLoop(StateObject state)
         {
-            HeardResponseEventArgs args = new HeardResponseEventArgs(content, handler);
-            ListenerResultHeard?.BeginInvoke(this, args, new AsyncCallback(SendAfterEvent), args);
-        }
-
-        private void SendAfterEvent(IAsyncResult ar)
-        {
-            HeardResponseEventArgs args = ar.AsyncState as HeardResponseEventArgs;
-            byte[] byteData = Encoding.UTF8.GetBytes(args.response);
-            args.handler.BeginSend(byteData, 0, byteData.Length, SocketFlags.None, new AsyncCallback(SendBack), args.handler);
-        }
-        private void SendBack(IAsyncResult ar)
-        {
+            while (true)
+            {
+                if (!Receive(state)) break;
+            }
             try
             {
-                Socket handler = ar.AsyncState as Socket;
-                int bytesSent = handler.EndSend(ar);
-                //Console.WriteLine($"Sentback {bytesSent} tp client.");
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
+                ShutdownHandler(state.workSocket);
+            }
+            catch { }
+        }
+        private void DisposeReceiveLoopAsync(IAsyncResult ar)
+        {
+            ar.AsyncWaitHandle.Close();
+            ar.AsyncWaitHandle.Dispose();
+        }
+        private delegate void StateDelegate(StateObject state);
+        private bool Receive(StateObject state)
+        {
+            if (!state.workSocket.Connected)
+            {
+                ShutdownHandler(state.workSocket);
+                return false;
+            }
+            int receivedBytes;
+            SocketError errorCode;
+            try
+            {
+                receivedBytes = state.workSocket.Receive(state.buffer, 0, StateObject.BufferSize, SocketFlags.None, out errorCode);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                F.LogError("Error: ");
+                F.LogError(ex);
+                ShutdownHandler(state.workSocket);
+                return false;
             }
+            if (errorCode != SocketError.Success)
+            {
+                F.LogError("Error: " + errorCode.ToString());
+                receivedBytes = 0;
+            }
+            //F.Log($"Received {receivedBytes} bytes.", ConsoleColor.Yellow);
+            if (receivedBytes > 0)
+            {
+                state.AppendBuffer(receivedBytes);
+                byte[] olddata = state.allData.ToArray();
+                byte[] data;
+                int matchcounter = 0;
+                int actualdatalength = olddata.Length;
+                for (int i = 0; i < olddata.Length; i++)
+                {
+                    if (olddata[i] == EndOfFileUTF8[matchcounter])
+                    {
+                        matchcounter++;
+                        if (matchcounter > EndOfFileUTF8.Length)
+                        {
+                            actualdatalength = i - matchcounter;
+                            break;
+                        }
+                    }
+                }
+                if (matchcounter >= EndOfFileUTF8.Length) // if found <EOF>
+                {
+                    data = new byte[actualdatalength + 1];
+                    Array.Copy(olddata, 0, data, 0, actualdatalength);
+                    string sentmessage;
+                    try
+                    {
+                        sentmessage = Encoding.UTF8.GetString(olddata);
+                    }
+                    catch (ArgumentException)
+                    {
+                        sentmessage = string.Join(", ", olddata);
+                    }
+                    //F.Log($"Received {olddata.Length} ({data.Length}) bytes total: \"{sentmessage}\"", ConsoleColor.Green);
+                    OnMessageReceived?.Invoke(this, new MessageReceivedEventArgs { message = data, utf8 = sentmessage });
+                    state.allData.Clear();
+                }
+                else // didnt find <EOF>, continue looking.
+                {
+                    F.Log($"Appending {receivedBytes} bytes to final then looping back.", ConsoleColor.White);
+                }
+            }
+            if (state.workSocket.Connected)
+            {
+                return true;
+            }
+            else
+            {
+                ShutdownHandler(state.workSocket);
+                return false;
+            }
+        }
+        private void ShutdownHandler(Socket handler)
+        {
+            try
+            {
+                handler.Shutdown(SocketShutdown.Both);
+                handler.Close();
+            }
+            finally
+            {
+                handler.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                this.client.Shutdown(SocketShutdown.Both);
+            }
+            catch { }
+            try
+            {
+                this.client.Close();
+            } catch { }
+            try
+            {
+                this.client.Dispose();
+            } catch { }
+            GC.SuppressFinalize(this);
         }
     }
 }

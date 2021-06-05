@@ -7,11 +7,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Flags;
+using Uncreated.Warfare.Flags;
+using Uncreated.Warfare.Kits;
 using UnityEngine;
-using Flag = UncreatedWarfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Flags.Flag;
 
-namespace UncreatedWarfare.Teams
+namespace Uncreated.Warfare.Teams
 {
     public class TeamManager : JSONSaver<TeamConfig>
     {
@@ -24,6 +25,12 @@ namespace UncreatedWarfare.Teams
             {
                 LoadDefaults();
             }
+            if(!KitManager.KitExists(_data.Team1UnarmedKit, out _)) 
+                F.LogError("Team 1's unarmed kit, \"" + _data.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if(!KitManager.KitExists(_data.Team2UnarmedKit, out _)) 
+                F.LogError("Team 2's unarmed kit, \"" + _data.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if(!KitManager.KitExists(_data.DefaultKit, out _)) 
+                F.LogError("The default kit, \"" + _data.DefaultKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
         }
         public void Reload() => _data = GetExistingObjects().FirstOrDefault();
         public void Save() => WriteSingleObject(_data);
@@ -45,14 +52,17 @@ namespace UncreatedWarfare.Teams
         public static string Team1Code { get => _data.Team1Code; }
         public static string Team2Code { get => _data.Team2Code; }
         public static string AdminCode { get => _data.AdminCode; }
-        public static Color Team1Color => _data.Team1Color;
-        public static Color Team2Color => _data.Team2Color;
-        public static Color AdminColor => _data.AdminColor;
-        public static Color NeutralColor => _data.AdminColor;
-        public static string Team1ColorHex => _data.Team1ColorHex;
-        public static string Team2ColorHex => _data.Team2ColorHex;
-        public static string AdminColorHex => _data.AdminColorHex;
-        public static string NeutralColorHex => _data.AdminColorHex;
+        public static Color Team1Color { get => _data.Team1Color; }
+        public static Color Team2Color { get => _data.Team2Color; }
+        public static Color AdminColor { get => _data.AdminColor; }
+        public static Color NeutralColor { get => _data.AdminColor; }
+        public static string Team1ColorHex { get => _data.Team1ColorHex; }
+        public static string Team2ColorHex { get => _data.Team2ColorHex; }
+        public static string AdminColorHex { get => _data.AdminColorHex; }
+        public static string NeutralColorHex { get => _data.AdminColorHex; }
+        public static string Team1UnarmedKit { get => _data.Team1UnarmedKit; }
+        public static string Team2UnarmedKit { get => _data.Team2UnarmedKit; }
+        public static string DefaultKit { get => _data.DefaultKit; }
         public static Zone Team1Main { get {
                 if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(1))
                     return Data.ExtraZones[1];
@@ -156,7 +166,22 @@ namespace UncreatedWarfare.Teams
         }
         public static List<SteamPlayer> Team1Players => Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == Team1ID).ToList();
         public static List<SteamPlayer> Team2Players => Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == Team2ID).ToList();
-
+        public static void GetBothTeamPlayersFast(out List<SteamPlayer> t1, out List<SteamPlayer> t2)
+        {
+            t1 = new List<SteamPlayer>();
+            t2 = new List<SteamPlayer>();
+            foreach(SteamPlayer player in Provider.clients)
+            {
+                if (player.player.quests.groupID.m_SteamID == Team1ID) t1.Add(player);
+                else if (player.player.quests.groupID.m_SteamID == Team2ID) t2.Add(player);
+            }
+        }
+        public static List<SteamPlayer> GetTeamPlayers(ulong team)
+        {
+            if (team == 1) return Team1Players;
+            else if (team == 2) return Team2Players;
+            else return Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == team).ToList();
+        }
         public static ulong GetTeam(UnturnedPlayer player) => F.GetTeam(player);
         public static ulong GetTeam(SteamPlayer player) => F.GetTeam(player);
         public static ulong GetTeam(Player player) => F.GetTeam(player);
@@ -178,18 +203,19 @@ namespace UncreatedWarfare.Teams
         public static bool IsFriendly(UnturnedPlayer player, UnturnedPlayer player2) => player.Player.quests.groupID.m_SteamID == player2.Player.quests.groupID.m_SteamID;
         public static bool IsFriendly(SteamPlayer player, SteamPlayer player2) => player.player.quests.groupID.m_SteamID == player2.player.quests.groupID.m_SteamID;
         public static bool IsFriendly(Player player, Player player2) => player.quests.groupID.m_SteamID == player2.quests.groupID.m_SteamID;
-        public static bool CanJoinTeam(ulong groupID)
+        public static bool CanJoinTeam(ulong team)
         {
             if (UCWarfare.Config.TeamSettings.BalanceTeams)
             {
-                int Team1Count = Team1Players.Count;
-                int Team2Count = Team2Players.Count;
+                GetBothTeamPlayersFast(out List<SteamPlayer> t1, out List<SteamPlayer> t2);
+                int Team1Count = t1.Count;
+                int Team2Count = t2.Count;
                 if (Team1Count == Team2Count) return true;
-                if(groupID == _data.Team1ID)
+                if(team == 1)
                 {
                     if (Team2Count > Team1Count) return true;
                     if ((Team1Count - Team2Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
-                } else if (groupID == _data.Team2ID)
+                } else if (team == 2)
                 {
                     if (Team1Count > Team2Count) return true;
                     if ((Team2Count - Team1Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
@@ -209,7 +235,10 @@ namespace UncreatedWarfare.Teams
         public string AdminName;
         public string Team1Code;
         public string Team2Code;
-        public string AdminCode; 
+        public string AdminCode;
+        public string Team1UnarmedKit;
+        public string Team2UnarmedKit;
+        public string DefaultKit;
         [JsonIgnore]
         public Color Team1Color
         {
@@ -217,7 +246,7 @@ namespace UncreatedWarfare.Teams
             {
                 if (Data.Colors != default)
                     return UCWarfare.GetColor("team_1_color");
-                else return UnityEngine.Color.white;
+                else return Color.white;
             }
         }
         [JsonIgnore]
@@ -227,7 +256,7 @@ namespace UncreatedWarfare.Teams
             {
                 if (Data.Colors != default)
                     return UCWarfare.GetColor("team_2_color");
-                else return UnityEngine.Color.white;
+                else return Color.white;
             }
         }
         [JsonIgnore]
@@ -237,7 +266,7 @@ namespace UncreatedWarfare.Teams
             {
                 if (Data.Colors != default)
                     return UCWarfare.GetColor("team_3_color");
-                else return UnityEngine.Color.cyan;
+                else return Color.cyan;
             }
         }
         [JsonIgnore]
@@ -247,7 +276,7 @@ namespace UncreatedWarfare.Teams
             {
                 if (Data.Colors != default)
                     return UCWarfare.GetColor("neutral_color");
-                else return UnityEngine.Color.white;
+                else return Color.white;
             }
         }
         [JsonIgnore]
@@ -302,6 +331,9 @@ namespace UncreatedWarfare.Teams
             Team1Code = "us";
             Team2Code = "ru";
             AdminCode = "ad";
+            Team1UnarmedKit = "usunarmed";
+            Team2UnarmedKit = "ruunarmed";
+            DefaultKit = "default";
         }
     }
 }

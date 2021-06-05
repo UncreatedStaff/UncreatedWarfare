@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
-using static UncreatedWarfare.FOBs.FOBConfig;
+using static Uncreated.Warfare.FOBs.FOBConfig;
 
-namespace UncreatedWarfare.FOBs
+namespace Uncreated.Warfare.FOBs
 {
     class Command_build : IRocketCommand
     {

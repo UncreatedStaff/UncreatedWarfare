@@ -7,9 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Teams;
 
-namespace UncreatedWarfare.FOBs
+namespace Uncreated.Warfare.FOBs
 {
     public class FOBManager : IDisposable
     {

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Commands
+namespace Uncreated.Warfare.Commands
 {
     public class PlayerChangedLanguageEventArgs : EventArgs { public UnturnedPlayer player; public LanguageAliasSet OldLanguage; public LanguageAliasSet NewLanguage; }
     public class LangCommand : IRocketCommand
@@ -41,7 +41,19 @@ namespace UncreatedWarfare.Commands
                 player.SendChat("language_list", UCWarfare.GetColor("language_list"), sb.ToString(), UCWarfare.GetColorHex("language_list_list"));
             } else if (command.Length == 1)
             {
-                if(command[0].ToLower() == "reset")
+                if(command[0].ToLower() == "current")
+                {
+                    string OldLanguage = JSONMethods.DefaultLanguage;
+                    if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                        OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
+                    LanguageAliasSet oldSet;
+                    if (Data.LanguageAliases.ContainsKey(OldLanguage))
+                        oldSet = Data.LanguageAliases[OldLanguage];
+                    else
+                        oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
+
+                    player.SendChat("language_current", UCWarfare.GetColor("language_current"), $"{oldSet.display_name} : {oldSet.key}", UCWarfare.GetColorHex("language_current_language"));
+                } else if(command[0].ToLower() == "reset")
                 {
                     string fullname = JSONMethods.DefaultLanguage;
                     LanguageAliasSet alias;
@@ -85,7 +97,7 @@ namespace UncreatedWarfare.Commands
                         aliases = Data.LanguageAliases[langInput];
                     else
                         aliases = Data.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
-                    if (!aliases.Equals(default(LanguageAliasSet)))
+                    if (!aliases.Equals(default))
                     {
                         if (OldLanguage == aliases.key)
                             player.SendChat("change_language_not_needed", UCWarfare.GetColor("change_language_not_needed"), aliases.display_name, UCWarfare.GetColorHex("change_language_not_needed_language"));

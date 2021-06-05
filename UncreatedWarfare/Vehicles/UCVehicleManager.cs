@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using static UnityEngine.Physics;
 
-namespace UncreatedWarfare.Vehicles
+namespace Uncreated.Warfare.Vehicles
 {
     public static class UCVehicleManager
     {

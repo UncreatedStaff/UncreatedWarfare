@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.FOBs
+namespace Uncreated.Warfare.FOBs
 {
     public class FOBConfig
     {

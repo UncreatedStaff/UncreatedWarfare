@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace UncreatedWarfare.Stats
+namespace Uncreated.Warfare.Stats
 {
     public static class WebCallbacks
     {

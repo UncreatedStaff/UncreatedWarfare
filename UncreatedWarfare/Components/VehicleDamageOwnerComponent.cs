@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using SDG.Unturned;
 using Steamworks;
-namespace UncreatedWarfare.Components
+namespace Uncreated.Warfare.Components
 {
     public class VehicleDamageOwnerComponent : MonoBehaviour
     {

@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace UncreatedWarfare.Revives
+namespace Uncreated.Warfare.Revives
 {
     public class ReviveManager : IDisposable
     {
@@ -19,7 +19,6 @@ namespace UncreatedWarfare.Revives
 
             DamageTool.damagePlayerRequested += OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
-            PlayerStance.OnStanceChanged_Global += OnStanceChanged;
             U.Events.OnPlayerConnected += OnPlayerConnected;
             U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
             foreach(SteamPlayer player in Provider.clients)
@@ -28,12 +27,9 @@ namespace UncreatedWarfare.Revives
                 {
                     StanceUpdatedLocal(player);
                 };
-
                 player.player.equipment.onEquipRequested += OnEquipRequested;
             }
         }
-
-
         private void OnPlayerConnected(UnturnedPlayer player)
         {
             player.Player.equipment.onEquipRequested += OnEquipRequested;
@@ -82,9 +78,11 @@ namespace UncreatedWarfare.Revives
                         }
                     }
 
-                    Reviver reviver = UnturnedPlayer.FromPlayer(parameters.player).GetComponent<Reviver>();
-                    reviver.TellProneDelayed();
-                    reviver.StartBleedout(this);
+                    if(parameters.player.transform.TryGetComponent(out Reviver reviver))
+                    {
+                        reviver.TellProneDelayed();
+                        reviver.StartBleedout();
+                    }
                 }
             }
             else
@@ -95,11 +93,13 @@ namespace UncreatedWarfare.Revives
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
             F.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
-            player.Player.movement.sendPluginSpeedMultiplier(1);
-            player.Player.movement.sendPluginJumpMultiplier(1);
-            Reviver.TellStandDelayed(player.Player);
-            DownedPlayers.Remove(player.CSteamID.m_SteamID);
-            DistancesFromInitialShot.Remove(player.CSteamID.m_SteamID);
+            if(DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
+            {
+                if (player.Player.transform.TryGetComponent(out Reviver reviver))
+                {
+                    reviver.FinishKillingPlayer(this, true);
+                }
+            }
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {
@@ -109,20 +109,12 @@ namespace UncreatedWarfare.Revives
                 shouldAllow = false;
             }
         }
-        private void OnStanceChanged(PlayerStance stance)
-        {
-            F.Log(stance.player.channel.owner.playerID.playerName + " tried to change stance.", ConsoleColor.DarkRed);
-            if (DownedPlayers.ContainsKey(stance.player.channel.owner.playerID.steamID.m_SteamID))
-            {
-                if (stance.player.transform.TryGetComponent(out Reviver reviver))
-                {
-                    reviver.TellProneDelayed();
-                }
-            }
-        }
         private void StanceUpdatedLocal(SteamPlayer player)
         {
-            F.Log(player.playerID.playerName + " tried to change stance local function.", ConsoleColor.DarkRed);
+            if (DownedPlayers.ContainsKey(player.playerID.steamID.m_SteamID) && player.player.transform.TryGetComponent(out Reviver reviver))
+            {
+                reviver.TellStanceNoDelay(EPlayerStance.PRONE);
+            }
         }
 
         public void Dispose()
@@ -142,13 +134,14 @@ namespace UncreatedWarfare.Revives
             }
             DamageTool.damagePlayerRequested -= OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
-            PlayerStance.OnStanceChanged_Global -= OnStanceChanged;
             U.Events.OnPlayerConnected -= OnPlayerConnected;
             U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
         }
 
         private class Reviver : UnturnedPlayerComponent
         {
+            public Vector3 BlockerBarricade;
+            private bool pendingStopSpawningBarricade = false;
             public void TellProneDelayed(float time = 0.5f)
             {
                 StartCoroutine(WaitToChangeStance(EPlayerStance.PRONE, time));
@@ -157,10 +150,14 @@ namespace UncreatedWarfare.Revives
             {
                 StartCoroutine(WaitToChangeStance(EPlayerStance.STAND, time));
             }
+            public void TellStanceNoDelay(EPlayerStance stance)
+            {
+                Player.Player.stance.checkStance(stance, true);
+            }
             private IEnumerator<WaitForSeconds> WaitToChangeStance(EPlayerStance stance, float time = 0.5f)
             {
                 yield return new WaitForSeconds(time);
-                Player.Player.stance.checkStance(stance, true);
+                TellStanceNoDelay(stance);
                 F.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
             }
             public static void TellStandDelayed(Player player, float time = 0.5f)
@@ -170,14 +167,13 @@ namespace UncreatedWarfare.Revives
                     player.StartCoroutine(r.WaitToChangeStance(EPlayerStance.STAND, time));
                 }
             }
-            public void StartBleedout(ReviveManager reviveManager)
+            public void StartBleedout()
             {
-                StartCoroutine(WaitToKillPlayer(reviveManager));
+                StartCoroutine(WaitToKillPlayer());
             }
-            private IEnumerator<WaitForSeconds> WaitToKillPlayer(ReviveManager reviveManager)
+            private IEnumerator<WaitForSeconds> WaitToKillPlayer()
             {
                 yield return new WaitForSeconds(10);
-
                 F.Log(Player.Player.channel.owner.playerID.playerName + " bled out or something.", ConsoleColor.DarkRed);
                 /*
                 if (reviveManager.DownedPlayers.ContainsKey(Player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -186,16 +182,19 @@ namespace UncreatedWarfare.Revives
                 } // else player already died
                 */
             }
-            public void FinishKillingPlayer(ReviveManager reviveManager)
+            public void FinishKillingPlayer(ReviveManager reviveManager, bool isDead = false)
             {
-                Player.Player.movement.sendPluginSpeedMultiplier(1);
-                Player.Player.movement.sendPluginJumpMultiplier(1);
+                Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
+                Player.Player.movement.sendPluginJumpMultiplier(1.0f);
 
-                DamagePlayerParameters parameters = reviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
-                parameters.damage = 100;
-                parameters.respectArmor = false;
-                parameters.applyGlobalArmorMultiplier = false;
-                DamageTool.damagePlayer(parameters, out _);
+                if(!isDead)
+                {
+                    DamagePlayerParameters parameters = reviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
+                    parameters.damage = 100.0f;
+                    parameters.respectArmor = false;
+                    parameters.applyGlobalArmorMultiplier = false;
+                    DamageTool.damagePlayer(parameters, out _);
+                }
                 reviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                 reviveManager.DistancesFromInitialShot.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
             }

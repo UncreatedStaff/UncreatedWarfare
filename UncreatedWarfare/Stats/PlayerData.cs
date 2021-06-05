@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace UncreatedWarfare.Stats
+namespace Uncreated.Warfare.Stats
 {
     public class PlayerStatsCoroutineData
     {

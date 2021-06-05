@@ -4,12 +4,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare;
 
-namespace UncreatedWarfare
+namespace Uncreated.SQL
 {
     public static class AsyncDatabaseCallbacks
     {
-        private static void Dispose(this IAsyncResult ar) => Stats.WebCallbacks.Dispose(ar);
+        internal static void Dispose(this IAsyncResult ar)
+        {
+            try
+            {
+                ar.AsyncWaitHandle.Close();
+                ar.AsyncWaitHandle.Dispose();
+            }
+            catch (ObjectDisposedException) { }
+        }
         internal static void DisposeAsyncResult(IAsyncResult ar)
         {
             if (UCWarfare.Config.Debug)
@@ -29,7 +38,8 @@ namespace UncreatedWarfare
         }
         internal static void PlayerReceivedZonesCallback(Player player)
         {
-            player.SendChat("Picture finished generating, check your spy menu.", UCWarfare.GetColor("default"));
+            if (player != default)
+                player.SendChat("Picture finished generating, check the Config\\Flags\\Presets folder menu.", UCWarfare.GetColor("default"));
         }
     }
 }

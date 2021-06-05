@@ -2,28 +2,19 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using UncreatedWarfare.Flags;
-using UncreatedWarfare.Teams;
-using UncreatedWarfare.Kits;
-using UncreatedWarfare.Vehicles;
-using UncreatedWarfare.FOBs;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Rocket.Core;
 using Rocket.Unturned;
-using UncreatedWarfare.Stats;
-using UncreatedWarfare.Revives;
-using System.Threading;
-using Rocket.Unturned.Player;
+using Uncreated.Warfare.Stats;
 using Newtonsoft.Json;
-using Steamworks;
-using System.ComponentModel;
-using UncreatedWarfare.Components;
+using Uncreated.SQL;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Vehicles;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public partial class UCWarfare : RocketPlugin<Config>
     {
@@ -34,7 +25,7 @@ namespace UncreatedWarfare
         public MySqlData SQL { 
             get
             {
-                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(null))) return _sqlElsewhere;
+                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default))) return _sqlElsewhere;
                 else return Configuration.Instance.SQL;
             }
         }
@@ -72,99 +63,13 @@ namespace UncreatedWarfare
                     _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
                 }
             }
-            F.Log("Validating directories...", ConsoleColor.Magenta);
-            F.CheckDir(Data.DataDirectory, out _, true);
-            F.CheckDir(Data.FlagStorage, out _, true);
-            F.CheckDir(Data.LangStorage, out _, true);
-            F.CheckDir(Data.KitsStorage, out _, true);
-            F.CheckDir(Data.VehicleStorage, out _, true);
-            F.CheckDir(Data.FOBStorage, out _, true);
-            F.CheckDir(Data.TeamStorage, out _, true);
-            F.CheckDir(Data.FOBStorage, out _, true);
-            void DuplicateKeyError(Exception ex)
-            {
-                string[] stuff = ex.Message.Split(':');
-                string badKey = "unknown";
-                if (stuff.Length >= 2) badKey = stuff[1].Trim();
-                F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
-                Level.onLevelLoaded += (int level) =>
-                {
-                    F.LogError("!!UNCREATED WARFARE DID NOT LOAD!!!");
-                    F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
-                };
-                UnloadPlugin();
-            }
-            F.Log("Loading JSON Data...", ConsoleColor.Magenta);
-            try
-            {
-                JSONMethods.CreateDefaultTranslations();
-            } catch (TypeInitializationException ex)
-            {
-                DuplicateKeyError(ex);
-                return;
-            } catch (ArgumentException ex)
-            {
-                DuplicateKeyError(ex);
-                return;
-            }
-
-            Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            Data.XPData = JSONMethods.LoadXP();
-            Data.CreditsData = JSONMethods.LoadCredits();
-            Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
-            Data.ExtraPoints = JSONMethods.LoadExtraPoints(Config.FlagSettings.CurrentGamePreset);
-            Data.TableData = JSONMethods.LoadTables();
-            Data.NodeCalls = JSONMethods.LoadCalls();
-            Data.Languages = JSONMethods.LoadLanguagePreferences();
-            Data.LanguageAliases = JSONMethods.LoadLangAliases();
-
-            // Managers
-            F.Log("Instantiating Framework...", ConsoleColor.Magenta);
-            Data.DatabaseManager = new AsyncDatabase();
-            Data.DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
-            Data.WebInterface = new WebInterface();
-            Data.ListenerThread = new Thread(StartListening);
-            CommandWindow.shouldLogDeaths = false;
-
-
-            Data.FlagManager = new FlagManager(Config.FlagSettings.CurrentGamePreset);
-            Data.FlagManager.OnReady += OnFlagManagerReady;
-            if (Config.Modules.Kits)
-            {
-                Data.KitManager = new KitManager();
-            }
-            if (Config.Modules.VehicleSpawning)
-            {
-                Data.VehicleSpawnSaver = new VehicleSpawnSaver();
-                Data.VehicleBay = new VehicleBay();
-            }
-            if (Config.Modules.FOBs)
-            {
-                Data.FOBManager = new FOBManager();
-                Data.BuildManager = new BuildManager();
-            }
-            if (Config.Modules.Revives)
-            {
-                Data.ReviveManager = new ReviveManager();
-            }
-            F.Log("Starting Coroutines...", ConsoleColor.Magenta);
+            Data.LoadVariables();
             if (Level.isLoaded)
             {
                 StartAllCoroutines();
-                if(Configuration.Instance.SendAssetsOnStartup)
-                {
-                    F.Log("Sending assets...", ConsoleColor.Magenta);
-                    Data.WebInterface.SendAssetUpdate();
-                }
-                F.Log("Subscribing to events...", ConsoleColor.Magenta);
-                InitialLoadEventSubscription = true;
                 SubscribeToEvents();
-                Data.TeamManager = new TeamManager();
-                Data.ExtraZones = JSONMethods.LoadExtraZones(Config.FlagSettings.CurrentGamePreset);
-                Data.FlagManager.Load();
-                // Start new game.
-
-                Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+                OnLevelLoaded(2);
+                InitialLoadEventSubscription = true;
             } else
             {
                 InitialLoadEventSubscription = false;
@@ -173,119 +78,77 @@ namespace UncreatedWarfare
             }
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
-
         }
-        private void OnFlagManagerReady(object sender, EventArgs e)
+        private void OnLevelLoaded(int level)
+        {
+            F.CheckDir(Data.FlagStorage, out _, true);
+            F.CheckDir(Data.StructureStorage, out _, true);
+            F.CheckDir(Data.VehicleStorage, out _, true);
+            if (UCWarfare.Config.Modules.VehicleSpawning)
+            {
+                Data.VehicleSpawnSaver = new VehicleSpawnSaver();
+                Data.VehicleBay = new VehicleBay();
+            }
+            Data.VehicleBay.FirstSpawn();
+            Data.RequestSignManager = new RequestSigns();
+            Data.StructureManager = new StructureSaver();
+            Data.ExtraPoints = JSONMethods.LoadExtraPoints();
+            Data.ExtraZones = JSONMethods.LoadExtraZones();
+            F.Log("Wiping barricades...", ConsoleColor.Magenta);
+            BarricadeManager.askClearAllBarricades();
+            F.Log("Placing back functional barricades...", ConsoleColor.Magenta);
+            RequestSigns.DropAllSigns();
+            if (Configuration.Instance.SendAssetsOnStartup)
+            {
+                F.Log("Sending assets...", ConsoleColor.Magenta);
+                Data.WebInterface.SendAssetUpdate();
+            }
+            Data.TeamManager = new TeamManager();
+            Data.FlagManager.Load(); // starts new game
+            Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+        }
+        internal void OnFlagManagerReady(object sender, EventArgs e)
         {
             Data.FlagManager.StartNextGame();
         }
         private void SubscribeToEvents()
         {
-            U.Events.OnPlayerConnected += OnPostPlayerConnected;
-            U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
-            Provider.onCheckValidWithExplanation += OnPrePlayerConnect;
-            Commands.LangCommand.OnPlayerChangedLanguage += LangCommand_OnPlayerChangedLanguage;
-            Commands.ReloadCommand.OnTranslationsReloaded += ReloadCommand_onTranslationsReloaded;
-            BarricadeManager.onDeployBarricadeRequested += OnBarricadeTryPlaced;
+            U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
+            U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
+            Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
+            Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
+            Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
+            BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
-            UseableGun.onBulletSpawned += BulletSpawned;
-            UseableGun.onProjectileSpawned += ProjectileSpawned;
-            UseableThrowable.onThrowableSpawned += ThrowableSpawned;
-            Patches.InternalPatches.OnLandmineExplode += OnLandmineExploded;
-            Patches.BarricadeSpawnedHandler += OnBarricadePlaced;
-            Patches.BarricadeDestroyedHandler += OnBarricadeDestroyed;
+            UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
+            UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
+            UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
+            Patches.InternalPatches.OnLandmineExplode += EventFunctions.OnLandmineExploded;
+            Patches.BarricadeSpawnedHandler += EventFunctions.OnBarricadePlaced;
+            Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
+            Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
+            Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
         }
         private void UnsubscribeFromEvents()
         {
-            Commands.ReloadCommand.OnTranslationsReloaded -= ReloadCommand_onTranslationsReloaded;
-            U.Events.OnPlayerConnected -= OnPostPlayerConnected;
-            U.Events.OnPlayerDisconnected -= OnPlayerDisconnected;
-            if (Data.ListenServer != null) Data.ListenServer.ListenerResultHeard -= ReceivedResponeFromListenServer;
-            Commands.LangCommand.OnPlayerChangedLanguage -= LangCommand_OnPlayerChangedLanguage;
-            BarricadeManager.onDeployBarricadeRequested -= OnBarricadeTryPlaced;
+            Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
+            U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
+            U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
+            if (Data.ListenServer != null) Data.ListenServer.OnMessageReceived -= ReceivedResponeFromListenServer;
+            Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
+            BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
-            UseableGun.onBulletSpawned -= BulletSpawned;
-            UseableGun.onProjectileSpawned -= ProjectileSpawned;
-            Patches.InternalPatches.OnLandmineExplode -= OnLandmineExploded;
-            Patches.BarricadeSpawnedHandler -= OnBarricadePlaced;
-            Patches.BarricadeDestroyedHandler -= OnBarricadeDestroyed;
+            UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
+            UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
+            Patches.InternalPatches.OnLandmineExplode -= EventFunctions.OnLandmineExploded;
+            Patches.BarricadeSpawnedHandler -= EventFunctions.OnBarricadePlaced;
+            Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
+            Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
+            Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
-            }
-        }
-
-        private void OnBarricadeDestroyed(BarricadeData data, uint instanceID)
-        {
-            if (Data.OwnerComponents != null)
-            {
-                int c = Data.OwnerComponents.FindIndex(x => x.transform.position == data.point);
-                if (c != -1)
-                {
-                    Destroy(Data.OwnerComponents[c]);
-                    Data.OwnerComponents.RemoveAt(c);
-                }
-            }
-        }
-        private void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
-        {
-            F.Log("Placed barricade: " + data.barricade.asset.itemName + ", " + location.position.ToString());
-            BarricadeOwnerDataComponent c = location.gameObject.AddComponent<BarricadeOwnerDataComponent>();
-            c.SetData(data, region, location);
-            Data.OwnerComponents.Add(c);
-        }
-        private void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner, ref bool allow)
-        {
-            if (owner == null) return;
-            if(F.TryGetPlaytimeComponent(owner.owner.player, out PlaytimeComponent c))
-                c.LastLandmineExploded = new LandmineDataForPostAccess(trap, owner);
-            F.Log(owner.owner.playerID.playerName + "'s landmine exploded");
-        }
-        private void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
-        {
-            F.Log(useable == null ? "null" : useable.player.name + " - " + useable.equippedThrowableAsset.itemName);
-            ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
-            PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
-            t.Set(useable, throwable, c);
-            if (success)
-                c.thrown.Add(t);
-        }
-        private void ProjectileSpawned(UseableGun gun, GameObject projectile)
-        {
-            PlaytimeComponent c = F.GetPlaytimeComponent(gun.player, out bool success); 
-            if (success)
-            {
-                c.lastProjected = gun.equippedGunAsset.id;
-            }
-        }
-        private void BulletSpawned(UseableGun gun, BulletInfo bullet)
-        {
-            PlaytimeComponent c = F.GetPlaytimeComponent(gun.player, out bool success);
-            if (success)
-            {
-                c.lastShot = gun.equippedGunAsset.id;
-            }
-        }
-        private void ReloadCommand_onTranslationsReloaded(object sender, EventArgs e)
-        {
-            foreach(SteamPlayer player in Provider.clients)
-                UpdateLangs(player);
-        }
-        private void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x, 
-            ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
-        {
-            if (hit != null && hit.transform.CompareTag("Vehicle"))
-            {
-                if (!Configuration.Instance.AdminLoggerSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
-                {
-                    UnturnedPlayer player = UnturnedPlayer.FromCSteamID(new Steamworks.CSteamID(owner));
-                    if (player != null && player.OffDuty())
-                    {
-                        shouldAllow = false;
-                        player.SendChat("no_placement_on_vehicle", GetColor("defaulterror"), asset.itemName, asset.itemName.An());
-                    }
-                }
             }
         }
         private void OnPluginsLoaded()
@@ -294,7 +157,7 @@ namespace UncreatedWarfare
             F.Log("Subscribing to events...", ConsoleColor.Magenta);
             SubscribeToEvents();
         }
-        private void UpdateLangs(SteamPlayer player)
+        internal void UpdateLangs(SteamPlayer player)
         {
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
@@ -313,91 +176,6 @@ namespace UncreatedWarfare
             }
             
         }
-        private void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UpdateLangs(e.player.Player.channel.owner);
-
-        private void OnPrePlayerConnect(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
-        {
-            SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == callback.m_SteamID.m_SteamID);
-            if (player == default(SteamPending)) return;
-            F.Log(player.playerID.playerName);
-            if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
-                Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
-            else
-                Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
-            const string prefix = "[TEAM] ";
-            if (!player.playerID.characterName.StartsWith(prefix))
-                player.playerID.characterName = prefix + player.playerID.characterName;
-            if (!player.playerID.nickName.StartsWith(prefix))
-                player.playerID.nickName = prefix + player.playerID.nickName;
-            // remove any "staff" from player's names.
-            player.playerID.characterName = player.playerID.characterName.ReplaceCaseInsensitive("staff");
-            player.playerID.nickName = player.playerID.nickName.ReplaceCaseInsensitive("staff");
-        }
-
-        private void OnLevelLoaded(int level)
-        {
-            F.Log("Sending assets...", ConsoleColor.Magenta);
-            if (Configuration.Instance.SendAssetsOnStartup)
-                Data.WebInterface.SendAssetUpdate();
-            Data.TeamManager = new TeamManager();
-            Data.ExtraZones = JSONMethods.LoadExtraZones(Config.FlagSettings.CurrentGamePreset);
-            Data.FlagManager.Load();
-
-            //Start new game
-            Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
-        }
-
-        private void StartListening()
-        {
-            Data.ListenServer = new AsyncListenServer();
-            Data.ListenServer.ListenerResultHeard += ReceivedResponeFromListenServer;
-            Data.ListenServer.StartListening();
-        }
-
-        private void OnPostPlayerConnected(UnturnedPlayer player)
-        {
-            F.Broadcast("player_connected", GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, GetColorHex("join_message_name"));
-            Data.WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
-            FPlayerName names;
-            if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                names = Data.OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
-            else names = new FPlayerName(player);
-            Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
-            Data.GameStats.AddPlayer(player.Player);
-            if(Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-            {
-                DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
-                Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            }
-            player.Player.transform.gameObject.AddComponent<PlaytimeComponent>().StartTracking(player.Player);
-            if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
-                Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, c);
-        }
-        private void OnPlayerDisconnected(UnturnedPlayer player)
-        {
-            if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            F.Broadcast("player_disconnected", GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, GetColorHex("leave_message_name"));
-            Data.WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
-            IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.owner?.playerID.steamID.m_SteamID == player.CSteamID.m_SteamID && x.barricade?.asset?.type == EItemType.TRAP);
-            foreach(BarricadeOwnerDataComponent comp in ownedTraps.ToList())
-            {
-                if (comp == null) continue;
-                if(BarricadeManager.tryGetInfo(comp.barricadeTransform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                {
-                    BarricadeManager.destroyBarricade(region, x, y, plant, index);
-                    F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
-                }
-                Destroy(comp);
-                Data.OwnerComponents.Remove(comp);
-            }
-            if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
-            {
-                Destroy(c);
-                Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
-            }
-        }
-
         protected override void Unload()
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
@@ -409,6 +187,8 @@ namespace UncreatedWarfare
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
             Data.FOBManager?.Dispose();
+            Data.ListenServer?.Dispose();
+            Data.ListenerThread?.Abort();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);

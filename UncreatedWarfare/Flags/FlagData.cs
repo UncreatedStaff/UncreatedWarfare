@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace UncreatedWarfare.Flags
+namespace Uncreated.Warfare.Flags
 {
     // +x > right, +y > up
     public class FlagData

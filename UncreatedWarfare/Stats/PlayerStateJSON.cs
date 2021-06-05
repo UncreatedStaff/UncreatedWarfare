@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UncreatedWarfare.Stats
+namespace Uncreated.Warfare.Stats
 {
     public class PlayerStateJSON
     {

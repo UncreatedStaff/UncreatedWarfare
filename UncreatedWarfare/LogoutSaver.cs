@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Kits;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     public class LogoutSaver : JSONSaver<LogoutSave>
     {
@@ -19,37 +19,31 @@ namespace UncreatedWarfare
             : base(Data.KitsStorage + "playersaves.json")
         {
             ActiveSaves = new List<LogoutSave>();
-
-            U.Events.OnPlayerConnected += OnPlayerConnected;
-            U.Events.OnPlayerDisconnected += OnPlayerDisconnected;
-
         }
         protected override string LoadDefaults() => "[]";
         protected static void ReloadActiveSaves() => ActiveSaves = GetExistingObjects();
-        private static void AddSave(CSteamID playerID, ulong team, Kit.EClass kitClass, EBranch branch, string kitName) => AddObjectToSave(new LogoutSave(playerID.m_SteamID, team, kitClass, branch, kitName));
+        private static LogoutSave AddSave(CSteamID playerID, ulong team, Kit.EClass kitClass, EBranch branch, string kitName) => AddObjectToSave(new LogoutSave(playerID.m_SteamID, team, kitClass, branch, kitName));
         private static void RemoveSave(CSteamID playerID) => RemoveFromSaveWhere(ks => ks.Steam64 == playerID.m_SteamID);
-        public static bool HasSave(CSteamID playerID, out LogoutSave save)
-        {
-            bool result = ObjectExists(ks => ks.Steam64 == playerID.m_SteamID, out var s);
-            save = s;
-            return result;
-        }
+        public static bool HasSave(CSteamID playerID, out LogoutSave save) => ObjectExists(ks => ks.Steam64 == playerID.m_SteamID, out save);
         public static LogoutSave GetSave(CSteamID playerID) => GetObject(s => s.Steam64 == playerID.m_SteamID);
         public static void UpdateSave(Func<LogoutSave, bool> selector, Action<LogoutSave> operation)
         {
             ActiveSaves.Where(selector).ToList().ForEach(operation);
             OverwriteSavedList(ActiveSaves);
         }
-
-        private void OnPlayerConnected(UnturnedPlayer rocketplayer)
+        public static void InvokePlayerConnected(UnturnedPlayer player) => OnPlayerConnected(player);
+        public static void InvokePlayerDisconnected(UnturnedPlayer player) => OnPlayerDisconnected(player);
+        private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
-            if (!HasSave(rocketplayer.CSteamID, out var save))
+            if (!HasSave(rocketplayer.CSteamID, out LogoutSave save))
             {
-                AddSave(rocketplayer.CSteamID, rocketplayer.Player.quests.groupID.m_SteamID, Kit.EClass.NONE, EBranch.DEFAULT, "");
+                ActiveSaves.Add(AddSave(rocketplayer.CSteamID, rocketplayer.Player.quests.groupID.m_SteamID, Kit.EClass.NONE, EBranch.DEFAULT, TeamManager.DefaultKit));
+            } else
+            {
+                ActiveSaves.Add(save);
             }
-            ActiveSaves.Add(save);
         }
-        private void OnPlayerDisconnected(UnturnedPlayer player)
+        private static void OnPlayerDisconnected(UnturnedPlayer player)
         {
             ActiveSaves.RemoveAll(s => s.Steam64 == player.CSteamID.m_SteamID);
         }

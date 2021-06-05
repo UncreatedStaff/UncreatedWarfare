@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.FOBs;
-using UncreatedWarfare.Kits;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Kits;
 using UnityEngine;
 
-namespace UncreatedWarfare.Vehicles
+namespace Uncreated.Warfare.Vehicles
 {
     public class VehicleBay : JSONSaver<VehicleData>
     {
@@ -21,7 +21,6 @@ namespace UncreatedWarfare.Vehicles
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
-            Level.onLevelLoaded += OnLevelLoaded;
         }
 
         protected override string LoadDefaults() => "[]";
@@ -354,7 +353,7 @@ namespace UncreatedWarfare.Vehicles
                 return;
             }
         }
-        private void OnLevelLoaded(int level)
+        public void FirstSpawn()
         {
             var allspawns = VehicleSpawnSaver.GetAllSpawns();
             foreach (var spawn in allspawns)

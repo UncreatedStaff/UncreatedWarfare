@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Stats;
+using Uncreated.Warfare.Stats;
 using UnityEngine;
 
-namespace UncreatedWarfare
+namespace Uncreated.Warfare
 {
     partial class UCWarfare
     { 
@@ -20,15 +20,24 @@ namespace UncreatedWarfare
                 data.Add(new PlayerStatsCoroutineData(player.playerID.steamID.m_SteamID, player.player.transform.position.x, player.player.transform.position.z));
             Data.WebInterface?.SendCoroutinePlayerData(data);
         }
-        private void ReceivedResponeFromListenServer(object sender, HeardResponseEventArgs e)
+        internal void ReceivedResponeFromListenServer(object sender, AsyncListenServer.MessageReceivedEventArgs e)
         {
-            string Received = e.data;
+            string message;
+            try
+            {
+                message = Encoding.UTF8.GetString(e.message);
+            } catch
+            {
+                message = string.Join(",", e.message);
+            }
+            F.Log(message, ConsoleColor.DarkRed);
+            /*
             if(Received.Length >= 4) 
             {
                 string prefix = Received.Substring(0, 3);
                 string data = Received.Substring(4, Received.Length - 4);
                 // 76561198267927009,Too Good,220938256127229952
-                if (prefix == "BAN")
+                if (prefix == "CMD")
                 {
                     string[] args = data.Split(',');
                     if(args.Length != 3)
@@ -48,12 +57,14 @@ namespace UncreatedWarfare
                             }
                             else
                             {
-                                
+                                // ban
                             }
                         }
                     }
                 }
             }
+            */
+
         }
     }
 }

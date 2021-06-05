@@ -6,12 +6,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UncreatedWarfare.Teams;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
-namespace UncreatedWarfare.Flags
+namespace Uncreated.Warfare.Flags
 {
     public class PlayerEventArgs : EventArgs { public Player player; }
+    public class DiscoveredEventArgs : EventArgs { public ulong Team; }
     public class CaptureChangeEventArgs : EventArgs { public int NewPoints; public int OldPoints; }
     public class OwnerChangeEventArgs : EventArgs { public ulong OldOwner; public ulong NewOwner; }
     public class Flag : IDisposable
@@ -118,8 +119,19 @@ namespace UncreatedWarfare.Flags
             OnDisposed?.Invoke(this, EventArgs.Empty);
             GC.SuppressFinalize(this);
         }
-        private ulong _owner;
-        public ulong Owner { get => _owner; set => _owner = value; }
+        private ulong _owner = 0;
+        public ulong Owner {
+            get => _owner;
+            set
+            {
+                if (_owner != value) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = _owner, NewOwner = value });
+                _owner = value;
+            }
+        }
+        public void SetOwnerNoEventInvocation(ulong newOwner)
+        {
+            _owner = newOwner;
+        }
         public float SizeX { get => _sizeX; set => _sizeX = value; }
         public float SizeZ { get => _sizeZ; set => _sizeZ = value; }
         private float _sizeX;
@@ -148,6 +160,7 @@ namespace UncreatedWarfare.Flags
         {
             List<Player> OldPlayers = PlayersOnFlag.ToList();
             RecalcCappers(OnlinePlayers, true);
+            // gets the players that aren't in oldplayers
             NewPlayers = PlayersOnFlag.Where(p => !OldPlayers.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
             return OldPlayers.Where(p => !PlayersOnFlag.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
         }
@@ -172,24 +185,22 @@ namespace UncreatedWarfare.Flags
             }
         }
         private int _points;
+        public int LastDeltaPoints { get; protected set; }
         public int Points
         {
             get => _points;
             set
             {
-                ulong OldOwner;
+                ulong OldOwner = _owner;
                 int OldPoints = _points;
-                if (_points >= MaxPoints)
-                    OldOwner = 1;
-                else if (_points <= MaxPoints * -1)
-                    OldOwner = 2;
-                else OldOwner = 0;
                 if (value > MaxPoints) _points = MaxPoints;
-                else if (value < MaxPoints * -1) _points = MaxPoints * -1;
+                else if (value < -MaxPoints) _points = -MaxPoints;
                 else _points = value;
                 if (OldPoints != _points)
                 {
+                    LastDeltaPoints = _points - OldPoints;
                     OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
+                    /*
                     ulong NewOwner;
                     if (_points >= MaxPoints)
                         NewOwner = 1;
@@ -197,6 +208,7 @@ namespace UncreatedWarfare.Flags
                         NewOwner = 2;
                     else NewOwner = 0;
                     if (OldOwner != NewOwner) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
+                    */
                 }
             }
         }
@@ -204,6 +216,8 @@ namespace UncreatedWarfare.Flags
         public event EventHandler<PlayerEventArgs> OnPlayerLeft;
         public event EventHandler<CaptureChangeEventArgs> OnPointsChanged;
         public event EventHandler<OwnerChangeEventArgs> OnOwnerChanged;
+        public event EventHandler<DiscoveredEventArgs> OnDiscovered;
+        public event EventHandler<DiscoveredEventArgs> OnHidden;
         public event EventHandler OnDisposed;
         public event EventHandler OnReset;
         public List<Player> PlayersOnFlag { get; private set; }
@@ -215,6 +229,7 @@ namespace UncreatedWarfare.Flags
             this._y = data.y;
             this._position2d = data.Position2D;
             this._level = data.level;
+            this.LastDeltaPoints = 0;
             this._name = data.name;
             this._color = data.color;
             this._owner = 0;
@@ -257,39 +272,188 @@ namespace UncreatedWarfare.Flags
             PlayersOnFlag.Remove(player);
         }
         public bool IsNeutral() => FullOwner == 0;
-        public void CapT1(int amount = 1)
+        public void CapT1(int amount)
         {
             Points += amount;
+            if (Points >= MaxPoints)
+                Owner = 1;
         }
-        public void CapT2(int amount = 1)
+        public void CapT1()
+        {
+            Points = MaxPoints;
+            Owner = 1;
+        }
+        public void CapT2(int amount)
         {
             Points -= amount;
+            if(Points <= -MaxPoints)
+                Owner = 2;
+        }
+        public void CapT2()
+        {
+            Points = -MaxPoints;
+            Owner = 2;
+        }
+        public void Cap(ulong team, int amount)
+        {
+            if (team == 1) CapT1(amount);
+            else if (team == 2) CapT2(amount);
+        }
+        public void Cap(ulong team)
+        {
+            if (team == 1) CapT1();
+            else if (team == 2) CapT2();
         }
         public bool T1Obj { get => ID == Data.FlagManager.ObjectiveTeam1.ID; }
         public bool T2Obj { get => ID == Data.FlagManager.ObjectiveTeam2.ID; }
+        public bool IsObj(ulong team)
+        {
+            if (team == 1) return T1Obj;
+            else if (team == 2) return T2Obj;
+            else return false;
+        }
+        public bool IsAnObj { get => T1Obj || T2Obj; }
+        public bool DiscoveredT1 {
+            get => _discovered1;
+            protected set
+            {
+                if (value == true && _discovered1 == false)
+                {
+                    OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
+                    _discovered1 = value;
+                    return;
+                }
+                if(value == false && _discovered2 == true)
+                {
+                    OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
+                    _discovered1 = value;
+                    return;
+                }
+            } 
+        }
+        public bool DiscoveredT2
+        {
+            get => _discovered2;
+            protected set
+            {
+                if (value == true && _discovered2 == false)
+                {
+                    OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
+                    _discovered2 = value;
+                    return;
+                }
+                if (value == false && _discovered2 == true)
+                {
+                    OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 2 });
+                    _discovered2 = value;
+                    return;
+                }
+            }
+        }
+        protected bool _discovered1;
+        protected bool _discovered2;
+        public bool Discovered(ulong team)
+        {
+            if (!UCWarfare.Config.FlagSettings.HideUnknownFlags) return true;
+            if (team == 1) return _discovered1;
+            else if (team == 2) return _discovered2;
+            else return false;
+        }
+        public bool Hidden(ulong team) => !Discovered(team);
+        public void Discover(ulong team)
+        {
+            if (team == 1) DiscoveredT1 = true;
+            else if (team == 2) DiscoveredT2 = true;
+        }
+        public void Hide(ulong team)
+        {
+            if (team == 1) DiscoveredT1 = false;
+            else if (team == 2) DiscoveredT2 = false;
+        }
+        public ulong WhosObj()
+        {
+            if (T1Obj && T2Obj) return 3;
+            else if (T1Obj) return 1;
+            else if (T2Obj) return 2;
+            else return 0;
+        }
+        public bool IsContested(out ulong winner)
+        {
+            if ((T1Obj && T2Obj) || (T1Obj && Owner == 2) || (T2Obj && Owner == 1)) // must be objective for both teams
+            {
+                if (Team1TotalPlayers == 0 && Team2TotalPlayers == 0)
+                {
+                    winner = 0;
+                    return false;
+                }
+                if (Team1TotalPlayers == Team2TotalPlayers)
+                {
+                    winner = 0;
+                    return true;
+                }
+                if (Team1TotalPlayers == 0 && Team2TotalPlayers > 0)
+                {
+                    winner = 2;
+                    return false;
+                }
+                if (Team2TotalPlayers == 0 && Team1TotalPlayers > 0)
+                {
+                    winner = 1;
+                    return false;
+                }
+                if (Team1TotalPlayers > Team2TotalPlayers)
+                {
+                    if (this.Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= this.Team2TotalPlayers)
+                    {
+                        winner = 1;
+                        return false;
+                    }
+                    else
+                    {
+                        winner = 0;
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (this.Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= this.Team1TotalPlayers)
+                    {
+                        winner = 2;
+                        return false;
+                    }
+                    else
+                    {
+                        winner = 0;
+                        return true;
+                    }
+                }
+            }
+            else 
+            {
+                ulong obj = WhosObj();
+                winner = obj;
+                return false;
+            }
+            
+            
+        }
         public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
             if (Manager.State == EState.ACTIVE || overrideInactiveCheck)
             {
-                if (T1Obj)
+                if (IsAnObj)
                 {
-                    if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team1TotalPlayers > 0 && Team2TotalPlayers == 0))
-                        CapT1();
-                    else if (
-                      (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers ||
-                      (Team2TotalPlayers > 0 && Team1TotalPlayers == 0)) &&
-                      Owner == 2 && _points > -1 * MaxPoints)
-                        CapT2();
-                }
-                else if (T2Obj)
-                {
-                    if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers || (Team2TotalPlayers > 0 && Team1TotalPlayers == 0))
-                        CapT2();
-                    else if (
-                      (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers ||
-                      (Team1TotalPlayers > 0 && Team2TotalPlayers == 0)) &&
-                      Owner == 1 && _points < MaxPoints)
-                        CapT1();
+                    if (!IsContested(out ulong winner))
+                    {
+                        if(IsObj(winner))
+                            Cap(winner, 1);
+                    }
+                    else
+                    {
+                        // invoke points updated method to show contested.
+                        this.LastDeltaPoints = 0;
+                        OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = _points });
+                    }
                 }
             }
         }
