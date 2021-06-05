@@ -59,7 +59,7 @@ namespace Uncreated.Warfare.Kits
             {
                 if (arguments[0].ToLower() == "set")
                 {
-                    if (arguments[1].ToLower() == "maxamount")
+                    if (arguments[1].ToLower() == "maxamount" || arguments[1].ToLower() == "a")
                     {
                         if (UInt16.TryParse(arguments[2], out var itemID))
                         {

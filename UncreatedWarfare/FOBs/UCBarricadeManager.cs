@@ -56,5 +56,63 @@ namespace Uncreated.Warfare.FOBs
 
             return barricadeDatas.Find(brd => brd.instanceID == InstanceID);
         }
+
+        public static BarricadeData GetBarricadeFromLook(UnturnedPlayer player)
+        {
+            PlayerLook look = player.Player.look;
+
+            Transform barricadeTransform = GetBarricadeTransformFromLook(look);
+
+            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out _, out _, out _, out var index,
+                out var region))
+                return null;
+            return region.barricades[index];
+        }
+
+        public static Transform GetBarricadeTransformFromLook(PlayerLook look)
+        {
+            return Physics.Raycast(look.aim.position, look.aim.forward, out var collision, 4, RayMasks.BLOCK_COLLISION) &&
+                   Physics.Raycast(look.aim.position, look.aim.forward, out var hit, 4, RayMasks.BARRICADE) &&
+                   collision.transform == hit.transform
+                ? hit.transform
+                : null;
+        }
+        public static T GetInteractableFromLook<T>(PlayerLook look) where T : Interactable
+        {
+            Transform barricadeTransform = GetBarricadeTransformFromLook(look);
+            if (barricadeTransform == null) return null;
+            if (barricadeTransform.TryGetComponent(out T interactable))
+                return interactable;
+            else return null;
+        }
+
+        public static void RemoveSingleItemFromStorage(InteractableStorage storage, ushort item_id)
+        {
+            for (byte i = 0; i < storage.items.items.Count; i++)
+            {
+                if (storage.items.getItem(i).item.id == item_id)
+                {
+                    storage.items.removeItem(i);
+                    return;
+                }
+            }
+        }
+
+        public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort item_id, int amount)
+        {
+            int counter = 0;
+
+            for (byte i = (byte)(storage.items.getItemCount() - 1); i >= 0; i--)
+            {
+                if (storage.items.getItem(i).item.id == item_id)
+                {
+                    counter++;
+                    storage.items.removeItem(i);
+
+                    if (counter == amount)
+                        return;
+                }
+            }
+        }
     }
 }
