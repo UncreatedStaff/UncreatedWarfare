@@ -188,7 +188,7 @@ namespace Uncreated.Warfare.Kits
                 else
                     player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
             }
-            BarricadeData barricade = UCBarricadeManager.GetBarricadeFromLook(player);
+            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player);
 
             if (barricade != null)
             {

@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Vehicles
 
         protected override string LoadDefaults() => "[]";
         public static void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
-        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
+        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static void RemoveAllVehicles() => RemoveAllObjectsFromSave();
         public static List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
         public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
@@ -415,15 +415,25 @@ namespace Uncreated.Warfare.Vehicles
     public class VehicleData
     {
         public ushort VehicleID;
+        [JsonSettable]
         public ulong Team;
+        [JsonSettable]
         public ushort RespawnTime;
+        [JsonSettable]
         public ushort Cost;
+        [JsonSettable]
         public ushort RequiredLevel;
+        [JsonSettable]
         public ushort TicketCost;
+        [JsonSettable]
         public ushort Cooldown;
+        [JsonSettable]
         public EBranch RequiredBranch;
+        [JsonSettable]
         public Kit.EClass RequiredClass;
+        [JsonSettable]
         public byte RearmCost;
+        [JsonSettable]
         public byte RepairCost;
         public List<ushort> Items;
         public List<byte> CrewSeats;

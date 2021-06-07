@@ -83,7 +83,7 @@ namespace Uncreated.Warfare
             player.Message("whitelist_nosalvage");
             shouldAllow = false;
         }
-        private void OnStructureSalvageRequested(CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
+        private void OnStructureSalvageRequested(CSteamID steamID, byte x, byte y, ushort index, ref bool shouldAllow)
         {
             var player = UnturnedPlayer.FromCSteamID(steamID);
             if (player.OnDuty())
