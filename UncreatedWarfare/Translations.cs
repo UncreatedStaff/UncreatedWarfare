@@ -118,8 +118,9 @@ namespace Uncreated.Warfare
                 { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
                 { "kit_accessremoved", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
                 { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
-                { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'class', 'cost', 'clearinv' etc.</color>" },
+                { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'Class', 'Cost', 'IsPremium', etc.</color>" },
                 { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
+                { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>You are not allowed to change {0}.</color>" },
                 { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
                 { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
                 { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
@@ -318,6 +319,25 @@ namespace Uncreated.Warfare
                 { "kit_owned", "OWNED" },
                 { "kit_price_dollars", "$ {0}" },
                 { "kit_price_credits", "C {0}" },
+                // structure
+                { "structure_not_looking", "You must be looking at a barricade, structure, or vehicle." },
+                { "structure_saved", "Saved <color=#{1}>{0}</color>." },
+                { "structure_saved_already", "<color=#{1}>{0}</color> is already saved." },
+                { "structure_saved_not_vehicle", "You can not save a vehicle." },
+                { "structure_saved_not_bush", "Why are you trying to save a bush?" },
+                { "structure_unsaved_not_bush", "Why are you trying to unsave a bush?" },
+                { "structure_unsaved", "Removed <color=#{1}>{0}</color> save." },
+                { "structure_unsaved_already", "<color=#{1}>{0}</color> is not saved." },
+                { "structure_unsaved_not_vehicle", "You can not save or remove a vehicle." },
+                { "structure_remove", "Discarded <color=#{1}>{0}</color>." },
+                { "structure_popped", "Destroyed <color=#{1}>{0}</color>." },
+                { "structure_pop_not_poppable", "That object can not be destroyed." },
+                { "structure_examine_not_examinable", "That object can not be examined." },
+                { "structure_examine", "<color=#{2}>{0} <i>({1})</i></color> placed this <color=#{4}>{3}</color>." },
+                { "structure_examine_not_locked", "This vehicle is not locked." },
+                { "structure_last_owner_web_prompt", "Last owner of {0}: {1}, Team: {2}." },
+                { "structure_last_owner_chat", "Last owner of <color=#{1}>{0}</color>: <color=#{4}>{2} <i>({3})</i></color>, Team: <color=#{6}>{5}</color>." },
+
                 // whitelist
                 { "whitelist_added", "<color=#a0ad8e>Whitelisted item: <color=#ffffff>{0}</color></color>" },
                 { "whitelist_removed", "<color=#a0ad8e>Un-whitelisted item: <color=#ffffff>{0}</color></color>" },
@@ -586,7 +606,30 @@ namespace Uncreated.Warfare
             new ColorData("kit_price_free", "f53b3b"),
             new ColorData("kit_price_credits", "f53b3b"),
             new ColorData("kit_price_dollars", "f53b3b"),
-            new ColorData("kit_price_owned", "f53b3b")
+            new ColorData("kit_price_owned", "f53b3b"),
+
+            // Structure
+            new ColorData("structure_saved", "e6e3d5"),
+            new ColorData("structure_saved_already", "e6e3d5"),
+            new ColorData("structure_saved_not_vehicle", "ff0000"),
+            new ColorData("structure_saved_not_bush", "ff0000"),
+            new ColorData("structure_unsaved", "e6e3d5"),
+            new ColorData("structure_unsaved_already", "e6e3d5"),
+            new ColorData("structure_unsaved_not_vehicle", "ff0000"),
+            new ColorData("structure_unsaved_not_bush", "ff0000"),
+            new ColorData("structure_not_looking", "ff0000"),
+            new ColorData("structure_examine_not_locked", "ff0000"),
+            new ColorData("structure_popped", "e6e3d5"),
+            new ColorData("structure_popped_structure", "c6d4b8"),
+            new ColorData("structure_saved_structure", "c6d4b8"),
+            new ColorData("structure_unsaved_structure", "c6d4b8"),
+            new ColorData("structure_saved_already_structure", "c6d4b8"),
+            new ColorData("structure_unsaved_already_structure", "c6d4b8"),
+            new ColorData("structure_pop_not_poppable", "ff0000"),
+            new ColorData("structure_examine_not_examinable", "ff0000"),
+            new ColorData("structure_last_owner_chat", "c6d4b8"),
+            new ColorData("structure_last_owner_chat_structure", "e6e3d5"),
+
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {

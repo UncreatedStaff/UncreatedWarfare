@@ -268,26 +268,21 @@ namespace Uncreated.Warfare.Stats
             }
             if (parameters.killer != null)
             {
-                int kitsaveindex = LogoutSaver.ActiveSaves.FindIndex(x => x.Steam64 == parameters.killer.channel.owner.playerID.steamID.m_SteamID);
-                if (kitsaveindex != -1)
+                string kitname = LogoutSaver.GetKit(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
+                int kitindex = kits.FindIndex(x => x.name == kitname);
+                Kit kit;
+                if (kitindex != -1)
                 {
-                    string kitname = LogoutSaver.ActiveSaves[kitsaveindex].KitName;
-                    int kitindex = kits.FindIndex(x => x.name == kitname);
-                    Kit kit;
-                    if (kitindex != -1)
-                    {
-                        kit = kits[kitindex];
-                    }
-                    else
-                    {
-                        kit = new Kit(kitname, F.GetKitDisplayName(kitname));
-                        kits.Add(kit);
-                    }
-                    kit.AddKill(false, parameters);
+                    kit = kits[kitindex];
                 }
+                else
+                {
+                    kit = new Kit(kitname, F.GetKitDisplayName(kitname));
+                    kits.Add(kit);
+                }
+                kit.AddKill(false, parameters);
             }
             else F.Log("killer was null");
-            
             if (save) Save();
         }
     }

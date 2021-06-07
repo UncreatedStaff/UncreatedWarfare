@@ -82,6 +82,7 @@ namespace Uncreated.Warfare
     }
     public struct SerializableVector3
     {
+        public static readonly SerializableVector3 Zero = new SerializableVector3(0, 0, 0);
         public float x;
         public float y;
         public float z;
@@ -145,6 +146,7 @@ namespace Uncreated.Warfare
     }
     public struct SerializableTransform
     {
+        public static readonly SerializableTransform Zero = new SerializableTransform(SerializableVector3.Zero, SerializableVector3.Zero);
         public SerializableVector3 position;
         public SerializableVector3 euler_angles;
         [JsonIgnore]

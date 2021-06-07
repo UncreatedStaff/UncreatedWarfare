@@ -13,11 +13,7 @@ namespace Uncreated.Warfare.Kits
 {
     public class KitManager : JSONSaver<Kit>
     {
-        public static List<Kit> ActiveKits;
-        public KitManager() : base(Data.KitsStorage + "kits.json") 
-        {
-            ActiveKits = GetExistingObjects();
-        }
+        public KitManager() : base(Data.KitsStorage + "kits.json") { }
         protected override string LoadDefaults() 
         {
             if (JSONMethods.DefaultKits != default)
@@ -25,112 +21,100 @@ namespace Uncreated.Warfare.Kits
             else return "[]";
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
-        public static void DeleteKit(string kitName) => RemoveFromSaveWhere(k => k.Name.ToLower() == kitName.ToLower());
-        public static void Refresh() => ActiveKits = GetExistingObjects();
+        public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public static void DeleteAllKits() => RemoveAllObjectsFromSave();
-        public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => ActiveKits.Where(predicate);
-        public static bool KitExists(string kitName, out Kit kit)
+        public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
+        public static bool KitExists(string kitName, out Kit kit) => ObjectExists(i => i != default && kitName != default && i.Name.ToLower() == kitName.ToLower(), out kit);
+        public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes, bool save = true)
         {
-            kit = ActiveKits.FirstOrDefault(i => i.Name.ToLower() == kitName.ToLower());
-            return kit == default;
-        }
-        public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes)
-        {
-            foreach (var kit in ActiveKits)
+            if(KitExists(kitName, out Kit kit))
             {
-                if (kit.Name.ToLower() == kitName.ToLower())
-                {
-                    kit.Items = newItems;
-                    kit.Clothes = newClothes;
-                    OverwriteSavedList(ActiveKits);
-                    return true;
-                }
+                kit.Items = newItems ?? kit.Items;
+                kit.Clothes = newClothes ?? kit.Clothes;
+                if(save) Save();
+                return true;
             }
             return false;
         }
-        public static bool SetProperty(string kitName, object property, object newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid)
+        [Obsolete]
+        public static bool SetPropertyOld(string kitName, object property, object newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid)
         {
             propertyIsValid = false;
             kitExists = false;
             argIsValid = false;
 
-            if (!IsPropertyValid<Kit.EKitProperty>(property, out var p))
+            if (!IsPropertyValid(property, out Kit.EKitProperty p))
             {
                 return false;
             }
             propertyIsValid = true;
-
-            foreach (var kit in ActiveKits)
+            if(KitExists(kitName, out Kit kit))
             {
-                if (kit.Name.ToLower() == kitName.ToLower())
+                kitExists = true;
+                switch (p)
                 {
-                    kitExists = true;
+                    case Kit.EKitProperty.CLASS:
+                        if (Enum.TryParse<Kit.EClass>(newValue.ToString().ToUpper(), out var kitclass))
+                        {
+                            kit.Class = kitclass;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.BRANCH:
+                        if (Enum.TryParse<EBranch>(newValue.ToString().ToUpper(), out var branch))
+                        {
+                            kit.Branch = branch;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.TEAM:
 
-                    switch (property)
-                    {
-                        case Kit.EKitProperty.CLASS:
-                            if (Enum.TryParse<Kit.EClass>(newValue.ToString().ToUpper(), out var kitclass))
-                            {
-                                kit.Class = kitclass;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.BRANCH:
-                            if (Enum.TryParse<EBranch>(newValue.ToString().ToUpper(), out var branch))
-                            {
-                                kit.Branch = branch;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.TEAM:
-
-                            if (UInt64.TryParse(newValue.ToString(), out var team))
-                            {
-                                kit.Team = team;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.COST:
-                            if (UInt16.TryParse(newValue.ToString(), out var cost))
-                            {
-                                kit.Cost = cost;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.LEVEL:
-                            if (UInt16.TryParse(newValue.ToString(), out var level))
-                            {
-                                kit.RequiredLevel = level;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.TICKETS:
-                            if (UInt16.TryParse(newValue.ToString(), out var tickets))
-                            {
-                                kit.TicketCost = tickets;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.PREMIUM:
-                            if (Boolean.TryParse(newValue.ToString(), out var ispremium))
-                            {
-                                kit.IsPremium = ispremium;
-                                argIsValid = true;
-                            }
-                            break;
-                        case Kit.EKitProperty.CLEARINV:
-                            if (Boolean.TryParse(newValue.ToString(), out var clearinv))
-                            {
-                                kit.ShouldClearInventory = clearinv;
-                                argIsValid = true;
-                            }
-                            break;
-                    }
-                    if (argIsValid)
-                    {
-                        OverwriteSavedList(ActiveKits);
-                        return true;
-                    }
+                        if (UInt64.TryParse(newValue.ToString(), out var team))
+                        {
+                            kit.Team = team;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.COST:
+                        if (UInt16.TryParse(newValue.ToString(), out var cost))
+                        {
+                            kit.Cost = cost;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.LEVEL:
+                        if (UInt16.TryParse(newValue.ToString(), out var level))
+                        {
+                            kit.RequiredLevel = level;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.TICKETS:
+                        if (UInt16.TryParse(newValue.ToString(), out var tickets))
+                        {
+                            kit.TicketCost = tickets;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.PREMIUM:
+                        if (Boolean.TryParse(newValue.ToString(), out var ispremium))
+                        {
+                            kit.IsPremium = ispremium;
+                            argIsValid = true;
+                        }
+                        break;
+                    case Kit.EKitProperty.CLEARINV:
+                        if (Boolean.TryParse(newValue.ToString(), out var clearinv))
+                        {
+                            kit.ShouldClearInventory = clearinv;
+                            argIsValid = true;
+                        }
+                        break;
+                }
+                if (argIsValid)
+                {
+                    Save();
+                    return true;
                 }
             }
             return false;
@@ -176,7 +160,6 @@ namespace Uncreated.Warfare.Kits
 
             return clothes;
         }
-
         public static void GiveKit(UnturnedPlayer player, Kit kit)
         {
             if (kit == null)
@@ -216,7 +199,6 @@ namespace Uncreated.Warfare.Kits
 
             LogoutSaver.UpdateSave(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
         }
-
         public static void ResupplyKit(UnturnedPlayer player, Kit kit)
         {
             List<ItemJar> nonKitItems = new List<ItemJar>();
@@ -256,56 +238,44 @@ namespace Uncreated.Warfare.Kits
 
             EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
         }
-
-        public static bool HasKit(CSteamID steamID, out Kit kit)
+        public static bool HasKit(ulong steamID, out Kit kit)
         {
-            bool result = LogoutSaver.HasSave(steamID, out LogoutSave save);
-            kit = ActiveKits.FirstOrDefault(k => k.Name == save.KitName);
-            return result;
+            if (LogoutSaver.HasSave(steamID, out LogoutSave save))
+                return ObjectExists(k => k.Name == save.KitName, out kit);
+            else
+            {
+                kit = default;
+                return false;
+            }
         }
-
-        public static bool HasKit(UnturnedPlayer player, out Kit kit)
-        {
-            bool result = HasKit(player.CSteamID, out Kit k);
-            kit = k;
-            return result;
-        }
-
+        public static bool HasKit(UnturnedPlayer player, out Kit kit) => HasKit(player.Player.channel.owner.playerID.steamID.m_SteamID, out kit);
+        public static bool HasKit(SteamPlayer player, out Kit kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
+        public static bool HasKit(Player player, out Kit kit) => HasKit(player.channel.owner.playerID.steamID.m_SteamID, out kit);
+        public static bool HasKit(CSteamID player, out Kit kit) => HasKit(player.m_SteamID, out kit);
         public static bool HasAccess(ulong playerID, string kitName)
         {
-            foreach (var kit in ActiveKits)
-            {
-                if (kit.Name.ToLower() == kitName.ToLower())
-                    return kit.AllowedUsers.Contains(playerID);
-            }
-            return false;
+            if (KitExists(kitName, out Kit kit))
+                return kit.AllowedUsers.Contains(playerID);
+            else return false;
         }
-        public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => ActiveKits.Where(kit => kit.AllowedUsers.Contains(playerID)).ToList();
+        public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => GetObjectsWhere(k => k.AllowedUsers.Contains(playerID));
         public static void GiveAccess(ulong playerID, string kitName)
         {
-            foreach (var kit in ActiveKits)
+            if (KitExists(kitName, out Kit kit))
             {
-                if (kit.Name.ToLower() == kitName.ToLower())
+                if (!kit.AllowedUsers.Contains(playerID))
                 {
-                    if (!kit.AllowedUsers.Contains(playerID))
-                    {
-                        kit.AllowedUsers.Add(playerID);
-                        OverwriteSavedList(ActiveKits);
-                        return;
-                    }
+                    kit.AllowedUsers.Add(playerID);
+                    Save();
                 }
             }
         }
         public static void RemoveAccess(ulong playerID, string kitName)
         {
-            foreach (var kit in ActiveKits)
+            if (KitExists(kitName, out Kit kit))
             {
-                if (kit.Name == kitName.ToLower())
-                {
-                    kit.AllowedUsers.RemoveAll(id => id == playerID);
-                    OverwriteSavedList(ActiveKits);
-                    return;
-                }
+                kit.AllowedUsers.RemoveAll(i => i == playerID);
+                Save();
             }
         }
     }
@@ -354,14 +324,23 @@ namespace Uncreated.Warfare.Kits
                 return Name;
             }
         }
+        [JsonSettable]
         public EClass Class;
+        [JsonSettable]
         public EBranch Branch;
+        [JsonSettable]
         public ulong Team;
+        [JsonSettable]
         public ushort Cost;
+        [JsonSettable]
         public ushort RequiredLevel;
+        [JsonSettable]
         public ushort TicketCost;
+        [JsonSettable]
         public bool IsPremium;
+        [JsonSettable]
         public float PremiumCost;
+        [JsonSettable]
         public bool ShouldClearInventory;
         public List<KitItem> Items;
         public List<KitClothing> Clothes;
@@ -388,7 +367,6 @@ namespace Uncreated.Warfare.Kits
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, name } };
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
-
         public enum EClothingType
         {
             SHIRT,

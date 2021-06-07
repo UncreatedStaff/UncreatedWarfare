@@ -13,8 +13,6 @@ namespace Uncreated.Warfare
 {
     public class Whitelister : JSONSaver<WhitelistItem>, IDisposable
     {
-        private static List<WhitelistItem> items;
-
         protected override string LoadDefaults() => "[]";
 
         public Whitelister()
@@ -25,7 +23,6 @@ namespace Uncreated.Warfare
             StructureManager.onSalvageStructureRequested += OnStructureSalvageRequested;
             Reload();
         }
-
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
         {
             var player = UnturnedPlayer.FromPlayer(P);
@@ -140,29 +137,10 @@ namespace Uncreated.Warfare
             shouldAllow = false;
             player.Message($"whitelist_nokit");
         }
-
-        public static void Reload() => items = GetExistingObjects();
-        public static void Save() => OverwriteSavedList(items);
-        public static void AddItem(ushort ID)
-        {
-            items.Add(new WhitelistItem(ID, 255));
-            Save();
-        }
-        public static void RemoveItem(ushort ID)
-        {
-            items.RemoveAll(i => i.itemID == ID);
-            Save();
-        }
-        public static void SetAmount(ushort ID, ushort newAmount)
-        {
-            items.Where(i => i.itemID == ID).ToList().ForEach(i => i.amount = newAmount);
-            Save();
-        }
-        public static bool IsWhitelisted(ushort itemID, out WhitelistItem item)
-        {
-            item = items.Find(w => w.itemID == itemID);
-            return item != null;
-        }
+        public static void AddItem(ushort ID) => AddObjectToSave(new WhitelistItem(ID, 255));
+        public static void RemoveItem(ushort ID) => RemoveWhere(i => i.itemID == ID);
+        public static void SetAmount(ushort ID, ushort newAmount) => UpdateObjectsWhere(i => i.itemID == ID, i => i.amount = newAmount);
+        public static bool IsWhitelisted(ushort itemID, out WhitelistItem item) => ObjectExists(w => w.itemID == itemID, out item);
         public void Dispose()
         {
             ItemManager.onTakeItemRequested -= OnItemPickup;
@@ -173,6 +151,7 @@ namespace Uncreated.Warfare
     public class WhitelistItem
     {
         public ushort itemID;
+        [JsonSettable]
         public ushort amount;
 
         public WhitelistItem(ushort itemID, ushort amount)

@@ -57,11 +57,8 @@ namespace Uncreated.Warfare.Kits
                     if (KitManager.KitExists(kitName, out _))
                     {
                         KitManager.DeleteKit(kitName);
-                        if(RequestSigns.SignExists(kitName, out List<RequestSign> signs))
-                        {
-                            foreach (RequestSign sign in signs)
-                                RequestSigns.RemoveRequestSign(sign);
-                        }
+                        
+                        RequestSigns.RemoveRequestSigns(kitName);
                         player.Message("kit_deleted", kitName);
                         return;
                     }
@@ -99,23 +96,31 @@ namespace Uncreated.Warfare.Kits
 
                 if (op.ToLower() == "set" || op.ToLower() == "s")
                 {
-                    if (KitManager.SetProperty(kitName, property, newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid))
+                    if (!KitManager.SetProperty(x => x.Name == kitName, property, newValue, out bool founditem, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange))
                     {
-                        if (!propertyIsValid) // error - invalid property name
-                        {
-                            player.Message("kit_e_invalidprop", property);
-                            return;
-                        }
-                        if (!kitExists) // error - kit does not exist
+                        if (!founditem) // error - kit does not exist
                         {
                             player.Message("kit_e_noexist", kitName);
                             return;
                         }
-                        if (!argIsValid) // error - invalid argument value
+                        if (!allowedToChange) // error - invalid argument value
+                        {
+                            player.Message("kit_e_invalidarg_not_allowed", property);
+                            return;
+                        }
+                        if (!parsed) // error - invalid argument value
                         {
                             player.Message("kit_e_invalidarg", newValue, property);
                             return;
                         }
+                        if (!foundproperty || !set) // error - invalid property name
+                        {
+                            player.Message("kit_e_invalidprop", property);
+                            return;
+                        }
+                        return;
+                    } else
+                    {
                         // success
                         player.Message("kit_setprop", property, kitName, newValue);
                         RequestSigns.UpdateSignsWithName(kitName);

@@ -12,15 +12,11 @@ namespace Uncreated.Warfare.Kits
 {
     public class RequestSigns : JSONSaver<RequestSign>
     {
-        public static List<RequestSign> ActiveSigns;
-        public RequestSigns() : base(Data.StructureStorage + "request_signs.json") 
-        {
-            ActiveSigns = GetExistingObjects();
-        }
+        public RequestSigns() : base(Data.StructureStorage + "request_signs.json") { }
         protected override string LoadDefaults() => "[]";
         public static void DropAllSigns()
         {
-            foreach(RequestSign sign in ActiveSigns)
+            foreach(RequestSign sign in ActiveObjects)
             {
                 Transform barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(sign.sign_id), sign.transform.Position, sign.transform.Rotation, sign.owner, sign.group);
                 if (barricade == default)
@@ -47,7 +43,6 @@ namespace Uncreated.Warfare.Kits
             if(!ObjectExists(x => x.transform.Position == sign.transform.position && x.transform.Rotation == sign.transform.rotation, out _))
             {
                 signadded = new RequestSign(sign);
-                ActiveSigns.Add(signadded);
                 AddObjectToSave(signadded);
                 return true;
             }
@@ -55,55 +50,17 @@ namespace Uncreated.Warfare.Kits
         }
         public static void RemoveRequestSign(RequestSign sign)
         {
-            int i = ActiveSigns.FindIndex(x => x.transform == sign.transform);
-            if (i != -1) ActiveSigns.RemoveAt(i);
-            RemoveFromSaveWhere(x => x.transform == sign.transform);
+            RemoveWhere(x => x.transform == sign.transform);
             sign.InvokeUpdate();
         }
-        public static bool SignExists(InteractableSign sign, out RequestSign found, bool secondTime = false)
-        {
-            if(sign == default)
-            {
-                found = default;
-                return false;
-            }
-            IEnumerable<RequestSign> matches = ActiveSigns.Where(s => s.transform == sign.transform);
-            int amt = matches.Count();
-            if (amt >= 1)
-            {
-                found = matches.ElementAt(0);
-                return found != default;
-            } else if (!secondTime)
-            {
-                ActiveSigns = GetExistingObjects();
-                return SignExists(sign, out found, true);
-            } else 
-            {
-                found = default;
-                return false;
-            }
-        }
-        public static bool SignExists(string kitName, out List<RequestSign> signs)
-        {
-            signs = ActiveSigns.Where(x => x.kit_name == kitName).ToList();
-            return signs.Count > 0;
-        }
-        public static void UpdateSignsWithName(SteamPlayer player, string kitName)
-        {
-            if (SignExists(kitName, out List<RequestSign> signs))
-            {
-                foreach (RequestSign sign in signs)
-                    sign.InvokeUpdate(player);
-            }
-        }
-        public static void UpdateSignsWithName(string kitName)
-        {
-            if (SignExists(kitName, out List<RequestSign> signs))
-            {
-                foreach (RequestSign sign in signs)
-                    sign.InvokeUpdate();
-            }
-        }
+        public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
+        public static bool SignExists(InteractableSign sign, out RequestSign found) => ObjectExists(s => s != default && sign != default && s.transform == sign.transform, out found);
+        public static bool SignExists(string kitName, out RequestSign sign) => ObjectExists(x => x.kit_name == kitName, out sign);
+        public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
+        public static void UpdateSignsWithName(SteamPlayer player, string kitName) => GetObjectsWhere(x => x.kit_name == kitName).ForEach(x => x.InvokeUpdate(player));
+        public static void UpdateSignsWithName(string kitName) => GetObjectsWhere(x => x.kit_name == kitName).ForEach(x => x.InvokeUpdate());
+        public static void SetOwner(RequestSign sign, ulong newOwner) => SetProperty(sign, nameof(sign.owner), newOwner, out _, out _, out _);
+        public static void SetGroupOwner(RequestSign sign, ulong group) => SetProperty(sign, nameof(sign.group), group, out _, out _, out _);
     }
     public class RequestSign
     {
@@ -128,10 +85,14 @@ namespace Uncreated.Warfare.Kits
                 else kit_name = value;
             }
         }
+        [JsonSettable]
         public string kit_name;
         public SerializableTransform transform;
+        [JsonSettable]
         public ushort sign_id;
+        [JsonSettable]
         public ulong owner;
+        [JsonSettable]
         public ulong group;
         [JsonIgnore]
         public Transform barricadetransform = default;

@@ -418,30 +418,32 @@ namespace Uncreated.Warfare.Flags
             }
         }
         public class OnTeamWinEventArgs : EventArgs { public ulong team; }
-        public event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
         public class OnObjectiveChangeEventArgs : EventArgs { public Flag oldFlagObj; public Flag newFlagObj; public ulong Team; public int OldObj; public int NewObj; }
         public class OnStateChangedEventArgs : EventArgs { public EState NewState; public EState OldState; }
+        public event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
         public event EventHandler<OnObjectiveChangeEventArgs> OnObjectiveChange;
         public event EventHandler<OnStateChangedEventArgs> OnStateChanged;
         public event EventHandler OnReady;
         public event EventHandler OnNewGameStarting;
-        public void DeclareWin(ulong Team)
+        public void DeclareWin(ulong Team, bool showEndScreen = true)
         {
             F.LogWarning(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Green);
             foreach (SteamPlayer client in Provider.clients)
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(Team));
             this.State = EState.FINISHED;
             OnTeamWinGame?.Invoke(this, new OnTeamWinEventArgs { team = Team });
-            EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
-            EndScreen.OnLeaderboardExpired += EndScreen_OnLeaderboardExpired;
-            EndScreen.winner = Team;
-            foreach (SteamPlayer client in Provider.clients)
+            if(showEndScreen)
             {
-                ClearListUI(client.transportConnection);
+                EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
+                EndScreen.OnLeaderboardExpired += EndScreen_OnLeaderboardExpired;
+                EndScreen.winner = Team;
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ClearListUI(client.transportConnection);
+                }
+                EndScreen.EndGame();
+                isScreenUp = true;
             }
-            EndScreen.EndGame();
-            isScreenUp = true;
-
         }
         public void StartNextGame()
         {

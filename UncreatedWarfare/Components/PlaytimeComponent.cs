@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Components
         public ushort barricadeID;
         public int barricadeInstId;
         public SteamPlayer owner;
+        public ulong ownerID;
         public LandmineDataForPostAccess(InteractableTrap trap, BarricadeOwnerDataComponent owner)
         {
             if(trap == default || owner == default)
@@ -22,11 +23,15 @@ namespace Uncreated.Warfare.Components
                 barricadeID = 0;
                 barricadeInstId = 0;
                 this.owner = null;
+                if (owner != default)
+                    this.ownerID = owner.ownerID;
+                else this.ownerID = 0;
             } else
             {
                 this.barricadeID = owner.barricade.id;
                 this.barricadeInstId = trap.GetInstanceID();
                 this.owner = owner.owner;
+                this.ownerID = owner.ownerID;
             }
         }
     }

@@ -216,7 +216,7 @@ namespace Uncreated.Warfare
         {
             ListenServer = new AsyncListenServer();
             ListenServer.OnMessageReceived += UCWarfare.I.ReceivedResponeFromListenServer;
-            ListenServer.Start();
+            ListenServer.Start(ListenerThread);
         }
         private static void DuplicateKeyError(Exception ex)
         {

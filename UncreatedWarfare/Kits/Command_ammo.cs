@@ -33,8 +33,8 @@ namespace Uncreated.Warfare.Kits
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            var barricadeData = UCBarricadeManager.GetBarricadeFromLook(player);
-            var storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
+            BarricadeData barricadeData = UCBarricadeManager.GetBarricadeDataFromLook(player);
+            InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
 
             if (barricadeData != null)
             {
