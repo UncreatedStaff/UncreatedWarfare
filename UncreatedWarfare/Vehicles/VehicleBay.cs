@@ -10,10 +10,11 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
+using Logger = Rocket.Core.Logging.Logger;
 
 namespace Uncreated.Warfare.Vehicles
 {
-    public class VehicleBay : JSONSaver<VehicleData>
+    public class VehicleBay : JSONSaver<VehicleData>, IDisposable
     {
         public VehicleBay()
             : base(Data.VehicleStorage + "vehiclebay.json")
@@ -21,6 +22,19 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
+            Patches.BarricadeDestroyedHandler += OnBarricadeDestroyed;
+        }
+
+        private void OnBarricadeDestroyed(BarricadeData data, uint instanceID)
+        {
+            if (data.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
+            {
+                if (VehicleSpawner.SpawnExists(instanceID, out _))
+                {
+                    Logger.Log("Vehicle spawn was deregistered because it was salvaged or destroyed.");
+                    VehicleSpawner.DeleteSpawn(instanceID);
+                }
+            }
         }
 
         protected override string LoadDefaults() => "[]";
@@ -34,7 +48,7 @@ namespace Uncreated.Warfare.Vehicles
             vehicleData = v;
             return result;
         }
-        public static bool SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
+        public static void SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
         {
             propertyIsValid = false;
             vehicleExists = false;
@@ -42,7 +56,7 @@ namespace Uncreated.Warfare.Vehicles
 
             if (!IsPropertyValid<EVehicleProperty>(property, out var p))
             {
-                return false;
+                return;
             }
             propertyIsValid = true;
 
@@ -128,13 +142,15 @@ namespace Uncreated.Warfare.Vehicles
                     if (argIsValid)
                     {
                         OverwriteSavedList(vehicles);
-                        return true;
                     }
                 }
             }
-
-            return true;
         }
+
+        public static void SetItems(ushort vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
+
+        public static void AddCrewmanSeat(ushort vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
+        public static void RemoveCrewmanSeat(ushort vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
 
         public static void SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
@@ -175,14 +191,14 @@ namespace Uncreated.Warfare.Vehicles
 
         public static bool TryRespawnVehicle(uint vehicleInstanceID)
         {
-            if (VehicleSpawnSaver.HasLinkedSpawn(vehicleInstanceID, out var spawn))
+            if (VehicleSpawner.HasLinkedSpawn(vehicleInstanceID, out var spawn))
             {
                 var spawnLocation = UCBarricadeManager.GetBarricadeByInstanceID(spawn.BarricadeInstanceID);
                 if (spawnLocation == null)
                     return false;
 
                 SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out var newInstanceID);
-                VehicleSpawnSaver.LinkVehicleToSpawn(vehicleInstanceID, spawn.BarricadeInstanceID);
+                VehicleSpawner.LinkVehicleToSpawn(vehicleInstanceID, spawn.BarricadeInstanceID);
 
                 return true;
             }
@@ -191,7 +207,7 @@ namespace Uncreated.Warfare.Vehicles
 
         public static bool TrySpawnNewVehicle(VehicleSpawn spawn)
         {
-            if (VehicleSpawnSaver.HasLinkedVehicle(spawn, out var vehicle))
+            if (VehicleSpawner.HasLinkedVehicle(spawn, out var vehicle))
             {
                 if (!(vehicle.isDead || vehicle.isDrowned))
                     return false;
@@ -202,7 +218,7 @@ namespace Uncreated.Warfare.Vehicles
                 return false;
 
             SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out uint instancID);
-            VehicleSpawnSaver.LinkVehicleToSpawn(vehicle.instanceID, spawn.BarricadeInstanceID);
+            VehicleSpawner.LinkVehicleToSpawn(vehicle.instanceID, spawn.BarricadeInstanceID);
 
                 return true;
         }
@@ -355,7 +371,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void FirstSpawn()
         {
-            var allspawns = VehicleSpawnSaver.GetAllSpawns();
+            var allspawns = VehicleSpawner.GetAllSpawns();
             foreach (var spawn in allspawns)
                 TrySpawnNewVehicle(spawn);
         }
@@ -371,6 +387,14 @@ namespace Uncreated.Warfare.Vehicles
                 yield break;
 
             TryRespawnVehicle(vehicle.instanceID);
+        }
+
+        public void Dispose()
+        {
+            VehicleManager.OnVehicleExploded -= OnVehicleExploded;
+            VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
+            VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
+            Patches.BarricadeDestroyedHandler -= OnBarricadeDestroyed;
         }
 
         public enum EVehicleProperty
@@ -401,7 +425,7 @@ namespace Uncreated.Warfare.Vehicles
         public Kit.EClass RequiredClass;
         public byte RearmCost;
         public byte RepairCost;
-        Dictionary<ushort, byte> Items;
+        public List<ushort> Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
 
@@ -418,7 +442,7 @@ namespace Uncreated.Warfare.Vehicles
             RequiredClass = Kit.EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;
-            Items = new Dictionary<ushort, byte>() { { 1440, 1 }, { 277, 1 } };
+            Items = new List<ushort>() { 1440, 277 };
             CrewSeats = new List<byte>();
             Metadata = null;
         }

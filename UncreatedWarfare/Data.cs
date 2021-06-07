@@ -85,7 +85,7 @@ namespace Uncreated.Warfare
         public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
         public static List<UncreatedPlayer> Online = new List<UncreatedPlayer>();
         public static KitManager KitManager;
-        public static VehicleSpawnSaver VehicleSpawnSaver;
+        public static VehicleSpawner VehicleSpawnSaver;
         public static VehicleBay VehicleBay;
         public static FlagManager FlagManager;
         public static TeamManager TeamManager;

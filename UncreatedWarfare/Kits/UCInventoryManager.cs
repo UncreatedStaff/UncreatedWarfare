@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Kits
 
                 for (byte index = 0; index < pageCount; index++)
                 {
-                    if (player.Player.inventory.getItem(page, 0).item.id == itemID)
+                    if (player.Player.inventory.getItem(page, index).item.id == itemID)
                     {
                         count++;
                     }

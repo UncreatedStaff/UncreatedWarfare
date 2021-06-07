@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if(player.HasPermission("uc.request.save"))
                     {
-                        InteractableSign sign = BuildManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+                        InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
                         if (sign == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
                         else
                         {
@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (player.HasPermission("uc.request.remove"))
                     {
-                        InteractableSign sign = BuildManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+                        InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
                         if (sign == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
                         else
                         {
@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Kits
                     return;
                 }
             }
-            InteractableSign signlook = BuildManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+            InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
             if (signlook == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
             else
             {

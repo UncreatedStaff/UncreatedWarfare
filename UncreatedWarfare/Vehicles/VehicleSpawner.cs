@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Vehicles
 {
-    public class VehicleSpawnSaver : JSONSaver<VehicleSpawn>
+    public class VehicleSpawner : JSONSaver<VehicleSpawn>
     {
-        public VehicleSpawnSaver()
+        public VehicleSpawner()
             : base(Data.VehicleStorage + "vehiclespawns.json")
         {
 
@@ -55,14 +55,12 @@ namespace Uncreated.Warfare.Vehicles
             spawn = t;
             return result;
         }
-
         public static bool HasLinkedVehicle(VehicleSpawn spawn, out InteractableVehicle vehicle)
         {
             var v = VehicleManager.getVehicle(spawn.VehicleID);
             vehicle = v;
             return v != null;
         }
-
     }
 
     public class VehicleSpawn

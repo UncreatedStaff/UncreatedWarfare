@@ -158,6 +158,11 @@ namespace Uncreated.Warfare.Kits
                             player.Message($"<color=#FAE69C>This Ammo Station is missing ammo! <color=#d1c597>Ammo crates: </color><color=#d1c597>{ammoCount}/{vehicleData.RearmCost}</color></color>"); return;
                         }
 
+                        foreach (var itemID in vehicleData.Items)
+                        {
+                            ItemManager.dropItem(new Item(itemID, true), player.Position, true, true, true);
+                        }
+
                         player.Message($"Your vehicle has been resupplied. <color=#d1c597>-{vehicleData.RearmCost} Ammo crates</color>");
 
                         EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);

@@ -86,7 +86,7 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.VehicleStorage, out _, true);
             if (UCWarfare.Config.Modules.VehicleSpawning)
             {
-                Data.VehicleSpawnSaver = new VehicleSpawnSaver();
+                Data.VehicleSpawnSaver = new VehicleSpawner();
                 Data.VehicleBay = new VehicleBay();
             }
             Data.VehicleBay.FirstSpawn();

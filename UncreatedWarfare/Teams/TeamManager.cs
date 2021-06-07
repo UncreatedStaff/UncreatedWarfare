@@ -18,6 +18,10 @@ namespace Uncreated.Warfare.Teams
     {
         private static TeamConfig _data;
         public const ulong ZombieTeamID = ulong.MaxValue;
+
+        public static ushort Team1Tickets;
+        public static ushort Team2Tickets;
+
         public TeamManager()
             : base(Data.TeamStorage + "teams.json")
         {
@@ -25,7 +29,8 @@ namespace Uncreated.Warfare.Teams
             {
                 LoadDefaults();
             }
-            if(!KitManager.KitExists(_data.Team1UnarmedKit, out _)) 
+
+            if (!KitManager.KitExists(_data.Team1UnarmedKit, out _)) 
                 F.LogError("Team 1's unarmed kit, \"" + _data.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if(!KitManager.KitExists(_data.Team2UnarmedKit, out _)) 
                 F.LogError("Team 2's unarmed kit, \"" + _data.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
@@ -203,6 +208,7 @@ namespace Uncreated.Warfare.Teams
         public static bool IsFriendly(UnturnedPlayer player, UnturnedPlayer player2) => player.Player.quests.groupID.m_SteamID == player2.Player.quests.groupID.m_SteamID;
         public static bool IsFriendly(SteamPlayer player, SteamPlayer player2) => player.player.quests.groupID.m_SteamID == player2.player.quests.groupID.m_SteamID;
         public static bool IsFriendly(Player player, Player player2) => player.quests.groupID.m_SteamID == player2.quests.groupID.m_SteamID;
+
         public static bool CanJoinTeam(ulong team)
         {
             if (UCWarfare.Config.TeamSettings.BalanceTeams)

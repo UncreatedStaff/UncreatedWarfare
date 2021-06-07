@@ -27,6 +27,8 @@ namespace Uncreated.Warfare
         public PatchToggles Patches;
         [XmlElement("MySQL")]
         public MySqlData SQL;
+        [XmlElement("VehicleBay")]
+        public VehicleBaySettings VehicleBaySettings;
         public bool Debug;
         public bool SendAssetsOnStartup;
         public float DelayAfterConnectionToSendTranslations;
@@ -45,6 +47,7 @@ namespace Uncreated.Warfare
             this.DeathMessages = new DeathMesssagesSettings();
             this.Patches = new PatchToggles();
             this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
+            this.VehicleBaySettings = new VehicleBaySettings();
             this.Debug = true;
             this.SendAssetsOnStartup = false;
             this.DelayAfterConnectionToSendTranslations = 0.5f;
@@ -81,7 +84,6 @@ namespace Uncreated.Warfare
             this.Flags = true;
             this.Revives = true;
         }
-
     }
     public class FlagSettings
     {
@@ -248,6 +250,14 @@ namespace Uncreated.Warfare
         {
             this.FOBID_Unbuilt = 38310;
             this.FOBID = 38311;
+        }
+    }
+    public class VehicleBaySettings
+    {
+        public ushort VehicleSpawnerID;
+        public VehicleBaySettings()
+        {
+            VehicleSpawnerID = 38390;
         }
     }
     public struct MySqlData

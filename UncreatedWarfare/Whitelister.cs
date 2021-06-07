@@ -1,11 +1,13 @@
 ﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
+using UnityEngine;
 
 namespace Uncreated.Warfare
 {
@@ -20,6 +22,7 @@ namespace Uncreated.Warfare
         {
             ItemManager.onTakeItemRequested += OnItemPickup;
             BarricadeManager.onSalvageBarricadeRequested += OnBarricadeSalvageRequested;
+            StructureManager.onSalvageStructureRequested += OnStructureSalvageRequested;
             Reload();
         }
 
@@ -65,7 +68,7 @@ namespace Uncreated.Warfare
                 player.Message($"whitelist_nokit");
             }
         }
-        private void OnBarricadeSalvageRequested(Steamworks.CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
+        private void OnBarricadeSalvageRequested(CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
         {
             var player = UnturnedPlayer.FromCSteamID(steamID);
             if (player.OnDuty())
@@ -82,6 +85,60 @@ namespace Uncreated.Warfare
 
             player.Message("whitelist_nosalvage");
             shouldAllow = false;
+        }
+        private void OnStructureSalvageRequested(CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
+        {
+            var player = UnturnedPlayer.FromCSteamID(steamID);
+            if (player.OnDuty())
+            {
+                return;
+            }
+            if (StructureManager.tryGetRegion(x, y, out var region))
+            {
+                if (IsWhitelisted(region.structures[index].structure.id, out var whitelistedItem))
+                {
+                    return;
+                }
+            }
+
+            player.Message("whitelist_nosalvage");
+            shouldAllow = false;
+        }
+        private void OnStructurePlaceRequested(Structure structure, ItemStructureAsset asset, ref Vector3 point, ref float angle_x, ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
+        {
+            
+        }
+        private void OnBarricadePlaceRequested(
+            Barricade barricade,
+            ItemBarricadeAsset asset,
+            Transform hit,
+            ref Vector3 point,
+            ref float angle_x,
+            ref float angle_y,
+            ref float angle_z,
+            ref ulong owner,
+            ref ulong group,
+            ref bool shouldAllow)
+        {
+            var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
+
+            if (F.OnDuty(player))
+                return;
+
+            if (KitManager.HasKit(player.CSteamID, out var kit))
+            {
+                if (kit.Items.Exists(k => k.ID == barricade.id))
+                {
+                    return;
+                }
+                else if (IsWhitelisted(barricade.id, out _))
+                {
+                    return;
+                }
+            }
+
+            shouldAllow = false;
+            player.Message($"whitelist_nokit");
         }
 
         public static void Reload() => items = GetExistingObjects();
@@ -110,6 +167,7 @@ namespace Uncreated.Warfare
         {
             ItemManager.onTakeItemRequested -= OnItemPickup;
             BarricadeManager.onSalvageBarricadeRequested -= OnBarricadeSalvageRequested;
+            BarricadeManager.onDeployBarricadeRequested -= OnBarricadePlaceRequested;
         }
     }
     public class WhitelistItem

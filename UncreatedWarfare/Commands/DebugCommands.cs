@@ -47,7 +47,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "sign")
                 {
-                    InteractableSign sign = BuildManager.GetInteractableFromLook<InteractableSign>(player.look);
+                    InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.look);
                     if (sign == null) player.SendChat("No sign found.", UCWarfare.GetColor("default"));
                     else
                     {

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Uncreated.Warfare.FOBs;
 using static Uncreated.Warfare.FOBs.FOBConfig;
 
 namespace Uncreated.Warfare.FOBs
@@ -36,7 +37,7 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            BarricadeData foundation = BuildManager.GetBarricadeFromLook(player);
+            BarricadeData foundation = UCBarricadeManager.GetBarricadeFromLook(player);
 
             if (foundation == null || !TeamManager.IsFriendly(player, foundation.group))
             {
@@ -44,21 +45,21 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            if (foundation.barricade.id == Data.FOBManager.config.FOBBaseID)
+            if (foundation.barricade.id == FOBManager.config.FOBBaseID)
             {
                 Data.BuildManager.TryBuildFOB(foundation, player);
             }
-            else if (foundation.barricade.id == Data.FOBManager.config.AmmoCrateBaseID)
+            else if (foundation.barricade.id == FOBManager.config.AmmoCrateBaseID)
             {
                 Data.BuildManager.TryBuildAmmoCrate(foundation, player);
             }
-            else if (foundation.barricade.id == Data.FOBManager.config.RepairStationBaseID)
+            else if (foundation.barricade.id == FOBManager.config.RepairStationBaseID)
             {
                 Data.BuildManager.TryBuildRepairStation(foundation, player);
             }
             else
             {
-                Emplacement emplacement = Data.FOBManager.config.Emplacements.Find(e => e.baseID == foundation.barricade.id);
+                Emplacement emplacement = FOBManager.config.Emplacements.Find(e => e.baseID == foundation.barricade.id);
 
                 if (emplacement != null)
                 {
@@ -66,7 +67,7 @@ namespace Uncreated.Warfare.FOBs
                     return;
                 }
 
-                Fortification fortification = Data.FOBManager.config.Fortifications.Find(f => f.base_id == foundation.barricade.id);
+                Fortification fortification = FOBManager.config.Fortifications.Find(f => f.base_id == foundation.barricade.id);
 
                 if (fortification != null)
                 {
