@@ -9,10 +9,10 @@ namespace Uncreated.Warfare.Vehicles
 {
     public class VehicleSpawner : JSONSaver<VehicleSpawn>
     {
-        public VehicleSpawnSaver()
+        public VehicleSpawner()
             : base(Data.VehicleStorage + "vehiclespawns.json")
         {
-
+            
         }
         protected override string LoadDefaults() => "[]";
         public static void CreateSpawn(ushort vehicleID, uint barricadeInstanceID) => AddObjectToSave(new VehicleSpawn(vehicleID, barricadeInstanceID));

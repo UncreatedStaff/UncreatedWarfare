@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            BarricadeData foundation = UCBarricadeManager.GetBarricadeFromLook(player);
+            BarricadeData foundation = UCBarricadeManager.GetBarricadeDataFromLook(player);
 
             if (foundation == null || !TeamManager.IsFriendly(player, foundation.group))
             {

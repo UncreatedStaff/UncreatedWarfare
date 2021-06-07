@@ -18,6 +18,7 @@ using System.Reflection;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare
 {
@@ -92,6 +93,7 @@ namespace Uncreated.Warfare
         public static FOBManager FOBManager;
         public static BuildManager BuildManager;
         public static ReviveManager ReviveManager;
+        public static TicketManager TicketManager;
         public static LogoutSaver LogoutSaver;
         public static WebInterface WebInterface;
         public static RequestSigns RequestSignManager;
@@ -162,9 +164,9 @@ namespace Uncreated.Warfare
             Whitelister = new Whitelister();
             CommandWindow.shouldLogDeaths = false;
 
-
             FlagManager = new FlagManager();
             FlagManager.OnReady += UCWarfare.I.OnFlagManagerReady;
+            TicketManager = new TicketManager();
             if (UCWarfare.Config.PlayerStatsSettings.EnableListenServer)
             {
                 ListenerThread = new Thread(StartListening);

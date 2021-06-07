@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Vehicles
 
         protected override string LoadDefaults() => "[]";
         public static void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
-        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
+        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static void RemoveAllVehicles() => RemoveAllObjectsFromSave();
         public static List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
         public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
