@@ -406,8 +406,8 @@ namespace Uncreated.Warfare
                             item = c.lastProjected;
                         else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)
                             item = c.lastExplodedVehicle;
-                        else if (cause == EDeathCause.ROADKILL && c.lastRoadkilledBy != default)
-                            item = c.lastRoadkilledBy;
+                        else if (cause == EDeathCause.ROADKILL && c.lastRoadkilled != default)
+                            item = c.lastRoadkilled;
                         else item = killer.player.equipment.itemID;
                     }
                     else item = dead.Player.equipment.itemID;

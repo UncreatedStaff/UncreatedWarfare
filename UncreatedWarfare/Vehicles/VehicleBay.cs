@@ -415,15 +415,25 @@ namespace Uncreated.Warfare.Vehicles
     public class VehicleData
     {
         public ushort VehicleID;
+        [JsonSettable]
         public ulong Team;
+        [JsonSettable]
         public ushort RespawnTime;
+        [JsonSettable]
         public ushort Cost;
+        [JsonSettable]
         public ushort RequiredLevel;
+        [JsonSettable]
         public ushort TicketCost;
+        [JsonSettable]
         public ushort Cooldown;
+        [JsonSettable]
         public EBranch RequiredBranch;
+        [JsonSettable]
         public Kit.EClass RequiredClass;
+        [JsonSettable]
         public byte RearmCost;
+        [JsonSettable]
         public byte RepairCost;
         public List<ushort> Items;
         public List<byte> CrewSeats;
