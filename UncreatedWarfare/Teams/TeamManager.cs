@@ -21,23 +21,16 @@ namespace Uncreated.Warfare.Teams
         public TeamManager()
             : base(Data.TeamStorage + "teams.json")
         {
-            List<TeamConfig> configs = GetExistingObjects();
-            if (configs.Count < 1) CreateFileIfNotExists(LoadDefaults());
-            else _data = configs[0];
-            configs = GetExistingObjects();
-            if (configs.Count < 1)
-                throw new Exception("Unable to read TeamManager configuration in " + directory);
-            else _data = configs[0];
+            _data = ReloadSingle(LoadDefaults(), () => { return new TeamConfig(); });
             if (!KitManager.KitExists(_data.Team1UnarmedKit, out _)) 
                 F.LogError("Team 1's unarmed kit, \"" + _data.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if(!KitManager.KitExists(_data.Team2UnarmedKit, out _)) 
                 F.LogError("Team 2's unarmed kit, \"" + _data.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if(!KitManager.KitExists(_data.DefaultKit, out _)) 
                 F.LogError("The default kit, \"" + _data.DefaultKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            
         }
-        public void Reload() => _data = GetExistingObjects().FirstOrDefault();
-        public void Save() => WriteSingleObject(_data);
-
+        public new static void Save() => WriteSingleObject(_data);
         protected override string LoadDefaults() => F.QuickSerialize(new TeamConfig());
         public static ulong Team1ID { get => _data.Team1ID; }
         public static ulong Team2ID { get => _data.Team2ID; }
@@ -128,6 +121,13 @@ namespace Uncreated.Warfare.Teams
             else uncolorized = team.ToString();
             if (!colorize) return uncolorized;
             return F.ColorizeName(uncolorized, team);
+        }
+        public static string GetUnarmedFromS64ID(ulong playerSteam64)
+        {
+            ulong team = F.GetTeamFromPlayerSteam64ID(playerSteam64);
+            if (team == 1) return Team1UnarmedKit;
+            else if (team == 2) return Team2UnarmedKit;
+            else return DefaultKit;
         }
         public static string GetTeamHexColor(ulong team)
         {

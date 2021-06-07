@@ -11,15 +11,11 @@ namespace Uncreated.Warfare.Structures
 {
     public class StructureSaver : JSONSaver<Structure>
     {
-        public static List<Structure> ActiveStructures;
-        public StructureSaver() : base(Data.StructureStorage + "structures.json") 
-        {
-            ActiveStructures = GetExistingObjects();
-        }
+        public StructureSaver() : base(Data.StructureStorage + "structures.json") { }
         protected override string LoadDefaults() => "[]";
         public static void DropAllStructures()
         {
-            foreach (Structure structure in ActiveStructures)
+            foreach (Structure structure in ActiveObjects)
             {
                 F.Log(structure.id);
                 if(structure.Asset is ItemBarricadeAsset barricadeasset)
@@ -77,46 +73,18 @@ namespace Uncreated.Warfare.Structures
                     reason = 3;
                     return false;
                 }
-                ActiveStructures.Add(structureadded);
                 AddObjectToSave(structureadded);
                 return true;
             }
             else reason = 4;
             return false;
         }
-        public static void RemoveStructure(Structure structure)
-        {
-            int i = ActiveStructures.FindIndex(x => x.transform == structure.transform);
-            if (i != -1) ActiveStructures.RemoveAt(i);
-            RemoveFromSaveWhere(x => x.transform == structure.transform);
-        }
-        private static bool StructureExists(Transform barricade, out Structure found, bool secondTime = false)
-        {
-            if (barricade == default)
-            {
-                found = default;
-                return false;
-            }
-            IEnumerable<Structure> matches = ActiveStructures.Where(s => s.transform == barricade);
-            int amt = matches.Count();
-            if (amt >= 1)
-            {
-                found = matches.ElementAt(0);
-                return found != default;
-            }
-            else if (!secondTime)
-            {
-                ActiveStructures = GetExistingObjects();
-                return StructureExists(barricade, out found, true);
-            }
-            else
-            {
-                found = default;
-                return false;
-            }
-        }
-        public static bool StructureExists(Interactable2 structure, out Structure found, bool secondTime = false) => StructureExists(structure.transform, out found, secondTime);
-        public static bool StructureExists(Interactable barricade, out Structure found, bool secondTime = false) => StructureExists(barricade.transform, out found, secondTime);
+        public static void RemoveStructure(Structure structure) => RemoveWhere(x => structure != default && x != default && x.transform == structure.transform);
+        private static bool StructureExists(Transform barricade, out Structure found) => ObjectExists(s => s.transform == barricade, out found);
+        public static bool StructureExists(Interactable2 structure, out Structure found) => StructureExists(structure.transform, out found);
+        public static bool StructureExists(Interactable barricade, out Structure found) => StructureExists(barricade.transform, out found);
+        public static void SetOwner(Structure structure, ulong newOwner) => SetProperty(structure, nameof(structure.owner), newOwner, out _, out _, out _);
+        public static void SetGroupOwner(Structure structure, ulong group) => SetProperty(structure, nameof(structure.group), group, out _, out _, out _);
     }
 
     public class Structure
@@ -155,7 +123,9 @@ namespace Uncreated.Warfare.Structures
         private byte[] _metadata;
         public string state;
         public SerializableTransform transform;
+        [JsonSettable]
         public ulong owner;
+        [JsonSettable]
         public ulong group;
         [JsonConstructor]
         public Structure(ushort id, string state, SerializableTransform transform, ulong owner, ulong group)

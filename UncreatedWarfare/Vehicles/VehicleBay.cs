@@ -1,4 +1,5 @@
-﻿using Rocket.API;
+﻿using Newtonsoft.Json;
+using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
@@ -13,7 +14,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles
 {
-    public class VehicleBay : JSONSaver<VehicleData>
+    public class VehicleBay : JSONSaver<VehicleData>, IDisposable
     {
         public VehicleBay()
             : base(Data.VehicleStorage + "vehiclebay.json")
@@ -22,24 +23,18 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
         }
-
         protected override string LoadDefaults() => "[]";
         public static void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
-        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveFromSaveWhere(vd => vd.VehicleID == vehicleID);
+        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static void RemoveAllVehicles() => RemoveAllObjectsFromSave();
         public static List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
-        public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
-        {
-            bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
-            vehicleData = v;
-            return result;
-        }
-        public static bool SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
+        public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData) => ObjectExists(vd => vd.VehicleID == vehicleID, out vehicleData);
+        [Obsolete]
+        public static bool SetPropertyOld(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
         {
             propertyIsValid = false;
             vehicleExists = false;
             argIsValid = false;
-
             if (!IsPropertyValid<EVehicleProperty>(property, out var p))
             {
                 return false;
@@ -135,7 +130,6 @@ namespace Uncreated.Warfare.Vehicles
 
             return true;
         }
-
         public static void SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
             instanceID = 0;
@@ -172,7 +166,6 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-
         public static bool TryRespawnVehicle(uint vehicleInstanceID)
         {
             if (VehicleSpawnSaver.HasLinkedSpawn(vehicleInstanceID, out var spawn))
@@ -188,7 +181,6 @@ namespace Uncreated.Warfare.Vehicles
             }
             return false;
         }
-
         public static bool TrySpawnNewVehicle(VehicleSpawn spawn)
         {
             if (VehicleSpawnSaver.HasLinkedVehicle(spawn, out var vehicle))
@@ -210,7 +202,6 @@ namespace Uncreated.Warfare.Vehicles
         {
             UCWarfare.I.StartCoroutine(StartVehicleRespawnTimer(vehicle));
         }
-
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
             UnturnedPlayer player = UnturnedPlayer.FromPlayer(nelsonplayer);
@@ -274,7 +265,6 @@ namespace Uncreated.Warfare.Vehicles
                 return;
             }
         }
-
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
             UnturnedPlayer player = UnturnedPlayer.FromPlayer(nelsonplayer);
@@ -359,7 +349,6 @@ namespace Uncreated.Warfare.Vehicles
             foreach (var spawn in allspawns)
                 TrySpawnNewVehicle(spawn);
         }
-
         private IEnumerator<WaitForSeconds> StartVehicleRespawnTimer(InteractableVehicle vehicle)
         {
             if (!VehicleExists(vehicle.id, out var vehicleData))
@@ -371,6 +360,12 @@ namespace Uncreated.Warfare.Vehicles
                 yield break;
 
             TryRespawnVehicle(vehicle.instanceID);
+        }
+        public void Dispose()
+        {
+            VehicleManager.OnVehicleExploded -= OnVehicleExploded;
+            VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
+            VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
         }
 
         public enum EVehicleProperty
@@ -391,17 +386,27 @@ namespace Uncreated.Warfare.Vehicles
     public class VehicleData
     {
         public ushort VehicleID;
+        [JsonSettable]
         public ulong Team;
+        [JsonSettable]
         public ushort RespawnTime;
+        [JsonSettable]
         public ushort Cost;
+        [JsonSettable]
         public ushort RequiredLevel;
+        [JsonSettable]
         public ushort TicketCost;
+        [JsonSettable]
         public ushort Cooldown;
+        [JsonSettable]
         public EBranch RequiredBranch;
+        [JsonSettable]
         public Kit.EClass RequiredClass;
+        [JsonSettable]
         public byte RearmCost;
+        [JsonSettable]
         public byte RepairCost;
-        Dictionary<ushort, byte> Items;
+        public Dictionary<ushort, byte> Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
 
@@ -422,6 +427,55 @@ namespace Uncreated.Warfare.Vehicles
             CrewSeats = new List<byte>();
             Metadata = null;
         }
+        public VehicleData()
+        {
+            VehicleID = 0;
+            Team = 0;
+            RespawnTime = 600;
+            Cost = 0;
+            RequiredLevel = 0;
+            TicketCost = 0;
+            Cooldown = 0;
+            RequiredBranch = EBranch.DEFAULT;
+            RequiredClass = Kit.EClass.NONE;
+            RearmCost = 3;
+            RepairCost = 3;
+            Items = new Dictionary<ushort, byte>() { { 1440, 1 }, { 277, 1 } };
+            CrewSeats = new List<byte>();
+            Metadata = null;
+        }
+
+        [JsonConstructor]
+        public VehicleData(ushort vehicleID, 
+            ulong team, 
+            ushort respawnTime, 
+            ushort cost, 
+            ushort requiredLevel, 
+            ushort ticketCost, 
+            ushort cooldown, 
+            EBranch requiredBranch, 
+            Kit.EClass requiredClass, 
+            byte rearmCost, 
+            byte repairCost, 
+            Dictionary<ushort, byte> items, 
+            List<byte> crewSeats, 
+            MetaSave metadata)
+        {
+            VehicleID = vehicleID;
+            Team = team;
+            RespawnTime = respawnTime;
+            Cost = cost;
+            RequiredLevel = requiredLevel;
+            TicketCost = ticketCost;
+            Cooldown = cooldown;
+            RequiredBranch = requiredBranch;
+            RequiredClass = requiredClass;
+            RearmCost = rearmCost;
+            RepairCost = repairCost;
+            Items = items;
+            CrewSeats = crewSeats;
+            Metadata = metadata;
+        }
     }
 
     public class MetaSave
@@ -440,7 +494,9 @@ namespace Uncreated.Warfare.Vehicles
     {
         public ushort BarricadeID;
         public ushort Health;
+        [JsonSettable]
         public ulong OwnerID;
+        [JsonSettable]
         public ulong GroupID;
         public float PosX;
         public float PosY;

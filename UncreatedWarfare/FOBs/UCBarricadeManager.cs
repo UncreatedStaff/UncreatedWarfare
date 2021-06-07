@@ -19,9 +19,8 @@ namespace Uncreated.Warfare.FOBs
                 direction = look.forward,
                 origin = look.position
             };
-            RaycastHit hit;
             //4 units for normal reach
-            if (Physics.Raycast(ray, out hit, 4, RayMasks.BARRICADE))
+            if (Physics.Raycast(ray, out RaycastHit hit, 4, RayMasks.BARRICADE))
             {
                 return hit.transform.GetComponent<InteractableSign>();
             }
