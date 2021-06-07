@@ -21,12 +21,6 @@ namespace Uncreated.Warfare.FOBs
                 ? hit.transform
                 : null;
 
-            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out var x, out var y, out var plant, out var index,
-                out var region))
-                return null;
-            return region.barricades[index].barricade;
-        }
-
         public static InteractableSign GetSignFromLook(UnturnedPlayer player)
         {
             Transform look = player.Player.look.aim;
@@ -112,6 +106,25 @@ namespace Uncreated.Warfare.FOBs
                     if (counter == amount)
                         return;
                 }
+            }
+        }
+
+        public static InteractableVehicle GetVehicleFromLook(UnturnedPlayer player)
+        {
+            Transform look = player.Player.look.aim;
+            Ray ray = new Ray
+            {
+                direction = look.forward,
+                origin = look.position
+            };
+            //4 units for normal reach
+            if (Raycast(ray, out RaycastHit hit, 4, RayMasks.VEHICLE))
+            {
+                return hit.transform.GetComponent<InteractableVehicle>();
+            }
+            else
+            {
+                return null;
             }
         }
     }
