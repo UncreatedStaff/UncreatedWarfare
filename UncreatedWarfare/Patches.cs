@@ -245,9 +245,9 @@ namespace Uncreated.Warfare
                         Player hit = DamageTool.getPlayer(other.transform);
                         Player driver = ___vehicle.passengers[0].player.player;
                         if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
-                        if(F.TryGetPlaytimeComponent(hit, out PlaytimeComponent c))
+                        if(F.TryGetPlaytimeComponent(driver, out PlaytimeComponent c))
                         {
-                            c.lastRoadkilledBy = ___vehicle.asset.id;
+                            c.lastRoadkilled = ___vehicle.asset.id;
                         }
                     }
                 }
@@ -420,22 +420,26 @@ namespace Uncreated.Warfare
                     UnturnedLog.error("Somehow tried to damage completely invulnerable vehicle: " + vehicle + " " + damage + " " + times + " " + canRepair.ToString());
                     return false;
                 }
-                if (instigatorSteamID != null && instigatorSteamID != CSteamID.Nil)
+                float newtimes = times * Provider.modeConfigData.Vehicles.Armor_Multiplier;
+                if (Mathf.RoundToInt(damage * newtimes) >= vehicle.health)
                 {
-                    if (vehicle.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
+                    if (instigatorSteamID != null && instigatorSteamID != CSteamID.Nil)
                     {
-                        vc.owner = instigatorSteamID;
+                        if (vehicle.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
+                        {
+                            vc.owner = instigatorSteamID;
+                        }
+                        else
+                        {
+                            vehicle.gameObject.AddComponent<VehicleDamageOwnerComponent>().owner = instigatorSteamID;
+                        }
                     }
                     else
                     {
-                        vehicle.gameObject.AddComponent<VehicleDamageOwnerComponent>().owner = instigatorSteamID;
-                    }
-                }
-                else
-                {
-                    if (vehicle.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
-                    {
-                        UnityEngine.Object.Destroy(vc);
+                        if (vehicle.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
+                        {
+                            UnityEngine.Object.Destroy(vc);
+                        }
                     }
                 }
                 return true;
@@ -454,6 +458,13 @@ namespace Uncreated.Warfare
                 if (__instance.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
                 {
                     instigator = vc.owner;
+                } else
+                {
+                    if(__instance.passengers.Length > 0)
+                    {
+                        if (__instance.passengers[0].player != null)
+                            instigator = __instance.passengers[0].player.playerID.steamID;
+                    }
                 }
                 Vector3 force = new Vector3(UnityEngine.Random.Range(__instance.asset.minExplosionForce.x, __instance.asset.maxExplosionForce.x), UnityEngine.Random.Range(__instance.asset.minExplosionForce.y, __instance.asset.maxExplosionForce.y), UnityEngine.Random.Range(__instance.asset.minExplosionForce.z, __instance.asset.maxExplosionForce.z));
                 __instance.GetComponent<Rigidbody>().AddForce(force);
@@ -462,7 +473,6 @@ namespace Uncreated.Warfare
                 if (F.TryGetPlaytimeComponent(instigator, out PlaytimeComponent c))
                 {
                     c.lastExplodedVehicle = __instance.asset.id;
-                    F.Log("set last exploded vehicle to " + __instance.asset.id, ConsoleColor.DarkGreen);
                 }
                 DamageTool.explode(__instance.transform.position, 8f, EDeathCause.VEHICLE, instigator, 200f, 200f, 200f, 0.0f, 0.0f, 500f, 2000f, 500f, out _, damageOrigin: EDamageOrigin.Vehicle_Explosion);
                 for (int index = 0; index < __instance.passengers.Length; ++index)
@@ -470,6 +480,7 @@ namespace Uncreated.Warfare
                     Passenger passenger = __instance.passengers[index];
                     if (passenger != null && passenger.player != null && passenger.player.player != null && !passenger.player.player.life.isDead)
                     {
+                        F.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}");
                         passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SPINE, instigator, out _);
                     }
                 }

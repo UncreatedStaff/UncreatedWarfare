@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Components
         public LandmineDataForPostAccess LastLandmineTriggered;
         public LandmineDataForPostAccess LastLandmineExploded;
         public ushort lastExplodedVehicle;
-        public ushort lastRoadkilledBy;
+        public ushort lastRoadkilled;
         public void Start()
         {
             this.thrown = new List<ThrowableOwnerDataComponent>();

@@ -165,6 +165,7 @@ namespace Uncreated.Warfare
             this.UseableTrapOnTriggerEnter = true;
             this.BumperOnTriggerEnter = true;
             this.damageVehicleTool = true;
+            this.explodeInteractableVehicle = true;
             this.outputToConsole = true;
         }
 
