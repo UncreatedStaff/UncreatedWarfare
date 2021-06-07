@@ -136,6 +136,13 @@ namespace Uncreated.Warfare
         /// <returns>A localized string based on the player's language.</returns>
         public static string Translate(string key, ulong player, params object[] formatting)
         {
+            if(key == null)
+            {
+                string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
+                LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
+                return args;
+            }
+            if (key.Length == 0) return formatting.Length > 0 ? string.Join(", ", formatting) : "";
             if (player == 0)
             {
                 if (!Data.Localization.ContainsKey(JSONMethods.DefaultLanguage))
@@ -247,7 +254,6 @@ namespace Uncreated.Warfare
         /// Max amount of bytes that can be sent in an Unturned Chat Message.
         /// </summary>
         const int MaxChatSizeAmount = 2047;
-
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
@@ -383,6 +389,17 @@ namespace Uncreated.Warfare
             else if (team == 2) return TeamManager.Team2Color;
             else if (team == 3) return TeamManager.AdminColor;
             else return TeamManager.NeutralColor;
+        }
+        public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
+        {
+            SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
+            if (pl == default)
+            {
+                if (LogoutSaver.HasSave(s64, out LogoutSave save))
+                    return GetTeam(save.Team);
+                else return 0;
+            }
+            else return pl.GetTeam();
         }
         public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
@@ -610,6 +627,7 @@ namespace Uncreated.Warfare
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
         public static void InvokeSignUpdateForAllKits(byte x, byte y, ushort plant, ushort index, string text)
         {
+            if (text == null) return;
             foreach (SteamPlayer player in Provider.clients)
             {
                 string newtext = text;
@@ -620,6 +638,7 @@ namespace Uncreated.Warfare
         }
         public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
         {
+            if (text == default || client == default || region == default) return;
             string newtext;
             if (!changeText)
             {
@@ -909,6 +928,29 @@ namespace Uncreated.Warfare
             if (Data.OriginalNames.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
                 return Data.OriginalNames[player.channel.owner.playerID.steamID.m_SteamID];
             else return new FPlayerName(player);
+        }
+        public static FPlayerName GetPlayerOriginalNames(ulong player)
+        {
+            if (Data.OriginalNames.ContainsKey(player))
+                return Data.OriginalNames[player];
+            else
+            {
+                SteamPlayer pl = PlayerTool.getSteamPlayer(player);
+                if (pl == default) return new FPlayerName()
+                {
+                    CharacterName = player.ToString(),
+                    NickName = player.ToString(),
+                    PlayerName = player.ToString(),
+                    Steam64 = player
+                };
+                else return new FPlayerName()
+                {
+                    CharacterName = pl.playerID.characterName,
+                    NickName = pl.playerID.nickName,
+                    PlayerName = pl.playerID.playerName,
+                    Steam64 = player
+                };
+            }
         }
         public static bool IsInMain(this Player player)
         {
@@ -1641,6 +1683,12 @@ namespace Uncreated.Warfare
             }
             if (LevelNodes.nodes[index] is LocationNode name) return name.name;
             else return string.Empty;
+        }
+        public static void SendSteamURL(this SteamPlayer player, string message, ulong SteamID) => player.SendURL(message, $"https://steamcommunity.com/profiles/{SteamID}/");
+        public static void SendURL(this SteamPlayer player, string message, string url)
+        {
+            if (player == default || url == default) return;
+            player.player.sendBrowserRequest(message, url);
         }
     }
 }

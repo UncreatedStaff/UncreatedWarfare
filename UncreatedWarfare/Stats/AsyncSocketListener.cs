@@ -27,12 +27,17 @@ namespace Uncreated.Warfare.Stats
         public class MessageReceivedEventArgs : EventArgs { public byte[] message; public string utf8; }
         public event EventHandler<MessageReceivedEventArgs> OnMessageReceived;
         public readonly byte[] EndOfFileUTF8 = new byte[] { 0x3c, 0x45, 0x4f, 0x46, 0x3e };
+        private volatile bool waitingForShutdown = false;
+        public Thread thread { get; protected set; }
         IPHostEntry host;
         IPAddress address;
         EndPoint endpoint;
         Socket client;
-        public void Start()
+        IAsyncResult currentWaiting;
+        public void Start(Thread thread)
         {
+            this.thread = thread;
+            waitingForShutdown = false;
             try
             {
                 host = Dns.GetHostEntry("localhost");
@@ -40,7 +45,8 @@ namespace Uncreated.Warfare.Stats
                 endpoint = new IPEndPoint(address, 8081);
                 client = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
                 {
-                    SendTimeout = 5000
+                    SendTimeout = 5000,
+                    ReceiveTimeout = 5000
                 };
                 client.Bind(endpoint);
                 ReconnectSync(true);
@@ -66,11 +72,13 @@ namespace Uncreated.Warfare.Stats
         }
         public void MainThread()
         {
-            while (true)
+            while (waitingForShutdown == false)
             {
                 //F.Log("about to accept");
-                IAsyncResult ar = client.BeginAccept(AcceptedCallback, client);
-                ar.AsyncWaitHandle.WaitOne();
+                currentWaiting = client.BeginAccept(AcceptedCallback, client);
+                currentWaiting.AsyncWaitHandle.WaitOne();
+                currentWaiting.AsyncWaitHandle.Close();
+                currentWaiting.AsyncWaitHandle.Dispose();
                 //F.Log("just accepted");
             }
         }
@@ -92,7 +100,7 @@ namespace Uncreated.Warfare.Stats
         }
         private void ReceiveLoop(StateObject state)
         {
-            while (true)
+            while (waitingForShutdown == false)
             {
                 if (!Receive(state)) break;
             }
@@ -110,7 +118,7 @@ namespace Uncreated.Warfare.Stats
         private delegate void StateDelegate(StateObject state);
         private bool Receive(StateObject state)
         {
-            if (!state.workSocket.Connected)
+            if (waitingForShutdown || !state.workSocket.Connected)
             {
                 ShutdownHandler(state.workSocket);
                 return false;
@@ -200,6 +208,8 @@ namespace Uncreated.Warfare.Stats
 
         public void Dispose()
         {
+            F.Log("Disposing of AsyncSocketListener", ConsoleColor.Magenta);
+            waitingForShutdown = true;
             try
             {
                 this.client.Shutdown(SocketShutdown.Both);
@@ -214,6 +224,7 @@ namespace Uncreated.Warfare.Stats
                 this.client.Dispose();
             } catch { }
             GC.SuppressFinalize(this);
+            thread.Abort();
         }
     }
 }

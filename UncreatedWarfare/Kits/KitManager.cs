@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.Kits
         public static bool KitExists(string kitName, out Kit kit)
         {
             kit = ActiveKits.FirstOrDefault(i => i.Name.ToLower() == kitName.ToLower());
-            return kit == default;
+            return kit != default;
         }
         public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes)
         {

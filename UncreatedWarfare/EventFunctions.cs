@@ -45,10 +45,22 @@ namespace Uncreated.Warfare
         }
         internal static void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner, ref bool allow)
         {
-            if (owner == null) return;
+            if (owner == default || owner.owner == default)
+            {
+                if (owner == default || owner.ownerID == 0) return;
+                Data.DatabaseManager.GetUsernameAsync(owner.ownerID, LandmineExplodedUsernameReceived);
+                return;
+            }
             if (F.TryGetPlaytimeComponent(owner.owner.player, out PlaytimeComponent c))
                 c.LastLandmineExploded = new LandmineDataForPostAccess(trap, owner);
             F.Log(owner.owner.playerID.playerName + "'s landmine exploded");
+        }
+        internal static void LandmineExplodedUsernameReceived(FPlayerName usernames, bool success)
+        {
+            if(success)
+            {
+                F.Log(usernames.PlayerName + "'s landmine exploded");
+            }
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
@@ -95,6 +107,10 @@ namespace Uncreated.Warfare
                     }
                 }
             }
+        }
+        internal static void OnPostHealedPlayer(Player instigator, Player target)
+        {
+
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
@@ -143,17 +159,21 @@ namespace Uncreated.Warfare
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
             Data.WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
-            IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.owner?.playerID.steamID.m_SteamID == player.CSteamID.m_SteamID && x.barricade?.asset?.type == EItemType.TRAP);
-            foreach (BarricadeOwnerDataComponent comp in ownedTraps.ToList())
+            if(UCWarfare.Config.RemoveLandminesOnDisconnect)
             {
-                if (comp == null) continue;
-                if (BarricadeManager.tryGetInfo(comp.barricadeTransform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
+               && x.barricade?.asset?.type == EItemType.TRAP);
+                foreach (BarricadeOwnerDataComponent comp in ownedTraps.ToList())
                 {
-                    BarricadeManager.destroyBarricade(region, x, y, plant, index);
-                    F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
+                    if (comp == null) continue;
+                    if (BarricadeManager.tryGetInfo(comp.barricadeTransform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                    {
+                        BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                        F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
+                    }
+                    UnityEngine.Object.Destroy(comp);
+                    Data.OwnerComponents.Remove(comp);
                 }
-                UnityEngine.Object.Destroy(comp);
-                Data.OwnerComponents.Remove(comp);
             }
             if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
             {

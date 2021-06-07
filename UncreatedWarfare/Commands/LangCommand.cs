@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Commands
                 for(int i = 0; i < Data.LanguageAliases.Keys.Count; i++)
                 {
                     string langInput = Data.LanguageAliases.Keys.ElementAt(i);
-                    if (!Data.Localization.ContainsKey(langInput)) continue;
+                    if (!Data.Localization.ContainsKey(langInput)) continue; // only show languages with translations
                     if (i != 0) sb.Append(", ");
                     sb.Append(langInput);
                     LanguageAliasSet aliases;

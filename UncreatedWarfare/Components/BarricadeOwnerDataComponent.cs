@@ -12,6 +12,8 @@ namespace Uncreated.Warfare.Components
     public class BarricadeOwnerDataComponent : MonoBehaviour
     {
         public SteamPlayer owner;
+        public ulong ownerID;
+        public CSteamID ownerCSID;
         public ulong group;
         public Barricade barricade;
         public BarricadeData data;
@@ -20,8 +22,17 @@ namespace Uncreated.Warfare.Components
         public void SetData(BarricadeData data, BarricadeRegion region, Transform transform)
         {
             owner = PlayerTool.getSteamPlayer(data.owner);
-            if(owner != null)
+            this.ownerID = data.owner;
+            if (owner != default)
+            {
                 group = F.GetTeam(owner);
+                this.ownerCSID = owner.playerID.steamID;
+            }
+            else
+            {
+                group = F.GetTeamFromPlayerSteam64ID(data.owner);
+                this.ownerCSID = CSteamID.Nil;
+            }
             barricade = data.barricade;
             this.data = data;
             this.region = region;

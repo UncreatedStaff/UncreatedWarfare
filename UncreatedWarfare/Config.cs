@@ -34,6 +34,7 @@ namespace Uncreated.Warfare
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
         public bool AllowCosmetics;
+        public bool RemoveLandminesOnDisconnect;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -52,6 +53,7 @@ namespace Uncreated.Warfare
             this.EndScreenUI = 10000;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
+            this.RemoveLandminesOnDisconnect = false;
         }
     }
     public class Modules

@@ -274,7 +274,7 @@ namespace Uncreated.Warfare
                     int c = Data.OwnerComponents.FindIndex(x => x != null && x.transform != null && x.transform.position == __instance.transform.position);
                     if (c != -1)
                     {
-                        owner = Data.OwnerComponents[c].owner.playerID.steamID;
+                        owner = Data.OwnerComponents[c].ownerCSID;
                         OwnerComponent = Data.OwnerComponents[c];
                         UnityEngine.Object.Destroy(Data.OwnerComponents[c]);
                         Data.OwnerComponents.RemoveAt(c);

@@ -32,12 +32,12 @@ namespace Uncreated.Warfare.Kits
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            var barricadeData = BuildManager.GetBarricadeFromLook(player);
-            var storage = BuildManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
+            BarricadeData barricadeData = UCBarricadeManager.GetBarricadeDataFromLook(player);
+            InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
 
             if (barricadeData != null)
             {
-                if (barricadeData.barricade.id != Data.FOBManager.config.AmmoCrateID)
+                if (barricadeData.barricade.id != FOBManager.config.AmmoCrateID)
                 {
                     player.Message("ammo_error_nocrate");
                     return;
@@ -47,8 +47,8 @@ namespace Uncreated.Warfare.Kits
                     player.Message("Join a team first and get a kit.");
                     return;
                 }
-                if ((TeamManager.IsTeam1(player) && !storage.items.items.Exists(j => j.item.id == Data.FOBManager.config.Team1AmmoID)) || 
-                    (TeamManager.IsTeam2(player) && !storage.items.items.Exists(j => j.item.id == Data.FOBManager.config.Team2AmmoID)))
+                if ((TeamManager.IsTeam1(player) && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Team1AmmoID)) || 
+                    (TeamManager.IsTeam2(player) && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Team2AmmoID)))
                 {
                     player.Message("This ammo box has no ammo. If you have logistics truck, go and fetch some more crates from main.");
                     return;
@@ -64,14 +64,13 @@ namespace Uncreated.Warfare.Kits
                 player.Message("ammo_success");
 
                 if (TeamManager.IsTeam1(player))
-                    RemoveSingleItemFromStorage(storage, Data.FOBManager.config.Team1AmmoID);
+                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Team1AmmoID);
                 else if (TeamManager.IsTeam2(player))
-                    RemoveSingleItemFromStorage(storage, Data.FOBManager.config.Team2AmmoID);
+                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Team2AmmoID);
             }
             else
             {
-                InteractableVehicle vehicle = GetVehicleFromLook(player);
-
+                InteractableVehicle vehicle = UCBarricadeManager.GetInteractableFromLook<InteractableVehicle>(player.Player.look);
                 if (vehicle != null)
                 {
 

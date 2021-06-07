@@ -84,7 +84,7 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
-            if (UCWarfare.Config.Modules.VehicleSpawning)
+            if (Config.Modules.VehicleSpawning)
             {
                 Data.VehicleSpawnSaver = new VehicleSpawnSaver();
                 Data.VehicleBay = new VehicleBay();
@@ -94,16 +94,18 @@ namespace Uncreated.Warfare
             Data.StructureManager = new StructureSaver();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
-            F.Log("Wiping barricades...", ConsoleColor.Magenta);
-            BarricadeManager.askClearAllBarricades();
-            F.Log("Placing back functional barricades...", ConsoleColor.Magenta);
-            RequestSigns.DropAllSigns();
             if (Configuration.Instance.SendAssetsOnStartup)
             {
                 F.Log("Sending assets...", ConsoleColor.Magenta);
                 Data.WebInterface.SendAssetUpdate();
             }
             Data.TeamManager = new TeamManager();
+            F.Log("Wiping barricades...", ConsoleColor.Magenta);
+            BarricadeManager.askClearAllBarricades();
+            StructureManager.askClearAllStructures();
+            F.Log("Placing back functional barricades...", ConsoleColor.Magenta);
+            RequestSigns.DropAllSigns();
+            StructureSaver.DropAllStructures();
             Data.FlagManager.Load(); // starts new game
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
         }
@@ -114,6 +116,7 @@ namespace Uncreated.Warfare
         private void SubscribeToEvents()
         {
             U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
+            UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
             Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
@@ -133,6 +136,7 @@ namespace Uncreated.Warfare
         {
             Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
+            UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
             if (Data.ListenServer != null) Data.ListenServer.OnMessageReceived -= ReceivedResponeFromListenServer;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
@@ -169,7 +173,7 @@ namespace Uncreated.Warfare
                         if (sign.text.StartsWith("sign_"))
                         {
                             if (BarricadeManager.tryGetInfo(drop.model, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion _))
-                                F.InvokeSignUpdateFor(player, x, y, plant, index, region, false);
+                                F.InvokeSignUpdateFor(player, x, y, plant, index, region, false); 
                         }
                     }
                 }
@@ -187,8 +191,6 @@ namespace Uncreated.Warfare
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
             Data.FOBManager?.Dispose();
-            Data.ListenServer?.Dispose();
-            Data.ListenerThread?.Abort();
             Data.Whitelister?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
@@ -197,9 +199,11 @@ namespace Uncreated.Warfare
             CommandWindow.shouldLogDeaths = true;
             try
             {
-                CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
+                if(CloseSQLAsyncResult != default && CloseSQLAsyncResult.AsyncWaitHandle != default)
+                    CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
             }
             catch (ObjectDisposedException) { }
+            Data.ListenServer?.Dispose();
         }
         public static Color GetColor(string key)
         {

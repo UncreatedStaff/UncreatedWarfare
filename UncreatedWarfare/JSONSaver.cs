@@ -146,12 +146,8 @@ namespace Uncreated.Warfare
 
         protected static bool ObjectExists(Predicate<T> match, out T item)
         {
-            var list = GetExistingObjects();
-            item = list.Find(match);
-            if (item != null)
-                return true;
-            else
-                return false;
+            item = GetExistingObjects().Find(match);
+            return item != null;
         }
 
         protected static void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation)

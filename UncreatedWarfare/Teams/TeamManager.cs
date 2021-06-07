@@ -21,11 +21,14 @@ namespace Uncreated.Warfare.Teams
         public TeamManager()
             : base(Data.TeamStorage + "teams.json")
         {
-            if (GetExistingObjects().Count == 0)
-            {
-                LoadDefaults();
-            }
-            if(!KitManager.KitExists(_data.Team1UnarmedKit, out _)) 
+            List<TeamConfig> configs = GetExistingObjects();
+            if (configs.Count < 1) CreateFileIfNotExists(LoadDefaults());
+            else _data = configs[0];
+            configs = GetExistingObjects();
+            if (configs.Count < 1)
+                throw new Exception("Unable to read TeamManager configuration in " + directory);
+            else _data = configs[0];
+            if (!KitManager.KitExists(_data.Team1UnarmedKit, out _)) 
                 F.LogError("Team 1's unarmed kit, \"" + _data.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if(!KitManager.KitExists(_data.Team2UnarmedKit, out _)) 
                 F.LogError("Team 2's unarmed kit, \"" + _data.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
@@ -35,14 +38,7 @@ namespace Uncreated.Warfare.Teams
         public void Reload() => _data = GetExistingObjects().FirstOrDefault();
         public void Save() => WriteSingleObject(_data);
 
-        protected override string LoadDefaults()
-        {
-            TeamConfig defaults = new TeamConfig();
-
-            WriteSingleObject(defaults);
-            _data = defaults;
-            return "";
-        }
+        protected override string LoadDefaults() => F.QuickSerialize(new TeamConfig());
         public static ulong Team1ID { get => _data.Team1ID; }
         public static ulong Team2ID { get => _data.Team2ID; }
         public static ulong AdminID { get => _data.AdminID; }
@@ -128,7 +124,8 @@ namespace Uncreated.Warfare.Teams
             else if (team == 2) uncolorized = F.Translate("team_2", player);
             else if (team == 3) uncolorized = F.Translate("team_3", player);
             else if (team == ZombieTeamID) uncolorized = F.Translate("zombie", player);
-            else uncolorized = F.Translate("neutral", player);
+            else if (team == 0) uncolorized = F.Translate("neutral", player);
+            else uncolorized = team.ToString();
             if (!colorize) return uncolorized;
             return F.ColorizeName(uncolorized, team);
         }
@@ -319,7 +316,7 @@ namespace Uncreated.Warfare.Teams
                 else return "ffffff";
             }
         }
-
+        
         public TeamConfig()
         {
             Team1ID = 1;
@@ -334,6 +331,33 @@ namespace Uncreated.Warfare.Teams
             Team1UnarmedKit = "usunarmed";
             Team2UnarmedKit = "ruunarmed";
             DefaultKit = "default";
+        }
+
+        public TeamConfig(ulong team1ID, 
+            ulong team2ID, 
+            ulong adminID, 
+            string team1Name, 
+            string team2Name, 
+            string adminName, 
+            string team1Code, 
+            string team2Code, 
+            string adminCode, 
+            string team1UnarmedKit, 
+            string team2UnarmedKit, 
+            string defaultKit)
+        {
+            this.Team1ID = team1ID;
+            this.Team2ID = team2ID;
+            this.AdminID = adminID;
+            this.Team1Name = team1Name ?? "USA";
+            this.Team2Name = team2Name ?? "Russia";
+            this.AdminName = adminName ?? "Admins";
+            this.Team1Code = team1Code ?? "us";
+            this.Team2Code = team2Code ?? "ru";
+            this.AdminCode = adminCode ?? "ad";
+            this.Team1UnarmedKit = team1UnarmedKit ?? "usunarmed";
+            this.Team2UnarmedKit = team2UnarmedKit ?? "ruunarmed";
+            this.DefaultKit = defaultKit ?? "default";
         }
     }
 }

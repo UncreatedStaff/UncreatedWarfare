@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.FOBs
 {
     public class FOBManager : IDisposable
     {
-        public FOBConfig config;
+        public static FOBConfig config;
         readonly List<FOB> Team1FOBs = new List<FOB>();
         readonly List<FOB> Team2FOBs = new List<FOB>();
 
