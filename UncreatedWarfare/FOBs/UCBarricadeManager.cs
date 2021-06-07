@@ -11,16 +11,6 @@ namespace Uncreated.Warfare.FOBs
 {
     public static class UCBarricadeManager
     {
-        public static Barricade GetBarricadeFromLook(UnturnedPlayer player)
-        {
-            PlayerLook look = player.Player.look;
-
-            Transform barricadeTransform = Physics.Raycast(look.aim.position, look.aim.forward, out var collision, Mathf.Infinity, RayMasks.BLOCK_COLLISION) &&
-                   Physics.Raycast(look.aim.position, look.aim.forward, out var hit, Mathf.Infinity, RayMasks.BARRICADE) &&
-                   collision.transform == hit.transform
-                ? hit.transform
-                : null;
-
         public static InteractableSign GetSignFromLook(UnturnedPlayer player)
         {
             Transform look = player.Player.look.aim;
@@ -40,7 +30,6 @@ namespace Uncreated.Warfare.FOBs
                 return null;
             }
         }
-
         public static BarricadeData GetBarricadeByInstanceID(uint InstanceID)
         {
             var barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
@@ -108,24 +97,6 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
-
-        public static InteractableVehicle GetVehicleFromLook(UnturnedPlayer player)
-        {
-            Transform look = player.Player.look.aim;
-            Ray ray = new Ray
-            {
-                direction = look.forward,
-                origin = look.position
-            };
-            //4 units for normal reach
-            if (Raycast(ray, out RaycastHit hit, 4, RayMasks.VEHICLE))
-            {
-                return hit.transform.GetComponent<InteractableVehicle>();
-            }
-            else
-            {
-                return null;
-            }
-        }
+        public static InteractableVehicle GetVehicleFromLook(UnturnedPlayer player) => GetInteractableFromLook<InteractableVehicle>(player.Player.look, RayMasks.VEHICLE);
     }
 }
