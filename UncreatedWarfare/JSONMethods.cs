@@ -122,6 +122,7 @@ namespace Uncreated.Warfare
             hashCode = hashCode * -1521134295 + z.GetHashCode();
             return hashCode;
         }
+        public override string ToString() => $"({Mathf.RoundToInt(x)}, {Mathf.RoundToInt(y)}, {Mathf.RoundToInt(z)})";
         public SerializableVector3(Vector3 v)
         {
             if(v == default)
@@ -166,6 +167,7 @@ namespace Uncreated.Warfare
                 return position == ut.position && euler_angles == ut.eulerAngles;
             else return false;
         }
+        public override string ToString() => position.ToString();
         public override int GetHashCode()
         {
             int hashCode = -1079335343;

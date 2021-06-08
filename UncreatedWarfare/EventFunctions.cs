@@ -16,7 +16,7 @@ namespace Uncreated.Warfare
 {
     public static class EventFunctions
     {
-        internal static void OnBarricadeDestroyed(BarricadeData data, uint instanceID)
+        internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID)
         {
             if (Data.OwnerComponents != null)
             {

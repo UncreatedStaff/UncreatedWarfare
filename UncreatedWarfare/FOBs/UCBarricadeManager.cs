@@ -37,16 +37,39 @@ namespace Uncreated.Warfare
 
             return barricadeDatas.Find(brd => brd.instanceID == InstanceID);
         }
-        
-        public static BarricadeData GetBarricadeDataFromLook(UnturnedPlayer player)
+        public static BarricadeData GetBarricadeFromTransform(Transform transform)
+        {
+            if (BarricadeManager.tryGetInfo(transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                return region.barricades[index];
+            else return default;
+        }
+        public static StructureData GetStructureDataFromLook(UnturnedPlayer player) => GetStructureDataFromLook(player, out _);
+        public static StructureData GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop drop)
+        {
+            Transform structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
+            if (structureTransform == null || !StructureManager.tryGetInfo(structureTransform, out _, out _, out var index,
+                out var region))
+            {
+                drop = null;
+                return null;
+            }
+            drop = region.drops[index];
+            return region.structures[index];
+        }
+        public static BarricadeData GetBarricadeDataFromLook(UnturnedPlayer player) => GetBarricadeDataFromLook(player, out _);
+        public static BarricadeData GetBarricadeDataFromLook(UnturnedPlayer player, out BarricadeDrop drop)
         {
             PlayerLook look = player.Player.look;
 
             Transform barricadeTransform = GetBarricadeTransformFromLook(look);
 
-            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out _, out _, out _, out var index,
+            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out _, out _, out _, out ushort index,
                 out var region))
+            {
+                drop = null;
                 return null;
+            }
+            drop = region.drops[index];
             return region.barricades[index];
         }
         public static Transform GetTransformFromLook(PlayerLook look, int Raymask) => 

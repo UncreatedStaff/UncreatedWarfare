@@ -18,13 +18,15 @@ namespace Uncreated.Warfare
     public static class Patches
     {
         public delegate void BarricadeDroppedEventArgs(BarricadeRegion region, BarricadeData data, ref Transform location);
-        public delegate void BarricadeDestroyedEventArgs(BarricadeData data, uint instanceID);
+        public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID);
+        public delegate void StructureDestroyedEventArgs(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID);
         public delegate void BarricadeHealthEventArgs(BarricadeData data);
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
+        public static event StructureDestroyedEventArgs StructureDestroyedHandler;
         public static event BarricadeHealthEventArgs BarricadeHealthChangedHandler;
         public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
@@ -529,9 +531,25 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
                 if (region.barricades[index] != null)
                 {
-                    BarricadeDestroyedHandler?.Invoke(region.barricades[index], region.barricades[index].instanceID);
+                    BarricadeDestroyedHandler?.Invoke(region, region.barricades[index], region.drops[index], region.barricades[index].instanceID);
                 }
             }
+
+            // SDG.Unturned.StructureManager
+            /// <summary>
+            /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
+            /// </summary>
+            [HarmonyPatch(typeof(StructureManager), "destroyStructure")]
+            [HarmonyPrefix]
+            static void DestroyStructurePostFix(StructureRegion region, byte x, byte y, ushort index, Vector3 ragdoll)
+            {
+                if (!UCWarfare.Config.Patches.destroyStructure) return;
+                if (region.structures[index] != null)
+                {
+                    StructureDestroyedHandler?.Invoke(region, region.structures[index], region.drops[index], region.structures[index].instanceID);
+                }
+            }
+
 
             // SDG.Unturned.BarricadeManager
             /// <summary>

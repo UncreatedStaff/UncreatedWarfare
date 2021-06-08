@@ -23,16 +23,42 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             Patches.BarricadeDestroyedHandler += OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler += OnStructureDestroyed;
+        }
+        public static void StartAllActive()
+        {
+            foreach(VehicleSpawn data in VehicleSpawner.ActiveObjects)
+            {
+                F.Log("Trying to spawn " + data.VehicleID);
+                if (!TrySpawnNewVehicle(data))
+                    F.Log("Couldn't start spawning " + data.VehicleID);
+            }
+        }
+        public static void Start(VehicleSpawn spawn)
+        {
+            if (!TrySpawnNewVehicle(spawn))
+                F.Log("Couldn't start spawning " + spawn.VehicleID);
+        }
+        private void OnStructureDestroyed(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID)
+        {
+            if (data.structure.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
+            {
+                if (VehicleSpawner.SpawnExists(drop.model, out _))
+                {
+                    Logger.Log("Vehicle spawn was deregistered because it was salvaged or destroyed.");
+                    VehicleSpawner.DeleteSpawn(drop.model);
+                }
+            }
         }
 
-        private void OnBarricadeDestroyed(BarricadeData data, uint instanceID)
+        private void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID)
         {
             if (data.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
             {
-                if (VehicleSpawner.SpawnExists(instanceID, out _))
+                if (VehicleSpawner.SpawnExists(drop.model, out _))
                 {
                     Logger.Log("Vehicle spawn was deregistered because it was salvaged or destroyed.");
-                    VehicleSpawner.DeleteSpawn(instanceID);
+                    VehicleSpawner.DeleteSpawn(drop.model);
                 }
             }
         }
@@ -161,6 +187,7 @@ namespace Uncreated.Warfare.Vehicles
 
             if (VehicleExists(vehicleID, out var vehicleData))
             {
+                F.Log("Spawning vehicle");
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
                 instanceID = vehicle.instanceID;
 
@@ -191,16 +218,16 @@ namespace Uncreated.Warfare.Vehicles
 
         public static bool TryRespawnVehicle(uint vehicleInstanceID)
         {
-            if (VehicleSpawner.HasLinkedSpawn(vehicleInstanceID, out var spawn))
+            if (VehicleSpawner.HasLinkedSpawn(vehicleInstanceID, out VehicleSpawn spawn))
             {
-                var spawnLocation = UCBarricadeManager.GetBarricadeByInstanceID(spawn.BarricadeInstanceID);
-                if (spawnLocation == null)
-                    return false;
-
-                SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out var newInstanceID);
-                VehicleSpawner.LinkVehicleToSpawn(vehicleInstanceID, spawn.BarricadeInstanceID);
-
-                return true;
+                if (spawn.Barricade != default(SerializableTransform))
+                {
+                    SpawnLockedVehicle(spawn.VehicleID, spawn.Barricade.Position, Quaternion.Euler(spawn.Barricade.euler_angles.x * 2,
+                        spawn.Barricade.euler_angles.y * 2, spawn.Barricade.euler_angles.z * 2), out var newInstanceID);
+                    VehicleSpawner.LinkVehicleToSpawn(newInstanceID, spawn.Barricade);
+                    return true;
+                }
+                else return false;
             }
             return false;
         }
@@ -209,18 +236,16 @@ namespace Uncreated.Warfare.Vehicles
         {
             if (VehicleSpawner.HasLinkedVehicle(spawn, out var vehicle))
             {
-                if (!(vehicle.isDead || vehicle.isDrowned))
+                if (!(vehicle.isDead || vehicle.isDrowned)) // if the vehicle is not dead or drowned
                     return false;
             }
-
-            var spawnLocation = UCBarricadeManager.GetBarricadeByInstanceID(spawn.BarricadeInstanceID);
-            if (spawnLocation == null)
-                return false;
-
-            SpawnLockedVehicle(spawn.VehicleID, spawnLocation.point, Quaternion.Euler(spawnLocation.angle_x * 2, spawnLocation.angle_y * 2, spawnLocation.angle_z * 2), out uint instancID);
-            VehicleSpawner.LinkVehicleToSpawn(vehicle.instanceID, spawn.BarricadeInstanceID);
-
+            if (spawn.Barricade != default(SerializableTransform))
+            {
+                SpawnLockedVehicle(spawn.VehicleID, spawn.Barricade.Position + new Vector3(0, 5, 0), Quaternion.Euler(Vector3.up), out var newInstanceID);
+                VehicleSpawner.LinkVehicleToSpawn(newInstanceID, spawn.Barricade);
                 return true;
+            }
+            else return false;
         }
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
@@ -395,6 +420,7 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
             Patches.BarricadeDestroyedHandler -= OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler -= OnStructureDestroyed;
         }
 
         public enum EVehicleProperty

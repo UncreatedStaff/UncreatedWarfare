@@ -107,6 +107,7 @@ namespace Uncreated.Warfare
             RequestSigns.DropAllSigns();
             StructureSaver.DropAllStructures();
             Data.FlagManager.Load(); // starts new game
+            VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
         }
         internal void OnFlagManagerReady(object sender, EventArgs e)

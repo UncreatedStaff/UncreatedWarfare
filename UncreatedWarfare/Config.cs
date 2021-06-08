@@ -127,6 +127,7 @@ namespace Uncreated.Warfare
         public bool ServerSetSignTextInternal;
         public bool dropBarricadeIntoRegionInternal;
         public bool destroyBarricade;
+        public bool destroyStructure;
         public bool ReceiveVisualToggleRequest;
         public bool sendHealthChanged;
         public bool ServerSetVisualToggleState;
@@ -158,6 +159,7 @@ namespace Uncreated.Warfare
             this.ServerSetSignTextInternal = true;
             this.dropBarricadeIntoRegionInternal = true;
             this.destroyBarricade = true;
+            this.destroyStructure = true;
             this.ReceiveVisualToggleRequest = true;
             this.sendHealthChanged = true;
             this.simulatePlayerLife = true;
@@ -260,7 +262,7 @@ namespace Uncreated.Warfare
         public ushort VehicleSpawnerID;
         public VehicleBaySettings()
         {
-            VehicleSpawnerID = 38390;
+            VehicleSpawnerID = 20002;
         }
     }
     public struct MySqlData
