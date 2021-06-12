@@ -18,6 +18,7 @@ using Color = UnityEngine.Color;
 using System.Reflection;
 using Uncreated.Players;
 using Flag = Uncreated.Warfare.Flags.Flag;
+using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare
 {
@@ -390,6 +391,53 @@ namespace Uncreated.Warfare
             else if (team == 2) return TeamManager.Team2Color;
             else if (team == 3) return TeamManager.AdminColor;
             else return TeamManager.NeutralColor;
+        }
+        public static string GetKitIcon(this UnturnedPlayer player)
+        {
+            var save = LogoutSaver.GetSave(player.CSteamID);
+
+            if (save == null)
+                return "NO SAVE";
+
+            switch (save.KitClass)
+            {
+                case Kit.EClass.NONE:
+                    return "";
+                case Kit.EClass.UNARMED:
+                    return "±";
+                case Kit.EClass.SQUADLEADER:
+                    return "¦";
+                case Kit.EClass.RIFLEMAN:
+                    return "¡";
+                case Kit.EClass.MEDIC:
+                    return "¢";
+                case Kit.EClass.BREACHER:
+                    return "¤";
+                case Kit.EClass.AUTOMATIC_RIFLEMAN:
+                    return "¥";
+                case Kit.EClass.GRENADIER:
+                    return "¬";
+                case Kit.EClass.MACHINE_GUNNER:
+                    return "«";
+                case Kit.EClass.LAT:
+                    return "®";
+                case Kit.EClass.HAT:
+                    return "¯";
+                case Kit.EClass.MARKSMAN:
+                    return "¨";
+                case Kit.EClass.SNIPER:
+                    return "£";
+                case Kit.EClass.AP_RIFLEMAN:
+                    return "©";
+                case Kit.EClass.COMBAT_ENGINEER:
+                    return "ª";
+                case Kit.EClass.CREWMAN:
+                    return "§";
+                case Kit.EClass.PILOT:
+                    return "°";
+                default:
+                    return "";
+            }
         }
         public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
         {

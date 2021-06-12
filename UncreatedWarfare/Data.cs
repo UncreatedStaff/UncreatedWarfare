@@ -19,6 +19,7 @@ using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare
 {
@@ -98,6 +99,7 @@ namespace Uncreated.Warfare
         public static RequestSigns RequestSignManager;
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
+        public static SquadManager squadManager;
         internal static Thread ListenerThread;
         internal static AsyncListenServer ListenServer;
         internal static AsyncDatabase DatabaseManager;
@@ -161,6 +163,7 @@ namespace Uncreated.Warfare
             WebInterface = new WebInterface();
             LogoutSaver = new LogoutSaver();
             Whitelister = new Whitelister();
+            squadManager = new SquadManager();
             CommandWindow.shouldLogDeaths = false;
 
             FlagManager = new FlagManager();

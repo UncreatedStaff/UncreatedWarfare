@@ -21,13 +21,11 @@ namespace Uncreated.Warfare.Kits
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
             string op = "";
             string property = "";
             string kitName = "";
             string newValue = "";
             string targetPlayer = "";
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
             if (command.Length == 2)
             {
@@ -38,7 +36,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (!KitManager.KitExists(kitName, out var kit)) // create kit
                     {
-                        KitManager.CreateKit(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
                         RequestSigns.UpdateSignsWithName(kitName);
                         player.Message("kit_created", kitName);
                         return;

@@ -301,6 +301,8 @@ namespace Uncreated.Warfare.Kits
                         return "Breacher";
                     case EClass.AUTOMATIC_RIFLEMAN:
                         return "Automatic Rifleman";
+                    case EClass.GRENADIER:
+                        return "Grenadier";
                     case EClass.MACHINE_GUNNER:
                         return "Machine Gunner";
                     case EClass.LAT:
@@ -386,6 +388,7 @@ namespace Uncreated.Warfare.Kits
             MEDIC,
             BREACHER,
             AUTOMATIC_RIFLEMAN,
+            GRENADIER,
             MACHINE_GUNNER,
             LAT,
             HAT,
