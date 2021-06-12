@@ -29,7 +29,7 @@ namespace Uncreated.Warfare
                 else return Configuration.Instance.SQL;
             }
         }
-        public const bool LoadMySQLDataFromElsewhere = true;
+        public const bool LoadMySQLDataFromElsewhere = false;
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;

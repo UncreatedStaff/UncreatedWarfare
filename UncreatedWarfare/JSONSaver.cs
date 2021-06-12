@@ -191,17 +191,11 @@ namespace Uncreated
                     return input[0];
                 }
             }
-            if(!type.IsPrimitive)
-            {
-                F.LogError("Can not parse non-primitive types except for strings and enums.");
-                parsed = false;
-                return default;
-            }
             if(type.IsEnum)
             {
                 try
                 {
-                    object output = Enum.Parse(type, input);
+                    object output = Enum.Parse(type, input, true);
                     parsed = true;
                     return output;
                 } catch (ArgumentNullException)
@@ -214,6 +208,12 @@ namespace Uncreated
                     parsed = false;
                     return default;
                 }
+            }
+            if (!type.IsPrimitive)
+            {
+                F.LogError("Can not parse non-primitive types except for strings and enums.");
+                parsed = false;
+                return default;
             }
 
             if (type == typeof(int))

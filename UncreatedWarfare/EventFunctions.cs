@@ -198,7 +198,7 @@ namespace Uncreated.Warfare
                 Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
             else
                 Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
-            const string prefix = "[TEAM] ";
+            const string prefix = "";
             if (!player.playerID.characterName.StartsWith(prefix))
                 player.playerID.characterName = prefix + player.playerID.characterName;
             if (!player.playerID.nickName.StartsWith(prefix))

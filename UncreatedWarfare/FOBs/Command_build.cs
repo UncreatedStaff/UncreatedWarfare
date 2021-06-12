@@ -74,12 +74,8 @@ namespace Uncreated.Warfare.FOBs
                     Data.BuildManager.TryBuildFortification(foundation, player, fortification);
                     return;
                 }
-
                 player.Message("build_error_notbuildable");
             }
-
         }
-
-
     }
 }
