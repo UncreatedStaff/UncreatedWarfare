@@ -37,11 +37,11 @@ namespace Uncreated.Warfare.Structures
                 }
             }
         }
-        /// <param name="reason">0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</param>
+        /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
         public static bool AddStructure(Interactable barricade, out Structure structureadded, out byte reason) => AddStructure(barricade.transform, out structureadded, out reason);
-        /// <param name="reason">0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</param>
+        /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
         public static bool AddStructure(Interactable2 structure, out Structure structureadded, out byte reason) => AddStructure(structure.transform, out structureadded, out reason);
-        /// <param name="reason">0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</param>
+        /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
         public static bool AddStructure(Transform structure, out Structure structureadded, out byte reason)
         {
             structureadded = default;
@@ -83,6 +83,7 @@ namespace Uncreated.Warfare.Structures
         private static bool StructureExists(Transform barricade, out Structure found) => ObjectExists(s => s.transform == barricade, out found);
         public static bool StructureExists(Interactable2 structure, out Structure found) => StructureExists(structure.transform, out found);
         public static bool StructureExists(Interactable barricade, out Structure found) => StructureExists(barricade.transform, out found);
+        public static bool StructureExists(SerializableTransform barricade, out Structure found) => ObjectExists(s => s.transform == barricade, out found);
         public static void SetOwner(Structure structure, ulong newOwner) => SetProperty(structure, nameof(structure.owner), newOwner, out _, out _, out _);
         public static void SetGroupOwner(Structure structure, ulong group) => SetProperty(structure, nameof(structure.group), group, out _, out _, out _);
     }

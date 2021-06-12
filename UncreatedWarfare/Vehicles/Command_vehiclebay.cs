@@ -188,11 +188,11 @@ namespace Uncreated.Warfare.Kits
                 else
                     player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
             }
-            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player);
+            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player, out BarricadeDrop barricadeDrop);
 
             if (barricade != null)
             {
-                if (barricade.barricade.id != UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
+                if (barricade.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
                 {
                     if (command.Length == 2)
                     {
@@ -207,9 +207,9 @@ namespace Uncreated.Warfare.Kits
 
                                 if (asset != null)
                                 {
-                                    if (!VehicleSpawner.SpawnExists(barricade.instanceID, out _))
+                                    if (!VehicleSpawner.SpawnExists(barricadeDrop.model.transform, out _))
                                     {
-                                        VehicleSpawner.CreateSpawn(vehicleID, barricade.instanceID);
+                                        VehicleSpawner.CreateSpawn(vehicleID, barricadeDrop.model.transform);
                                         player.Message("vehiclebay_spawn_registered", asset.vehicleName);
                                     }
                                     else
@@ -230,9 +230,9 @@ namespace Uncreated.Warfare.Kits
 
                         if (op == "deregister" || op == "dereg")
                         {
-                            if (VehicleSpawner.SpawnExists(barricade.instanceID, out _))
+                            if (VehicleSpawner.SpawnExists(barricadeDrop.model.transform, out _))
                             {
-                                VehicleSpawner.DeleteSpawn(barricade.instanceID);
+                                VehicleSpawner.DeleteSpawn(barricadeDrop.model.transform);
                                 player.Message("vehiclebay_spawn_remove");
                             }
                             else
@@ -240,11 +240,11 @@ namespace Uncreated.Warfare.Kits
                         }
                         else if (op == "check")
                         {
-                            if (VehicleSpawner.SpawnExists(barricade.instanceID, out var spawn))
+                            if (VehicleSpawner.SpawnExists(barricadeDrop.model.transform, out var spawn))
                             {
                                 var asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
                                 if (asset != null)
-                                    player.Message("vehiclebay_check_registered", spawn.BarricadeInstanceID, asset.vehicleName, spawn.VehicleID);
+                                    player.Message("vehiclebay_check_registered", spawn.Barricade.ToString(), asset.vehicleName, spawn.VehicleID);
                                 else
                                     player.Message("vehiclebay_e_idnotfound", spawn.VehicleID);
                             }
@@ -261,7 +261,81 @@ namespace Uncreated.Warfare.Kits
                     player.Message("vehiclebay_e_novehicle");
             }
             else
-                player.Message("vehiclebay_e_novehicle");
+            {
+                StructureData structure = UCBarricadeManager.GetStructureDataFromLook(player, out StructureDrop structureDrop);
+                if (structure != default)
+                {
+                    if (structure.structure.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
+                    {
+                        if (command.Length == 2)
+                        {
+                            string op = command[0].ToLower();
+                            string ID = command[1].ToLower();
+
+                            if (op == "register" || op == "reg")
+                            {
+                                if (UInt16.TryParse(ID, out var vehicleID))
+                                {
+                                    var asset = UCAssetManager.FindVehicleAsset(vehicleID);
+
+                                    if (asset != null)
+                                    {
+                                        if (!VehicleSpawner.SpawnExists(structureDrop.model.transform, out _))
+                                        {
+                                            VehicleSpawner.CreateSpawn(vehicleID, structureDrop.model.transform);
+                                            player.Message("vehiclebay_spawn_registered", asset.vehicleName);
+                                        }
+                                        else
+                                            player.Message("vehiclebay_e_spawnexist", vehicleID);
+                                    }
+                                    else
+                                        player.Message("vehiclebay_e_idnotfound", vehicleID);
+                                }
+                                else
+                                    player.Message("vehiclebay_e_invalidid", ID);
+                            }
+                            else
+                                player.Message("correct_usage", "/vehiclebay <register|unregister> <vehicle ID>");
+                        }
+                        else if (command.Length == 1)
+                        {
+                            string op = command[0].ToLower();
+
+                            if (op == "deregister" || op == "dereg")
+                            {
+                                if (VehicleSpawner.SpawnExists(structureDrop.model.transform, out _))
+                                {
+                                    VehicleSpawner.DeleteSpawn(structureDrop.model.transform);
+                                    player.Message("vehiclebay_spawn_remove");
+                                }
+                                else
+                                    player.Message("vehiclebay_e_spawnnoexist");
+                            }
+                            else if (op == "check")
+                            {
+                                if (VehicleSpawner.SpawnExists(structureDrop.model.transform, out var spawn))
+                                {
+                                    var asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
+                                    if (asset != null)
+                                        player.Message("vehiclebay_check_registered", spawn.Barricade.ToString(), asset.vehicleName, spawn.VehicleID);
+                                    else
+                                        player.Message("vehiclebay_e_idnotfound", spawn.VehicleID);
+                                }
+                                else
+                                    player.Message("vehiclebay_check_notregistered");
+                            }
+                            else
+                                player.Message("correct_usage", "/vehiclebay <register|unregister> <vehicle ID>");
+                        }
+                        else
+                            player.Message("correct_usage", "/vehiclebay <register|unregister> <vehicle ID>");
+                    }
+                    else
+                        player.Message("vehiclebay_e_novehicle");
+                }
+                else
+                    player.Message("vehiclebay_e_novehicle");
+            }
         }
     }
 }
