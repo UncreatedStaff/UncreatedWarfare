@@ -17,11 +17,21 @@ namespace Uncreated.Warfare.Flags
     public class OwnerChangeEventArgs : EventArgs { public ulong OldOwner; public ulong NewOwner; }
     public class Flag : IDisposable
     {
+        public int index = -1;
         public const int MaxPoints = 64;
         public Zone ZoneData { get; private set; }
         public FlagManager Manager { get; private set; }
         public int Level { get => _level; }
         private readonly int _level;
+        public int ObjectivePlayerCount 
+        { 
+            get
+            {
+                if (T1Obj) return Team1TotalPlayers;
+                else if (T2Obj) return Team2TotalPlayers;
+                else return 0;
+            } 
+        }
         public Vector3 Position
         {
             get => _position;
@@ -124,8 +134,12 @@ namespace Uncreated.Warfare.Flags
             get => _owner;
             set
             {
-                if (_owner != value) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = _owner, NewOwner = value });
-                _owner = value;
+                if (_owner != value)
+                {
+                    ulong oldowner = _owner;
+                    _owner = value;
+                    OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = oldowner, NewOwner = _owner });
+                }
             }
         }
         public void SetOwnerNoEventInvocation(ulong newOwner)
@@ -175,13 +189,22 @@ namespace Uncreated.Warfare.Flags
             } 
             set
             {
-                if (1 == value)
+                if (value == 1)
+                {
                     Points = MaxPoints;
-                else if (2 == value)
-                    Points = MaxPoints * -1;
-                else if (0 == value)
+                    Owner = 1;
+                }
+                else if (value == 2)
+                {
+                    Points = -MaxPoints;
+                    Owner = 2;
+                }
+                else if (value == 0)
+                {
                     Points = 0;
-                else F.LogError($"Tried to set owner of flag {_id} to an invalid team: {value}.");
+                    Owner = 0;
+                }
+                else F.LogError($"Tried to set owner of flag {_id}: \"{Name}\" to an invalid team: {value}.");
             }
         }
         private int _points;
@@ -191,7 +214,6 @@ namespace Uncreated.Warfare.Flags
             get => _points;
             set
             {
-                ulong OldOwner = _owner;
                 int OldPoints = _points;
                 if (value > MaxPoints) _points = MaxPoints;
                 else if (value < -MaxPoints) _points = -MaxPoints;
@@ -200,15 +222,6 @@ namespace Uncreated.Warfare.Flags
                 {
                     LastDeltaPoints = _points - OldPoints;
                     OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
-                    /*
-                    ulong NewOwner;
-                    if (_points >= MaxPoints)
-                        NewOwner = 1;
-                    else if (_points <= -MaxPoints)
-                        NewOwner = 2;
-                    else NewOwner = 0;
-                    if (OldOwner != NewOwner) OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = OldOwner, NewOwner = NewOwner });
-                    */
                 }
             }
         }
@@ -362,6 +375,7 @@ namespace Uncreated.Warfare.Flags
         public bool Hidden(ulong team) => !Discovered(team);
         public void Discover(ulong team)
         {
+            F.Log($"{team} discovered {Name} ({index})", ConsoleColor.Yellow);
             if (team == 1) DiscoveredT1 = true;
             else if (team == 2) DiscoveredT2 = true;
         }
@@ -386,56 +400,49 @@ namespace Uncreated.Warfare.Flags
                     winner = 0;
                     return false;
                 }
-                if (Team1TotalPlayers == Team2TotalPlayers)
+                else if (Team1TotalPlayers == Team2TotalPlayers)
                 {
                     winner = 0;
-                    return true;
                 }
-                if (Team1TotalPlayers == 0 && Team2TotalPlayers > 0)
+                else if (Team1TotalPlayers == 0 && Team2TotalPlayers > 0)
                 {
                     winner = 2;
-                    return false;
                 }
-                if (Team2TotalPlayers == 0 && Team1TotalPlayers > 0)
+                else if (Team2TotalPlayers == 0 && Team1TotalPlayers > 0)
                 {
                     winner = 1;
-                    return false;
                 }
-                if (Team1TotalPlayers > Team2TotalPlayers)
+                else if (Team1TotalPlayers > Team2TotalPlayers)
                 {
-                    if (this.Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= this.Team2TotalPlayers)
+                    if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers)
                     {
                         winner = 1;
-                        return false;
                     }
                     else
                     {
                         winner = 0;
-                        return true;
                     }
                 }
                 else
                 {
-                    if (this.Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= this.Team1TotalPlayers)
+                    if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers)
                     {
                         winner = 2;
-                        return false;
                     }
                     else
                     {
                         winner = 0;
-                        return true;
                     }
                 }
+                return winner == 0;
             }
-            else 
+            else
             {
-                ulong obj = WhosObj();
-                winner = obj;
+                if (ObjectivePlayerCount == 0) winner = 0;
+                else winner = WhosObj();
+                if (!IsObj(winner)) winner = 0;
                 return false;
             }
-            
-            
         }
         public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
@@ -445,8 +452,13 @@ namespace Uncreated.Warfare.Flags
                 {
                     if (!IsContested(out ulong winner))
                     {
-                        if(IsObj(winner))
-                            Cap(winner, 1);
+                        if (IsObj(winner))
+                        {
+                            if (winner == 1 || winner == 2)
+                            {
+                                Cap(winner, 1);
+                            }
+                        }
                     }
                     else
                     {

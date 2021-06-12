@@ -24,7 +24,37 @@ namespace Uncreated.Warfare.Stats
         public string rank;
         public string rank_abbreviation;
         public List<Team> teams;
+        public void AddTeam(Team team)
+        {
+            team.OnNeedsSave += SaveEscalator;
+            teams.Add(team);
+        }
         public Offences offences;
+        public void TellOffence(Ban ban)
+        {
+            offences.AddOffence(ban);
+            Save();
+        }
+        public void TellOffence(Kick kick)
+        {
+            offences.AddOffence(kick);
+            Save();
+        }
+        public void TellOffence(Warning warning)
+        {
+            offences.AddOffence(warning);
+            Save();
+        }
+        public void TellOffence(BattleyeKick battleye_kick)
+        {
+            offences.AddOffence(battleye_kick);
+            Save();
+        }
+        public void TellOffence(Teamkill teamkill)
+        {
+            offences.AddOffence(teamkill);
+            Save();
+        }
         public void TellKill(UCWarfare.KillEventArgs parameters)
         {
             this.kills++;
@@ -39,7 +69,47 @@ namespace Uncreated.Warfare.Stats
                 { 
                     Team team = new Team(killerteam, killerteam == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(killerteam, 0, false));
                     team.AddKill(false, parameters);
-                    teams.Add(team);
+                    AddTeam(team);
+                }
+            }
+            Save();
+        }
+        public void TellTeamkill(UCWarfare.KillEventArgs parameters)
+        {
+            this.teamkills++;
+            ulong killerteam = F.GetTeam(parameters.killer);
+            int teamindex = teams.FindIndex(x => x.id == killerteam);
+            if (teamindex != -1)
+            {
+                teams[teamindex].AddTeamkill(false, parameters);
+            }
+            else
+            {
+                if (killerteam == 1 || killerteam == 2)
+                {
+                    Team team = new Team(killerteam, killerteam == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(killerteam, 0, false));
+                    team.AddTeamkill(false, parameters);
+                    AddTeam(team);
+                }
+            }
+            Save();
+        }
+        public void TellDeathNonSuicide(UCWarfare.DeathEventArgs parameters)
+        {
+            this.deaths++;
+            ulong deadteam = F.GetTeam(parameters.dead);
+            int teamindex = teams.FindIndex(x => x.id == deadteam);
+            if (teamindex != -1)
+            {
+                teams[teamindex].AddDeathNonSuicide(false, parameters);
+            }
+            else
+            {
+                if (deadteam == 1 || deadteam == 2)
+                {
+                    Team team = new Team(deadteam, deadteam == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(deadteam, 0, false));
+                    team.AddDeathNonSuicide(false, parameters);
+                    AddTeam(team);
                 }
             }
             Save();
@@ -86,10 +156,35 @@ namespace Uncreated.Warfare.Stats
     public class Offences : PlayerObject
     {
         public List<Ban> bans;
+        public void AddOffence(Ban ban)
+        {
+            ban.OnNeedsSave += SaveEscalator;
+            bans.Add(ban);
+        }
         public List<Kick> kicks;
+        public void AddOffence(Kick kick)
+        {
+            kick.OnNeedsSave += SaveEscalator;
+            kicks.Add(kick);
+        }
         public List<Warning> warnings;
+        public void AddOffence(Warning warning)
+        {
+            warning.OnNeedsSave += SaveEscalator;
+            warnings.Add(warning);
+        }
         public List<BattleyeKick> battleye_kicks;
+        public void AddOffence(BattleyeKick battleye_kick)
+        {
+            battleye_kick.OnNeedsSave += SaveEscalator;
+            battleye_kicks.Add(battleye_kick);
+        }
         public List<Teamkill> teamkills;
+        public void AddOffence(Teamkill teamkill)
+        {
+            teamkill.OnNeedsSave += SaveEscalator;
+            teamkills.Add(teamkill);
+        }
         [JsonConstructor]
         public Offences(List<Ban> bans, List<Kick> kicks, List<Warning> warnings, List<BattleyeKick> battleye_kicks, List<Teamkill> teamkills)
         {
@@ -208,8 +303,18 @@ namespace Uncreated.Warfare.Stats
         public string rank;
         public string rank_abbreviation;
         public List<Kit> kits;
+        public void AddKit(Kit kit)
+        {
+            kit.OnNeedsSave += SaveEscalator;
+            kits.Add(kit);
+        }
         public List<string> owned_paid_kits;
         public List<KillTrack> kill_counts;
+        public void AddKillCount(KillTrack track)
+        {
+            track.OnNeedsSave += SaveEscalator;
+            kill_counts.Add(track);
+        }
         public float time_deployed;
         public float playtime;
 
@@ -254,35 +359,86 @@ namespace Uncreated.Warfare.Stats
             this.time_deployed = 0;
             this.playtime = 0;
         }
+        public void GiveKitAccess(string kitname)
+        {
+            if (!owned_paid_kits.Contains(kitname)) owned_paid_kits.Add(kitname);
+        }
         public void AddKill(bool save, UCWarfare.KillEventArgs parameters)
         {
             kills++;
             int kill_countsindex = kill_counts.FindIndex(x => x.player_id == parameters.dead.channel.owner.playerID.steamID.m_SteamID);
             if (kill_countsindex != -1)
-            {
                 kill_counts[kill_countsindex].kills_on++;
-            }
             else
-            {
-                kill_counts.Add(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 1, 0, 0));
-            }
+                AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 1, 0, 0));
             if (parameters.killer != null)
             {
                 string kitname = LogoutSaver.GetKit(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
-                {
                     kit = kits[kitindex];
-                }
                 else
                 {
                     kit = new Kit(kitname, F.GetKitDisplayName(kitname));
-                    kits.Add(kit);
+                    AddKit(kit);
                 }
                 kit.AddKill(false, parameters);
             }
             else F.Log("killer was null");
+            if (save) Save();
+        }
+        public void AddTeamkill(bool save, UCWarfare.KillEventArgs parameters)
+        {
+            teamkills++;
+            int teamkill_countsindex = kill_counts.FindIndex(x => x.player_id == parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+            if (teamkill_countsindex != -1)
+                kill_counts[teamkill_countsindex].teamkills_on++;
+            else
+                AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 0, 0, 1));
+            if (parameters.killer != null)
+            {
+                string kitname = LogoutSaver.GetKit(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
+                int kitindex = kits.FindIndex(x => x.name == kitname);
+                Kit kit;
+                if (kitindex != -1)
+                    kit = kits[kitindex];
+                else
+                {
+                    kit = new Kit(kitname, F.GetKitDisplayName(kitname));
+                    AddKit(kit);
+                }
+                kit.AddTeamkill(false, parameters);
+            }
+            else F.Log("killer was null");
+            if (save) Save();
+        }
+        public void AddDeathNonSuicide(bool save, UCWarfare.DeathEventArgs parameters)
+        {
+            kills++;
+            if(parameters.killerargs != default && parameters.killerargs.killer != default)
+            {
+                int kill_countsindex = kill_counts.FindIndex(x => x.player_id == parameters.killerargs.killer.channel.owner.playerID.steamID.m_SteamID);
+                if (kill_countsindex != -1)
+                    kill_counts[kill_countsindex].deaths_from++;
+                else
+                    AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 0, 1, 0));
+            }
+            if (parameters.dead != default)
+            {
+                string kitname = LogoutSaver.GetKit(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+                int kitindex = kits.FindIndex(x => x.name == kitname);
+                Kit kit;
+                if (kitindex != -1)
+                    kit = kits[kitindex];
+                else
+                {
+                    kit = new Kit(kitname, F.GetKitDisplayName(kitname));
+                    AddKit(kit);
+                }
+                kit.AddDeathNonSuicide(false, parameters);
+            }
+            else F.Log("dead was null");
             if (save) Save();
         }
     }
@@ -291,10 +447,20 @@ namespace Uncreated.Warfare.Stats
         public string name;
         public string display_name;
         public List<Item> items;
+        public void AddItem(Item item)
+        {
+            item.OnNeedsSave += SaveEscalator;
+            items.Add(item);
+        }
         public long playtime;
         public float time_deployed;
         public Playstyle playstyle;
         public List<Vehicle> vehicles;
+        public void AddVehicle(Vehicle vehicle)
+        {
+            vehicle.OnNeedsSave += SaveEscalator;
+            vehicles.Add(vehicle);
+        }
         public uint wins;
         /// <summary> Similar to win/loss but is its effect to the old win loss is influenced by percent of time in the game. </summary>
         public uint win_value;
@@ -303,6 +469,11 @@ namespace Uncreated.Warfare.Stats
         public uint deaths;
         public uint teamkills;
         public List<Point> points;
+        public void AddPoint(Point point)
+        {
+            point.OnNeedsSave += SaveEscalator;
+            points.Add(point);
+        }
         public void AddKill(bool save, UCWarfare.KillEventArgs parameters)
         {
             kills++;
@@ -323,17 +494,17 @@ namespace Uncreated.Warfare.Stats
                             item.item_kills[limbindex].kills[causeindex].kills++;
                         } else
                         {
-                            item.item_kills[limbindex].kills.Add(new LimbKill((byte)parameters.cause, 1));
+                            item.item_kills[limbindex].AddKill(new LimbKill((byte)parameters.cause, 1));
                         }
                     } else
                     {
-                        item.item_kills.Add(new ItemKill((byte)parameters.limb, new List<LimbKill> { new LimbKill((byte)parameters.cause, 1) }));
+                        item.AddItemKill(new ItemKill((byte)parameters.limb, new List<LimbKill> { new LimbKill((byte)parameters.cause, 1) }));
                     }
                 }
                 else
                 {
                     item = new Item(parameters.item, 1, 0, 0, new List<ItemKill> { new ItemKill((byte)parameters.limb, new List<LimbKill> { new LimbKill((byte)parameters.cause, 1) }) });
-                    items.Add(item);
+                    AddItem(item);
                 }
             }
             if(parameters.cause == EDeathCause.ROADKILL)
@@ -344,7 +515,7 @@ namespace Uncreated.Warfare.Stats
                     vehicles[vehicleindex].kills_by_roadkill++;
                 } else
                 {
-                    vehicles.Add(new Vehicle(parameters.item, 0, 0, 0, 0, 0, 0, 1));
+                    AddVehicle(new Vehicle(parameters.item, 0, 0, 0, 0, 0, 0, 1));
                 }
             }
 
@@ -355,14 +526,53 @@ namespace Uncreated.Warfare.Stats
                 playstyle.avg_kill_distance = ((playstyle.avg_kill_distance * (playstyle.avg_kill_distance_counter++)) + Convert.ToDecimal(parameters.distance)) / playstyle.avg_kill_distance_counter;
                 Vector2 gridSquare = F.RoundLocationToGrid(parameters.killer.transform.position);
                 int squareindex = playstyle.locations.FindIndex(l => l.x == gridSquare.x && l.y == gridSquare.y);
-                Location location;
                 if (squareindex != -1)
+                    playstyle.locations[squareindex].kills++;
+                else
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 1, 0, 0, 0, 0));
+            }
+            if (save) Save();
+        }
+        public void AddTeamkill(bool save, UCWarfare.KillEventArgs parameters)
+        {
+            teamkills++;
+            if (parameters.item != 0)
+            {
+                int itemindex = items.FindIndex(x => x.id == parameters.item);
+                Item item;
+                if (itemindex != -1)
                 {
-                    location = playstyle.locations[squareindex];
-                    location.kills++;
+                    item = items[itemindex];
+                    item.teamkills++;
                 }
                 else
-                    location = new Location(gridSquare.x, gridSquare.y, 1, 0, 0, 0, 0);
+                {
+                    item = new Item(parameters.item, 0, 0, 1, new List<ItemKill>());
+                    AddItem(item);
+                }
+            }
+            decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Flags.Flag closestObjective, false)));
+            if (save) Save();
+        }
+        public void AddDeathNonSuicide(bool save, UCWarfare.DeathEventArgs parameters)
+        {
+            deaths++;
+            if (parameters.item != 0)
+            {
+                int itemindex = items.FindIndex(x => x.id == parameters.item);
+                if (itemindex != -1)
+                    items[itemindex].deaths++;
+                else
+                    AddItem(new Item(parameters.item, 0, 1, 0, new List<ItemKill>()));
+            }
+            if (playstyle != default)
+            {
+                Vector2 gridSquare = F.RoundLocationToGrid(parameters.dead.transform.position);
+                int squareindex = playstyle.locations.FindIndex(l => l.x == gridSquare.x && l.y == gridSquare.y);
+                if (squareindex != -1)
+                    playstyle.locations[squareindex].deaths++;
+                else
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 1, 0, 0, 0));
             }
             if (save) Save();
         }
@@ -396,6 +606,7 @@ namespace Uncreated.Warfare.Stats
             this.playtime = 0;
             this.time_deployed = 0;
             this.playstyle = new Playstyle();
+            this.playstyle.OnNeedsSave += SaveEscalator;
             this.vehicles = new List<Vehicle>();
             this.wins = 0;
             this.win_value = 0;
@@ -473,6 +684,11 @@ namespace Uncreated.Warfare.Stats
         /// <summary> Percentage of time the player spent on point out of time spent not on main. (deployed) </summary>
         public decimal pct_deploy_time_spent_on_point;
         public List<Location> locations;
+        public void AddLocation(Location location)
+        {
+            location.OnNeedsSave += SaveEscalator;
+            locations.Add(location);
+        }
         [JsonConstructor]
         public Playstyle(
             decimal avg_distance_from_objective_on_kill, 
@@ -558,6 +774,11 @@ namespace Uncreated.Warfare.Stats
         public uint deaths;
         public uint teamkills;
         public List<ItemKill> item_kills;
+        public void AddItemKill(ItemKill item_kill)
+        {
+            item_kill.OnNeedsSave += SaveEscalator;
+            item_kills.Add(item_kill);
+        }
         [JsonConstructor]
         public Item(ushort id, uint kills, uint deaths, uint teamkills, List<ItemKill> item_kills)
         {
@@ -573,6 +794,11 @@ namespace Uncreated.Warfare.Stats
     {
         public byte limb_id;
         public List<LimbKill> kills;
+        public void AddKill(LimbKill kill)
+        {
+            kill.OnNeedsSave += SaveEscalator;
+            kills.Add(kill);
+        }
         [JsonConstructor]
         public ItemKill(byte limb_id, List<LimbKill> kills)
         {
@@ -602,21 +828,21 @@ namespace Uncreated.Warfare.Stats
         public ulong player_id;
         public uint kills_on;
         public uint deaths_from;
-        public uint teamkills_from;
+        public uint teamkills_on;
         [JsonConstructor]
-        public KillTrack(ulong player_id, uint kills_on, uint deaths_from, uint teamkills_from)
+        public KillTrack(ulong player_id, uint kills_on, uint deaths_from, uint teamkills_on)
         {
             this.player_id = player_id;
             this.kills_on = kills_on;
             this.deaths_from = deaths_from;
-            this.teamkills_from = teamkills_from;
+            this.teamkills_on = teamkills_on;
         }
         public KillTrack(ulong player_id)
         {
             this.player_id = player_id;
             this.kills_on = 0;
             this.deaths_from = 0;
-            this.teamkills_from = 0;
+            this.teamkills_on = 0;
         }
     }
 }

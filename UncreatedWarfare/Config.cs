@@ -36,6 +36,7 @@ namespace Uncreated.Warfare
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
         public bool AllowCosmetics;
+        public bool AllowBatteryStealing;
         public bool RemoveLandminesOnDisconnect;
         public void LoadDefaults()
         {
@@ -56,6 +57,7 @@ namespace Uncreated.Warfare
             this.EndScreenUI = 10000;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
+            this.AllowBatteryStealing = false;
             this.RemoveLandminesOnDisconnect = false;
         }
     }
@@ -103,6 +105,8 @@ namespace Uncreated.Warfare
         public bool ShowPointsOnUI;
         public bool AllowPlayersToCaptureInVehicle;
         public bool HideUnknownFlags;
+        public uint DiscoveryForesight;
+        public bool ShowObjectives;
         public int RequiredPlayerDifferenceToCapture;
         public FlagSettings()
         {
@@ -117,6 +121,8 @@ namespace Uncreated.Warfare
             this.EnablePlayerCount = true;
             this.ShowPointsOnUI = true;
             this.HideUnknownFlags = true;
+            this.DiscoveryForesight = 3;
+            this.ShowObjectives = true;
             this.AllowPlayersToCaptureInVehicle = false;
             this.RequiredPlayerDifferenceToCapture = 2;
         }
@@ -152,6 +158,7 @@ namespace Uncreated.Warfare
         /// </summary>
         public bool explodeInteractableVehicle;
         public bool outputToConsole;
+        public bool ReceiveStealVehicleBattery;
 
         public PatchToggles()
         {
@@ -169,6 +176,7 @@ namespace Uncreated.Warfare
             this.damageVehicleTool = true;
             this.explodeInteractableVehicle = true;
             this.outputToConsole = true;
+            this.ReceiveStealVehicleBattery = true;
         }
 
     }
@@ -224,9 +232,13 @@ namespace Uncreated.Warfare
     public class DeathMesssagesSettings
     {
         public bool ColorizeNames;
+        public bool PenalizeTeamkilledPlayers;
+        public bool PenalizeSuicides;
         public DeathMesssagesSettings()
         {
             ColorizeNames = true;
+            PenalizeTeamkilledPlayers = true;
+            PenalizeSuicides = true;
         }
     }
     public class TeamSettings 

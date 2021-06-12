@@ -7,7 +7,6 @@ using System.Text;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Random = System.Random;
 
 namespace Uncreated.Warfare.Flags
 {
@@ -16,6 +15,7 @@ namespace Uncreated.Warfare.Flags
         public List<Flag> FlagRotation { get; private set; }
         public List<Flag> AllFlags { get; private set; }
         const int FLAGS_PER_LEVEL_MAX = 2;
+        const int LIST_UI_COUNT = 10;
         public const int CounterMax = 1;  // how many detection coroutine go by before points are incremented. (higher the number, longer the flags take to capture)
         public bool TimeToCheck
         {
@@ -60,13 +60,33 @@ namespace Uncreated.Warfare.Flags
         }
         private void OnObjectiveChangeAction(object sender, OnObjectiveChangeEventArgs e)
         {
-            if(Data.GameStats != null)
-                Data.GameStats.totalFlagOwnerChanges++;
-            F.Broadcast("Objective changed for team " + e.Team.ToString() + " from " + e.oldFlagObj.Name + " to " + e.newFlagObj.Name, UCWarfare.GetColor("default"));
-            F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.Magenta);
-            e.newFlagObj.Discover(e.Team);
-            foreach(SteamPlayer player in Provider.clients)
-                SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam());
+            if(e.Team == 0)
+            {
+                F.Log("Flag neutralized.");
+            } else
+            {
+                if (Data.GameStats != null)
+                    Data.GameStats.totalFlagOwnerChanges++;
+                F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.DarkYellow);
+                if (UCWarfare.Config.FlagSettings.DiscoveryForesight > 0)
+                {
+                    if (e.Team == 1)
+                    {
+                        for (int i = e.newFlagObj.index; i < e.newFlagObj.index + UCWarfare.Config.FlagSettings.DiscoveryForesight; i++)
+                        {
+                            if (i >= FlagRotation.Count || i < 0) break;
+                            FlagRotation[i].Discover(1);
+                        }
+                    } else if (e.Team == 2)
+                    {
+                        for (int i = e.newFlagObj.index; i > e.newFlagObj.index - UCWarfare.Config.FlagSettings.DiscoveryForesight; i--)
+                        {
+                            if (i >= FlagRotation.Count || i < 0) break;
+                            FlagRotation[i].Discover(2);
+                        }
+                    }
+                }
+            }
         }
         public void Load()
         {
@@ -117,14 +137,14 @@ namespace Uncreated.Warfare.Flags
                         flag.Value.Add(AllFlags[i]);
                 }
                 lvls.Sort((KeyValuePair<int, List<Flag>> a, KeyValuePair<int, List<Flag>> b) => a.Key.CompareTo(b.Key));
-                Random r = new Random();
                 for (int i = 0; i < lvls.Count; i++)
                 {
                     int amtToAdd = lvls[i].Value.Count > FLAGS_PER_LEVEL_MAX ? FLAGS_PER_LEVEL_MAX : lvls[i].Value.Count;
                     int counter = 0;
                     while (counter < amtToAdd)
                     {
-                        int index = r.Next(0, lvls[i].Value.Count);
+                        int index = UnityEngine.Random.Range(0, lvls[i].Value.Count - 1);
+                        lvls[i].Value[index].index = FlagRotation.Count;
                         FlagRotation.Add(lvls[i].Value[index]);
                         lvls[i].Value.RemoveAt(index);
                         counter++;
@@ -133,8 +153,22 @@ namespace Uncreated.Warfare.Flags
             }
             ObjectiveT1Index = 0;
             ObjectiveT2Index = FlagRotation.Count - 1;
-            ObjectiveTeam1.Discover(1);
-            ObjectiveTeam2.Discover(2);
+            if(UCWarfare.Config.FlagSettings.DiscoveryForesight < 1)
+            {
+                F.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
+            } else
+            {
+                for (int i = 0; i < UCWarfare.Config.FlagSettings.DiscoveryForesight; i++)
+                {
+                    if (i >= FlagRotation.Count || i < 0) break;
+                    FlagRotation[i].Discover(1);
+                }
+                for (int i = FlagRotation.Count - 1; i > FlagRotation.Count - 1 - UCWarfare.Config.FlagSettings.DiscoveryForesight; i--)
+                {
+                    if (i >= FlagRotation.Count || i < 0) break;
+                    FlagRotation[i].Discover(2);
+                }
+            }
             foreach (Flag flag in FlagRotation)
             {
                 flag.OnPlayerEntered += PlayerEnteredFlagRadius;
@@ -143,7 +177,10 @@ namespace Uncreated.Warfare.Flags
                 flag.OnPointsChanged += FlagPointsChanged;
             }
             foreach (SteamPlayer client in Provider.clients)
+            {
+                ClearListUI(client.transportConnection);
                 SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam());
+            }
             PrintFlagRotation();
         }
         public void PrintFlagRotation()
@@ -152,7 +189,7 @@ namespace Uncreated.Warfare.Flags
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < FlagRotation.Count; i++)
             {
-                sb.Append(i.ToString() + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString() + '\n');
+                sb.Append(i.ToString() + ") (" + FlagRotation[i].index + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString() + '\n');
             }
             F.Log(sb.ToString(), ConsoleColor.Green);
         }
@@ -164,7 +201,7 @@ namespace Uncreated.Warfare.Flags
             int i;
             for (i = 0; i < flags.Count; i++)
             {
-                AllFlags.Add(new Flag(flags[i], this));
+                AllFlags.Add(new Flag(flags[i], this) { index = i });
             }
             F.Log("Loaded " + i.ToString() + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
         }
@@ -241,7 +278,7 @@ namespace Uncreated.Warfare.Flags
         }
         private SendUIParameters ComputeUI(ulong team, Flag flag)
         {
-            if(flag.LastDeltaPoints == 0)
+            if (flag.LastDeltaPoints == 0)
             {
                 if(flag.IsContested(out _))
                 {
@@ -249,7 +286,12 @@ namespace Uncreated.Warfare.Flags
                         flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers, flag.Name, flag.TeamSpecificHexColor);
                 } else
                 {
-                    return SendUIParameters.Nil;
+                    if(flag.IsObj(team))
+                        return new SendUIParameters(team, F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor($"capturing_team_{team}_chat"),
+                            flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers, flag.Name, flag.TeamSpecificHexColor);
+                    else
+                        return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"nocap_team_{team}_chat"),
+                            Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers, flag.Name, flag.TeamSpecificHexColor);
                 }
             } 
             else if (flag.LastDeltaPoints > 0)
@@ -260,19 +302,23 @@ namespace Uncreated.Warfare.Flags
                     {
                         if(flag.Points < Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_1_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_1_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         } else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     } else
                     {
                         if (flag.Points > -Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_1_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_1_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         } else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_1_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_1_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                 } else
@@ -281,20 +327,24 @@ namespace Uncreated.Warfare.Flags
                     {
                         if (flag.Points > -Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         } else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                     else
                     {
                         if (flag.Points < Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         } else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_2_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_2_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                 }
@@ -306,22 +356,26 @@ namespace Uncreated.Warfare.Flags
                     {
                         if (flag.Points > -Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_2_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_2_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                     else
                     {
                         if (flag.Points < Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_2_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_2_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_2_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_2_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                 }
@@ -331,22 +385,26 @@ namespace Uncreated.Warfare.Flags
                     {
                         if (flag.Points < Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                     else
                     {
                         if (flag.Points > -Flag.MaxPoints)
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"), flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"), 
+                                flag.Points, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_1_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_1_chat"), 
+                                Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
                         }
                     }
                 }
@@ -354,7 +412,7 @@ namespace Uncreated.Warfare.Flags
         }
         public void ClearListUI(ITransportConnection player)
         {
-            for (int i = 0; i < FlagRotation.Count; i++) unchecked
+            for (int i = 0; i < LIST_UI_COUNT; i++) unchecked
             {
                 EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
             }
@@ -371,9 +429,21 @@ namespace Uncreated.Warfare.Flags
                     unchecked
                     {
                         Flag flag = FlagRotation[index];
+                        string nameprefix = string.Empty;
+                        if (UCWarfare.Config.FlagSettings.ShowObjectives)
+                        {
+                            if(flag.T1Obj)
+                            {
+                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
+                            }
+                            if (flag.T2Obj)
+                            {
+                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
+                            }
+                        }
                         EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
-                            $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
-                            $"<color=#{flag.TeamSpecificHexColor}>{F.Translate("undiscovered_flag", playerid)}</color>");
+                            $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" :
+                            $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>");
                     }
                 }
             } else if (team == 3)
@@ -384,8 +454,20 @@ namespace Uncreated.Warfare.Flags
                     unchecked
                     {
                         Flag flag = FlagRotation[i];
+                        string nameprefix = string.Empty;
+                        if (UCWarfare.Config.FlagSettings.ShowObjectives)
+                        {
+                            if (flag.T1Obj)
+                            {
+                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
+                            }
+                            if (flag.T2Obj)
+                            {
+                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
+                            }
+                        }
                         EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, 
-                            $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                            $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" +
                             $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
                             $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
                     }
@@ -396,7 +478,7 @@ namespace Uncreated.Warfare.Flags
         {
             if(sender is Flag flag)
             {
-                if(e.NewPoints == 0)
+                if (e.NewPoints == 0)
                 {
                     flag.Owner = 0;
                 }
@@ -427,7 +509,7 @@ namespace Uncreated.Warfare.Flags
         public event EventHandler OnNewGameStarting;
         public void DeclareWin(ulong Team, bool showEndScreen = true)
         {
-            F.LogWarning(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Green);
+            F.Log(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Cyan);
             foreach (SteamPlayer client in Provider.clients)
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(Team));
             this.State = EState.FINISHED;
@@ -459,73 +541,114 @@ namespace Uncreated.Warfare.Flags
             StartNextGame();
             isScreenUp = false;
         }
-
         private void FlagOwnerChanged(object sender, OwnerChangeEventArgs e)
         {
-            Flag flag = sender as Flag;
-            F.Log("Owner changed of flag " + flag.Name + " to Team " + e.NewOwner.ToString(), ConsoleColor.White);
-            // owner of flag changed (full caputure or loss)
-            if(e.NewOwner == 1)
+            if(sender is Flag flag)
             {
-                if(ObjectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
+                F.Log($"Owner changed of flag {flag.Name} ({flag.index}) to Team {e.NewOwner} from Team {e.OldOwner}", ConsoleColor.DarkYellow);
+                // owner of flag changed (full caputure or loss)
+                if (e.NewOwner == 1)
                 {
-                    DeclareWin(1UL);
-                    ObjectiveT1Index = FlagRotation.Count - 1;
-                } else
-                {
-                    flag.SetOwnerNoEventInvocation(1UL);
-                    if (ObjectiveT2Index == ObjectiveT1Index - 1)
-                        ObjectiveT2Index++;
-                    ObjectiveT1Index++;
-                    OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs 
-                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index], NewObj = ObjectiveT1Index, OldObj = ObjectiveT1Index - 1, Team = 1 });
+                    if (ObjectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
+                    {
+                        DeclareWin(e.NewOwner);
+                        ObjectiveT1Index = FlagRotation.Count - 1;
+                    }
+                    else
+                    {
+                        ObjectiveT1Index = flag.index + 1;
+                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                        { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index], NewObj = ObjectiveT1Index, OldObj = flag.index, Team = e.NewOwner });
+                    }
                 }
-            } else if(e.NewOwner == 2)
-            {
-                if (ObjectiveT2Index < 1) // if t2 just capped the last flag
+                else if (e.NewOwner == 2)
                 {
-                    DeclareWin(2UL);
-                    ObjectiveT2Index = 0;
+                    if (ObjectiveT2Index <   1) // if t2 just capped the last flag
+                    {
+                        DeclareWin(e.NewOwner);
+                        ObjectiveT2Index = 0;
+                    }
+                    else
+                    {
+                        ObjectiveT2Index = flag.index - 1;
+                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                        { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index], NewObj = ObjectiveT2Index, OldObj = flag.index, Team = e.NewOwner });
+                    }
                 }
-                else
+                else if (e.NewOwner == 0)
                 {
-                    flag.SetOwnerNoEventInvocation(2UL);
-                    if (ObjectiveT1Index == ObjectiveT2Index + 1)
-                        ObjectiveT1Index--;
-                    ObjectiveT2Index--;
-                    OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs 
-                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index], NewObj = ObjectiveT2Index, OldObj = ObjectiveT2Index + 1, Team = 2 });
+                    if (e.OldOwner == 1)
+                    {
+                        int oldindex = ObjectiveT1Index;
+                        ObjectiveT1Index = flag.index;
+                        if (oldindex != flag.index)
+                        {
+                            OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                            { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                        }
+                    } else if (e.OldOwner == 2)
+                    {
+                        int oldindex = ObjectiveT2Index;
+                        ObjectiveT2Index = flag.index;
+                        if (oldindex != flag.index)
+                        {
+                            OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                            { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                        }
+                    }
                 }
-            }
-            flag.RecalcCappers(true);
-            foreach(Player player in flag.PlayersOnFlag)
-                RefreshStaticUI(player.GetTeam(), flag).SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
-            foreach (SteamPlayer client in Provider.clients)
-            {
+                SendUIParameters t1;
+                if (flag.Team1TotalPlayers > 0)
+                    t1 = RefreshStaticUI(1, flag);
+                else t1 = default;
+                SendUIParameters t2;
+                if (flag.Team2TotalPlayers > 0)
+                    t2 = RefreshStaticUI(2, flag);
+                else t2 = default;
+                if (!t1.Equals(default))
+                    foreach (Player player in flag.PlayersOnFlagTeam1)
+                        t1.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
+                if (!t2.Equals(default))
+                    foreach (Player player in flag.PlayersOnFlagTeam2)
+                        t2.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
                 if (e.NewOwner == 0)
                 {
-                    client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"), 
-                        flag.Discovered(client.GetTeam()) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
-                        flag.TeamSpecificHexColor);
+                    foreach (SteamPlayer client in Provider.clients)
+                    {
+                        ulong team = client.GetTeam();
+                        client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
+                            flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                            flag.TeamSpecificHexColor);
+                        SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
+                    }
                 }
                 else
                 {
-                    client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(e.NewOwner, client.playerID.steamID.m_SteamID),
-                        TeamManager.GetTeamHexColor(e.NewOwner), flag.Discovered(client.GetTeam()) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
-                        flag.TeamSpecificHexColor);
+                    foreach (SteamPlayer client in Provider.clients)
+                    {
+                        ulong team = client.GetTeam();
+                        client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(e.NewOwner, client.playerID.steamID.m_SteamID),
+                            TeamManager.GetTeamHexColor(e.NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                            flag.TeamSpecificHexColor);
+                        SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
+                    }
                 }
             }
         }
         private void PlayerLeftFlagRadius(object sender, PlayerEventArgs e)
         {
-            Flag flag = sender as Flag;
-            // player walked out of flag
-            ITransportConnection Channel = e.player.channel.owner.transportConnection;
-            ulong team = e.player.GetTeam();
-            F.Log("Player " + e.player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-            e.player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
-            if (UCWarfare.Config.FlagSettings.UseUI)
-                EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, Channel);
+            // player walked or tp'd out of flag
+            if (sender is Flag flag)
+            {
+                ITransportConnection Channel = e.player.channel.owner.transportConnection;
+                ulong team = e.player.GetTeam();
+                F.Log("Player " + e.player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+                e.player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
+                if (UCWarfare.Config.FlagSettings.UseUI)
+                    EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, Channel);
+                foreach (Player player in flag.PlayersOnFlag)
+                    RefreshStaticUI(player.GetTeam(), flag).SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
+            }
         }
         public SendUIParameters RefreshStaticUI(ulong team, Flag flag)
         {
@@ -537,9 +660,13 @@ namespace Uncreated.Warfare.Flags
             else
             {
                 if (flag.Owner == team)
-                    return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor($"secured_team_{team}_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
-                else
-                    return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"nocap_team_{team}_chat"), Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                    return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor($"secured_team_{team}_chat"), 
+                        Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                else if(flag.Owner == TeamManager.Other(team))
+                    return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor($"notowned_team_{team}_chat"), 
+                        Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
+                else return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"notowned_team_{team}_chat"),
+                        Flag.MaxPoints, flag.Team1TotalPlayers, flag.Team2TotalPlayers);
             }
         }
         private void PlayerEnteredFlagRadius(object sender, PlayerEventArgs e)
@@ -568,6 +695,7 @@ namespace Uncreated.Warfare.Flags
                 flag.Dispose();
             }
             FlagRotation.Clear();
+            OnObjectiveChange -= OnObjectiveChangeAction;
         }
         public void ResetFlags()
         {
@@ -599,7 +727,8 @@ namespace Uncreated.Warfare.Flags
         }
         public void PlayerLeft(SteamPlayer player)
         {
-
+            foreach(Flag flag in FlagRotation)
+                flag.RecalcCappers(true);
         }
     }
     public enum EState : byte

@@ -15,43 +15,14 @@ namespace Uncreated.Warfare
     partial class UCWarfare
     {
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
-        public class TeamkillEventArgs : EventArgs
+        public event EventHandler<KillEventArgs> OnTeamkill;
+        private void Teamkill(KillEventArgs parameters)
         {
-            public Player killer;
-            public Player dead;
-            public Player LandmineLinkedNonOffender;
-            public EDeathCause cause;
-            public ushort item;
-            public string itemName;
-            public string key;
-            public ELimb limb;
-            public float distance;
-            public override string ToString()
-            {
-                string msg;
-                if(cause == EDeathCause.LANDMINE)
-                {
-                    if (LandmineLinkedNonOffender == null)
-                    {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
-                            new FPlayerName() { CharacterName = "Unknown", NickName = "Unknown", PlayerName = "Unknown", Steam64 = 0 }, 0, limb, itemName, out msg, false);
-                    }
-                    else
-                    {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
-                            F.GetPlayerOriginalNames(LandmineLinkedNonOffender), LandmineLinkedNonOffender.GetTeam(), limb, itemName, out msg, false);
-                    }
-                } else
-                {
-                    F.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), false, killer.GetTeam(), limb, itemName, distance, out msg, false);
-                }
-                return msg;
-            }
-        }
-        public event EventHandler<TeamkillEventArgs> OnTeamkill;
-        private void Teamkill(TeamkillEventArgs parameters)
-        {
-            F.Log(" __TEAMKILL__  -  " + parameters.ToString(), ConsoleColor.Blue);
+            F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
+            F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
+            byte team = parameters.killer.GetTeamByte();
+            if(team == 1 || team == 2)
+                Data.DatabaseManager?.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
             OnTeamkill?.Invoke(this, parameters);
         }
         public class KillEventArgs : EventArgs
@@ -65,6 +36,7 @@ namespace Uncreated.Warfare
             public string key;
             public ELimb limb;
             public float distance;
+            public bool teamkill;
             public override string ToString()
             {
                 string msg;
@@ -90,23 +62,108 @@ namespace Uncreated.Warfare
         public event EventHandler<KillEventArgs> OnKill;
         private void Kill(KillEventArgs parameters)
         {
-            F.Log(" __KILL__  -  " + parameters.ToString(), ConsoleColor.Blue);
+            F.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
             F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
+            byte team = parameters.killer.GetTeamByte();
+            if (team == 1 || team == 2)
+                Data.DatabaseManager?.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
             OnKill?.Invoke(this, parameters);
         }
         public class SuicideEventArgs : EventArgs
         {
-
+            public Player dead;
+            public EDeathCause cause;
+            public ushort item;
+            public string itemName;
+            public string key;
+            public ELimb limb;
+            public float distance;
+            public override string ToString()
+            {
+                string msg;
+                FPlayerName name = F.GetPlayerOriginalNames(dead);
+                ulong team = dead.GetTeam();
+                if (cause == EDeathCause.LANDMINE)
+                    F.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                else
+                    F.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
+                return msg;
+            }
         }
         public event EventHandler<SuicideEventArgs> OnSuicide;
         public void Suicide(SuicideEventArgs parameters)
         {
-            F.Log(" __SUICIDE__  -  " + parameters.ToString(), ConsoleColor.Blue);
+            F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             OnSuicide?.Invoke(this, parameters);
+            byte team = parameters.dead.GetTeamByte();
+            if (team == 1 || team == 2)
+                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+        }
+        public class DeathEventArgs : EventArgs
+        {
+            public Player dead;
+            public KillEventArgs killerargs;
+            public EDeathCause cause;
+            public ushort item;
+            public string itemName;
+            public string key;
+            public ELimb limb;
+            public float distance;
+            public override string ToString()
+            {
+                string msg;
+                FPlayerName name = F.GetPlayerOriginalNames(dead);
+                ulong team = dead.GetTeam();
+                if (cause == EDeathCause.LANDMINE)
+                {
+                    if (killerargs == default)
+                    {
+                        F.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                    }
+                    else
+                    {
+                        if (killerargs.LandmineLinkedAssistant == default)
+                        {
+                            if(killerargs.killer != default)
+                            {
+                                FPlayerName name2 = F.GetPlayerOriginalNames(killerargs.killer);
+                                ulong team2 = killerargs.killer.GetTeam();
+                                F.BroadcastLandmineDeath(key, name, team, name2, team2, name2, team2, limb, itemName, out msg, false);
+                            } else
+                            {
+                                F.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                            }
+                        } else
+                        {
+                            F.BroadcastLandmineDeath(key, name, team, F.GetPlayerOriginalNames(killerargs.killer ?? dead), (killerargs.killer ?? dead).GetTeam(),
+                            F.GetPlayerOriginalNames(killerargs.LandmineLinkedAssistant), killerargs.LandmineLinkedAssistant.GetTeam(), limb, itemName, out msg, false);
+                        }
+                    }
+                }
+                else
+                {
+                    if(killerargs == default || killerargs.killer == default)
+                    {
+                        F.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
+                    } else
+                    {
+                        F.BroadcastDeath(key, cause, name, team, F.GetPlayerOriginalNames(killerargs.killer), false, killerargs.killer.GetTeam(), limb, itemName, distance, out msg, false);
+                    }
+                }
+                return msg;
+            }
+        }
+        public event EventHandler<DeathEventArgs> OnDeathNotSuicide;
+        public void DeathNotSuicide(DeathEventArgs parameters)
+        {
+            F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
+            byte team = parameters.dead.GetTeamByte();
+            if (team == 1 || team == 2)
+                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+            OnDeathNotSuicide?.Invoke(this, parameters);
         }
         private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
-            F.Log($"Received death: {dead.DisplayName}, {cause}, {limb}, {murderer}", ConsoleColor.Blue);
             if (cause == EDeathCause.LANDMINE)
             {
                 SteamPlayer placer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
@@ -217,44 +274,22 @@ namespace Uncreated.Warfare
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
-                        Suicide(new SuicideEventArgs() { });
+                        if (Config.DeathMessages.PenalizeSuicides)
+                            Suicide(new SuicideEventArgs()
+                            {
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key,
+                                limb = limb
+                            });
                     } else if (placerTeam == triggererTeam)
                     {
                         if(deadTeam == placerTeam)
                         {
-                            Teamkill(new TeamkillEventArgs()
-                            {
-                                dead = dead.Player,
-                                killer = triggerer,
-                                cause = cause,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key,
-                                limb = limb,
-                                LandmineLinkedNonOffender = placer.player,
-                                distance = 0
-                            });
-                        } else
-                        {
-                            Kill(new KillEventArgs()
-                            {
-                                dead = dead.Player,
-                                killer = placer.player,
-                                cause = cause,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key,
-                                limb = limb,
-                                LandmineLinkedAssistant = triggerer,
-                                distance = 0
-                            });
-                        }
-                    } 
-                    else 
-                    {
-                        if(deadTeam == placerTeam) // and placer team != triggerer team
-                        {
-                            Kill(new KillEventArgs()
+                            KillEventArgs a = new KillEventArgs()
                             {
                                 dead = dead.Player,
                                 killer = triggerer,
@@ -264,11 +299,25 @@ namespace Uncreated.Warfare
                                 key = key,
                                 limb = limb,
                                 LandmineLinkedAssistant = placer.player,
-                                distance = 0
-                            });
-                        } else // dead team == triggerer team
+                                distance = 0,
+                                teamkill = true
+                            };
+                            Teamkill(a);
+                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                });
+                        } else
                         {
-                            Kill(new KillEventArgs()
+                            KillEventArgs a = new KillEventArgs()
                             {
                                 dead = dead.Player,
                                 killer = placer.player,
@@ -278,7 +327,78 @@ namespace Uncreated.Warfare
                                 key = key,
                                 limb = limb,
                                 LandmineLinkedAssistant = triggerer,
-                                distance = 0
+                                distance = 0,
+                                teamkill = false
+                            };
+                            Kill(a);
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = 0,
+                                limb = limb,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            });
+                        }
+                    } 
+                    else 
+                    {
+                        if(deadTeam == placerTeam) // and placer team != triggerer team
+                        {
+                            KillEventArgs a = new KillEventArgs()
+                            {
+                                dead = dead.Player,
+                                killer = triggerer,
+                                cause = cause,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key,
+                                limb = limb,
+                                LandmineLinkedAssistant = placer.player,
+                                distance = 0,
+                                teamkill = false
+                            };
+                            Kill(a);
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = 0,
+                                limb = limb,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            });
+                        } else // dead team == triggerer team
+                        {
+                            KillEventArgs a = new KillEventArgs()
+                            {
+                                dead = dead.Player,
+                                killer = placer.player,
+                                cause = cause,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key,
+                                limb = limb,
+                                LandmineLinkedAssistant = triggerer,
+                                distance = 0,
+                                teamkill = false
+                            };
+                            Kill(a);
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = 0,
+                                limb = limb,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
                             });
                         }
                     }
@@ -286,25 +406,20 @@ namespace Uncreated.Warfare
                 {
                     if (dead.Player.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
-                        Suicide(new SuicideEventArgs() { });
+                        if (Config.DeathMessages.PenalizeSuicides)
+                            Suicide(new SuicideEventArgs()
+                            {
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key,
+                                limb = limb
+                            });
                     } else if (deadTeam == placerTeam)
                     {
-                        Teamkill(new TeamkillEventArgs()
-                        {
-                            dead = dead.Player,
-                            killer = placer.player,
-                            cause = cause,
-                            item = landmineID,
-                            itemName = landmineName,
-                            key = key,
-                            limb = limb,
-                            LandmineLinkedNonOffender = null,
-                            distance = 0
-                        });
-                    }
-                    else
-                    {
-                        Kill(new KillEventArgs()
+                        KillEventArgs a = new KillEventArgs()
                         {
                             dead = dead.Player,
                             killer = placer.player,
@@ -314,32 +429,69 @@ namespace Uncreated.Warfare
                             key = key,
                             limb = limb,
                             LandmineLinkedAssistant = null,
-                            distance = 0
+                            distance = 0,
+                            teamkill = true
+                        };
+                        Teamkill(a);
+                        if(Config.DeathMessages.PenalizeTeamkilledPlayers)
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                limb = limb,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            });
+                    }
+                    else
+                    {
+                        KillEventArgs a = new KillEventArgs()
+                        {
+                            dead = dead.Player,
+                            killer = placer.player,
+                            cause = cause,
+                            item = landmineID,
+                            itemName = landmineName,
+                            key = key,
+                            limb = limb,
+                            LandmineLinkedAssistant = null,
+                            distance = 0,
+                            teamkill = false
+                        };
+                        Kill(a);
+                        DeathNotSuicide(new DeathEventArgs()
+                        {
+                            killerargs = a,
+                            cause = cause,
+                            limb = limb,
+                            dead = dead.Player,
+                            distance = 0,
+                            item = landmineID,
+                            itemName = landmineName,
+                            key = key
                         });
                     }
                 } else if (foundTriggerer)
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
-                        Suicide(new SuicideEventArgs() { });
+                        if (Config.DeathMessages.PenalizeSuicides)
+                            Suicide(new SuicideEventArgs() 
+                            { 
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key,
+                                limb = limb
+                            });
                     } else if (deadTeam == triggererTeam)
                     {
-                        Teamkill(new TeamkillEventArgs()
-                        {
-                            dead = dead.Player,
-                            killer = triggerer,
-                            cause = cause,
-                            item = landmineID,
-                            itemName = landmineName,
-                            key = key,
-                            limb = limb,
-                            LandmineLinkedNonOffender = null,
-                            distance = 0
-                        });
-                    }
-                    else
-                    {
-                        Kill(new KillEventArgs()
+                        KillEventArgs a = new KillEventArgs()
                         {
                             dead = dead.Player,
                             killer = triggerer,
@@ -349,7 +501,49 @@ namespace Uncreated.Warfare
                             key = key,
                             limb = limb,
                             LandmineLinkedAssistant = null,
-                            distance = 0
+                            distance = 0,
+                            teamkill = true
+                        };
+                        Teamkill(a);
+                        if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                limb = limb,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            });
+                    }
+                    else
+                    {
+                        KillEventArgs a = new KillEventArgs()
+                        {
+                            dead = dead.Player,
+                            killer = triggerer,
+                            cause = cause,
+                            item = landmineID,
+                            itemName = landmineName,
+                            key = key,
+                            limb = limb,
+                            LandmineLinkedAssistant = null,
+                            distance = 0,
+                            teamkill = false
+                        };
+                        Kill(a);
+                        DeathNotSuicide(new DeathEventArgs()
+                        {
+                            killerargs = a,
+                            cause = cause,
+                            limb = limb,
+                            dead = dead.Player,
+                            distance = 0,
+                            item = landmineID,
+                            itemName = landmineName,
+                            key = key
                         });
                     }
                 }
@@ -460,34 +654,103 @@ namespace Uncreated.Warfare
                 LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
                 if(foundKiller)
                 {
-                    if (killerTeam != F.GetTeam(dead))
+                    if(killer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
-                        Kill(new KillEventArgs()
+                        if (Config.DeathMessages.PenalizeSuicides)
+                            Suicide(new SuicideEventArgs()
+                            {
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = distance,
+                                item = item,
+                                itemName = itemName,
+                                key = key,
+                                limb = limb
+                            });
+                    } else
+                    {
+                        if (killerTeam != F.GetTeam(dead))
                         {
-                            LandmineLinkedAssistant = default,
-                            cause = cause,
-                            dead = dead.Player,
-                            distance = distance,
-                            item = item,
-                            itemName = itemName,
-                            key = key,
-                            killer = killer.player,
-                            limb = limb
-                        });
+                            KillEventArgs a = new KillEventArgs()
+                            {
+                                LandmineLinkedAssistant = default,
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = distance,
+                                item = item,
+                                itemName = itemName,
+                                key = key,
+                                killer = killer.player,
+                                limb = limb,
+                                teamkill = false
+                            };
+                            Kill(a);
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                limb = limb,
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = distance,
+                                item = item,
+                                itemName = itemName,
+                                key = key,
+                                killerargs = a
+                            });
+                        }
+                        else
+                        {
+                            KillEventArgs a = new KillEventArgs()
+                            {
+                                LandmineLinkedAssistant = default,
+                                cause = cause,
+                                dead = dead.Player,
+                                distance = distance,
+                                item = item,
+                                itemName = itemName,
+                                key = key,
+                                killer = killer.player,
+                                limb = limb,
+                                teamkill = true
+                            };
+                            Teamkill(a);
+                            if(Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    limb = limb,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = distance,
+                                    item = item,
+                                    itemName = itemName,
+                                    key = key,
+                                    killerargs = a
+                                });
+                        }
                     }
+                } else
+                {
+                    DeathNotSuicide(new DeathEventArgs()
+                    {
+                        limb = limb,
+                        cause = cause,
+                        dead = dead.Player,
+                        distance = distance,
+                        item = item,
+                        itemName = itemName,
+                        key = key,
+                        killerargs = default
+                    });
                 }
             }
             OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
         }
         private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
         {
-            F.Log(key, ConsoleColor.Blue);
             F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
         private void LogLandmineMessage(string key, Player dead, FPlayerName killerName, ulong killerGroup, ELimb limb, string landmineName, FPlayerName triggererName, ulong triggererTeam)
         {
-            F.Log(key, ConsoleColor.Blue);
             F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }

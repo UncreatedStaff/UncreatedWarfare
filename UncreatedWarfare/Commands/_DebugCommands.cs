@@ -19,7 +19,7 @@ using Flag = Uncreated.Warfare.Flags.Flag;
 
 namespace Uncreated.Warfare.Commands
 {
-    internal class DebugCommand : IRocketCommand
+    internal class _DebugCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "test";
@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string> { "uc.test" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            Player player = caller.DisplayName == "Console" ? null : (caller as UnturnedPlayer).Player;
+            Player player = caller.DisplayName == "Console" ? Provider.clients.FirstOrDefault()?.player : (caller as UnturnedPlayer).Player;
             if(command.Length > 0)
             {
                 if (command[0] == "zone")
@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Commands
                     Flag flag = Data.FlagManager.FlagRotation.FirstOrDefault(f => f.PlayerInRange(player));
                     if (flag == default(Flag))
                     {
-                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, Data.FlagManager.FlagRotation.Count);
+                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, player.transform.rotation.eulerAngles.y, Data.FlagManager.FlagRotation.Count);
                     }
                     else
                     {
@@ -61,7 +61,7 @@ namespace Uncreated.Warfare.Commands
                     Zone zone;
                     string zoneName;
                     string zoneColor;
-                    if (flag == default(Flag))
+                    if (flag == default)
                     {
                         List<Zone> zones = Data.ExtraZones.Values.ToList();
                         zones.Sort(delegate (Zone a, Zone b)
@@ -69,7 +69,7 @@ namespace Uncreated.Warfare.Commands
                             return a.BoundsArea.CompareTo(b.BoundsArea);
                         });
                         Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
-                        if (extrazone == default(Zone))
+                        if (extrazone == default)
                         {
                             player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, Data.FlagManager.FlagRotation.Count);
                             return;
@@ -154,7 +154,7 @@ namespace Uncreated.Warfare.Commands
                             flag = Data.FlagManager.ObjectiveTeam2;
                         else
                             flag = Data.FlagManager.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, out int o) && f.ID == o));
-                        if(flag == default(Flag))
+                        if(flag == default)
                         {
                             Dictionary<int, Zone> eZones = Data.ExtraZones;
                             KeyValuePair<int, Zone> zone = eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, out int o) && f.Key == o));
@@ -163,11 +163,11 @@ namespace Uncreated.Warfare.Commands
                                 player.SendChat("No zone or flag found from search terms: \"" + arg + "\"", UCWarfare.GetColor("default"));
                                 return;
                             }
-                            player.teleportToLocation(new Vector3(zone.Value.Center.x, F.GetTerrainHeightAt2DPoint(zone.Value.Center) + 1f, zone.Value.Center.y), 90f);
+                            player.teleportToLocation(zone.Value.Center3DAbove, 90f);
                             player.SendChat("Teleported to extra zone " + zone.Value.Name + '.', UCWarfare.GetColor("default"));
                             return;
                         }
-                        player.teleportToLocation(new Vector3(flag.ZoneData.Center.x, F.GetTerrainHeightAt2DPoint(flag.ZoneData.Center) + 1f, flag.ZoneData.Center.y), 90f);
+                        player.teleportToLocation(flag.ZoneData.Center3DAbove, 90f);
                         player.SendChat("Teleported to flag <color=#" + flag.TeamSpecificHexColor + ">" + flag.Name + "</color>.", UCWarfare.GetColor("default"));
                         return;
                     } else
@@ -186,7 +186,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     player.SendChat($"Size: {Level.size}, Height: {Level.HEIGHT}, Border: {Level.border}, ObjectName: {Level.level.name}, ObjectType: {Level.level.GetType().FullName}", UCWarfare.GetColor("default"));
                 }
-                else if (command[0] == "togglecoroutinetiming")
+                else if (command[0] == "time")
                 {
                     UCWarfare.I.CoroutineTiming = !UCWarfare.I.CoroutineTiming;
                     player.SendChat((UCWarfare.I.CoroutineTiming ? "Enabled" : "Disabled") + " coroutine timing.", UCWarfare.GetColor("default"));
@@ -226,11 +226,11 @@ namespace Uncreated.Warfare.Commands
                     }
                     if (player != default)
                         player.SendChat("Picture has to generate, wait around a minute.", UCWarfare.GetColor("default"));
-                    Data.DatabaseManager.CreateFlagTestAreaOverlay(player, zones, path, range, drawIn);
+                    ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, path, range, drawIn);
                 } else if (command[0] == "quickcap")
                 {
                     Flag flag = Data.FlagManager.FlagRotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
-                    if(flag == default(Flag))
+                    if(flag == default)
                     {
                         player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, Data.FlagManager.FlagRotation.Count);
                         return;
@@ -256,13 +256,13 @@ namespace Uncreated.Warfare.Commands
                     }
                     if(team == 1)
                     {
-                        while(Data.FlagManager.ObjectiveT1Index < Data.FlagManager.FlagRotation.Count)
+                        while(!Data.FlagManager.isScreenUp)
                         {
                             Data.FlagManager.ObjectiveTeam1.CapT1();
                         }
                     } else
                     {
-                        while (Data.FlagManager.ObjectiveT2Index > 0)
+                        while (!Data.FlagManager.isScreenUp)
                         {
                             Data.FlagManager.ObjectiveTeam2.CapT2();
                         }
@@ -396,7 +396,7 @@ namespace Uncreated.Warfare.Commands
                     for(int i = 0; i < times; i++)
                     {
                         ReloadCommand.ReloadFlags();
-                        Data.DatabaseManager.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, "ZoneExport\\zonearea_" + i.ToString());
+                        ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, @"ZoneExport\zonearea_" + i.ToString());
                         F.Log("Done with " + (i + 1).ToString() + '/' + times.ToString());
                     }
                 }

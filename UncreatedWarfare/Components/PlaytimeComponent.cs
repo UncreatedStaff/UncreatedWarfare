@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using Uncreated.Warfare.Stats;
+using Uncreated.Players;
 
 namespace Uncreated.Warfare.Components
 {
@@ -47,6 +48,8 @@ namespace Uncreated.Warfare.Components
         public LandmineDataForPostAccess LastLandmineExploded;
         public ushort lastExplodedVehicle;
         public ushort lastRoadkilled;
+        private Coroutine _currentTeleportRequest;
+        public UncreatedPlayer UCPlayer;
         public void Start()
         {
             this.thrown = new List<ThrowableOwnerDataComponent>();
@@ -55,6 +58,7 @@ namespace Uncreated.Warfare.Components
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
+            UCPlayer = UncreatedPlayer.Load(player.channel.owner.playerID.steamID.m_SteamID);
             F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
         }
         public void Update()
@@ -69,7 +73,7 @@ namespace Uncreated.Warfare.Components
                     Data.GameStats.playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, stats);
                 }
             }
-            if(player.IsOnFlag())
+            if (player.IsOnFlag())
             {
                 stats.AddToTimeOnPoint(dt);
                 stats.AddToTimeDeployed(dt);
@@ -80,9 +84,35 @@ namespace Uncreated.Warfare.Components
             if (veh != null)
             {
                 veh.findPlayerSeat(player.channel.owner.playerID.steamID, out byte seat);
-                if(seat == 0)
+                if (seat == 0)
                     stats.AddToTimeDriving(dt);
             }
+        }
+        /// <summary>Start a delayed teleport on the player.</summary>
+        /// <returns>True if there were no requests pending, false if there were.</returns>
+        public bool TeleportDelayed(Vector3 Location, float y_euler, float seconds)
+        {
+            if(_currentTeleportRequest == default)
+            {
+                _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(Location, y_euler, seconds));
+                return true;
+            }
+            return false;
+        }
+        public void CancelTeleport()
+        {
+            if (_currentTeleportRequest != default)
+            {
+                StopCoroutine(_currentTeleportRequest);
+                _currentTeleportRequest = default;
+            }
+
+        }
+        private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 Location, float y_euler, float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            if (!player.teleportToLocation(Location, y_euler))
+                F.LogError($"Failed to teleport {F.GetPlayerOriginalNames(player).PlayerName} to ({Location.x}, {Location.y}, {Location.z}) at {Math.Round(y_euler, 2)}°");
         }
     }
 }

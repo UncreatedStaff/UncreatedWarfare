@@ -23,6 +23,7 @@ namespace Uncreated.Warfare
 {
     public static class F
     {
+        public const float SPAWN_HEIGHT_ABOVE_GROUND = 0.5f;
         public static readonly List<char> vowels = new List<char> { 'a', 'e', 'i', 'o', 'u' };
         /// <summary>
         /// Convert an HTMLColor string to a actual color.
@@ -566,22 +567,38 @@ namespace Uncreated.Warfare
             }
         }
         public static string EncodeURIComponent(this string input) => Uri.EscapeUriString(input);
-        public static Vector3 GetBaseSpawn(this SteamPlayer player)
+        public static Vector3 GetBaseSpawn(this SteamPlayer player) => player.player.GetBaseSpawn();
+        public static Vector3 GetBaseSpawn(this Player player)
         {
             ulong team = player.GetTeam();
             if (team == 1)
             {
-                Vector2 v2 = TeamManager.Team1Main.Center;
-                return new Vector3(v2.x, GetTerrainHeightAt2DPoint(v2.x, v2.y), v2.y);
+                return TeamManager.Team1Main.Center3D;
             }
             else if (team == 2)
             {
-                Vector2 v2 = TeamManager.Team2Main.Center;
-                return new Vector3(v2.x, GetTerrainHeightAt2DPoint(v2.x, v2.y), v2.y);
+                return TeamManager.Team2Main.Center3D;
             }
-            else if (team == 3) return TeamManager.LobbySpawn;
-            else return Data.ExtraPoints["lobby_spawn"];
+            else return TeamManager.LobbySpawn;
         }
+        public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
+        {
+            team = playerID.GetTeamFromPlayerSteam64ID();
+            return team.GetBaseSpawnFromTeam();
+        }
+        public static Vector3 GetBaseSpawnFromTeam(this ulong team)
+        {
+            if (team == 1) return TeamManager.Team1Main.Center3D;
+            else if (team == 2) return TeamManager.Team2Main.Center3D;
+            else return TeamManager.LobbySpawn;
+        }
+        public static float GetBaseAngle(this ulong team)
+        {
+            if (team == 1) return TeamManager.Team1SpawnAngle;
+            else if (team == 2) return TeamManager.Team2SpawnAngle;
+            else return TeamManager.LobbySpawnAngle;
+        }
+        public static Vector3 GetBaseSpawn(this ulong playerID) => playerID.GetBaseSpawn(out _);
         public static string QuickSerialize(object obj) => JsonConvert.SerializeObject(obj);
         public static T QuickDeserialize<T>(string json) => JsonConvert.DeserializeObject<T>(json);
         public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, string text)
@@ -674,11 +691,11 @@ namespace Uncreated.Warfare
             }
             else return false;
         }
-        public static float GetTerrainHeightAt2DPoint(Vector2 position) => GetTerrainHeightAt2DPoint(position.x, position.y);
-        public static float GetTerrainHeightAt2DPoint(float x, float z, float defaultY = 0)
+        public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
+        public static float GetTerrainHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
         {
             if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.GROUND | RayMasks.GROUND2))
-                return h.point.y;
+                return h.point.y + above;
             else return defaultY;
         }
         public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
@@ -812,17 +829,15 @@ namespace Uncreated.Warfare
             if (thickness == 0) return;
             float sides_radians = (Mathf.PI / 180) * polygonResolutionScale;
             float increment = (Mathf.PI * 2) * sides_radians;
-            int x1 = 0;
-            int y1 = 0;            
-            int x2 = 0;
-            int y2 = 0;
+            int x1;
+            int y1;
             x1 = Mathf.RoundToInt(x + radius);
             y1 = Mathf.RoundToInt(y);
             for (float r = 0; r < sides_radians; r += increment)
             {
                 Vector2 p = GetPositionOnCircle(r, radius);
-                x2 = Mathf.RoundToInt(p.x + x);
-                y2 = Mathf.RoundToInt(p.y + y);
+                int x2 = Mathf.RoundToInt(p.x + x);
+                int y2 = Mathf.RoundToInt(p.y + y);
                 F.DrawLine(texture, new Line(new Vector2(x1, y1), new Vector2(x2, y2)), color, false, thickness);
                 x1 = x2;
                 y1 = y2;
@@ -857,6 +872,11 @@ namespace Uncreated.Warfare
             return success;
         }
         public static bool TryGetPlaytimeComponent(this CSteamID player, out PlaytimeComponent component)
+        {
+            component = GetPlaytimeComponent(player, out bool success);
+            return success;
+        }
+        public static bool TryGetPlaytimeComponent(this ulong player, out PlaytimeComponent component)
         {
             component = GetPlaytimeComponent(player, out bool success);
             return success;
@@ -905,6 +925,38 @@ namespace Uncreated.Warfare
                     return null;
                 }
                 if (p.transform.TryGetComponent(out PlaytimeComponent playtimeObj))
+                {
+                    success = true;
+                    return playtimeObj;
+                }
+                else
+                {
+                    success = false;
+                    return null;
+                }
+            }
+        }
+        public static PlaytimeComponent GetPlaytimeComponent(this ulong player, out bool success)
+        {
+            if (player == 0)
+            {
+                success = false;
+                return default;
+            }
+            if (Data.PlaytimeComponents.ContainsKey(player))
+            {
+                success = Data.PlaytimeComponents[player] != null;
+                return Data.PlaytimeComponents[player];
+            }
+            else 
+            {
+                SteamPlayer p = PlayerTool.getSteamPlayer(player);
+                if(p == default || p.player == default)
+                {
+                    success = false;
+                    return null;
+                }
+                if (p.player.transform.TryGetComponent(out PlaytimeComponent playtimeObj))
                 {
                     success = true;
                     return playtimeObj;
@@ -1630,19 +1682,18 @@ namespace Uncreated.Warfare
             float gridSquareSize = Level.size / Stats.Playstyle.GRID_SIZE;
             return new Vector2(Mathf.Floor(position.x / gridSquareSize) * gridSquareSize, Mathf.Floor(position.z / gridSquareSize) * gridSquareSize);
         }
-        public static UncreatedPlayer GetPlayerStats(ulong player) => Data.Online.FirstOrDefault(x => x.steam_id == player) ?? UncreatedPlayer.Load(player);
-        public static void AddPlayerStatsAndLogIn(ulong id)
+        public static UncreatedPlayer GetPlayerStats(UnturnedPlayer player) => GetPlayerStats(player.Player.channel.owner.playerID.steamID.m_SteamID);
+        public static UncreatedPlayer GetPlayerStats(Player player) => GetPlayerStats(player.channel.owner.playerID.steamID.m_SteamID);
+        public static UncreatedPlayer GetPlayerStats(SteamPlayer player) => GetPlayerStats(player.playerID.steamID.m_SteamID);
+        public static UncreatedPlayer GetPlayerStats(CSteamID player) => GetPlayerStats(player.m_SteamID);
+        public static UncreatedPlayer GetPlayerStats(ulong player)
         {
-            UncreatedPlayer player = Data.Online.FirstOrDefault(x => x.steam_id == id);
-            if (player == default)
-                Data.Online.Add(UncreatedPlayer.Load(id));
-            else
+            if (TryGetPlaytimeComponent(player, out PlaytimeComponent c))
             {
-                if (player != default && player.player.getIPv4Address(out uint ip))
-                {
-                    if (player.addresses == default) player.addresses = new Addresses();
-                    player.addresses.LogIn(Parser.getIPFromUInt32(ip));
-                }
+                return c.UCPlayer;
+            } else
+            {
+                return UncreatedPlayer.Load(player);
             }
         }
         /// <summary>Ineffecient</summary>

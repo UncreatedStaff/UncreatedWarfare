@@ -50,8 +50,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-
-        private void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID)
+        private void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
             if (data.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
             {

@@ -16,11 +16,23 @@ namespace Uncreated.Warfare
 {
     public static class EventFunctions
     {
-        internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID)
+        public delegate void GroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup);
+        public static event GroupChanged OnGroupChanged;
+        internal static void OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => OnGroupChanged?.Invoke(player, oldGroup, newGroup);
+        internal static void GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
+        {
+            ulong newteam = newGroup.GetTeam();
+            Data.FlagManager.ClearListUI(player.transportConnection);
+            if (Data.FlagManager.OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
+                Data.FlagManager.RefreshStaticUI(newteam, Data.FlagManager.FlagRotation.FirstOrDefault(x => x.ID == Data.FlagManager.OnFlag[player.playerID.steamID.m_SteamID])
+                    ?? Data.FlagManager.FlagRotation[0]).SendToPlayer(player, player.transportConnection);
+            Data.FlagManager.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newteam);
+        }
+        internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
             if (Data.OwnerComponents != null)
             {
-                int c = Data.OwnerComponents.FindIndex(x => x.transform.position == data.point);
+                int c = Data.OwnerComponents.FindIndex(x => x != null && x.transform != default && data != default && x.transform.position == data.point);
                 if (c != -1)
                 {
                     UnityEngine.Object.Destroy(Data.OwnerComponents[c]);
@@ -110,7 +122,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {
-
+            Data.ReviveManager.OnPlayerHealed(instigator, target);
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
@@ -127,16 +139,17 @@ namespace Uncreated.Warfare
                 UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
                 Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             }
-            player.Player.transform.gameObject.AddComponent<PlaytimeComponent>().StartTracking(player.Player);
-            if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
-                Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, c);
-            F.AddPlayerStatsAndLogIn(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
+            pt.StartTracking(player.Player);
+            Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
+            pt.UCPlayer?.LogIn(player.Player.channel.owner, names);
 
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
 
             LogoutSaver.InvokePlayerConnected(player);
+            Data.ReviveManager.OnPlayerConnected(player);
             LogoutSave save = LogoutSaver.GetSave(player.CSteamID);
             if(save != default)
             {
@@ -152,6 +165,29 @@ namespace Uncreated.Warfare
             }
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
+        }
+
+
+        internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
+        {
+            if (!UCWarfare.Config.AllowBatteryStealing)
+            {
+                allow = false;
+                theif.SendChat("cant_steal_batteries", UCWarfare.GetColor("cant_steal_batteries"));
+            }
+        }
+
+        internal static void OnCalculateSpawnDuringRevive(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
+        {
+            ulong team = sender.player.GetTeam();
+            position = team.GetBaseSpawnFromTeam();
+            yaw = team.GetBaseAngle();
+        }
+        internal static void OnCalculateSpawnDuringLogin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
+        {
+            point = playerID.steamID.m_SteamID.GetBaseSpawn(out ulong team);
+            yaw = team.GetBaseAngle();
+            needsNewSpawnpoint = false;
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
@@ -181,10 +217,7 @@ namespace Uncreated.Warfare
                 Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
             }
             LogoutSaver.InvokePlayerDisconnected(player);
-
-
-
-
+            Data.ReviveManager.OnPlayerDisconnected(player);
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last
         }
         internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
@@ -203,9 +236,6 @@ namespace Uncreated.Warfare
                 player.playerID.characterName = prefix + player.playerID.characterName;
             if (!player.playerID.nickName.StartsWith(prefix))
                 player.playerID.nickName = prefix + player.playerID.nickName;
-            // remove any "staff" from player's names.
-            player.playerID.characterName = player.playerID.characterName.ReplaceCaseInsensitive("staff");
-            player.playerID.nickName = player.playerID.nickName.ReplaceCaseInsensitive("staff");
         }
     }
 }

@@ -66,7 +66,7 @@ namespace Uncreated.Warfare
                 { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
                 { "team_win", "<color=#{1}>{0}</color> won the game!" },
                 { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
-                { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}), out of {3} registered flags." },
+                { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}) - {3}°, out of {4} registered flags." },
                 { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
                 { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
                 { "current_group", "Group <color=#{1}>{0}</color>: <color=#{3}>{2}</color>" },
@@ -303,6 +303,7 @@ namespace Uncreated.Warfare
                 { "tk_Teamkilled_Console", "{0} ({1}) teamkilled {2} ({3})!!" },
                 // vehicle placement
                 { "no_placement_on_vehicle", "You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!" },
+                { "cant_steal_batteries", "Stealing batteries is not allowed." },
                 // battleye
                 { "battleye_kicked_Console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kicked_Broadcast", "<color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>." },
@@ -394,7 +395,8 @@ namespace Uncreated.Warfare
             new FlagData(4, "Verto", 624, 469, new ZoneData("polygon", "500,446,514,527,710,492,748,466,710,411"), true, 2),
             new FlagData(5, "Hill123", 631, 139, new ZoneData("rectangle", "44,86"), true, 0),
             new FlagData(6, "Hill13", 338, -15, new ZoneData("circle", "35"), true, 1),
-            new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true, 0)
+            new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true, 0),
+            new FlagData(8, "Fortress", -648.5f, 102.5f, new ZoneData("rectangle", "79,47"), true, 0)
         };
         public static List<FlagData> DefaultExtraZones = new List<FlagData>
         {
@@ -629,7 +631,9 @@ namespace Uncreated.Warfare
             new ColorData("structure_examine_not_examinable", "ff0000"),
             new ColorData("structure_last_owner_chat", "c6d4b8"),
             new ColorData("structure_last_owner_chat_structure", "e6e3d5"),
-
+            
+            
+            new ColorData("cant_steal_batteries", "f53b3b"),
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {
@@ -664,17 +668,11 @@ namespace Uncreated.Warfare
                 new MySqlColumnData("IP","IP"),
                 new MySqlColumnData("LastLoggedIn","LastLoggedIn")
             }),
-            new MySqlTableData("xp", "xp", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("Team","Team"),
-                new MySqlColumnData("Username","Username"),
-                new MySqlColumnData("Balance","Balance")
-            }),
-            new MySqlTableData("credits", "credits", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("Team","Team"),
-                new MySqlColumnData("Username","Username"),
-                new MySqlColumnData("Balance","Balance")
+            new MySqlTableData("levels", "levels", new List<MySqlColumnData> {
+                new MySqlColumnData("Steam64", "Steam64"),
+                new MySqlColumnData("Team", "Team"),
+                new MySqlColumnData("OfficerPoints", "OfficerPoints"),
+                new MySqlColumnData("XP", "XP")
             }),
             new MySqlTableData("playerstats", "playerstats", new List<MySqlColumnData> {
                 new MySqlColumnData("Steam64","Steam64"),

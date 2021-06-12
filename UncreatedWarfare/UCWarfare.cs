@@ -128,10 +128,14 @@ namespace Uncreated.Warfare
             UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
             UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
             Patches.InternalPatches.OnLandmineExplode += EventFunctions.OnLandmineExploded;
+            Provider.onLoginSpawning += EventFunctions.OnCalculateSpawnDuringLogin;
+            PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler += EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
+            Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
+            EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
         }
         private void UnsubscribeFromEvents()
         {
@@ -146,10 +150,14 @@ namespace Uncreated.Warfare
             UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
             UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
             Patches.InternalPatches.OnLandmineExplode -= EventFunctions.OnLandmineExploded;
+            Provider.onLoginSpawning -= EventFunctions.OnCalculateSpawnDuringLogin;
+            PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler -= EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
+            Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
+            EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;

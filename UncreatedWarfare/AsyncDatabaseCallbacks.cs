@@ -36,10 +36,5 @@ namespace Uncreated.SQL
             DisposeAsyncResult(ar);
             F.LogWarning("MySql database connection has been closed.", ConsoleColor.Magenta);
         }
-        internal static void PlayerReceivedZonesCallback(Player player)
-        {
-            if (player != default)
-                player.SendChat("Picture finished generating, check the Config\\Flags\\Presets folder menu.", UCWarfare.GetColor("default"));
-        }
     }
 }

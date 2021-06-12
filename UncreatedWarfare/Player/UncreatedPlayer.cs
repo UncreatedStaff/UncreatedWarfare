@@ -123,7 +123,20 @@ namespace Uncreated.Players
                 writer.Dispose();
             }
         }
-        protected override void SaveEscalator(object sender, EventArgs e) => Save();
+        protected override void SaveEscalator() => Save();
+        public void LogIn(SteamPlayer player) => LogIn(player, F.GetPlayerOriginalNames(player));
+        public void LogIn(SteamPlayer player, FPlayerName name)
+        {
+            if (player != default)
+            {
+                if (player.getIPv4Address(out uint ip))
+                {
+                    if (addresses == default) addresses = new Addresses();
+                    addresses.LogIn(Parser.getIPFromUInt32(ip));
+                }
+                usernames.PlayerNameObject = name;
+            }
+        }
     }
     public abstract class StatsCollection : PlayerObject
     {
@@ -284,11 +297,11 @@ namespace Uncreated.Players
     public abstract class PlayerObject
     {
         /// <summary>When the main class needs to save.</summary>
-        internal event EventHandler OnNeedsSave;
+        internal event System.Action OnNeedsSave;
         /// <summary> Saves all of the player's stats </summary>
-        private void InvokeSave() => OnNeedsSave?.Invoke(this, EventArgs.Empty);
+        private void InvokeSave() => OnNeedsSave?.Invoke();
         /// <summary>Escalates the save event all the way to <see cref="UncreatedPlayer"/>.</summary>
-        protected virtual void SaveEscalator(object sender, EventArgs e) => InvokeSave();
+        protected virtual void SaveEscalator() => InvokeSave();
         /// <summary> Saves all of the player's stats </summary>
         public virtual void Save() => InvokeSave();
     }

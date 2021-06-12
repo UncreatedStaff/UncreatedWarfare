@@ -106,10 +106,11 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
+                    string color = F.GetTeamColorHex(topkills[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
-                        F.GetPlayerOriginalNames(topkills[i].Key).CharacterName, F.GetTeamColorHex(topkills[i].Key)));
+                        F.GetPlayerOriginalNames(topkills[i].Key).CharacterName, color));
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'V', F.Translate("lb_player_value", player,
-                        topkills[i].Value, F.GetTeamColorHex(player)));
+                        topkills[i].Value, color));
                 }
             }
             for (int i = 0; i < 5; i++)
@@ -126,10 +127,11 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
+                    string color = F.GetTeamColorHex(topkdr[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
-                        F.GetPlayerOriginalNames(topkdr[i].Key).CharacterName, F.GetTeamColorHex(topkdr[i].Key)));
+                        F.GetPlayerOriginalNames(topkdr[i].Key).CharacterName, color));
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'V', F.Translate("lb_float_player_value", player,
-                        topkdr[i].Value, F.GetTeamColorHex(player)));
+                        topkdr[i].Value, color));
                 }
             }
             for (int i = 0; i < 5; i++)
@@ -146,10 +148,11 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
+                    string color = F.GetTeamColorHex(toptimeonpoint[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
-                        F.GetPlayerOriginalNames(toptimeonpoint[i].Key).CharacterName, F.GetTeamColorHex(toptimeonpoint[i].Key)));
+                        F.GetPlayerOriginalNames(toptimeonpoint[i].Key).CharacterName, color));
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'V', F.Translate("lb_time_player_value", player,
-                        toptimeonpoint[i].Value, F.GetTeamColorHex(player)));
+                        toptimeonpoint[i].Value, color));
                 }
             }
             for (int i = 0; i < 5; i++)
@@ -166,10 +169,11 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
+                    string color = F.GetTeamColorHex(topxpgain[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
-                        F.GetPlayerOriginalNames(topxpgain[i].Key).CharacterName, F.GetTeamColorHex(topxpgain[i].Key)));
+                        F.GetPlayerOriginalNames(topxpgain[i].Key).CharacterName, color));
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'V', F.Translate("lb_player_value", player,
-                        topxpgain[i].Value, F.GetTeamColorHex(player)));
+                        topxpgain[i].Value, color));
                 }
             }
             /*
@@ -382,6 +386,12 @@ namespace Uncreated.Warfare.Stats
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) => 
             {
+                if (a.player == default) // if the player left midgame the player will be default, this checks if they rejoined, if not they are sent to the bottom.
+                {
+                    SteamPlayer player = PlayerTool.getSteamPlayer(a.id);
+                    if (player == default || player.player == default) return -1;
+                    else a.player = player.player;
+                }
                 return a.kills.CompareTo(b.kills);
             });
             List<KeyValuePair<Player, int>> rtnList = new List<KeyValuePair<Player, int>>();
@@ -394,6 +404,12 @@ namespace Uncreated.Warfare.Stats
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) =>
             {
+                if (a.player == default)
+                {
+                    SteamPlayer player = PlayerTool.getSteamPlayer(a.id);
+                    if (player == default || player.player == default) return -1;
+                    else a.player = player.player;
+                }
                 return a.KDR.CompareTo(b.KDR);
             });
             List<KeyValuePair<Player, float>> rtnList = new List<KeyValuePair<Player, float>>();
@@ -406,6 +422,12 @@ namespace Uncreated.Warfare.Stats
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) =>
             {
+                if (a.player == default)
+                {
+                    SteamPlayer player = PlayerTool.getSteamPlayer(a.id);
+                    if (player == default || player.player == default) return -1;
+                    else a.player = player.player;
+                }
                 return a.KDR.CompareTo(b.KDR);
             });
             List<KeyValuePair<Player, TimeSpan>> rtnList = new List<KeyValuePair<Player, TimeSpan>>();
@@ -418,6 +440,12 @@ namespace Uncreated.Warfare.Stats
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) =>
             {
+                if (a.player == default)
+                {
+                    SteamPlayer player = PlayerTool.getSteamPlayer(a.id);
+                    if (player == default || player.player == default) return -1;
+                    else a.player = player.player;
+                }
                 return a.xpgained.CompareTo(b.xpgained);
             });
             List<KeyValuePair<Player, int>> rtnList = new List<KeyValuePair<Player, int>>();

@@ -26,7 +26,7 @@ namespace Uncreated.SQL
         /// </summary>
         public AsyncDatabase()
         {
-            _dbCaller = new DbCaller();
+            _dbCaller = new DbCaller(this);
             SQL = new MySqlConnection(UCWarfare.I.SQL.ConnectionString);
         }
         /// <summary>
@@ -37,7 +37,7 @@ namespace Uncreated.SQL
         private IAsyncResult InvokeWithDatabase(DbCaller.D_DatabaseDelegate method, AsyncCallback callback = null)
         {
             DbCaller.D_DatabaseDelegate caller = new DbCaller.D_DatabaseDelegate(method);
-            return caller.BeginInvoke(this, callback == null ? AsyncDatabaseCallbacks.DisposeAsyncResult : callback, caller);
+            return caller.BeginInvoke(callback == null ? AsyncDatabaseCallbacks.DisposeAsyncResult : callback, caller);
         }
         /// <summary>
         /// Closes the connection and disposes of it. Not thread-blocking.
@@ -51,7 +51,7 @@ namespace Uncreated.SQL
         public IAsyncResult OpenAsync(AsyncCallback callback = null)
         {
             DbCaller.D_DatabaseDelegateWithBool caller = new DbCaller.D_DatabaseDelegateWithBool(_dbCaller.Open);
-            return caller.BeginInvoke(this, out _, callback == null ? AsyncDatabaseCallbacks.DisposeAsyncResult : callback, caller);
+            return caller.BeginInvoke(out _, callback == null ? AsyncDatabaseCallbacks.DisposeAsyncResult : callback, caller);
         }
         /// <summary>
         /// Opens the connection and waits for a response.
@@ -59,7 +59,7 @@ namespace Uncreated.SQL
         /// <returns></returns>
         public bool OpenSync() 
         {
-            _dbCaller.Open(this, out bool success);
+            _dbCaller.Open(out bool success);
             return success;
         }
         /// <summary>
@@ -71,7 +71,7 @@ namespace Uncreated.SQL
         /// <summary>
         /// Closes the connection and waits for a response.
         /// </summary>
-        public void CloseSync() => _dbCaller.Close(this);
+        public void CloseSync() => _dbCaller.Close();
         /// <summary>
         /// Synchronous. Closes the connection and waits for a response.
         /// </summary>
@@ -95,112 +95,45 @@ namespace Uncreated.SQL
         public void UpdateUsernameAsync(ulong Steam64, FPlayerName player)
         {
             DbCaller.D_UpdateUsernameAsync caller = _dbCaller.UpdateUsername;
-            caller.BeginInvoke(this, Steam64, player, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            caller.BeginInvoke(Steam64, player, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
         /// <summary>
         /// Add a kill (default 1) to the "playerstats" database.
         /// </summary>
         /// <param name="Steam64">Player's Steam64 ID to add a kill to.</param>
+        /// <param name="Team">Team to add the kill to.</param>
         /// <param name="amount">Amount of kills to add, default 1.</param>
-        public void AddKill(ulong Steam64, int amount = 1)
+        public void AddKill(ulong Steam64, byte Team, int amount = 1)
         {
-
+            DbCaller.D_ModifyPlayerStat caller = _dbCaller.AddKill;
+            caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
-        private int overlayStep = 0;
-        public void CreateFlagTestAreaOverlay(Player player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool lockthreaduntildone = false, string filename = default)
+        /// <summary>
+        /// Add a death (default 1) to the "playerstats" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add a death to.</param>
+        /// <param name="Team">Team to add the death to.</param>
+        /// <param name="amount">Amount of deaths to add, default 1.</param>
+        public void AddDeath(ulong Steam64, byte Team, int amount = 1)
         {
-            if(lockthreaduntildone)
-            {
-                List<Zone> newZones = zones;
-                newZones.Sort(delegate (Zone a, Zone b)
-                {
-                    return b.BoundsArea.CompareTo(a.BoundsArea);
-                });
-                Texture2D img = new Texture2D(Level.size, Level.size);
-                List<Vector2> PointsToTest = new List<Vector2>();
-                for (int i = -1 * img.width / 2; i < img.width / 2; i += 1)
-                {
-                    for (int j = -1 * img.height / 2; j < img.height / 2; j += 1)
-                    {
-                        PointsToTest.Add(new Vector2(i, j));
-                    }
-                }
-                if (drawIsInTest)
-                {
-                    int step = 0;
-                    bool done = false;
-                    while (!done)
-                    {
-                        _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, step, out done, filename);
-                        step++;
-                    }
-                } else
-                {
-                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, 0, out _, filename);
-                }
-                if (drawrange)
-                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -3, out _, filename);
-                if (drawpath)
-                    _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
-                _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
-                AsyncDatabaseCallbacks.PlayerReceivedZonesCallback(player);
-            } else
-            {
-                if (overlayStep == 0)
-                {
-                    List<Zone> newZones = zones;
-                    newZones.Sort(delegate (Zone a, Zone b)
-                    {
-                        return b.BoundsArea.CompareTo(a.BoundsArea);
-                    });
-                    Texture2D img = new Texture2D(Level.size, Level.size);
-                    List<Vector2> PointsToTest = new List<Vector2>();
-                    for (int i = -1 * img.width / 2; i < img.width / 2; i += 1)
-                    {
-                        for (int j = -1 * img.height / 2; j < img.height / 2; j += 1)
-                        {
-                            PointsToTest.Add(new Vector2(i, j));
-                        }
-                    }
-                    UCWarfare.I.StartCoroutine(enumerator());
-                    IEnumerator<WaitForSeconds> enumerator()
-                    {
-                        bool done = !drawIsInTest;
-                        if (drawIsInTest)
-                        {
-                            _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, overlayStep, out done, filename);
-                        }
-                        else if (overlayStep == 0)
-                        {
-                            _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, 0, out done, filename);
-                        }
-                        overlayStep++;
-                        yield return new WaitForSeconds(0.5f);
-                        if (!done)
-                            UCWarfare.I.StartCoroutine(enumerator());
-                        else
-                        {
-                            if (drawrange)
-                                _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -3, out _, filename);
-                            if (drawpath)
-                                _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
-                            _dbCaller.SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
-                            AsyncDatabaseCallbacks.PlayerReceivedZonesCallback(player);
-                            overlayStep = 0;
-                        }
-                    }
-                }
-                else
-                {
-                    if (player != default)
-                        player.SendChat("A player is already running this procedure, try again in a few minutes.", UCWarfare.GetColor("default"));
-                }
-            }
+            DbCaller.D_ModifyPlayerStat caller = _dbCaller.AddDeath;
+            caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        /// <summary>
+        /// Add a teamkill (default 1) to the "playerstats" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add a teamkill to.</param>
+        /// <param name="Team">Team to add the teamkill to.</param>
+        /// <param name="amount">Amount of teamkills to add, default 1.</param>
+        public void AddTeamkill(ulong Steam64, byte Team, int amount = 1)
+        {
+            DbCaller.D_ModifyPlayerStat caller = _dbCaller.AddTeamkill;
+            caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
         public void GetUsernameAsync(ulong ID, DbCaller.D_UsernameReceived callback)
         {
             DbCaller.D_GetUsername caller = _dbCaller.GetUsername;
-            caller.BeginInvoke(this, ID, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            caller.BeginInvoke(ID, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
     }
     public enum EComparisonType : byte
@@ -235,18 +168,21 @@ namespace Uncreated.SQL
     }
     public class DbCaller
     {
-        public static string GetTableName(string key) => 
+        public DbCaller(AsyncDatabase manager) { this._manager = manager; }
+        private readonly AsyncDatabase _manager;
+        public static string GetTableName(string key) =>
             Data.TableData.ContainsKey(key) ? Data.TableData[key].TableName : key;
-        public static string GetColumnName(string table, string key) => 
+        public static string GetColumnName(string table, string key) =>
             Data.TableData.ContainsKey(table) && Data.TableData[table].Columns.ContainsKey(key) ? Data.TableData[table].Columns[key] : key;
-        internal delegate void D_DatabaseDelegate(AsyncDatabase DatabaseManager);
+        internal delegate void D_DatabaseDelegate();
         internal delegate void D_NoArgsInvokerDelegate();
-        internal delegate void D_DatabaseDelegateWithBool(AsyncDatabase DatabaseManager, out bool bSuccess);
+        internal delegate void D_DatabaseDelegateWithBool(out bool bSuccess);
         internal delegate void D_SelectAsync(SQLSelectCallStructure Data, AsyncCallback callback);
         internal delegate void D_InsertOrUpdateAsync(SQLInsertOrUpdateStructure Data, AsyncCallback callback);
-        internal delegate void D_UpdateUsernameAsync(AsyncDatabase DatabaseManager, ulong Steam64, FPlayerName player);
+        internal delegate void D_UpdateUsernameAsync(ulong Steam64, FPlayerName player);
         internal delegate void D_DatabaseQuery<T>(T Data, out MySqlResponse Output) where T : SQLCallStructure;
-        internal delegate void D_GetUsername(AsyncDatabase DatabaseManager, ulong Steam64, D_UsernameReceived callback);
+        internal delegate void D_GetUsername(ulong Steam64, D_UsernameReceived callback);
+        internal delegate void D_ModifyPlayerStat(ulong Steam64, byte Team, int amount);
         public delegate void D_UsernameReceived(FPlayerName usernames, bool success);
 
         private readonly Dictionary<EComparisonType, string> OperatorTranslations = new Dictionary<EComparisonType, string>
@@ -265,9 +201,9 @@ namespace Uncreated.SQL
             { EComparisonType.IS, "IS" },
             { EComparisonType.ISNULL, "IS NULL" },
         };
-        internal void GetUsername(AsyncDatabase DatabaseManager, ulong Steam64, D_UsernameReceived callback)
+        internal void GetUsername(ulong Steam64, D_UsernameReceived callback)
         {
-            SQLSelectCallStructure s = new SQLSelectCallStructure(DatabaseManager)
+            SQLSelectCallStructure s = new SQLSelectCallStructure(_manager)
             {
                 tableName = GetTableName("usernames"),
                 selectAll = false,
@@ -277,17 +213,16 @@ namespace Uncreated.SQL
                     { GetColumnName("usernames", "CharacterName"), typeof(string) },
                     { GetColumnName("usernames", "NickName"), typeof(string) },
                 },
-                comparison = EComparisonType.EQUALS,
-                condition = Steam64,
-                ConditionVariable = GetColumnName("usernames", "Steam64"),
+                comparisons = new EComparisonType[] { EComparisonType.EQUALS },
+                conditions = new object[] { Steam64 },
+                ConditionVariables = new string[] { GetColumnName("usernames", "Steam64") },
                 limit = 1
             };
             SelectDataAsync(s, (ar) =>
             {
                 MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
-                try
+                if(vagueResponse is SelectResponse response)
                 {
-                    SelectResponse response = (SelectResponse)vagueResponse;
                     if (response != null && response.executionstatus == MySqlResponse.EExecutionStatus.SUCCESS)
                     {
                         callback.Invoke(new FPlayerName()
@@ -297,13 +232,13 @@ namespace Uncreated.SQL
                             PlayerName = response.GetColumn<string>(GetColumnName("usernames", "PlayerName")).GetValue(0),
                             NickName = response.GetColumn<string>(GetColumnName("usernames", "NickName")).GetValue(0)
                         }, true);
-                    } else
+                    }
+                    else
                     {
                         string id = Steam64.ToString();
                         callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
                     }
-                }
-                catch (InvalidCastException)
+                } else
                 {
                     F.LogError("Couldn't get username from MySql Database. Cast error.\n\"" + vagueResponse.command + "\"");
                     string id = Steam64.ToString();
@@ -312,29 +247,28 @@ namespace Uncreated.SQL
                 }
             });
         }
-        internal void UpdateUsername(AsyncDatabase DatabaseManager, ulong Steam64, FPlayerName player)
+        internal void UpdateUsername(ulong Steam64, FPlayerName player)
         {
-            SQLSelectCallStructure s = new SQLSelectCallStructure(DatabaseManager)
+            SQLSelectCallStructure s = new SQLSelectCallStructure(_manager)
             {
                 tableName = GetTableName("usernames"),
                 selectAll = false,
-                Columns = new Dictionary<string, Type> 
-                { 
-                    { GetColumnName("usernames", "PlayerName"), typeof(string) }, 
-                    { GetColumnName("usernames", "CharacterName"), typeof(string) }, 
-                    { GetColumnName("usernames", "NickName"), typeof(string) }, 
+                Columns = new Dictionary<string, Type>
+                {
+                    { GetColumnName("usernames", "PlayerName"), typeof(string) },
+                    { GetColumnName("usernames", "CharacterName"), typeof(string) },
+                    { GetColumnName("usernames", "NickName"), typeof(string) },
                 },
-                comparison = EComparisonType.EQUALS,
-                condition = Steam64,
-                ConditionVariable = GetColumnName("usernames", "Steam64"),
+                comparisons = new EComparisonType[] { EComparisonType.EQUALS },
+                conditions = new object[] { Steam64 },
+                ConditionVariables = new string[] { GetColumnName("usernames", "Steam64") },
                 limit = 1
             };
             SelectDataAsync(s, new AsyncCallback((ar) =>
             {
                 MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
-                try
+                if(vagueResponse is SelectResponse response)
                 {
-                    SelectResponse response = (SelectResponse)vagueResponse;
                     SQLInsertOrUpdateStructure s2;
                     if (response != null && response.executionstatus == MySqlResponse.EExecutionStatus.SUCCESS)
                     {
@@ -359,47 +293,196 @@ namespace Uncreated.SQL
                             varsToUpdate.Add(GetColumnName("usernames", "CharacterName"), EUpdateOperation.SETFROMVALUES);
                         if (updateNickName)
                             varsToUpdate.Add(GetColumnName("usernames", "NickName"), EUpdateOperation.SETFROMVALUES);
-                        s2 = new SQLInsertOrUpdateStructure(DatabaseManager)
+                        s2 = new SQLInsertOrUpdateStructure(_manager)
                         {
                             NewValues = new Dictionary<string, object>
-                                {
-                                    { GetColumnName("usernames", "Steam64"), Steam64 },
-                                    { GetColumnName("usernames", "PlayerName"), player.PlayerName },
-                                    { GetColumnName("usernames", "CharacterName"), player.CharacterName },
-                                    { GetColumnName("usernames", "NickName"), player.NickName }
-                                },
+                            {
+                                { GetColumnName("usernames", "Steam64"), Steam64 },
+                                { GetColumnName("usernames", "PlayerName"), player.PlayerName },
+                                { GetColumnName("usernames", "CharacterName"), player.CharacterName },
+                                { GetColumnName("usernames", "NickName"), player.NickName }
+                            },
                             VariablesToUpdateIfDuplicate = varsToUpdate,
                             tableName = GetTableName("usernames"),
                             UpdateValuesIfValid = null
                         };
-                    } else
+                    }
+                    else
                     {
-                        s2 = new SQLInsertOrUpdateStructure(DatabaseManager)
+                        s2 = new SQLInsertOrUpdateStructure(_manager)
                         {
                             NewValues = new Dictionary<string, object>
-                                {
-                                    { GetColumnName("usernames", "Steam64"), Steam64 },
-                                    { GetColumnName("usernames", "PlayerName"), player.PlayerName },
-                                    { GetColumnName("usernames", "CharacterName"), player.CharacterName },
-                                    { GetColumnName("usernames", "NickName"), player.NickName }
-                                },
-                            VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
                             {
-                                { GetColumnName("usernames", "PlayerName"), EUpdateOperation.SETFROMVALUES },
-                                { GetColumnName("usernames", "CharacterName"), EUpdateOperation.SETFROMVALUES },
-                                { GetColumnName("usernames", "NickName"), EUpdateOperation.SETFROMVALUES },
+                                { GetColumnName("usernames", "Steam64"), Steam64 },
+                                { GetColumnName("usernames", "PlayerName"), player.PlayerName },
+                                { GetColumnName("usernames", "CharacterName"), player.CharacterName },
+                                { GetColumnName("usernames", "NickName"), player.NickName }
                             },
+                            VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                        {
+                            { GetColumnName("usernames", "PlayerName"), EUpdateOperation.SETFROMVALUES },
+                            { GetColumnName("usernames", "CharacterName"), EUpdateOperation.SETFROMVALUES },
+                            { GetColumnName("usernames", "NickName"), EUpdateOperation.SETFROMVALUES },
+                        },
                             tableName = GetTableName("usernames"),
                             UpdateValuesIfValid = null
                         };
                     }
                     InsertOrUpdateAsync(s2, AsyncDatabaseCallbacks.DisposeAsyncResult);
-                } catch (InvalidCastException)
+                } else
                 {
                     F.LogError("Couldn't save username to MySql Database. Cast error.\n\"" + vagueResponse.command + "\"");
                     return;
                 }
             }));
+        }
+        internal void GetOfficerPoints(ulong Steam64, byte Team, D_UsernameReceived callback)
+        {
+            SQLSelectCallStructure s = new SQLSelectCallStructure(_manager)
+            {
+                tableName = GetTableName("levels"),
+                selectAll = false,
+                Columns = new Dictionary<string, Type>
+                {
+                    { GetColumnName("levels", "OfficerPoints"), typeof(uint) }
+                },
+                comparisons = new EComparisonType[] { EComparisonType.EQUALS, EComparisonType.EQUALS },
+                conditions = new object[] { Steam64, Team },
+                ConditionVariables = new string[] { GetColumnName("levels", "Steam64"), GetColumnName("levels", "Team") },
+                limit = 1
+            };
+            SelectDataAsync(s, (ar) =>
+            {
+                MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
+                if (vagueResponse is SelectResponse response)
+                {
+                    if (response != null && response.executionstatus == MySqlResponse.EExecutionStatus.SUCCESS)
+                    {
+                        callback.Invoke(new FPlayerName()
+                        {
+                            Steam64 = Steam64,
+                            CharacterName = response.GetColumn<string>(GetColumnName("usernames", "CharacterName")).GetValue(0),
+                            PlayerName = response.GetColumn<string>(GetColumnName("usernames", "PlayerName")).GetValue(0),
+                            NickName = response.GetColumn<string>(GetColumnName("usernames", "NickName")).GetValue(0)
+                        }, true);
+                    }
+                    else
+                    {
+                        string id = Steam64.ToString();
+                        callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
+                    }
+                }
+                else
+                {
+                    F.LogError("Couldn't get username from MySql Database. Cast error.\n\"" + vagueResponse.command + "\"");
+                    string id = Steam64.ToString();
+                    callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
+                    return;
+                }
+            });
+        }
+        internal void AddOfficerPoints(ulong Steam64, byte Team, int amount = 1)
+        {
+            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
+            {
+                tableName = GetTableName("levels"),
+                NewValues = new Dictionary<string, object>
+                {
+                    { GetColumnName("levels", "Steam64"), Steam64 },
+                    { GetColumnName("levels", "Team"), Team },
+                    { GetColumnName("levels", "OfficerPoints"), amount },
+                    { GetColumnName("levels", "XP"), 0 }
+                },
+                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                {
+                    { GetColumnName("levels", "OfficerPoints"), EUpdateOperation.ADD }
+                },
+                UpdateValuesIfValid = new List<object> { amount }
+            };
+            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+        }
+        internal void AddXP(ulong Steam64, byte Team, int amount = 1)
+        {
+            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
+            {
+                tableName = GetTableName("levels"),
+                NewValues = new Dictionary<string, object>
+                {
+                    { GetColumnName("levels", "Steam64"), Steam64 },
+                    { GetColumnName("levels", "Team"), Team },
+                    { GetColumnName("levels", "OfficerPoints"), 0 },
+                    { GetColumnName("levels", "XP"), amount }
+                },
+                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                {
+                    { GetColumnName("levels", "OfficerPoints"), EUpdateOperation.ADD }
+                },
+                UpdateValuesIfValid = new List<object> { amount }
+            };
+            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+        }
+        internal void AddKill(ulong Steam64, byte Team, int amount = 1)
+        {
+            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
+            {
+                tableName = GetTableName("playerstats"),
+                NewValues = new Dictionary<string, object>
+                {
+                    { GetColumnName("playerstats", "Steam64"), Steam64 },
+                    { GetColumnName("playerstats", "Team"), Team },
+                    { GetColumnName("playerstats", "Kills"), amount },
+                    { GetColumnName("playerstats", "Deaths"), 0 },
+                    { GetColumnName("playerstats", "Teamkills"), 0 }
+                },
+                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                {
+                    { GetColumnName("playerstats", "Kills"), EUpdateOperation.ADD }
+                },
+                UpdateValuesIfValid = new List<object> { amount }
+            };
+            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+        }
+        internal void AddDeath(ulong Steam64, byte Team, int amount = 1)
+        {
+            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
+            {
+                tableName = GetTableName("playerstats"),
+                NewValues = new Dictionary<string, object>
+                {
+                    { GetColumnName("playerstats", "Steam64"), Steam64 },
+                    { GetColumnName("playerstats", "Team"), Team },
+                    { GetColumnName("playerstats", "Kills"), 0 },
+                    { GetColumnName("playerstats", "Deaths"), amount },
+                    { GetColumnName("playerstats", "Teamkills"), 0 }
+                },
+                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                {
+                    { GetColumnName("playerstats", "Deaths"), EUpdateOperation.ADD }
+                },
+                UpdateValuesIfValid = new List<object> { amount }
+            };
+            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+        }
+        internal void AddTeamkill(ulong Steam64, byte Team, int amount = 1)
+        {
+            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
+            {
+                tableName = GetTableName("playerstats"),
+                NewValues = new Dictionary<string, object>
+                {
+                    { GetColumnName("playerstats", "Steam64"), Steam64 },
+                    { GetColumnName("playerstats", "Team"), Team },
+                    { GetColumnName("playerstats", "Kills"), 0 },
+                    { GetColumnName("playerstats", "Deaths"), 0 },
+                    { GetColumnName("playerstats", "Teamkills"), amount }
+                },
+                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                {
+                    { GetColumnName("playerstats", "Teamkills"), EUpdateOperation.ADD }
+                },
+                UpdateValuesIfValid = new List<object> { amount }
+            };
+            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
         }
         /// <summary>
         /// Gets a <see cref="MySqlResponse"/> from an IAsyncResult then disposes of it, calling WaitOne() if it is not already completed.
@@ -409,32 +492,27 @@ namespace Uncreated.SQL
         /// <returns><see cref="MySqlResponse"/> from the provided SQL type.</returns>
         private MySqlResponse GetResponse<AsyncStateType>(IAsyncResult ar) where AsyncStateType : SQLCallStructure
         {
-            D_DatabaseQuery<AsyncStateType> rtn;
-            try
+            if (ar.AsyncState is D_DatabaseQuery<AsyncStateType> rtn)
             {
-                rtn = (D_DatabaseQuery<AsyncStateType>)ar.AsyncState;
+                rtn.EndInvoke(out MySqlResponse response, ar);
+                ar.AsyncWaitHandle.WaitOne();
+                ar.AsyncWaitHandle.Dispose();
+                return response;
             }
-            catch (InvalidCastException)
-            {
-                rtn = default(D_DatabaseQuery<AsyncStateType>);
-            }
-            rtn.EndInvoke(out MySqlResponse response, ar);
-            ar.AsyncWaitHandle.WaitOne();
-            ar.AsyncWaitHandle.Dispose();
-            return response;
+            else return default;
         }
-        internal void DisposeOf(AsyncDatabase DatabaseManager)
+        internal void DisposeOf()
         {
-            IAsyncResult ar = DatabaseManager.CloseAsync(null);
+            IAsyncResult ar = _manager.CloseAsync(null);
             ar.AsyncWaitHandle.WaitOne();
             Warfare.Stats.WebCallbacks.Dispose(ar);
-            DatabaseManager.SQL.Dispose();
+            _manager.SQL.Dispose();
         }
-        internal void Close(AsyncDatabase DatabaseManager)
+        internal void Close()
         {
             try
             {
-                DatabaseManager.SQL.Close();
+                _manager.SQL.Close();
             }
             catch (MySqlException ex)
             {
@@ -442,11 +520,11 @@ namespace Uncreated.SQL
                 F.LogError("\nTrace\n" + ex.StackTrace);
             }
         }
-        internal void Open(AsyncDatabase DatabaseManager, out bool bSuccess)
+        internal void Open(out bool bSuccess)
         {
             try
             {
-                DatabaseManager.SQL.Open();
+                _manager.SQL.Open();
                 bSuccess = true;
             }
             catch (MySqlException ex)
@@ -473,9 +551,9 @@ namespace Uncreated.SQL
         private delegate void WaitUntilFinishedReadingDelegate(SQLCallStructure Data, AsyncCallback Function, out SQLCallStructure DataReturn, out AsyncCallback FunctionReturn, out Type TypeReturn);
         private void FinishedReading(IAsyncResult ar)
         {
-            try
+            if(ar.AsyncState is WaitUntilFinishedReadingDelegate dele)
             {
-                ((WaitUntilFinishedReadingDelegate)ar.AsyncState).EndInvoke(out SQLCallStructure Data, out AsyncCallback Function, out Type type, ar);
+                dele.EndInvoke(out SQLCallStructure Data, out AsyncCallback Function, out Type type, ar); 
                 try
                 {
                     if (type == typeof(SQLSelectCallStructure))
@@ -487,15 +565,17 @@ namespace Uncreated.SQL
                     {
                         D_DatabaseQuery<SQLInsertOrUpdateStructure> InsertOnDuplicateKeyUpdateCaller = new D_DatabaseQuery<SQLInsertOrUpdateStructure>(InsertIfDuplicateUpdateAsyncCall);
                         InsertOnDuplicateKeyUpdateCaller.BeginInvoke((SQLInsertOrUpdateStructure)Data, out _, Function, InsertOnDuplicateKeyUpdateCaller);
-                    } else
+                    }
+                    else
                     {
                         F.LogError("Type \"" + type.ToString() + "\" - Not a valid type.");
                     }
-                } catch (InvalidCastException)
+                }
+                catch (InvalidCastException)
                 {
                     F.LogError("Failed to cast \"" + type.ToString() + "\" to a valid SQL Container.");
                 }
-            } catch (InvalidCastException)
+            } else
             {
                 F.LogError("Failed to cast \"" + ar.AsyncState.GetType().ToString() + "\" to a valid delegate containing SQL information.");
             }
@@ -540,9 +620,9 @@ namespace Uncreated.SQL
             public Dictionary<string, Type> Columns;
             public string tableName;
             public bool selectAll;
-            public string ConditionVariable;
-            public EComparisonType comparison;
-            public object condition;
+            public string[] ConditionVariables;
+            public EComparisonType[] comparisons;
+            public object[] conditions;
             public int limit;
             public SQLSelectCallStructure(AsyncDatabase DatabaseManager) : base(DatabaseManager) { }
             public SQLSelectCallStructure(
@@ -550,18 +630,18 @@ namespace Uncreated.SQL
                 Dictionary<string, Type> Columns,
                 string tableName,
                 bool selectAll = false,
-                string ConditionVariable = "none",
-                EComparisonType comparison = EComparisonType.NOCOMPARISON,
-                object condition = null,
+                string[] ConditionVariables = null,
+                EComparisonType[] comparisons = null,
+                object[] conditions = null,
                 int limit = -1
                 ) : base(DatabaseManager)
             {
                 this.Columns = Columns;
                 this.tableName = tableName;
                 this.selectAll = selectAll;
-                this.ConditionVariable = ConditionVariable;
-                this.comparison = comparison;
-                this.condition = condition;
+                this.ConditionVariables = ConditionVariables;
+                this.comparisons = comparisons;
+                this.conditions = conditions;
                 this.limit = limit;
             }
         }
@@ -587,13 +667,21 @@ namespace Uncreated.SQL
                 }
             }
             query.Append(" FROM `").Append(Data.tableName).Append('`');
-            if (Data.comparison != EComparisonType.NOCOMPARISON && Data.condition != null)
+            if(Data.comparisons != null && Data.ConditionVariables != null && Data.conditions != null && 
+                Data.comparisons.Length == Data.ConditionVariables.Length && Data.comparisons.Length == Data.conditions.Length)
             {
-                query.Append(" WHERE ");
-                query.Append("`" + Data.ConditionVariable + "` ");
-                query.Append(OperatorTranslations[Data.comparison]);
-                if (Data.comparison != EComparisonType.ISNULL && Data.comparison != EComparisonType.ISNOTNULL)
-                    query.Append(" @0");
+                for (int i = 0; i < Data.comparisons.Length; i++)
+                {
+                    if(Data.comparisons[i] != EComparisonType.NOCOMPARISON && Data.conditions[i] != null)
+                    {
+                        if (i == 0) query.Append(" WHERE ");
+                        else query.Append(" AND ");
+                        query.Append("`" + Data.ConditionVariables[i] + "` ");
+                        query.Append(OperatorTranslations[Data.comparisons[i]]);
+                        if (Data.comparisons[i] != EComparisonType.ISNULL && Data.comparisons[i] != EComparisonType.ISNOTNULL)
+                            query.Append(" @" + i.ToString());
+                    }
+                }
             }
             if (Data.limit != -1)
                 query.Append(" LIMIT " + Data.limit.ToString());
@@ -602,12 +690,15 @@ namespace Uncreated.SQL
             SelectResponse rtn = new SelectResponse(CommandText);
             using (MySqlCommand Q = new MySqlCommand(CommandText, Data.DatabaseManager.SQL))
             {
-                Q.Parameters.AddWithValue("@0", Data.condition);
+                for(int i = 0; i < Data.comparisons.Length; i++)
+                {
+                    Q.Parameters.AddWithValue("@" + i.ToString(), Data.conditions[i]);
+                }
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
-                    while(R.Read())
+                    while (R.Read())
                     {
-                        foreach(KeyValuePair<string, Type> column in Data.Columns)
+                        foreach (KeyValuePair<string, Type> column in Data.Columns)
                         {
                             try
                             {
@@ -646,7 +737,8 @@ namespace Uncreated.SQL
                                     rtn.AddValueToColumn(R.GetTimeSpan(ordinal), column.Key);
                                 else
                                     rtn.AddValueToColumn(R.GetValue(ordinal), column.Key);
-                            } catch (Exception ex)
+                            }
+                            catch (Exception ex)
                             {
                                 F.LogError("Exception in MySql SELECT statement:\n\"" + rtn.command + "\"\nError:\n" + ex.ToString());
                                 rtn.executionstatus = MySqlResponse.EExecutionStatus.FAILURE;
@@ -664,20 +756,20 @@ namespace Uncreated.SQL
             StringBuilder sb = new StringBuilder();
             Dictionary<int, object> Parameters = new Dictionary<int, object>();
             sb.Append("INSERT INTO `").Append(Data.tableName).Append("` (");
-            for(int i = 0; i < Data.NewValues.Count; i++)
+            for (int i = 0; i < Data.NewValues.Count; i++)
             {
                 if (i != 0) sb.Append(", ");
                 sb.Append("`" + Data.NewValues.ElementAt(i).Key + "`");
             }
             sb.Append(") VALUES(");
-            for(int i = 0; i < Data.NewValues.Count; i++)
+            for (int i = 0; i < Data.NewValues.Count; i++)
             {
                 if (i != 0) sb.Append(", ");
                 sb.Append("@" + i.ToString());
                 Parameters.Add(i, Data.NewValues.ElementAt(i).Value);
             }
             sb.Append(") ON DUPLICATE KEY UPDATE ");
-            for(int i = 0; i < Data.VariablesToUpdateIfDuplicate.Count; i++)
+            for (int i = 0; i < Data.VariablesToUpdateIfDuplicate.Count; i++)
             {
                 if (i != 0) sb.Append(", ");
                 sb.Append("`" + Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + "` = ");
@@ -718,14 +810,15 @@ namespace Uncreated.SQL
             NonQueryResponse rtn = new NonQueryResponse(query, 0);
             using (MySqlCommand Q = new MySqlCommand(query, Data.DatabaseManager.SQL))
             {
-                foreach(KeyValuePair<int, object> Parameter in Parameters)
+                foreach (KeyValuePair<int, object> Parameter in Parameters)
                     Q.Parameters.AddWithValue('@' + Parameter.Key.ToString(), Parameter.Value);
                 try
                 {
                     rtn.RowsAffected = Q.ExecuteNonQuery();
                     if (rtn.RowsAffected == 0) rtn.executionstatus = MySqlResponse.EExecutionStatus.NORESULTS;
                     else rtn.executionstatus = MySqlResponse.EExecutionStatus.SUCCESS;
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     F.LogError("Exception in MySql INSERT ON DUPLICATE UPDATE statement:\n\"" + rtn.command + "\"\nError:\n" + ex.ToString());
                     rtn.executionstatus = MySqlResponse.EExecutionStatus.FAILURE;
@@ -745,99 +838,8 @@ namespace Uncreated.SQL
             WaitUntilFinishedReadingDelegate caller = new WaitUntilFinishedReadingDelegate(WaitUntilFinishedReading);
             caller.BeginInvoke(Data, callback, out _, out _, out _, FinishedReading, caller);
         }
-        internal void SendPlayerZoneOverlay(Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename)
-        {
-            complete = false;
-            F.Log("STEP " + step.ToString());
-            if (step == 0)
-            {
-                if (File.Exists(Level.info.path + @"\Map.png"))
-                {
-                    byte[] fileData = File.ReadAllBytes(Level.info.path + @"\Map.png");
-                    img.LoadImage(fileData, false);
-                }
-                img.Apply();
-            }
-            else if (step == 1)
-            {
-                foreach (Zone zone in zones)
-                {
-                    if (zone.GetType() == typeof(PolygonZone))
-                    {
-                        PolygonZone pzone = (PolygonZone)zone;
-                        for (int i = 0; i < pzone.PolygonInverseZone.Lines.Length; i++)
-                        {
-                            F.DrawLine(img, pzone.PolygonInverseZone.Lines[i], Color.black, false);
-                        }
-                    }
-                    else if (zone.GetType() == typeof(CircleZone))
-                    {
-                        CircleZone czone = (CircleZone)zone;
-                        F.FillCircle(img, czone.InverseZone.Center.x + img.width / 2, czone.InverseZone.Center.y + img.height / 2, czone.CircleInverseZone.Radius, Color.black, false);
-                    }
-                    else if (zone.GetType() == typeof(RectZone))
-                    {
-                        RectZone rzone = (RectZone)zone;
-                        for (int i = 0; i < rzone.RectInverseZone.lines.Length; i++)
-                        {
-                            F.DrawLine(img, rzone.RectInverseZone.lines[i], Color.black, false);
-                        }
-                    }
-                }
-                //player.SendChat("Completed step 2", UCWarfare.GetColor("default"));
-                img.Apply();
-            }
-            else if (step > 1)
-            {
-                int z = (step - 2) * 3;    //0
-                int next = (step - 1) * 3; //3
-                if (zones.Count <= next) complete = true;
-                System.Random r = new System.Random();
-                for (int e = z; e < (zones.Count > next ? next : zones.Count); e++)
-                {
-                    Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
-                    for (int i = 0; i < PointsToTest.Count; i++)
-                    {
-                        if (zones[e].InverseZone.IsInside(new Vector2(PointsToTest[i].x, PointsToTest[i].y)))
-                        {
-                            img.SetPixelClamp((int)Math.Round(PointsToTest[i].x + img.width / 2), (int)Math.Round(PointsToTest[i].y + img.height / 2), zonecolor);
-                        }
-                    }
-                }
-                //player.SendChat("Completed step " + (step + 1).ToString(), UCWarfare.GetColor("default"));
-                img.Apply();
-            }
-            else if (step == -1) // finalizing image
-            {
-                img.Apply();
-                Texture2D flipped = F.FlipVertical(img);
-                F.SavePhotoToDisk(Data.FlagStorage + (filename == default ? "zonearea.png" : filename + ".png"), flipped);
-                UnityEngine.Object.Destroy(flipped);
-                UnityEngine.Object.Destroy(img);
-                complete = true;
-            } else if (step == -2) // drawing path
-            {
-                for(int i = 0; i <= Data.FlagManager.FlagRotation.Count; i++)
-                {
-                    F.DrawLine(img, new Line(i == Data.FlagManager.FlagRotation.Count ? TeamManager.Team2Main.InverseZone.Center : Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center, 
-                        i == 0 ? TeamManager.Team1Main.InverseZone.Center : Data.FlagManager.FlagRotation[i - 1].ZoneData.InverseZone.Center), Color.cyan, false, 8);
-                }
-                img.Apply();
-            } else if (step == -3)
-            {
-                System.Random r = new System.Random();
-                for (int i = 0; i < Data.FlagManager.FlagRotation.Count; i++)
-                {
-                    Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
-                    F.DrawCircle(img, Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center.x, Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * Data.FlagManager.FlagRotation[i].ZoneData.CoordinateMultiplier, zonecolor, 5, false, true);
-                }
-                F.DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_RADIUS_SEARCH * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
-                F.DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_RADIUS_SEARCH * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
-                img.Apply();
-            }
-        }
     }
-    public class MySqlResponse
+    public abstract class MySqlResponse
     {
         public enum EExecutionStatus : byte
         {

@@ -84,7 +84,6 @@ namespace Uncreated.Warfare
         public static Dictionary<string, LanguageAliasSet> LanguageAliases;
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
         public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
-        public static List<UncreatedPlayer> Online = new List<UncreatedPlayer>();
         public static KitManager KitManager;
         public static VehicleSpawner VehicleSpawnSaver;
         public static VehicleBay VehicleBay;

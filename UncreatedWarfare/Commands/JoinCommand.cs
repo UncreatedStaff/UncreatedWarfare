@@ -65,25 +65,19 @@ namespace Uncreated.Warfare.Commands
                                     steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t1name), ConsoleColor.Cyan);
                                 return;
                             }
+                            ulong oldgroup = steamplayer.player.quests.groupID.m_SteamID;
                             steamplayer.player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
                             GroupManager.save();
+                            EventFunctions.OnGroupChangedInvoke(steamplayer, oldgroup, steamplayer.player.quests.groupID.m_SteamID);
                             steamplayer.SendChat("joined_team", UCWarfare.GetColor("joined_team"),
                                 t1name, TeamManager.Team1ColorHex);
                             F.Log(F.Translate("player_switched_groups_console", 0,
                                 steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t1name), ConsoleColor.Cyan);
-                            if (steamplayer.player.TryGetComponent(out TeleportPlayerComponent component))
-                            {
-                                if(!component.InstantlyTeleportPlayer(steamplayer.GetBaseSpawn(), true))
-                                {
-                                    steamplayer.SendChat("from_lobby_teleport_failed", UCWarfare.GetColor("from_lobby_teleport_failed"),
-                                        UCWarfare.GetColorHex("from_lobby_teleport_failed_command"));
-                                    F.LogError("Couldn't teleport " + steamplayer.playerID.playerName + " from lobby.");
-                                }
-                            } else
+                            if (!steamplayer.player.teleportToLocation(steamplayer.GetBaseSpawn(), 1UL.GetBaseAngle()))
                             {
                                 steamplayer.SendChat("from_lobby_teleport_failed", UCWarfare.GetColor("from_lobby_teleport_failed"),
                                     UCWarfare.GetColorHex("from_lobby_teleport_failed_command"));
-                                F.LogError("Couldn't get the player component of " + steamplayer.playerID.playerName);
+                                F.LogError("Couldn't teleport " + steamplayer.playerID.playerName + " to their main base.");
                             }
                         } else if (command[0].ToLower() == TeamManager.Team2Code || command[0].ToLower() == t2name.ToLower())
                         {
@@ -122,20 +116,11 @@ namespace Uncreated.Warfare.Commands
                                 t2name, TeamManager.Team2ColorHex);
                             F.Log(F.Translate("player_switched_groups_console", 0,
                                 steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t2name), ConsoleColor.Cyan); // player joined T2
-                            if (steamplayer.player.TryGetComponent(out TeleportPlayerComponent component))
-                            {
-                                if (!component.InstantlyTeleportPlayer(steamplayer.GetBaseSpawn(), true))
-                                {
-                                    steamplayer.SendChat("from_lobby_teleport_failed", UCWarfare.GetColor("from_lobby_teleport_failed"),
-                                        UCWarfare.GetColorHex("from_lobby_teleport_failed_command"));
-                                    F.LogError("Couldn't teleport " + steamplayer.playerID.playerName + " from lobby.");
-                                }
-                            }
-                            else
+                            if (!steamplayer.player.teleportToLocation(steamplayer.GetBaseSpawn(), 2UL.GetBaseAngle()))
                             {
                                 steamplayer.SendChat("from_lobby_teleport_failed", UCWarfare.GetColor("from_lobby_teleport_failed"),
                                     UCWarfare.GetColorHex("from_lobby_teleport_failed_command"));
-                                F.LogError("Couldn't get the player component of " + steamplayer.playerID.playerName);
+                                F.LogError("Couldn't teleport " + steamplayer.playerID.playerName + " to their main base.");
                             }
                         }
                     } else

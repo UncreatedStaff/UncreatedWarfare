@@ -89,9 +89,11 @@ namespace Uncreated.Warfare.Commands
                                 ID.ToString(), UCWarfare.GetColorHex("joined_group_not_found_group_id"));
                             return;
                         }
+                        ulong oldgroup = player.Player.quests.groupID.m_SteamID;
                         if(player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
                         {
                             GroupManager.save();
+                            EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, groupInfo.groupID.m_SteamID);
                             ulong team = player.GetTeam();
                             if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                             if (team == 1)

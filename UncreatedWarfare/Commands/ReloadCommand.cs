@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +24,7 @@ namespace Uncreated.Warfare.Commands
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == ConsoleName;
+            string cmd = command[0].ToLower();
             if (command.Length == 0)
             {
                 if (isConsole || player.HasPermission("uc.reload.all"))
@@ -34,13 +36,13 @@ namespace Uncreated.Warfare.Commands
                     player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
             } else
             {
-                if (command[0] == "translations")
+                if (cmd == "translations")
                 {
                     if(isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
                         ReloadTranslations();
                     else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
-                } else if (command[0] == "flags")
+                } else if (cmd == "flags")
                 {
                     if (isConsole || player.HasPermission("uc.reload.flags") || player.HasPermission("uc.reload.all"))
                         ReloadFlags();

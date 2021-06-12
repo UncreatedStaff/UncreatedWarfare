@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Random = System.Random;
 
 namespace Uncreated.Warfare.Flags
 {
@@ -28,7 +27,7 @@ namespace Uncreated.Warfare.Flags
         public static List<Flag> CreatePath()
         {
             List<Flag> path = new List<Flag>();
-            Random random = new Random();
+            UnityEngine.Random random = new UnityEngine.Random();
             StartLoop(ref path, random);
             int redoCounter = 0;
             while(redoCounter < MAX_REDOS && 
@@ -45,13 +44,15 @@ namespace Uncreated.Warfare.Flags
                 F.LogError("Unable to correct bad path after " + MAX_REDOS.ToString() + " tries.");
             return path;
         }
-        private static void StartLoop(ref List<Flag> list, Random r)
+        private static void StartLoop(ref List<Flag> list, UnityEngine.Random r)
         {
             List<Flag> StarterFlags = GetFlagsInRadius(TeamManager.Team1Main.Center, MAIN_RADIUS_SEARCH);
-            list.Add(PickRandomFlagWithBias(TeamManager.Team1Main.Center, StarterFlags, r));
+            Flag first = PickRandomFlagWithBias(TeamManager.Team1Main.Center, StarterFlags);
+            first.index = 0;
+            list.Add(first);
             //F.Log(list.Count + ". " + list[0].Name, ConsoleColor.Green);
             int counter = 0;
-            FlagLoop(ref list, r, ref counter);
+            FlagLoop(ref list, ref counter);
         }
         private static float GetAverageDistanceFromTeamMain(bool team1, List<Flag> list)
         {
@@ -64,7 +65,7 @@ namespace Uncreated.Warfare.Flags
             float avg = Mathf.Sqrt(total / i);
             return avg;
         }
-        private static void FlagLoop(ref List<Flag> list, Random r, ref int counter)
+        private static void FlagLoop(ref List<Flag> list,  ref int counter)
         {
             Flag lastFlag = list.Last();
             List<Flag> candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, lastFlag.ID, list);
@@ -78,7 +79,7 @@ namespace Uncreated.Warfare.Flags
                 candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, lastFlag.ID, list);
                 //F.Log(uppingCounter.ToString() + "th search: " + candidates.Count + " results in " + FLAG_RADIUS_SEARCH.ToString() + 'm');
                 if (candidates.Count < 1) continue;
-                lastFlag = PickRandomFlagWithBias(lastFlag.Position2D, candidates, r);
+                lastFlag = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
             }
             //if (uppingCounter != 0) F.Log("Had to raise \"FLAG_RADIUS_SEARCH\" to " + FLAG_RADIUS_SEARCH + " until a flag was found.");
             if(candidates.Count == 0)
@@ -87,16 +88,17 @@ namespace Uncreated.Warfare.Flags
                 return;
             }
             FLAG_RADIUS_SEARCH = oldradius;
-            Flag pick = PickRandomFlagWithBias(lastFlag.Position2D, candidates, r);
+            Flag pick = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
+            pick.index = list.Count;
             list.Add(pick);
             //F.Log(list.Count + ". " + pick.Name, ConsoleColor.Green);
             counter++;
             if (counter < MAX_FLAGS - 1 && (TeamManager.Team2Main.Center - pick.Position2D).sqrMagnitude > MAIN_STOP_RADIUS * MAIN_STOP_RADIUS) // if the picked flag is not in range of team 2 main base. 
             {
-                FlagLoop(ref list, r, ref counter);
+                FlagLoop(ref list, ref counter);
             }
         }
-        private static Flag PickRandomFlagWithBias(Vector2 origin, List<Flag> candidates, Random r)
+        private static Flag PickRandomFlagWithBias(Vector2 origin, List<Flag> candidates)
         {
             if (candidates.Count < 1) return default;
             Dictionary<Flag, int> values = new Dictionary<Flag, int>();
@@ -108,7 +110,7 @@ namespace Uncreated.Warfare.Flags
                 total += bias;
                 values.Add(flag, bias);
             }
-            int pick = r.Next(0, total + 1);
+            int pick = UnityEngine.Random.Range(0, total);
             int counter = 0;
             foreach (KeyValuePair<Flag, int> flag in values)
             {

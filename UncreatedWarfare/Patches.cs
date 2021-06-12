@@ -18,11 +18,12 @@ namespace Uncreated.Warfare
     public static class Patches
     {
         public delegate void BarricadeDroppedEventArgs(BarricadeRegion region, BarricadeData data, ref Transform location);
-        public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID);
+        public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort index, ushort plant);
         public delegate void StructureDestroyedEventArgs(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID);
         public delegate void BarricadeHealthEventArgs(BarricadeData data);
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
+        public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
@@ -30,6 +31,7 @@ namespace Uncreated.Warfare
         public static event BarricadeHealthEventArgs BarricadeHealthChangedHandler;
         public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
+        public static event BatteryStealingDelegate OnBatterySteal_Global;
 
         /// <summary>
         /// Stores all <see cref="Harmony"/> patches.
@@ -72,7 +74,19 @@ namespace Uncreated.Warfare
                 OnPlayerSetsCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref isVisible, ref allow);
                 return allow;
             }
-
+            // SDG.Unturned.VehicleManager
+            /// <summary>
+            /// Prefix of <see cref="VehicleManager.ReceiveStealVehicleBattery(in ServerInvocationContext)"/> to disable the removal of batteries from vehicles.
+            /// </summary>
+            [HarmonyPatch(typeof(VehicleManager), "ReceiveStealVehicleBattery")]
+            [HarmonyPrefix]
+            static bool BatteryStealingOverride(in ServerInvocationContext context)
+            {
+                if (!UCWarfare.Config.Patches.ReceiveStealVehicleBattery) return true;
+                bool allow = true;
+                OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
+                return allow;
+            }
             // SDG.Unturned.BarricadeManager
             /// <summary>
             /// Prefix of <see cref="BarricadeManager.ServerSetSignText(InteractableSign, string)"/> to set translation data of signs.
@@ -531,7 +545,7 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
                 if (region.barricades[index] != null)
                 {
-                    BarricadeDestroyedHandler?.Invoke(region, region.barricades[index], region.drops[index], region.barricades[index].instanceID);
+                    BarricadeDestroyedHandler?.Invoke(region, region.barricades[index], region.drops[index], region.barricades[index].instanceID, index, plant);
                 }
             }
 
