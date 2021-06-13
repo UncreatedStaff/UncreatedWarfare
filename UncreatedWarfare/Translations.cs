@@ -129,7 +129,7 @@ namespace Uncreated.Warfare
                 // Squads
                 { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
                 { "squad_joined", "<color=#a0ad8e>You joined <color=#ffffff>{0}</color>.</color>" },
-                { "squad_left", "<color=#a7a8a5>You left <color=#ffffff>{0}</color>.</color>" },
+                { "squad_left", "<color=#a7a8a5>You left your squad.</color>" },
                 { "squad_disbanded", "<color=#a7a8a5>Your squad was disbanded.</color>" },
                 { "squad_locked", "<color=#a7a8a5>You <color=#6be888>locked</color> your squad.</color>" },
                 { "squad_unlocked", "<color=#999e90>You <color=#ffffff>unlocked</color> your squad.</color>" },
@@ -145,9 +145,9 @@ namespace Uncreated.Warfare
                 { "squad_e_playernotinsquad", "<color=#a89791>That player is not in your squad.</color>" },
                 { "squad_e_playernotfound", "<color=#a89791>Could not find player: '{0}'.</color>" },
                 { "squad_player_joined", "<color=#b9bdb3><color=#8df0c5>{0}</color> joined your squad.</color>" },
-                { "squad_player_left", "<color=#b9bdb3><color=#8df0c5>{0}</color> left your squad.</color>" },
+                { "squad_player_left", "<color=#b9bdb3><color=#f0c08d>{0}</color> left your squad.</color>" },
                 { "squad_player_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
-                { "squad_player_kicked", "<color=#b9bdb3><color=#d6a181>{0}</color> was kicked from the squad.</color>" },
+                { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from the squad.</color>" },
                 { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
 
                 // fobs

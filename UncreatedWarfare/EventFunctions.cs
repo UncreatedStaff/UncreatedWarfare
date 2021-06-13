@@ -28,6 +28,9 @@ namespace Uncreated.Warfare
                 Data.FlagManager.RefreshStaticUI(newteam, Data.FlagManager.FlagRotation.FirstOrDefault(x => x.ID == Data.FlagManager.OnFlag[player.playerID.steamID.m_SteamID])
                     ?? Data.FlagManager.FlagRotation[0]).SendToPlayer(player, player.transportConnection);
             Data.FlagManager.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newteam);
+
+            SquadManager.ClearUIsquad(player);
+            SquadManager.UpdateUIMemberCount(newGroup);
         }
         internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
@@ -175,9 +178,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnCalculateSpawnDuringLogin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
         {
-            point = playerID.steamID.m_SteamID.GetBaseSpawn(out ulong team);
-            yaw = team.GetBaseAngle();
-            needsNewSpawnpoint = false;
+
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {

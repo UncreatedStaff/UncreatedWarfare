@@ -67,7 +67,7 @@ namespace Uncreated.Warfare
         }
         public static readonly string FOBStorage = DataDirectory + @"FOBs\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
-        public static readonly string ElseWhereSQLPath = @"C:\SteamCMD\unturned\Servers\UncreatedRewrite\sql.json";
+        public static readonly string ElseWhereSQLPath = @"C:\sql.json";
         public static Dictionary<string, Color> Colors;
         public static Dictionary<string, string> ColorsHex;
         public static Dictionary<string, Dictionary<string, string>> Localization;

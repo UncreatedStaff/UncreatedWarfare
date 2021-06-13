@@ -96,9 +96,34 @@ namespace Uncreated.Warfare.Squads
                     UnturnedPlayer target = UnturnedPlayer.FromName(name);
                     if (target != null)
                     {
-                        if (squad.Members.Exists(p => p.CSteamID == target.CSteamID))
+                        if (SquadManager.IsInSquad(target.CSteamID, squad))
                         {
                             SquadManager.PromoteToLeader(ref squad, target);
+                        }
+                        else
+                            player.Message("squad_e_playernotinsquad", name);
+                    }
+                    else
+                        player.Message("squad_e_playernotfound", name);
+                }
+                else 
+                    player.Message("squad_e_notsquadleader", name);
+            }
+            else if (command.Length >= 1 && command[0].ToLower() == "kick")
+            {
+                if (command.Length < 2)
+                {
+                    player.Message("correct_usage", "/squad kick <player name>");
+                    return;
+                }
+                if (SquadManager.IsInAnySquad(player.CSteamID, out var squad) && squad?.Leader.CSteamID == player.CSteamID)
+                {
+                    UnturnedPlayer target = UnturnedPlayer.FromName(name);
+                    if (target != null)
+                    {
+                        if (SquadManager.IsInSquad(target.CSteamID, squad))
+                        {
+                            SquadManager.KickPlayerFromSquad(target, ref squad);
                         }
                         else
                             player.Message("squad_e_playernotinsquad", name);
@@ -116,8 +141,6 @@ namespace Uncreated.Warfare.Squads
                     if (SquadManager.IsInAnySquad(player.CSteamID, out var squad))
                     {
                         SquadManager.LeaveSquad(player, ref squad);
-
-                        player.Message("squad_left");
                     }
                     else
                         player.Message("squad_e_notinsquad");
@@ -151,7 +174,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 else if (command[0].ToLower() == "testui")
                 {
-                    SquadManager.UpdateUIForTeam(player.GetTeam());
+                    SquadManager.UpdateUIMemberCount(player.GetTeam());
 
                     player.Message("Squad UI has been reloaded.");
                 }
