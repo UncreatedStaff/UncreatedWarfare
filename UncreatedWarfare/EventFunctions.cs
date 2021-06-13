@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -148,21 +149,10 @@ namespace Uncreated.Warfare
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
 
-            LogoutSaver.InvokePlayerConnected(player);
+            PlayerManager.InvokePlayerConnected(player);
             Data.ReviveManager.OnPlayerConnected(player);
-            LogoutSave save = LogoutSaver.GetSave(player.CSteamID);
-            if(save != default)
-            {
-                if (KitManager.KitExists(save.KitName, out Kit kit))
-                    KitManager.GiveKit(player, kit);
-                else
-                {
-                    byte team = F.GetTeamByte(player);
-                    string unarmedKitName = team == 1 ? TeamManager.Team1UnarmedKit : (team == 2 ? TeamManager.Team2UnarmedKit : TeamManager.DefaultKit);
-                    if (KitManager.KitExists(unarmedKitName, out Kit defKit))
-                        KitManager.GiveKit(player, defKit);
-                }
-            }
+
+            SquadManager.InvokePlayerJoined(player);
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
         }
@@ -216,8 +206,9 @@ namespace Uncreated.Warfare
                 UnityEngine.Object.Destroy(c);
                 Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
             }
-            LogoutSaver.InvokePlayerDisconnected(player);
+            PlayerManager.InvokePlayerDisconnected(player);
             Data.ReviveManager.OnPlayerDisconnected(player);
+            SquadManager.InvokePlayerLeft(player);
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last
         }
         internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);

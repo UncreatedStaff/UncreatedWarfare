@@ -94,7 +94,7 @@ namespace Uncreated.Warfare
         public static BuildManager BuildManager;
         public static ReviveManager ReviveManager;
         public static TicketManager TicketManager;
-        public static LogoutSaver LogoutSaver;
+        public static PlayerManager LogoutSaver;
         public static WebInterface WebInterface;
         public static RequestSigns RequestSignManager;
         public static StructureSaver StructureManager;
@@ -161,7 +161,7 @@ namespace Uncreated.Warfare
             DatabaseManager = new AsyncDatabase();
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             WebInterface = new WebInterface();
-            LogoutSaver = new LogoutSaver();
+            LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
             squadManager = new SquadManager();
             CommandWindow.shouldLogDeaths = false;

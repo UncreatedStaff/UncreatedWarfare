@@ -197,7 +197,7 @@ namespace Uncreated.Warfare.Kits
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
-            LogoutSaver.UpdateSave(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
+            PlayerManager.UpdateData(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
         }
         public static void ResupplyKit(UnturnedPlayer player, Kit kit)
         {
@@ -240,7 +240,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
-            if (LogoutSaver.HasSave(steamID, out LogoutSave save))
+            if (PlayerManager.HasPlayerData(steamID, out LogoutSave save))
                 return ObjectExists(k => k.Name == save.KitName, out kit);
             else
             {

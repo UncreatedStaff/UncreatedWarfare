@@ -394,7 +394,7 @@ namespace Uncreated.Warfare
         }
         public static string GetKitIcon(this UnturnedPlayer player)
         {
-            var save = LogoutSaver.GetSave(player.CSteamID);
+            PlayerManager.HasPlayerData(player.CSteamID.m_SteamID, out var save);
 
             if (save == null)
                 return "NO SAVE";
@@ -444,7 +444,7 @@ namespace Uncreated.Warfare
             SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
             if (pl == default)
             {
-                if (LogoutSaver.HasSave(s64, out LogoutSave save))
+                if (PlayerManager.HasSave(s64, out LogoutSave save))
                     return GetTeam(save.Team);
                 else return 0;
             }
@@ -1023,6 +1023,7 @@ namespace Uncreated.Warfare
             else return 0f;
         }
         public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
+        public static FPlayerName GetPlayerOriginalNames(UnturnedPlayer player) => GetPlayerOriginalNames(player.Player);
         public static FPlayerName GetPlayerOriginalNames(Player player)
         {
             if (Data.OriginalNames.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))

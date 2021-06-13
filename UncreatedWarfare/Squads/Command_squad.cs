@@ -22,82 +22,92 @@ namespace Uncreated.Warfare.Squads
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            if (command.Length >= 2)
+            string name = "";
+            for (int i = 1; i < command.Length; i++)
             {
-                string squadName = "";
-                for (int i = 1; i < command.Length; i++)
+                name += command[i];
+                if (i < command.Length - 1)
+                    name += " ";
+            }
+
+            if (command.Length >= 1 && command[0].ToLower() == "create")
+            {
+                if (command.Length < 2)
                 {
-                    squadName += command[i];
-                    if (i < command.Length - 1)
-                        squadName += " ";
+                    player.Message("correct_usage", "/squad create <squad name>");
+                    return;
                 }
 
-                if (command[0].ToLower() == "create")
+                if (!SquadManager.IsInAnySquad(player.CSteamID, out _))
+                {
+                    if (!SquadManager.FindSquad(name, player.GetTeam(), out var squad))
+                    {
+                        SquadManager.CreateSquad(name, player, player.GetTeam(), PlayerManager.GetPlayerData(player.CSteamID).Branch);
+
+                        player.Message("squad_created", name);
+                    }
+                    else
+                        player.Message("squad_e_exist", name);
+                }
+                else
+                    player.Message("squad_e_insquad");
+            }
+            if (command.Length >= 1 && command[0].ToLower() == "join")
+            {
+                if (command.Length < 2)
+                {
+                    player.Message("correct_usage", "/squad join <squad name>");
+                    return;
+                }
+
+                if (SquadManager.FindSquad(name, player.GetTeam(), out var squad))
                 {
                     if (!SquadManager.IsInAnySquad(player.CSteamID, out _))
                     {
-                        if (!SquadManager.FindSquad(squadName, player.GetTeam(), out var squad))
+                        if (squad.Members.Count < 6)
                         {
-                            SquadManager.CreateSquad(squadName, player, player.GetTeam(), LogoutSaver.GetSave(player.CSteamID).Branch);
-
-                            player.Message("You created the squad: {0}", squadName);
-                        }
-                        else
-                            player.Message("A squad with a similar name to {0} already exists.", squadName);
-                    }
-                    else
-                        player.Message("You are already in a squad! Leave it before you create a new one.", squadName);
-                }
-                if (command[0].ToLower() == "join")
-                {
-                    if (SquadManager.FindSquad(squadName, player.GetTeam(), out var squad))
-                    {
-                        if (!SquadManager.IsInAnySquad(player.CSteamID, out _))
-                        {
-                            if (squad.Members.Count < 6)
+                            if (!squad.IsLocked)
                             {
-                                if (!squad.IsLocked)
-                                {
-                                    SquadManager.JoinSquad(player, ref squad);
+                                SquadManager.JoinSquad(player, ref squad);
 
-                                    player.Message("You joined the squad: {0}", squad.Name);
-                                }
-                                else
-                                    player.Message("That squad is locked. Try again later.");
+                                player.Message("squad_joined", squad.Name);
                             }
                             else
-                                player.Message("That squad is full. Try again later.");
+                                player.Message("squad_e_locked");
                         }
                         else
-                            player.Message("You are already in a squad! Leave it before you join a new one.", squadName);
+                            player.Message("squad_e_full");
                     }
                     else
-                        player.Message("A squad called '{0}' could not be found.", squadName);
-                }
-                if (command[0].ToLower() == "promote")
-                {
-                    if (SquadManager.IsInAnySquad(player.CSteamID, out var squad) && squad?.Leader.CSteamID == player.CSteamID)
-                    {
-                        UnturnedPlayer target = UnturnedPlayer.FromName(squadName);
-                        if (target != null)
-                        {
-                            if (squad.Members.Exists(p => p.CSteamID == target.CSteamID))
-                            {
-                                SquadManager.PromoteToLeader(ref squad, target);
-                            }
-                            else
-                                player.Message("That player is not in you squad.", squadName);
-                        }
-                        else
-                            player.Message("Could not find player: {0}", squadName);
-                    }
-                    else
-                        player.Message("You are not the leader of any squad!", squadName);
+                        player.Message("squad_e_insquad", name);
                 }
                 else
+                    player.Message("A squad called '{0}' could not be found.", name);
+            }
+            if (command.Length >= 1 && command[0].ToLower() == "promote")
+            {
+                if (command.Length < 2)
                 {
-
+                    player.Message("correct_usage", "/squad promote <player name>");
+                    return;
                 }
+                if (SquadManager.IsInAnySquad(player.CSteamID, out var squad) && squad?.Leader.CSteamID == player.CSteamID)
+                {
+                    UnturnedPlayer target = UnturnedPlayer.FromName(name);
+                    if (target != null)
+                    {
+                        if (squad.Members.Exists(p => p.CSteamID == target.CSteamID))
+                        {
+                            SquadManager.PromoteToLeader(ref squad, target);
+                        }
+                        else
+                            player.Message("squad_e_notinsquad", name);
+                    }
+                    else
+                        player.Message("squad_e_playernotfound", name);
+                }
+                else
+                    player.Message("squad_e_notsquadleader", name);
             }
             if (command.Length == 1)
             {
@@ -107,10 +117,10 @@ namespace Uncreated.Warfare.Squads
                     {
                         SquadManager.LeaveSquad(player, ref squad);
 
-                        player.Message("You left your squad.");
+                        player.Message("squad_left");
                     }
                     else
-                        player.Message("You are not in any squad!");
+                        player.Message("squad_e_notinsquad");
                 }
                 else if (command[0].ToLower() == "disband")
                 {
@@ -119,7 +129,7 @@ namespace Uncreated.Warfare.Squads
                         SquadManager.DisbandSquad(squad);
                     }
                     else
-                        player.Message("You are not the leader of a squad!");
+                        player.Message("squad_e_notsquadleader");
                 }
                 else if (command[0].ToLower() == "lock" || command[0].ToLower() == "unlock")
                 {
@@ -128,24 +138,26 @@ namespace Uncreated.Warfare.Squads
                         if (command[0].ToLower() == "lock")
                         {
                             SquadManager.SetLocked(ref squad, true);
-                            player.Message("You locked your squad.");
+                            player.Message("squad_locked");
                         }
-                        if (command[0].ToLower() == "unlock")
+                        else if (command[0].ToLower() == "unlock")
                         {
                             SquadManager.SetLocked(ref squad, false);
-                            player.Message("You unlocked your squad.");
+                            player.Message("squad_unlocked");
                         }
                     }
                     else
-                        player.Message("You are not the leader of a squad!");
+                        player.Message("squad_e_notsquadleader");
                 }
                 else if (command[0].ToLower() == "testui")
                 {
                     SquadManager.UpdateUIForTeam(player.GetTeam());
 
-                    player.Message("Squad UI has been reload.");
+                    player.Message("Squad UI has been reloaded.");
                 }
             }
+            else
+                player.Message("correct_usage", "/squad <join|create|leave>");
         }
     }
 }

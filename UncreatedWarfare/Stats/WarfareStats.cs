@@ -373,7 +373,7 @@ namespace Uncreated.Warfare.Stats
                 AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 1, 0, 0));
             if (parameters.killer != null)
             {
-                string kitname = LogoutSaver.GetKit(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
+                string kitname = PlayerManager.GetKitName(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
@@ -398,7 +398,7 @@ namespace Uncreated.Warfare.Stats
                 AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 0, 0, 1));
             if (parameters.killer != null)
             {
-                string kitname = LogoutSaver.GetKit(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
+                string kitname = PlayerManager.GetKitName(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
@@ -426,7 +426,7 @@ namespace Uncreated.Warfare.Stats
             }
             if (parameters.dead != default)
             {
-                string kitname = LogoutSaver.GetKit(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+                string kitname = PlayerManager.GetKitName(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
