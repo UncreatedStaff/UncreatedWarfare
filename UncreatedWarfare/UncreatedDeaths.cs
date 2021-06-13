@@ -19,10 +19,12 @@ namespace Uncreated.Warfare
         private void Teamkill(KillEventArgs parameters)
         {
             F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
-            F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
             byte team = parameters.killer.GetTeamByte();
-            if(team == 1 || team == 2)
+            if (team == 1 || team == 2)
+            {
+                F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
                 Data.DatabaseManager?.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+            }
             OnTeamkill?.Invoke(this, parameters);
         }
         public class KillEventArgs : EventArgs
@@ -63,10 +65,14 @@ namespace Uncreated.Warfare
         private void Kill(KillEventArgs parameters)
         {
             F.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
-            F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
+            {
+                F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
                 Data.DatabaseManager?.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                    pt.stats.KillPlayer();
+            }
             OnKill?.Invoke(this, parameters);
         }
         public class SuicideEventArgs : EventArgs
@@ -97,7 +103,10 @@ namespace Uncreated.Warfare
             OnSuicide?.Invoke(this, parameters);
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
+            {
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);
+            }
         }
         public class DeathEventArgs : EventArgs
         {

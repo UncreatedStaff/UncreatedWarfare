@@ -114,6 +114,26 @@ namespace Uncreated.Warfare.Stats
             }
             Save();
         }
+        public void TellDeathSuicide(UCWarfare.SuicideEventArgs parameters)
+        {
+            this.deaths++;
+            ulong deadteam = F.GetTeam(parameters.dead);
+            int teamindex = teams.FindIndex(x => x.id == deadteam);
+            if (teamindex != -1)
+            {
+                teams[teamindex].AddDeathSuicide(false, parameters);
+            }
+            else
+            {
+                if (deadteam == 1 || deadteam == 2)
+                {
+                    Team team = new Team(deadteam, deadteam == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(deadteam, 0, false));
+                    team.AddDeathSuicide(false, parameters);
+                    AddTeam(team);
+                }
+            }
+            Save();
+        }
         [JsonConstructor]
         public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
         {
@@ -415,7 +435,7 @@ namespace Uncreated.Warfare.Stats
         }
         public void AddDeathNonSuicide(bool save, UCWarfare.DeathEventArgs parameters)
         {
-            kills++;
+            deaths++;
             if(parameters.killerargs != default && parameters.killerargs.killer != default)
             {
                 int kill_countsindex = kill_counts.FindIndex(x => x.player_id == parameters.killerargs.killer.channel.owner.playerID.steamID.m_SteamID);
@@ -436,7 +456,27 @@ namespace Uncreated.Warfare.Stats
                     kit = new Kit(kitname, F.GetKitDisplayName(kitname));
                     AddKit(kit);
                 }
-                kit.AddDeathNonSuicide(false, parameters);
+                kit.AddDeath(false, parameters);
+            }
+            else F.Log("dead was null");
+            if (save) Save();
+        }
+        public void AddDeathSuicide(bool save, UCWarfare.SuicideEventArgs parameters)
+        {
+            deaths++;
+            if (parameters.dead != default)
+            {
+                string kitname = LogoutSaver.GetKit(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+                int kitindex = kits.FindIndex(x => x.name == kitname);
+                Kit kit;
+                if (kitindex != -1)
+                    kit = kits[kitindex];
+                else
+                {
+                    kit = new Kit(kitname, F.GetKitDisplayName(kitname));
+                    AddKit(kit);
+                }
+                kit.AddDeath(false, parameters);
             }
             else F.Log("dead was null");
             if (save) Save();
@@ -554,7 +594,29 @@ namespace Uncreated.Warfare.Stats
             decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Flags.Flag closestObjective, false)));
             if (save) Save();
         }
-        public void AddDeathNonSuicide(bool save, UCWarfare.DeathEventArgs parameters)
+        public void AddDeath(bool save, UCWarfare.DeathEventArgs parameters)
+        {
+            deaths++;
+            if (parameters.item != 0)
+            {
+                int itemindex = items.FindIndex(x => x.id == parameters.item);
+                if (itemindex != -1)
+                    items[itemindex].deaths++;
+                else
+                    AddItem(new Item(parameters.item, 0, 1, 0, new List<ItemKill>()));
+            }
+            if (playstyle != default)
+            {
+                Vector2 gridSquare = F.RoundLocationToGrid(parameters.dead.transform.position);
+                int squareindex = playstyle.locations.FindIndex(l => l.x == gridSquare.x && l.y == gridSquare.y);
+                if (squareindex != -1)
+                    playstyle.locations[squareindex].deaths++;
+                else
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 1, 0, 0, 0));
+            }
+            if (save) Save();
+        }
+        public void AddDeath(bool save, UCWarfare.SuicideEventArgs parameters)
         {
             deaths++;
             if (parameters.item != 0)

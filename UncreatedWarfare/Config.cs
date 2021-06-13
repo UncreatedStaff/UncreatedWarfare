@@ -115,7 +115,7 @@ namespace Uncreated.Warfare
             this.UseAutomaticLevelSensing = true;
             this.UseUI = true;
             this.UseChat = false;
-            this.UIID = 10001;
+            this.UIID = 32366;
             this.FlagUIIdFirst = 32351;
             this.charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             this.EnablePlayerCount = true;
