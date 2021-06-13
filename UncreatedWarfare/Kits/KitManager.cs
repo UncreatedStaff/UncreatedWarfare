@@ -11,8 +11,13 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits
 {
+
+    public delegate void KitChangedHandler(UnturnedPlayer player, Kit kit);
+
     public class KitManager : JSONSaver<Kit>
     {
+        public static event KitChangedHandler OnKitChanged;
+
         public KitManager() : base(Data.KitsStorage + "kits.json") { }
         protected override string LoadDefaults() 
         {
@@ -198,6 +203,8 @@ namespace Uncreated.Warfare.Kits
             }
 
             PlayerManager.UpdateData(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
+
+            OnKitChanged?.Invoke(player, kit);
         }
         public static void ResupplyKit(UnturnedPlayer player, Kit kit)
         {
@@ -366,7 +373,7 @@ namespace Uncreated.Warfare.Kits
             PremiumCost = 0;
             ShouldClearInventory = true;
             AllowedUsers = new List<ulong>();
-            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, name } };
+            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{DisplayName}</color>\n<color=#{{2}}>{{1}}</color>" } };
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public enum EClothingType

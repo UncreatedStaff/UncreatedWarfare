@@ -466,7 +466,7 @@ namespace Uncreated.Warfare.Stats
             deaths++;
             if (parameters.dead != default)
             {
-                string kitname = LogoutSaver.GetKit(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+                string kitname = PlayerManager.GetKitName(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
