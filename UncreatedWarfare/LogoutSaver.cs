@@ -13,10 +13,7 @@ namespace Uncreated.Warfare
 {
     public class LogoutSaver : JSONSaver<LogoutSave>
     {
-        public LogoutSaver() : base(Data.KitsStorage + "playersaves.json")
-        {
-            
-        }
+        public LogoutSaver() : base(Data.KitsStorage + "playersaves.json") { }
         protected override string LoadDefaults() => "[]";
         private static LogoutSave AddSave(LogoutSave newSave) => 
             AddObjectToSave(newSave);

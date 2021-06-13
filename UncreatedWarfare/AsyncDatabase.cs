@@ -105,7 +105,7 @@ namespace Uncreated.SQL
         /// <param name="amount">Amount of kills to add, default 1.</param>
         public void AddKill(ulong Steam64, byte Team, int amount = 1)
         {
-            DbCaller.D_ModifyPlayerStat caller = _dbCaller.AddKill;
+            DbCaller.D_AddPlayerStat caller = _dbCaller.AddKill;
             caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
         /// <summary>
@@ -116,7 +116,7 @@ namespace Uncreated.SQL
         /// <param name="amount">Amount of deaths to add, default 1.</param>
         public void AddDeath(ulong Steam64, byte Team, int amount = 1)
         {
-            DbCaller.D_ModifyPlayerStat caller = _dbCaller.AddDeath;
+            DbCaller.D_AddPlayerStat caller = _dbCaller.AddDeath;
             caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
         /// <summary>
@@ -127,8 +127,147 @@ namespace Uncreated.SQL
         /// <param name="amount">Amount of teamkills to add, default 1.</param>
         public void AddTeamkill(ulong Steam64, byte Team, int amount = 1)
         {
-            DbCaller.D_ModifyPlayerStat caller = _dbCaller.AddTeamkill;
+            DbCaller.D_AddPlayerStat caller = _dbCaller.AddTeamkill;
             caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        /// <summary>
+        /// Add xp to the "levels" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add xp to.</param>
+        /// <param name="Team">Team to add the xp to.</param>
+        /// <param name="amount">Amount of xp to add, or negative for subtraction.</param>
+        public void AddXP(ulong Steam64, byte Team, int amount, DbCaller.D_Difference amtToHigh = null)
+        {
+            if(amount < 0)
+            {
+                DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractXP;
+                caller.BeginInvoke(Steam64, Team, -amount, amtToHigh, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            } else
+            {
+                DbCaller.D_AddPlayerStat caller = _dbCaller.AddXP;
+                caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            }
+        }
+        /// <summary>
+        /// Add xp to the "levels" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add xp to.</param>
+        /// <param name="Team">Team to add the xp to.</param>
+        /// <param name="amount">Amount of xp to add, or negative for subtraction.</param>
+        /// <returns>The difference between the amount and the original value if the amount was higher than the value. (or 0 if it was successful)</returns>
+        public long AddXPSync(ulong Steam64, byte Team, int amount = 1)
+        {
+            if (amount < 0)
+            {
+                DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractXP;
+                long difference = 0;
+                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                ar.AsyncWaitHandle.WaitOne();
+                return difference;
+            }
+            else
+            {
+                DbCaller.D_AddPlayerStat caller = _dbCaller.AddXP;
+                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                ar.AsyncWaitHandle.WaitOne();
+                return 0;
+            }
+        }
+        /// <summary>
+        /// Add officer points to the "levels" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add xp to.</param>
+        /// <param name="Team">Team to add the xp to.</param>
+        /// <param name="amount">Amount of officer points to add, or negative for subtraction.</param>
+        public void AddOfficerPoints(ulong Steam64, byte Team, int amount, DbCaller.D_Difference amtToHigh = null)
+        {
+            if (amount < 0)
+            {
+                DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractOfficerPoints;
+                caller.BeginInvoke(Steam64, Team, -amount, amtToHigh, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            }
+            else
+            {
+                DbCaller.D_AddPlayerStat caller = _dbCaller.AddOfficerPoints;
+                caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            }
+        }
+        /// <summary>
+        /// Add officer points to the "levels" database.
+        /// </summary>
+        /// <param name="Steam64">Player's Steam64 ID to add xp to.</param>
+        /// <param name="Team">Team to add the xp to.</param>
+        /// <param name="amount">Amount of officer points to add, or negative for subtraction.</param>
+        /// <returns>The difference between the amount and the original value if the amount was higher than the value. (or 0 if it was successful)</returns>
+        public long AddOfficerPointsSync(ulong Steam64, byte Team, int amount = 1)
+        {
+            if (amount < 0)
+            {
+                DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractOfficerPoints;
+                long difference = 0;
+                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                ar.AsyncWaitHandle.WaitOne();
+                return difference;
+            }
+            else
+            {
+                DbCaller.D_AddPlayerStat caller = _dbCaller.AddOfficerPoints;
+                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                ar.AsyncWaitHandle.WaitOne();
+                return 0;
+            }
+        }
+        public void GetXP(ulong Steam64, byte Team, DbCaller.D_Uint32BalanceReceived callback)
+        {
+            DbCaller.D_GetUInt32Balance caller = _dbCaller.GetXP;
+            caller.BeginInvoke(Steam64, Team, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        public void CustomSqlQuery(string command, DbCaller.D_ReaderAction readerLoopAction, AsyncCallback callback, params object[] parameters)
+        {
+            DbCaller.D_CustomReader caller = _dbCaller.CustomReaderCall;
+            caller.BeginInvoke(command, readerLoopAction, parameters, callback ?? AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        public void CustomSqlNonQuery(string command, params object[] parameters)
+        {
+            DbCaller.D_CustomWriter caller = _dbCaller.CustomNonQueryCall;
+            caller.BeginInvoke(command, parameters, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        public void CustomSqlQuerySync(string command, DbCaller.D_ReaderAction readerLoopAction, params object[] parameters)
+        {
+            DbCaller.D_CustomReader caller = _dbCaller.CustomReaderCall;
+            IAsyncResult ar = caller.BeginInvoke(command, readerLoopAction, parameters, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            ar.AsyncWaitHandle.WaitOne();
+        }
+        public void CustomSqlNonQuerySync(string command, params object[] parameters)
+        {
+            DbCaller.D_CustomWriter caller = _dbCaller.CustomNonQueryCall;
+            IAsyncResult ar = caller.BeginInvoke(command, parameters, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            ar.AsyncWaitHandle.WaitOne();
+        }
+        public void GetOfficerPoints(ulong Steam64, byte Team, DbCaller.D_Uint32BalanceReceived callback)
+        {
+            DbCaller.D_GetUInt32Balance caller = _dbCaller.GetOfficerPoints;
+            caller.BeginInvoke(Steam64, Team, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+        }
+        public uint GetXPSync(ulong Steam64, byte Team)
+        {
+            DbCaller.D_GetUInt32Balance caller = _dbCaller.GetXP;
+            uint xp = 0;
+            IAsyncResult ar = caller.BeginInvoke(Steam64, Team, 
+                (balance, success) => { if (success) xp = balance; }, 
+                AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            ar.AsyncWaitHandle.WaitOne();
+            return xp;
+        }
+        public uint GetOfficerPointsSync(ulong Steam64, byte Team)
+        {
+            DbCaller.D_GetUInt32Balance caller = _dbCaller.GetOfficerPoints;
+            uint op = 0;
+            IAsyncResult ar = caller.BeginInvoke(Steam64, Team,
+                (balance, success) => { if (success) op = balance; },
+                AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            ar.AsyncWaitHandle.WaitOne();
+            return op;
         }
         public void GetUsernameAsync(ulong ID, DbCaller.D_UsernameReceived callback)
         {
@@ -182,8 +321,16 @@ namespace Uncreated.SQL
         internal delegate void D_UpdateUsernameAsync(ulong Steam64, FPlayerName player);
         internal delegate void D_DatabaseQuery<T>(T Data, out MySqlResponse Output) where T : SQLCallStructure;
         internal delegate void D_GetUsername(ulong Steam64, D_UsernameReceived callback);
-        internal delegate void D_ModifyPlayerStat(ulong Steam64, byte Team, int amount);
+        internal delegate void D_GetUInt32Balance(ulong Steam64, byte Team, D_Uint32BalanceReceived callback);
+        internal delegate void D_AddPlayerStat(ulong Steam64, byte Team, int amount);
+        internal delegate void D_SubtractPlayerStat(ulong Steam64, byte Team, int amount, D_Difference onUnderZero);
+        internal delegate void D_CustomReader(string command, D_ReaderAction readerLoop, object[] parameters);
+        internal delegate void D_CustomWriter(string command, object[] parameters);
+
         public delegate void D_UsernameReceived(FPlayerName usernames, bool success);
+        public delegate void D_Uint32BalanceReceived(uint balance, bool success);
+        public delegate void D_Difference(long difference);
+        public delegate void D_ReaderAction(MySqlDataReader reader);
 
         private readonly Dictionary<EComparisonType, string> OperatorTranslations = new Dictionary<EComparisonType, string>
         {
@@ -203,22 +350,7 @@ namespace Uncreated.SQL
         };
         internal void GetUsername(ulong Steam64, D_UsernameReceived callback)
         {
-            SQLSelectCallStructure s = new SQLSelectCallStructure(_manager)
-            {
-                tableName = GetTableName("usernames"),
-                selectAll = false,
-                Columns = new Dictionary<string, Type>
-                {
-                    { GetColumnName("usernames", "PlayerName"), typeof(string) },
-                    { GetColumnName("usernames", "CharacterName"), typeof(string) },
-                    { GetColumnName("usernames", "NickName"), typeof(string) },
-                },
-                comparisons = new EComparisonType[] { EComparisonType.EQUALS },
-                conditions = new object[] { Steam64 },
-                ConditionVariables = new string[] { GetColumnName("usernames", "Steam64") },
-                limit = 1
-            };
-            SelectDataAsync(s, (ar) =>
+            SelectData(SQLSelectCallStructure.GetUsername(_manager, Steam64), (ar) =>
             {
                 MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
                 if(vagueResponse is SelectResponse response)
@@ -249,22 +381,7 @@ namespace Uncreated.SQL
         }
         internal void UpdateUsername(ulong Steam64, FPlayerName player)
         {
-            SQLSelectCallStructure s = new SQLSelectCallStructure(_manager)
-            {
-                tableName = GetTableName("usernames"),
-                selectAll = false,
-                Columns = new Dictionary<string, Type>
-                {
-                    { GetColumnName("usernames", "PlayerName"), typeof(string) },
-                    { GetColumnName("usernames", "CharacterName"), typeof(string) },
-                    { GetColumnName("usernames", "NickName"), typeof(string) },
-                },
-                comparisons = new EComparisonType[] { EComparisonType.EQUALS },
-                conditions = new object[] { Steam64 },
-                ConditionVariables = new string[] { GetColumnName("usernames", "Steam64") },
-                limit = 1
-            };
-            SelectDataAsync(s, new AsyncCallback((ar) =>
+            SelectData(SQLSelectCallStructure.GetUsername(_manager, Steam64), new AsyncCallback((ar) =>
             {
                 MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
                 if(vagueResponse is SelectResponse response)
@@ -336,153 +453,123 @@ namespace Uncreated.SQL
                 }
             }));
         }
-        internal void GetOfficerPoints(ulong Steam64, byte Team, D_UsernameReceived callback)
+        internal void GetOfficerPoints(ulong Steam64, byte Team, D_Uint32BalanceReceived callback)
         {
-            SQLSelectCallStructure s = new SQLSelectCallStructure(_manager)
-            {
-                tableName = GetTableName("levels"),
-                selectAll = false,
-                Columns = new Dictionary<string, Type>
-                {
-                    { GetColumnName("levels", "OfficerPoints"), typeof(uint) }
-                },
-                comparisons = new EComparisonType[] { EComparisonType.EQUALS, EComparisonType.EQUALS },
-                conditions = new object[] { Steam64, Team },
-                ConditionVariables = new string[] { GetColumnName("levels", "Steam64"), GetColumnName("levels", "Team") },
-                limit = 1
-            };
-            SelectDataAsync(s, (ar) =>
+            SelectData(SQLSelectCallStructure.S64TeamCompare(_manager, "levels", "OfficerPoints", Steam64, Team, typeof(uint)), (ar) =>
             {
                 MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
                 if (vagueResponse is SelectResponse response)
                 {
                     if (response != null && response.executionstatus == MySqlResponse.EExecutionStatus.SUCCESS)
                     {
-                        callback.Invoke(new FPlayerName()
-                        {
-                            Steam64 = Steam64,
-                            CharacterName = response.GetColumn<string>(GetColumnName("usernames", "CharacterName")).GetValue(0),
-                            PlayerName = response.GetColumn<string>(GetColumnName("usernames", "PlayerName")).GetValue(0),
-                            NickName = response.GetColumn<string>(GetColumnName("usernames", "NickName")).GetValue(0)
-                        }, true);
+                        callback.Invoke(response.GetColumn<uint>(GetColumnName("levels", "OfficerPoints")).GetValue(0), true);
                     }
                     else
                     {
-                        string id = Steam64.ToString();
-                        callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
+                        callback.Invoke(0, false);
                     }
                 }
                 else
                 {
-                    F.LogError("Couldn't get username from MySql Database. Cast error.\n\"" + vagueResponse.command + "\"");
+                    F.LogError("Couldn't get Officer Points balance from MySql Database. Cast error.\n\"" + vagueResponse.command + "\"");
                     string id = Steam64.ToString();
-                    callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
+                    callback.Invoke(0, false);
                     return;
+                }
+            });
+        }
+        internal void GetXP(ulong Steam64, byte Team, D_Uint32BalanceReceived callback)
+        {
+            SelectData(SQLSelectCallStructure.S64TeamCompare(_manager, "levels", "XP", Steam64, Team, typeof(uint)), (ar) =>
+            {
+                F.Log("Received");
+                MySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
+                if (vagueResponse is SelectResponse response)
+                {
+                    if (response != null && response.executionstatus == MySqlResponse.EExecutionStatus.SUCCESS)
+                    {
+                        callback.Invoke(response.GetColumn<uint>(GetColumnName("levels", "XP")).GetValue(0), true);
+                    }
+                    else
+                    {
+                        callback.Invoke(0, false);
+                    }
+                }
+                else
+                {
+                    F.LogError("Couldn't get XP balance from MySql Database. Cast error.\n\"" + vagueResponse.command + "\"");
+                    string id = Steam64.ToString();
+                    callback.Invoke(0, false);
+                }
+            });
+        }
+        internal void SubtractOfficerPoints(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null)
+        {
+            GetOfficerPoints(Steam64, Team, (balance, success) =>
+            {
+                if (success && balance >= amount)
+                {
+                    InsertOrUpdateAsync(
+                        SQLInsertOrUpdateStructure.SubtractFromUintS64AndTeam(_manager, "levels", Steam64, Team, "OfficerPoints", amount, new Dictionary<string, object>
+                        { { GetColumnName("levels", "XP"), 0 } }),
+                        AsyncDatabaseCallbacks.DisposeAsyncResult);
+                }
+                else if (onFailureToClamp != null)
+                {
+                    onFailureToClamp.Invoke(amount - balance);
+                }
+            });
+        }
+        internal void SubtractXP(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null)
+        {
+            GetXP(Steam64, Team, (balance, success) => 
+            {
+                if(success && balance >= amount)
+                {
+                    InsertOrUpdateAsync(
+                       SQLInsertOrUpdateStructure.SubtractFromUintS64AndTeam(_manager, "levels", Steam64, Team, "XP", amount, new Dictionary<string, object>
+                       { { GetColumnName("levels", "OfficerPoints"), 0 } }),
+                       AsyncDatabaseCallbacks.DisposeAsyncResult);
+                } else if (onFailureToClamp != null)
+                {
+                    onFailureToClamp.Invoke(amount - balance);
                 }
             });
         }
         internal void AddOfficerPoints(ulong Steam64, byte Team, int amount = 1)
         {
-            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
-            {
-                tableName = GetTableName("levels"),
-                NewValues = new Dictionary<string, object>
-                {
-                    { GetColumnName("levels", "Steam64"), Steam64 },
-                    { GetColumnName("levels", "Team"), Team },
-                    { GetColumnName("levels", "OfficerPoints"), amount },
-                    { GetColumnName("levels", "XP"), 0 }
-                },
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                {
-                    { GetColumnName("levels", "OfficerPoints"), EUpdateOperation.ADD }
-                },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+            InsertOrUpdateAsync(
+                SQLInsertOrUpdateStructure.AddToUintS64AndTeam(_manager, "levels", Steam64, Team, "OfficerPoints", amount, new Dictionary<string, object>
+                { { GetColumnName("levels", "XP"), 0 } }),
+                AsyncDatabaseCallbacks.DisposeAsyncResult);
         }
         internal void AddXP(ulong Steam64, byte Team, int amount = 1)
         {
-            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
-            {
-                tableName = GetTableName("levels"),
-                NewValues = new Dictionary<string, object>
-                {
-                    { GetColumnName("levels", "Steam64"), Steam64 },
-                    { GetColumnName("levels", "Team"), Team },
-                    { GetColumnName("levels", "OfficerPoints"), 0 },
-                    { GetColumnName("levels", "XP"), amount }
-                },
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                {
-                    { GetColumnName("levels", "OfficerPoints"), EUpdateOperation.ADD }
-                },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+            InsertOrUpdateAsync(
+                SQLInsertOrUpdateStructure.AddToUintS64AndTeam(_manager, "levels", Steam64, Team, "XP", amount, new Dictionary<string, object>
+                { { GetColumnName("levels", "OfficerPoints"), 0 } }),
+                AsyncDatabaseCallbacks.DisposeAsyncResult);
         }
         internal void AddKill(ulong Steam64, byte Team, int amount = 1)
         {
-            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
-            {
-                tableName = GetTableName("playerstats"),
-                NewValues = new Dictionary<string, object>
-                {
-                    { GetColumnName("playerstats", "Steam64"), Steam64 },
-                    { GetColumnName("playerstats", "Team"), Team },
-                    { GetColumnName("playerstats", "Kills"), amount },
-                    { GetColumnName("playerstats", "Deaths"), 0 },
-                    { GetColumnName("playerstats", "Teamkills"), 0 }
-                },
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                {
-                    { GetColumnName("playerstats", "Kills"), EUpdateOperation.ADD }
-                },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+            InsertOrUpdateAsync(
+                SQLInsertOrUpdateStructure.AddToUintS64AndTeam(_manager, "playerstats", Steam64, Team, "Kills", amount, new Dictionary<string, object> 
+                { { GetColumnName("playerstats", "Deaths"), 0 }, { GetColumnName("playerstats", "Teamkills"), 0 } }), 
+                AsyncDatabaseCallbacks.DisposeAsyncResult);
         }
         internal void AddDeath(ulong Steam64, byte Team, int amount = 1)
         {
-            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
-            {
-                tableName = GetTableName("playerstats"),
-                NewValues = new Dictionary<string, object>
-                {
-                    { GetColumnName("playerstats", "Steam64"), Steam64 },
-                    { GetColumnName("playerstats", "Team"), Team },
-                    { GetColumnName("playerstats", "Kills"), 0 },
-                    { GetColumnName("playerstats", "Deaths"), amount },
-                    { GetColumnName("playerstats", "Teamkills"), 0 }
-                },
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                {
-                    { GetColumnName("playerstats", "Deaths"), EUpdateOperation.ADD }
-                },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+            InsertOrUpdateAsync(
+                SQLInsertOrUpdateStructure.AddToUintS64AndTeam(_manager, "playerstats", Steam64, Team, "Deaths", amount, new Dictionary<string, object>
+                { { GetColumnName("playerstats", "Kills"), 0 }, { GetColumnName("playerstats", "Teamkills"), 0 } }),
+                AsyncDatabaseCallbacks.DisposeAsyncResult);
         }
         internal void AddTeamkill(ulong Steam64, byte Team, int amount = 1)
         {
-            SQLInsertOrUpdateStructure s = new SQLInsertOrUpdateStructure(_manager)
-            {
-                tableName = GetTableName("playerstats"),
-                NewValues = new Dictionary<string, object>
-                {
-                    { GetColumnName("playerstats", "Steam64"), Steam64 },
-                    { GetColumnName("playerstats", "Team"), Team },
-                    { GetColumnName("playerstats", "Kills"), 0 },
-                    { GetColumnName("playerstats", "Deaths"), 0 },
-                    { GetColumnName("playerstats", "Teamkills"), amount }
-                },
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                {
-                    { GetColumnName("playerstats", "Teamkills"), EUpdateOperation.ADD }
-                },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-            InsertOrUpdateAsync(s, AsyncDatabaseCallbacks.DisposeAsyncResult);
+            InsertOrUpdateAsync(
+                SQLInsertOrUpdateStructure.AddToUintS64AndTeam(_manager, "playerstats", Steam64, Team, "Teamkills", amount, new Dictionary<string, object>
+                { { GetColumnName("playerstats", "Kills"), 0 }, { GetColumnName("playerstats", "Deaths"), 0 } }),
+                AsyncDatabaseCallbacks.DisposeAsyncResult);
         }
         /// <summary>
         /// Gets a <see cref="MySqlResponse"/> from an IAsyncResult then disposes of it, calling WaitOne() if it is not already completed.
@@ -553,33 +640,37 @@ namespace Uncreated.SQL
         {
             if(ar.AsyncState is WaitUntilFinishedReadingDelegate dele)
             {
-                dele.EndInvoke(out SQLCallStructure Data, out AsyncCallback Function, out Type type, ar); 
-                try
-                {
-                    if (type == typeof(SQLSelectCallStructure))
-                    {
-                        D_DatabaseQuery<SQLSelectCallStructure> SelectCaller = new D_DatabaseQuery<SQLSelectCallStructure>(SelectDataAsyncCall);
-                        SelectCaller.BeginInvoke((SQLSelectCallStructure)Data, out _, Function, SelectCaller);
-                    }
-                    else if (type == typeof(SQLInsertOrUpdateStructure))
-                    {
-                        D_DatabaseQuery<SQLInsertOrUpdateStructure> InsertOnDuplicateKeyUpdateCaller = new D_DatabaseQuery<SQLInsertOrUpdateStructure>(InsertIfDuplicateUpdateAsyncCall);
-                        InsertOnDuplicateKeyUpdateCaller.BeginInvoke((SQLInsertOrUpdateStructure)Data, out _, Function, InsertOnDuplicateKeyUpdateCaller);
-                    }
-                    else
-                    {
-                        F.LogError("Type \"" + type.ToString() + "\" - Not a valid type.");
-                    }
-                }
-                catch (InvalidCastException)
-                {
-                    F.LogError("Failed to cast \"" + type.ToString() + "\" to a valid SQL Container.");
-                }
+                dele.EndInvoke(out SQLCallStructure Data, out AsyncCallback Function, out Type type, ar);
+                FinishedReading(Data, Function, type);
             } else
             {
                 F.LogError("Failed to cast \"" + ar.AsyncState.GetType().ToString() + "\" to a valid delegate containing SQL information.");
             }
             Warfare.Stats.WebCallbacks.Dispose(ar);
+        }
+        private void FinishedReading(SQLCallStructure Data, AsyncCallback Function, Type type)
+        {
+            try
+            {
+                if (type == typeof(SQLSelectCallStructure))
+                {
+                    D_DatabaseQuery<SQLSelectCallStructure> SelectCaller = new D_DatabaseQuery<SQLSelectCallStructure>(SelectDataAsyncCall);
+                    SelectCaller.BeginInvoke((SQLSelectCallStructure)Data, out _, Function, SelectCaller);
+                }
+                else if (type == typeof(SQLInsertOrUpdateStructure))
+                {
+                    D_DatabaseQuery<SQLInsertOrUpdateStructure> InsertOnDuplicateKeyUpdateCaller = new D_DatabaseQuery<SQLInsertOrUpdateStructure>(InsertIfDuplicateUpdateAsyncCall);
+                    InsertOnDuplicateKeyUpdateCaller.BeginInvoke((SQLInsertOrUpdateStructure)Data, out _, Function, InsertOnDuplicateKeyUpdateCaller);
+                }
+                else
+                {
+                    F.LogError("Type \"" + type.ToString() + "\" - Not a valid type.");
+                }
+            }
+            catch (InvalidCastException)
+            {
+                F.LogError("Failed to cast \"" + type.ToString() + "\" to a valid SQL Container.");
+            }
         }
         private void WaitUntilFinishedReading(SQLCallStructure Data, AsyncCallback Function, out SQLCallStructure DataReturn, out AsyncCallback FunctionReturn, out Type TypeReturn)
         {
@@ -644,6 +735,46 @@ namespace Uncreated.SQL
                 this.conditions = conditions;
                 this.limit = limit;
             }
+            /// <summary>
+            /// Compares a column called "Steam64" and "Team" with equals to a ulong id and byte team, limit 1.
+            /// </summary>
+            public static SQLSelectCallStructure S64TeamCompare(AsyncDatabase manager, string table, string column, ulong Steam64, byte Team, Type expectedReturn)
+            {
+                return new SQLSelectCallStructure(manager)
+                {
+                    tableName = GetTableName(table),
+                    selectAll = false,
+                    Columns = new Dictionary<string, Type>
+                    {
+                        { GetColumnName(table, column), expectedReturn }
+                    },
+                    comparisons = new EComparisonType[] { EComparisonType.EQUALS, EComparisonType.EQUALS },
+                    conditions = new object[] { Steam64, Team },
+                    ConditionVariables = new string[] { GetColumnName(table, "Steam64"), GetColumnName(table, "Team") },
+                    limit = 1
+                };
+            }
+            /// <summary>
+            /// Selects usernames with "PlayerName", "CharacterName", and "NickName", comparing only Steam64.
+            /// </summary>
+            public static SQLSelectCallStructure GetUsername(AsyncDatabase manager, ulong Steam64, string table = "usernames")
+            {
+                return new SQLSelectCallStructure(manager)
+                {
+                    tableName = GetTableName(table),
+                    selectAll = false,
+                    Columns = new Dictionary<string, Type>
+                    {
+                        { GetColumnName(table, "PlayerName"), typeof(string) },
+                        { GetColumnName(table, "CharacterName"), typeof(string) },
+                        { GetColumnName(table, "NickName"), typeof(string) },
+                    },
+                    comparisons = new EComparisonType[] { EComparisonType.EQUALS },
+                    conditions = new object[] { Steam64 },
+                    ConditionVariables = new string[] { GetColumnName(table, "Steam64") },
+                    limit = 1
+                };
+            }
         }
         public class SQLInsertOrUpdateStructure : SQLCallStructure
         {
@@ -652,6 +783,44 @@ namespace Uncreated.SQL
             public Dictionary<string, EUpdateOperation> VariablesToUpdateIfDuplicate;
             public List<object> UpdateValuesIfValid;
             public SQLInsertOrUpdateStructure(AsyncDatabase DatabaseManager) : base(DatabaseManager) { }
+            public static SQLInsertOrUpdateStructure AddToUintS64AndTeam(AsyncDatabase manager, string table, ulong Steam64, ulong Team,
+                string variable, int amount, Dictionary<string, object> otherdefaults)
+            {
+                return new SQLInsertOrUpdateStructure(manager)
+                {
+                    tableName = GetTableName(table),
+                    NewValues = (Dictionary<string, object>)new Dictionary<string, object>
+                    {
+                        { GetColumnName(table, "Steam64"), Steam64 },
+                        { GetColumnName(table, "Team"), Team },
+                        { GetColumnName(table, variable), amount }
+                    }.Union(otherdefaults),
+                    VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                    {
+                        { GetColumnName(table, variable), EUpdateOperation.ADD }
+                    },
+                    UpdateValuesIfValid = new List<object> { amount }
+                };
+            }
+            public static SQLInsertOrUpdateStructure SubtractFromUintS64AndTeam(AsyncDatabase manager, string table, ulong Steam64, ulong Team,
+                string variable, int amount, Dictionary<string, object> otherdefaults)
+            {
+                return new SQLInsertOrUpdateStructure(manager)
+                {
+                    tableName = GetTableName(table),
+                    NewValues = (Dictionary<string, object>)new Dictionary<string, object>
+                    {
+                        { GetColumnName(table, "Steam64"), Steam64 },
+                        { GetColumnName(table, "Team"), Team },
+                        { GetColumnName(table, variable), amount }
+                    }.Union(otherdefaults),
+                    VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                    {
+                        { GetColumnName(table, variable), EUpdateOperation.SUBTRACT }
+                    },
+                    UpdateValuesIfValid = new List<object> { amount }
+                };
+            }
         }
         private void SelectDataAsyncCall(SQLSelectCallStructure Data, out MySqlResponse Output)
         {
@@ -693,6 +862,13 @@ namespace Uncreated.SQL
                 for(int i = 0; i < Data.comparisons.Length; i++)
                 {
                     Q.Parameters.AddWithValue("@" + i.ToString(), Data.conditions[i]);
+                }
+                if (UCWarfare.Config.Debug)
+                {
+                    StringBuilder sb = new StringBuilder(Q.CommandText + " - ");
+                    for (int i = 0; i < Q.Parameters.Count; i++)
+                        sb.Append(Q.Parameters[i].ParameterName + " : " + Q.Parameters[i].Value);
+                    F.Log(sb.ToString(), ConsoleColor.Green);
                 }
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
@@ -829,14 +1005,50 @@ namespace Uncreated.SQL
         /// <param name="callback">Cast AsyncState to <see cref="D_DatabaseQuery{SQLSelectCallStructure}">DatabaseQuery&lt;SQLInsertOrUpdateStructure&gt;</see></param>
         internal void InsertOrUpdateAsync(SQLInsertOrUpdateStructure Data, AsyncCallback callback)
         {
-            WaitUntilFinishedReadingDelegate caller = new WaitUntilFinishedReadingDelegate(WaitUntilFinishedReading);
-            caller.BeginInvoke(Data, callback, out _, out _, out _, FinishedReading, caller);
+            WaitUntilFinishedReading(Data, callback, out _, out _, out _);
+            FinishedReading(Data, callback, typeof(SQLInsertOrUpdateStructure));
         }
         /// <param name="callback">Cast AsyncState to <see cref="D_DatabaseQuery{SQLSelectCallStructure}">DatabaseQuery&lt;SQLSelectCallStructure&gt;</see></param>
-        internal void SelectDataAsync(SQLSelectCallStructure Data, AsyncCallback callback)
+        internal void SelectData(SQLSelectCallStructure Data, AsyncCallback callback) 
         {
-            WaitUntilFinishedReadingDelegate caller = new WaitUntilFinishedReadingDelegate(WaitUntilFinishedReading);
-            caller.BeginInvoke(Data, callback, out _, out _, out _, FinishedReading, caller);
+            WaitUntilFinishedReading(Data, callback, out _, out _, out _);
+            FinishedReading(Data, callback, typeof(SQLSelectCallStructure));
+        }
+        internal void CustomReaderCall(string command, D_ReaderAction readerLoop, params object[] parameters)
+        {
+            using (MySqlCommand Q = new MySqlCommand(command, _manager.SQL))
+            {
+                if(parameters != default)
+                    for (int i = 0; i < parameters.Length; i++)
+                        Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                using (MySqlDataReader R = Q.ExecuteReader())
+                {
+                    while (R.Read())
+                    {
+                        readerLoop.Invoke(R);
+                    }
+                    R.Close();
+                    R.Dispose();
+                    Q.Dispose();
+                }
+            }
+        }
+        internal void CustomNonQueryCall(string command, params object[] parameters)
+        {
+            using (MySqlCommand Q = new MySqlCommand(command, _manager.SQL))
+            {
+                if (parameters != default)
+                    for (int i = 0; i < parameters.Length; i++)
+                        Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                try
+                {
+                    Q.ExecuteNonQuery();
+                }
+                finally
+                {
+                    Q.Dispose();
+                }
+            }
         }
     }
     public abstract class MySqlResponse
