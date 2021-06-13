@@ -292,6 +292,15 @@ namespace Uncreated.Warfare.Stats
             this.xpgained = 0;
             this.creditsgained = 0;
         }
+        public void KillPlayer()
+        {
+            kills++;
+            if (player != default && Data.FlagManager.FlagRotation.Exists(x => x.ZoneData.IsInside(player.transform.position))) killsonpoint++;
+        }
+        public void AddXP()
+        {
+            xpgained++;
+        }
         public void AddToTimeDeployed(float amount) => timeDeployedCounter += amount;
         public void AddToTimeOnPoint(float amount) => timeOnPointCounter += amount;
         public void AddToTimeDriving(float amount) => timeDrivingCounter += amount;
