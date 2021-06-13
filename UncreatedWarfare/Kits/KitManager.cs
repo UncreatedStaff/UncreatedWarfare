@@ -258,6 +258,23 @@ namespace Uncreated.Warfare.Kits
                 return kit.AllowedUsers.Contains(playerID);
             else return false;
         }
+        public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DefaultLanguage)
+        {
+            if (KitExists(kitname, out Kit kit))
+            {
+                UpdateObjectsWhere(k => k.Name == kit.Name, k =>
+                {
+                    F.Log(k.SignName);
+                    k.SignName = SignName;
+                    k.SignTexts.Remove(language);
+                    k.SignTexts.Add(language, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>");
+                    F.Log(k.SignName);
+                    if (RequestSigns.SignExists(k.Name, out RequestSign sign)) sign.InvokeUpdate();
+                });
+                return true;
+            }
+            else return false;
+        }
         public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => GetObjectsWhere(k => k.AllowedUsers.Contains(playerID));
         public static void GiveAccess(ulong playerID, string kitName)
         {
@@ -329,6 +346,8 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public EClass Class;
         [JsonSettable]
+        public string SignName;
+        [JsonSettable]
         public EBranch Branch;
         [JsonSettable]
         public ulong Team;
@@ -364,9 +383,10 @@ namespace Uncreated.Warfare.Kits
             TicketCost = 0;
             IsPremium = false;
             PremiumCost = 0;
+            SignName = DisplayName;
             ShouldClearInventory = true;
             AllowedUsers = new List<ulong>();
-            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, name } };
+            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public enum EClothingType

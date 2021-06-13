@@ -432,9 +432,8 @@ namespace Uncreated
             if(ObjectExists(selector, out T selected))
             {
                 foundObject = true;
-                SetProperty(selected, property, value, out bool success, out parsed, out found, out allowedToChange);
-                setSuccessfully = success;
-                return success;
+                SetProperty(selected, property, value, out setSuccessfully, out parsed, out found, out allowedToChange);
+                return setSuccessfully;
             } else
             {
                 foundObject = false;

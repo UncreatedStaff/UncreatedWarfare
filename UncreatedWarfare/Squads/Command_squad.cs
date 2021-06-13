@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Squads
                 else
                     player.Message("squad_e_insquad");
             }
-            if (command.Length >= 1 && command[0].ToLower() == "join")
+            else if (command.Length >= 1 && command[0].ToLower() == "join")
             {
                 if (command.Length < 2)
                 {
@@ -84,7 +84,7 @@ namespace Uncreated.Warfare.Squads
                 else
                     player.Message("A squad called '{0}' could not be found.", name);
             }
-            if (command.Length >= 1 && command[0].ToLower() == "promote")
+            else if (command.Length >= 1 && command[0].ToLower() == "promote")
             {
                 if (command.Length < 2)
                 {
@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Squads
                             SquadManager.PromoteToLeader(ref squad, target);
                         }
                         else
-                            player.Message("squad_e_notinsquad", name);
+                            player.Message("squad_e_playernotinsquad", name);
                     }
                     else
                         player.Message("squad_e_playernotfound", name);
@@ -109,7 +109,7 @@ namespace Uncreated.Warfare.Squads
                 else
                     player.Message("squad_e_notsquadleader", name);
             }
-            if (command.Length == 1)
+            else if (command.Length == 1)
             {
                 if (command[0].ToLower() == "leave")
                 {

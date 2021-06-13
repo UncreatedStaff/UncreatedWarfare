@@ -80,19 +80,44 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
                 }
-
-
                 return;
             }
+            if (command[0].ToLower() == "set" || command[0].ToLower() == "s")
+            {
+                if (command[1] == "sign")
+                {
+                    if (command.Length > 4)
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 4; i < command.Length; i++)
+                        {
+                            if (i > 4) sb.Append(' ');
+                            sb.Append(command[i]);
+                        }
+                        string text = sb.ToString();
+                        F.Log(text);
+                        if (KitManager.UpdateText(command[2], text, command[3]))
+                            player.Message("kit_setprop", "sign text", command[2], command[3] + " : " + text);
+                        else
+                            player.Message("kit_e_noexist", command[2]);
+                        return;
+                    }
+                    else
+                    {
+                        player.Message("kit_e_set_sign_syntax", command[2]);
+                        return;
+                    }
+                }
+            }
             // change kit property
-            if (command.Length == 4)
+            else if (command.Length == 4)
             {
                 op = command[0];
                 property = command[1];
                 kitName = command[2];
                 newValue = command[3];
 
-                if (op.ToLower() == "set" || op.ToLower() == "s")
+                if (command[0].ToLower() == "set" || command[0].ToLower() == "s")
                 {
                     if (!KitManager.SetProperty(x => x.Name == kitName, property, newValue, out bool founditem, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange))
                     {
@@ -117,7 +142,8 @@ namespace Uncreated.Warfare.Kits
                             return;
                         }
                         return;
-                    } else
+                    }
+                    else
                     {
                         // success
                         player.Message("kit_setprop", property, kitName, newValue);
@@ -125,8 +151,7 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
                 }
-            }
-            if (command.Length == 3)
+            } else if (command.Length == 3)
             {
                 op = command[0];
                 targetPlayer = command[1];

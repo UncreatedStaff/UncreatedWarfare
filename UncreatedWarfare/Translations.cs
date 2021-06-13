@@ -116,8 +116,9 @@ namespace Uncreated.Warfare
                 { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_setprop", "<color=#a0ad8e>Set {0} for kit <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
                 { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-                { "kit_accessremoved", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
+                { "kit_accessremoved", "<color=#a0ad8e>Disallowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
                 { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
+                { "kit_e_set_sign_syntax", "<color=#ff8c69>Syntax: /kit set sign <kitname> <language> <sign text...></color>" },
                 { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'Class', 'Cost', 'IsPremium', etc.</color>" },
                 { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
                 { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>You are not allowed to change {0}.</color>" },
@@ -141,7 +142,7 @@ namespace Uncreated.Warfare
                 { "squad_e_notsquadleader", "<color=#ff8c69>You are not a squad leader!</color>" },
                 { "squad_e_locked", "<color=#a89791>That squad is locked.</color>" },
                 { "squad_e_full", "<color=#a89791>That squad is full.</color>" },
-                { "squad_e_notinsquad", "<color=#a89791>That player is not in your squad.</color>" },
+                { "squad_e_playernotinsquad", "<color=#a89791>That player is not in your squad.</color>" },
                 { "squad_e_playernotfound", "<color=#a89791>Could not find player: '{0}'.</color>" },
                 { "squad_player_joined", "<color=#b9bdb3><color=#8df0c5>{0}</color> joined your squad.</color>" },
                 { "squad_player_left", "<color=#b9bdb3><color=#8df0c5>{0}</color> left your squad.</color>" },
@@ -424,11 +425,11 @@ namespace Uncreated.Warfare
         };
         public static List<FlagData> DefaultExtraZones = new List<FlagData>
         {
-            new FlagData(-69, "Lobby", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false, 0),
-            new FlagData(1, "USMain", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, 0),
-            new FlagData(101, "USAMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, 0),
-            new FlagData(2, "RUMain", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, 0),
-            new FlagData(102, "RUAMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, 0),
+            new FlagData(-69, "lobby", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false, 0),
+            new FlagData(1, "T1Main", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, 0),
+            new FlagData(101, "T1AMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, 0),
+            new FlagData(2, "T2Main", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, 0),
+            new FlagData(102, "T2AMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, 0),
         };
         public static List<Point3D> DefaultExtraPoints = new List<Point3D>
         {
