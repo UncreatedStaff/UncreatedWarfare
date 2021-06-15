@@ -134,13 +134,13 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "goto")
                 {
-                    if(command.Length > 1)
+                    if (command.Length > 1)
                     {
                         string arg = command[1].ToLower();
                         if (command.Length > 2)
                         {
                             StringBuilder sb = new StringBuilder();
-                            for(int i = 1; i < command.Length; i++)
+                            for (int i = 1; i < command.Length; i++)
                             {
                                 if (i != 1) sb.Append(' ');
                                 sb.Append(command[i]);
@@ -154,11 +154,11 @@ namespace Uncreated.Warfare.Commands
                             flag = Data.FlagManager.ObjectiveTeam2;
                         else
                             flag = Data.FlagManager.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, out int o) && f.ID == o));
-                        if(flag == default)
+                        if (flag == default)
                         {
                             Dictionary<int, Zone> eZones = Data.ExtraZones;
                             KeyValuePair<int, Zone> zone = eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, out int o) && f.Key == o));
-                            if(zone.Equals(default(KeyValuePair<int, Zone>)))
+                            if (zone.Equals(default(KeyValuePair<int, Zone>)))
                             {
                                 player.SendChat("No zone or flag found from search terms: \"" + arg + "\"", UCWarfare.GetColor("default"));
                                 return;
@@ -190,6 +190,22 @@ namespace Uncreated.Warfare.Commands
                 {
                     UCWarfare.I.CoroutineTiming = !UCWarfare.I.CoroutineTiming;
                     player.SendChat((UCWarfare.I.CoroutineTiming ? "Enabled" : "Disabled") + " coroutine timing.", UCWarfare.GetColor("default"));
+                }
+                else if (command[0] == "usernames")
+                {
+                    List<string> usernames = new List<string>();
+                    Data.DatabaseManager.CustomSqlQuery("SELECT `PlayerName` FROM Usernames WHERE Steam64 = @0 LIMIT 10;", 
+                        (R)  =>
+                        {
+                            usernames.Add(R.GetString(0)); 
+                        },
+                        (ar) =>
+                        {
+                            F.Log(string.Join(", ", usernames)); 
+                            ar.Dispose(); 
+                        },
+                    player.channel.owner.playerID.steamID.m_SteamID);
+
                 } else if (command[0] == "zonearea")
                 {
                     const string zonesyntax = "Syntax: /test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false>";
@@ -274,21 +290,6 @@ namespace Uncreated.Warfare.Commands
                 else if (command[0] == "rotation")
                 {
                     Data.FlagManager.PrintFlagRotation();
-                }
-                else if (command[0] == "wipe")
-                {
-                    if(command.Length == 2)
-                    {
-                        if(command[1] == "v" || command[1] == "vehicles")
-                        {
-                            VehicleManager.askVehicleDestroyAll();
-                            player.SendChat("Destroyed all vehicles.", UCWarfare.GetColor("default"));
-                        } else if (command[1] == "i" || command[1] == "items")
-                        {
-                            ItemManager.askClearAllItems();
-                            player.SendChat("Destroyed all items.", UCWarfare.GetColor("default"));
-                        }
-                    }
                 }
                 else if (command[0] == "lastshot")
                 {

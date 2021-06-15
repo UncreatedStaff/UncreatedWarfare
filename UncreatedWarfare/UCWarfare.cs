@@ -100,15 +100,18 @@ namespace Uncreated.Warfare
                 Data.WebInterface.SendAssetUpdate();
             }
             Data.TeamManager = new TeamManager();
-            F.Log("Wiping barricades...", ConsoleColor.Magenta);
-            BarricadeManager.askClearAllBarricades();
-            StructureManager.askClearAllStructures();
-            F.Log("Placing back functional barricades...", ConsoleColor.Magenta);
-            RequestSigns.DropAllSigns();
-            StructureSaver.DropAllStructures();
+            F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
+            ReplaceBarricadesAndStructures();
             Data.FlagManager.Load(); // starts new game
             VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+        }
+        public static void ReplaceBarricadesAndStructures()
+        {
+            BarricadeManager.askClearAllBarricades();
+            StructureManager.askClearAllStructures();
+            RequestSigns.DropAllSigns();
+            StructureSaver.DropAllStructures();
         }
         internal void OnFlagManagerReady(object sender, EventArgs e)
         {
