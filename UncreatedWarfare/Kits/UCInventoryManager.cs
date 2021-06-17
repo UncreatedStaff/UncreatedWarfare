@@ -47,53 +47,54 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
-        public static void ClearInventory(UnturnedPlayer player)
+        public static void ClearInventory(UnturnedPlayer player) => ClearInventory(player.Player.channel.owner);
+        public static void ClearInventory(SteamPlayer player)
         {
-            player.Player.equipment.dequip();
+            player.player.equipment.dequip();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
                 if (page == PlayerInventory.AREA)
                     continue;
 
-                var count = player.Player.inventory.getItemCount(page);
+                var count = player.player.inventory.getItemCount(page);
 
                 for (byte index = 0; index < count; index++)
                 {
-                    player.Player.inventory.removeItem(page, 0);
+                    player.player.inventory.removeItem(page, 0);
                 }
             }
 
             System.Action removeUnequipped = () => {
-                for (byte i = 0; i < player.Player.inventory.getItemCount(2); i++)
+                for (byte i = 0; i < player.player.inventory.getItemCount(2); i++)
                 {
-                    player.Player.inventory.removeItem(2, 0);
+                    player.player.inventory.removeItem(2, 0);
                 }
             };
 
-            player.Player.clothing.askWearBackpack(0, 0, new byte[0], true);
+            player.player.clothing.askWearBackpack(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.clothing.askWearGlasses(0, 0, new byte[0], true);
+            player.player.clothing.askWearGlasses(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.clothing.askWearHat(0, 0, new byte[0], true);
+            player.player.clothing.askWearHat(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.clothing.askWearPants(0, 0, new byte[0], true);
+            player.player.clothing.askWearPants(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.clothing.askWearMask(0, 0, new byte[0], true);
+            player.player.clothing.askWearMask(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.clothing.askWearShirt(0, 0, new byte[0], true);
+            player.player.clothing.askWearShirt(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.clothing.askWearVest(0, 0, new byte[0], true);
+            player.player.clothing.askWearVest(0, 0, new byte[0], true);
             removeUnequipped();
 
-            player.Player.equipment.ReceiveSlot(0, 0, new byte[0]);
-            player.Player.equipment.ReceiveSlot(0, 1, new byte[0]);
+            player.player.equipment.ReceiveSlot(0, 0, new byte[0]);
+            player.player.equipment.ReceiveSlot(1, 0, new byte[0]);
         }
 
         public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)

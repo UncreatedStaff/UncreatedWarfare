@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Squads
         public string Help => "Creates or disbands a squad";
         public string Syntax => "/squad";
         public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "squad" };
+        public List<string> Permissions => new List<string>() { "uc.squad" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);

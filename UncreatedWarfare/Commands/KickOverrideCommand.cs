@@ -4,6 +4,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using Uncreated.Networking;
 using Uncreated.Players;
 
 namespace Uncreated.Warfare.Commands
@@ -13,7 +14,7 @@ namespace Uncreated.Warfare.Commands
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "kick";
         public string Help => "Kick players who are misbehaving.";
-        public string Syntax => "/kick <player> [reason]";
+        public string Syntax => "/kick <player> <reason>";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string> { "uc.kick" };
         public void Execute(IRocketPlayer caller, string[] command)
@@ -42,7 +43,7 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName names = F.GetPlayerOriginalNames(player);
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
-                                    Data.WebInterface?.LogKick(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, names.PlayerName, "Console", F.GetTeamByte(player), reason);
+                                    Server.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
                                 F.Log(F.Translate("kick_KickedPlayerFromConsole_Console", 0, names.PlayerName, player.playerID.steamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
                                 F.Broadcast("kick_KickedPlayerFromConsole_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.PlayerName);
                             }
@@ -74,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
-                                    Data.WebInterface?.LogKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, names.PlayerName, callerNames.PlayerName, F.GetTeamByte(steamplayer), reason);
+                                    Server.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 F.LogWarning(F.Translate("kick_KickedPlayer_Console", 0, 
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_KickedPlayer_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.CharacterName, callerNames.CharacterName);
@@ -84,7 +85,6 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             }
-
         }
     }
 }

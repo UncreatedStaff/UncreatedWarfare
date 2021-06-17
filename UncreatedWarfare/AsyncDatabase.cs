@@ -20,7 +20,7 @@ namespace Uncreated.SQL
     public class AsyncDatabase : IDisposable
     {
         public MySqlConnection SQL { get; protected set; }
-        private DbCaller _dbCaller;
+        private readonly DbCaller _dbCaller;
         /// <summary>
         /// Does not open the connection, you must run <see cref="OpenAsync">OpenAsync</see> or <see cref="OpenSync">OpenSync</see>
         /// </summary>
@@ -136,12 +136,12 @@ namespace Uncreated.SQL
         /// <param name="Steam64">Player's Steam64 ID to add xp to.</param>
         /// <param name="Team">Team to add the xp to.</param>
         /// <param name="amount">Amount of xp to add, or negative for subtraction.</param>
-        public void AddXP(ulong Steam64, byte Team, int amount, DbCaller.D_Difference amtToHigh = null)
+        public void AddXP(ulong Steam64, byte Team, int amount, bool clampOnSubtract = false, DbCaller.D_Difference amtTooHigh = null)
         {
             if(amount < 0)
             {
                 DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractXP;
-                caller.BeginInvoke(Steam64, Team, -amount, amtToHigh, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                caller.BeginInvoke(Steam64, Team, -amount, amtTooHigh, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
             } else
             {
                 DbCaller.D_AddPlayerStat caller = _dbCaller.AddXP;
@@ -155,13 +155,13 @@ namespace Uncreated.SQL
         /// <param name="Team">Team to add the xp to.</param>
         /// <param name="amount">Amount of xp to add, or negative for subtraction.</param>
         /// <returns>The difference between the amount and the original value if the amount was higher than the value. (or 0 if it was successful)</returns>
-        public long AddXPSync(ulong Steam64, byte Team, int amount = 1)
+        public long AddXPSync(ulong Steam64, byte Team, int amount, bool clampOnSubtract = false)
         {
             if (amount < 0)
             {
                 DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractXP;
                 long difference = 0;
-                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
                 ar.AsyncWaitHandle.WaitOne();
                 return difference;
             }
@@ -179,12 +179,12 @@ namespace Uncreated.SQL
         /// <param name="Steam64">Player's Steam64 ID to add xp to.</param>
         /// <param name="Team">Team to add the xp to.</param>
         /// <param name="amount">Amount of officer points to add, or negative for subtraction.</param>
-        public void AddOfficerPoints(ulong Steam64, byte Team, int amount, DbCaller.D_Difference amtToHigh = null)
+        public void AddOfficerPoints(ulong Steam64, byte Team, int amount, DbCaller.D_Difference amtTooHigh = null, bool clampOnSubtract = false)
         {
             if (amount < 0)
             {
                 DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractOfficerPoints;
-                caller.BeginInvoke(Steam64, Team, -amount, amtToHigh, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                caller.BeginInvoke(Steam64, Team, -amount, amtTooHigh, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
             }
             else
             {
@@ -199,13 +199,13 @@ namespace Uncreated.SQL
         /// <param name="Team">Team to add the xp to.</param>
         /// <param name="amount">Amount of officer points to add, or negative for subtraction.</param>
         /// <returns>The difference between the amount and the original value if the amount was higher than the value. (or 0 if it was successful)</returns>
-        public long AddOfficerPointsSync(ulong Steam64, byte Team, int amount = 1)
+        public long AddOfficerPointsSync(ulong Steam64, byte Team, int amount = 1, bool clampOnSubtract = false)
         {
             if (amount < 0)
             {
                 DbCaller.D_SubtractPlayerStat caller = _dbCaller.SubtractOfficerPoints;
                 long difference = 0;
-                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
                 ar.AsyncWaitHandle.WaitOne();
                 return difference;
             }
@@ -227,10 +227,10 @@ namespace Uncreated.SQL
             DbCaller.D_CustomReader caller = _dbCaller.CustomReaderCall;
             caller.BeginInvoke(command, readerLoopAction, parameters, callback ?? AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
-        public void CustomSqlNonQuery(string command, params object[] parameters)
+        public void CustomSqlNonQuery(string command, AsyncCallback callback, params object[] parameters)
         {
             DbCaller.D_CustomWriter caller = _dbCaller.CustomNonQueryCall;
-            caller.BeginInvoke(command, parameters, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            caller.BeginInvoke(command, parameters, callback ?? AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
         public void CustomSqlQuerySync(string command, DbCaller.D_ReaderAction readerLoopAction, params object[] parameters)
         {
@@ -323,7 +323,7 @@ namespace Uncreated.SQL
         internal delegate void D_GetUsername(ulong Steam64, D_UsernameReceived callback);
         internal delegate void D_GetUInt32Balance(ulong Steam64, byte Team, D_Uint32BalanceReceived callback);
         internal delegate void D_AddPlayerStat(ulong Steam64, byte Team, int amount);
-        internal delegate void D_SubtractPlayerStat(ulong Steam64, byte Team, int amount, D_Difference onUnderZero);
+        internal delegate void D_SubtractPlayerStat(ulong Steam64, byte Team, int amount, D_Difference onUnderZero, bool clampOnSubtract);
         internal delegate void D_CustomReader(string command, D_ReaderAction readerLoop, object[] parameters);
         internal delegate void D_CustomWriter(string command, object[] parameters);
 
@@ -402,7 +402,6 @@ namespace Uncreated.SQL
                         if (oldNickName == null || oldNickName != player.NickName)
                             updateNickName = true;
                         if (!updatePlayerName && !updateNickName && !updateCharacterName) return;
-                        Data.WebInterface?.SendUpdatedUsername(Steam64, player);
                         Dictionary<string, EUpdateOperation> varsToUpdate = new Dictionary<string, EUpdateOperation>();
                         if (updatePlayerName)
                             varsToUpdate.Add(GetColumnName("usernames", "PlayerName"), EUpdateOperation.SETFROMVALUES);
@@ -503,7 +502,7 @@ namespace Uncreated.SQL
                 }
             });
         }
-        internal void SubtractOfficerPoints(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null)
+        internal void SubtractOfficerPoints(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null, bool clampOnSubtract = false)
         {
             GetOfficerPoints(Steam64, Team, (balance, success) =>
             {
@@ -516,11 +515,19 @@ namespace Uncreated.SQL
                 }
                 else if (onFailureToClamp != null)
                 {
-                    onFailureToClamp.Invoke(amount - balance);
+                    if (clampOnSubtract)
+                    {
+                        InsertOrUpdateAsync(
+                           SQLInsertOrUpdateStructure.SetUintS64AndTeam(_manager, "levels", Steam64, Team, "OfficerPoints", 0, new Dictionary<string, object>
+                           { { GetColumnName("levels", "XP"), 0 } }),
+                           AsyncDatabaseCallbacks.DisposeAsyncResult);
+                    }
+                    else
+                        onFailureToClamp.Invoke(amount - balance);
                 }
             });
         }
-        internal void SubtractXP(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null)
+        internal void SubtractXP(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null, bool clampOnSubtract = false)
         {
             GetXP(Steam64, Team, (balance, success) => 
             {
@@ -532,7 +539,14 @@ namespace Uncreated.SQL
                        AsyncDatabaseCallbacks.DisposeAsyncResult);
                 } else if (onFailureToClamp != null)
                 {
-                    onFailureToClamp.Invoke(amount - balance);
+                    if (clampOnSubtract)
+                    {
+                        InsertOrUpdateAsync(
+                           SQLInsertOrUpdateStructure.SetUintS64AndTeam(_manager, "levels", Steam64, Team, "XP", 0, new Dictionary<string, object>
+                           { { GetColumnName("levels", "OfficerPoints"), 0 } }),
+                           AsyncDatabaseCallbacks.DisposeAsyncResult);
+                    } else
+                        onFailureToClamp.Invoke(amount - balance);
                 }
             });
         }
@@ -592,7 +606,7 @@ namespace Uncreated.SQL
         {
             IAsyncResult ar = _manager.CloseAsync(null);
             ar.AsyncWaitHandle.WaitOne();
-            Warfare.Stats.WebCallbacks.Dispose(ar);
+            AsyncDatabaseCallbacks.Dispose(ar);
             _manager.SQL.Dispose();
         }
         internal void Close()
@@ -646,7 +660,7 @@ namespace Uncreated.SQL
             {
                 F.LogError("Failed to cast \"" + ar.AsyncState.GetType().ToString() + "\" to a valid delegate containing SQL information.");
             }
-            Warfare.Stats.WebCallbacks.Dispose(ar);
+            AsyncDatabaseCallbacks.Dispose(ar);
         }
         private void FinishedReading(SQLCallStructure Data, AsyncCallback Function, Type type)
         {
@@ -817,6 +831,25 @@ namespace Uncreated.SQL
                     VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
                     {
                         { GetColumnName(table, variable), EUpdateOperation.SUBTRACT }
+                    },
+                    UpdateValuesIfValid = new List<object> { amount }
+                };
+            }
+            public static SQLInsertOrUpdateStructure SetUintS64AndTeam(AsyncDatabase manager, string table, ulong Steam64, ulong Team,
+                string variable, int amount, Dictionary<string, object> otherdefaults)
+            {
+                return new SQLInsertOrUpdateStructure(manager)
+                {
+                    tableName = GetTableName(table),
+                    NewValues = (Dictionary<string, object>)new Dictionary<string, object>
+                    {
+                        { GetColumnName(table, "Steam64"), Steam64 },
+                        { GetColumnName(table, "Team"), Team },
+                        { GetColumnName(table, variable), amount }
+                    }.Union(otherdefaults),
+                    VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
+                    {
+                        { GetColumnName(table, variable), EUpdateOperation.SET }
                     },
                     UpdateValuesIfValid = new List<object> { amount }
                 };

@@ -39,13 +39,12 @@ namespace Uncreated.Warfare
         {
             Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
             Instance = this;
-
+            Data.LoadColoredConsole();
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
 
             F.Log("Patching methods...", ConsoleColor.Magenta);
             Patches.InternalPatches.DoPatching();
-
             if(LoadMySQLDataFromElsewhere)
             {
                 if (!File.Exists(Data.ElseWhereSQLPath))
@@ -98,18 +97,20 @@ namespace Uncreated.Warfare
             if (Configuration.Instance.SendAssetsOnStartup)
             {
                 F.Log("Sending assets...", ConsoleColor.Magenta);
-                Data.WebInterface.SendAssetUpdate();
             }
             Data.TeamManager = new TeamManager();
-            F.Log("Wiping barricades...", ConsoleColor.Magenta);
-            BarricadeManager.askClearAllBarricades();
-            StructureManager.askClearAllStructures();
-            F.Log("Placing back functional barricades...", ConsoleColor.Magenta);
-            RequestSigns.DropAllSigns();
-            StructureSaver.DropAllStructures();
+            F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
+            ReplaceBarricadesAndStructures();
             Data.FlagManager.Load(); // starts new game
             VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+        }
+        public static void ReplaceBarricadesAndStructures()
+        {
+            BarricadeManager.askClearAllBarricades();
+            StructureManager.askClearAllStructures();
+            RequestSigns.DropAllSigns();
+            StructureSaver.DropAllStructures();
         }
         internal void OnFlagManagerReady(object sender, EventArgs e)
         {
@@ -121,6 +122,7 @@ namespace Uncreated.Warfare
             UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
+            if(Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData += Networking.Server.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
             Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
             BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
@@ -129,7 +131,6 @@ namespace Uncreated.Warfare
             UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
             UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
             Patches.InternalPatches.OnLandmineExplode += EventFunctions.OnLandmineExploded;
-            Provider.onLoginSpawning += EventFunctions.OnCalculateSpawnDuringLogin;
             PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler += EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
@@ -146,14 +147,13 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
             UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
-            if (Data.ListenServer != null) Data.ListenServer.OnMessageReceived -= ReceivedResponeFromListenServer;
+            if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Server.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
             BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
             UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
             UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
             Patches.InternalPatches.OnLandmineExplode -= EventFunctions.OnLandmineExploded;
-            Provider.onLoginSpawning -= EventFunctions.OnCalculateSpawnDuringLogin;
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler -= EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
@@ -198,7 +198,6 @@ namespace Uncreated.Warfare
 
             IAsyncResult CloseSQLAsyncResult = Data.DatabaseManager.CloseAsync(AsyncDatabaseCallbacks.ClosedOnUnload);
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
-            Data.WebInterface?.Dispose();
             Data.FlagManager?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
@@ -215,7 +214,7 @@ namespace Uncreated.Warfare
                     CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
             }
             catch (ObjectDisposedException) { }
-            Data.ListenServer?.Dispose();
+            Networking.TCPClient.I?.Dispose();
         }
         public static Color GetColor(string key)
         {

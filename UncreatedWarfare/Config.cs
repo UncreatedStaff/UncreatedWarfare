@@ -218,15 +218,19 @@ namespace Uncreated.Warfare
         public string NJS_ServerURL;
         public string ServerName;
         public float StatUpdateFrequency;
-        public bool EnableListenServer;
+        public bool EnableTCPServer;
+        public string TCPServerIP;
+        public ushort TCPServerPort;
 
         public PlayerStatsSettings()
         {
             this.EnablePlayerList = true;
-            this.EnableListenServer = true;
+            this.EnableTCPServer = true;
             this.NJS_ServerURL = "http://localhost:8080/";
             this.ServerName = "warfare";
             this.StatUpdateFrequency = 30.0f;
+            this.TCPServerIP = "127.0.0.1";
+            this.TCPServerPort = 31902;
         }
     }
     public class DeathMesssagesSettings

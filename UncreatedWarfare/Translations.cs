@@ -15,30 +15,12 @@ namespace Uncreated.Warfare
 {
     partial class JSONMethods
     {
-        public static readonly List<CallData> DefaultNodeCalls = new List<CallData>
-        {
-            new CallData(ECall.SEND_PLAYER_LIST, "sendPlayerList"),
-            new CallData(ECall.SEND_PLAYER_JOINED, "sendPlayerJoin"),
-            new CallData(ECall.SEND_PLAYER_LEFT, "sendPlayerLeave"),
-            new CallData(ECall.GET_PLAYER_LIST, "getPlayerList"),
-            new CallData(ECall.GET_USERNAME, "getUsername"),
-            new CallData(ECall.PING_SERVER, "ping" ),
-            new CallData(ECall.SEND_PLAYER_LOCATION_DATA, "sendPlayerLocationData"),
-            new CallData(ECall.INVOKE_BAN, "invokeBan"),
-            new CallData(ECall.SEND_VEHICLE_DATA, "sendVehicleData"),
-            new CallData(ECall.SEND_ITEM_DATA, "sendItemData"),
-            new CallData(ECall.SEND_SKIN_DATA, "sendSkinData"),
-            new CallData(ECall.REPORT_VEHICLE_ERROR, "reportVehicleError"),
-            new CallData(ECall.REPORT_ITEM_ERROR, "reportItemError"),
-            new CallData(ECall.REPORT_SKIN_ERROR, "reportSkinError"),
-            new CallData(ECall.SEND_UPDATED_USERNAME, "sendUpdatedUsername"),
-
-        };
         public static void CreateDefaultTranslations()
         {
             DefaultTranslations = new Dictionary<string, string>
             {
                 { "correct_usage", "<color=#ff8c69>Correct usage: {0}</color>" },
+                { "correct_usage_c", "Correct usage: {0}" },
                 { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
                 { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
                 { "capturing", "Your team is capturing this point!" },
@@ -414,6 +396,17 @@ namespace Uncreated.Warfare
                 { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
                 { "officer_discharged", "<color=#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.</color>" },
 
+
+                // Clear
+                { "clear_not_enough_args", "The clear command requires 1 argument." },
+                { "clear_inventory_console_identity", "Specify a player name when clearing from console." },
+                { "clear_inventory_player_not_found", "A player was not found from <color=#{1}>\"{0}\"</color>." },
+                { "clear_inventory_self", "Cleared your inventory." },
+                { "clear_inventory_others", "Cleared <color=#{1}>{0}</color>'s inventory." },
+                { "clear_items_cleared", "Cleared all dropped items." },
+                { "clear_structures_cleared", "Cleared all placed structures and barricades." },
+                { "clear_vehicles_cleared", "Cleared all vehicles." },
+
                 // Deaths
                 { "no_murderer_name", "Unapplicable" },
                 { "zombie", "a zombie" }
@@ -446,7 +439,8 @@ namespace Uncreated.Warfare
         public static readonly List<ColorData> DefaultColors = new List<ColorData>
         {
             new ColorData("default", "ffffff"),
-            new ColorData("defaulterror", "ff3300"),
+            new ColorData("defaulterror", "ff8c69"),
+            new ColorData("correct_usage_c", "ff8c69"),
             new ColorData("join_message_background", "e6e3d5"),
             new ColorData("join_message_name", "ffff1a"),
             new ColorData("leave_message_background", "e6e3d5"),
@@ -468,8 +462,8 @@ namespace Uncreated.Warfare
             new ColorData("clearing_team_1", "4785ff"),
             new ColorData("contested_team_1", "ffff1a"),
             new ColorData("secured_team_1", "00ff00"),
-            new ColorData("nocap_team_1", "ff0000"),
-            new ColorData("notowned_team_1", "ff0000"),
+            new ColorData("nocap_team_1", "ff8c69"),
+            new ColorData("notowned_team_1", "ff8c69"),
 
             // Team 1 Background Circle
             new ColorData("capturing_team_1_bkgr", "002266"),
@@ -486,8 +480,8 @@ namespace Uncreated.Warfare
             new ColorData("clearing_team_1_words", "4785ff"),
             new ColorData("contested_team_1_words", "ffff1a"),
             new ColorData("secured_team_1_words", "00ff00"),
-            new ColorData("nocap_team_1_words", "ff0000"),
-            new ColorData("notowned_team_1_words", "ff0000"),
+            new ColorData("nocap_team_1_words", "ff8c69"),
+            new ColorData("notowned_team_1_words", "ff8c69"),
 
             // Team 2 Circle
             new ColorData("capturing_team_2", "f53b3b"),
@@ -495,8 +489,8 @@ namespace Uncreated.Warfare
             new ColorData("clearing_team_2", "f53b3b"),
             new ColorData("contested_team_2", "ffff1a"),
             new ColorData("secured_team_2", "00ff00"),
-            new ColorData("nocap_team_2", "ff0000"),
-            new ColorData("notowned_team_2", "ff0000"),
+            new ColorData("nocap_team_2", "ff8c69"),
+            new ColorData("notowned_team_2", "ff8c69"),
 
             // Team 2 Background Circle
             new ColorData("capturing_team_2_bkgr", "610505"),
@@ -513,8 +507,8 @@ namespace Uncreated.Warfare
             new ColorData("clearing_team_2_words", "f53b3b"),
             new ColorData("contested_team_2_words", "ffff1a"),
             new ColorData("secured_team_2_words", "00ff00"),
-            new ColorData("nocap_team_2_words", "ff0000"),
-            new ColorData("notowned_team_2_words", "ff0000"),
+            new ColorData("nocap_team_2_words", "ff8c69"),
+            new ColorData("notowned_team_2_words", "ff8c69"),
 
             // Flag Chats
             new ColorData("entered_cap_radius_team_1", "e6e3d5"),
@@ -553,24 +547,24 @@ namespace Uncreated.Warfare
             new ColorData("created_group", "e6e3d5"),
             new ColorData("created_group_id", "4785ff"),
             new ColorData("created_group_name", "4785ff"),
-            new ColorData("cant_create_group", "ff0000"),
-            new ColorData("rename_not_in_group", "ff0000"),
-            new ColorData("group_not_found", "ff0000"),
+            new ColorData("cant_create_group", "ff8c69"),
+            new ColorData("rename_not_in_group", "ff8c69"),
+            new ColorData("group_not_found", "ff8c69"),
             new ColorData("renamed_group", "e6e3d5"),
-            new ColorData("renamed_group_already_named_that", "ff0000"),
+            new ColorData("renamed_group_already_named_that", "ff8c69"),
             new ColorData("renamed_group_id", "4785ff"),
             new ColorData("renamed_group_old_name", "f53b3b"),
             new ColorData("renamed_group_new_name", "4785ff"),
             new ColorData("joined_group", "e6e3d5"),
-            new ColorData("joined_already_in_group", "ff0000"),
-            new ColorData("joined_group_not_found", "ff0000"),
+            new ColorData("joined_already_in_group", "ff8c69"),
+            new ColorData("joined_group_not_found", "ff8c69"),
             new ColorData("joined_group_not_found_group_id", "4785ff"),
             new ColorData("joined_group_id", "4785ff"),
             new ColorData("joined_group_name", "4785ff"),
             new ColorData("deleted_group", "e6e3d5"),
             new ColorData("deleted_group_id", "4785ff"),
             new ColorData("deleted_group_name", "4785ff"),
-            new ColorData("join_not_in_lobby", "ff0000"),
+            new ColorData("join_not_in_lobby", "ff8c69"),
             new ColorData("join_not_in_lobby_command", "e6e3d5"),
             new ColorData("joined_team_must_rejoin", "e6e3d5"),
             new ColorData("joined_team", "e6e3d5"),
@@ -580,9 +574,9 @@ namespace Uncreated.Warfare
             new ColorData("join_group_has_no_space", "f53b3b"),
             new ColorData("join_group_not_found", "f53b3b"),
             new ColorData("join_group_not_found_group_id", "4785ff"),
-            new ColorData("from_lobby_teleport_failed", "ff0000"),
+            new ColorData("from_lobby_teleport_failed", "ff8c69"),
             new ColorData("from_lobby_teleport_failed_command", "4785ff"),
-            new ColorData("no_permissions", "ff0000"),
+            new ColorData("no_permissions", "ff8c69"),
 
             // Lang Command
             new ColorData("language_list", "f53b3b"),
@@ -637,7 +631,7 @@ namespace Uncreated.Warfare
             new ColorData("request_kit_given_credits_cant_afford", "00fffff"),
             new ColorData("request_kit_given_credits_cant_afford_credits", "c6d4b8"),
             new ColorData("request_kit_given_not_owned", "00fffff"),
-            new ColorData("request_not_looking", "ff0000"),
+            new ColorData("request_not_looking", "ff8c69"),
             new ColorData("kit_price_free", "f53b3b"),
             new ColorData("kit_price_credits", "f53b3b"),
             new ColorData("kit_price_dollars", "f53b3b"),
@@ -646,24 +640,36 @@ namespace Uncreated.Warfare
             // Structure
             new ColorData("structure_saved", "e6e3d5"),
             new ColorData("structure_saved_already", "e6e3d5"),
-            new ColorData("structure_saved_not_vehicle", "ff0000"),
-            new ColorData("structure_saved_not_bush", "ff0000"),
+            new ColorData("structure_saved_not_vehicle", "ff8c69"),
+            new ColorData("structure_saved_not_bush", "ff8c69"),
             new ColorData("structure_unsaved", "e6e3d5"),
             new ColorData("structure_unsaved_already", "e6e3d5"),
-            new ColorData("structure_unsaved_not_vehicle", "ff0000"),
-            new ColorData("structure_unsaved_not_bush", "ff0000"),
-            new ColorData("structure_not_looking", "ff0000"),
-            new ColorData("structure_examine_not_locked", "ff0000"),
+            new ColorData("structure_unsaved_not_vehicle", "ff8c69"),
+            new ColorData("structure_unsaved_not_bush", "ff8c69"),
+            new ColorData("structure_not_looking", "ff8c69"),
+            new ColorData("structure_examine_not_locked", "ff8c69"),
             new ColorData("structure_popped", "e6e3d5"),
             new ColorData("structure_popped_structure", "c6d4b8"),
             new ColorData("structure_saved_structure", "c6d4b8"),
             new ColorData("structure_unsaved_structure", "c6d4b8"),
             new ColorData("structure_saved_already_structure", "c6d4b8"),
             new ColorData("structure_unsaved_already_structure", "c6d4b8"),
-            new ColorData("structure_pop_not_poppable", "ff0000"),
-            new ColorData("structure_examine_not_examinable", "ff0000"),
+            new ColorData("structure_pop_not_poppable", "ff8c69"),
+            new ColorData("structure_examine_not_examinable", "ff8c69"),
             new ColorData("structure_last_owner_chat", "c6d4b8"),
             new ColorData("structure_last_owner_chat_structure", "e6e3d5"),
+
+            // Clear
+            new ColorData("clear_not_enough_args", "ff8c69"),
+            new ColorData("clear_inventory_console_identity", "ff8c69"),
+            new ColorData("clear_inventory_player_not_found", "ff8c69"),
+            new ColorData("clear_inventory_player_not_found_player", "8ce4ff"),
+            new ColorData("clear_inventory_self", "e6e3d5"),
+            new ColorData("clear_inventory_others", "e6e3d5"),
+            new ColorData("clear_inventory_others_name", "8ce4ff"),
+            new ColorData("clear_items_cleared", "e6e3d5"),
+            new ColorData("clear_structures_cleared", "e6e3d5"),
+            new ColorData("clear_vehicles_cleared", "e6e3d5"),
             
             
             new ColorData("cant_steal_batteries", "f53b3b"),

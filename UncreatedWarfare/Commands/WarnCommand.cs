@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Networking;
 using Uncreated.Players;
 
 namespace Uncreated.Warfare.Commands
@@ -51,7 +52,7 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName name = F.GetPlayerOriginalNames(player);
                                 F.Log(F.Translate("warn_WarnedPlayerFromConsole_Console", 0, name.PlayerName, player.playerID.steamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
-                                    Data.WebInterface?.LogWarning(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, name.PlayerName, "Console", F.GetTeamByte(player), reason);
+                                    Server.LogPlayerWarned(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
                                 F.SendChat(player.playerID.steamID, "warn_WarnedPlayerFromConsole_DM", UCWarfare.GetColor("warn_message"), reason);
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.playerID.steamID }, "warn_WarnedPlayerFromConsole_Broadcast", UCWarfare.GetColor("warn_broadcast"), name.CharacterName);
                             }
@@ -84,7 +85,7 @@ namespace Uncreated.Warfare.Commands
                                 F.Log(F.Translate("warn_WarnedPlayer_Console", 0, name.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(), callerName.PlayerName, player.CSteamID.m_SteamID.ToString(), reason), 
                                     ConsoleColor.Cyan);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
-                                    Data.WebInterface?.LogWarning(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, name.PlayerName, callerName.PlayerName, F.GetTeamByte(steamplayer), reason);
+                                    Server.LogPlayerWarned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 F.SendChat(player, "warn_WarnedPlayer_Feedback", UCWarfare.GetColor("warn_feedback"), name.CharacterName);
                                 F.SendChat(steamplayer.playerID.steamID, "warn_WarnedPlayer_DM", UCWarfare.GetColor("warn_message"), callerName.CharacterName, reason);
                                 F.BroadcastToAllExcept(new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID }, "warn_WarnedPlayer_Broadcast", UCWarfare.GetColor("warn_broadcast"), name.CharacterName, callerName.CharacterName);

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Uncreated.Warfare.Kits
+namespace Uncreated.Warfare.Commands
 {
     public class Command_blank : IRocketCommand
     {
@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Kits
         public string Syntax => "/com";
         public List<string> Aliases => new List<string>() { "c" };
         public List<string> Permissions => new List<string>() { "com" };
-        public void Execute(IRocketPlayer caller, string[] arguments)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 

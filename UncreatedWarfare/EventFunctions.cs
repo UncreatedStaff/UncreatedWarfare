@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Flags;
@@ -137,11 +138,11 @@ namespace Uncreated.Warfare
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
-            Data.WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
             FPlayerName names;
             if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 names = Data.OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
             else names = new FPlayerName(player);
+            Server.SendPlayerJoined(names);
             Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
             Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -154,10 +155,12 @@ namespace Uncreated.Warfare
             Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
             pt.UCPlayer?.LogIn(player.Player.channel.owner, names);
 
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
-
+            if (!UCWarfare.Config.AllowCosmetics)
+            {
+                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
+                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
+                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
+            }
             PlayerManager.InvokePlayerConnected(player);
             Data.ReviveManager.OnPlayerConnected(player);
 
@@ -165,8 +168,6 @@ namespace Uncreated.Warfare
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
         }
-
-
         internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
         {
             if (!UCWarfare.Config.AllowBatteryStealing)
@@ -175,25 +176,28 @@ namespace Uncreated.Warfare
                 theif.SendChat("cant_steal_batteries", UCWarfare.GetColor("cant_steal_batteries"));
             }
         }
-
         internal static void OnCalculateSpawnDuringRevive(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
         {
             ulong team = sender.player.GetTeam();
             position = team.GetBaseSpawnFromTeam();
             yaw = team.GetBaseAngle();
         }
-        internal static void OnCalculateSpawnDuringLogin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
-        {
-
-        }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-
-            if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+            if (Data.OriginalNames.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
+            {
+                Server.SendPlayerLeft(names);
+                if (player.OnDuty())
+                {
+                    if (player.IsAdmin())
+                        Commands.DutyCommand.AdminOnToOff(player, names);
+                    else if (player.IsIntern())
+                        Commands.DutyCommand.InternOnToOff(player, names);
+                }
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            }
+            if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
             F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
-            Data.WebInterface?.SendPlayerLeftAsync(player.Player.channel.owner);
             if(UCWarfare.Config.RemoveLandminesOnDisconnect)
             {
                 IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
@@ -220,7 +224,8 @@ namespace Uncreated.Warfare
             SquadManager.InvokePlayerLeft(ucplayer);
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last
         }
-        internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
+        internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) 
+            => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
 
         internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
         {
@@ -231,10 +236,14 @@ namespace Uncreated.Warfare
                 Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
             else
                 Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
-            const string prefix = "";
-            if (!player.playerID.characterName.StartsWith(prefix))
+            ulong team = F.GetTeamFromPlayerSteam64ID(player.playerID.steamID.m_SteamID);
+            string prefix;
+            if (team == 1) prefix = $"[{TeamManager.Team1Code.ToUpper()}]";
+            else if (team == 2) prefix = $"[{TeamManager.Team2Code.ToUpper()}]";
+            else prefix = "";
+            if (team < 3 && team > 0 && !player.playerID.characterName.StartsWith(prefix))
                 player.playerID.characterName = prefix + player.playerID.characterName;
-            if (!player.playerID.nickName.StartsWith(prefix))
+            if (team < 3 && team > 0 && !player.playerID.nickName.StartsWith(prefix))
                 player.playerID.nickName = prefix + player.playerID.nickName;
         }
 
