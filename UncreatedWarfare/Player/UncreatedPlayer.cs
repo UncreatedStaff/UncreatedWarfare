@@ -364,5 +364,38 @@ namespace Uncreated.Players
             Array.Copy(cn, 0, rtn, i, nn.Length);
             return rtn;
         }
+        public static FPlayerName FromBytes(byte[] bytes, out int length, int offset = 0)
+        {
+            int i = offset;
+            if (!Networking.ByteMath.ReadUInt64(out ulong st, i, bytes))
+                throw new ArgumentException("Failed to read Steam64 UInt64 Value from relative index 0.", nameof(bytes));
+            i += sizeof(ulong);
+            if (!Networking.ByteMath.ReadUInt16(out ushort pnl, i, bytes))
+                throw new ArgumentException("Failed to read length of PlayerName", nameof(bytes));
+            i += sizeof(ushort);
+            if (!Networking.ByteMath.ReadString(out string pn, i, bytes, pnl))
+                throw new ArgumentException("Failed to read PlayerName", nameof(bytes));
+            i += pnl;
+            if (!Networking.ByteMath.ReadUInt16(out ushort cnl, i, bytes))
+                throw new ArgumentException("Failed to read length of CharacterName", nameof(bytes));
+            i += sizeof(ushort);
+            if (!Networking.ByteMath.ReadString(out string cn, i, bytes, cnl))
+                throw new ArgumentException("Failed to read CharacterName", nameof(bytes));
+            i += cnl;
+            if (!Networking.ByteMath.ReadUInt16(out ushort nnl, i, bytes))
+                throw new ArgumentException("Failed to read length of NickName", nameof(bytes));
+            i += sizeof(ushort);
+            if (!Networking.ByteMath.ReadString(out string nn, i, bytes, cnl))
+                throw new ArgumentException("Failed to read NickName", nameof(bytes));
+            i += nnl;
+            length = i - offset;
+            return new FPlayerName
+            {
+                Steam64 = st,
+                PlayerName = pn,
+                CharacterName = cn,
+                NickName = nn
+            };
+        }
     }
 }

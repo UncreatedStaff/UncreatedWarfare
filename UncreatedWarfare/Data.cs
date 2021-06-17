@@ -134,6 +134,7 @@ namespace Uncreated.Warfare
             F.CheckDir(KitsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
+            F.CheckDir(TicketStorage, out _, true);
             F.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
@@ -174,7 +175,7 @@ namespace Uncreated.Warfare
             {
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
-                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort);
+                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
             }
             if (UCWarfare.Config.Modules.Kits)
             {

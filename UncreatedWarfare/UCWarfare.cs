@@ -104,6 +104,12 @@ namespace Uncreated.Warfare
             Data.FlagManager.Load(); // starts new game
             VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+            if (Provider.clients.Count > 0)
+            {
+                List<Players.FPlayerName> playersOnline = new List<Players.FPlayerName>();
+                Provider.clients.ForEach(x => playersOnline.Add(F.GetPlayerOriginalNames(x)));
+                Networking.Server.SendPlayerList(playersOnline);
+            }
         }
         public static void ReplaceBarricadesAndStructures()
         {

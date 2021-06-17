@@ -143,8 +143,6 @@ namespace Uncreated.Warfare.Revives
 
         private class Reviver : UnturnedPlayerComponent
         {
-            public Vector3 BlockerBarricade;
-            private bool pendingStopSpawningBarricade = false;
             private Coroutine bleedout;
             private Coroutine stance;
             public void TellProneDelayed(float time = 0.5f)

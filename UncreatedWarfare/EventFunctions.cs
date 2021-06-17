@@ -184,6 +184,8 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
             if (Data.OriginalNames.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
             {
                 Server.SendPlayerLeft(names);

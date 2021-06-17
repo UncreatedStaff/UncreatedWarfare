@@ -3,7 +3,7 @@ using Rocket.API;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace Uncreated.Warfare
+namespace Uncreated
 {
     public class Config : IRocketPluginConfiguration
     {
@@ -221,6 +221,7 @@ namespace Uncreated.Warfare
         public bool EnableTCPServer;
         public string TCPServerIP;
         public ushort TCPServerPort;
+        public string TCPServerIdentity;
 
         public PlayerStatsSettings()
         {
@@ -231,6 +232,7 @@ namespace Uncreated.Warfare
             this.StatUpdateFrequency = 30.0f;
             this.TCPServerIP = "127.0.0.1";
             this.TCPServerPort = 31902;
+            this.TCPServerIdentity = "ucwarfare";
         }
     }
     public class DeathMesssagesSettings

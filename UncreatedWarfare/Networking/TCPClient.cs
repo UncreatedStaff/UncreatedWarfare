@@ -13,6 +13,16 @@ namespace Uncreated.Networking
 {
     public static class Server
     {
+        public static void Identify()
+        {
+            byte[] i = Encoding.UTF8.GetBytes(TCPClient.I.Identity);
+            byte[] il = BitConverter.GetBytes((ushort)i.Length);
+            byte[] rtn = new byte[il.Length + i.Length];
+            Array.Copy(il, 0, rtn, 0, il.Length);
+            Array.Copy(i, 0, rtn, il.Length, i.Length);
+            TCPClient.I.SendMessageAsync(rtn.Callify(ECall.IDENTIFY_TO_SERVER));
+            Warfare.F.Log("Identified as " + TCPClient.I.Identity, ConsoleColor.DarkYellow);
+        }
         public static void SendPlayerJoined(Players.FPlayerName player)
         {
             TCPClient.I.SendMessageAsync(player.GetBytes().Callify(ECall.PLAYER_JOINED));
@@ -23,11 +33,10 @@ namespace Uncreated.Networking
         }
         public static void SendPlayerList(List<Players.FPlayerName> players)
         {
-            List<byte> bytes = new List<byte>();
+            if (players.Count > byte.MaxValue) return;
+            List<byte> bytes = new List<byte> { (byte)players.Count };
             for (int i = 0; i < players.Count; i++)
-            {
                 bytes.AddRange(players[i].GetBytes());
-            }
             TCPClient.I.SendMessageAsync(bytes.ToArray().Callify(ECall.PLAYER_LIST));
         }
         public static void SendPlayerOnDuty(ulong player, bool intern)
@@ -125,9 +134,28 @@ namespace Uncreated.Networking
         }
         internal static void ProcessResponse(object sender, ReceivedServerMessageArgs e)
         {
-            throw new NotImplementedException();
-        }
+            if (e.message.Length <= 0) return;
+            ECall call;
+            try
+            {
+                call = (ECall)e.message[0];
+            }
+            catch (Exception)
+            {
+                Warfare.F.LogError("Incorrect call enumerator given in response: " + e.message[0].ToString());
+                return;
+            }
+            switch (call)
+            {
+                case ECall.INVOKE_BAN:
 
+                    break;
+            }
+        }
+        private static void InvokeBan()
+        {
+
+        }
         public static void LogPlayerUnbanned(ulong pardoned, ulong admin_id, DateTime time)
         {
             byte[] p = BitConverter.GetBytes(pardoned);
@@ -179,9 +207,10 @@ namespace Uncreated.Networking
         public string IP = "127.0.0.1";
         public int LocalID = 0;
         public ushort Port = 31902;
+        public string Identity = "ucwarfare";
         public event EventHandler<ReceivedServerMessageArgs> OnReceivedData;
         public ClientConnection connection;
-        public TCPClient(string ip, ushort port)
+        public TCPClient(string ip, ushort port, string identitiy)
         {
             if (I == null)
             {
@@ -197,12 +226,14 @@ namespace Uncreated.Networking
             this.IP = ip;
             this.Port = port;
             this.connection = new ClientConnection(this);
+            this.Identity = identitiy;
+            Connect();
         }
         public bool Connect()
         {
             if (connection != null)
             {
-                connection.Connect();
+                connection.Connect(true);
                 return true;
             }
             else return false;
@@ -258,6 +289,7 @@ namespace Uncreated.Networking
                 {
                     socket.EndConnect(ar);
                     Warfare.F.Log($"Connected to {socket.Client.RemoteEndPoint}.", ConsoleColor.DarkYellow);
+                    Server.Identify();
                 }
                 catch (SocketException)
                 {
@@ -328,30 +360,31 @@ namespace Uncreated.Networking
     }
     public enum ECall : ushort
     {
-        SERVER_SHUTTING_DOWN = 0,
-        SERVER_STARTING_UP = 1,
-        PLAYER_LIST = 2,
-        PLAYER_JOINED = 3,
-        PLAYER_LEFT = 4,
-        USERNAME_UPDATED = 5,
-        LOG_BAN = 6,
-        LOG_KICK = 7,
-        LOG_BATTLEYEKICK = 8,
-        LOG_TEAMKILL = 9,
-        LOG_UNBAN = 10,
-        LOG_WARNING = 11,
-        ON_DUTY = 12,
-        OFF_DUTY = 13,
-        INVOKE_BAN = 14,
-        INVOKE_KICK = 15,
-        INVOKE_WARN = 16,
-        INVOKE_UNBAN = 17,
-        INVOKE_GIVE_KIT = 18,
-        INVOKE_REVOKE_KIT = 19,
-        INVOKE_SHUTDOWN = 20,
-        INVOKE_SHUTDOWN_AFTER_GAME = 21,
-        INVOKE_PROMOTE_OFFICER = 22,
-        INVOKE_DEMOTE_OFFICER = 23
+        IDENTIFY_TO_SERVER = 1,
+        SERVER_SHUTTING_DOWN = 2,
+        SERVER_STARTING_UP = 3,
+        PLAYER_LIST = 4,
+        PLAYER_JOINED = 5,
+        PLAYER_LEFT = 6,
+        USERNAME_UPDATED = 7,
+        LOG_BAN = 8,
+        LOG_KICK = 9,
+        LOG_BATTLEYEKICK = 10,
+        LOG_TEAMKILL = 11,
+        LOG_UNBAN = 12,
+        LOG_WARNING = 13,
+        ON_DUTY = 14,
+        OFF_DUTY = 15,
+        INVOKE_BAN = 16,
+        INVOKE_KICK = 17,
+        INVOKE_WARN = 18,
+        INVOKE_UNBAN = 19,
+        INVOKE_GIVE_KIT = 20,
+        INVOKE_REVOKE_KIT = 21,
+        INVOKE_SHUTDOWN = 22,
+        INVOKE_SHUTDOWN_AFTER_GAME = 23,
+        INVOKE_PROMOTE_OFFICER = 24,
+        INVOKE_DEMOTE_OFFICER = 25,
     }
     public enum EStartupStep : byte
     {
