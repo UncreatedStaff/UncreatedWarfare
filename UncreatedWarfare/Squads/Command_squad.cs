@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Squads
         public List<string> Permissions => new List<string>() { "squad" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UnturnedPlayer player = (UnturnedPlayer)caller;
+            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
             string name = "";
             for (int i = 1; i < command.Length; i++)
@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Squads
                 {
                     if (!SquadManager.FindSquad(name, player.GetTeam(), out var squad))
                     {
-                        SquadManager.CreateSquad(name, player, player.GetTeam(), PlayerManager.GetPlayerData(player.CSteamID).Branch);
+                        SquadManager.CreateSquad(name, player, player.GetTeam(), PlayerManager.GetPlayer(player.CSteamID).Branch);
 
                         player.Message("squad_created", name);
                     }
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (SquadManager.IsInAnySquad(player.CSteamID, out var squad) && squad?.Leader.CSteamID == player.CSteamID)
                 {
-                    UnturnedPlayer target = UnturnedPlayer.FromName(name);
+                    UCPlayer target = UCPlayer.FromName(name);
                     if (target != null)
                     {
                         if (SquadManager.IsInSquad(target.CSteamID, squad))
@@ -118,7 +118,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (SquadManager.IsInAnySquad(player.CSteamID, out var squad) && squad?.Leader.CSteamID == player.CSteamID)
                 {
-                    UnturnedPlayer target = UnturnedPlayer.FromName(name);
+                    UCPlayer target = UCPlayer.FromName(name);
                     if (target != null)
                     {
                         if (SquadManager.IsInSquad(target.CSteamID, squad))

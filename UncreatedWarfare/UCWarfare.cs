@@ -13,6 +13,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Flags;
 
 namespace Uncreated.Warfare
 {
@@ -136,6 +137,8 @@ namespace Uncreated.Warfare
             Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
+            FlagManager.OnFlagCaptured += EventFunctions.OnFlagCaptured;
+            FlagManager.OnFlagNeutralized += EventFunctions.OnFlagNeutralized;
         }
         private void UnsubscribeFromEvents()
         {

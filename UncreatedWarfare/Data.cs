@@ -52,6 +52,8 @@ namespace Uncreated.Warfare
             }
         }
         public static readonly string TeamStorage = DataDirectory + @"Teams\";
+        public static readonly string TicketStorage = DataDirectory + @"Tickets\";
+        public static readonly string OfficerStorage = DataDirectory + @"Officers\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
         private static readonly string _vehicleStorage = DataDirectory + @"Maps\{0}\Vehicles\";
         private static string _vehicleStorageTemp;

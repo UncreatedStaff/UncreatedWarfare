@@ -8,10 +8,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.XP;
 using UnityEngine;
+using Flag = Uncreated.Warfare.Flags.Flag;
 
 namespace Uncreated.Warfare
 {
@@ -130,6 +134,8 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             Data.WebInterface?.SendPlayerJoinedAsync(player.Player.channel.owner);
             FPlayerName names;
@@ -155,7 +161,7 @@ namespace Uncreated.Warfare
             PlayerManager.InvokePlayerConnected(player);
             Data.ReviveManager.OnPlayerConnected(player);
 
-            SquadManager.InvokePlayerJoined(player);
+            SquadManager.InvokePlayerJoined(ucplayer);
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
         }
@@ -182,6 +188,8 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
             if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
@@ -209,7 +217,7 @@ namespace Uncreated.Warfare
             }
             PlayerManager.InvokePlayerDisconnected(player);
             Data.ReviveManager.OnPlayerDisconnected(player);
-            SquadManager.InvokePlayerLeft(player);
+            SquadManager.InvokePlayerLeft(ucplayer);
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last
         }
         internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
@@ -228,6 +236,17 @@ namespace Uncreated.Warfare
                 player.playerID.characterName = prefix + player.playerID.characterName;
             if (!player.playerID.nickName.StartsWith(prefix))
                 player.playerID.nickName = prefix + player.playerID.nickName;
+        }
+
+        internal static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+        {
+            XPManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+            OfficerManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        }
+        internal static void OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+        {
+            XPManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+            OfficerManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
     }
 }

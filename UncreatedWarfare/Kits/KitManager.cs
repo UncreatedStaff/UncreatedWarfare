@@ -202,7 +202,7 @@ namespace Uncreated.Warfare.Kits
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
-            PlayerManager.UpdateData(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
+            PlayerManager.UpdatePlayer(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
 
             OnKitChanged?.Invoke(player, kit);
         }
@@ -247,7 +247,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
-            if (PlayerManager.HasPlayerData(steamID, out LogoutSave save))
+            if (PlayerManager.PlayerExists(steamID, out UCPlayer save))
                 return ObjectExists(k => k.Name == save.KitName, out kit);
             else
             {

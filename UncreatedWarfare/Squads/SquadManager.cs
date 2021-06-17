@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Squads
                     {
                         EffectManager.sendUIEffect(30071, 30071, member.SteamPlayer().transportConnection, true,
                                  squad.Members[i].SteamPlayer().playerID.nickName,
-                                 squad.Members[i].GetKitIcon(),
+                                 squad.Members[i].Icon,
                                  squad.IsLocked ? $"{squad.Name} <color=#cf6a59>({squad.Members.Count}/6)</color>" : $"{squad.Name} ({squad.Members.Count}/6)"
                              );
                     }
@@ -59,7 +59,7 @@ namespace Uncreated.Warfare.Squads
                     {
                         EffectManager.sendUIEffect((ushort)(30071 + i), (short)(30071 + i), member.SteamPlayer().transportConnection, true,
                                squad.Members[i].SteamPlayer().playerID.nickName,
-                               squad.Members[i].GetKitIcon()
+                               squad.Members[i].Icon
                            );
                     }
                 }
@@ -118,7 +118,7 @@ namespace Uncreated.Warfare.Squads
             }
         }
 
-        public static void InvokePlayerJoined(UnturnedPlayer player)
+        public static void InvokePlayerJoined(UCPlayer player)
         {
             for (int i = 0; i < Squads.Count; i++)
             {
@@ -132,16 +132,18 @@ namespace Uncreated.Warfare.Squads
                 );
             }
         }
-        public static void InvokePlayerLeft(UnturnedPlayer player)
+        public static void InvokePlayerLeft(UCPlayer player)
         {
             if (IsInAnySquad(player.CSteamID, out var squad))
                 LeaveSquad(player, ref squad);
         }
 
-        public static void CreateSquad(string name, UnturnedPlayer leader, ulong team, EBranch branch)
+        public static void CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
         {
             var squad = new Squad(name, leader, team, branch);
             Squads.Add(squad);
+
+            leader.Squad = squad;
 
             ClearUIList(leader.SteamPlayer());
             UpdateUISquad(squad);
@@ -150,29 +152,33 @@ namespace Uncreated.Warfare.Squads
 
         public static bool IsInAnySquad(CSteamID playerID, out Squad squad)
         {
-            squad = Squads.Find(s => s.Members.Exists(p => p.CSteamID == playerID));
+            squad = Squads.Find(s => s.Members.Exists(p => p.Steam64 == playerID.m_SteamID));
             return squad != null;
         }
-        public static bool IsInSquad(CSteamID playerID, Squad targetSquad) => targetSquad.Members.Exists(p => p.CSteamID == playerID);
-        public static void JoinSquad(UnturnedPlayer player, ref Squad squad)
+        public static bool IsInSquad(CSteamID playerID, Squad targetSquad) => targetSquad.Members.Exists(p => p.Steam64 == playerID.m_SteamID);
+        public static void JoinSquad(UCPlayer player, ref Squad squad)
         {
             foreach (var p in squad.Members)
-                p.Message("squad_player_joined", F.GetPlayerOriginalNames(player).NickName);
+                p.Message("squad_player_joined", p.Player.channel.owner.playerID.nickName);
 
             squad.Members.Add(player);
+
+            player.Squad = squad;
 
             ClearUIList(player.SteamPlayer());
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
-        public static void LeaveSquad(UnturnedPlayer player, ref Squad squad)
+        public static void LeaveSquad(UCPlayer player, ref Squad squad)
         {
             player.Message("squad_left");
 
             squad.Members.RemoveAll(p => p.CSteamID == player.CSteamID);
 
+            player.Squad = null;
+
             foreach (var p in squad.Members)
-                p.Message("squad_player_left", F.GetPlayerOriginalNames(player).NickName);
+                p.Message("squad_player_left", p.SteamPlayer().playerID.nickName);
 
             if (squad.Members.Count == 0)
             {
@@ -191,7 +197,7 @@ namespace Uncreated.Warfare.Squads
                 squad.Leader = squad.Members[0];
                 var leaderID = squad.Leader.CSteamID;
                 squad.Members = squad.Members.OrderBy(p => p.CSteamID != leaderID).ToList();
-                squad.Leader.Message("squad_squadleader", F.GetPlayerOriginalNames(player).NickName);
+                squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer().playerID.nickName);
             }
 
             UpdateUISquad(squad);
@@ -204,12 +210,14 @@ namespace Uncreated.Warfare.Squads
 
             foreach (var member in squad.Members)
             {
+                member.Squad = null;
+
                 member.Message("squad_disbanded");
                 ClearUIsquad(member.SteamPlayer());
                 UpdateUIMemberCount(squad.Team);
             }
         }
-        public static void KickPlayerFromSquad(UnturnedPlayer player, ref Squad squad)
+        public static void KickPlayerFromSquad(UCPlayer player, ref Squad squad)
         {
             if (squad.Members.Count <= 1)
                 return;
@@ -220,13 +228,15 @@ namespace Uncreated.Warfare.Squads
                 player.Message("squad_kicked");
 
             foreach (var p in squad.Members)
-                p.Message("squad_player_kicked", F.GetPlayerOriginalNames(player).NickName);
+                p.Message("squad_player_kicked", player.SteamPlayer().playerID.nickName);
+
+            player.Squad = null;
 
             ClearUIsquad(player.SteamPlayer());
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
-        public static void PromoteToLeader(ref Squad squad, UnturnedPlayer newLeader)
+        public static void PromoteToLeader(ref Squad squad, UCPlayer newLeader)
         {
             squad.Leader = newLeader;
 
@@ -235,7 +245,7 @@ namespace Uncreated.Warfare.Squads
                 if (p.CSteamID == squad.Leader.CSteamID)
                     p.Message("squad_promoted");
                 else
-                    p.Message("squad_player_promoted", F.GetPlayerOriginalNames(newLeader).NickName);
+                    p.Message("squad_player_promoted", p.SteamPlayer().playerID.nickName);
             }
 
             var leaderID = squad.Leader.CSteamID;
@@ -277,17 +287,29 @@ namespace Uncreated.Warfare.Squads
         public ulong Team;
         public EBranch Branch;
         public bool IsLocked;
-        public UnturnedPlayer Leader;
-        public List<UnturnedPlayer> Members;
-        public Squad(string name, UnturnedPlayer leader, ulong team, EBranch branch)
+        public UCPlayer Leader;
+        public List<UCPlayer> Members;
+        public Squad(string name, UCPlayer leader, ulong team, EBranch branch)
         {
             Name = name;
             Team = team;
             Branch = branch;
             Leader = leader;
             IsLocked = false;
-            Members = new List<UnturnedPlayer>();
+            Members = new List<UCPlayer>();
             Members.Add(leader);
         }
+    }
+
+    public class SquadConfigData : ConfigData
+    {
+        public float MemberNearXPMultiplier;
+
+        public override void SetDefaults()
+        {
+            MemberNearXPMultiplier = 1.1F;
+        }
+
+        public SquadConfigData() { }
     }
 }

@@ -21,6 +21,8 @@ namespace Uncreated.Warfare
             ItemManager.onTakeItemRequested += OnItemPickup;
             BarricadeManager.onSalvageBarricadeRequested += OnBarricadeSalvageRequested;
             StructureManager.onSalvageStructureRequested += OnStructureSalvageRequested;
+            StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
+            BarricadeManager.onModifySignRequested += OnEditSignRequest;
             Reload();
         }
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
@@ -101,9 +103,14 @@ namespace Uncreated.Warfare
             player.Message("whitelist_nosalvage");
             shouldAllow = false;
         }
-        private void OnStructurePlaceRequested(Structure structure, ItemStructureAsset asset, ref Vector3 point, ref float angle_x, ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
+        private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
         {
-            
+            var player = UnturnedPlayer.FromCSteamID(steamID);
+            if (!player.OnDuty())
+            {
+                shouldAllow = false;
+                player.Message("whitelist_noeditsign");
+            }
         }
         private void OnBarricadePlaceRequested(
             Barricade barricade,
@@ -135,7 +142,39 @@ namespace Uncreated.Warfare
             }
 
             shouldAllow = false;
-            player.Message($"whitelist_nokit");
+            player.Message($"whitelist_noplace");
+        }
+        private void OnStructurePlaceRequested(
+            Structure structure,
+            ItemStructureAsset asset,
+            ref Vector3 point,
+            ref float angle_x,
+            ref float angle_y,
+            ref float angle_z,
+            ref ulong owner,
+            ref ulong group,
+            ref bool shouldAllow
+            )
+        {
+            var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
+
+            if (F.OnDuty(player))
+                return;
+
+            if (KitManager.HasKit(player.CSteamID, out var kit))
+            {
+                if (kit.Items.Exists(k => k.ID == structure.id))
+                {
+                    return;
+                }
+                else if (IsWhitelisted(structure.id, out _))
+                {
+                    return;
+                }
+            }
+
+            shouldAllow = false;
+            player.Message($"whitelist_noplace");
         }
         public static void AddItem(ushort ID) => AddObjectToSave(new WhitelistItem(ID, 255));
         public static void RemoveItem(ushort ID) => RemoveWhere(i => i.itemID == ID);

@@ -7,61 +7,47 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Tickets
 {
-    public class TicketManager : JSONSaver<TicketManagerConfig>, IDisposable
+    public class TicketManager
     {
-        public static TicketManagerConfig config;
+        public static Config<TicketData> config;
 
         public static int Team1Tickets;
         public static int Team2Tickets;
 
         public TicketManager()
-            : base(Data.TeamStorage + "tickets.json")
         {
-            Team1Tickets = config.StartingTickets;
-            Team2Tickets = config.StartingTickets;
+            config = new Config<TicketData>(Data.TicketStorage + "config.json");
 
-            if (GetExistingObjects().Count == 0)
-            {
-                LoadDefaults();
-            }
+            Team1Tickets = config.data.StartingTickets;
+            Team2Tickets = config.data.StartingTickets;
 
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
+            FlagManager.OnNewGameStarting += OnNewGameStarting;
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
-            Data.FlagManager.OnNewGameStarting += OnNewGameStarting;
         }
-        protected override string LoadDefaults()
-        {
-            TicketManagerConfig defaults = new TicketManagerConfig();
 
-            WriteSingleObject(defaults);
-            config = defaults;
-            return "";
-        }
-        public static void ReloadConfig() => GetExistingObjects().FirstOrDefault();
-        public static void SaveConfig() => WriteSingleObject(config);
-
-        private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
+        public static void OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
         {
-            if (KitManager.HasKit(player.CSteamID, out var kit))
+            if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
             {
-                if (TeamManager.IsTeam1(player))
+                if (TeamManager.IsTeam1(eventArgs.dead))
                 {
                     AddTeam1Tickets(-1*kit.TicketCost);
                 }
-                if (TeamManager.IsTeam2(player))
+                if (TeamManager.IsTeam2(eventArgs.dead))
                 {
                     AddTeam2Tickets(-1 * kit.TicketCost);
                 }
             }
         }
 
-        private void OnVehicleExploded(InteractableVehicle vehicle)
+        private static void OnVehicleExploded(InteractableVehicle vehicle)
         {
             if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
             {
@@ -78,8 +64,8 @@ namespace Uncreated.Warfare.Tickets
 
         private void OnNewGameStarting(object sender, EventArgs e)
         {
-            Team1Tickets = config.StartingTickets;
-            Team2Tickets = config.StartingTickets;
+            Team1Tickets = config.data.StartingTickets;
+            Team2Tickets = config.data.StartingTickets;
         }
 
         public static void AddTeam1Tickets(int number)
@@ -129,20 +115,25 @@ namespace Uncreated.Warfare.Tickets
 
         public void Dispose()
         {
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
+            FlagManager.OnNewGameStarting -= OnNewGameStarting;
             VehicleManager.OnVehicleExploded -= OnVehicleExploded;
-            Data.FlagManager.OnNewGameStarting -= OnNewGameStarting;
         }
     }
-    public class TicketManagerConfig
+    public class TicketData : ConfigData
     {
         public ushort StartingTickets;
-        public ushort FOBTicketCost;
+        public ushort FOBCost;
+        public ushort Team1TicketUIID;
+        public ushort Team2TicketUIID;
 
-        public TicketManagerConfig()
+        public override void SetDefaults()
         {
             StartingTickets = 600;
-            FOBTicketCost = 20;
+            FOBCost = 20;
+            Team1TicketUIID = 30050;
+            Team1TicketUIID = 30051;
         }
+
+        public TicketData() { }
     }
 }

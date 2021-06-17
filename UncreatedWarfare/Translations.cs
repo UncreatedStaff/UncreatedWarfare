@@ -378,8 +378,10 @@ namespace Uncreated.Warfare
                 { "whitelist_maxamount", "<color=#ff8c69>You are not allowed to carry any more of this item.</color> " },
                 { "whitelist_kit_maxamount", "<color=#ff8c69>Your kit does not allow you to have any more of this item.</color> " },
                 { "whitelist_nokit", "<color=#ff8c69>Get a kit first before you can pick up items.</color> " },
-                { "whitelist_nosalvage", "<color=#ff8c69>You are not allowed to salvage this barricade.</color> " },
-                { "whitelist_noplace", "<color=#ff8c69>You are not allowed to salvage this barricade.</color> " },
+                { "whitelist_nosalvage", "<color=#ff8c69>You are not allowed to salvage that.</color> " },
+                { "whitelist_noplace", "<color=#ff8c69>You are not allowed to place that.</color> " },
+                { "whitelist_noeditsign", "<color=#ff8c69>You are not allowed to edit that sign.</color> " },
+
                 //vehiclebay
                 { "vehiclebay_added", "<color=#a0ad8e>Added requestable vehicle to the vehicle bay: <color=#ffffff>{0}</color></color>" },
                 { "vehiclebay_removed", "<color=#a0ad8e>Removed requestable vehicle from the vehicle bay: <color=#ffffff>{0}</color></color>" },
@@ -397,7 +399,7 @@ namespace Uncreated.Warfare
                 { "vehiclebay_e_seatexist", "<color=#ff8c69>This vehicle already has a crew seat with index: {0}</color>" },
                 { "vehiclebay_e_seatnoexist", "<color=#ff8c69>This vehicle does not have a crew seat with index: {0}</color>" },
                 // vehiclebay spawns
-                { "vehiclebay_spawn_registered", "<color=#a0ad8e>Successfully registered spawn. <color=#ffffff>{0}s</color></color> will spawn here." },
+                { "vehiclebay_spawn_registered", "<color=#a0ad8e>Successfully registered spawn. <color=#ffffff>{0}s</color> will spawn here.</color>" },
                 { "vehiclebay_spawn_deregistered", "<color=#a0ad8e>Successfully deregistered spawn.</color>" },
                 { "vehiclebay_spawn_removed", "<color=#a0ad8e>Vehicle spawn was deregistered it's barricade was salvaged.</color>" },
                 { "vehiclebay_e_invalidid", "<color=#ff8c69>{0} is not a valid vehicle ID.</color>" },
@@ -406,6 +408,12 @@ namespace Uncreated.Warfare
                 { "vehiclebay_e_spawnnoexist", "<color=#ff8c69>This spawn is not registered.</color>" },
                 { "vehiclebay_check_registered", "<color=#a0ad8e>This spawn (<color=#8ce4ff>{0}</color>) is registered with vehicle: <color=#ffffff>{1} - {2}</color></color>" },
                 { "vehiclebay_check_notregistered", "<color=#a0ad8e>This spawn is not registered.</color>" },
+
+                //Officers
+                { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of <color=#baccca>{1}</color>!</color>" },
+                { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
+                { "officer_discharged", "<color=#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.</color>" },
+
                 // Deaths
                 { "no_murderer_name", "Unapplicable" },
                 { "zombie", "a zombie" }

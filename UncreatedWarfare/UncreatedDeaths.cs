@@ -6,8 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -26,6 +29,7 @@ namespace Uncreated.Warfare
                 Data.DatabaseManager?.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
             }
             OnTeamkill?.Invoke(this, parameters);
+            XPManager.OnFriendlyKilled(parameters);
         }
         public class KillEventArgs : EventArgs
         {
@@ -74,6 +78,8 @@ namespace Uncreated.Warfare
                     pt.stats.KillPlayer();
             }
             OnKill?.Invoke(this, parameters);
+            XPManager.OnEnemyKilled(parameters);
+            OfficerManager.OnEnemyKilled(parameters);
         }
         public class SuicideEventArgs : EventArgs
         {

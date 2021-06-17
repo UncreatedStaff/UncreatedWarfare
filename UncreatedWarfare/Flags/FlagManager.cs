@@ -10,6 +10,9 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Flags
 {
+    public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
+    public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
+
     public class FlagManager : IDisposable
     {
         public List<Flag> FlagRotation { get; private set; }
@@ -502,11 +505,14 @@ namespace Uncreated.Warfare.Flags
         public class OnTeamWinEventArgs : EventArgs { public ulong team; }
         public class OnObjectiveChangeEventArgs : EventArgs { public Flag oldFlagObj; public Flag newFlagObj; public ulong Team; public int OldObj; public int NewObj; }
         public class OnStateChangedEventArgs : EventArgs { public EState NewState; public EState OldState; }
-        public event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
-        public event EventHandler<OnObjectiveChangeEventArgs> OnObjectiveChange;
-        public event EventHandler<OnStateChangedEventArgs> OnStateChanged;
-        public event EventHandler OnReady;
-        public event EventHandler OnNewGameStarting;
+        public static event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
+        public static event EventHandler<OnObjectiveChangeEventArgs> OnObjectiveChange;
+        public static event EventHandler<OnStateChangedEventArgs> OnStateChanged;
+        public static event EventHandler OnReady;
+        public static event EventHandler OnNewGameStarting;
+        public static event FlagCapturedHandler OnFlagCaptured;
+        public static event FlagNeutralizedHandler OnFlagNeutralized;
+
         public void DeclareWin(ulong Team, bool showEndScreen = true)
         {
             F.Log(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Cyan);
@@ -559,6 +565,7 @@ namespace Uncreated.Warfare.Flags
                         ObjectiveT1Index = flag.index + 1;
                         OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
                         { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index], NewObj = ObjectiveT1Index, OldObj = flag.index, Team = e.NewOwner });
+                        OnFlagCaptured?.Invoke(flag, e.NewOwner, e.OldOwner);
                     }
                 }
                 else if (e.NewOwner == 2)
@@ -573,6 +580,7 @@ namespace Uncreated.Warfare.Flags
                         ObjectiveT2Index = flag.index - 1;
                         OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
                         { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index], NewObj = ObjectiveT2Index, OldObj = flag.index, Team = e.NewOwner });
+                        OnFlagCaptured?.Invoke(flag, e.NewOwner, e.OldOwner);
                     }
                 }
                 else if (e.NewOwner == 0)
@@ -585,8 +593,10 @@ namespace Uncreated.Warfare.Flags
                         {
                             OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
                             { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                            OnFlagNeutralized?.Invoke(flag, 2, 1);
                         }
-                    } else if (e.OldOwner == 2)
+                    }
+                    else if (e.OldOwner == 2)
                     {
                         int oldindex = ObjectiveT2Index;
                         ObjectiveT2Index = flag.index;
@@ -594,6 +604,7 @@ namespace Uncreated.Warfare.Flags
                         {
                             OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
                             { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                            OnFlagNeutralized?.Invoke(flag, 1, 2);
                         }
                     }
                 }
@@ -620,6 +631,8 @@ namespace Uncreated.Warfare.Flags
                             flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                             flag.TeamSpecificHexColor);
                         SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
+
+                        
                     }
                 }
                 else

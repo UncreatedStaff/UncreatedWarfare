@@ -391,59 +391,12 @@ namespace Uncreated.Warfare
             else if (team == 3) return TeamManager.AdminColor;
             else return TeamManager.NeutralColor;
         }
-        public static string GetKitIcon(this UnturnedPlayer player)
-        {
-            PlayerManager.HasPlayerData(player.CSteamID.m_SteamID, out var save);
-
-            if (save == null)
-                return "NO SAVE";
-
-            switch (save.KitClass)
-            {
-                case Kit.EClass.NONE:
-                    return "";
-                case Kit.EClass.UNARMED:
-                    return "±";
-                case Kit.EClass.SQUADLEADER:
-                    return "¦";
-                case Kit.EClass.RIFLEMAN:
-                    return "¡";
-                case Kit.EClass.MEDIC:
-                    return "¢";
-                case Kit.EClass.BREACHER:
-                    return "¤";
-                case Kit.EClass.AUTOMATIC_RIFLEMAN:
-                    return "¥";
-                case Kit.EClass.GRENADIER:
-                    return "¬";
-                case Kit.EClass.MACHINE_GUNNER:
-                    return "«";
-                case Kit.EClass.LAT:
-                    return "®";
-                case Kit.EClass.HAT:
-                    return "¯";
-                case Kit.EClass.MARKSMAN:
-                    return "¨";
-                case Kit.EClass.SNIPER:
-                    return "£";
-                case Kit.EClass.AP_RIFLEMAN:
-                    return "©";
-                case Kit.EClass.COMBAT_ENGINEER:
-                    return "ª";
-                case Kit.EClass.CREWMAN:
-                    return "§";
-                case Kit.EClass.PILOT:
-                    return "°";
-                default:
-                    return "";
-            }
-        }
         public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
         {
             SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
             if (pl == default)
             {
-                if (PlayerManager.HasSave(s64, out LogoutSave save))
+                if (PlayerManager.HasSave(s64, out UCPlayer save))
                     return GetTeam(save.Team);
                 else return 0;
             }
