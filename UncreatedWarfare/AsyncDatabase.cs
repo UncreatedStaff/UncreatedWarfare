@@ -20,7 +20,7 @@ namespace Uncreated.SQL
     public class AsyncDatabase : IDisposable
     {
         public MySqlConnection SQL { get; protected set; }
-        private DbCaller _dbCaller;
+        private readonly DbCaller _dbCaller;
         /// <summary>
         /// Does not open the connection, you must run <see cref="OpenAsync">OpenAsync</see> or <see cref="OpenSync">OpenSync</see>
         /// </summary>
@@ -402,7 +402,6 @@ namespace Uncreated.SQL
                         if (oldNickName == null || oldNickName != player.NickName)
                             updateNickName = true;
                         if (!updatePlayerName && !updateNickName && !updateCharacterName) return;
-                        Data.WebInterface?.SendUpdatedUsername(Steam64, player);
                         Dictionary<string, EUpdateOperation> varsToUpdate = new Dictionary<string, EUpdateOperation>();
                         if (updatePlayerName)
                             varsToUpdate.Add(GetColumnName("usernames", "PlayerName"), EUpdateOperation.SETFROMVALUES);
@@ -607,7 +606,7 @@ namespace Uncreated.SQL
         {
             IAsyncResult ar = _manager.CloseAsync(null);
             ar.AsyncWaitHandle.WaitOne();
-            Warfare.Stats.WebCallbacks.Dispose(ar);
+            AsyncDatabaseCallbacks.Dispose(ar);
             _manager.SQL.Dispose();
         }
         internal void Close()
@@ -661,7 +660,7 @@ namespace Uncreated.SQL
             {
                 F.LogError("Failed to cast \"" + ar.AsyncState.GetType().ToString() + "\" to a valid delegate containing SQL information.");
             }
-            Warfare.Stats.WebCallbacks.Dispose(ar);
+            AsyncDatabaseCallbacks.Dispose(ar);
         }
         private void FinishedReading(SQLCallStructure Data, AsyncCallback Function, Type type)
         {

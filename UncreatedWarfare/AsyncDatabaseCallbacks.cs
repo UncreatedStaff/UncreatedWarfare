@@ -10,6 +10,7 @@ namespace Uncreated.SQL
 {
     public static class AsyncDatabaseCallbacks
     {
+
         internal static void Dispose(this IAsyncResult ar)
         {
             try

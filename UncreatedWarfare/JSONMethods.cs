@@ -224,22 +224,6 @@ namespace Uncreated.Warfare
             this.language = language;
         }
     }
-    public struct CallData
-    {
-        public string key;
-        public string call;
-        [JsonConstructor]
-        public CallData(string key, string call)
-        {
-            this.key = key;
-            this.call = call;
-        }
-        public CallData(ECall key, string call)
-        {
-            this.key = key.ToString();
-            this.call = call;
-        }
-    }
     public struct LanguageAliasSet
     {
         public string key;
@@ -787,53 +771,6 @@ namespace Uncreated.Warfare
                 NewTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
             }
             return NewTables;
-        }
-        public static Dictionary<ECall, string> LoadCalls()
-        {
-            if (!File.Exists(Data.DataDirectory + "node-calls.json"))
-            {
-                
-                using (StreamWriter TextWriter = File.CreateText(Data.DataDirectory + "node-calls.json"))
-                {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
-                    {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
-                        Serializer.Serialize(JsonWriter, DefaultNodeCalls);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
-                    }
-                }
-                Dictionary<ECall, string> DefaultNewCalls = new Dictionary<ECall, string>();
-                foreach (CallData call in DefaultNodeCalls)
-                {
-                    DefaultNewCalls.Add((ECall)Enum.Parse(typeof(ECall), call.key), call.call);
-                }
-                return DefaultNewCalls;
-            }
-            List<CallData> Calls;
-            using (StreamReader Reader = File.OpenText(Data.DataDirectory + "node-calls.json"))
-            {
-                Calls = JsonConvert.DeserializeObject<List<CallData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
-            }
-            if (Calls == null)
-            {
-                Dictionary<ECall, string> DefaultNewCalls = new Dictionary<ECall, string>();
-                foreach (CallData call in DefaultNodeCalls)
-                {
-                    DefaultNewCalls.Add((ECall)Enum.Parse(typeof(ECall), call.key), call.call);
-                }
-                return DefaultNewCalls;
-            }
-            Dictionary<ECall, string> NewCalls = new Dictionary<ECall, string>();
-            foreach (CallData call in Calls)
-            {
-                NewCalls.Add((ECall)Enum.Parse(typeof(ECall), call.key), call.call);
-            }
-            return NewCalls;
         }
         public static Dictionary<ulong, string> LoadLanguagePreferences()
         {

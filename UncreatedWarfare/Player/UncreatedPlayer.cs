@@ -339,5 +339,30 @@ namespace Uncreated.Players
             this.NickName = player.channel.owner.playerID.nickName;
             this.Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
         }
+        public byte[] GetBytes()
+        {
+            byte[] st = BitConverter.GetBytes(Steam64);
+            byte[] pn = Encoding.UTF8.GetBytes(PlayerName);
+            byte[] pnl = BitConverter.GetBytes((ushort)pn.Length);
+            byte[] cn = Encoding.UTF8.GetBytes(CharacterName);
+            byte[] cnl = BitConverter.GetBytes((ushort)cn.Length);
+            byte[] nn = Encoding.UTF8.GetBytes(NickName);
+            byte[] nnl = BitConverter.GetBytes((ushort)nn.Length);
+            byte[] rtn = new byte[st.Length + pn.Length + cn.Length + nn.Length + pnl.Length + cnl.Length + nnl.Length];
+            Array.Copy(st, rtn, st.Length);
+            int i = st.Length;
+            Array.Copy(pnl, 0, rtn, i, pnl.Length);
+            i += pnl.Length;
+            Array.Copy(pn, 0, rtn, i, pn.Length);
+            i += pn.Length;
+            Array.Copy(cnl, 0, rtn, i, cnl.Length);
+            i += cnl.Length;
+            Array.Copy(cn, 0, rtn, i, cn.Length);
+            i += cn.Length;
+            Array.Copy(cnl, 0, rtn, i, nnl.Length);
+            i += nnl.Length;
+            Array.Copy(cn, 0, rtn, i, nn.Length);
+            return rtn;
+        }
     }
 }

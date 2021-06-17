@@ -15,25 +15,6 @@ namespace Uncreated.Warfare
 {
     partial class JSONMethods
     {
-        public static readonly List<CallData> DefaultNodeCalls = new List<CallData>
-        {
-            new CallData(ECall.SEND_PLAYER_LIST, "sendPlayerList"),
-            new CallData(ECall.SEND_PLAYER_JOINED, "sendPlayerJoin"),
-            new CallData(ECall.SEND_PLAYER_LEFT, "sendPlayerLeave"),
-            new CallData(ECall.GET_PLAYER_LIST, "getPlayerList"),
-            new CallData(ECall.GET_USERNAME, "getUsername"),
-            new CallData(ECall.PING_SERVER, "ping" ),
-            new CallData(ECall.SEND_PLAYER_LOCATION_DATA, "sendPlayerLocationData"),
-            new CallData(ECall.INVOKE_BAN, "invokeBan"),
-            new CallData(ECall.SEND_VEHICLE_DATA, "sendVehicleData"),
-            new CallData(ECall.SEND_ITEM_DATA, "sendItemData"),
-            new CallData(ECall.SEND_SKIN_DATA, "sendSkinData"),
-            new CallData(ECall.REPORT_VEHICLE_ERROR, "reportVehicleError"),
-            new CallData(ECall.REPORT_ITEM_ERROR, "reportItemError"),
-            new CallData(ECall.REPORT_SKIN_ERROR, "reportSkinError"),
-            new CallData(ECall.SEND_UPDATED_USERNAME, "sendUpdatedUsername"),
-
-        };
         public static void CreateDefaultTranslations()
         {
             DefaultTranslations = new Dictionary<string, string>

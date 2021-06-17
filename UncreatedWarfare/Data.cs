@@ -20,6 +20,8 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Squads;
+using Rocket.Core;
+using Rocket.API.Serialisation;
 
 namespace Uncreated.Warfare
 {
@@ -27,7 +29,7 @@ namespace Uncreated.Warfare
     {
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
-        public static readonly string StatsDirectory = Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
+        public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
         private static string _flagStorageTemp;
         public static string FlagStorage {
@@ -78,7 +80,6 @@ namespace Uncreated.Warfare
         public static Dictionary<int, Zone> ExtraZones;
         public static Dictionary<string, Vector3> ExtraPoints;
         public static Dictionary<string, MySqlTableLang> TableData;
-        public static Dictionary<ECall, string> NodeCalls;
         public static Dictionary<ulong, string> DefaultPlayerNames;
         public static Dictionary<ulong, FPlayerName> OriginalNames = new Dictionary<ulong, FPlayerName>();
         public static Dictionary<ulong, string> Languages;
@@ -95,20 +96,17 @@ namespace Uncreated.Warfare
         public static ReviveManager ReviveManager;
         public static TicketManager TicketManager;
         public static PlayerManager LogoutSaver;
-        public static WebInterface WebInterface;
         public static RequestSigns RequestSignManager;
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
         public static SquadManager squadManager;
-        internal static Thread ListenerThread;
-        internal static AsyncListenServer ListenServer;
         internal static AsyncDatabase DatabaseManager;
         public static WarStatsTracker GameStats;
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static MethodInfo AppendConsoleMethod;
         internal static ConsoleInputOutputBase defaultIOHandler;
-        public static void LoadVariables()
+        public static void LoadColoredConsole()
         {
             CommandWindow.Log("Loading Colored Console Method");
             try
@@ -124,6 +122,9 @@ namespace Uncreated.Warfare
                 CommandWindow.LogError(ex);
                 CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
+        }
+        public static void LoadVariables()
+        {
             F.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
             F.CheckDir(DataDirectory, out _, true);
@@ -152,7 +153,6 @@ namespace Uncreated.Warfare
             CreditsData = JSONMethods.LoadCredits();
             Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
             TableData = JSONMethods.LoadTables();
-            NodeCalls = JSONMethods.LoadCalls();
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 
@@ -160,7 +160,6 @@ namespace Uncreated.Warfare
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new AsyncDatabase();
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
-            WebInterface = new WebInterface();
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
             squadManager = new SquadManager();
@@ -169,12 +168,11 @@ namespace Uncreated.Warfare
             FlagManager = new FlagManager();
             FlagManager.OnReady += UCWarfare.I.OnFlagManagerReady;
             TicketManager = new TicketManager();
-            if (UCWarfare.Config.PlayerStatsSettings.EnableListenServer)
+            if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
             {
-                ListenerThread = new Thread(StartListening);
-                ListenerThread.Name = "UCWarfareListenServer";
-                ListenerThread.IsBackground = true;
-                ListenerThread.Start();
+                F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
+                Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
+                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort);
             }
             if (UCWarfare.Config.Modules.Kits)
             {
@@ -215,12 +213,15 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
                 F.LogError("The sign translation system will likely not work!");
             }
-        }
-        private static void StartListening()
-        {
-            ListenServer = new AsyncListenServer();
-            ListenServer.OnMessageReceived += UCWarfare.I.ReceivedResponeFromListenServer;
-            ListenServer.Start(ListenerThread);
+
+            if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
+                R.Permissions.AddGroup(AdminOnDutyGroup);
+            if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
+                R.Permissions.AddGroup(AdminOffDutyGroup);
+            if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup) == default)
+                R.Permissions.AddGroup(InternOnDutyGroup);
+            if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup) == default)
+                R.Permissions.AddGroup(InternOffDutyGroup);
         }
         private static void DuplicateKeyError(Exception ex)
         {
@@ -237,6 +238,99 @@ namespace Uncreated.Warfare
                 F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
             };
             UCWarfare.I.UnloadPlugin();
+        }
+        private static RocketPermissionsGroup AdminOnDutyGroup
+        {
+            get =>
+                new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup,
+                "Admin", "default", new List<string>(), AdminPerms, "00ffff", 100)
+                { Prefix = "[Admin] " };
+        }
+        private static RocketPermissionsGroup AdminOffDutyGroup
+        {
+            get =>
+                new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup,
+                "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100)
+                { Prefix = "[Admin] " };
+        }
+        
+        private static RocketPermissionsGroup InternOnDutyGroup
+        {
+            get =>
+                new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup,
+                "Intern", "default", new List<string>(), TrialAdminPerms, "66ffff", 50)
+                { Prefix = "[Intern] " };
+        }
+        private static RocketPermissionsGroup InternOffDutyGroup
+        {
+            get =>
+                new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup,
+                "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50)
+                { Prefix = "[Intern] " };
+        }
+
+        private static List<Permission> AdminPerms 
+        {
+            get =>
+                new List<Permission>()
+                {
+                    new Permission("uc.duty"),
+                    new Permission("uc.reload"),
+                    new Permission("uc.test"),
+                    new Permission("uc.ban"),
+                    new Permission("uc.clear"),
+                    new Permission("uc.group"),
+                    new Permission("uc.group.current"),
+                    new Permission("uc.group.create"),
+                    new Permission("uc.group.join"),
+                    new Permission("uc.join"),
+                    new Permission("uc.kick"),
+                    new Permission("uc.lang"),
+                    new Permission("uc.reload"),
+                    new Permission("uc.reload.all"),
+                    new Permission("uc.reload.translations"),
+                    new Permission("uc.reload.flags"),
+                    new Permission("uc.request"),
+                    new Permission("uc.request.save"),
+                    new Permission("uc.request.remove"),
+                    new Permission("uc.structure"),
+                    new Permission("uc.structure.save"),
+                    new Permission("uc.structure.remove"),
+                    new Permission("uc.structure.pop"),
+                    new Permission("uc.structure.examine"),
+                    new Permission("uc.unban"),
+                    new Permission("uc.warn"),
+                    new Permission("uc.whitelist"),
+                    new Permission("uc.build"),
+                    new Permission("uc.kit"),
+                    new Permission("uc.ammo"),
+                    new Permission("uc.squad"),
+                    new Permission("uc.vehiclebay")
+                };
+        }
+        private static List<Permission> TrialAdminPerms
+        {
+            get =>
+                new List<Permission>()
+                {
+                    new Permission("uc.duty"),
+                    new Permission("uc.reload"),
+                    new Permission("uc.test"),
+                    new Permission("uc.ban"),
+                    new Permission("uc.clear"),
+                    new Permission("uc.join"),
+                    new Permission("uc.kick"),
+                    new Permission("uc.lang"),
+                    new Permission("uc.request"),
+                    new Permission("uc.structure"),
+                    new Permission("uc.structure.pop"),
+                    new Permission("uc.structure.examine"),
+                    new Permission("uc.unban"),
+                    new Permission("uc.warn"),
+                    new Permission("uc.build"),
+                    new Permission("uc.ammo"),
+                    new Permission("uc.squad"),
+                };
         }
     }
 }

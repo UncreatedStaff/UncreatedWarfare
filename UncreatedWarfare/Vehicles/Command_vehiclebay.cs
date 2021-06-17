@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Kits
         public string Help => "Set's up the vehicle bay";
         public string Syntax => "/vehiclebay";
         public List<string> Aliases => new List<string>() { "vb" };
-        public List<string> Permissions => new List<string>() { "vehiclebay" };
+        public List<string> Permissions => new List<string>() { "uc.vehiclebay" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
