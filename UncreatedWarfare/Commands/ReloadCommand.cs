@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadTCPServer()
         {
-            Networking.Server.SendReloading();
+            Networking.Client.SendReloading();
             Networking.TCPClient.I?.Shutdown();
             Networking.TCPClient.I = null;
         }

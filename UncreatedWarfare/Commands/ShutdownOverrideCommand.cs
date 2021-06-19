@@ -40,7 +40,7 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
-                    Networking.Server.SendGracefulShutdown(reason, 0);
+                    Networking.Client.SendShuttingDown(0, reason);
                     Provider.shutdown(0, reason);
                 } else if (option == "aftergame" || option == "after" || option == "game")
                 {
@@ -67,7 +67,7 @@ namespace Uncreated.Warfare.Commands
                     F.Broadcast("shutdown_broadcast_after_time", UCWarfare.GetColor("shutdown_broadcast_after_time"),
                         time, UCWarfare.GetColorHex("shutdown_broadcast_after_time_reason"));
                     F.Log(F.Translate("shutdown_broadcast_after_time_console", 0, time, reason), ConsoleColor.Cyan);
-                    Networking.Server.SendGracefulShutdown(reason, 0);
+                    Networking.Client.SendShuttingDown(0, reason);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 } else
                 {
@@ -94,7 +94,7 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
-                    Networking.Server.SendGracefulShutdown(reason, player.playerID.steamID.m_SteamID);
+                    Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
                     Provider.shutdown(0, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
@@ -133,7 +133,7 @@ namespace Uncreated.Warfare.Commands
                     F.Broadcast("shutdown_broadcast_after_time", UCWarfare.GetColor("shutdown_broadcast_after_time"),
                         time, UCWarfare.GetColorHex("shutdown_broadcast_after_time_reason"));
                     F.Log(F.Translate("shutdown_broadcast_after_time_console_player", 0, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
-                    Networking.Server.SendGracefulShutdown(reason, player.playerID.steamID.m_SteamID);
+                    Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 }
                 else

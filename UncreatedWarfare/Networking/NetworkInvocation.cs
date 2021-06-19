@@ -4,8 +4,50 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Uncreated.Networking
+namespace Uncreated.Networking.Invocations
 {
+    public class NetworkInvocationRaw<T>
+    {
+        private ECall call;
+        private Action<byte[]> send;
+        private Func<byte[], T> read_func;
+        private Func<T, byte[]> write_func;
+        public NetworkInvocationRaw(ECall call, Action<byte[]> send, Func<byte[], T> read, Func<T, byte[]> write)
+        {
+            this.call = call;
+            this.send = send;
+            this.read_func = read;
+            this.write_func = write;
+        }
+        public void Invoke(T arg) => send.Invoke(write_func.Invoke(arg).Callify(call));
+        public bool Read(byte[] bytes, out T output)
+        {
+            try
+            {
+                output = read_func.Invoke(bytes);
+                return true;
+            }
+            catch
+            {
+                output = default;
+                return false;
+            }
+        }
+    }
+    public class NetworkInvocation
+    {
+        private ECall call;
+        private Action<byte[]> send;
+        public NetworkInvocation(ECall call, Action<byte[]> send)
+        {
+            this.call = call;
+            this.send = send;
+        }
+        public void Invoke()
+        {
+            send.Invoke(ByteMath.Callify(call));
+        }
+    }
     public class NetworkInvocation<T1>
     {
         private ECall call;
@@ -13,6 +55,7 @@ namespace Uncreated.Networking
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
+            this.send = send;
         }
         public void Invoke(T1 arg1)
         {

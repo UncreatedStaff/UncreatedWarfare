@@ -49,7 +49,7 @@ namespace Uncreated.Warfare.Stats
                 }
                 if (ShuttingDown)
                 {
-                    Networking.Server.SendGracefulShutdown(ShuttingDownMessage, ShuttingDownPlayer);
+                    Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
                     Provider.shutdown(0, ShuttingDownMessage);
                 }
                 else if (OnLeaderboardExpired != null)

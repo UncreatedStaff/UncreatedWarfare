@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Uncreated.Warfare
+namespace Uncreated
 {
     public class Config<TData> where TData : ConfigData, new()
     {

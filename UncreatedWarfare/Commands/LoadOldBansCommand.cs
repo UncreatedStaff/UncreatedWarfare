@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Commands
                     for (int index = 0; index < SteamBlacklist.list.Count; ++index)
                     {
                         SteamBlacklistID ban = SteamBlacklist.list[index];
-                        Server.LogPlayerBanned(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, ban.duration / 60, DateTime.Now - TimeSpan.FromSeconds(ban.duration - ban.getTime()));
+                        Client.LogPlayerBanned(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, ban.duration / 60, DateTime.Now - TimeSpan.FromSeconds(ban.duration - ban.getTime()));
                     }
                 }
                 else

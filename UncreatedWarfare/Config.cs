@@ -26,7 +26,7 @@ namespace Uncreated
         [XmlElement("Patches")]
         public PatchToggles Patches;
         [XmlElement("MySQL")]
-        public MySqlData SQL;
+        public SQL.MySqlData SQL;
         [XmlElement("VehicleBay")]
         public VehicleBaySettings VehicleBaySettings;
         public bool Debug;
@@ -48,7 +48,7 @@ namespace Uncreated
             this.FobSettings = new FOBSettings();
             this.DeathMessages = new DeathMesssagesSettings();
             this.Patches = new PatchToggles();
-            this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
+            this.SQL = new SQL.MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "admin", CharSet = "utf8mb4" };
             this.VehicleBaySettings = new VehicleBaySettings();
             this.Debug = true;
             this.SendAssetsOnStartup = false;
@@ -284,16 +284,5 @@ namespace Uncreated
         {
             VehicleSpawnerID = 20002;
         }
-    }
-    public struct MySqlData
-    {
-        public string Host;
-        public string Database;
-        public string Password;
-        public string Username;
-        public ushort Port;
-        public string CharSet;
-        [JsonIgnore]
-        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
     }
 }

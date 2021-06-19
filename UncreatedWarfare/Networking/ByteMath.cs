@@ -18,6 +18,7 @@ namespace Uncreated.Networking
             Array.Copy(b, 0, n, 0, b.Length);
             return n;
         }
+        public static byte[] Callify(ECall call) => BitConverter.GetBytes((ushort)call);
         public static bool ReadUInt16(out ushort output, int index, byte[] source)
         {
             if (source.Length > index + sizeof(ushort))
@@ -245,6 +246,7 @@ namespace Uncreated.Networking
                 return false;
             }
         }
+        /// <summary>Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></summary>
         public static byte[] GetBytes(object t)
         {
             Type type = t.GetType();
@@ -298,8 +300,13 @@ namespace Uncreated.Networking
                     throw;
                 }
             }
+            else if (t is DateTime dt)
+            {
+                return BitConverter.GetBytes(dt.Ticks);
+            }
             else throw new ArgumentException("Can not convert that type!", "t");
         }
+        /// <summary>Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></summary>
         public static object ReadBytes(byte[] data, int index, Type type, out int size)
         {
             if (type.IsPrimitive)
@@ -389,6 +396,15 @@ namespace Uncreated.Networking
                 {
                     throw;
                 }
+            }
+            else if (type == typeof(DateTime))
+            {
+                if (ReadInt64(out long l, index, data))
+                {
+                    size = sizeof(long);
+                    return new DateTime(l);
+                }
+                else throw new ArgumentException("Can not convert that type!", "t");
             }
             else throw new ArgumentException("Can not convert that type!", "t");
         }
