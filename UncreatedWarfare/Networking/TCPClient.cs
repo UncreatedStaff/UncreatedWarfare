@@ -136,15 +136,16 @@ namespace Uncreated.Networking
         {
             if (e.message.Length <= 0) return;
             ECall call;
-            try
+            if (ByteMath.ReadUInt16(out ushort callid, 0, e.message))
             {
-                call = (ECall)e.message[0];
-            }
-            catch (Exception)
+                call = (ECall)callid;
+            } else
             {
                 Warfare.F.LogError("Incorrect call enumerator given in response: " + e.message[0].ToString());
                 return;
             }
+            byte[] data = new byte[e.message.Length - sizeof(ushort)];
+            Array.Copy(e.message, sizeof(ushort), data, 0, data.Length);
             switch (call)
             {
                 case ECall.INVOKE_BAN:
@@ -190,7 +191,19 @@ namespace Uncreated.Networking
         }
         public static void SendStartupStep(EStartupStep step) =>
             TCPClient.I.SendMessageAsync(new byte[1] { (byte)step }.Callify(ECall.SERVER_STARTING_UP));
-        public static void SendGracefulShutdown() => TCPClient.I.SendMessageAsync(new byte[1] { (byte)ECall.SERVER_SHUTTING_DOWN });
+        public static void SendGracefulShutdown(string reason, ulong player) 
+        {
+            byte[] p = BitConverter.GetBytes(player);
+            byte[] rb = Encoding.UTF8.GetBytes(reason);
+            byte[] rbl = BitConverter.GetBytes((ushort)rb.Length);
+            byte[] rtn = new byte[p.Length + rbl.Length + rb.Length];
+            Array.Copy(p, 0, rtn, 0, p.Length);
+            Array.Copy(rbl, 0, rtn, p.Length, rbl.Length);
+            Array.Copy(rb, 0, rtn, p.Length + rbl.Length, rb.Length);
+            TCPClient.I.SendMessageAsync(rtn.Callify(ECall.SERVER_SHUTTING_DOWN)); 
+        }
+        public static void SendReloading() =>
+            TCPClient.I.SendMessageAsync(new byte[1] { (byte)ECall.SERVER_RELOADING }); 
     }
     public class ReceivedServerMessageArgs : EventArgs
     {
@@ -309,10 +322,17 @@ namespace Uncreated.Networking
             {
                 try
                 {
-                    if (stream == null) stream = socket.GetStream();
-                    stream.BeginWrite(message, 0, message.Length, WriteComplete, socket);
+                    if (socket != null && socket.Connected)
+                    {
+                        if (stream == null) stream = socket.GetStream();
+                        stream.BeginWrite(message, 0, message.Length, WriteComplete, socket);
+                    }
                 }
                 catch (SocketException)
+                {
+                    Warfare.F.LogError("Unable to write message.", ConsoleColor.Red);
+                }
+                catch (InvalidOperationException)
                 {
                     Warfare.F.LogError("Unable to write message.", ConsoleColor.Red);
                 }
@@ -383,8 +403,8 @@ namespace Uncreated.Networking
         INVOKE_REVOKE_KIT = 21,
         INVOKE_SHUTDOWN = 22,
         INVOKE_SHUTDOWN_AFTER_GAME = 23,
-        INVOKE_PROMOTE_OFFICER = 24,
-        INVOKE_DEMOTE_OFFICER = 25,
+        INVOKE_SET_OFFICER_LEVEL = 24,
+        SERVER_RELOADING = 25
     }
     public enum EStartupStep : byte
     {

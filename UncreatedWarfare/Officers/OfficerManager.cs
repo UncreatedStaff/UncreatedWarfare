@@ -60,8 +60,8 @@ namespace Uncreated.Warfare.Officers
 
         }
 
-        public static uint GetOfficerPoints(CSteamID playerID, ulong team) => Data.DatabaseManager.GetOfficerPointsSync(playerID.m_SteamID, (byte)team);
-        public static void AddOfficerPoints(CSteamID playerID, ulong team, int amount) => Data.DatabaseManager.AddOfficerPoints(playerID.m_SteamID, (byte)team, amount);
+        public static uint GetOfficerPoints(CSteamID playerID, ulong team) => Data.DatabaseManager.GetOfficerPointsSync(playerID.m_SteamID, unchecked((byte)team));
+        public static void AddOfficerPoints(CSteamID playerID, ulong team, int amount) => Data.DatabaseManager.AddOfficerPoints(playerID.m_SteamID, unchecked((byte)team), amount);
 
         public void ChangeOfficerRank(UCPlayer player, EOfficerLevel newLevel, EBranch branch)
         {

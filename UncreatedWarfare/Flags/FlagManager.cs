@@ -45,6 +45,9 @@ namespace Uncreated.Warfare.Flags
         public Flag ObjectiveTeam1 { get => FlagRotation[ObjectiveT1Index]; }
         public Flag ObjectiveTeam2 { get => FlagRotation[ObjectiveT2Index]; }
         private EndScreenLeaderboard EndScreen;
+        private string shutdownMessage = string.Empty;
+        private bool shutdownAfterGame = false;
+        private ulong shutdownPlayer = 0;
         public EState State { get => _state; set
             {
                 EState oldState = _state;
@@ -52,6 +55,20 @@ namespace Uncreated.Warfare.Flags
                 OnStateChanged?.Invoke(this, new OnStateChangedEventArgs() { NewState = _state, OldState = oldState });
             } 
         }
+        internal void ShutdownAfterGame(string reason, ulong player)
+        {
+            shutdownAfterGame = true;
+            shutdownMessage = reason;
+            shutdownPlayer = player;
+        }
+        
+        internal void CancelShutdownAfterGame()
+        {
+            shutdownAfterGame = false;
+            shutdownMessage = string.Empty;
+            shutdownPlayer = 0;
+        }
+
         private EState _state;
         public FlagManager()
         {
@@ -529,6 +546,9 @@ namespace Uncreated.Warfare.Flags
                 {
                     ClearListUI(client.transportConnection);
                 }
+                EndScreen.ShuttingDown = shutdownAfterGame;
+                EndScreen.ShuttingDownMessage = shutdownMessage;
+                EndScreen.ShuttingDownPlayer = shutdownPlayer;
                 EndScreen.EndGame();
                 isScreenUp = true;
             }

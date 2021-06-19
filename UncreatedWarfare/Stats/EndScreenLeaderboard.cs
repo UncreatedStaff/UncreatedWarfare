@@ -18,6 +18,9 @@ namespace Uncreated.Warfare.Stats
         readonly string[] headerPrefixes = new string[] { "MK", "KD", "TP", "XP" };
         public event EventHandler OnLeaderboardExpired;
         private float secondsLeft;
+        public bool ShuttingDown = false;
+        public string ShuttingDownMessage = string.Empty;
+        public ulong ShuttingDownPlayer = 0;
         const float updateTimeFrequency = 1f;
         private readonly Dictionary<ulong, EPluginWidgetFlags> oldFlags = new Dictionary<ulong, EPluginWidgetFlags>();
         public ulong winner;
@@ -44,8 +47,15 @@ namespace Uncreated.Warfare.Stats
                     player.player.movement.sendPluginSpeedMultiplier(1f);
                     player.player.movement.sendPluginJumpMultiplier(1f);
                 }
-                if(OnLeaderboardExpired != null)
+                if (ShuttingDown)
+                {
+                    Networking.Server.SendGracefulShutdown(ShuttingDownMessage, ShuttingDownPlayer);
+                    Provider.shutdown(0, ShuttingDownMessage);
+                }
+                else if (OnLeaderboardExpired != null)
+                {
                     OnLeaderboardExpired.Invoke(this, EventArgs.Empty);
+                }
                 Destroy(this);
             }
             else
@@ -79,7 +89,10 @@ namespace Uncreated.Warfare.Stats
             EffectManager.sendUIEffect(UCWarfare.Config.EndScreenUI, UiIdentifier, channel, true);
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "Title1", F.Translate("game_over", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TitleWinner", F.Translate("winner", player, TeamManager.TranslateName(winner, player), teamcolor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
+            if (ShuttingDown)
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label_shutting_down", player, ShuttingDownMessage));
+            else
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
             List<KeyValuePair<Player, int>> topkills = Data.GameStats.GetTop5MostKills();
             List<KeyValuePair<Player, float>> topkdr = Data.GameStats.GetTop5KDR();

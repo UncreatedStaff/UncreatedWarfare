@@ -227,6 +227,7 @@ namespace Uncreated.Warfare
                 { "lblFOBsDestroyedT2", "RU FOBs Destroyed: " },
                 { "lblTeamkillingCasualties", "Teamkill Casualties: " },
                 { "next_game_start_label", "Next Game Starting In" },
+                { "next_game_start_label_shutting_down", "<color=#00ffff>Shutting Down Because: \"{0}\" In</color>" },
                 { "next_game_starting_format", "{0:mm\\:ss}" },
 
                 // SIGNS - must prefix with "sign_" for them to work
@@ -396,7 +397,6 @@ namespace Uncreated.Warfare
                 { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
                 { "officer_discharged", "<color=#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.</color>" },
 
-
                 // Clear
                 { "clear_not_enough_args", "The clear command requires 1 argument." },
                 { "clear_inventory_console_identity", "Specify a player name when clearing from console." },
@@ -409,7 +409,21 @@ namespace Uncreated.Warfare
 
                 // Deaths
                 { "no_murderer_name", "Unapplicable" },
-                { "zombie", "a zombie" }
+                { "zombie", "a zombie" },
+
+                // Shutdown
+                { "shutdown_not_server", "This is not a server." },
+                { "shutdown_syntax", "Corrent syntax: /shutdown <aftergame|*seconds*|instant> <reason>." },
+                { "shutdown_broadcast_after_game", "A shutdown has been scheduled after this game because: \"<color=#{1}>{0}</color>\"" },
+                { "shutdown_broadcast_after_game_canceled", "The scheduled shutdown has been canceled." },
+                { "shutdown_broadcast_after_game_canceled_console", "The scheduled shutdown was canceled." },
+                { "shutdown_broadcast_after_game_canceled_console_player", "The scheduled shutdown was canceled by {0}." },
+                { "shutdown_broadcast_after_time", "A shutdown has been scheduled in {0} because: \"<color=#{2}>{1}</color>\"" },
+                { "shutdown_broadcast_after_game_console", "A shutdown has been scheduled after this game because: \"{0}\"" },
+                { "shutdown_broadcast_after_game_reminder", "A shutdown is scheduled to occur after this game because: \"<color=#{1}>{0}</color>\"" },
+                { "shutdown_broadcast_after_game_console_player", "A shutdown has been scheduled after this game by {0} because: \"{1}\"" },
+                { "shutdown_broadcast_after_time_console", "A shutdown has been scheduled in {0} because: \"{1}\"" },
+                { "shutdown_broadcast_after_time_console_player", "A shutdown has been scheduled in {0} by {1} because: \"{2}\"" },
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -671,7 +685,16 @@ namespace Uncreated.Warfare
             new ColorData("clear_structures_cleared", "e6e3d5"),
             new ColorData("clear_vehicles_cleared", "e6e3d5"),
             
-            
+            // Shutdown
+            new ColorData("shutdown_broadcast_after_game", "00ffff"),
+            new ColorData("shutdown_broadcast_after_game_canceled", "00ffff"),
+            new ColorData("shutdown_broadcast_after_game_reason", "6699ff"),
+            new ColorData("shutdown_broadcast_after_time", "00ffff"),
+            new ColorData("shutdown_broadcast_after_time_reason", "6699ff"),
+            new ColorData("shutdown_broadcast_after_game_reminder", "00ffff"),
+            new ColorData("shutdown_broadcast_after_game_reminder_reason", "6699ff"),
+
+            // Restrictions
             new ColorData("cant_steal_batteries", "f53b3b"),
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>

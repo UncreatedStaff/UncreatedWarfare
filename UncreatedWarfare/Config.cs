@@ -195,6 +195,7 @@ namespace Uncreated
         public bool LogBattleyeKick;
         public bool LogLastJoinedTime;
         public List<ushort> AllowedBarricadesOnVehicles;
+        public uint TimeBetweenShutdownMessages;
         public AdminLoggerSettings()
         {
             this.InternOnDutyGroup = "intern";
@@ -210,6 +211,7 @@ namespace Uncreated
             this.LogBattleyeKick = true;
             this.LogLastJoinedTime = true;
             this.AllowedBarricadesOnVehicles = new List<ushort>();
+            this.TimeBetweenShutdownMessages = 60;
         }
     }
     public class PlayerStatsSettings
