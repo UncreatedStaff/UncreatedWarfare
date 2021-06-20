@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.XP
 
         public XPManager()
         {
-            config = new Config<XPData>(Data.TeamStorage + "config.json");
+            config = new Config<XPData>(Data.TeamStorage, "config.json");
         }
 
         public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)

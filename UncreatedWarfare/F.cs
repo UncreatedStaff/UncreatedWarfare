@@ -1005,6 +1005,7 @@ namespace Uncreated.Warfare
                 };
             }
         }
+        public static bool TryGetPlayerOriginalNamesFromS64(ulong player, out FPlayerName originalNames) => Data.OriginalNames.TryGetValue(player, out originalNames);
         public static bool IsInMain(this Player player)
         {
             ulong team = player.GetTeam();

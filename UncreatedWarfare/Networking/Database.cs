@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
-using Uncreated.Warfare;
 using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -39,8 +38,8 @@ namespace Uncreated.SQL
             }
             catch (MySqlException ex)
             {
-                F.LogError("ERROR Closing Connection\n" + ex.Message);
-                F.LogError("\nTrace\n" + ex.StackTrace);
+                LogError("ERROR Closing Connection\n" + ex.Message);
+                LogError("\nTrace\n" + ex.StackTrace);
             }
         }
         /// <summary>Opens the connection and waits for a response.</summary>
@@ -55,16 +54,16 @@ namespace Uncreated.SQL
                 switch (ex.Number)
                 {
                     case 0:
-                        F.LogError("ERROR: Cannot connect to server. Server not found.");
+                        LogError("ERROR: Cannot connect to server. Server not found.");
                         break;
                     case 1045:
-                        F.LogError("ERROR: SQL Invalid Login");
+                        LogError("ERROR: SQL Invalid Login");
                         break;
                     case 1042:
-                        F.LogError("ERROR: Unable to connect to any of the specified MySQL hosts.");
+                        LogError("ERROR: Unable to connect to any of the specified MySQL hosts.");
                         break;
                     default:
-                        F.LogError($"Unknown MYSQL Error: {ex.Number}\n{ex.Message}");
+                        LogError($"Unknown MYSQL Error: {ex.Number}\n{ex.Message}");
                         break;
                 }
             }
@@ -212,6 +211,20 @@ namespace Uncreated.SQL
             }
             else return default;
         }
+        protected bool GetSelectResponse(IAsyncResult ar, out SelectResponse response)
+        {
+            IMySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
+            if (vagueResponse is SelectResponse r)
+            {
+                response = r;
+                return true;
+            }
+            else
+            {
+                response = null;
+                return false;
+            }
+        }
         public void DisposeOf()
         {
             _manager.CloseSync();
@@ -225,8 +238,8 @@ namespace Uncreated.SQL
             }
             catch (MySqlException ex)
             {
-                F.LogError("ERROR Closing Connection\n" + ex.Message);
-                F.LogError("\nTrace\n" + ex.StackTrace);
+                _manager.LogError("ERROR Closing Connection\n" + ex.Message);
+                _manager.LogError("\nTrace\n" + ex.StackTrace);
             }
         }
         public void Open(out bool bSuccess)
@@ -241,16 +254,16 @@ namespace Uncreated.SQL
                 switch (ex.Number)
                 {
                     case 0:
-                        F.LogError("ERROR: Cannot connect to server. Server not found.");
+                        _manager.LogError("ERROR: Cannot connect to server. Server not found.");
                         break;
                     case 1045:
-                        F.LogError("ERROR: SQL Invalid Login");
+                        _manager.LogError("ERROR: SQL Invalid Login");
                         break;
                     case 1042:
-                        F.LogError("ERROR: Unable to connect to any of the specified MySQL hosts.");
+                        _manager.LogError("ERROR: Unable to connect to any of the specified MySQL hosts.");
                         break;
                     default:
-                        F.LogError($"Unknown MYSQL Error: {ex.Number}\n{ex.Message}");
+                        _manager.LogError($"Unknown MYSQL Error: {ex.Number}\n{ex.Message}");
                         break;
                 }
                 bSuccess = false;
@@ -274,12 +287,12 @@ namespace Uncreated.SQL
                 }
                 else
                 {
-                    F.LogError("Type \"" + type.ToString() + "\" - Not a valid type.");
+                    _manager.LogError("Type \"" + type.ToString() + "\" - Not a valid type.");
                 }
             }
             catch (InvalidCastException)
             {
-                F.LogError("Failed to cast \"" + type.ToString() + "\" to a valid SQL Container.");
+                _manager.LogError("Failed to cast \"" + type.ToString() + "\" to a valid SQL Container.");
             }
         }
         protected void WaitUntilFinishedReading(ISQLCallStructure Data, AsyncCallback Function, out ISQLCallStructure DataReturn, out AsyncCallback FunctionReturn, out Type TypeReturn)
@@ -349,13 +362,6 @@ namespace Uncreated.SQL
                 {
                     Q.Parameters.AddWithValue("@" + i.ToString(), Data.conditions[i]);
                 }
-                if (UCWarfare.Config.Debug)
-                {
-                    StringBuilder sb = new StringBuilder(Q.CommandText + " - ");
-                    for (int i = 0; i < Q.Parameters.Count; i++)
-                        sb.Append(Q.Parameters[i].ParameterName + " : " + Q.Parameters[i].Value);
-                    F.Log(sb.ToString(), ConsoleColor.Green);
-                }
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
                     while (R.Read())
@@ -402,7 +408,7 @@ namespace Uncreated.SQL
                             }
                             catch (Exception ex)
                             {
-                                F.LogError("Exception in MySql SELECT statement:\n\"" + rtn.Command + "\"\nError:\n" + ex.ToString());
+                                _manager.LogError("Exception in MySql SELECT statement:\n\"" + rtn.Command + "\"\nError:\n" + ex.ToString());
                                 rtn.ExecutionStatus = EExecutionStatus.FAILURE;
                             }
                         }
@@ -482,7 +488,7 @@ namespace Uncreated.SQL
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Exception in MySql INSERT ON DUPLICATE UPDATE statement:\n\"" + rtn.Command + "\"\nError:\n" + ex.ToString());
+                    _manager.LogError("Exception in MySql INSERT ON DUPLICATE UPDATE statement:\n\"" + rtn.Command + "\"\nError:\n" + ex.ToString());
                     rtn.ExecutionStatus = EExecutionStatus.FAILURE;
                 }
             }
@@ -597,6 +603,8 @@ namespace Uncreated.SQL
                     return values[i];
                 } else return default;
             }
+            public T[] GetAllValues() => values.ToArray();
+            public T[] GetAllValues(Func<T, bool> predicate) => values.Where(predicate).ToArray();
         }
         public List<SqlColumn> Columns;
         public SelectResponse(string command)

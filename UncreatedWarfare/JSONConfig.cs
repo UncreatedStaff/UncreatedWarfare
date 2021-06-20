@@ -13,11 +13,13 @@ namespace Uncreated
         public readonly string directory;
         public TData data { get; private set; }
 
-        public Config(string directory)
+        public Config(string directory, string filename)
         {
-            this.directory = directory;
+            if(!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+            this.directory = directory + filename;
 
-            if (!File.Exists(directory))
+            if (!File.Exists(this.directory))
                 LoadDefaults();
             else
                 Reload();
