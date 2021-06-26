@@ -92,6 +92,7 @@ namespace Uncreated.SQL
                 switch (ex.Number)
                 {
                     case 0:
+                    case 1042:
                         LogWarning($"DATABASE CONNECTION FAILED: Could not find a host called '{_login.Host}'", ConsoleColor.Yellow);
                         return false;
                     case 1045:

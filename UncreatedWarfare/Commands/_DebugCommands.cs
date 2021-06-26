@@ -31,7 +31,8 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/test <mode>";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string> { "uc.test" };
-        public void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command) => ExecuteAsync(caller, command).GetAwaiter().GetResult();
+        public async Task ExecuteAsync(IRocketPlayer caller, string[] command)
         {
             Player player = caller.DisplayName == "Console" ? Provider.clients.FirstOrDefault()?.player : (caller as UnturnedPlayer).Player;
             if(command.Length > 0)
@@ -429,7 +430,10 @@ namespace Uncreated.Warfare.Commands
                     }
                 } else if (command[0] == "sqltest")
                 {
-                    Data.TestDB.NonQuery("SELECT XP FROM levels WHERE Steam64 = @0 AND TEAM = @1;", new object[] { player.channel.owner.playerID.steamID, player.GetTeam() });
+                    uint xp = 0;
+                    F.Log(xp);
+                    await Data.TestDB.Query("SELECT XP FROM levels WHERE Steam64 = @0 AND TEAM = @1;", new object[] { player.channel.owner.playerID.steamID, player.GetTeam() }, (R) => { xp = (uint)R.GetValue(0); });
+                    F.Log(xp);
                 }
             }
         }
