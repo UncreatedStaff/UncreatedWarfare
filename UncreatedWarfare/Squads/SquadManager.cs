@@ -28,7 +28,6 @@ namespace Uncreated.Warfare.Squads
             if (IsInAnySquad(player.CSteamID, out var squad))
                 UpdateUISquad(squad);
         }
-
         public static void ClearUIsquad(Player player)
         {
             for (int i = 0; i < 6; i++)

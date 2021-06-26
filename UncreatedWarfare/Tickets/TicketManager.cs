@@ -46,6 +46,24 @@ namespace Uncreated.Warfare.Tickets
                     AddTeam2Tickets(-1 * kit.TicketCost);
                 }
             }
+            F.Log("Team 1 Tickets: " + Team1Tickets);
+            F.Log("Team 2 Tickets: " + Team2Tickets);
+        }
+        public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
+        {
+            if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
+            {
+                if (TeamManager.IsTeam1(eventArgs.dead))
+                {
+                    AddTeam1Tickets(-1 * kit.TicketCost);
+                }
+                if (TeamManager.IsTeam2(eventArgs.dead))
+                {
+                    AddTeam2Tickets(-1 * kit.TicketCost);
+                }
+            }
+            F.Log("Team 1 Tickets: " + Team1Tickets);
+            F.Log("Team 2 Tickets: " + Team2Tickets);
         }
 
         private static void OnVehicleExploded(InteractableVehicle vehicle)
