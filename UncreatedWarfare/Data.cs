@@ -171,8 +171,7 @@ namespace Uncreated.Warfare
             // Managers
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             TestDB = new WarfareSqlTest(UCWarfare.Config.SQL);
-            await TestDB.OpenAsync();
-            /*
+            //await TestDB.OpenAsync();
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL.ConnectionString);
             DatabaseManager.OpenAsync(
                 new AsyncCallback(AsyncDatabaseCallbacks.OpenedOnLoad) + 
@@ -181,7 +180,6 @@ namespace Uncreated.Warfare
                     SyncDB = new SyncDatabase(DatabaseManager.SQL);
                 })
             );
-            */
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
             squadManager = new SquadManager();
