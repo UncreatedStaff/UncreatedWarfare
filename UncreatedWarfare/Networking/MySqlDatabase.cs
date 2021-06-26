@@ -88,9 +88,9 @@ namespace Uncreated.SQL
                 await SQL.OpenAsync();
                 return true;
             }
-            catch (MySqlException ex)
+            catch (DbException ex)
             {
-                switch (ex.Number)
+                switch (ex.ErrorCode)
                 {
                     case 0:
                     case 1042:
@@ -100,7 +100,7 @@ namespace Uncreated.SQL
                         LogWarning($"DATABASE CONNECTION FAILED: Host was found, but login was incorrect.", ConsoleColor.Yellow);
                         return false;
                     default:
-                        LogError($"DATABASE CONNECTION ERROR CODE: {ex.Number} - {ex.Message}", ConsoleColor.Yellow);
+                        LogError($"DATABASE CONNECTION ERROR CODE: {ex.ErrorCode} - {ex.Message}", ConsoleColor.Yellow);
                         LogError(ex);
                         return false;
                 }

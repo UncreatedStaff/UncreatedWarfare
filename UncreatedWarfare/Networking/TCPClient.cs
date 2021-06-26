@@ -203,7 +203,7 @@ namespace Uncreated.Networking
     }
     public class TCPClient : IDisposable
     {
-        public static readonly Action<byte[]> Send = (arr) => { I.SendMessageAsync(arr); };
+        public static readonly Action<byte[]> Send = (arr) => { SendMessageAsyncStatic(arr); };
         public static TCPClient I;
         public const int BufferSize = 4096;
         public string IP = "127.0.0.1";
@@ -248,6 +248,7 @@ namespace Uncreated.Networking
             connection.socket.Dispose();
         }
         public void SendMessageAsync(byte[] message) => connection?.SendMessage(message);
+        public static void SendMessageAsyncStatic(byte[] message) => I?.SendMessageAsync(message);
         internal void ReceiveData(byte[] data) => OnReceivedData?.Invoke(this, new ReceivedServerMessageArgs(data));
         public class ClientConnection
         {
