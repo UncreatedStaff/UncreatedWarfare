@@ -36,8 +36,9 @@ namespace Uncreated.Networking.Invocations
     }
     public class NetworkInvocation
     {
-        private ECall call;
-        private Action<byte[]> send;
+        private readonly ECall call;
+        private readonly Action<byte[]> send;
+
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
@@ -52,14 +53,16 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
         }
         public void Invoke(T1 arg1)
         {
-            send?.Invoke(ByteMath.GetBytes(arg1).Callify(call));
+            send?.Invoke(writer1.Invoke(arg1).Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1)
         {
@@ -79,15 +82,24 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private delegate T1 _reader1(byte[] bytes, int index, out int size);
+        private delegate T2 _reader2(byte[] bytes, int index, out int size);
+        private readonly _reader1 reader1;
+        private readonly _reader2 reader2;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.reader1 = ByteMath.GetReadFunction<T1, _reader1>();
         }
         public void Invoke(T1 arg1, T2 arg2)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
             byte[] rtn = new byte[b1.Length + b2.Length];
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
@@ -114,16 +126,22 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length];
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
@@ -155,17 +173,25 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);
@@ -205,18 +231,28 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
+        private readonly Func<object, byte[]> writer5;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
+            this.writer5 = ByteMath.GetByteFunction<T5>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
-            byte[] b5 = ByteMath.GetBytes(arg5);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
+            byte[] b5 = writer5.Invoke(arg5);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length + b5.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);
@@ -261,19 +297,31 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
+        private readonly Func<object, byte[]> writer5;
+        private readonly Func<object, byte[]> writer6;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
+            this.writer5 = ByteMath.GetByteFunction<T5>();
+            this.writer6 = ByteMath.GetByteFunction<T6>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
-            byte[] b5 = ByteMath.GetBytes(arg5);
-            byte[] b6 = ByteMath.GetBytes(arg6);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
+            byte[] b5 = writer5.Invoke(arg5);
+            byte[] b6 = writer6.Invoke(arg6);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length + b5.Length + b6.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);
@@ -323,20 +371,34 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
+        private readonly Func<object, byte[]> writer5;
+        private readonly Func<object, byte[]> writer6;
+        private readonly Func<object, byte[]> writer7;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
+            this.writer5 = ByteMath.GetByteFunction<T5>();
+            this.writer6 = ByteMath.GetByteFunction<T6>();
+            this.writer7 = ByteMath.GetByteFunction<T7>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
-            byte[] b5 = ByteMath.GetBytes(arg5);
-            byte[] b6 = ByteMath.GetBytes(arg6);
-            byte[] b7 = ByteMath.GetBytes(arg7);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
+            byte[] b5 = writer5.Invoke(arg5);
+            byte[] b6 = writer6.Invoke(arg6);
+            byte[] b7 = writer7.Invoke(arg7);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length + b5.Length + b6.Length + b7.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);
@@ -391,21 +453,37 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
+        private readonly Func<object, byte[]> writer5;
+        private readonly Func<object, byte[]> writer6;
+        private readonly Func<object, byte[]> writer7;
+        private readonly Func<object, byte[]> writer8;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
+            this.writer5 = ByteMath.GetByteFunction<T5>();
+            this.writer6 = ByteMath.GetByteFunction<T6>();
+            this.writer7 = ByteMath.GetByteFunction<T7>();
+            this.writer8 = ByteMath.GetByteFunction<T8>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
-            byte[] b5 = ByteMath.GetBytes(arg5);
-            byte[] b6 = ByteMath.GetBytes(arg6);
-            byte[] b7 = ByteMath.GetBytes(arg7);
-            byte[] b8 = ByteMath.GetBytes(arg8);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
+            byte[] b5 = writer5.Invoke(arg5);
+            byte[] b6 = writer6.Invoke(arg6);
+            byte[] b7 = writer7.Invoke(arg7);
+            byte[] b8 = writer8.Invoke(arg8);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length + b5.Length + b6.Length + b7.Length + b8.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);
@@ -465,22 +543,40 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
+        private readonly Func<object, byte[]> writer5;
+        private readonly Func<object, byte[]> writer6;
+        private readonly Func<object, byte[]> writer7;
+        private readonly Func<object, byte[]> writer8;
+        private readonly Func<object, byte[]> writer9;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
+            this.writer5 = ByteMath.GetByteFunction<T5>();
+            this.writer6 = ByteMath.GetByteFunction<T6>();
+            this.writer7 = ByteMath.GetByteFunction<T7>();
+            this.writer8 = ByteMath.GetByteFunction<T8>();
+            this.writer9 = ByteMath.GetByteFunction<T9>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
-            byte[] b5 = ByteMath.GetBytes(arg5);
-            byte[] b6 = ByteMath.GetBytes(arg6);
-            byte[] b7 = ByteMath.GetBytes(arg7);
-            byte[] b8 = ByteMath.GetBytes(arg8);
-            byte[] b9 = ByteMath.GetBytes(arg9);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
+            byte[] b5 = writer5.Invoke(arg5);
+            byte[] b6 = writer6.Invoke(arg6);
+            byte[] b7 = writer7.Invoke(arg7);
+            byte[] b8 = writer8.Invoke(arg8);
+            byte[] b9 = writer9.Invoke(arg9);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length + b5.Length + b6.Length + b7.Length + b8.Length + b9.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);
@@ -545,23 +641,43 @@ namespace Uncreated.Networking.Invocations
     {
         private ECall call;
         private Action<byte[]> send;
+        private readonly Func<object, byte[]> writer1;
+        private readonly Func<object, byte[]> writer2;
+        private readonly Func<object, byte[]> writer3;
+        private readonly Func<object, byte[]> writer4;
+        private readonly Func<object, byte[]> writer5;
+        private readonly Func<object, byte[]> writer6;
+        private readonly Func<object, byte[]> writer7;
+        private readonly Func<object, byte[]> writer8;
+        private readonly Func<object, byte[]> writer9;
+        private readonly Func<object, byte[]> writer10;
         public NetworkInvocation(ECall call, Action<byte[]> send)
         {
             this.call = call;
             this.send = send;
+            this.writer1 = ByteMath.GetByteFunction<T1>();
+            this.writer2 = ByteMath.GetByteFunction<T2>();
+            this.writer3 = ByteMath.GetByteFunction<T3>();
+            this.writer4 = ByteMath.GetByteFunction<T4>();
+            this.writer5 = ByteMath.GetByteFunction<T5>();
+            this.writer6 = ByteMath.GetByteFunction<T6>();
+            this.writer7 = ByteMath.GetByteFunction<T7>();
+            this.writer8 = ByteMath.GetByteFunction<T8>();
+            this.writer9 = ByteMath.GetByteFunction<T9>();
+            this.writer10 = ByteMath.GetByteFunction<T10>();
         }
         public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
         {
-            byte[] b1 = ByteMath.GetBytes(arg1);
-            byte[] b2 = ByteMath.GetBytes(arg2);
-            byte[] b3 = ByteMath.GetBytes(arg3);
-            byte[] b4 = ByteMath.GetBytes(arg4);
-            byte[] b5 = ByteMath.GetBytes(arg5);
-            byte[] b6 = ByteMath.GetBytes(arg6);
-            byte[] b7 = ByteMath.GetBytes(arg7);
-            byte[] b8 = ByteMath.GetBytes(arg8);
-            byte[] b9 = ByteMath.GetBytes(arg9);
-            byte[] b10 = ByteMath.GetBytes(arg10);
+            byte[] b1 = writer1.Invoke(arg1);
+            byte[] b2 = writer2.Invoke(arg2);
+            byte[] b3 = writer3.Invoke(arg3);
+            byte[] b4 = writer4.Invoke(arg4);
+            byte[] b5 = writer5.Invoke(arg5);
+            byte[] b6 = writer6.Invoke(arg6);
+            byte[] b7 = writer7.Invoke(arg7);
+            byte[] b8 = writer8.Invoke(arg8);
+            byte[] b9 = writer8.Invoke(arg9);
+            byte[] b10 = writer10.Invoke(arg10);
             byte[] rtn = new byte[b1.Length + b2.Length + b3.Length + b4.Length + b5.Length + b6.Length + b7.Length + b8.Length + b9.Length + b10.Length];
             int i = 0;
             Array.Copy(b1, 0, rtn, 0, b1.Length);

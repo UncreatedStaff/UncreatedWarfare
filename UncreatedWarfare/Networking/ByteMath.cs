@@ -247,64 +247,101 @@ namespace Uncreated.Networking
             }
         }
         /// <summary>Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></summary>
-        public static byte[] GetBytes(object t)
+        public static byte[] GetBytes<T>(object t)
         {
-            Type type = t.GetType();
+            return GetByteFunction<T>()(t);
+        }
+        public static TDele GetReadFunction<T, TDele>() where TDele : Delegate
+        {
+            return null;
+        }
+        public static Func<object, byte[]> GetByteFunction<T>()
+        {
+            Type type = typeof(T);
+            return GetByteFunction(type);
+        }
+        public static Func<object, byte[]> GetByteFunction(Type type)
+        {
             if (type.IsPrimitive)
             {
-                if (t is ulong ul)
-                    return BitConverter.GetBytes(ul);
-                else if (t is float fl)
-                    return BitConverter.GetBytes(fl);
-                else if (t is long l)
-                    return BitConverter.GetBytes(l);
-                else if (t is ushort ush)
-                    return BitConverter.GetBytes(ush);
-                else if (t is short sh)
-                    return BitConverter.GetBytes(sh);
-                else if (t is byte by)
-                    return new byte[1] { by };
-                else if (t is int i32)
-                    return BitConverter.GetBytes(i32);
-                else if (t is uint ui32)
-                    return BitConverter.GetBytes(ui32);
-                else if (t is bool bo)
-                    return new byte[1] { bo ? (byte)1 : (byte)0 };
-                else if (t is sbyte sb)
-                    return new byte[1] { unchecked((byte)sb) };
-                else if (t is decimal de)
-                    return BitConverter.GetBytes(Convert.ToDouble(de));
-                else if (t is double du)
-                    return BitConverter.GetBytes(du);
-                else throw new ArgumentException("Can not convert that type!", "t");
+                if (type == typeof(ulong))
+                    return (o) => BitConverter.GetBytes((ulong)o);
+                else if (type == typeof(float))
+                    return (o) => BitConverter.GetBytes((float)o);
+                else if (type == typeof(long))
+                    return (o) => BitConverter.GetBytes((long)o);
+                else if (type == typeof(ushort))
+                    return (o) => BitConverter.GetBytes((ushort)o);
+                else if (type == typeof(short))
+                    return (o) => BitConverter.GetBytes((short)o);
+                else if (type == typeof(byte))
+                    return (o) => new byte[1] { (byte)o };
+                else if (type == typeof(int))
+                    return (o) => BitConverter.GetBytes((int)o);
+                else if (type == typeof(uint))
+                    return (o) => BitConverter.GetBytes((uint)o);
+                else if (type == typeof(bool))
+                    return (o) => new byte[1] { (bool)o ? (byte)1 : (byte)0 };
+                else if (type == typeof(sbyte))
+                    return (o) => new byte[1] { unchecked((byte)(sbyte)o) };
+                else if (type == typeof(decimal))
+                    return (o) => BitConverter.GetBytes(Convert.ToDouble((decimal)o));
+                else if (type == typeof(double))
+                    return (o) => BitConverter.GetBytes((double)o);
+                else throw new ArgumentException("Can not convert that type!", nameof(type));
             }
-            else if (t is string str)
+            else if (type == typeof(string))
             {
-                byte[] strbytes = Encoding.UTF8.GetBytes(str);
-                byte[] length = BitConverter.GetBytes(unchecked((ushort)strbytes.Length));
-                byte[] rtn = new byte[length.Length + strbytes.Length];
-                Array.Copy(length, 0, rtn, 0, length.Length);
-                Array.Copy(strbytes, 0, rtn, length.Length, strbytes.Length);
-                return rtn;
+                return (o) =>
+                {
+                    byte[] strbytes = Encoding.UTF8.GetBytes((string)o);
+                    byte[] length = BitConverter.GetBytes(unchecked((ushort)strbytes.Length));
+                    byte[] rtn = new byte[length.Length + strbytes.Length];
+                    Array.Copy(length, 0, rtn, 0, length.Length);
+                    Array.Copy(strbytes, 0, rtn, length.Length, strbytes.Length);
+                    return rtn;
+                };
             }
             else if (type.IsEnum)
             {
                 Type underlying = Enum.GetUnderlyingType(type);
-                try
+                if (!underlying.IsEnum)
                 {
-                    if (!underlying.IsEnum) return GetBytes(Convert.ChangeType(t, underlying));
-                    else throw new ArgumentException("Can not convert that enum type!", "t");
+                    if (underlying.IsPrimitive)
+                    {
+                        if (underlying == typeof(ulong))
+                            return (o) => BitConverter.GetBytes((ulong)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(float))
+                            return (o) => BitConverter.GetBytes((float)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(long))
+                            return (o) => BitConverter.GetBytes((long)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(ushort))
+                            return (o) => BitConverter.GetBytes((ushort)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(short))
+                            return (o) => BitConverter.GetBytes((short)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(byte))
+                            return (o) => new byte[1] { (byte)Convert.ChangeType(o, underlying) };
+                        else if (underlying == typeof(int))
+                            return (o) => BitConverter.GetBytes((int)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(uint))
+                            return (o) => BitConverter.GetBytes((uint)Convert.ChangeType(o, underlying));
+                        else if (underlying == typeof(sbyte))
+                            return (o) => new byte[1] { unchecked((byte)(sbyte)Convert.ChangeType(o, underlying)) };
+                        else if (underlying == typeof(decimal))
+                            return (o) => BitConverter.GetBytes(Convert.ToDouble((decimal)Convert.ChangeType(o, underlying)));
+                        else if (underlying == typeof(double))
+                            return (o) => BitConverter.GetBytes((double)Convert.ChangeType(o, underlying));
+                        else throw new ArgumentException("Can not convert that type!", nameof(type));
+                    }
+                    else throw new ArgumentException("Can not convert that enum type!", nameof(type));
                 }
-                catch (Exception)
-                {
-                    throw;
-                }
+                else throw new ArgumentException("Can not convert that enum type!", nameof(type));
             }
-            else if (t is DateTime dt)
+            else if (type == typeof(DateTime))
             {
-                return BitConverter.GetBytes(dt.Ticks);
+                return (o) => BitConverter.GetBytes(((DateTime)o).Ticks);
             }
-            else throw new ArgumentException("Can not convert that type!", "t");
+            else throw new ArgumentException("Can not convert that type!", nameof(type));
         }
         /// <summary>Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></summary>
         public static object ReadBytes(byte[] data, int index, Type type, out int size)
