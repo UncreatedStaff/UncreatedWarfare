@@ -154,10 +154,7 @@ namespace Uncreated.Warfare
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
-            FPlayerName names;
-            if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                names = Data.OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
-            else names = new FPlayerName(player);
+            FPlayerName names = F.GetPlayerOriginalNames(player);
             Client.SendPlayerJoined(names);
             Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
             Data.GameStats.AddPlayer(player.Player);

@@ -112,6 +112,7 @@ namespace Uncreated.Warfare
         public static SquadManager squadManager;
         internal static SyncDatabase SyncDB;
         internal static WarfareSQL DatabaseManager;
+        internal static MySqlDatabase TestDB;
         public static WarStatsTracker GameStats;
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
@@ -134,7 +135,7 @@ namespace Uncreated.Warfare
                 CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
         }
-        public static void LoadVariables()
+        public static async Task LoadVariables()
         {
             F.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
@@ -169,10 +170,16 @@ namespace Uncreated.Warfare
 
             // Managers
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
+            TestDB = new WarfareSqlTest(UCWarfare.Config.SQL);
+            //await TestDB.OpenAsync();
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL.ConnectionString);
-            DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
-            SyncDB = new SyncDatabase(DatabaseManager.SQL);
-            SyncDB.Open();
+            DatabaseManager.OpenAsync(
+                new AsyncCallback(AsyncDatabaseCallbacks.OpenedOnLoad) + 
+                new AsyncCallback((ar) =>
+                {
+                    SyncDB = new SyncDatabase(DatabaseManager.SQL);
+                })
+            );
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
             squadManager = new SquadManager();

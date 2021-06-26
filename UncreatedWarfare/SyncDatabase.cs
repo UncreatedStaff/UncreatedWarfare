@@ -19,8 +19,7 @@ namespace Uncreated.Warfare
         public SyncDatabase(MySqlConnection connection)
         {
             config = new Config<SQLConfig>(Data.SQLStorage, "config.json");
-
-            IsConnected = false;
+            IsConnected = true; // assume the connection has already been opened.
             try
             {
                 this.Connection = connection;
@@ -39,7 +38,7 @@ namespace Uncreated.Warfare
             {
                 Connection.Open();
                 IsConnected = true;
-                F.Log($"DATABASE CONNECTION: Successfully connected to {config.data.LoginInfo.Host}:{config.data.LoginInfo.Port} under user: {config.data.LoginInfo.Username}", ConsoleColor.DarkYellow);
+                F.Log($"DATABASE CONNECTION: Successfully connected to {config.data.LoginInfo.Host}:{config.data.LoginInfo.Port} under user: {config.data.LoginInfo.Username}", ConsoleColor.Magenta);
                 return true;
             }
             catch (MySqlException ex)
@@ -47,17 +46,18 @@ namespace Uncreated.Warfare
                 switch (ex.Number)
                 {
                     case 0:
-                        F.Log($"DATABASE CONNECTION FAILED: Could not find a host called '{config.data.LoginInfo.Host}'", ConsoleColor.Yellow);
+                        F.LogWarning($"DATABASE CONNECTION FAILED: Could not find a host called '{config.data.LoginInfo.Host}'", ConsoleColor.Yellow);
                         break;
 
                     case 1045:
-                        F.Log($"DATABASE CONNECTION FAILED: Host was found, but password was incorrect.", ConsoleColor.Yellow);
+                        F.LogWarning($"DATABASE CONNECTION FAILED: Host was found, but password was incorrect.", ConsoleColor.Yellow);
                         break;
                     default:
-                        F.Log($"DATABASE CONNECTION FAILED: An unknown error occured...", ConsoleColor.Yellow);
+                        F.LogWarning($"DATABASE CONNECTION FAILED: An unknown error occured...", ConsoleColor.Yellow);
                         break;
                 }
-                F.Log($"DATABASE CONNECTION ERROR CODE: {ex.Number} - {ex.Message}", ConsoleColor.Yellow);
+                F.LogError($"DATABASE CONNECTION ERROR CODE: {ex.Number} - {ex.Message}", ConsoleColor.Yellow);
+                F.LogError(ex);
                 return false;
             }
         }

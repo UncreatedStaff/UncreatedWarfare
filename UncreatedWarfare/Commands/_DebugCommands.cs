@@ -427,6 +427,9 @@ namespace Uncreated.Warfare.Commands
                         ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, @"ZoneExport\zonearea_" + i.ToString());
                         F.Log("Done with " + (i + 1).ToString() + '/' + times.ToString());
                     }
+                } else if (command[0] == "sqltest")
+                {
+                    Data.TestDB.NonQuery("SELECT XP FROM levels WHERE Steam64 = @0 AND TEAM = @1;", new object[] { player.channel.owner.playerID.steamID, player.GetTeam() });
                 }
             }
         }

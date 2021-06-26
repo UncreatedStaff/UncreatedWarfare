@@ -63,7 +63,7 @@ namespace Uncreated.Warfare
                     _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
                 }
             }
-            Data.LoadVariables();
+            Data.LoadVariables().GetAwaiter().GetResult();
             if (Level.isLoaded)
             {
                 StartAllCoroutines();
