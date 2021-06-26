@@ -24,6 +24,7 @@ using Rocket.Core;
 using Rocket.API.Serialisation;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.XP;
+using System.Globalization;
 
 namespace Uncreated.Warfare
 {
@@ -78,6 +79,7 @@ namespace Uncreated.Warfare
         public static readonly string FOBStorage = DataDirectory + @"FOBs\";
         public static readonly string LangStorage = DataDirectory + @"Lang\";
         public static readonly string ElseWhereSQLPath = @"C:\sql.json";
+        public static readonly CultureInfo Locale = new CultureInfo("en-US");
         public static Dictionary<string, Color> Colors;
         public static Dictionary<string, string> ColorsHex;
         public static Dictionary<string, Dictionary<string, string>> Localization;

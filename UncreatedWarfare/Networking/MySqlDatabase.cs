@@ -139,7 +139,7 @@ namespace Uncreated.SQL
             if(query == null) throw new ArgumentNullException(nameof(query));
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
-                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 while (_readerOpen) await Task.Delay(10);
                 using (DbDataReader R = await Q.ExecuteReaderAsync())
                 {
@@ -158,7 +158,7 @@ namespace Uncreated.SQL
             if (command == null) throw new ArgumentNullException(nameof(command));
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
-                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 try
                 {
                     await Q.ExecuteNonQueryAsync();
@@ -175,7 +175,7 @@ namespace Uncreated.SQL
             if (query == null) throw new ArgumentNullException(nameof(query));
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
-                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 while (_readerOpen) System.Threading.Thread.Sleep(10);
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
@@ -196,7 +196,7 @@ namespace Uncreated.SQL
             if (command == null) throw new ArgumentNullException(nameof(command));
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
-                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 try
                 {
                     Q.ExecuteNonQuery();

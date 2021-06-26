@@ -44,7 +44,7 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                     Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
-                                F.Log(F.Translate("kick_KickedPlayerFromConsole_Console", 0, names.PlayerName, player.playerID.steamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
+                                F.Log(F.Translate("kick_KickedPlayerFromConsole_Console", 0, names.PlayerName, player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                 F.Broadcast("kick_KickedPlayerFromConsole_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.PlayerName);
                             }
                         }
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                     Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 F.LogWarning(F.Translate("kick_KickedPlayer_Console", 0, 
-                                    names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
+                                    names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_KickedPlayer_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.CharacterName, callerNames.CharacterName);
                                 F.SendChat(player.CSteamID, "kick_KickedPlayer", UCWarfare.GetColor("kick_feedback"), names.CharacterName);
                             }

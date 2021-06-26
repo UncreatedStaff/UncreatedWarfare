@@ -84,13 +84,13 @@ namespace Uncreated.Warfare.Kits
                         if(credits >= kit.Cost)
                         {
                             player.Player.SendChat("request_kit_given_credits", UCWarfare.GetColor("request_kit_given_credits"), requestsign.kit_name, teamcolor,
-                                kit.Cost.ToString(), UCWarfare.GetColorHex("request_kit_given_credits_credits"));
+                                kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_credits"));
                             KitManager.GiveKit(player, kit);
                             player.Player.ChangeCredits(-kit.Cost);
                         } else
                         {
                             player.Player.SendChat("request_kit_given_credits_cant_afford", UCWarfare.GetColor("request_kit_given_credits_cant_afford"), requestsign.kit_name, teamcolor,
-                                kit.Cost.ToString(), UCWarfare.GetColorHex("request_kit_given_credits_cant_afford_credits"));
+                                kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_cant_afford_credits"));
                         }
                     } else if (kit.IsPremium)
                     {
@@ -107,14 +107,14 @@ namespace Uncreated.Warfare.Kits
                                 if (credits >= kit.Cost)
                                 {
                                     player.Player.SendChat("request_kit_given_credits", UCWarfare.GetColor("request_kit_given_credits"), requestsign.kit_name, teamcolor,
-                                        kit.Cost.ToString(), UCWarfare.GetColorHex("request_kit_given_credits_credits"));
+                                        kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_credits"));
                                     KitManager.GiveKit(player, kit);
                                     player.Player.ChangeCredits(-kit.Cost);
                                 }
                                 else
                                 {
                                     player.Player.SendChat("request_kit_given_credits_cant_afford", UCWarfare.GetColor("request_kit_given_credits_cant_afford"), requestsign.kit_name, teamcolor,
-                                        kit.Cost.ToString(), UCWarfare.GetColorHex("request_kit_given_credits_cant_afford_credits"));
+                                        kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_cant_afford_credits"));
                                 }
                             }
                         } else

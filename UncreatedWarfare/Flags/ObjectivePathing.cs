@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Flags
                 redoCounter++;
             }
             if(redoCounter >= MAX_REDOS)
-                F.LogError("Unable to correct bad path after " + MAX_REDOS.ToString() + " tries.");
+                F.LogError("Unable to correct bad path after " + MAX_REDOS.ToString(Data.Locale) + " tries.");
             return path;
         }
         private static void StartLoop(ref List<Flag> list, UnityEngine.Random r)
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare.Flags
                 uppingCounter++;
                 FLAG_RADIUS_SEARCH = oldradius + RADIUS_TUNING_RESOLUTION * uppingCounter;
                 candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, lastFlag.ID, list);
-                //F.Log(uppingCounter.ToString() + "th search: " + candidates.Count + " results in " + FLAG_RADIUS_SEARCH.ToString() + 'm');
+                //F.Log(uppingCounter.ToString(Data.Locale) + "th search: " + candidates.Count + " results in " + FLAG_RADIUS_SEARCH.ToString(Data.Locale) + 'm');
                 if (candidates.Count < 1) continue;
                 lastFlag = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
             }

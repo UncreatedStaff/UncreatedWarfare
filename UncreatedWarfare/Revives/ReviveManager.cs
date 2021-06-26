@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
-            F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString() + " damage.", ConsoleColor.DarkRed);
+            F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
                 if (parameters.damage > parameters.player.life.health && parameters.damage < 100 && parameters.player.life.health > 0 && !parameters.player.life.isDead) // insta kills break this...

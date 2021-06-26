@@ -211,7 +211,7 @@ namespace Uncreated.Warfare.Flags
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < FlagRotation.Count; i++)
             {
-                sb.Append(i.ToString() + ") (" + FlagRotation[i].index + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString() + '\n');
+                sb.Append(i.ToString(Data.Locale) + ") (" + FlagRotation[i].index + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString(Data.Locale) + '\n');
             }
             F.Log(sb.ToString(), ConsoleColor.Green);
         }
@@ -225,7 +225,7 @@ namespace Uncreated.Warfare.Flags
             {
                 AllFlags.Add(new Flag(flags[i], this) { index = i });
             }
-            F.Log("Loaded " + i.ToString() + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
+            F.Log("Loaded " + i.ToString(Data.Locale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
         }
         public struct SendUIParameters
         {
@@ -552,7 +552,7 @@ namespace Uncreated.Warfare.Flags
                 {
                     flag.Owner = 0;
                 }
-                //F.Log("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString() + " to " + e.NewPoints.ToString(), ConsoleColor.Yellow);
+                //F.Log("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString(Data.Locale) + " to " + e.NewPoints.ToString(Data.Locale), ConsoleColor.Yellow);
                 SendUIParameters sendT1;
                 if (flag.Team1TotalPlayers > 0)
                     sendT1 = ComputeUI(1, flag);

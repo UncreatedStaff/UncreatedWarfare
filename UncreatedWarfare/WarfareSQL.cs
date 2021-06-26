@@ -198,14 +198,14 @@ namespace Uncreated.Warfare
                     }
                     else
                     {
-                        string id = Steam64.ToString();
+                        string id = Steam64.ToString(Data.Locale);
                         callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
                     }
                 }
                 else
                 {
                     _manager.LogError("Couldn't get username from MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    string id = Steam64.ToString();
+                    string id = Steam64.ToString(Data.Locale);
                     callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
                     return;
                 }
@@ -305,7 +305,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     _manager.LogError("Couldn't get Officer Points balance from MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    string id = Steam64.ToString();
+                    string id = Steam64.ToString(Data.Locale);
                     callback.Invoke(0, false);
                     return;
                 }
@@ -331,7 +331,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     _manager.LogError("Couldn't get XP balance from MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    string id = Steam64.ToString();
+                    string id = Steam64.ToString(Data.Locale);
                     callback.Invoke(0, false);
                 }
             });

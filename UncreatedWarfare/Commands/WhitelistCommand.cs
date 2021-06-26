@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (arguments[0].ToLower() == "add")
                 {
-                    if (UInt16.TryParse(arguments[1], out var itemID))
+                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
                     {
                         if (!Whitelister.IsWhitelisted(itemID, out _))
                         {
@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (arguments[0].ToLower() == "remove")
                 {
-                    if (UInt16.TryParse(arguments[1], out var itemID))
+                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
                     {
                         if (Whitelister.IsWhitelisted(itemID, out _))
                         {
@@ -60,9 +60,9 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (arguments[1].ToLower() == "maxamount" || arguments[1].ToLower() == "a")
                     {
-                        if (UInt16.TryParse(arguments[2], out var itemID))
+                        if (UInt16.TryParse(arguments[2], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
                         {
-                            if (UInt16.TryParse(arguments[3], out var amount))
+                            if (UInt16.TryParse(arguments[3], System.Globalization.NumberStyles.Any, Data.Locale, out var amount))
                             {
                                 if (Whitelister.IsWhitelisted(itemID, out _))
                                 {

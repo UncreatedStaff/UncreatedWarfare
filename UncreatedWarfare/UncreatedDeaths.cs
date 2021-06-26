@@ -234,7 +234,7 @@ namespace Uncreated.Warfare
                     {
                         ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, landmineID);
                         if (asset != null) landmineName = asset.itemName;
-                        else landmineName = landmineID.ToString();
+                        else landmineName = landmineID.ToString(Data.Locale);
                     }
                     else landmineName = "Unknown";
                     if(!landmine.Equals(default))
@@ -267,7 +267,7 @@ namespace Uncreated.Warfare
                     }
                 }
                 string key = "LANDMINE";
-                string itemkey = landmineID.ToString();
+                string itemkey = landmineID.ToString(Data.Locale);
                 if (foundPlacer && placer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                 {
                     key += "_SUICIDE";
@@ -626,12 +626,12 @@ namespace Uncreated.Warfare
                         {
                             VehicleAsset asset = (VehicleAsset)Assets.find(EAssetType.VEHICLE, item);
                             if (asset != null) itemName = asset.vehicleName;
-                            else itemName = item.ToString();
+                            else itemName = item.ToString(Data.Locale);
                         } else
                         {
                             ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, item);
                             if (asset != null) itemName = asset.itemName;
-                            else itemName = item.ToString();
+                            else itemName = item.ToString(Data.Locale);
                         }
                     }
                     else itemName = "Unknown";
@@ -643,7 +643,7 @@ namespace Uncreated.Warfare
                 {
                     if (item != 0)
                     {
-                        string k1 = (itemIsVehicle ? "v" : "") + item.ToString();
+                        string k1 = (itemIsVehicle ? "v" : "") + item.ToString(Data.Locale);
                         string k2 = k1 + "_SUICIDE";
                         if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(k1))
                         {
@@ -662,7 +662,7 @@ namespace Uncreated.Warfare
                     {
                         if (murderer == Provider.server)
                             key += "_SUICIDE";
-                        else if (!murderer.m_SteamID.ToString().StartsWith("765"))
+                        else if (!murderer.m_SteamID.ToString(Data.Locale).StartsWith("765"))
                             killerName = new FPlayerName() { CharacterName = "zombie", NickName = "zombie", PlayerName = "zombie", Steam64 = murderer == null || murderer == CSteamID.Nil ? 0 : murderer.m_SteamID };
                     }
                 }

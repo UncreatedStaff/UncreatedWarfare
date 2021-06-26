@@ -224,7 +224,7 @@ namespace Uncreated
 
             if (type == typeof(int))
             {
-                if (int.TryParse(input, out int result))
+                if (int.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out int result))
                 {
                     parsed = true;
                     return result;
@@ -232,7 +232,7 @@ namespace Uncreated
             } 
             else if (type == typeof(ushort))
             {
-                if (ushort.TryParse(input, out ushort result))
+                if (ushort.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ushort result))
                 {
                     parsed = true;
                     return result;
@@ -240,7 +240,7 @@ namespace Uncreated
             } 
             else if (type == typeof(ulong))
             {
-                if (ulong.TryParse(input, out ulong result))
+                if (ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong result))
                 {
                     parsed = true;
                     return result;
@@ -248,7 +248,7 @@ namespace Uncreated
             }
             else if (type == typeof(float))
             {
-                if (float.TryParse(input, out float result))
+                if (float.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out float result))
                 {
                     parsed = true;
                     return result;
@@ -256,7 +256,7 @@ namespace Uncreated
             }
             else if (type == typeof(decimal))
             {
-                if (decimal.TryParse(input, out decimal result))
+                if (decimal.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out decimal result))
                 {
                     parsed = true;
                     return result;
@@ -264,7 +264,7 @@ namespace Uncreated
             }
             else if (type == typeof(double))
             {
-                if (double.TryParse(input, out double result))
+                if (double.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out double result))
                 {
                     parsed = true;
                     return result;
@@ -272,7 +272,7 @@ namespace Uncreated
             }
             else if (type == typeof(byte))
             {
-                if(byte.TryParse(input, out byte result))
+                if(byte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out byte result))
                 {
                     parsed = true;
                     return result;
@@ -280,7 +280,7 @@ namespace Uncreated
             } 
             else if (type == typeof(sbyte))
             {
-                if (sbyte.TryParse(input, out sbyte result))
+                if (sbyte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out sbyte result))
                 {
                     parsed = true;
                     return result;
@@ -288,7 +288,7 @@ namespace Uncreated
             } 
             else if (type == typeof(short))
             {
-                if (short.TryParse(input, out short result))
+                if (short.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out short result))
                 {
                     parsed = true;
                     return result;
@@ -296,7 +296,7 @@ namespace Uncreated
             } 
             else if (type == typeof(uint))
             {
-                if (uint.TryParse(input, out uint result))
+                if (uint.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out uint result))
                 {
                     parsed = true;
                     return result;
@@ -304,7 +304,7 @@ namespace Uncreated
             } 
             else if (type == typeof(long))
             {
-                if (long.TryParse(input, out long result))
+                if (long.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out long result))
                 {
                     parsed = true;
                     return result;

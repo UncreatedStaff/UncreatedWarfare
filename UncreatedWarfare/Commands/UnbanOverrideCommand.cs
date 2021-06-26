@@ -49,12 +49,12 @@ namespace Uncreated.Warfare.Commands
                             {
                                 if(success)
                                 {
-                                    F.Log(F.Translate("unban_UnbanTextFromConsole_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString()), ConsoleColor.Cyan);
+                                    F.Log(F.Translate("unban_UnbanTextFromConsole_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                                     F.Broadcast("unban_UnbanTextFromConsole_WithName_Broadcast", UCWarfare.GetColor("unban_broadcast"), names.CharacterName);
                                 } else
                                 {
-                                    F.Log(F.Translate("unban_UnbanTextFromConsole_NoName_Console", 0, steamplayer.m_SteamID.ToString()), ConsoleColor.Cyan);
-                                    F.Broadcast("unban_UnbanTextFromConsole_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString());
+                                    F.Log(F.Translate("unban_UnbanTextFromConsole_NoName_Console", 0, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                    F.Broadcast("unban_UnbanTextFromConsole_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(Data.Locale));
                                 }
                             });
                         }
@@ -85,15 +85,15 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
                                 if (success)
                                 {
-                                    F.Log(F.Translate("unban_UnbanText_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString()), ConsoleColor.Cyan);
+                                    F.Log(F.Translate("unban_UnbanText_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                                     F.SendChat(player, "unban_UnbanText_WithName_Feedback", UCWarfare.GetColor("unban_feedback"), names.CharacterName);
                                     F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_WithName_Broadcast", UCWarfare.GetColor("unban_broadcast"), names.CharacterName, callerNames.CharacterName);
                                 }
                                 else
                                 {
-                                    F.Log(F.Translate("unban_UnbanText_NoName_Console", 0, steamplayer.m_SteamID.ToString(), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString()), ConsoleColor.Cyan);
-                                    F.SendChat(player, "unban_UnbanText_NoName_Feedback", UCWarfare.GetColor("unban_feedback"), steamplayer.m_SteamID.ToString());
-                                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(), callerNames.CharacterName);
+                                    F.Log(F.Translate("unban_UnbanText_NoName_Console", 0, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                    F.SendChat(player, "unban_UnbanText_NoName_Feedback", UCWarfare.GetColor("unban_feedback"), steamplayer.m_SteamID.ToString(Data.Locale));
+                                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(Data.Locale), callerNames.CharacterName);
                                 }
                             });
                         }

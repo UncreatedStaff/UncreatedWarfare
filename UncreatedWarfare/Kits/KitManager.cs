@@ -74,28 +74,28 @@ namespace Uncreated.Warfare.Kits
                         break;
                     case Kit.EKitProperty.TEAM:
 
-                        if (UInt64.TryParse(newValue.ToString(), out var team))
+                        if (UInt64.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var team))
                         {
                             kit.Team = team;
                             argIsValid = true;
                         }
                         break;
                     case Kit.EKitProperty.COST:
-                        if (UInt16.TryParse(newValue.ToString(), out var cost))
+                        if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var cost))
                         {
                             kit.Cost = cost;
                             argIsValid = true;
                         }
                         break;
                     case Kit.EKitProperty.LEVEL:
-                        if (UInt16.TryParse(newValue.ToString(), out var level))
+                        if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var level))
                         {
                             kit.RequiredLevel = level;
                             argIsValid = true;
                         }
                         break;
                     case Kit.EKitProperty.TICKETS:
-                        if (UInt16.TryParse(newValue.ToString(), out var tickets))
+                        if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var tickets))
                         {
                             kit.TicketCost = tickets;
                             argIsValid = true;

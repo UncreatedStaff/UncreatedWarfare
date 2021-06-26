@@ -127,8 +127,8 @@ namespace Uncreated.Warfare.Tickets
             }
                 
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
-                tickets.ToString(),
-                bleed.ToString(),
+                tickets.ToString(Data.Locale),
+                bleed.ToString(Data.Locale),
                 message
                 );
         }

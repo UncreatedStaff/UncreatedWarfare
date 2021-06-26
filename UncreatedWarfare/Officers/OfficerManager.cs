@@ -101,18 +101,18 @@ namespace Uncreated.Warfare.Officers
 
                 if (branch != officer.branch || newLevel >= officer.officerLevel)
                 {
-                    player.Message("officer_promoted", newLevel.ToString(), branch.ToString());
+                    player.Message("officer_promoted", newLevel.ToString(Data.Locale), branch.ToString());
                 }
                 else
                 {
-                    player.Message("officer_demoted", newLevel.ToString());
+                    player.Message("officer_demoted", newLevel.ToString(Data.Locale));
                 }
             }
             else
             {
                 AddObjectToSave(new Officer(player.CSteamID.m_SteamID, player.GetTeam(), newLevel, branch));
 
-                player.Message("officer_promoted", newLevel.ToString(), branch.ToString());
+                player.Message("officer_promoted", newLevel.ToString(Data.Locale), branch.ToString());
             }
         }
 
@@ -135,7 +135,7 @@ namespace Uncreated.Warfare.Officers
             int requiredPoints = GetRequiredLevelPoints(balance);
 
             EffectManager.sendUIEffect(config.data.StarsUI, (short)config.data.StarsUI, player.channel.owner.transportConnection, true,
-                GetStars(balance).ToString(),
+                GetStars(balance).ToString(Data.Locale),
                 currentPoints + "/" + requiredPoints,
                 GetProgress(currentPoints, requiredPoints)
             );

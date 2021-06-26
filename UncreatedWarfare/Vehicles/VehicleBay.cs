@@ -95,41 +95,41 @@ namespace Uncreated.Warfare.Vehicles
                     switch (p)
                     {
                         case EVehicleProperty.TEAM:
-                            if (UInt64.TryParse(newValue.ToString(), out var team))
+                            if (UInt64.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var team))
                             {
                                 argIsValid = true;
                                 data.Team = team;
                             } break;
                         case EVehicleProperty.RESPAWNTIME:
-                            if (UInt16.TryParse(newValue.ToString(), out var time))
+                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var time))
                             {
                                 argIsValid = true;
                                 data.RespawnTime = time;
                             }
                             break;
                         case EVehicleProperty.COST:
-                            if (UInt16.TryParse(newValue.ToString(), out var cost))
+                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var cost))
                             {
                                 argIsValid = true;
                                 data.Cost = cost;
                             }
                             break;
                         case EVehicleProperty.LEVEL:
-                            if (UInt16.TryParse(newValue.ToString(), out var level))
+                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var level))
                             {
                                 argIsValid = true;
                                 data.RequiredLevel = level;
                             }
                             break;
                         case EVehicleProperty.TICKETS:
-                            if (UInt16.TryParse(newValue.ToString(), out var tickets))
+                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var tickets))
                             {
                                 argIsValid = true;
                                 data.TicketCost = tickets;
                             }
                             break;
                         case EVehicleProperty.COOLDOWN:
-                            if (UInt16.TryParse(newValue.ToString(), out var cooldown))
+                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var cooldown))
                             {
                                 argIsValid = true;
                                 data.Cooldown = cooldown;
@@ -150,14 +150,14 @@ namespace Uncreated.Warfare.Vehicles
                             }
                             break;
                         case EVehicleProperty.REARMCOST:
-                            if (byte.TryParse(newValue.ToString(), out var rearmCost))
+                            if (byte.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var rearmCost))
                             {
                                 argIsValid = true;
                                 data.RearmCost = rearmCost;
                             }
                             break;
                         case EVehicleProperty.REPAIRCOST:
-                            if (byte.TryParse(newValue.ToString(), out var repairCost))
+                            if (byte.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var repairCost))
                             {
                                 argIsValid = true;
                                 data.RepairCost = repairCost;

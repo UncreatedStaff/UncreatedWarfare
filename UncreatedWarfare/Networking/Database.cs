@@ -364,12 +364,12 @@ namespace Uncreated.SQL
                         query.Append("`" + Data.ConditionVariables[i] + "` ");
                         query.Append(OperatorTranslations[Data.comparisons[i]]);
                         if (Data.comparisons[i] != EComparisonType.ISNULL && Data.comparisons[i] != EComparisonType.ISNOTNULL)
-                            query.Append(" @" + i.ToString());
+                            query.Append(" @" + i.ToString(Warfare.Data.Locale));
                     }
                 }
             }
             if (Data.limit != -1)
-                query.Append(" LIMIT " + Data.limit.ToString());
+                query.Append(" LIMIT " + Data.limit.ToString(Warfare.Data.Locale));
             query.Append(';');
             string CommandText = query.ToString();
             SelectResponse rtn = new SelectResponse(CommandText);
@@ -377,7 +377,7 @@ namespace Uncreated.SQL
             {
                 for(int i = 0; i < Data.comparisons.Length; i++)
                 {
-                    Q.Parameters.AddWithValue("@" + i.ToString(), Data.conditions[i]);
+                    Q.Parameters.AddWithValue("@" + i.ToString(Warfare.Data.Locale), Data.conditions[i]);
                 }
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
@@ -450,7 +450,7 @@ namespace Uncreated.SQL
             for (int i = 0; i < Data.NewValues.Count; i++)
             {
                 if (i != 0) sb.Append(", ");
-                sb.Append("@" + i.ToString());
+                sb.Append("@" + i.ToString(Warfare.Data.Locale));
                 Parameters.Add(i, Data.NewValues.ElementAt(i).Value);
             }
             sb.Append(") ON DUPLICATE KEY UPDATE ");
@@ -465,27 +465,27 @@ namespace Uncreated.SQL
                         break;
                     case EUpdateOperation.SET:
                         int setp = Parameters.ElementAt(Parameters.Count - 1).Key + 1;
-                        sb.Append("@" + setp.ToString());
+                        sb.Append("@" + setp.ToString(Warfare.Data.Locale));
                         Parameters.Add(setp, Data.UpdateValuesIfValid[i]);
                         break;
                     case EUpdateOperation.ADD:
                         int addp = Parameters.ElementAt(Parameters.Count - 1).Key + 1;
-                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " + @" + addp.ToString());
+                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " + @" + addp.ToString(Warfare.Data.Locale));
                         Parameters.Add(addp, Data.UpdateValuesIfValid[i]);
                         break;
                     case EUpdateOperation.SUBTRACT:
                         int subp = Parameters.ElementAt(Parameters.Count - 1).Key + 1;
-                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " - @" + subp.ToString());
+                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " - @" + subp.ToString(Warfare.Data.Locale));
                         Parameters.Add(subp, Data.UpdateValuesIfValid[i]);
                         break;
                     case EUpdateOperation.DIVIDE:
                         int divp = Parameters.ElementAt(Parameters.Count - 1).Key + 1;
-                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " / @" + divp.ToString());
+                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " / @" + divp.ToString(Warfare.Data.Locale));
                         Parameters.Add(divp, Data.UpdateValuesIfValid[i]);
                         break;
                     case EUpdateOperation.MULTIPLY:
                         int mulp = Parameters.ElementAt(Parameters.Count - 1).Key + 1;
-                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " / @" + mulp.ToString());
+                        sb.Append(Data.VariablesToUpdateIfDuplicate.ElementAt(i).Key + " / @" + mulp.ToString(Warfare.Data.Locale));
                         Parameters.Add(mulp, Data.UpdateValuesIfValid[i]);
                         break;
                 }
@@ -496,7 +496,7 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(query, Data.DatabaseManager.SQL))
             {
                 foreach (KeyValuePair<int, object> Parameter in Parameters)
-                    Q.Parameters.AddWithValue('@' + Parameter.Key.ToString(), Parameter.Value);
+                    Q.Parameters.AddWithValue('@' + Parameter.Key.ToString(Warfare.Data.Locale), Parameter.Value);
                 try
                 {
                     rtn.RowsAffected = Q.ExecuteNonQuery();
@@ -529,7 +529,7 @@ namespace Uncreated.SQL
             {
                 if(parameters != default)
                     for (int i = 0; i < parameters.Length; i++)
-                        Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                        Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
                     while (R.Read())
@@ -548,7 +548,7 @@ namespace Uncreated.SQL
             {
                 if (parameters != default)
                     for (int i = 0; i < parameters.Length; i++)
-                        Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
+                        Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 try
                 {
                     Q.ExecuteNonQuery();
@@ -572,7 +572,7 @@ namespace Uncreated.SQL
         public EExecutionStatus ExecutionStatus { get; set; }
         public override string ToString()
         {
-            return this.Command + "\n" + RowsAffected.ToString() + " rows affected";
+            return this.Command + "\n" + RowsAffected.ToString(Warfare.Data.Locale) + " rows affected";
         }
         public NonQueryResponse(string command, int rowsChanged)
         {

@@ -47,7 +47,7 @@ namespace Uncreated.Warfare
                 }
                 
                 if(ttc && CoroutineTiming)
-                    F.Log((DateTime.Now - start).TotalMilliseconds.ToString() + "ms");
+                    F.Log((DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms");
                 
             } catch (Exception ex)
             {

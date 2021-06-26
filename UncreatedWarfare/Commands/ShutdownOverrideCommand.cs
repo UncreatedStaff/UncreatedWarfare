@@ -30,7 +30,8 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (command.Length == 0)
                 {
-                    Provider.shutdown();
+                    Networking.Client.SendShuttingDown(0, "None specified.");
+                    Provider.shutdown(0);
                     return;
                 }
                 string option = command[0].ToLower();
@@ -66,7 +67,7 @@ namespace Uncreated.Warfare.Commands
                         }
                         catch { }
                     }
-                } else if (uint.TryParse(option, out uint seconds))
+                } else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
                     string time = F.GetTimeFromSeconds(seconds);
                     F.Broadcast("shutdown_broadcast_after_time", UCWarfare.GetColor("shutdown_broadcast_after_time"),
@@ -132,7 +133,7 @@ namespace Uncreated.Warfare.Commands
                         catch { }
                     }
                 }
-                else if (uint.TryParse(option, out uint seconds))
+                else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
                     string time = F.GetTimeFromSeconds(seconds);
                     F.Broadcast("shutdown_broadcast_after_time", UCWarfare.GetColor("shutdown_broadcast_after_time"),

@@ -180,7 +180,7 @@ namespace Uncreated.Networking
             }
             else
             {
-                Warfare.F.LogError("Incorrect call enumerator given in response: " + e.message[0].ToString());
+                Warfare.F.LogError("Incorrect call enumerator given in response: " + e.message[0].ToString(Warfare.Data.Locale));
                 return;
             }
             byte[] data = new byte[e.message.Length - sizeof(ushort)];

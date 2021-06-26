@@ -110,7 +110,7 @@ namespace Uncreated.Warfare.Flags
         internal static void SendPlayerZoneOverlay(Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename)
         {
             complete = false;
-            F.Log("STEP " + step.ToString());
+            F.Log("STEP " + step.ToString(Data.Locale));
             if (step == 0)
             {
                 if (File.Exists(Level.info.path + @"\Map.png"))
@@ -166,7 +166,7 @@ namespace Uncreated.Warfare.Flags
                         }
                     }
                 }
-                //player.SendChat("Completed step " + (step + 1).ToString(), UCWarfare.GetColor("default"));
+                //player.SendChat("Completed step " + (step + 1).ToString(Data.Locale), UCWarfare.GetColor("default"));
                 img.Apply();
             }
             else if (step == -1) // finalizing image
