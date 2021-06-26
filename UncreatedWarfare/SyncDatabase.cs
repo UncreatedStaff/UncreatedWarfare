@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare
 {
@@ -15,21 +16,14 @@ namespace Uncreated.Warfare
 
         public bool IsConnected;
 
-        public SyncDatabase()
+        public SyncDatabase(MySqlConnection connection)
         {
-            config = new Config<SQLConfig>(Data.SQLStorage + "config.json");
+            config = new Config<SQLConfig>(Data.SQLStorage, "config.json");
 
             IsConnected = false;
-
-            string ConnectionInfo = $"SERVER={config.data.LoginInfo.Host};" +
-               $"DATABASE={config.data.LoginInfo.Database};" +
-               $"UID={config.data.LoginInfo.Username};" +
-               $"PASSWORD={config.data.LoginInfo.Password};" +
-               $"PORT={config.data.LoginInfo.Port};";
-
             try
             {
-                Connection = new MySqlConnection(ConnectionInfo);
+                this.Connection = connection;
                 F.Log($"DATABASE CONNECTION: Connection created to {config.data.LoginInfo.Host}:{config.data.LoginInfo.Port} under user: {config.data.LoginInfo.Username}", ConsoleColor.DarkYellow);
                 IsConnected = true;
             }
@@ -39,7 +33,6 @@ namespace Uncreated.Warfare
                 IsConnected = false;
             }
         }
-
         public bool Open()
         {
             try
@@ -97,6 +90,7 @@ namespace Uncreated.Warfare
                     balance = reader.GetInt32("XP");
 
                 reader.Close();
+                reader.Dispose();
                 command.Dispose();
             }
             return balance;
@@ -138,6 +132,7 @@ namespace Uncreated.Warfare
                     balance = reader.GetInt32("OfficerPoints");
 
                 reader.Close();
+                reader.Dispose();
                 command.Dispose();
             }
             return balance;

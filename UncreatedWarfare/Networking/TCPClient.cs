@@ -124,8 +124,8 @@ namespace Uncreated.Networking
         public static NetworkInvocation<ulong, string> InvokeShutdownAfterGameInvoc =
             new NetworkInvocation<ulong, string>(ECall.INVOKE_SHUTDOWN_AFTER_GAME, Send);
         // Invoke Set Officer Level
-        public static NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, Warfare.Officers.EOfficerLevel, byte, DateTime> InvokeSetOfficerLevelInvoc =
-            new NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, Warfare.Officers.EOfficerLevel, byte, DateTime>(ECall.INVOKE_SET_OFFICER_LEVEL, Send);
+        public static NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, int, byte, DateTime> InvokeSetOfficerLevelInvoc =
+            new NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, int, byte, DateTime>(ECall.INVOKE_SET_OFFICER_LEVEL, Send);
         // Invoke Server Reloading
         public static NetworkInvocation<ulong, string> InvokeServerReloadingInvoc =
             new NetworkInvocation<ulong, string>(ECall.SERVER_RELOADING, Send);

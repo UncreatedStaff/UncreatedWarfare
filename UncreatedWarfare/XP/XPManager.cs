@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.XP
 
         public XPManager()
         {
-            config = new Config<XPData>(Data.XPStorage + "config.json");
+            config = new Config<XPData>(Data.XPStorage, "config.json");
         }
 
         public static void OnPlayerJoined(UCPlayer player)

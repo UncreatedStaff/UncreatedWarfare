@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Squads
 
         public SquadManager()
         {
-            config = new Config<SquadConfigData>(Data.SquadStorage + "config.json");
+            config = new Config<SquadConfigData>(Data.SquadStorage, "config.json");
 
             Squads = new List<Squad>();
             KitManager.OnKitChanged += OnKitChanged;

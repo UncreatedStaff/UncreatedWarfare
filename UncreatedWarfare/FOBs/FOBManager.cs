@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.FOBs
 
         public FOBManager()
         {
-            config = new Config<FOBConfig>(Data.FOBStorage + "config.json");
+            config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
 
             if (Level.isLoaded)
                 LoadFobs();

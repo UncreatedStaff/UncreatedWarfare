@@ -13,7 +13,7 @@ namespace Uncreated.Warfare
 
         public CooldownManager()
         {
-            config = new Config<CooldownConfig>(Data.CooldownStorage + "config.json");
+            config = new Config<CooldownConfig>(Data.CooldownStorage, "config.json");
         }
 
         public static void StartCooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
