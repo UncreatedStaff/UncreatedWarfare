@@ -15,6 +15,8 @@ namespace Uncreated.Warfare.Flags
 
     public class FlagManager : IDisposable
     {
+        public const string PROGRESS_CHARS = "¶·¸¹º»:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        public const char PLAYER_ICON = '³';
         public List<Flag> FlagRotation { get; private set; }
         public List<Flag> AllFlags { get; private set; }
         const int FLAGS_PER_LEVEL_MAX = 2;
@@ -135,7 +137,7 @@ namespace Uncreated.Warfare.Flags
                 flag.ExitPlayer(player);
             }
         }
-        public static int FromMax(int cap) => Math.Abs(cap) >= Flag.MaxPoints ? UCWarfare.Config.FlagSettings.charactersForUI.Length - 1 : ((UCWarfare.Config.FlagSettings.charactersForUI.Length - 1) / Flag.MaxPoints) * Math.Abs(cap);
+        public static int FromMax(int cap) => Math.Abs(cap) >= Flag.MaxPoints ? PROGRESS_CHARS.Length - 1 : ((PROGRESS_CHARS.Length - 1) / Flag.MaxPoints) * Math.Abs(cap);
         public void ClearPlayersOnFlag() => OnFlag.Clear();
         public void LoadNewFlags()
         {
@@ -442,54 +444,67 @@ namespace Uncreated.Warfare.Flags
             ClearListUI(player);
             if (team == 1 || team == 2)
             {
-                for (int i = 0; i < FlagRotation.Count; i++)
+                for (int i = 0; i < LIST_UI_COUNT; i++)
                 {
-                    int index = team == 1 ? i : FlagRotation.Count - i - 1;
-                    if (FlagRotation[i] == default) continue;
-                    unchecked
+                    if (FlagRotation.Count <= i)
                     {
-                        Flag flag = FlagRotation[index];
-                        string nameprefix = string.Empty;
-                        if (UCWarfare.Config.FlagSettings.ShowObjectives)
+                        EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
+                    } else
+                    {
+                        int index = team == 1 ? i : FlagRotation.Count - i - 1;
+                        if (FlagRotation[i] == default) continue;
+                        unchecked
                         {
-                            if(flag.T1Obj)
+                            Flag flag = FlagRotation[index];
+                            string nameprefix = string.Empty;
+                            if (UCWarfare.Config.FlagSettings.ShowObjectives)
                             {
-                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
+                                if (flag.T1Obj)
+                                {
+                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
+                                }
+                                if (flag.T2Obj)
+                                {
+                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
+                                }
                             }
-                            if (flag.T2Obj)
-                            {
-                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
-                            }
+                            EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
+                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" :
+                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>");
                         }
-                        EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
-                            $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" :
-                            $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>");
                     }
                 }
             } else if (team == 3)
             {
-                for (int i = 0; i < FlagRotation.Count; i++)
+                for (int i = 0; i < LIST_UI_COUNT; i++)
                 {
-                    if (FlagRotation[i] == default) continue;
-                    unchecked
+                    if (FlagRotation.Count <= i)
                     {
-                        Flag flag = FlagRotation[i];
-                        string nameprefix = string.Empty;
-                        if (UCWarfare.Config.FlagSettings.ShowObjectives)
+                        EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
+                    }
+                    else
+                    {
+                        if (FlagRotation[i] == default) continue;
+                        unchecked
                         {
-                            if (flag.T1Obj)
+                            Flag flag = FlagRotation[i];
+                            string nameprefix = string.Empty;
+                            if (UCWarfare.Config.FlagSettings.ShowObjectives)
                             {
-                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
+                                if (flag.T1Obj)
+                                {
+                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
+                                }
+                                if (flag.T2Obj)
+                                {
+                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
+                                }
                             }
-                            if (flag.T2Obj)
-                            {
-                                nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
-                            }
+                            EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true,
+                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" +
+                                $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                                $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
                         }
-                        EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, 
-                            $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" +
-                            $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                            $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
                     }
                 }
             }

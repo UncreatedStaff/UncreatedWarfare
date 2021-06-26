@@ -100,7 +100,6 @@ namespace Uncreated
         public bool UseAutomaticLevelSensing;
         public ushort UIID;
         public ushort FlagUIIdFirst;
-        public string charactersForUI;
         public bool EnablePlayerCount;
         public bool ShowPointsOnUI;
         public bool AllowPlayersToCaptureInVehicle;
@@ -117,7 +116,6 @@ namespace Uncreated
             this.UseChat = false;
             this.UIID = 32366;
             this.FlagUIIdFirst = 32351;
-            this.charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             this.EnablePlayerCount = true;
             this.ShowPointsOnUI = true;
             this.HideUnknownFlags = true;
