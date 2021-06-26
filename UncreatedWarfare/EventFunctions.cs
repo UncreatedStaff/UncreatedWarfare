@@ -158,7 +158,7 @@ namespace Uncreated.Warfare
             if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 names = Data.OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
             else names = new FPlayerName(player);
-            Client.SendPlayerJoined(names);
+            //Client.SendPlayerJoined(names);   
             Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
             Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))

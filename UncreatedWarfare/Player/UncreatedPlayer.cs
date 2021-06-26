@@ -368,9 +368,9 @@ namespace Uncreated.Players
             i += cnl.Length;
             Array.Copy(cn, 0, rtn, i, cn.Length);
             i += cn.Length;
-            Array.Copy(cnl, 0, rtn, i, nnl.Length);
+            Array.Copy(nnl, 0, rtn, i, nnl.Length);
             i += nnl.Length;
-            Array.Copy(cn, 0, rtn, i, nn.Length);
+            Array.Copy(nn, 0, rtn, i, nn.Length);
             return rtn;
         }
         public static FPlayerName FromBytes(byte[] bytes, out int length, int offset = 0)

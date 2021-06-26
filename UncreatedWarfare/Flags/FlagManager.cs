@@ -468,9 +468,28 @@ namespace Uncreated.Warfare.Flags
                                     nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
                                 }
                             }
+                            string objective = string.Empty;
+                            if (flag.T1Obj)
+                            {
+                                if (team == 1)
+                                    objective = "<color=#ffca61>µ</color>";
+                                else if (team == 2 && flag.FullOwner == 2)
+                                    objective = "<color=#ba70cc>´</color>";
+                            }
+                            else if (flag.T2Obj)
+                            {
+                                if (team == 2)
+                                    objective = "<color=#ffca61>µ</color>";
+                                else if (team == 1 && flag.FullOwner == 1)
+                                    objective = "<color=#ba70cc>´</color>";
+                            }
+
+
                             EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
                                 $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" :
-                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>");
+                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>",
+                                objective
+                                );
                         }
                     }
                 }
@@ -500,10 +519,26 @@ namespace Uncreated.Warfare.Flags
                                     nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
                                 }
                             }
+                            string objective = string.Empty;
+                            if (flag.T1Obj)
+                            {
+                                if (team == 1)
+                                    objective = "<color=#ffca61>µ</color>";
+                                else if (team == 2 && flag.FullOwner == 2)
+                                    objective = "<color=#ba70cc>´</color>";
+                            }
+                            else if (flag.T2Obj)
+                            {
+                                if (team == 2)
+                                    objective = "<color=#ffca61>µ</color>";
+                                else if (team == 1 && flag.FullOwner == 1)
+                                    objective = "<color=#ba70cc>´</color>";
+                            }
                             EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true,
                                 $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" +
                                 $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                                $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                                $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}",
+                                objective);
                         }
                     }
                 }

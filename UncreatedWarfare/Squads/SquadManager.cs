@@ -35,6 +35,7 @@ namespace Uncreated.Warfare.Squads
                 EffectManager.askEffectClearByID((ushort)(30071 + i), player.channel.owner.transportConnection);
             for (int i = 0; i < 8; i++)
                 EffectManager.askEffectClearByID((ushort)(30081 + i), player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(config.data.rallyUI, player.channel.owner.transportConnection);
         }
         public static void ClearUIList(Player player)
         {

@@ -24,6 +24,9 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
+            if (player is null)
+                F.Log("PLAYER WAS NULL", ConsoleColor.DarkYellow);
+
             var barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
             var storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
@@ -55,10 +58,8 @@ namespace Uncreated.Warfare.Commands
                     UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.data.Team1AmmoID);
                 else if (player.IsTeam2())
                     UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.data.Team2AmmoID);
-
-                return;
             }
-            if (vehicle != null)
+            else if (vehicle != null)
             {
                 if (!VehicleBay.VehicleExists(vehicle.id, out var vehicleData) || vehicleData.Items?.Count == 0)
                 {
