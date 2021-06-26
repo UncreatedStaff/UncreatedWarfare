@@ -112,6 +112,7 @@ namespace Uncreated.Warfare
         public static SquadManager squadManager;
         internal static AsyncDatabase DatabaseManager;
         internal static SyncDatabase SyncDB;
+        internal static WarfareSQL DatabaseManager;
         public static WarStatsTracker GameStats;
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
@@ -143,12 +144,6 @@ namespace Uncreated.Warfare
             F.CheckDir(KitsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
-            F.CheckDir(XPStorage, out _, true);
-            F.CheckDir(OfficerStorage, out _, true);
-            F.CheckDir(TicketStorage, out _, true);
-            F.CheckDir(CooldownStorage, out _, true);
-            F.CheckDir(SquadStorage, out _, true);
-            F.CheckDir(SQLStorage, out _, true);
             F.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
@@ -175,7 +170,7 @@ namespace Uncreated.Warfare
 
             // Managers
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
-            DatabaseManager = new AsyncDatabase();
+            DatabaseManager = new WarfareSQL(UCWarfare.I.SQL.ConnectionString);
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
             SyncDB = new SyncDatabase();
             SyncDB.Open();
@@ -193,7 +188,7 @@ namespace Uncreated.Warfare
             {
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
-                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort);
+                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
             }
             if (UCWarfare.Config.Modules.Kits)
             {

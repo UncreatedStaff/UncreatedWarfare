@@ -48,6 +48,12 @@ namespace Uncreated.Warfare.Commands
                         ReloadFlags();
                     else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                } else if (cmd == "tcp")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.tcp") || player.HasPermission("uc.reload.all"))
+                        ReloadTCPServer();
+                    else
+                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 }
             }
         }
@@ -63,6 +69,12 @@ namespace Uncreated.Warfare.Commands
         {
             Data.FlagManager.StartNextGame();
             OnFlagsReloaded?.Invoke(null, EventArgs.Empty);
+        }
+        internal static void ReloadTCPServer()
+        {
+            Networking.Client.SendReloading();
+            Networking.TCPClient.I?.Shutdown();
+            Networking.TCPClient.I = null;
         }
     }
 }

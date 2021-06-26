@@ -44,7 +44,7 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-                                Server.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
+                                Client.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
                             Data.DatabaseManager.GetUsernameAsync(steamplayer.m_SteamID, (names, success) => 
                             {
                                 if(success)
@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-                                Server.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
+                                Client.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
                             Data.DatabaseManager.GetUsernameAsync(steamplayer.m_SteamID, (names, success) =>
                             {
                                 FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);

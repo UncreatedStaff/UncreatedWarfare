@@ -22,7 +22,7 @@ namespace Uncreated.Warfare.Officers
         public OfficerManager()
             :base(Data.OfficerStorage + "officers.json")
         {
-            config = new Config<OfficerConfigData>(Data.OfficerStorage + "config.json");
+            config = new Config<OfficerConfigData>(Data.OfficerStorage, "config.json");
             Reload();
         }
 

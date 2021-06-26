@@ -158,7 +158,7 @@ namespace Uncreated.Warfare
             if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 names = Data.OriginalNames[player.Player.channel.owner.playerID.steamID.m_SteamID];
             else names = new FPlayerName(player);
-            Server.SendPlayerJoined(names);
+            Client.SendPlayerJoined(names);
             Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
             Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -202,11 +202,11 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
-            UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
             if (Data.OriginalNames.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
             {
-                Server.SendPlayerLeft(names);
+                Client.SendPlayerLeft(names);
                 if (player.OnDuty())
                 {
                     if (player.IsAdmin())

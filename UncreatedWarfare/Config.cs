@@ -3,7 +3,7 @@ using Rocket.API;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace Uncreated.Warfare
+namespace Uncreated
 {
     public class Config : IRocketPluginConfiguration
     {
@@ -26,7 +26,7 @@ namespace Uncreated.Warfare
         [XmlElement("Patches")]
         public PatchToggles Patches;
         [XmlElement("MySQL")]
-        public MySqlData SQL;
+        public SQL.MySqlData SQL;
         [XmlElement("VehicleBay")]
         public VehicleBaySettings VehicleBaySettings;
         public bool Debug;
@@ -100,7 +100,6 @@ namespace Uncreated.Warfare
         public bool UseAutomaticLevelSensing;
         public ushort UIID;
         public ushort FlagUIIdFirst;
-        public string charactersForUI;
         public bool EnablePlayerCount;
         public bool ShowPointsOnUI;
         public bool AllowPlayersToCaptureInVehicle;
@@ -117,7 +116,6 @@ namespace Uncreated.Warfare
             this.UseChat = false;
             this.UIID = 32366;
             this.FlagUIIdFirst = 32351;
-            this.charactersForUI = "456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             this.EnablePlayerCount = true;
             this.ShowPointsOnUI = true;
             this.HideUnknownFlags = true;
@@ -195,6 +193,7 @@ namespace Uncreated.Warfare
         public bool LogBattleyeKick;
         public bool LogLastJoinedTime;
         public List<ushort> AllowedBarricadesOnVehicles;
+        public uint TimeBetweenShutdownMessages;
         public AdminLoggerSettings()
         {
             this.InternOnDutyGroup = "intern";
@@ -210,6 +209,7 @@ namespace Uncreated.Warfare
             this.LogBattleyeKick = true;
             this.LogLastJoinedTime = true;
             this.AllowedBarricadesOnVehicles = new List<ushort>();
+            this.TimeBetweenShutdownMessages = 60;
         }
     }
     public class PlayerStatsSettings
@@ -221,6 +221,7 @@ namespace Uncreated.Warfare
         public bool EnableTCPServer;
         public string TCPServerIP;
         public ushort TCPServerPort;
+        public string TCPServerIdentity;
 
         public PlayerStatsSettings()
         {
@@ -231,6 +232,7 @@ namespace Uncreated.Warfare
             this.StatUpdateFrequency = 30.0f;
             this.TCPServerIP = "127.0.0.1";
             this.TCPServerPort = 31902;
+            this.TCPServerIdentity = "ucwarfare";
         }
     }
     public class DeathMesssagesSettings
@@ -280,16 +282,5 @@ namespace Uncreated.Warfare
         {
             VehicleSpawnerID = 20002;
         }
-    }
-    public struct MySqlData
-    {
-        public string Host;
-        public string Database;
-        public string Password;
-        public string Username;
-        public ushort Port;
-        public string CharSet;
-        [JsonIgnore]
-        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
     }
 }

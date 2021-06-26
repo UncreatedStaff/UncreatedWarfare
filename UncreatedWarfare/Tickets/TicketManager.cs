@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Tickets
 
         public TicketManager()
         {
-            config = new Config<TicketData>(Data.TicketStorage + "config.json");
+            config = new Config<TicketData>(Data.TicketStorage, "config.json");
 
             Team1Tickets = config.data.StartingTickets;
             Team2Tickets = config.data.StartingTickets;

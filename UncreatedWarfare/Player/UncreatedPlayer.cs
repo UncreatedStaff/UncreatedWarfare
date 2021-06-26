@@ -25,20 +25,15 @@ namespace Uncreated.Players
         public string language;
         public DiscordInfo discord_account;
         public WarfareStats warfare_stats;
-
-        [JsonIgnore]
-        public bool isOnline;
-        [JsonIgnore]
-        public SteamPlayer player;
         public static string FileName(ulong steam_id) => Data.StatsDirectory + steam_id.ToString() + ".json";
         [JsonConstructor]
         public UncreatedPlayer(ulong steam_id, Usernames usernames, Sessions sessions, Addresses addresses, GlobalizationData globalization_data, string language, DiscordInfo discord_account, WarfareStats warfare_stats)
         {
             if (steam_id == default) throw new ArgumentException("SteamID was not a valid Steam64 ID", "steam_id");
             this.steam_id = steam_id;
-            this.player = PlayerTool.getSteamPlayer(this.steam_id);
-            this.isOnline = player != default;
-            this.usernames = usernames ?? (isOnline ? new Usernames(F.GetPlayerOriginalNames(player)) : default);
+            if (usernames == null && F.TryGetPlayerOriginalNamesFromS64(steam_id, out FPlayerName un))
+                this.usernames = new Usernames(un);
+            else this.usernames = usernames;
             this.sessions = sessions ?? new Sessions(new Dictionary<long, int>());
             this.addresses = addresses ?? new Addresses();
             this.globalization_data = globalization_data ?? new GlobalizationData();
@@ -57,9 +52,7 @@ namespace Uncreated.Players
         {
             if (player == default) throw new ArgumentException("Player is null.", "player");
             this.steam_id = player.playerID.steamID.m_SteamID;
-            this.player = player;
-            this.isOnline = true;
-            this.usernames = new Usernames(F.GetPlayerOriginalNames(this.player));
+            this.usernames = new Usernames(F.GetPlayerOriginalNames(player));
             this.sessions = new Sessions(new Dictionary<long, int>());
             this.addresses = new Addresses();
             if (player.getIPv4Address(out uint ip))
@@ -79,13 +72,15 @@ namespace Uncreated.Players
         {
             if(id == default) throw new ArgumentException("SteamID was not a valid Steam64 ID", "id");
             this.steam_id = id;
-            this.player = PlayerTool.getSteamPlayer(this.steam_id);
-            this.isOnline = player != default;
-            this.usernames = usernames ?? (isOnline ? new Usernames(F.GetPlayerOriginalNames(player)) : default);
+            if (F.TryGetPlayerOriginalNamesFromS64(steam_id, out FPlayerName un))
+                this.usernames = new Usernames(un);
+            else
+            {
+                string s64 = steam_id.ToString();
+                this.usernames = new Usernames(s64, s64, s64, new List<string>(), new List<string>(), new List<string>());
+            }
             this.sessions = new Sessions(new Dictionary<long, int>());
             this.addresses = new Addresses();
-            if (isOnline && this.player.getIPv4Address(out uint ip))
-                this.addresses.LogIn(Parser.getIPFromUInt32(ip));
             this.globalization_data = new GlobalizationData();
             this.language = Data.Languages.ContainsKey(this.steam_id) ? Data.Languages[this.steam_id] : JSONMethods.DefaultLanguage;
             this.discord_account = new DiscordInfo();
@@ -96,6 +91,20 @@ namespace Uncreated.Players
             this.addresses.OnNeedsSave += SaveEscalator;
             this.sessions.OnNeedsSave += SaveEscalator;
             Save();
+        }
+        public UncreatedPlayer() { }
+        public static bool TryLoad(ulong id, out UncreatedPlayer player)
+        {
+            string path = FileName(id);
+            if (id == default) throw new ArgumentException("SteamID was not a valid Steam64 ID", "steam_id");
+            if (File.Exists(path))
+            {
+                string json = File.ReadAllText(path);
+                player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
+                return player != default;
+            }
+            player = default;
+            return false;
         }
         public static UncreatedPlayer Load(ulong id)
         {
@@ -364,5 +373,53 @@ namespace Uncreated.Players
             Array.Copy(cn, 0, rtn, i, nn.Length);
             return rtn;
         }
+        public static FPlayerName FromBytes(byte[] bytes, out int length, int offset = 0)
+        {
+            int i = offset;
+            if (!Networking.ByteMath.ReadUInt64(out ulong st, i, bytes))
+                throw new ArgumentException("Failed to read Steam64 UInt64 Value from relative index 0.", nameof(bytes));
+            i += sizeof(ulong);
+            if (!Networking.ByteMath.ReadUInt16(out ushort pnl, i, bytes))
+                throw new ArgumentException("Failed to read length of PlayerName", nameof(bytes));
+            i += sizeof(ushort);
+            if (!Networking.ByteMath.ReadString(out string pn, i, bytes, pnl))
+                throw new ArgumentException("Failed to read PlayerName", nameof(bytes));
+            i += pnl;
+            if (!Networking.ByteMath.ReadUInt16(out ushort cnl, i, bytes))
+                throw new ArgumentException("Failed to read length of CharacterName", nameof(bytes));
+            i += sizeof(ushort);
+            if (!Networking.ByteMath.ReadString(out string cn, i, bytes, cnl))
+                throw new ArgumentException("Failed to read CharacterName", nameof(bytes));
+            i += cnl;
+            if (!Networking.ByteMath.ReadUInt16(out ushort nnl, i, bytes))
+                throw new ArgumentException("Failed to read length of NickName", nameof(bytes));
+            i += sizeof(ushort);
+            if (!Networking.ByteMath.ReadString(out string nn, i, bytes, cnl))
+                throw new ArgumentException("Failed to read NickName", nameof(bytes));
+            i += nnl;
+            length = i - offset;
+            return new FPlayerName
+            {
+                Steam64 = st,
+                PlayerName = pn,
+                CharacterName = cn,
+                NickName = nn
+            };
+        }
+    }
+    public struct BasicSQLStats
+    {
+        public ulong Steam64;
+        public FPlayerName Usernames;
+        public BasicSQLStatsTeam t1;
+        public BasicSQLStatsTeam t2;
+    }
+    public struct BasicSQLStatsTeam
+    {
+        public uint Kills;
+        public uint Deaths;
+        public uint Teamkills;
+        public uint XP;
+        public uint OfficerPoints;
     }
 }

@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName names = F.GetPlayerOriginalNames(player);
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
-                                    Server.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
+                                    Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
                                 F.Log(F.Translate("kick_KickedPlayerFromConsole_Console", 0, names.PlayerName, player.playerID.steamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
                                 F.Broadcast("kick_KickedPlayerFromConsole_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.PlayerName);
                             }
@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
-                                    Server.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 F.LogWarning(F.Translate("kick_KickedPlayer_Console", 0, 
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_KickedPlayer_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.CharacterName, callerNames.CharacterName);

@@ -104,6 +104,12 @@ namespace Uncreated.Warfare
             Data.FlagManager.Load(); // starts new game
             VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+            if (Provider.clients.Count > 0)
+            {
+                List<Players.FPlayerName> playersOnline = new List<Players.FPlayerName>();
+                Provider.clients.ForEach(x => playersOnline.Add(F.GetPlayerOriginalNames(x)));
+                Networking.Client.SendPlayerList(playersOnline);
+            }
         }
         public static void ReplaceBarricadesAndStructures()
         {
@@ -122,7 +128,7 @@ namespace Uncreated.Warfare
             UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
-            if(Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData += Networking.Server.ProcessResponse;
+            if(Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData += Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
             Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
             BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
@@ -147,7 +153,7 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
             UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
-            if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Server.ProcessResponse;
+            if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
             BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
