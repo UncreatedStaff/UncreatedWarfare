@@ -24,10 +24,10 @@ namespace Uncreated.Warfare
         /// <para>Asynchronous operation to update a player's saved username in usernames table.</para>
         /// <para>Sends a UsernameChanged event to node server as well if the username is different from that which is in the SQL database.</para>
         /// </summary>
-        public void UpdateUsernameAsync(ulong Steam64, FPlayerName player)
+        public void UpdateUsernameAsync(ulong Steam64, FPlayerName player, AsyncCallback callback = null)
         {
             D_UpdateUsernameAsync caller = _dbCaller.UpdateUsername;
-            caller.BeginInvoke(Steam64, player, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            caller.BeginInvoke(Steam64, player, callback == null ? AsyncDatabaseCallbacks.DisposeAsyncResult : callback + AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
         }
         /// <summary>
         /// Add a kill (default 1) to the "playerstats" table.

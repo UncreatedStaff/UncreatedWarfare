@@ -144,6 +144,7 @@ namespace Uncreated.Warfare
             F.CheckDir(KitsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
+            F.CheckDir(OfficerStorage, out _, true);
             F.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
@@ -174,7 +175,7 @@ namespace Uncreated.Warfare
             //await TestDB.OpenAsync();
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL.ConnectionString);
             DatabaseManager.OpenAsync(
-                new AsyncCallback(AsyncDatabaseCallbacks.OpenedOnLoad) + 
+                new AsyncCallback(AsyncDatabaseCallbacks.OpenedOnLoad) +
                 new AsyncCallback((ar) =>
                 {
                     SyncDB = new SyncDatabase(DatabaseManager.SQL);

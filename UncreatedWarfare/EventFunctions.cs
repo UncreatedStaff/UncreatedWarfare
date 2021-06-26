@@ -155,7 +155,9 @@ namespace Uncreated.Warfare
 
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             FPlayerName names = F.GetPlayerOriginalNames(player);
-            //Client.SendPlayerJoined(names);
+            Client.SendPlayerJoined(names);
+            XPManager.OnPlayerJoined(ucplayer);
+            OfficerManager.OnPlayerJoined(ucplayer);
             Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
             Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -177,8 +179,7 @@ namespace Uncreated.Warfare
             Data.ReviveManager.OnPlayerConnected(player);
 
             SquadManager.InvokePlayerJoined(ucplayer);
-            XPManager.OnPlayerJoined(ucplayer);
-            OfficerManager.OnPlayerJoined(ucplayer);
+            
             TicketManager.OnPlayerJoined(ucplayer);
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last

@@ -19,7 +19,7 @@ namespace Uncreated.Networking.Invocations
             this.read_func = read;
             this.write_func = write;
         }
-        public void Invoke(T arg) => send.Invoke(write_func.Invoke(arg).Callify(call));
+        public void Invoke(T arg) => send?.Invoke(write_func.Invoke(arg).Callify(call));
         public bool Read(byte[] bytes, out T output)
         {
             try
@@ -45,7 +45,7 @@ namespace Uncreated.Networking.Invocations
         }
         public void Invoke()
         {
-            send.Invoke(ByteMath.Callify(call));
+            send?.Invoke(ByteMath.Callify(call));
         }
     }
     public class NetworkInvocation<T1>
@@ -59,7 +59,7 @@ namespace Uncreated.Networking.Invocations
         }
         public void Invoke(T1 arg1)
         {
-            send.Invoke(ByteMath.GetBytes(arg1).Callify(call));
+            send?.Invoke(ByteMath.GetBytes(arg1).Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1)
         {
@@ -91,7 +91,7 @@ namespace Uncreated.Networking.Invocations
             byte[] rtn = new byte[b1.Length + b2.Length];
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2)
         {
@@ -128,7 +128,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
             Array.Copy(b3, 0, rtn, b1.Length + b2.Length, b3.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3)
         {
@@ -175,7 +175,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b3, 0, rtn, i, b3.Length);
             i += b3.Length;
             Array.Copy(b4, 0, rtn, i, b4.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4)
         {
@@ -228,7 +228,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b4, 0, rtn, i, b4.Length);
             i += b4.Length;
             Array.Copy(b5, 0, rtn, i, b5.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5)
         {
@@ -287,7 +287,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b5, 0, rtn, i, b5.Length);
             i += b5.Length;
             Array.Copy(b6, 0, rtn, i, b6.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6)
         {
@@ -352,7 +352,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b6, 0, rtn, i, b6.Length);
             i += b6.Length;
             Array.Copy(b7, 0, rtn, i, b7.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7)
         {
@@ -423,7 +423,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b7, 0, rtn, i, b7.Length);
             i += b7.Length;
             Array.Copy(b8, 0, rtn, i, b8.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8)
         {
@@ -500,7 +500,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b8, 0, rtn, i, b8.Length);
             i += b8.Length;
             Array.Copy(b9, 0, rtn, i, b9.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9)
         {
@@ -583,7 +583,7 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b9, 0, rtn, i, b9.Length);
             i += b9.Length;
             Array.Copy(b10, 0, rtn, i, b10.Length);
-            send.Invoke(rtn.Callify(call));
+            send?.Invoke(rtn.Callify(call));
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9, out T10 arg10)
         {

@@ -28,6 +28,11 @@ namespace Uncreated.Warfare.Commands
                     F.LogError(F.Translate("shutdown_not_server", 0), ConsoleColor.Red);
                     return;
                 }
+                if (command.Length == 0)
+                {
+                    Provider.shutdown();
+                    return;
+                }
                 string option = command[0].ToLower();
                 if (command.Length < 2 && option != "cancel" && option != "abort")
                 {

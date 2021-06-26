@@ -10,25 +10,22 @@ namespace Uncreated.Warfare
 {
     public class SyncDatabase
     {
-        public Config<SQLConfig> config;
-
-        private MySqlConnection Connection;
+        private readonly MySqlConnection Connection;
 
         public bool IsConnected;
 
         public SyncDatabase(MySqlConnection connection)
         {
-            config = new Config<SQLConfig>(Data.SQLStorage, "config.json");
             IsConnected = true; // assume the connection has already been opened.
             try
             {
                 this.Connection = connection;
-                F.Log($"DATABASE CONNECTION: Connection created to {config.data.LoginInfo.Host}:{config.data.LoginInfo.Port} under user: {config.data.LoginInfo.Username}", ConsoleColor.DarkYellow);
+                F.Log($"DATABASE CONNECTION: Connection created to {UCWarfare.I.SQL.Host}:{UCWarfare.I.SQL.Port} under user: {UCWarfare.I.SQL.Username}", ConsoleColor.DarkYellow);
                 IsConnected = true;
             }
             catch
             {
-                F.Log($"DATABASE CONNECTION FAILED: Could not create connection to {config.data.LoginInfo.Host}:{config.data.LoginInfo.Port} under user: {config.data.LoginInfo.Username}", ConsoleColor.Yellow);
+                F.Log($"DATABASE CONNECTION FAILED: Could not create connection to {UCWarfare.I.SQL.Host}:{UCWarfare.I.SQL.Port} under user: {UCWarfare.I.SQL.Username}", ConsoleColor.Yellow);
                 IsConnected = false;
             }
         }
@@ -38,7 +35,7 @@ namespace Uncreated.Warfare
             {
                 Connection.Open();
                 IsConnected = true;
-                F.Log($"DATABASE CONNECTION: Successfully connected to {config.data.LoginInfo.Host}:{config.data.LoginInfo.Port} under user: {config.data.LoginInfo.Username}", ConsoleColor.Magenta);
+                F.Log($"DATABASE CONNECTION: Successfully connected to {UCWarfare.I.SQL.Host}:{UCWarfare.I.SQL.Port} under user: {UCWarfare.I.SQL.Username}", ConsoleColor.Magenta);
                 return true;
             }
             catch (MySqlException ex)
@@ -46,7 +43,7 @@ namespace Uncreated.Warfare
                 switch (ex.Number)
                 {
                     case 0:
-                        F.LogWarning($"DATABASE CONNECTION FAILED: Could not find a host called '{config.data.LoginInfo.Host}'", ConsoleColor.Yellow);
+                        F.LogWarning($"DATABASE CONNECTION FAILED: Could not find a host called '{UCWarfare.I.SQL.Host}'", ConsoleColor.Yellow);
                         break;
 
                     case 1045:
@@ -156,24 +153,6 @@ namespace Uncreated.Warfare
                 command.Dispose();
             }
             return balance + amount;
-        }
-
-        public class SQLConfig : ConfigData
-        {
-            public MySqlData LoginInfo;
-            public override void SetDefaults()
-            {
-                LoginInfo = new MySqlData
-                {
-                    Database = "warfare",
-                    Host = "75.189.141.56",
-                    Password = "bruh1234!",
-                    Port = 3306,
-                    Username = "admin",
-                    CharSet = "utf8mb4"
-                };
-            }
-            public SQLConfig() { }
         }
     }
 }
