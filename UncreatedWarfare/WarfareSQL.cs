@@ -8,6 +8,11 @@ using Uncreated.Players;
 
 namespace Uncreated.Warfare
 {
+    public class WarfareSqlTest : MySqlDatabase
+    {
+        public WarfareSqlTest(MySqlData data) : base(data) { }
+    }
+
     public class WarfareSQL : AsyncDatabase<WarfareCaller>
     {
         public WarfareSQL(string connection_string) : base(connection_string) { }
