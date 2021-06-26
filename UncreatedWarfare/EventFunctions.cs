@@ -97,7 +97,6 @@ namespace Uncreated.Warfare
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
-            F.Log(useable == null ? "null" : useable.player.name + " - " + useable.equippedThrowableAsset.itemName);
             ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
             PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
             t.Set(useable, throwable, c);
@@ -248,9 +247,9 @@ namespace Uncreated.Warfare
         internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) 
             => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
 
-        internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
+        internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
         {
-            SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == callback.m_SteamID.m_SteamID);
+            SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
             if (player == default(SteamPending)) return;
             F.Log(player.playerID.playerName);
             if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
