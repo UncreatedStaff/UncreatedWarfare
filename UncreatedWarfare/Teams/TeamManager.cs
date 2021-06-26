@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.Teams
         public static bool IsTeam2(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team2ID;
         public static bool IsTeam2(Player player) => player.channel.owner.playerID.steamID.m_SteamID == Team2ID;
 
-        // Same as Team.LocalizedName from before.
+        // Same as Team.LocalizedName from before./
         public static string TranslateName(ulong team, UnturnedPlayer player, bool colorize = false) => TranslateName(team, player.CSteamID.m_SteamID, colorize);
         public static string TranslateName(ulong team, SteamPlayer player, bool colorize = false) => TranslateName(team, player.playerID.steamID.m_SteamID, colorize);
         public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);

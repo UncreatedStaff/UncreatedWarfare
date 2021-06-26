@@ -114,10 +114,28 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
-        public static int CountItems(UnturnedPlayer player, ushort itemID)
+        public static int CountItems(Player player, ushort itemID)
         {
             int count = 0;
 
+            for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+            {
+                var pageCount = player.inventory.getItemCount(page);
+
+                for (byte index = 0; index < pageCount; index++)
+                {
+                    if (player.inventory.getItem(page, index).item.id == itemID)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        public static void RemoveSingleItem(UCPlayer player, ushort itemID)
+        {
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
                 var pageCount = player.Player.inventory.getItemCount(page);
@@ -126,12 +144,11 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (player.Player.inventory.getItem(page, index).item.id == itemID)
                     {
-                        count++;
+                        player.Player.inventory.removeItem(page, index);
+                        return;
                     }
                 }
             }
-
-            return count;
         }
     }
 }

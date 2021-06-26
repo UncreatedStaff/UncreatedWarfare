@@ -9,8 +9,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -33,22 +35,35 @@ namespace Uncreated.Warfare
         [JsonIgnore]
         public CSteamID CSteamID { get; internal set; }
         [JsonIgnore]
+        public string CharacterName;
+        [JsonIgnore]
+        public string NickName;
+        [JsonIgnore]
+        public Rank OfficerRank;
+        [JsonIgnore]
         public Vector3 Position { get { return Player.transform.position; } }
 
-        public static UCPlayer FromID(ulong steamID)
+        public static UCPlayer FromID(ulong steamID, ulong team = 0)
         {
-            if (TeamManager.IsTeam1(steamID))
-                return PlayerManager.Team1Players.Find(p => p.Steam64 == steamID);
-            else if (TeamManager.IsTeam2(steamID))
-                return PlayerManager.Team2Players.Find(p => p.Steam64 == steamID);
-            else
-                return PlayerManager.OnlinePlayers.Find(p => p.Steam64 == steamID);
+            //if (TeamManager.IsTeam1(team))
+            //{
+            //    return PlayerManager.Team1Players.Find(p => p.Steam64 == steamID);
+            //}
+            //else if (TeamManager.IsTeam2(team))
+            //{w
+            //    return PlayerManager.Team2Players.Find(p => p.Steam64 == steamID);
+            //}
+            //else
+            //{
+            //    return PlayerManager.OnlinePlayers.Find(p => p.Steam64 == steamID);
+            //}
+            return PlayerManager.OnlinePlayers.Find(p => p.Steam64 == steamID);
         }
         public static UCPlayer FromCSteamID(CSteamID steamID) => FromID(steamID.m_SteamID);
-        public static UCPlayer FromPlayer(Player player) => FromCSteamID(player.channel.owner.playerID.steamID);
-        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => FromCSteamID(player.CSteamID);
-        public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromCSteamID(player.playerID.steamID);
-        public static UCPlayer FromIRocketPlayer(IRocketPlayer caller) => FromID(UInt64.Parse(caller.Id));
+        public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID, player.quests.groupID.m_SteamID);
+        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => FromID(player.CSteamID.m_SteamID, player.Player.quests.groupID.m_SteamID);
+        public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID, player.player.quests.groupID.m_SteamID);
+        public static UCPlayer FromIRocketPlayer(IRocketPlayer caller) => FromUnturnedPlayer((UnturnedPlayer)caller);
 
         public static UCPlayer FromName(string name)
         {
@@ -120,7 +135,7 @@ namespace Uncreated.Warfare
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
 
-        public UCPlayer(CSteamID steamID, ulong team, Kit.EClass kitClass, EBranch branch, string kitName, Player player)
+        public UCPlayer(CSteamID steamID, ulong team, Kit.EClass kitClass, EBranch branch, string kitName, Player player, string characterName, string nickName)
         {
             Steam64 = steamID.m_SteamID;
             Team = team;
@@ -130,6 +145,9 @@ namespace Uncreated.Warfare
             Squad = null;
             Player = player;
             CSteamID = steamID;
+            CharacterName = characterName;
+            NickName = nickName;
+            OfficerRank = null;
         }
         [JsonIgnore]
         public string Icon

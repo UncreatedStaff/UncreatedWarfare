@@ -15,11 +15,11 @@ namespace Uncreated.Networking
     {
         public static void SendPlayerJoined(Players.FPlayerName player)
         {
-            TCPClient.I.SendMessageAsync(player.GetBytes().Callify(ECall.PLAYER_JOINED));
+            //TCPClient.I.SendMessageAsync(player.GetBytes().Callify(ECall.PLAYER_JOINED));
         }
         public static void SendPlayerLeft(Players.FPlayerName player)
         {
-            TCPClient.I.SendMessageAsync(player.GetBytes().Callify(ECall.PLAYER_LEFT));
+            //TCPClient.I.SendMessageAsync(player.GetBytes().Callify(ECall.PLAYER_LEFT));
         }
         public static void SendPlayerList(List<Players.FPlayerName> players)
         {

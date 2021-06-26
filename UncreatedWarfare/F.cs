@@ -297,6 +297,7 @@ namespace Uncreated.Warfare
         /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void Message(this UnturnedPlayer player, string message, params object[] formatting) => SendChat(player, message, Color.white, formatting);
+        public static void Message(this Player player, string message, params object[] formatting) => SendChat(player, message, Color.white, formatting);
         /// <summary>
         /// Send a message in chat to everyone.
         /// </summary>

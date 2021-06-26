@@ -36,7 +36,7 @@ namespace Uncreated.Warfare
 
             if (KitManager.HasKit(player.CSteamID, out var kit))
             {
-                int itemCount = UCInventoryManager.CountItems(player, itemData.item.id);
+                int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
 
                 int allowedItems = kit.Items.Where(k => k.ID == itemData.item.id).Count();
                 if (allowedItems == 0)

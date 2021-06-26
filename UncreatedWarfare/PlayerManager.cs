@@ -60,7 +60,7 @@ namespace Uncreated.Warfare
         {
             if (!HasSave(rocketplayer.CSteamID, out var currentSave))
             {
-                var newSave = new UCPlayer(rocketplayer.CSteamID, rocketplayer.GetTeam(), Kit.EClass.NONE, EBranch.DEFAULT, "", rocketplayer.Player);
+                var newSave = new UCPlayer(rocketplayer.CSteamID, rocketplayer.GetTeam(), Kit.EClass.NONE, EBranch.DEFAULT, "", rocketplayer.Player, rocketplayer.CharacterName, rocketplayer.DisplayName);
                 AddObjectToSave(newSave);
                 OnlinePlayers.Add(newSave);
                 if (TeamManager.IsTeam1(rocketplayer))
@@ -72,6 +72,8 @@ namespace Uncreated.Warfare
             {
                 currentSave.Player = rocketplayer.Player;
                 currentSave.CSteamID = rocketplayer.CSteamID;
+                currentSave.CharacterName = rocketplayer.CharacterName;
+                currentSave.NickName = rocketplayer.DisplayName;
 
                 OnlinePlayers.Add(currentSave);
                 if (TeamManager.IsTeam1(rocketplayer))
@@ -90,5 +92,33 @@ namespace Uncreated.Warfare
                 Team2Players.RemoveAll(s => s.Steam64 == rocketplayer.CSteamID.m_SteamID);
         }
         public static string GetKitName(ulong playerID) => PlayerExists(playerID, out var data)? data.KitName : "";
+
+        public static void VerifyTeam(Player nelsonplayer)
+        {
+            CommandWindow.Log("Player Team: " + nelsonplayer.GetTeam());
+
+            var player = OnlinePlayers.Find(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+            player.Team = nelsonplayer.GetTeam();
+
+            if (TeamManager.IsTeam1(nelsonplayer))
+            {
+                Team2Players.RemoveAll(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+                if (!Team1Players.Exists(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
+                {
+                    Team1Players.Add(player);
+                }
+            }
+            else if (TeamManager.IsTeam2(nelsonplayer))
+            {
+                Team1Players.RemoveAll(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+                if (!Team2Players.Exists(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
+                {
+                    Team2Players.Add(player);
+                }
+            }
+
+            CommandWindow.Log("Team 1 Count: " + Team1Players.Count);
+            CommandWindow.Log("Team 2 Count: " + Team2Players.Count);
+        }
     }
 }

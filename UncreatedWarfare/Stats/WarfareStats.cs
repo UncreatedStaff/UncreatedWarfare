@@ -7,6 +7,7 @@ using Uncreated.Players;
 using Newtonsoft.Json;
 using SDG.Unturned;
 using UnityEngine;
+using Uncreated.Warfare.XP;
 
 namespace Uncreated.Warfare.Stats
 {
@@ -137,6 +138,8 @@ namespace Uncreated.Warfare.Stats
         [JsonConstructor]
         public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
         {
+            XPManager.GetRank((int)xp, out _, out var playerRank);
+
             this.name = WarfareName;
             this.display_name = WarfareDisplayName;
             this.playtime = playtime;
@@ -146,9 +149,9 @@ namespace Uncreated.Warfare.Stats
             this.teamkills = teamkills;
             this.credits = credits;
             this.xp = xp;
-            this.level = level == default ? Teams.XP.XPtoLevel(this.xp) : level;
-            this.rank = rank ?? Teams.XP.GetRankName(this.level);
-            this.rank_abbreviation = rank_abbreviation ?? Teams.XP.GetRankAbbreviation(this.level);
+            this.level = (uint)playerRank.level;
+            this.rank = playerRank.name;
+            this.rank_abbreviation = playerRank.abbreviation;
             this.teams = teams ?? new List<Team>();
             this.offences = offences ?? new Offences();
             this.offences.OnNeedsSave += SaveEscalator;
@@ -156,6 +159,8 @@ namespace Uncreated.Warfare.Stats
         }
         public WarfareStats()
         {
+            XPManager.GetRank(0, out _, out var rank);
+
             this.name = WarfareName;
             this.display_name = WarfareDisplayName;
             this.playtime = 0;
@@ -166,8 +171,8 @@ namespace Uncreated.Warfare.Stats
             this.credits = 0;
             this.xp = 0;
             this.level = 0;
-            this.rank = Teams.XP.GetRankName(0);
-            this.rank_abbreviation = Teams.XP.GetRankAbbreviation(0);
+            this.rank = rank.name;
+            this.rank_abbreviation = rank.abbreviation;
             this.teams = new List<Team>();
             this.offences = new Offences();
             this.offences.OnNeedsSave += SaveEscalator;
@@ -341,6 +346,8 @@ namespace Uncreated.Warfare.Stats
         [JsonConstructor]
         public Team(ulong id, string name, string display_name, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Kit> kits, List<string> owned_paid_kits, List<KillTrack> kill_counts, float time_deployed, float playtime)
         {
+            XPManager.GetRank((int)xp, out _, out var playerRank);
+
             this.id = id;
             this.name = name ?? string.Empty;
             this.display_name = display_name ?? string.Empty;
@@ -349,9 +356,9 @@ namespace Uncreated.Warfare.Stats
             this.teamkills = teamkills;
             this.credits = credits;
             this.xp = xp;
-            this.level = level == default ? Teams.XP.XPtoLevel(this.xp) : level;
-            this.rank = rank ?? Teams.XP.GetRankName(this.level);
-            this.rank_abbreviation = rank_abbreviation ?? Teams.XP.GetRankAbbreviation(this.level);
+            this.level = (uint)playerRank.level;
+            this.rank = playerRank.name;
+            this.rank_abbreviation = playerRank.abbreviation;
             this.kits = kits ?? new List<Kit>();
             this.owned_paid_kits = owned_paid_kits ?? new List<string>();
             this.kill_counts = kill_counts ?? new List<KillTrack>();
@@ -362,6 +369,8 @@ namespace Uncreated.Warfare.Stats
         }
         public Team(ulong id, string name, string display_name)
         {
+            XPManager.GetRank((int)xp, out _, out var playerRank);
+
             this.id = id;
             this.name = name ?? string.Empty;
             this.display_name = display_name ?? string.Empty;
@@ -370,9 +379,9 @@ namespace Uncreated.Warfare.Stats
             this.teamkills = 0;
             this.credits = 0;
             this.xp = 0;
-            this.level = Teams.XP.XPtoLevel(this.xp);
-            this.rank = Teams.XP.GetRankName(this.level);
-            this.rank_abbreviation = Teams.XP.GetRankAbbreviation(this.level);
+            this.level = (uint)playerRank.level;
+            this.rank = playerRank.name;
+            this.rank_abbreviation = playerRank.abbreviation;
             this.kits = new List<Kit>();
             this.owned_paid_kits = new List<string>();
             this.kill_counts = new List<KillTrack>();

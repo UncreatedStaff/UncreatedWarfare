@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Kits
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            var vehicle = UCBarricadeManager.GetVehicleFromLook(player);
+            var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
             if (vehicle != null)
             {
@@ -188,7 +188,7 @@ namespace Uncreated.Warfare.Kits
                 else
                     player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
             }
-            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player, out BarricadeDrop barricadeDrop);
+            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop barricadeDrop);
 
             if (barricade != null)
             {

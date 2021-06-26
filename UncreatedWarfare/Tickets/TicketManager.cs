@@ -1,5 +1,6 @@
 ﻿using Rocket.Unturned;
 using Rocket.Unturned.Player;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -61,11 +62,31 @@ namespace Uncreated.Warfare.Tickets
                 }
             }
         }
+        public static void OnPlayerJoined(UCPlayer player)
+        {
+            ulong team = player.GetTeam();
+            GetTeamBleed(team, out int bleed, out var message);
+            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, message);
 
-        private void OnNewGameStarting(object sender, EventArgs e)
+        }
+        public static void OnPlayerLeft(UCPlayer player)
+        {
+            
+        }
+        public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
+        {
+            EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
+            GetTeamBleed(newGroup, out int bleed, out var message);
+            UpdateUI(player.transportConnection, newGroup, bleed, message);
+        }
+
+        private static void OnNewGameStarting(object sender, EventArgs e)
         {
             Team1Tickets = config.data.StartingTickets;
             Team2Tickets = config.data.StartingTickets;
+            UpdateUITeam1();
+            UpdateUITeam2();
         }
 
         public static void AddTeam1Tickets(int number)
@@ -76,6 +97,7 @@ namespace Uncreated.Warfare.Tickets
                 Team1Tickets = 0;
                 Data.FlagManager.DeclareWin(TeamManager.Team2ID);
             }
+            UpdateUITeam1();
         }
         public static void AddTeam2Tickets(int number)
         {
@@ -85,31 +107,100 @@ namespace Uncreated.Warfare.Tickets
                 Team2Tickets = 0;
                 Data.FlagManager.DeclareWin(TeamManager.Team1ID);
             }
+            UpdateUITeam2();
         }
 
-        public void UpdateUI(CSteamID steamID)
+        public static void UpdateUI(ITransportConnection connection, ulong team, int bleed, string message)
         {
-            // TODO:
-        }
-        public void UpdateUIAll()
-        {
-            foreach (var steamPlayer in Provider.clients)
+            ushort UIID = 0;
+            int tickets = 0;
+            if (TeamManager.IsTeam1(team))
             {
-                UpdateUI(steamPlayer.playerID.steamID);
+                tickets = Team1Tickets;
+                UIID = config.data.Team1TicketUIID;
+            }
+
+            else if (TeamManager.IsTeam2(team))
+            {
+                tickets = Team2Tickets;
+                UIID = config.data.Team2TicketUIID;
+            }
+                
+            EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
+                tickets.ToString(),
+                bleed.ToString(),
+                message
+                );
+        }
+        public static void UpdateUITeam1()
+        {
+            GetTeamBleed(TeamManager.Team1ID, out int bleed, out string message);
+
+            var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam1()).ToList();
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team1ID, bleed, message);
             }
         }
-        public void UpdateUITeam1()
+        public static void UpdateUITeam2()
         {
-            foreach (var steamPlayer in Provider.clients.Where(sp => TeamManager.IsTeam1(sp.playerID.steamID)))
+            GetTeamBleed(TeamManager.Team2ID, out int bleed, out string message);
+
+            var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam2()).ToList();
+
+            for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(steamPlayer.playerID.steamID);
+                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, message);
             }
         }
-        public void UpdateUITeam2()
+
+        public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
-            foreach (var steamPlayer in Provider.clients.Where(sp => TeamManager.IsTeam2(sp.playerID.steamID)))
+            int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.FullOwner == team).Count();
+            int enemyCount = Data.FlagManager.AllFlags.Where(f => f.FullOwner != team).Count();
+
+            int diff = friendlyCount - enemyCount;
+
+            if (diff == 0 || diff == 1)
             {
-                UpdateUI(steamPlayer.playerID.steamID);
+                bleed = 0;
+                message = "";
+            }
+            else if (diff == 2 || diff == 3)
+            {
+                message = "Your team is in control!";
+                bleed = 1;
+            }
+            else if (diff >= 3 && enemyCount != 0)
+            {
+                message = "Your team is dominating!";
+                bleed = 2;
+            }
+            else if (diff == -1 || diff == -2)
+            {
+                message = "The enemy is in control!";
+                bleed = -1;
+            }
+            else if (diff <= -3 && friendlyCount != 0)
+            {
+                message = "The enemy is dominating!";
+                bleed = -2;
+            }
+            else if (friendlyCount == Data.FlagManager.AllFlags.Count)
+            {
+                message = "You are victorious!";
+                bleed = 3;
+            }
+            else if (enemyCount == Data.FlagManager.AllFlags.Count)
+            {
+                message = "You are defeated.";
+                bleed = -3;
+            }
+            else
+            {
+                bleed = 0;
+                message = "";
             }
         }
 
@@ -130,10 +221,9 @@ namespace Uncreated.Warfare.Tickets
         {
             StartingTickets = 600;
             FOBCost = 20;
-            Team1TicketUIID = 30050;
-            Team1TicketUIID = 30051;
+            Team1TicketUIID = 32390;
+            Team1TicketUIID = 32391;
         }
-
         public TicketData() { }
     }
 }

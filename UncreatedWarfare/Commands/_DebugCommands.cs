@@ -14,7 +14,9 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Flags.Flag;
 
@@ -34,7 +36,31 @@ namespace Uncreated.Warfare.Commands
             Player player = caller.DisplayName == "Console" ? Provider.clients.FirstOrDefault()?.player : (caller as UnturnedPlayer).Player;
             if(command.Length > 0)
             {
-                if (command[0] == "zone")
+                if (command.Length == 3 && (command[0].ToLower() == "givexp" || command[0].ToLower() == "giveof"))
+                {
+                    var target = UCPlayer.FromName(command[1]);
+                    if (target != null)
+                    {
+                        if (Int32.TryParse(command[2], out var amount))
+                        {
+                            if (command[0].ToLower() == "givexp")
+                            {
+                                XPManager.AddXP(target.Player, target.GetTeam(), amount);
+                                player.SendChat($"Given {amount} XP to {target.CharacterName}.", UCWarfare.GetColor("default"));
+                            }
+                            else if (command[0].ToLower() == "giveof")
+                            {
+                                OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount);
+                                player.SendChat($"Given {amount} Officer Points to {target.CharacterName}.", UCWarfare.GetColor("default"));
+                            }
+                        }
+                        else
+                            player.SendChat($"'{command[2]}' is not a valid amount.", UCWarfare.GetColor("default"));
+                    }
+                    else
+                        player.SendChat($"Could not find player called '{command[1]}'.", UCWarfare.GetColor("default"));
+                }
+                else if (command[0] == "zone")
                 {
                     Flag flag = Data.FlagManager.FlagRotation.FirstOrDefault(f => f.PlayerInRange(player));
                     if (flag == default(Flag))

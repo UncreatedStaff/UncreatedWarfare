@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Uncreated.Warfare.Stats;
 using Uncreated.Players;
+using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Components
 {
@@ -90,11 +91,13 @@ namespace Uncreated.Warfare.Components
         }
         /// <summary>Start a delayed teleport on the player.</summary>
         /// <returns>True if there were no requests pending, false if there were.</returns>
-        public bool TeleportDelayed(Vector3 Location, float y_euler, float seconds)
+        public bool TeleportDelayed(Vector3 position, float angle, float seconds, bool shouldCancelOnMove = false, bool shouldCancelOnDamage = false, bool shouldMessagePlayer = false, string locationName = "", FOB fob = null)
         {
             if(_currentTeleportRequest == default)
             {
-                _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(Location, y_euler, seconds));
+                if (shouldMessagePlayer)
+                    player.Message("deploy_standby", locationName, seconds);
+                _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(position, angle, seconds, shouldCancelOnMove, shouldCancelOnDamage, shouldMessagePlayer, locationName, fob));
                 return true;
             }
             return false;
@@ -106,13 +109,49 @@ namespace Uncreated.Warfare.Components
                 StopCoroutine(_currentTeleportRequest);
                 _currentTeleportRequest = default;
             }
-
         }
-        private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 Location, float y_euler, float seconds)
+        private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 position, float angle, float seconds, bool shouldCancelOnMove, bool shouldCancelOnDamage, bool shouldMessagePlayer, string locationName, FOB fob)
         {
-            yield return new WaitForSeconds(seconds);
-            if (!player.teleportToLocation(Location, y_euler))
-                F.LogError($"Failed to teleport {F.GetPlayerOriginalNames(player).PlayerName} to ({Location.x}, {Location.y}, {Location.z}) at {Math.Round(y_euler, 2)}°");
+            byte originalhealth = player.life.health;
+            Vector3 originalPosition = new Vector3(player.transform.position.x, player.transform.position.y, player.transform.position.z);
+
+            int counter = 0;
+            while (counter < seconds * 2)
+            {
+                if (player.life.isDead)
+                {
+                    if (shouldMessagePlayer)
+                        player.Message("deploy_c_death");
+                    yield break;
+                }
+                if (shouldCancelOnMove && player.transform.position != originalPosition)
+                {
+                    if (shouldMessagePlayer)
+                        player.Message("deploy_c_moved");
+                    yield break;
+                }
+                if (shouldCancelOnDamage && player.life.health != originalhealth)
+                {
+                    if (shouldMessagePlayer)
+                        player.Message("deploy_c_damaged");
+                    yield break;
+                }
+                if (fob != null && fob.Structure.barricade.isDead)
+                {
+                    if (shouldMessagePlayer)
+                        player.Message("deploy_c_fobdestroyed");
+                    yield break;
+                }
+                counter++;
+                yield return new WaitForSeconds(0.5F);
+            }
+            player.teleportToLocationUnsafe(position, angle);
+
+            if (shouldMessagePlayer)
+                player.Message("deploy_s", locationName);
+            CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.data.DeployFOBCooldown);
+
+            yield break;
         }
     }
 }

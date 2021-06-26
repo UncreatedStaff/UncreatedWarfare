@@ -13,14 +13,13 @@ namespace Uncreated.Warfare.FOBs
 {
     public class FOBManager : IDisposable
     {
-        public static FOBConfig config;
-        readonly List<FOB> Team1FOBs = new List<FOB>();
-        readonly List<FOB> Team2FOBs = new List<FOB>();
-
+        public static Config<FOBConfig> config;
+        static readonly List<FOB> Team1FOBs = new List<FOB>();
+        static readonly List<FOB> Team2FOBs = new List<FOB>();
 
         public FOBManager()
         {
-            config = new FOBConfig(Data.FOBStorage + "config.json");
+            config = new Config<FOBConfig>(Data.FOBStorage + "config.json");
 
             if (Level.isLoaded)
                 LoadFobs();
@@ -28,32 +27,41 @@ namespace Uncreated.Warfare.FOBs
                 Level.onLevelLoaded += OnLevelLoaded;
         }
 
-        private void OnLevelLoaded(int level)   
+        private static void OnLevelLoaded(int level)   
         {
             LoadFobs();
         }
 
-        public void LoadFobs()
+        public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
-            GetRegionBarricadeLists(
-                out List<BarricadeData> Team1FOBs,
-                out List<BarricadeData> Team2FOBs
-                );
-
-            this.Team1FOBs.Clear();
-            this.Team2FOBs.Clear();
-
-            for (int i = 0; i < Team1FOBs.Count; i++)
+            if (data.barricade.id == config.data.FOBID)
             {
-                this.Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(), i + 1, Team1FOBs[i]));
-            }
-            for (int i = 0; i < Team2FOBs.Count; i++)
-            {
-                this.Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(), i + 1, Team2FOBs[i]));
+                TryDeleteFOB(instanceID, data.group);
             }
         }
 
-        public void RegisterNewFOB(BarricadeData Structure)
+        public static void LoadFobs()
+        {
+            GetRegionBarricadeLists(
+                out List<BarricadeData> Team1FOBBarricades,
+                out List<BarricadeData> Team2FOBBarricades
+                );
+
+            Team1FOBs.Clear();
+            Team2FOBs.Clear();
+
+            for (int i = 0; i < Team1FOBs.Count; i++)
+            {
+                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(), i + 1, Team1FOBBarricades[i]));
+            }
+            for (int i = 0; i < Team2FOBs.Count; i++)
+            {
+                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(), i + 1, Team2FOBBarricades[i]));
+            }
+            UpdateUIAll();
+        }
+
+        public static void RegisterNewFOB(BarricadeData Structure)
         {
             if (TeamManager.IsTeam1(Structure.group))
             {
@@ -81,15 +89,21 @@ namespace Uncreated.Warfare.FOBs
 
                 Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(), Team2FOBs.Count + 1, Structure));
             }
+
+            UpdateUI(Structure.group);
         }
 
-        public void TryDeleteFOB(uint instanceID)
+        public static void TryDeleteFOB(uint instanceID, ulong team)
         {
-            Team1FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
-            Team2FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
+            if (TeamManager.IsTeam1(team))
+                Team1FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
+            else if (TeamManager.IsTeam2(team))
+                Team2FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
+
+            UpdateUI(team);
         }
 
-        public List<FOB> GetAvailableFobs(UnturnedPlayer player)
+        public static List<FOB> GetAvailableFobs(UnturnedPlayer player)
         {
             if (TeamManager.IsTeam1(player))
             {
@@ -103,7 +117,7 @@ namespace Uncreated.Warfare.FOBs
             return new List<FOB>();
         }
 
-        public void GetRegionBarricadeLists(
+        public static void GetRegionBarricadeLists(
                 out List<BarricadeData> Team1Barricades,
                 out List<BarricadeData> Team2Barricades
                 )
@@ -114,16 +128,16 @@ namespace Uncreated.Warfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             Team1Barricades = barricadeDatas.Where(b =>
-                b.barricade.id == config.FOBID &&   // All barricades that are FOB Structures
+                b.barricade.id == config.data.FOBID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam1(b.group)        // All barricades that are friendly
                 ).ToList();
             Team2Barricades = barricadeDatas.Where(b =>
-                b.barricade.id == config.FOBID &&   // All barricades that are FOB Structures
+                b.barricade.id == config.data.FOBID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam2(b.group)        // All barricades that are friendly
                 ).ToList();
         }
 
-        public void RemoveAllFOBBarricadesFromWorld()
+        public static void RemoveAllFOBBarricadesFromWorld()
         {
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
 
@@ -132,15 +146,15 @@ namespace Uncreated.Warfare.FOBs
 
             List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
             TeamManager.HasTeam(b.group) &&
-            (b.barricade.id == config.FOBID ||
-            b.barricade.id == config.FOBBaseID ||
-            b.barricade.id == config.AmmoCrateID ||
-            b.barricade.id == config.AmmoCrateBaseID ||
-            b.barricade.id == config.RepairStationID ||
-            b.barricade.id == config.RepairStationBaseID) ||
-            config.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
-            config.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
-            config.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
+            (b.barricade.id == config.data.FOBID ||
+            b.barricade.id == config.data.FOBBaseID ||
+            b.barricade.id == config.data.AmmoCrateID ||
+            b.barricade.id == config.data.AmmoCrateBaseID ||
+            b.barricade.id == config.data.RepairStationID ||
+            b.barricade.id == config.data.RepairStationBaseID) ||
+            config.data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
+            config.data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
+            config.data.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
             ).ToList();
 
             foreach (BarricadeData data in FOBComponents)
@@ -158,7 +172,23 @@ namespace Uncreated.Warfare.FOBs
             UpdateUIAll();
         }
 
-        public void UpdateUI(UnturnedPlayer player)
+        public static bool FindFOBByName(string name, ulong team, out FOB fob)
+        {
+            if (TeamManager.IsTeam1(team))
+            {
+                fob = Team1FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                return fob != null;
+            }
+            else if (TeamManager.IsTeam2(team))
+            {
+                fob = Team2FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                return fob != null;
+            }
+            fob = null;
+            return false;
+        }
+
+        public static void UpdateUI(UnturnedPlayer player)
         {
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
 
@@ -203,52 +233,20 @@ namespace Uncreated.Warfare.FOBs
                 UINumber++;
             }
         }
-        public void UpdateUIAll()
+        public static void UpdateUIAll()
         {
             foreach (var steamPlayer in Provider.clients)
             {
                 UpdateUI(UnturnedPlayer.FromSteamPlayer(steamPlayer));
             }
         }
-
-        public void SaveConfig()
+        public static void UpdateUI(ulong team)
         {
-            StreamWriter file = File.CreateText(config.directory);
-            JsonWriter writer = new JsonTextWriter(file);
-
-            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-
-            try
+            foreach (var steamPlayer in Provider.clients.Where(sp => sp.playerID.group.m_SteamID == team))
             {
-                serializer.Serialize(writer, config);
-                writer.Close();
-            }
-            catch (Exception ex)
-            {
-                writer.Close();
-                throw ex;
+                UpdateUI(UnturnedPlayer.FromSteamPlayer(steamPlayer));
             }
         }
-        public void ReloadConfig()
-        {
-            StreamReader r = File.OpenText(config.directory);
-
-            try
-            {
-                string json = r.ReadToEnd();
-                FOBConfig newConfig = JsonConvert.DeserializeObject<FOBConfig>(json);
-
-                r.Close();
-                r.Dispose();
-
-                config = newConfig;
-            }
-            catch
-            {
-                throw new ConfigReadException(r, config.directory);
-            }
-        }
-
         public void Dispose()
         {
             Level.onLevelLoaded -= OnLevelLoaded;
@@ -268,5 +266,170 @@ namespace Uncreated.Warfare.FOBs
             this.Structure = Structure;
             DateCreated = new DateTime(DateTime.Now.Ticks);
         }
+    }
+
+    public class FOBConfig : ConfigData
+    {
+        public ushort Team1BuildID;
+        public ushort Team2BuildID;
+        public ushort Team1AmmoID;
+        public ushort Team2AmmoID;
+        public ushort FOBBaseID;
+        public ushort FOBID;
+        public ushort FOBRequiredBuild;
+        public byte FobLimit;
+
+        public ushort AmmoCrateBaseID;
+        public ushort AmmoCrateID;
+        public ushort AmmoCrateRequiredBuild;
+        public ushort RepairStationBaseID;
+        public ushort RepairStationID;
+        public ushort RepairStationRequiredBuild;
+        public ushort MortarID;
+        public ushort MortarBaseID;
+        public ushort MortarRequiredBuild;
+        public ushort MortarShellID;
+
+        public List<Emplacement> Emplacements;
+        public List<Fortification> Fortifications;
+        public List<ushort> LogiTruckIDs;
+        public List<ushort> AmmoBagIDs;
+
+        public float DeloyMainDelay;
+        public float DeloyFOBDelay;
+
+        public bool EnableCombatLogger;
+        public uint CombatCooldown;
+
+        public bool EnableDeployCooldown;
+        public uint DeployCooldown;
+        public bool DeployCancelOnMove;
+        public bool DeployCancelOnDamage;
+
+        public bool ShouldRespawnAtMain;
+        public bool ShouldWipeAllFOBsOnRoundedEnded;
+        public bool ShouldSendPlayersBackToMainOnRoundEnded;
+        public bool ShouldKillMaincampers;
+
+        public override void SetDefaults()
+        {
+            Team1BuildID = 38312;
+            Team2BuildID = 38313;
+            Team1AmmoID = 38314;
+            Team2AmmoID = 38315;
+            FOBBaseID = 38310;
+            FOBID = 38311;
+            FOBRequiredBuild = 20;
+            FobLimit = 10;
+
+            AmmoCrateBaseID = 38316;
+            AmmoCrateID = 38317;
+            AmmoCrateRequiredBuild = 3;
+
+            RepairStationBaseID = 38318;
+            RepairStationID = 38319;
+            RepairStationRequiredBuild = 10;
+
+            MortarID = 38313;
+            MortarBaseID = 38336;
+            MortarRequiredBuild = 10;
+            MortarShellID = 38330;
+
+            LogiTruckIDs = new List<ushort>() { 38305, 38306 };
+            AmmoBagIDs = new List<ushort>() { 38380 };
+
+            Fortifications = new List<Fortification>() {
+                new Fortification
+                {
+                    base_id = 38350,
+                    barricade_id = 38351,
+                    required_build = 1
+                },
+                new Fortification
+                {
+                    base_id = 38352,
+                    barricade_id = 38353,
+                    required_build = 1
+                },
+                new Fortification
+                {
+                    base_id = 38354,
+                    barricade_id = 38355,
+                    required_build = 1
+                }
+            };
+
+            Emplacements = new List<Emplacement>() {
+                new Emplacement
+                {
+                    baseID = 38345,
+                    vehicleID = 38316,
+                    ammoID = 38302,
+                    ammoAmount = 2,
+                    requiredBuild = 6
+                },
+                new Emplacement
+                {
+                    baseID = 38346,
+                    vehicleID = 38317,
+                    ammoID = 38305,
+                    ammoAmount = 2,
+                    requiredBuild = 6
+                },
+                new Emplacement
+                {
+                    baseID = 38342,
+                    vehicleID = 38315,
+                    ammoID = 38341,
+                    ammoAmount = 1,
+                    requiredBuild = 10
+                },
+                new Emplacement
+                {
+                    baseID = 38339,
+                    vehicleID = 38314,
+                    ammoID = 38338,
+                    ammoAmount = 1,
+                    requiredBuild = 10
+                },
+                new Emplacement
+                {
+                    baseID = 38336,
+                    vehicleID = 38313,
+                    ammoID = 38330,
+                    ammoAmount = 3,
+                    requiredBuild = 8
+                },
+            };
+
+            DeloyMainDelay = 3;
+            DeloyFOBDelay = 10;
+
+            DeployCancelOnMove = true;
+            DeployCancelOnDamage = true;
+
+            ShouldRespawnAtMain = true;
+            ShouldSendPlayersBackToMainOnRoundEnded = true;
+            ShouldWipeAllFOBsOnRoundedEnded = true;
+            ShouldKillMaincampers = true;
+        }
+
+        public FOBConfig() { }
+    }
+
+    public class Emplacement
+    {
+        public ushort vehicleID;
+        public ushort baseID;
+        public ushort ammoID;
+        public ushort ammoAmount;
+        public ushort requiredBuild;
+    }
+
+    public class Fortification
+    {
+        public ushort barricade_id;
+        public ushort base_id;
+        public ushort required_build;
     }
 }

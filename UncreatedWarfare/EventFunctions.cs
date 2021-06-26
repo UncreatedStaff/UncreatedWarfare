@@ -10,10 +10,12 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Flags;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Flags.Flag;
@@ -28,14 +30,21 @@ namespace Uncreated.Warfare
         internal static void GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             ulong newteam = newGroup.GetTeam();
+
+            PlayerManager.VerifyTeam(player.player);
+
             Data.FlagManager.ClearListUI(player.transportConnection);
             if (Data.FlagManager.OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
                 Data.FlagManager.RefreshStaticUI(newteam, Data.FlagManager.FlagRotation.FirstOrDefault(x => x.ID == Data.FlagManager.OnFlag[player.playerID.steamID.m_SteamID])
                     ?? Data.FlagManager.FlagRotation[0]).SendToPlayer(player, player.transportConnection);
             Data.FlagManager.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newteam);
 
-            SquadManager.ClearUIsquad(player);
+            SquadManager.ClearUIsquad(player.player);
             SquadManager.UpdateUIMemberCount(newGroup);
+
+            XPManager.OnGroupChanged(player, oldGroup, newGroup);
+            OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
+            TicketManager.OnGroupChanged(player, oldGroup, newGroup);
         }
         internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
@@ -48,6 +57,8 @@ namespace Uncreated.Warfare
                     Data.OwnerComponents.RemoveAt(c);
                 }
             }
+            FOBManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
+            RallyManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow) 
         {
@@ -63,6 +74,7 @@ namespace Uncreated.Warfare
             BarricadeOwnerDataComponent c = location.gameObject.AddComponent<BarricadeOwnerDataComponent>();
             c.SetData(data, region, location);
             Data.OwnerComponents.Add(c);
+            RallyManager.OnBarricadePlaced(region, data, ref location);
         }
         internal static void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner, ref bool allow)
         {
@@ -128,6 +140,8 @@ namespace Uncreated.Warfare
                     }
                 }
             }
+            if (shouldAllow)
+                RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {
@@ -135,6 +149,8 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
+            PlayerManager.InvokePlayerConnected(player); // must always be first
+
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
@@ -161,10 +177,12 @@ namespace Uncreated.Warfare
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
             }
-            PlayerManager.InvokePlayerConnected(player);
             Data.ReviveManager.OnPlayerConnected(player);
 
             SquadManager.InvokePlayerJoined(ucplayer);
+            XPManager.OnPlayerJoined(ucplayer);
+            OfficerManager.OnPlayerJoined(ucplayer);
+            TicketManager.OnPlayerJoined(ucplayer);
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
         }
@@ -184,6 +202,8 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(player);
+
             if (Data.OriginalNames.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
             {
                 Server.SendPlayerLeft(names);
@@ -223,6 +243,9 @@ namespace Uncreated.Warfare
             Data.ReviveManager.OnPlayerDisconnected(player);
             SquadManager.InvokePlayerLeft(ucplayer);
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last
+            XPManager.OnPlayerLeft(ucplayer);
+            OfficerManager.OnPlayerLeft(ucplayer);
+            TicketManager.OnPlayerLeft(ucplayer);
         }
         internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) 
             => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);

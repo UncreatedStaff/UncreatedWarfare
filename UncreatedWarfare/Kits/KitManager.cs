@@ -206,7 +206,7 @@ namespace Uncreated.Warfare.Kits
 
             OnKitChanged?.Invoke(player, kit);
         }
-        public static void ResupplyKit(UnturnedPlayer player, Kit kit)
+        public static void ResupplyKit(UCPlayer player, Kit kit)
         {
             List<ItemJar> nonKitItems = new List<ItemJar>();
 
@@ -219,7 +219,7 @@ namespace Uncreated.Warfare.Kits
 
                 for (byte index = 0; index < count; index++)
                 {
-                    ItemJar jar = player.Inventory.getItem(page, 0);
+                    ItemJar jar = player.Player.inventory.getItem(page, 0);
 
                     if (!kit.HasItemOfID(jar.item.id) && !(jar.item.id == 38324 || jar.item.id == 38322))
                     {
@@ -234,13 +234,13 @@ namespace Uncreated.Warfare.Kits
                 var item = new Item(i.ID, i.amount, i.quality);
                 item.metadata = System.Convert.FromBase64String(i.metadata);
 
-                if (!player.Inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
-                    player.Inventory.tryAddItem(item, true);
+                if (!player.Player.inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
+                    player.Player.inventory.tryAddItem(item, true);
             }
 
             foreach (var jar in nonKitItems)
             {
-                player.Inventory.tryAddItem(jar.item, true);
+                player.Player.inventory.tryAddItem(jar.item, true);
             }
 
             EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);

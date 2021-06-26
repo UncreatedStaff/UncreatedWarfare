@@ -56,11 +56,9 @@ namespace Uncreated.Warfare
             drop = region.drops[index];
             return region.structures[index];
         }
-        public static BarricadeData GetBarricadeDataFromLook(UnturnedPlayer player) => GetBarricadeDataFromLook(player, out _);
-        public static BarricadeData GetBarricadeDataFromLook(UnturnedPlayer player, out BarricadeDrop drop)
+        public static BarricadeData GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
+        public static BarricadeData GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop drop)
         {
-            PlayerLook look = player.Player.look;
-
             Transform barricadeTransform = GetBarricadeTransformFromLook(look);
 
             if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out _, out _, out _, out ushort index,
@@ -119,6 +117,12 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public static InteractableVehicle GetVehicleFromLook(UnturnedPlayer player) => GetInteractableFromLook<InteractableVehicle>(player.Player.look, RayMasks.VEHICLE);
+        public static InteractableVehicle GetVehicleFromLook(PlayerLook look) => GetInteractableFromLook<InteractableVehicle>(look, RayMasks.VEHICLE);
+
+        public static BarricadeDrop GetDropFromBarricadeData(BarricadeData data)
+        {
+            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
+            return barricadeRegions.SelectMany(brd => brd.drops).Where(d => d.instanceID == data.instanceID).FirstOrDefault();
+        }
     }
 }

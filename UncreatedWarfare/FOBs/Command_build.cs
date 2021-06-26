@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            BarricadeData foundation = UCBarricadeManager.GetBarricadeDataFromLook(player);
+            BarricadeData foundation = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
 
             if (foundation == null || !TeamManager.IsFriendly(player, foundation.group))
             {
@@ -45,33 +45,33 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            if (foundation.barricade.id == FOBManager.config.FOBBaseID)
+            if (foundation.barricade.id == FOBManager.config.data.FOBBaseID)
             {
-                Data.BuildManager.TryBuildFOB(foundation, player);
+                BuildManager.TryBuildFOB(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.AmmoCrateBaseID)
+            else if (foundation.barricade.id == FOBManager.config.data.AmmoCrateBaseID)
             {
-                Data.BuildManager.TryBuildAmmoCrate(foundation, player);
+                BuildManager.TryBuildAmmoCrate(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.RepairStationBaseID)
+            else if (foundation.barricade.id == FOBManager.config.data.RepairStationBaseID)
             {
-                Data.BuildManager.TryBuildRepairStation(foundation, player);
+                BuildManager.TryBuildRepairStation(foundation, player);
             }
             else
             {
-                Emplacement emplacement = FOBManager.config.Emplacements.Find(e => e.baseID == foundation.barricade.id);
+                Emplacement emplacement = FOBManager.config.data.Emplacements.Find(e => e.baseID == foundation.barricade.id);
 
                 if (emplacement != null)
                 {
-                    Data.BuildManager.TryBuildEmplacement(foundation, player, emplacement);
+                    BuildManager.TryBuildEmplacement(foundation, player, emplacement);
                     return;
                 }
 
-                Fortification fortification = FOBManager.config.Fortifications.Find(f => f.base_id == foundation.barricade.id);
+                Fortification fortification = FOBManager.config.data.Fortifications.Find(f => f.base_id == foundation.barricade.id);
 
                 if (fortification != null)
                 {
-                    Data.BuildManager.TryBuildFortification(foundation, player, fortification);
+                    BuildManager.TryBuildFortification(foundation, player, fortification);
                     return;
                 }
                 player.Message("build_error_notbuildable");

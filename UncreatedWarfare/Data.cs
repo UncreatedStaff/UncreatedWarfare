@@ -22,6 +22,8 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Squads;
 using Rocket.Core;
 using Rocket.API.Serialisation;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.XP;
 
 namespace Uncreated.Warfare
 {
@@ -55,8 +57,12 @@ namespace Uncreated.Warfare
         }
         public static readonly string TeamStorage = DataDirectory + @"Teams\";
         public static readonly string TicketStorage = DataDirectory + @"Tickets\";
+        public static readonly string XPStorage = DataDirectory + @"XP\";
         public static readonly string OfficerStorage = DataDirectory + @"Officers\";
+        public static readonly string CooldownStorage = DataDirectory + @"Cooldowns\";
+        public static readonly string SquadStorage = DataDirectory + @"Squads\";
         public static readonly string KitsStorage = DataDirectory + @"Kits\";
+        public static readonly string SQLStorage = DataDirectory + @"SQL\";
         private static readonly string _vehicleStorage = DataDirectory + @"Maps\{0}\Vehicles\";
         private static string _vehicleStorageTemp;
         public static string VehicleStorage
@@ -97,12 +103,15 @@ namespace Uncreated.Warfare
         public static TeamManager TeamManager;
         public static ReviveManager ReviveManager;
         public static TicketManager TicketManager;
+        public static XPManager XPManager;
+        public static OfficerManager OfficerManager;
         public static PlayerManager LogoutSaver;
         public static RequestSigns RequestSignManager;
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
         public static SquadManager squadManager;
         internal static AsyncDatabase DatabaseManager;
+        internal static SyncDatabase SyncDB;
         public static WarStatsTracker GameStats;
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
@@ -134,6 +143,12 @@ namespace Uncreated.Warfare
             F.CheckDir(KitsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
+            F.CheckDir(XPStorage, out _, true);
+            F.CheckDir(OfficerStorage, out _, true);
+            F.CheckDir(TicketStorage, out _, true);
+            F.CheckDir(CooldownStorage, out _, true);
+            F.CheckDir(SquadStorage, out _, true);
+            F.CheckDir(SQLStorage, out _, true);
             F.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
@@ -162,6 +177,8 @@ namespace Uncreated.Warfare
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new AsyncDatabase();
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
+            SyncDB = new SyncDatabase();
+            SyncDB.Open();
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
             squadManager = new SquadManager();
@@ -170,6 +187,8 @@ namespace Uncreated.Warfare
             FlagManager = new FlagManager();
             FlagManager.OnReady += UCWarfare.I.OnFlagManagerReady;
             TicketManager = new TicketManager();
+            XPManager = new XPManager();
+            OfficerManager = new OfficerManager();
             if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
             {
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);

@@ -246,6 +246,35 @@ namespace Uncreated.Warfare.Vehicles
             }
             else return false;
         }
+
+        public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
+        {
+            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
+
+            ushort plant = (ushort)BarricadeManager.vehicleRegions.ToList().IndexOf(vehicleRegion);
+            for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
+            {
+                if (i >= 0)
+                {
+                    if (vehicleRegion.drops[i].interactable is InteractableStorage store)
+                        store.despawnWhenDestroyed = true;
+
+                    BarricadeManager.destroyBarricade(vehicleRegion, 0, 0, plant, (ushort)i);
+                }
+            }
+
+            foreach (var vb in vehicleData.Metadata.Barricades)
+            {
+                Barricade barricade = new Barricade(vb.BarricadeID);
+                barricade.state = Convert.FromBase64String(vb.State);
+
+                Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
+
+                BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
+            }
+
+            EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
+        }
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
             UCWarfare.I.StartCoroutine(StartVehicleRespawnTimer(vehicle));
@@ -314,7 +343,6 @@ namespace Uncreated.Warfare.Vehicles
                 return;
             }
         }
-
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
             UnturnedPlayer player = UnturnedPlayer.FromPlayer(nelsonplayer);

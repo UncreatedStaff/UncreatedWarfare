@@ -13,10 +13,13 @@ namespace Uncreated.Warfare.Squads
 {
     public class SquadManager
     {
+        public static Config<SquadConfigData> config;
         public static List<Squad> Squads;
 
         public SquadManager()
         {
+            config = new Config<SquadConfigData>(Data.SquadStorage + "config.json");
+
             Squads = new List<Squad>();
             KitManager.OnKitChanged += OnKitChanged;
         }
@@ -26,30 +29,30 @@ namespace Uncreated.Warfare.Squads
                 UpdateUISquad(squad);
         }
 
-        public static void ClearUIsquad(SteamPlayer steamplayer)
+        public static void ClearUIsquad(Player player)
         {
             for (int i = 0; i < 6; i++)
-                EffectManager.askEffectClearByID((ushort)(30071 + i), steamplayer.transportConnection);
+                EffectManager.askEffectClearByID((ushort)(30071 + i), player.channel.owner.transportConnection);
             for (int i = 0; i < 8; i++)
-                EffectManager.askEffectClearByID((ushort)(30081 + i), steamplayer.transportConnection);
+                EffectManager.askEffectClearByID((ushort)(30081 + i), player.channel.owner.transportConnection);
         }
-        public static void ClearUIList(SteamPlayer steamplayer)
+        public static void ClearUIList(Player player)
         {
             for (int i = 0; i < 8; i++)
-                EffectManager.askEffectClearByID((ushort)(30061 + i), steamplayer.transportConnection);
+                EffectManager.askEffectClearByID((ushort)(30061 + i), player.channel.owner.transportConnection);
         }
         public static void UpdateUISquad(Squad squad)
         {
             foreach (var member in squad.Members)
             {
                 for (int i = 0; i < 6; i++)
-                    EffectManager.askEffectClearByID((ushort)(30071 + i), member.SteamPlayer().transportConnection);
+                    EffectManager.askEffectClearByID((ushort)(30071 + i), member.Player.channel.owner.transportConnection);
 
                 for (int i = 0; i < squad.Members.Count; i++)
                 {
                     if (squad.Members[i] == squad.Leader)
                     {
-                        EffectManager.sendUIEffect(30071, 30071, member.SteamPlayer().transportConnection, true,
+                        EffectManager.sendUIEffect(30071, 30071, member.Player.channel.owner.transportConnection, true,
                                  squad.Members[i].SteamPlayer().playerID.nickName,
                                  squad.Members[i].Icon,
                                  squad.IsLocked ? $"{squad.Name} <color=#cf6a59>({squad.Members.Count}/6)</color>" : $"{squad.Name} ({squad.Members.Count}/6)"
@@ -86,7 +89,7 @@ namespace Uncreated.Warfare.Squads
                             {
                                 display = $"{sortedSquads[i].Members.Count}/6";
                                 if (sortedSquads[i].IsLocked)
-                                    display = $"<color=#cf6a59>{display}</color>";
+                                    display = $"<color=#969696>{display}</color>";
                             }
 
                             EffectManager.sendUIEffect((ushort)(30081 + i),
@@ -108,9 +111,8 @@ namespace Uncreated.Warfare.Squads
                                 (short)(30061 + i),
                                 steamplayer.transportConnection,
                                 true,
-                                Squads[i].Name,
-                                $"{Squads[i].Members.Count}/6",
-                                Squads[i].IsLocked ? $"<color=#cf6a59>{Squads[i].Name}/6</color>" : $"{Squads[i].Name}/6"
+                                !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
+                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
                             );
                         }
                     }
@@ -145,7 +147,7 @@ namespace Uncreated.Warfare.Squads
 
             leader.Squad = squad;
 
-            ClearUIList(leader.SteamPlayer());
+            ClearUIList(leader.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
@@ -165,7 +167,7 @@ namespace Uncreated.Warfare.Squads
 
             player.Squad = squad;
 
-            ClearUIList(player.SteamPlayer());
+            ClearUIList(player.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
@@ -186,7 +188,7 @@ namespace Uncreated.Warfare.Squads
                 Squads.RemoveAll(s => s.Name == name);
 
                 squad.Leader.Message("squad_disbanded");
-                ClearUIsquad(squad.Leader.SteamPlayer());
+                ClearUIsquad(squad.Leader.Player);
 
                 UpdateUIMemberCount(squad.Team);
                 return;
@@ -201,7 +203,7 @@ namespace Uncreated.Warfare.Squads
             }
 
             UpdateUISquad(squad);
-            ClearUIsquad(player.SteamPlayer());
+            ClearUIsquad(player.Player);
             UpdateUIMemberCount(squad.Team);
         }
         public static void DisbandSquad(Squad squad)
@@ -213,7 +215,7 @@ namespace Uncreated.Warfare.Squads
                 member.Squad = null;
 
                 member.Message("squad_disbanded");
-                ClearUIsquad(member.SteamPlayer());
+                ClearUIsquad(member.Player);
                 UpdateUIMemberCount(squad.Team);
             }
         }
@@ -232,7 +234,7 @@ namespace Uncreated.Warfare.Squads
 
             player.Squad = null;
 
-            ClearUIsquad(player.SteamPlayer());
+            ClearUIsquad(player.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
@@ -304,10 +306,16 @@ namespace Uncreated.Warfare.Squads
     public class SquadConfigData : ConfigData
     {
         public float MemberNearXPMultiplier;
+        public ushort Team1RallyID;
+        public ushort Team2RallyID;
+        public ushort rallyUI;
 
         public override void SetDefaults()
         {
             MemberNearXPMultiplier = 1.1F;
+            Team1RallyID = 38381;
+            Team1RallyID = 38382;
+            rallyUI = 32395;
         }
 
         public SquadConfigData() { }
