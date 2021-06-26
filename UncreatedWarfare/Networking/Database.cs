@@ -19,6 +19,7 @@ namespace Uncreated.SQL
     public class Database : IDisposable
     {
         public MySqlConnection SQL { get; protected set; }
+        protected bool _connected = false;
         public Database(string connection_string)
         {
             SQL = new MySqlConnection(connection_string);
@@ -35,6 +36,7 @@ namespace Uncreated.SQL
             try
             {
                 SQL.Close();
+                _connected = false;
             }
             catch (MySqlException ex)
             {
@@ -48,6 +50,7 @@ namespace Uncreated.SQL
             try
             {
                 SQL.Open();
+                _connected = true;
             }
             catch (MySqlException ex)
             {
@@ -68,10 +71,7 @@ namespace Uncreated.SQL
                 }
             }
         }
-        public virtual string GetTableName(string key)
-        {
-            return key;
-        }
+        public virtual string GetTableName(string key) => key;
         public virtual string GetColumnName(string table_key, string column_key, out string table_name)
         {
             table_name = table_key;
@@ -124,13 +124,28 @@ namespace Uncreated.SQL
         public IAsyncResult OpenAsync(AsyncCallback callback = null)
         {
             D_DatabaseDelegateWithBool caller = new D_DatabaseDelegateWithBool(_dbCaller.Open);
-            return caller.BeginInvoke(out _, callback ?? AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            return caller.BeginInvoke(out _, callback == null ? SetOpen : callback + SetOpen, caller);
+        }
+        private void SetOpen(IAsyncResult ar)
+        {
+            if (ar.AsyncState is D_DatabaseDelegateWithBool b)
+                b.EndInvoke(out _connected, ar);
+            ar.Dispose();
+        }
+        private void SetClose(IAsyncResult ar)
+        {
+            if (ar.AsyncState is D_DatabaseDelegateWithBool b)
+            {
+                b.EndInvoke(out bool success, ar);
+                if (success) _connected = false;
+            }
+            ar.Dispose();
         }
         /// <summary>Closes the connection. Not thread-blocking.</summary>
         public IAsyncResult CloseAsync(AsyncCallback callback = null)
         {
-            D_DatabaseDelegate caller = new D_DatabaseDelegate(_dbCaller.Close);
-            return caller.BeginInvoke(callback ?? AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            D_DatabaseDelegateWithBool caller = new D_DatabaseDelegateWithBool(_dbCaller.Close);
+            return caller.BeginInvoke(out _, callback == null ? SetClose : callback + SetClose, caller);
         }
         public void CustomSqlQuery(string command, D_ReaderAction readerLoopAction, AsyncCallback callback, params object[] parameters)
         {
@@ -230,16 +245,18 @@ namespace Uncreated.SQL
             _manager.CloseSync();
             _manager.SQL.Dispose();
         }
-        public void Close()
+        public void Close(out bool success)
         {
             try
             {
                 _manager.SQL.Close();
+                success = true;
             }
             catch (MySqlException ex)
             {
                 _manager.LogError("ERROR Closing Connection\n" + ex.Message);
                 _manager.LogError("\nTrace\n" + ex.StackTrace);
+                success = false;
             }
         }
         public void Open(out bool bSuccess)

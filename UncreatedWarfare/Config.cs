@@ -2,6 +2,7 @@
 using Rocket.API;
 using System.Collections.Generic;
 using System.Xml.Serialization;
+using Uncreated.SQL;
 
 namespace Uncreated
 {

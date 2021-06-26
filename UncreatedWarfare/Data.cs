@@ -110,7 +110,6 @@ namespace Uncreated.Warfare
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
         public static SquadManager squadManager;
-        internal static AsyncDatabase DatabaseManager;
         internal static SyncDatabase SyncDB;
         internal static WarfareSQL DatabaseManager;
         public static WarStatsTracker GameStats;
@@ -172,7 +171,7 @@ namespace Uncreated.Warfare
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL.ConnectionString);
             DatabaseManager.OpenAsync(AsyncDatabaseCallbacks.OpenedOnLoad);
-            SyncDB = new SyncDatabase();
+            SyncDB = new SyncDatabase(DatabaseManager.SQL);
             SyncDB.Open();
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
