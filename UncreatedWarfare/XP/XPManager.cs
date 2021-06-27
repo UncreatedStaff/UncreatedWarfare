@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
@@ -34,8 +35,9 @@ namespace Uncreated.Warfare.XP
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             uint xp = await GetXP(player.player, newGroup);
-            await ThreadTool.SwitchToGameThread();
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player.player, xp);
+            await rtn;
         }
         public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
@@ -64,8 +66,9 @@ namespace Uncreated.Warfare.XP
         public static async Task AddXP(Player player, ulong team, int amount)
         {
             uint newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.XPMultiplier));
-            await ThreadTool.SwitchToGameThread();
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
+            await rtn;
         }
 
         public static void UpdateUI(Player nelsonplayer, uint balance)

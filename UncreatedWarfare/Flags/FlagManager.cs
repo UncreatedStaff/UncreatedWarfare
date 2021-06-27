@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -139,10 +141,10 @@ namespace Uncreated.Warfare.Flags
         }
         public static int FromMax(int cap) => Math.Abs(cap) >= Flag.MaxPoints ? PROGRESS_CHARS.Length - 1 : ((PROGRESS_CHARS.Length - 1) / Flag.MaxPoints) * Math.Abs(cap);
         public void ClearPlayersOnFlag() => OnFlag.Clear();
-        public void LoadNewFlags()
+        public async Task LoadNewFlags()
         {
             if (AllFlags == null) return;
-            ResetFlags();
+            await ResetFlags();
             OnFlag.Clear();
             if(UCWarfare.Config.FlagSettings.UseAutomaticLevelSensing)
             {
@@ -200,8 +202,10 @@ namespace Uncreated.Warfare.Flags
             }
             foreach (SteamPlayer client in Provider.clients)
             {
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 ClearListUI(client.transportConnection);
                 SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam());
+                await rtn;
             }
             PrintFlagRotation();
         }
@@ -544,30 +548,28 @@ namespace Uncreated.Warfare.Flags
                 }
             }
         }
-        private void FlagPointsChanged(object sender, CaptureChangeEventArgs e)
+        private async Task FlagPointsChanged(int NewPoints, int OldPoints, Flag flag)
         {
-            if(sender is Flag flag)
+            if (NewPoints == 0)
             {
-                if (e.NewPoints == 0)
-                {
-                    flag.Owner = 0;
-                }
-                //F.Log("Points changed on flag " + flag.Name + " from " + e.OldPoints.ToString(Data.Locale) + " to " + e.NewPoints.ToString(Data.Locale), ConsoleColor.Yellow);
-                SendUIParameters sendT1;
-                if (flag.Team1TotalPlayers > 0)
-                    sendT1 = ComputeUI(1, flag);
-                else sendT1 = default;
-                SendUIParameters sendT2;
-                if (flag.Team2TotalPlayers > 0)
-                    sendT2 = ComputeUI(2, flag);
-                else sendT2 = default;
-                foreach (Player player in flag.PlayersOnFlag)
-                {
-                    byte team = player.GetTeamByte();
-                    if (team == 1 && !sendT1.Equals(default)) sendT1.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
-                    else if (team == 2 && !sendT2.Equals(default)) sendT2.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
-                }
+                await flag.SetOwner(0);
             }
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+            SendUIParameters sendT1;
+            if (flag.Team1TotalPlayers > 0)
+                sendT1 = ComputeUI(1, flag);
+            else sendT1 = default;
+            SendUIParameters sendT2;
+            if (flag.Team2TotalPlayers > 0)
+                sendT2 = ComputeUI(2, flag);
+            else sendT2 = default;
+            foreach (Player player in flag.PlayersOnFlag)
+            {
+                byte team = player.GetTeamByte();
+                if (team == 1 && !sendT1.Equals(default)) sendT1.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
+                else if (team == 2 && !sendT2.Equals(default)) sendT2.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
+            }
+            await rtn;
         }
         public class OnTeamWinEventArgs : EventArgs { public ulong team; }
         public class OnObjectiveChangeEventArgs : EventArgs { public Flag oldFlagObj; public Flag newFlagObj; public ulong Team; public int OldObj; public int NewObj; }
@@ -580,7 +582,7 @@ namespace Uncreated.Warfare.Flags
         public static event FlagCapturedHandler OnFlagCaptured;
         public static event FlagNeutralizedHandler OnFlagNeutralized;
 
-        public void DeclareWin(ulong Team, bool showEndScreen = true)
+        public async Task DeclareWin(ulong Team, bool showEndScreen = true)
         {
             F.Log(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Cyan);
             foreach (SteamPlayer client in Provider.clients)
@@ -599,122 +601,129 @@ namespace Uncreated.Warfare.Flags
                 EndScreen.ShuttingDown = shutdownAfterGame;
                 EndScreen.ShuttingDownMessage = shutdownMessage;
                 EndScreen.ShuttingDownPlayer = shutdownPlayer;
-                EndScreen.EndGame();
+                await EndScreen.EndGame();
                 isScreenUp = true;
             }
         }
-        public void StartNextGame()
+        public async Task StartNextGame()
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
-            LoadNewFlags();
+            await LoadNewFlags();
             State = EState.ACTIVE;
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.FlagSettings.UIID);
             OnNewGameStarting?.Invoke(this, EventArgs.Empty);
+            await rtn;
         }
-        private void EndScreen_OnLeaderboardExpired(object sender, EventArgs e)
+        private async Task EndScreen_OnLeaderboardExpired()
         {
             EndScreen.OnLeaderboardExpired -= EndScreen_OnLeaderboardExpired;
-            StartNextGame();
+            await StartNextGame();
             isScreenUp = false;
         }
-        private void FlagOwnerChanged(object sender, OwnerChangeEventArgs e)
+        private async Task FlagOwnerChanged(ulong oldowner, ulong newowner, Flag flag)
         {
-            if(sender is Flag flag)
+            F.Log($"Owner changed of flag {flag.Name} ({flag.index}) to Team {newowner} from Team {oldowner}", ConsoleColor.DarkYellow);
+            // owner of flag changed (full caputure or loss)
+            if (newowner == 1)
             {
-                F.Log($"Owner changed of flag {flag.Name} ({flag.index}) to Team {e.NewOwner} from Team {e.OldOwner}", ConsoleColor.DarkYellow);
-                // owner of flag changed (full caputure or loss)
-                if (e.NewOwner == 1)
+                if (ObjectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
                 {
-                    if (ObjectiveT1Index >= FlagRotation.Count - 1) // if t1 just capped the last flag
-                    {
-                        DeclareWin(e.NewOwner);
-                        ObjectiveT1Index = FlagRotation.Count - 1;
-                    }
-                    else
-                    {
-                        ObjectiveT1Index = flag.index + 1;
-                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
-                        { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index], NewObj = ObjectiveT1Index, OldObj = flag.index, Team = e.NewOwner });
-                        OnFlagCaptured?.Invoke(flag, e.NewOwner, e.OldOwner);
-                    }
-                }
-                else if (e.NewOwner == 2)
-                {
-                    if (ObjectiveT2Index <   1) // if t2 just capped the last flag
-                    {
-                        DeclareWin(e.NewOwner);
-                        ObjectiveT2Index = 0;
-                    }
-                    else
-                    {
-                        ObjectiveT2Index = flag.index - 1;
-                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
-                        { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index], NewObj = ObjectiveT2Index, OldObj = flag.index, Team = e.NewOwner });
-                        OnFlagCaptured?.Invoke(flag, e.NewOwner, e.OldOwner);
-                    }
-                }
-                else if (e.NewOwner == 0)
-                {
-                    if (e.OldOwner == 1)
-                    {
-                        int oldindex = ObjectiveT1Index;
-                        ObjectiveT1Index = flag.index;
-                        if (oldindex != flag.index)
-                        {
-                            OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
-                            { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
-                            OnFlagNeutralized?.Invoke(flag, 2, 1);
-                        }
-                    }
-                    else if (e.OldOwner == 2)
-                    {
-                        int oldindex = ObjectiveT2Index;
-                        ObjectiveT2Index = flag.index;
-                        if (oldindex != flag.index)
-                        {
-                            OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
-                            { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
-                            OnFlagNeutralized?.Invoke(flag, 1, 2);
-                        }
-                    }
-                }
-                SendUIParameters t1;
-                if (flag.Team1TotalPlayers > 0)
-                    t1 = RefreshStaticUI(1, flag);
-                else t1 = default;
-                SendUIParameters t2;
-                if (flag.Team2TotalPlayers > 0)
-                    t2 = RefreshStaticUI(2, flag);
-                else t2 = default;
-                if (!t1.Equals(default))
-                    foreach (Player player in flag.PlayersOnFlagTeam1)
-                        t1.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
-                if (!t2.Equals(default))
-                    foreach (Player player in flag.PlayersOnFlagTeam2)
-                        t2.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
-                if (e.NewOwner == 0)
-                {
-                    foreach (SteamPlayer client in Provider.clients)
-                    {
-                        ulong team = client.GetTeam();
-                        client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
-                            flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
-                            flag.TeamSpecificHexColor);
-                        SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
-
-                        
-                    }
+                    await DeclareWin(newowner);
+                    ObjectiveT1Index = FlagRotation.Count - 1;
                 }
                 else
                 {
-                    foreach (SteamPlayer client in Provider.clients)
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    ObjectiveT1Index = flag.index + 1;
+                    OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT1Index], NewObj = ObjectiveT1Index, OldObj = flag.index, Team = newowner });
+                    OnFlagCaptured?.Invoke(flag, newowner, oldowner);
+                    await rtn;
+                }
+            }
+            else if (newowner == 2)
+            {
+                if (ObjectiveT2Index <   1) // if t2 just capped the last flag
+                {
+                    await DeclareWin(newowner);
+                    ObjectiveT2Index = 0;
+                }
+                else
+                {
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    ObjectiveT2Index = flag.index - 1;
+                    OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                    { oldFlagObj = flag, newFlagObj = FlagRotation[ObjectiveT2Index], NewObj = ObjectiveT2Index, OldObj = flag.index, Team = newowner });
+                    OnFlagCaptured?.Invoke(flag, newowner, oldowner);
+                    await rtn;
+                }
+            }
+            else if (newowner == 0)
+            {
+                if (oldowner == 1)
+                {
+                    int oldindex = ObjectiveT1Index;
+                    ObjectiveT1Index = flag.index;
+                    if (oldindex != flag.index)
                     {
-                        ulong team = client.GetTeam();
-                        client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(e.NewOwner, client.playerID.steamID.m_SteamID),
-                            TeamManager.GetTeamHexColor(e.NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
-                            flag.TeamSpecificHexColor);
-                        SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
+                        SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                        { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                        OnFlagNeutralized?.Invoke(flag, 2, 1);
+                        await rtn;
                     }
+                }
+                else if (oldowner == 2)
+                {
+                    int oldindex = ObjectiveT2Index;
+                    ObjectiveT2Index = flag.index;
+                    if (oldindex != flag.index)
+                    {
+                        SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                        { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                        OnFlagNeutralized?.Invoke(flag, 1, 2);
+                        await rtn;
+                    }
+                }
+            }
+            SendUIParameters t1;
+            if (flag.Team1TotalPlayers > 0)
+                t1 = RefreshStaticUI(1, flag);
+            else t1 = default;
+            SendUIParameters t2;
+            if (flag.Team2TotalPlayers > 0)
+                t2 = RefreshStaticUI(2, flag);
+            else t2 = default;
+            if (!t1.Equals(default))
+                foreach (Player player in flag.PlayersOnFlagTeam1)
+                    t1.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
+            if (!t2.Equals(default))
+                foreach (Player player in flag.PlayersOnFlagTeam2)
+                    t2.SendToPlayer(player.channel.owner, player.channel.owner.transportConnection);
+            if (newowner == 0)
+            {
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ulong team = client.GetTeam();
+                    client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
+                        flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                        flag.TeamSpecificHexColor);
+                    SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
+
+                        
+                }
+            }
+            else
+            {
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ulong team = client.GetTeam();
+                    client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(newowner, client.playerID.steamID.m_SteamID),
+                        TeamManager.GetTeamHexColor(newowner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                        flag.TeamSpecificHexColor);
+                    SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
                 }
             }
         }
@@ -780,7 +789,7 @@ namespace Uncreated.Warfare.Flags
             FlagRotation.Clear();
             OnObjectiveChange -= OnObjectiveChangeAction;
         }
-        public void ResetFlags()
+        public async Task ResetFlags()
         {
             foreach (Flag flag in FlagRotation)
             {
@@ -788,15 +797,15 @@ namespace Uncreated.Warfare.Flags
                 flag.OnPlayerLeft -= PlayerLeftFlagRadius;
                 flag.OnOwnerChanged -= FlagOwnerChanged;
                 flag.OnPointsChanged -= FlagPointsChanged;
-                flag.ResetFlag();
+                await flag.ResetFlag();
             }
             FlagRotation.Clear();
         }
-        public void EvaluatePoints()
+        public async Task EvaluatePoints()
         {
             if(State == EState.ACTIVE)
                 foreach (Flag flag in FlagRotation.Where(f => f.PlayersOnFlag.Count > 0))
-                    flag.EvaluatePoints();
+                    await flag.EvaluatePoints();
         }
         public void PlayerJoined(SteamPlayer player)
         {

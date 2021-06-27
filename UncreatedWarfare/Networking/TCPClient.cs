@@ -15,7 +15,7 @@ namespace Uncreated.Networking
 {
     public static class Client
     {
-        public static Action<byte[]> Send;
+        public static SendTask Send;
         #region INVOCATIONS
         // Identifying
         public static NetworkInvocation<string> IdentifyInvoc = 
@@ -135,87 +135,82 @@ namespace Uncreated.Networking
         public static NetworkInvocation<ulong, string> InvokeServerReloadingInvoc =
             new NetworkInvocation<ulong, string>(ECall.SERVER_RELOADING, Send);
         #endregion
-        public static void Identify() => 
-            IdentifyInvoc.Invoke(TCPClient.I.Identity);
-        public static void SendShuttingDown(ulong admin, string reason) =>
-            ShuttingDownInvoc.Invoke(admin, reason);
-        public static void SendStartingUp(EStartupStep step) =>
-            StartingUpInvoc.Invoke(step);
-        public static void SendPlayerList(List<FPlayerName> players) =>
-            PlayerListInvoc.Invoke(players);
-        public static void SendPlayerJoined(FPlayerName player) => 
-            PlayerJoinedInvoc.Invoke(player);
-        public static void SendPlayerLeft(FPlayerName player) => 
-            PlayerLeftInvoc.Invoke(player);
-        public static void SendPlayerUpdatedUsername(FPlayerName player) => 
-            PlayerUpdatedUsernameInvoc.Invoke(player);
-        public static void LogPlayerBanned(ulong violator, ulong admin_id, string reason, uint duration, DateTime time) => 
-            PlayerBannedInvoc.Invoke(violator, admin_id, reason, duration, time);
-        public static void LogPlayerKicked(ulong violator, ulong admin_id, string reason, DateTime time) => 
-            PlayerKickedInvoc.Invoke(violator, admin_id, reason, time);
-        public static void LogPlayerBattleyeKicked(ulong violator, string reason, DateTime time) => 
-            PlayerBEKickedInvoc.Invoke(violator, reason, time);
-        public static void LogPlayerTeamkilled(ulong violator, ulong dead, ulong landmine_assoc, string death_cause, DateTime time) => 
-            PlayerTeamkilledInvoc.Invoke(violator, dead, landmine_assoc, death_cause, time);
-        public static void LogPlayerUnbanned(ulong pardoned, ulong admin_id, DateTime time) =>
-            PlayerUnbannedInvoc.Invoke(pardoned, admin_id, time);
-        public static void LogPlayerWarned(ulong violator, ulong admin_id, string reason, DateTime time) =>
-            PlayerWarnedInvoc.Invoke(violator, admin_id, reason, time);
-        public static void SendPlayerOnDuty(ulong player, bool intern) =>
-            PlayerOnDutyInvoc.Invoke(player, intern, DateTime.Now);
-        public static void SendPlayerOffDuty(ulong player, bool intern) =>
-            PlayerOffDutyInvoc.Invoke(player, intern, DateTime.Now);
-        public static void SendServerReloading(ulong admin, string reason) =>
-            InvokeServerReloadingInvoc.Invoke(admin, reason);
-        private static void InvokeBan()
+        public static async Task Identify() =>
+            await IdentifyInvoc.Invoke(TCPClient.I.Identity);
+        public static async Task SendShuttingDown(ulong admin, string reason) =>
+            await ShuttingDownInvoc.Invoke(admin, reason);
+        public static async Task SendStartingUp(EStartupStep step) =>
+            await StartingUpInvoc.Invoke(step);
+        public static async Task SendPlayerList(List<FPlayerName> players) =>
+            await PlayerListInvoc.Invoke(players);
+        public static async Task SendPlayerJoined(FPlayerName player) =>
+            await PlayerJoinedInvoc.Invoke(player);
+        public static async Task SendPlayerLeft(FPlayerName player) =>
+            await PlayerLeftInvoc.Invoke(player);
+        public static async Task SendPlayerUpdatedUsername(FPlayerName player) =>
+            await PlayerUpdatedUsernameInvoc.Invoke(player);
+        public static async Task LogPlayerBanned(ulong violator, ulong admin_id, string reason, uint duration, DateTime time) =>
+            await PlayerBannedInvoc.Invoke(violator, admin_id, reason, duration, time);
+        public static async Task LogPlayerKicked(ulong violator, ulong admin_id, string reason, DateTime time) =>
+            await PlayerKickedInvoc.Invoke(violator, admin_id, reason, time);
+        public static async Task LogPlayerBattleyeKicked(ulong violator, string reason, DateTime time) =>
+            await PlayerBEKickedInvoc.Invoke(violator, reason, time);
+        public static async Task LogPlayerTeamkilled(ulong violator, ulong dead, ulong landmine_assoc, string death_cause, DateTime time) =>
+            await PlayerTeamkilledInvoc.Invoke(violator, dead, landmine_assoc, death_cause, time);
+        public static async Task LogPlayerUnbanned(ulong pardoned, ulong admin_id, DateTime time) =>
+            await PlayerUnbannedInvoc.Invoke(pardoned, admin_id, time);
+        public static async Task LogPlayerWarned(ulong violator, ulong admin_id, string reason, DateTime time) =>
+            await PlayerWarnedInvoc.Invoke(violator, admin_id, reason, time);
+        public static async Task SendPlayerOnDuty(ulong player, bool intern) =>
+            await PlayerOnDutyInvoc.Invoke(player, intern, DateTime.Now);
+        public static async Task SendPlayerOffDuty(ulong player, bool intern) =>
+            await PlayerOffDutyInvoc.Invoke(player, intern, DateTime.Now);
+        public static async Task SendServerReloading(ulong admin, string reason) =>
+            await InvokeServerReloadingInvoc.Invoke(admin, reason);
+        public static async Task SendReloading(ulong admin, string reason) =>
+            await InvokeServerReloadingInvoc.Invoke(admin, reason);
+
+
+        internal static async Task ProcessResponse(byte[] message)
         {
-
-        }
-        public static void SendReloading() =>
-            TCPClient.I.SendMessageAsync(new byte[1] { (byte)ECall.SERVER_RELOADING });
-
-
-        internal static void ProcessResponse(object sender, ReceivedServerMessageArgs e)
-        {
-            if (e.message.Length <= 0) return;
+            if (message.Length <= 0) return;
             ECall call;
-            if (ByteMath.ReadUInt16(out ushort callid, 0, e.message))
+            if (ByteMath.ReadUInt16(out ushort callid, 0, message))
             {
                 call = (ECall)callid;
             }
             else
             {
-                Warfare.F.LogError("Incorrect call enumerator given in response: " + e.message[0].ToString(Warfare.Data.Locale));
+                Warfare.F.LogError("Incorrect call enumerator given in response: " + message[0].ToString(Warfare.Data.Locale));
                 return;
             }
-            byte[] data = new byte[e.message.Length - sizeof(ushort)];
-            Array.Copy(e.message, sizeof(ushort), data, 0, data.Length);
+            byte[] data = new byte[message.Length - sizeof(ushort)];
+            Array.Copy(message, sizeof(ushort), data, 0, data.Length);
             switch (call)
             {
                 case ECall.INVOKE_BAN:
-                    InvokeBan();
+                    InvokeBanInvoc.Read(data, out ulong banned, out ulong admin, out string reason, out uint duration, out DateTime timestamp);
+                    await ReceiveInvokeBan(banned, admin, reason, duration, timestamp);
                     break;
             }
         }
-    }
-    public class ReceivedServerMessageArgs : EventArgs
-    {
-        public byte[] message;
-        public ReceivedServerMessageArgs(byte[] message)
+
+        private static async Task ReceiveInvokeBan(ulong banned, ulong admin, string reason, uint duration, DateTime timestamp)
         {
-            this.message = message;
+            await Task.Yield(); // TODO
         }
     }
+    public delegate Task EmptyTaskDelegate();
     public class TCPClient : IDisposable
     {
-        public static readonly Action<byte[]> Send = (arr) => { SendMessageAsyncStatic(arr); };
+        public static readonly SendTask Send = async (arr) => { await SendMessageAsyncStatic(arr); };
         public static TCPClient I;
         public const int BufferSize = 4096;
         public string IP = "127.0.0.1";
         public int LocalID = 0;
         public ushort Port = 31902;
         public string Identity = "ucwarfare";
-        public event EventHandler<ReceivedServerMessageArgs> OnReceivedData;
+        public event SendTask OnReceivedData;
         public ClientConnection connection;
         public TCPClient(string ip, ushort port, string identitiy)
         {
@@ -234,31 +229,22 @@ namespace Uncreated.Networking
             this.Port = port;
             this.connection = new ClientConnection(this);
             this.Identity = identitiy;
-            Connect();
             Client.Send = Send;
         }
-        public bool Connect()
-        {
-            if (connection != null)
-            {
-                connection.Connect(true);
-                return true;
-            }
-            else return false;
-        }
+        public async Task Connect() => await connection?.Connect(true);
         public void Shutdown()
         {
             Warfare.F.Log("Shutting down", ConsoleColor.Magenta);
             connection.socket.Close();
             connection.socket.Dispose();
         }
-        public void SendMessageAsync(byte[] message) => connection?.SendMessage(message);
-        public static void SendMessageAsyncStatic(byte[] message) => I?.SendMessageAsync(message);
-        internal void ReceiveData(byte[] data) => OnReceivedData?.Invoke(this, new ReceivedServerMessageArgs(data));
+        public async Task SendMessageAsync(byte[] message) => await connection?.SendMessage(message);
+        public static async Task SendMessageAsyncStatic(byte[] message) => await I?.SendMessageAsync(message);
+        internal async Task ReceiveData(byte[] data) => await OnReceivedData?.Invoke(data);
         public class ClientConnection
         {
             public TcpClient socket;
-            private TCPClient _owner;
+            private readonly TCPClient _owner;
             private NetworkStream stream;
             private byte[] _buffer;
             public ClientConnection(TCPClient owner)
@@ -267,7 +253,7 @@ namespace Uncreated.Networking
             }
             int connection_tries = 0;
             const int max_connection_tries = 10;
-            public void Connect(bool first = true)
+            public async Task Connect(bool first = true)
             {
                 if (first) connection_tries = 0;
                 if (socket != null)
@@ -288,40 +274,43 @@ namespace Uncreated.Networking
                     SendBufferSize = BufferSize
                 };
                 _buffer = new byte[BufferSize];
-                socket.BeginConnect(_owner.IP, _owner.Port, Connected, socket);
-            }
 
-            private void Connected(IAsyncResult ar)
-            {
                 connection_tries++;
                 try
                 {
-                    socket.EndConnect(ar);
+                    await socket.ConnectAsync(_owner.IP, _owner.Port);
                     Warfare.F.Log($"Connected to {socket.Client.RemoteEndPoint}.", ConsoleColor.DarkYellow);
-                    Client.Identify();
+                    await Client.Identify();
                 }
                 catch (SocketException)
                 {
                     if (connection_tries <= max_connection_tries)
                     {
                         Warfare.F.LogWarning($"Unable to connect, retrying ({connection_tries}/{max_connection_tries})", ConsoleColor.DarkYellow);
-                        Connect(false);
+                        await Connect(false);
                     }
                     else Warfare.F.LogError($"Unable to connect after {max_connection_tries} tries.", ConsoleColor.Red);
 
                 }
                 if (!socket.Connected) return;
                 stream = socket.GetStream();
-                stream.BeginRead(_buffer, 0, BufferSize, AsyncReceivedData, socket);
+                while (true)
+                {
+                    int received_bytes_count = await stream.ReadAsync(_buffer, 0, BufferSize);
+                    if (received_bytes_count <= 0) _owner.Shutdown();
+                    byte[] received = new byte[received_bytes_count];
+                    Array.Copy(_buffer, 0, received, 0, received_bytes_count);
+                    await _owner.ReceiveData(received);
+                }
             }
-            public void SendMessage(byte[] message)
+            public async Task SendMessage(byte[] message)
             {
                 try
                 {
                     if (socket != null && socket.Connected)
                     {
                         if (stream == null) stream = socket.GetStream();
-                        stream.BeginWrite(message, 0, message.Length, WriteComplete, socket);
+                        await stream.WriteAsync(message, 0, message.Length);
                     }
                 }
                 catch (SocketException)
@@ -331,39 +320,6 @@ namespace Uncreated.Networking
                 catch (InvalidOperationException)
                 {
                     Warfare.F.LogError("Unable to write message.", ConsoleColor.Red);
-                }
-            }
-            protected virtual void WriteComplete(IAsyncResult ar)
-            {
-                try
-                {
-                    stream.EndWrite(ar);
-                }
-                catch (SocketException ex)
-                {
-                    Warfare.F.LogError(ex, ConsoleColor.Red);
-                }
-                ar.AsyncWaitHandle.Dispose();
-            }
-
-            private void AsyncReceivedData(IAsyncResult ar)
-            {
-                try
-                {
-                    int received_bytes_count = stream.EndRead(ar);
-                    if (received_bytes_count <= 0) _owner.Shutdown();
-                    byte[] received = new byte[received_bytes_count];
-                    Array.Copy(_buffer, 0, received, 0, received_bytes_count);
-                    _owner.ReceiveData(received);
-                    stream.BeginRead(_buffer, 0, BufferSize, AsyncReceivedData, socket);
-                }
-                catch (SocketException)
-                {
-                    _owner.Shutdown();
-                }
-                catch (IOException)
-                {
-                    _owner.Shutdown();
                 }
             }
         }

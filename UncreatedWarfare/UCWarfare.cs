@@ -14,6 +14,8 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Flags;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Uncreated.Warfare
 {
@@ -38,7 +40,6 @@ namespace Uncreated.Warfare
         protected override void Load()
         {
             ThreadTool.SetGameThread();
-            Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
             Instance = this;
             Data.LoadColoredConsole();
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
@@ -67,7 +68,7 @@ namespace Uncreated.Warfare
             Data.LoadVariables().GetAwaiter().GetResult();
             if (Level.isLoaded)
             {
-                StartAllCoroutines();
+                StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
                 SubscribeToEvents();
                 OnLevelLoaded(2);
                 InitialLoadEventSubscription = true;
@@ -80,8 +81,9 @@ namespace Uncreated.Warfare
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
-        private void OnLevelLoaded(int level)
+        private async void OnLevelLoaded(int level)
         {
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
@@ -105,11 +107,12 @@ namespace Uncreated.Warfare
             Data.FlagManager.Load(); // starts new game
             VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+            await rtn;
             if (Provider.clients.Count > 0)
             {
                 List<Players.FPlayerName> playersOnline = new List<Players.FPlayerName>();
                 Provider.clients.ForEach(x => playersOnline.Add(F.GetPlayerOriginalNames(x)));
-                Networking.Client.SendPlayerList(playersOnline);
+                await Networking.Client.SendPlayerList(playersOnline);
             }
         }
         public static void ReplaceBarricadesAndStructures()
@@ -119,9 +122,9 @@ namespace Uncreated.Warfare
             RequestSigns.DropAllSigns();
             StructureSaver.DropAllStructures();
         }
-        internal void OnFlagManagerReady(object sender, EventArgs e)
+        internal async Task OnFlagManagerReady()
         {
-            Data.FlagManager.StartNextGame();
+            await Data.FlagManager.StartNextGame();
         }
         private void SubscribeToEvents()
         {
@@ -176,7 +179,7 @@ namespace Uncreated.Warfare
         }
         private void OnPluginsLoaded()
         {
-            StartAllCoroutines();
+            StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
             F.Log("Subscribing to events...", ConsoleColor.Magenta);
             SubscribeToEvents();
         }
@@ -202,7 +205,7 @@ namespace Uncreated.Warfare
         protected override void Unload()
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
-
+            Data.CancelFlags.Cancel();
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
             Data.FlagManager?.Dispose();
             Data.DatabaseManager?.Dispose();

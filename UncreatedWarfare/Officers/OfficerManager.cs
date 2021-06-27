@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Kits;
@@ -30,12 +31,13 @@ namespace Uncreated.Warfare.Officers
         {
             uint points = await GetOfficerPoints(player.Player, player.GetTeam());
 
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (points > 0)
                 UpdateUI(player.Player, points);
-
+            await rtn;
             if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
             {
-                player.OfficerRank =  config.data.OfficerRanks.Where(r => r.level == officer.officerLevel).FirstOrDefault();
+                player.OfficerRank = config.data.OfficerRanks.Where(r => r.level == officer.officerLevel).FirstOrDefault();
             }
         }
         public static async Task OnPlayerLeft(UCPlayer player)
@@ -45,7 +47,9 @@ namespace Uncreated.Warfare.Officers
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             uint op = await GetOfficerPoints(player.player, newGroup);
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player.player, op);
+            await rtn;
         }
         public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
@@ -88,8 +92,9 @@ namespace Uncreated.Warfare.Officers
         public static async Task AddOfficerPoints(Player player, ulong team, int amount)
         {
             uint newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.PointsMultiplier));
-            await ThreadTool.SwitchToGameThread();
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
+            await rtn;
         }
 
         public static void ChangeOfficerRank(UCPlayer player, int newLevel, EBranch branch)

@@ -35,6 +35,59 @@ namespace Uncreated.Warfare
             string tname = Steam64.ToString(Data.Locale);
             return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
         }
+        public async Task CheckUpdateUsernames(FPlayerName player)
+        {
+            FPlayerName oldNames = await GetUsernames(player.Steam64);
+            bool updatePlayerName = false;
+            bool updateCharacterName = false;
+            bool updateNickName = false;
+            if (oldNames.Steam64.ToString(Data.Locale) == oldNames.PlayerName)
+            {
+                updatePlayerName = true;
+                updateCharacterName = true;
+                updateNickName = true;
+            }
+            else
+            {
+                if (player.PlayerName != oldNames.PlayerName) updatePlayerName = true;
+                if (player.CharacterName != oldNames.CharacterName) updateCharacterName = true;
+                if (player.NickName != oldNames.NickName) updateNickName = true;
+            }
+            if (!updatePlayerName && !updateCharacterName && !updateNickName) return;
+            MySqlTableLang table = GetTable("usernames");
+            string s64 = table.GetColumnName("Steam64");
+            string pn = table.GetColumnName("PlayerName");
+            string cn = table.GetColumnName("CharacterName");
+            string nn = table.GetColumnName("NickName");
+            object[] parameters = new object[] { player.Steam64, player.PlayerName, player.CharacterName, player.NickName };
+            List<string> valueNames = new List<string>();
+            if (updatePlayerName)
+            {
+                valueNames.Add(pn);
+            }
+            if (updateCharacterName)
+            {
+                valueNames.Add(cn);
+            }
+            if (updateNickName)
+            {
+                valueNames.Add(nn);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < valueNames.Count; i++)
+            {
+                if (i != 0) sb.Append(", ");
+                sb.Append('`').Append(valueNames[i]).Append("` = VALUES(`").Append(valueNames[i]).Append("`)");
+            }
+            string updates = sb.ToString();
+            await NonQuery(
+                $"INSERT INTO `{table.TableName}` " +
+                $"(`{s64}`, `{pn}`, `{cn}`, `{nn}`) VALUES(@0, @1, @2, @3) " +
+                $"ON DUPLICATE KEY UPDATE " +
+                updates + 
+                $";", 
+                parameters);
+        }
         public async Task<uint> GetXP(ulong Steam64, ulong Team)
         {
             uint xp = 0;

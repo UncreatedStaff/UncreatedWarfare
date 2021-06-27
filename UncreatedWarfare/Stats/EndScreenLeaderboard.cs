@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -16,7 +17,7 @@ namespace Uncreated.Warfare.Stats
         public const short UiIdentifier = 10000;
         readonly string[] headers = new string[] { "MostKillsHeader", "HighestKDRHeader", "TimeOnPointHeader", "TimeDrivingHeader" };
         readonly string[] headerPrefixes = new string[] { "MK", "KD", "TP", "XP" };
-        public event EventHandler OnLeaderboardExpired;
+        public event Networking.EmptyTaskDelegate OnLeaderboardExpired;
         private float secondsLeft;
         public bool ShuttingDown = false;
         public string ShuttingDownMessage = string.Empty;
@@ -24,42 +25,46 @@ namespace Uncreated.Warfare.Stats
         const float updateTimeFrequency = 1f;
         private readonly Dictionary<ulong, EPluginWidgetFlags> oldFlags = new Dictionary<ulong, EPluginWidgetFlags>();
         public ulong winner;
-        public void EndGame()
+        public CancellationTokenSource CancelToken = new CancellationTokenSource();
+        public async Task EndGame()
         {
             SendEndScreen(winner);
             secondsLeft = SecondsEndGameLength;
-            StartCoroutine(UpdateTimer());
+            _ = StartUpdatingTimer(CancelToken.Token).ConfigureAwait(false);
+            await Task.Yield();
         }
-        private IEnumerator<WaitForSeconds> UpdateTimer()
+        private async Task StartUpdatingTimer(CancellationToken token)
         {
-            yield return new WaitForSeconds(updateTimeFrequency);
-            secondsLeft -= updateTimeFrequency;
-            UpdateLeaderboard(secondsLeft);
-            if (secondsLeft <= 0)
+            while (secondsLeft > 0 && !token.IsCancellationRequested)
             {
-                EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
-                foreach (SteamPlayer player in Provider.clients)
-                {
-                    if(oldFlags.ContainsKey(player.playerID.steamID.m_SteamID))
-                    {
-                        player.player.setAllPluginWidgetFlags(oldFlags[player.playerID.steamID.m_SteamID]);
-                    }
-                    player.player.movement.sendPluginSpeedMultiplier(1f);
-                    player.player.movement.sendPluginJumpMultiplier(1f);
-                }
-                if (ShuttingDown)
-                {
-                    Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
-                    Provider.shutdown(0, ShuttingDownMessage);
-                }
-                else if (OnLeaderboardExpired != null)
-                {
-                    OnLeaderboardExpired.Invoke(this, EventArgs.Empty);
-                }
-                Destroy(this);
+                secondsLeft -= updateTimeFrequency;
+                await Task.Delay(Mathf.RoundToInt(updateTimeFrequency * 1000));
+                UpdateLeaderboard(secondsLeft);
             }
-            else
-                StartCoroutine(UpdateTimer());
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+            EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
+            foreach (SteamPlayer player in Provider.clients)
+            {
+                if (oldFlags.ContainsKey(player.playerID.steamID.m_SteamID))
+                {
+                    player.player.setAllPluginWidgetFlags(oldFlags[player.playerID.steamID.m_SteamID]);
+                }
+                player.player.movement.sendPluginSpeedMultiplier(1f);
+                player.player.movement.sendPluginJumpMultiplier(1f);
+            }
+            if (ShuttingDown)
+            {
+                await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                Provider.shutdown(0, ShuttingDownMessage);
+                await rtn;
+            }
+            else if (OnLeaderboardExpired != null)
+            {
+                await OnLeaderboardExpired.Invoke();
+            }
+            Destroy(this);
+            await rtn;
         }
         public void SendScreenToPlayer(ulong winner, SteamPlayer player) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
         public void SendScreenToPlayer(SteamPlayer player) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));

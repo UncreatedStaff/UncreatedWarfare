@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -29,7 +30,9 @@ namespace Uncreated.Warfare
                 F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
                 await Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
             }
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnTeamkill?.Invoke(this, parameters);
+            await rtn;
             await XPManager.OnFriendlyKilled(parameters);
         }
         public class KillEventArgs : EventArgs
@@ -107,7 +110,9 @@ namespace Uncreated.Warfare
         public async Task Suicide(SuicideEventArgs parameters)
         {
             F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnSuicide?.Invoke(this, parameters);
+            await rtn;
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -176,7 +181,9 @@ namespace Uncreated.Warfare
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
                 await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnDeathNotSuicide?.Invoke(this, parameters);
+            await rtn;
         }
         private async void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
@@ -562,8 +569,9 @@ namespace Uncreated.Warfare
                         });
                     }
                 }
-                await ThreadTool.SwitchToGameThread();
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 LogLandmineMessage(key, dead.Player, placerName, placerTeam, limb, landmineName, triggererName, triggererTeam);
+                await rtn;
             } else
             {
                 SteamPlayer killer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
@@ -757,10 +765,13 @@ namespace Uncreated.Warfare
                         killerargs = default
                     });
                 }
-                await ThreadTool.SwitchToGameThread();
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
+                await rtn;
             }
+            SynchronizationContext oldthread = await ThreadTool.SwitchToGameThread();
             OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
+            await oldthread;
         }
         private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
         {

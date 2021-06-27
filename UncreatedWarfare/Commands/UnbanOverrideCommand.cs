@@ -4,6 +4,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Players;
 
@@ -43,8 +44,10 @@ namespace Uncreated.Warfare.Commands
                             F.LogError(F.Translate("unban_PlayerIsNotBanned_Console", 0, command[0]));
                         else
                         {
+                            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-                                Client.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
+                                await Client.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
+                            await rtn;
                             FPlayerName names = await Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {
@@ -76,8 +79,10 @@ namespace Uncreated.Warfare.Commands
                             F.SendChat(player, "unban_PlayerIsNotBanned", UCWarfare.GetColor("defaulterror"), command[0]);
                         else
                         {
+                            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-                                Client.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
+                                await Client.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
+                            await rtn;
                             FPlayerName names = await Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
                             if (names.Steam64.ToString(Data.Locale) == names.PlayerName)

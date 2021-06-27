@@ -118,6 +118,7 @@ namespace Uncreated.Warfare
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static MethodInfo AppendConsoleMethod;
         internal static ConsoleInputOutputBase defaultIOHandler;
+        internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
         public static void LoadColoredConsole()
         {
             CommandWindow.Log("Loading Colored Console Method");
@@ -188,6 +189,7 @@ namespace Uncreated.Warfare
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
                     UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
+                await Networking.TCPClient.I.Connect();
             }
             if (UCWarfare.Config.Modules.Kits)
             {
@@ -228,7 +230,7 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
                 F.LogError("The sign translation system will likely not work!");
             }
-
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
                 R.Permissions.AddGroup(AdminOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
@@ -237,6 +239,7 @@ namespace Uncreated.Warfare
                 R.Permissions.AddGroup(InternOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup) == default)
                 R.Permissions.AddGroup(InternOffDutyGroup);
+            await rtn;
         }
         private static void DuplicateKeyError(Exception ex)
         {

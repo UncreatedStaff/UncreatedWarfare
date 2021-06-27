@@ -29,11 +29,10 @@ namespace Uncreated
         /// <summary>
         /// Call await SwitchToGameThread() to switch to the main unity thread which should be set using <see cref="SetGameThread"/> from the game thread.
         /// </summary>
-        public static async Task<bool> SwitchToGameThread()
+        public static async Task<SynchronizationContext> SwitchToGameThread()
         {
-            if (GameThreadContext == default) return false;
-            await GameThreadContext;
-            return true;
+            if (GameThreadContext != default) await GameThreadContext;
+            return SynchronizationContext.Current;
         }
     }
 }

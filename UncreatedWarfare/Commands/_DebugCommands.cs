@@ -9,6 +9,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.SQL;
@@ -48,12 +49,16 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (command[0].ToLower() == "givexp")
                             {
+                                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                                 await XPManager.AddXP(target.Player, target.GetTeam(), amount);
+                                await rtn;
                                 player.SendChat($"Given {amount} XP to {target.CharacterName}.", UCWarfare.GetColor("default"));
                             }
                             else if (command[0].ToLower() == "giveof")
                             {
+                                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                                 await OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount);
+                                await rtn;
                                 player.SendChat($"Given {amount} Officer Points to {target.CharacterName}.", UCWarfare.GetColor("default"));
                             }
                         }
@@ -226,8 +231,9 @@ namespace Uncreated.Warfare.Commands
                     FPlayerName newplayer = await Data.DatabaseManager.GetUsernames(player.channel.owner.playerID.steamID.m_SteamID);
                     F.Log(newplayer.ToString());
                     player.SendChat(newplayer.PlayerName, UCWarfare.GetColor("default"));
-                    await ThreadTool.SwitchToGameThread();
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     player.SendChat(newplayer.PlayerName, UCWarfare.GetColor("default"));
+                    await rtn;
                 } 
                 else if (command[0] == "zonearea")
                 {
@@ -277,9 +283,9 @@ namespace Uncreated.Warfare.Commands
                     }
                     ulong team = player.GetTeam();
                     if (team == 1)
-                        flag.CapT1(Flag.MaxPoints - flag.Points - 1);
+                        await flag.CapT1(Flag.MaxPoints - flag.Points - 1);
                     else if (team == 2)
-                        flag.CapT2(Flag.MaxPoints - flag.Points - 1);
+                        await flag.CapT2(Flag.MaxPoints - flag.Points - 1);
                     else player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
                 } 
                 else if (command[0] == "quickwin")
@@ -299,13 +305,13 @@ namespace Uncreated.Warfare.Commands
                     {
                         while(!Data.FlagManager.isScreenUp)
                         {
-                            Data.FlagManager.ObjectiveTeam1.CapT1();
+                            await Data.FlagManager.ObjectiveTeam1.CapT1();
                         }
                     } else
                     {
                         while (!Data.FlagManager.isScreenUp)
                         {
-                            Data.FlagManager.ObjectiveTeam2.CapT2();
+                            await Data.FlagManager.ObjectiveTeam2.CapT2();
                         }
                     }
                 } 
@@ -426,7 +432,7 @@ namespace Uncreated.Warfare.Commands
                     Data.FlagManager.FlagRotation.ForEach(x => { zones.Add(x.ZoneData); });
                     for(int i = 0; i < times; i++)
                     {
-                        ReloadCommand.ReloadFlags();
+                        await ReloadCommand.ReloadFlags();
                         ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
                         F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
                     }
