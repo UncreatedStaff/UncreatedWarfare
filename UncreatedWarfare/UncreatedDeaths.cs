@@ -120,7 +120,7 @@ namespace Uncreated.Warfare
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
-                TicketManager.OnPlayerSuicide(parameters);
+                await TicketManager.OnPlayerSuicide(parameters);
 
                 await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);

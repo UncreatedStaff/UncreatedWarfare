@@ -57,13 +57,13 @@ namespace Uncreated.Warfare.Tickets
             F.Log("Team 1 Tickets: " + Team1Tickets);
             F.Log("Team 2 Tickets: " + Team2Tickets);
         }
-        public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
+        public static async Task OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
         {
             if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
             {
                 if (TeamManager.IsTeam1(eventArgs.dead))
                 {
-                    AddTeam1Tickets(-1 * kit.TicketCost);
+                    await AddTeam1Tickets(-1 * kit.TicketCost);
                     F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
                 else if (TeamManager.IsTeam2(eventArgs.dead))
