@@ -52,11 +52,11 @@ namespace Uncreated.Warfare.FOBs
 
             for (int i = 0; i < Team1FOBs.Count; i++)
             {
-                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(), i + 1, Team1FOBBarricades[i]));
+                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team1FOBBarricades[i]));
             }
             for (int i = 0; i < Team2FOBs.Count; i++)
             {
-                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(), i + 1, Team2FOBBarricades[i]));
+                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team2FOBBarricades[i]));
             }
             UpdateUIAll();
         }
@@ -69,12 +69,12 @@ namespace Uncreated.Warfare.FOBs
                 {
                     if (Team1FOBs[i].Number != i + 1)
                     {
-                        Team1FOBs.Insert(i, new FOB("FOB" + (i + 1).ToString(), i + 1, Structure));
+                        Team1FOBs.Insert(i, new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Structure));
                         return;
                     }
                 }
 
-                Team1FOBs.Add(new FOB("FOB" + (Team1FOBs.Count + 1).ToString(), Team1FOBs.Count + 1, Structure));
+                Team1FOBs.Add(new FOB("FOB" + (Team1FOBs.Count + 1).ToString(Data.Locale), Team1FOBs.Count + 1, Structure));
             }
             else if (TeamManager.IsTeam2(Structure.group))
             {
@@ -82,12 +82,12 @@ namespace Uncreated.Warfare.FOBs
                 {
                     if (Team2FOBs[i].Number != i + 1)
                     {
-                        Team2FOBs.Insert(i, new FOB("FOB" + (i + 1).ToString(), i + 1, Structure));
+                        Team2FOBs.Insert(i, new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Structure));
                         return;
                     }
                 }
 
-                Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(), Team2FOBs.Count + 1, Structure));
+                Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(Data.Locale), Team2FOBs.Count + 1, Structure));
             }
 
             UpdateUIForTeam(Structure.group);

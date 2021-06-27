@@ -36,7 +36,7 @@ namespace Uncreated.Warfare.Flags
         protected float spacing = -1;
         protected int perline = 10;
         public Vector2[] _particleSpawnPoints;
-        public string Name;
+        public string Name; 
         public Vector2 BoundsTLPos;
         public Vector2 BoundsSize;
         public float BoundsArea;
@@ -64,10 +64,9 @@ namespace Uncreated.Warfare.Flags
             if(!isInverse)
                 this.InverseZone = new RectZone(Center, data, !useMapSizeMultiplier, Name, true);
         }
-
         /// <param name="corners">Corners to spawn different points at.</param>
         /// <param name="spacing">Set to -1 to to use perline. Can not be &lt;0.1</param>
-        /// <param name="perline">If spacing is negative 1, it equally divides the spacing for each line to have &lt;perline&gt; spawn points per line. Can not be zero.</param>
+        /// <param name="perline">If <paramref name="spacing"/> <see cref="float.Equals(float)">==</see> -1, it equally divides the spacing for each line to have <paramref name="perline"/> spawn points per line. Can not be zero.</param>
         /// <returns></returns>
         public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1f)
         {
@@ -92,7 +91,6 @@ namespace Uncreated.Warfare.Flags
             _particleSpawnPoints = rtnSpawnPoints.ToArray();
             return _particleSpawnPoints;
         }
-
         public override void Init()
         {
             string[] size = data.data.Split(',');
@@ -103,8 +101,7 @@ namespace Uncreated.Warfare.Flags
             }
             else
             {
-                CultureInfo enus = new CultureInfo("en-US");
-                if (float.TryParse(size[0], NumberStyles.Float, enus, out float SizeX) && float.TryParse(size[1], NumberStyles.Float, enus, out float SizeY))
+                if (float.TryParse(size[0], NumberStyles.Any, Data.Locale, out float SizeX) && float.TryParse(size[1], NumberStyles.Any, Data.Locale, out float SizeY))
                 {
                     Size = new Vector2(SizeX * _multiplier, SizeY * _multiplier);
                     Corners = new Vector2[4]
@@ -189,8 +186,7 @@ namespace Uncreated.Warfare.Flags
             }
             else
             {
-                CultureInfo enus = new CultureInfo("en-US");
-                if (float.TryParse(size[0], NumberStyles.Float, enus, out float Rad))
+                if (float.TryParse(size[0], NumberStyles.Any, Data.Locale, out float Rad))
                 {
                     this.Radius = Rad * _multiplier;
                     GetParticleSpawnPoints(out _, out _, 36, 15); // every 10 degrees
@@ -357,8 +353,7 @@ namespace Uncreated.Warfare.Flags
             Points = new Vector2[size.Length / 2];
             for (int i = 0; i < size.Length; i += 2)
             {
-                CultureInfo enus = new CultureInfo("en-US");
-                if (float.TryParse(size[i], NumberStyles.Float, enus, out float x) && float.TryParse(size[i + 1], NumberStyles.Float, enus, out float y))
+                if (float.TryParse(size[i], NumberStyles.Any, Data.Locale, out float x) && float.TryParse(size[i + 1], NumberStyles.Any, Data.Locale, out float y))
                 {
                     Points[i / 2] = new Vector2(x * _multiplier, y * _multiplier);
                 }

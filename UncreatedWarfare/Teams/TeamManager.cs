@@ -133,7 +133,7 @@ namespace Uncreated.Warfare.Teams
             else if (team == 3) uncolorized = F.Translate("team_3", player);
             else if (team == ZombieTeamID) uncolorized = F.Translate("zombie", player);
             else if (team == 0) uncolorized = F.Translate("neutral", player);
-            else uncolorized = team.ToString();
+            else uncolorized = team.ToString(Data.Locale);
             if (!colorize) return uncolorized;
             return F.ColorizeName(uncolorized, team);
         }

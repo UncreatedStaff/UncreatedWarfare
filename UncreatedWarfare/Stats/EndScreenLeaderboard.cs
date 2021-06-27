@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -16,7 +17,7 @@ namespace Uncreated.Warfare.Stats
         public const short UiIdentifier = 10000;
         readonly string[] headers = new string[] { "MostKillsHeader", "HighestKDRHeader", "TimeOnPointHeader", "TimeDrivingHeader" };
         readonly string[] headerPrefixes = new string[] { "MK", "KD", "TP", "XP" };
-        public event EventHandler OnLeaderboardExpired;
+        public event Networking.EmptyTaskDelegate OnLeaderboardExpired;
         private float secondsLeft;
         public bool ShuttingDown = false;
         public string ShuttingDownMessage = string.Empty;
@@ -24,42 +25,46 @@ namespace Uncreated.Warfare.Stats
         const float updateTimeFrequency = 1f;
         private readonly Dictionary<ulong, EPluginWidgetFlags> oldFlags = new Dictionary<ulong, EPluginWidgetFlags>();
         public ulong winner;
-        public void EndGame()
+        public CancellationTokenSource CancelToken = new CancellationTokenSource();
+        public async Task EndGame()
         {
             SendEndScreen(winner);
             secondsLeft = SecondsEndGameLength;
-            StartCoroutine(UpdateTimer());
+            _ = StartUpdatingTimer(CancelToken.Token).ConfigureAwait(false);
+            await Task.Yield();
         }
-        private IEnumerator<WaitForSeconds> UpdateTimer()
+        private async Task StartUpdatingTimer(CancellationToken token)
         {
-            yield return new WaitForSeconds(updateTimeFrequency);
-            secondsLeft -= updateTimeFrequency;
-            UpdateLeaderboard(secondsLeft);
-            if (secondsLeft <= 0)
+            while (secondsLeft > 0 && !token.IsCancellationRequested)
             {
-                EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
-                foreach (SteamPlayer player in Provider.clients)
-                {
-                    if(oldFlags.ContainsKey(player.playerID.steamID.m_SteamID))
-                    {
-                        player.player.setAllPluginWidgetFlags(oldFlags[player.playerID.steamID.m_SteamID]);
-                    }
-                    player.player.movement.sendPluginSpeedMultiplier(1f);
-                    player.player.movement.sendPluginJumpMultiplier(1f);
-                }
-                if (ShuttingDown)
-                {
-                    Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
-                    Provider.shutdown(0, ShuttingDownMessage);
-                }
-                else if (OnLeaderboardExpired != null)
-                {
-                    OnLeaderboardExpired.Invoke(this, EventArgs.Empty);
-                }
-                Destroy(this);
+                secondsLeft -= updateTimeFrequency;
+                await Task.Delay(Mathf.RoundToInt(updateTimeFrequency * 1000));
+                UpdateLeaderboard(secondsLeft);
             }
-            else
-                StartCoroutine(UpdateTimer());
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+            EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
+            foreach (SteamPlayer player in Provider.clients)
+            {
+                if (oldFlags.ContainsKey(player.playerID.steamID.m_SteamID))
+                {
+                    player.player.setAllPluginWidgetFlags(oldFlags[player.playerID.steamID.m_SteamID]);
+                }
+                player.player.movement.sendPluginSpeedMultiplier(1f);
+                player.player.movement.sendPluginJumpMultiplier(1f);
+            }
+            if (ShuttingDown)
+            {
+                await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                Provider.shutdown(0, ShuttingDownMessage);
+                await rtn;
+            }
+            else if (OnLeaderboardExpired != null)
+            {
+                await OnLeaderboardExpired.Invoke();
+            }
+            Destroy(this);
+            await rtn;
         }
         public void SendScreenToPlayer(ulong winner, SteamPlayer player) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
         public void SendScreenToPlayer(SteamPlayer player) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
@@ -100,7 +105,7 @@ namespace Uncreated.Warfare.Stats
             List<KeyValuePair<Player, int>> topxpgain = Data.GameStats.GetTop5XP();
             for (int h = 1; h <= 4; h++)
                 if (headers.Length > h - 1)
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h - 1], F.Translate("lb_header_" + h.ToString(), player));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h - 1], F.Translate("lb_header_" + h.ToString(Data.Locale), player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.Translate("player_name_header", player, originalName, F.GetTeamColorHex(player)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
                 TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
@@ -109,20 +114,20 @@ namespace Uncreated.Warfare.Stats
             {
                 if (i >= topkills.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else if (topkills[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else
                 {
                     string color = F.GetTeamColorHex(topkills[i].Key);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topkills[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString() + 'V', F.Translate("lb_player_value", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value", player,
                         topkills[i].Value, color));
                 }
             }
@@ -130,20 +135,20 @@ namespace Uncreated.Warfare.Stats
             {
                 if (i >= topkdr.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else if (topkdr[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else
                 {
                     string color = F.GetTeamColorHex(topkdr[i].Key);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topkdr[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString() + 'V', F.Translate("lb_float_player_value", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_float_player_value", player,
                         topkdr[i].Value, color));
                 }
             }
@@ -151,20 +156,20 @@ namespace Uncreated.Warfare.Stats
             {
                 if (i >= toptimeonpoint.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else if (toptimeonpoint[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else
                 {
                     string color = F.GetTeamColorHex(toptimeonpoint[i].Key);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(toptimeonpoint[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString() + 'V', F.Translate("lb_time_player_value", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_time_player_value", player,
                         toptimeonpoint[i].Value, color));
                 }
             }
@@ -172,20 +177,20 @@ namespace Uncreated.Warfare.Stats
             {
                 if (i >= topxpgain.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else if (topxpgain[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
                 }
                 else
                 {
                     string color = F.GetTeamColorHex(topxpgain[i].Key);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'N', F.Translate("lb_player_name", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topxpgain[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString() + 'V', F.Translate("lb_player_value", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value", player,
                         topxpgain[i].Value, color));
                 }
             }

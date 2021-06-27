@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Components
             yield return new WaitForSeconds(1.0f);
             if (owner.thrown[index] == null) owner.thrown.RemoveAt(index);
             else owner.thrown.RemoveAll(x => x == null);
-            F.Log("Finished destroying " + index.ToString());
+            F.Log("Finished destroying " + index.ToString(Data.Locale));
         }
     }
 }

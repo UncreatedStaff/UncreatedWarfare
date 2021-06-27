@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -24,11 +25,12 @@ namespace Uncreated.Warfare
 {
     public static class EventFunctions
     {
-        public delegate void GroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup);
+        public delegate Task GroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup);
         public static event GroupChanged OnGroupChanged;
-        internal static void OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => OnGroupChanged?.Invoke(player, oldGroup, newGroup);
-        internal static void GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
+        internal static async Task OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => await OnGroupChanged?.Invoke(player, oldGroup, newGroup);
+        internal static async Task GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             ulong newteam = newGroup.GetTeam();
 
             PlayerManager.VerifyTeam(player.player);
@@ -41,10 +43,10 @@ namespace Uncreated.Warfare
 
             SquadManager.ClearUIsquad(player.player);
             SquadManager.UpdateUIMemberCount(newGroup);
-
-            XPManager.OnGroupChanged(player, oldGroup, newGroup);
-            OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
+            await rtn;
+            await XPManager.OnGroupChanged(player, oldGroup, newGroup);
+            await OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
         }
         internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
@@ -76,24 +78,20 @@ namespace Uncreated.Warfare
             Data.OwnerComponents.Add(c);
             RallyManager.OnBarricadePlaced(region, data, ref location);
         }
-        internal static void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner, ref bool allow)
+        internal static async void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner)
         {
             if (owner == default || owner.owner == default)
             {
                 if (owner == default || owner.ownerID == 0) return;
-                Data.DatabaseManager.GetUsernameAsync(owner.ownerID, LandmineExplodedUsernameReceived);
+                FPlayerName usernames = await Data.DatabaseManager.GetUsernames(owner.ownerID);
+                F.Log(usernames.PlayerName + "'s landmine exploded");
                 return;
             }
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (F.TryGetPlaytimeComponent(owner.owner.player, out PlaytimeComponent c))
                 c.LastLandmineExploded = new LandmineDataForPostAccess(trap, owner);
-            F.Log(owner.owner.playerID.playerName + "'s landmine exploded");
-        }
-        internal static void LandmineExplodedUsernameReceived(FPlayerName usernames, bool success)
-        {
-            if(success)
-            {
-                F.Log(usernames.PlayerName + "'s landmine exploded");
-            }
+            F.Log(F.GetPlayerOriginalNames(owner.owner).PlayerName + "'s landmine exploded");
+            await rtn;
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
@@ -146,18 +144,17 @@ namespace Uncreated.Warfare
         {
             Data.ReviveManager.OnPlayerHealed(instigator, target);
         }
-        internal static void OnPostPlayerConnected(UnturnedPlayer player)
+        internal static async void OnPostPlayerConnected(UnturnedPlayer player)
         {
-            PlayerManager.InvokePlayerConnected(player); // must always be first
-
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-
-            F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             FPlayerName names = F.GetPlayerOriginalNames(player);
-            Client.SendPlayerJoined(names);
-            XPManager.OnPlayerJoined(ucplayer);
-            OfficerManager.OnPlayerJoined(ucplayer);
-            Data.DatabaseManager?.UpdateUsernameAsync(player.Player.channel.owner.playerID.steamID.m_SteamID, names);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            await Client.SendPlayerJoined(names);
+            await XPManager.OnPlayerJoined(ucplayer);
+            await OfficerManager.OnPlayerJoined(ucplayer);
+            await Data.DatabaseManager.CheckUpdateUsernames(names);
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+            PlayerManager.InvokePlayerConnected(player); // must always be first
+            F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
             {
@@ -182,6 +179,7 @@ namespace Uncreated.Warfare
             TicketManager.OnPlayerJoined(ucplayer);
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
+            await rtn;
         }
         internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
         {
@@ -197,13 +195,13 @@ namespace Uncreated.Warfare
             position = team.GetBaseSpawnFromTeam();
             yaw = team.GetBaseAngle();
         }
-        internal static void OnPlayerDisconnected(UnturnedPlayer player)
+        internal static async void OnPlayerDisconnected(UnturnedPlayer player)
         {
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
             if (Data.OriginalNames.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
             {
-                Client.SendPlayerLeft(names);
+                await Client.SendPlayerLeft(names);
                 if (player.OnDuty())
                 {
                     if (player.IsAdmin())
@@ -213,8 +211,11 @@ namespace Uncreated.Warfare
                 }
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             }
+            await XPManager.OnPlayerLeft(ucplayer);
+            await OfficerManager.OnPlayerLeft(ucplayer);
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-            F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
+                F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
             if(UCWarfare.Config.RemoveLandminesOnDisconnect)
             {
                 IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
@@ -239,10 +240,9 @@ namespace Uncreated.Warfare
             PlayerManager.InvokePlayerDisconnected(player);
             Data.ReviveManager.OnPlayerDisconnected(player);
             SquadManager.InvokePlayerLeft(ucplayer);
-            Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last
-            XPManager.OnPlayerLeft(ucplayer);
-            OfficerManager.OnPlayerLeft(ucplayer);
             TicketManager.OnPlayerLeft(ucplayer);
+            Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last within game thread section
+            await rtn;
         }
         internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) 
             => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
@@ -267,15 +267,15 @@ namespace Uncreated.Warfare
                 player.playerID.nickName = prefix + player.playerID.nickName;
         }
 
-        internal static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+        internal static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            XPManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-            OfficerManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+            await XPManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+            await OfficerManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         }
-        internal static void OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+        internal static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            XPManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
-            OfficerManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+            await XPManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+            await OfficerManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
     }
 }

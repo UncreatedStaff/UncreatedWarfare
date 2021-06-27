@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Rocket.API;
 using Rocket.Unturned.Player;
@@ -19,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Aliases => new List<string>() { };
         public List<string> Permissions => new List<string>() { "uc.shutdown" };
         public static Coroutine Messager = null;
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             if (caller.DisplayName == "Console")
             {
@@ -30,7 +31,10 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (command.Length == 0)
                 {
-                    Provider.shutdown();
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    await Networking.Client.SendShuttingDown(0, "None specified.");
+                    await rtn;
+                    Provider.shutdown(0);
                     return;
                 }
                 string option = command[0].ToLower();
@@ -45,8 +49,10 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
-                    Networking.Client.SendShuttingDown(0, reason);
+                    await Networking.Client.SendShuttingDown(0, reason);
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     Provider.shutdown(0, reason);
+                    await rtn;
                 } else if (option == "aftergame" || option == "after" || option == "game")
                 {
                     F.Broadcast("shutdown_broadcast_after_game", UCWarfare.GetColor("shutdown_broadcast_after_game"),
@@ -66,14 +72,16 @@ namespace Uncreated.Warfare.Commands
                         }
                         catch { }
                     }
-                } else if (uint.TryParse(option, out uint seconds))
+                } else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
                     string time = F.GetTimeFromSeconds(seconds);
                     F.Broadcast("shutdown_broadcast_after_time", UCWarfare.GetColor("shutdown_broadcast_after_time"),
                         time, UCWarfare.GetColorHex("shutdown_broadcast_after_time_reason"));
                     F.Log(F.Translate("shutdown_broadcast_after_time_console", 0, time, reason), ConsoleColor.Cyan);
-                    Networking.Client.SendShuttingDown(0, reason);
+                    await Networking.Client.SendShuttingDown(0, reason);
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     Provider.shutdown(unchecked((int)seconds), reason);
+                    await rtn;
                 } else
                 {
                     F.LogError(F.Translate("shutdown_syntax", 0), ConsoleColor.Red);
@@ -99,8 +107,10 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
-                    Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
+                    await Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     Provider.shutdown(0, reason);
+                    await rtn;
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {
@@ -132,14 +142,16 @@ namespace Uncreated.Warfare.Commands
                         catch { }
                     }
                 }
-                else if (uint.TryParse(option, out uint seconds))
+                else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
                     string time = F.GetTimeFromSeconds(seconds);
                     F.Broadcast("shutdown_broadcast_after_time", UCWarfare.GetColor("shutdown_broadcast_after_time"),
                         time, UCWarfare.GetColorHex("shutdown_broadcast_after_time_reason"));
                     F.Log(F.Translate("shutdown_broadcast_after_time_console_player", 0, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
-                    Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
+                    await Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     Provider.shutdown(unchecked((int)seconds), reason);
+                    await rtn;
                 }
                 else
                 {

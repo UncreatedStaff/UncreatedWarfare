@@ -116,7 +116,7 @@ namespace Uncreated.Warfare.Kits
             if (BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
             {
                 this.sign_id = region.barricades[index].barricade.id;
-            } else if (ushort.TryParse(sign.name, out ushort id))
+            } else if (ushort.TryParse(sign.name, System.Globalization.NumberStyles.Any, Data.Locale, out ushort id))
             {
                 sign_id = id;
             }

@@ -5,12 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
+using Uncreated;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -25,7 +27,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.reload" };
         const string ConsoleName = "Console";
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == ConsoleName;
@@ -35,10 +37,13 @@ namespace Uncreated.Warfare.Commands
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
                     ReloadTranslations();
-                    ReloadFlags();
                     ReloadConfig();
+                    await ReloadFlags();
+
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
 
                     player.Message("Reload all Uncreated Warfare components.");
+                    await rtn;
                 }
                 else
                     player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
@@ -64,13 +69,13 @@ namespace Uncreated.Warfare.Commands
                 } else if (cmd == "flags")
                 {
                     if (isConsole || player.HasPermission("uc.reload.flags") || player.HasPermission("uc.reload.all"))
-                        ReloadFlags();
+                        await ReloadFlags();
                     else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 } else if (cmd == "tcp")
                 {
                     if (isConsole || player.HasPermission("uc.reload.tcp") || player.HasPermission("uc.reload.all"))
-                        ReloadTCPServer();
+                        await ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload command.");
                     else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 }
@@ -94,14 +99,16 @@ namespace Uncreated.Warfare.Commands
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
             OnTranslationsReloaded?.Invoke(null, EventArgs.Empty);
         }
-        internal static void ReloadFlags()
+        internal static async Task ReloadFlags()
         {
-            Data.FlagManager.StartNextGame();
+            await Data.FlagManager.StartNextGame();
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnFlagsReloaded?.Invoke(null, EventArgs.Empty);
+            await rtn;
         }
-        internal static void ReloadTCPServer()
+        internal static async Task ReloadTCPServer(ulong admin, string reason)
         {
-            Networking.Client.SendReloading();
+            await Networking.Client.SendReloading(admin, reason);
             Networking.TCPClient.I?.Shutdown();
             Networking.TCPClient.I = null;
         }

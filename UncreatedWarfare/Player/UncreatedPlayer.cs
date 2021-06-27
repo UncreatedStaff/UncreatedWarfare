@@ -25,7 +25,7 @@ namespace Uncreated.Players
         public string language;
         public DiscordInfo discord_account;
         public WarfareStats warfare_stats;
-        public static string FileName(ulong steam_id) => Data.StatsDirectory + steam_id.ToString() + ".json";
+        public static string FileName(ulong steam_id) => Data.StatsDirectory + steam_id.ToString(Data.Locale) + ".json";
         [JsonConstructor]
         public UncreatedPlayer(ulong steam_id, Usernames usernames, Sessions sessions, Addresses addresses, GlobalizationData globalization_data, string language, DiscordInfo discord_account, WarfareStats warfare_stats)
         {
@@ -406,6 +406,7 @@ namespace Uncreated.Players
                 NickName = nn
             };
         }
+        public override string ToString() => PlayerName;
     }
     public struct BasicSQLStats
     {

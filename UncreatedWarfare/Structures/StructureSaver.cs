@@ -17,7 +17,6 @@ namespace Uncreated.Warfare.Structures
         {
             foreach (Structure structure in ActiveObjects)
             {
-                F.Log(structure.id);
                 if(structure.Asset is ItemBarricadeAsset barricadeasset)
                 {
                     Transform barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(structure.id, 100, structure.Metadata, barricadeasset), 

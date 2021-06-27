@@ -259,7 +259,7 @@ namespace Uncreated.Warfare.Squads
         {
             var friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
 
-            if (name.ToLower().StartsWith("squad") && name.Length < 10 && Int32.TryParse(name[5].ToString(), out var squadNumber))
+            if (name.ToLower().StartsWith("squad") && name.Length < 10 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var squadNumber))
             {
                 if (squadNumber < friendlySquads.Count)
                 {

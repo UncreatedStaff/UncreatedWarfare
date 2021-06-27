@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Commands
                             {
                                 steamplayer.SendChat("join_group_not_found", UCWarfare.GetColor("join_group_not_found"),
                                     t1name, TeamManager.Team1ColorHex,
-                                    TeamManager.Team1ID.ToString(), UCWarfare.GetColorHex("join_group_not_found_group_id"));
+                                    TeamManager.Team1ID.ToString(Data.Locale), UCWarfare.GetColorHex("join_group_not_found_group_id"));
                                 return;
                             }
                             Kits.UCInventoryManager.ClearInventory(player);
@@ -62,7 +62,7 @@ namespace Uncreated.Warfare.Commands
                                 steamplayer.SendChat("joined_team_must_rejoin", UCWarfare.GetColor("joined_team_must_rejoin"),
                                     t1name, TeamManager.Team1ColorHex);
                                 F.Log(F.Translate("player_switched_groups_console_must_rejoin", 0,
-                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t1name), ConsoleColor.Cyan);
+                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), t1name), ConsoleColor.Cyan);
                                 return;
                             }
                             ulong oldgroup = steamplayer.player.quests.groupID.m_SteamID;
@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.Commands
                             steamplayer.SendChat("joined_team", UCWarfare.GetColor("joined_team"),
                                 t1name, TeamManager.Team1ColorHex);
                             F.Log(F.Translate("player_switched_groups_console", 0,
-                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t1name), ConsoleColor.Cyan);
+                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), t1name), ConsoleColor.Cyan);
                             if (!steamplayer.player.teleportToLocation(steamplayer.GetBaseSpawn(), 1UL.GetBaseAngle()))
                             {
                                 steamplayer.SendChat("from_lobby_teleport_failed", UCWarfare.GetColor("from_lobby_teleport_failed"),
@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.Commands
                             {
                                 steamplayer.SendChat("join_group_not_found", UCWarfare.GetColor("join_group_not_found"),
                                     t2name, TeamManager.Team2ColorHex,
-                                    TeamManager.Team2ID.ToString(), UCWarfare.GetColorHex("join_group_not_found_group_id"));
+                                    TeamManager.Team2ID.ToString(Data.Locale), UCWarfare.GetColorHex("join_group_not_found_group_id"));
                                 return;
                             }
                             Kits.UCInventoryManager.ClearInventory(player);
@@ -107,7 +107,7 @@ namespace Uncreated.Warfare.Commands
                                 steamplayer.SendChat("joined_team_must_rejoin", UCWarfare.GetColor("joined_team_must_rejoin"),
                                     t2name, TeamManager.Team2ColorHex);
                                 F.Log(F.Translate("player_switched_groups_console_must_rejoin", 0,
-                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t2name), ConsoleColor.Cyan);
+                                    steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), t2name), ConsoleColor.Cyan);
                                 return;
                             }
                             steamplayer.player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
@@ -115,7 +115,7 @@ namespace Uncreated.Warfare.Commands
                             steamplayer.SendChat("joined_team", UCWarfare.GetColor("joined_team"),
                                 t2name, TeamManager.Team2ColorHex);
                             F.Log(F.Translate("player_switched_groups_console", 0,
-                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(), t2name), ConsoleColor.Cyan); // player joined T2
+                                steamplayer.playerID.playerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), t2name), ConsoleColor.Cyan); // player joined T2
                             if (!steamplayer.player.teleportToLocation(steamplayer.GetBaseSpawn(), 2UL.GetBaseAngle()))
                             {
                                 steamplayer.SendChat("from_lobby_teleport_failed", UCWarfare.GetColor("from_lobby_teleport_failed"),

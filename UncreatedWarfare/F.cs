@@ -52,7 +52,7 @@ namespace Uncreated.Warfare
         {
             if (seconds < 60) // < 1 minute
             {
-                return seconds.ToString() + " second" + seconds.S();
+                return seconds.ToString(Data.Locale) + " second" + seconds.S();
             }
             else if (seconds < 3600) // < 1 hour
             {
@@ -84,7 +84,7 @@ namespace Uncreated.Warfare
         {
             if (minutes < 60) // < 1 hour
             {
-                return minutes.ToString() + " minute" + (minutes == 1 ? "" : "s");
+                return minutes.ToString(Data.Locale) + " minute" + (minutes == 1 ? "" : "s");
             }
             else if (minutes < 1440) // < 1 day 
             {
@@ -287,7 +287,7 @@ namespace Uncreated.Warfare
                     ChatManager.say(player, newMessage, textColor, newMessage.Contains("</"));
                 else
                     LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
-                        + MaxChatSizeAmount.ToString() + " bytes in UTF-8. Arguments may be too long.");
+                        + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
             }
         }
         /// <summary>
@@ -992,9 +992,9 @@ namespace Uncreated.Warfare
                 SteamPlayer pl = PlayerTool.getSteamPlayer(player);
                 if (pl == default) return new FPlayerName()
                 {
-                    CharacterName = player.ToString(),
-                    NickName = player.ToString(),
-                    PlayerName = player.ToString(),
+                    CharacterName = player.ToString(Data.Locale),
+                    NickName = player.ToString(Data.Locale),
+                    PlayerName = player.ToString(Data.Locale),
                     Steam64 = player
                 };
                 else return new FPlayerName()
@@ -1187,7 +1187,7 @@ namespace Uncreated.Warfare
             if (colorize) deadname = ColorizeName(deadname, deadTeam);
             string murderername = translateKillerName ? Translate(killerName.PlayerName, player) : (usePlayerName ? killerName.PlayerName : killerName.CharacterName);
             if (colorize) murderername = ColorizeName(murderername, killerTeam);
-            string dis = Math.Round(distance).ToString() + 'm';
+            string dis = Math.Round(distance).ToString(Data.Locale) + 'm';
             if (player == 0)
             {
                 if (!Data.DeathLocalization.ContainsKey(JSONMethods.DefaultLanguage))
@@ -1203,7 +1203,7 @@ namespace Uncreated.Warfare
                             catch (FormatException ex)
                             {
                                 LogError(ex);
-                                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             }
                         }
                         else if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(backupcause.ToString()))
@@ -1215,12 +1215,12 @@ namespace Uncreated.Warfare
                             catch (FormatException ex)
                             {
                                 LogError(ex);
-                                return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                                return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             }
                         }
-                        else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                        else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                     }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                 }
                 else
                 {
@@ -1233,7 +1233,7 @@ namespace Uncreated.Warfare
                         catch (FormatException ex)
                         {
                             LogError(ex);
-                            return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                            return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                         }
                     }
                     else if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(backupcause.ToString()))
@@ -1245,10 +1245,10 @@ namespace Uncreated.Warfare
                         catch (FormatException ex)
                         {
                             LogError(ex);
-                            return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                            return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                         }
                     }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                 }
             }
             else
@@ -1273,7 +1273,7 @@ namespace Uncreated.Warfare
                             catch (FormatException ex)
                             {
                                 LogError(ex);
-                                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             }
                         }
                         else if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(backupcause.ToString()))
@@ -1285,12 +1285,12 @@ namespace Uncreated.Warfare
                             catch (FormatException ex)
                             {
                                 LogError(ex);
-                                return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                                return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             }
                         }
-                        else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                        else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                     }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                 }
                 else if (Data.DeathLocalization[lang].ContainsKey(key))
                 {
@@ -1301,7 +1301,7 @@ namespace Uncreated.Warfare
                     catch (FormatException ex)
                     {
                         LogError(ex);
-                        return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                        return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                     }
                 }
                 else if (Data.DeathLocalization[lang].ContainsKey(backupcause.ToString()))
@@ -1313,10 +1313,10 @@ namespace Uncreated.Warfare
                     catch (FormatException ex)
                     {
                         LogError(ex);
-                        return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                        return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                     }
                 }
-                else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
             }
         }
         public static string TranslateLandmineDeath(ulong player, string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, bool usePlayerName = false, bool colorize = true)
@@ -1442,18 +1442,18 @@ namespace Uncreated.Warfare
                         try
                         {
                             newMessage = string.Format(defaultMessage, ColorizeName(dead.CharacterName, deadTeam), ColorizeName(killer, killerTeam),
-                                TranslateLimb(player.playerID.steamID.m_SteamID, limb), itemName, Math.Round(distance).ToString());
+                                TranslateLimb(player.playerID.steamID.m_SteamID, limb), itemName, Math.Round(distance).ToString(Data.Locale));
                         }
                         catch (FormatException)
                         {
-                            newMessage = key + $" ({ColorizeName(dead.CharacterName, deadTeam)}, {ColorizeName(killer, killerTeam)}, {limb}, {itemName}, {Math.Round(distance).ToString() + "m"}";
+                            newMessage = key + $" ({ColorizeName(dead.CharacterName, deadTeam)}, {ColorizeName(killer, killerTeam)}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
                             ChatManager.say(player.playerID.steamID, newMessage, UCWarfare.GetColor("death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
-                                + MaxChatSizeAmount.ToString() + " bytes in UTF-8. Arguments may be too long.");
+                                + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
                     }
                 }
             }
@@ -1491,7 +1491,7 @@ namespace Uncreated.Warfare
                             ChatManager.say(player.playerID.steamID, newMessage, UCWarfare.GetColor("death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
-                                + MaxChatSizeAmount.ToString() + " bytes in UTF-8. Arguments may be too long.");
+                                + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
                     }
                 }
             }
@@ -1605,9 +1605,6 @@ namespace Uncreated.Warfare
                 UnturnedLog.error(ex);
             }
         }
-        public static void Log(object obj, ConsoleColor color = ConsoleColor.Gray) => Log(obj.ToString(), color);
-        public static void LogWarning(object obj, ConsoleColor color = ConsoleColor.Yellow) => LogWarning(obj.ToString(), color);
-        public static void LogError(object obj, ConsoleColor color = ConsoleColor.Red) => LogError(obj.ToString(), color);
         public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
         {
             string message = $"EXCEPTION \n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";

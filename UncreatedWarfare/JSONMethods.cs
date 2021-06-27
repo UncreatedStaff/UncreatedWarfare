@@ -122,7 +122,7 @@ namespace Uncreated.Warfare
             hashCode = hashCode * -1521134295 + z.GetHashCode();
             return hashCode;
         }
-        public override string ToString() => $"({Mathf.RoundToInt(x)}, {Mathf.RoundToInt(y)}, {Mathf.RoundToInt(z)})";
+        public override string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.Locale)}, {Mathf.RoundToInt(y).ToString(Data.Locale)}, {Mathf.RoundToInt(z).ToString(Data.Locale)})";
         public SerializableVector3(Vector3 v)
         {
             if(v == default)
@@ -284,6 +284,7 @@ namespace Uncreated.Warfare
             this.TableName = tableName;
             this.Columns = columns;
         }
+        public string GetColumnName(string column_key) => Columns.TryGetValue(column_key, out string val) ? val : column_key;
         public override string ToString() => TableName;
     }
     public static partial class JSONMethods
@@ -606,7 +607,7 @@ namespace Uncreated.Warfare
                     }
 
                 }
-                F.Log($"Loaded {languages.Count} languages, default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString() : "NO_LANGS_FOUND")} translations.");
+                F.Log($"Loaded {languages.Count} languages, default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
             } else
             {
                 F.LogError("Failed to load translations, see above.");

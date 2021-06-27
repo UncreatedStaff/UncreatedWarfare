@@ -128,7 +128,7 @@ namespace Uncreated.Warfare
                     ChatManager.say(Player.channel.owner.playerID.steamID, newMessage, textColor, newMessage.Contains("</"));
                 else
                     F.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
-                        + MaxChatSizeAmount.ToString() + " bytes in UTF-8. Arguments may be too long.");
+                        + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
             }
         }
         public ulong GetTeam() => Player.quests.groupID.m_SteamID;

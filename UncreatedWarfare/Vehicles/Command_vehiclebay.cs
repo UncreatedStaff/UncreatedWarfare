@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Kits
                         {
                             if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
                             {
-                                if (Byte.TryParse(seat, out var index))
+                                if (Byte.TryParse(seat, System.Globalization.NumberStyles.Any, Data.Locale, out var index))
                                 {
                                     if (!vehicleData.CrewSeats.Contains(index))
                                     {
@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Kits
                         {
                             if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
                             {
-                                if (Byte.TryParse(seat, out var index))
+                                if (Byte.TryParse(seat, System.Globalization.NumberStyles.Any, Data.Locale, out var index))
                                 {
                                     if (vehicleData.CrewSeats.Contains(index))
                                     {
@@ -201,7 +201,7 @@ namespace Uncreated.Warfare.Kits
 
                         if (op == "register" || op == "reg")
                         {
-                            if (UInt16.TryParse(ID, out var vehicleID))
+                            if (UInt16.TryParse(ID, System.Globalization.NumberStyles.Any, Data.Locale, out var vehicleID))
                             {
                                 var asset = UCAssetManager.FindVehicleAsset(vehicleID);
 
@@ -274,7 +274,7 @@ namespace Uncreated.Warfare.Kits
 
                             if (op == "register" || op == "reg")
                             {
-                                if (UInt16.TryParse(ID, out var vehicleID))
+                                if (UInt16.TryParse(ID, System.Globalization.NumberStyles.Any, Data.Locale, out var vehicleID))
                                 {
                                     var asset = UCAssetManager.FindVehicleAsset(vehicleID);
 

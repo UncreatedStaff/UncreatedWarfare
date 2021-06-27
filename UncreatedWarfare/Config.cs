@@ -49,7 +49,7 @@ namespace Uncreated
             this.FobSettings = new FOBSettings();
             this.DeathMessages = new DeathMesssagesSettings();
             this.Patches = new PatchToggles();
-            this.SQL = new MySqlData { Database = "your SQL database name", Host = "your SQL server IP", Password = "your SQL password", Port = 3306, Username = "your SQL username", CharSet = "utf8mb4" };
+            this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
             this.VehicleBaySettings = new VehicleBaySettings();
             this.Debug = true;
             this.SendAssetsOnStartup = false;

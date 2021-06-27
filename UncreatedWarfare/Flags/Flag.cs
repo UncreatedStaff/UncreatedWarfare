@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -13,8 +14,6 @@ namespace Uncreated.Warfare.Flags
 {
     public class PlayerEventArgs : EventArgs { public Player player; }
     public class DiscoveredEventArgs : EventArgs { public ulong Team; }
-    public class CaptureChangeEventArgs : EventArgs { public int NewPoints; public int OldPoints; }
-    public class OwnerChangeEventArgs : EventArgs { public ulong OldOwner; public ulong NewOwner; }
     public class Flag : IDisposable
     {
         public int index = -1;
@@ -118,11 +117,13 @@ namespace Uncreated.Warfare.Flags
                 else return UCWarfare.GetColorHex("neutral_color");
             }
         }
-        public void ResetFlag()
+        public async Task ResetFlag()
         {
-            this.FullOwner = 0;
-            this._owner = 0;
+            await SetOwner(0);
+            _points = 0;
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnReset?.Invoke(this, EventArgs.Empty);
+            await rtn;
         }
         public void Dispose()
         {
@@ -132,14 +133,14 @@ namespace Uncreated.Warfare.Flags
         private ulong _owner = 0;
         public ulong Owner {
             get => _owner;
-            set
+        }
+        public async Task SetOwner(ulong value)
+        {
+            if (_owner != value)
             {
-                if (_owner != value)
-                {
-                    ulong oldowner = _owner;
-                    _owner = value;
-                    OnOwnerChanged?.Invoke(this, new OwnerChangeEventArgs { OldOwner = oldowner, NewOwner = _owner });
-                }
+                ulong oldowner = _owner;
+                _owner = value;
+                await OnOwnerChanged?.Invoke(oldowner, _owner, this);
             }
         }
         public void SetOwnerNoEventInvocation(ulong newOwner)
@@ -186,49 +187,51 @@ namespace Uncreated.Warfare.Flags
                 else if (_points <= MaxPoints * -1)
                     return 2;
                 else return 0;
-            } 
-            set
-            {
-                if (value == 1)
-                {
-                    Points = MaxPoints;
-                    Owner = 1;
-                }
-                else if (value == 2)
-                {
-                    Points = -MaxPoints;
-                    Owner = 2;
-                }
-                else if (value == 0)
-                {
-                    Points = 0;
-                    Owner = 0;
-                }
-                else F.LogError($"Tried to set owner of flag {_id}: \"{Name}\" to an invalid team: {value}.");
             }
+        }
+        public async Task SetFullOwner(ulong value)
+        {
+            if (value == 1)
+            {
+                await SetPoints(MaxPoints);
+                await SetOwner(1);
+            }
+            else if (value == 2)
+            {
+                await SetPoints(-MaxPoints);
+                await SetOwner(2);
+            }
+            else if (value == 0)
+            {
+                await SetPoints(0);
+                await SetOwner(0);
+            }
+            else F.LogError($"Tried to set owner of flag {_id}: \"{Name}\" to an invalid team: {value}.");
         }
         private int _points;
         public int LastDeltaPoints { get; protected set; }
         public int Points
         {
             get => _points;
-            set
+        }
+        public async Task SetPoints(int value)
+        {
+            int OldPoints = _points;
+            if (value > MaxPoints) _points = MaxPoints;
+            else if (value < -MaxPoints) _points = -MaxPoints;
+            else _points = value;
+            if (OldPoints != _points)
             {
-                int OldPoints = _points;
-                if (value > MaxPoints) _points = MaxPoints;
-                else if (value < -MaxPoints) _points = -MaxPoints;
-                else _points = value;
-                if (OldPoints != _points)
-                {
-                    LastDeltaPoints = _points - OldPoints;
-                    OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = OldPoints });
-                }
+                LastDeltaPoints = _points - OldPoints;
+                await OnPointsChanged?.Invoke(_points, OldPoints, this);
             }
         }
         public event EventHandler<PlayerEventArgs> OnPlayerEntered;
         public event EventHandler<PlayerEventArgs> OnPlayerLeft;
-        public event EventHandler<CaptureChangeEventArgs> OnPointsChanged;
-        public event EventHandler<OwnerChangeEventArgs> OnOwnerChanged;
+        public delegate Task PointsChangedDelegate(int NewPoints, int OldPoints, Flag flag);
+        public event PointsChangedDelegate OnPointsChanged;
+        public delegate Task OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
+        public event OwnerChangedDelegate OnOwnerChanged;
         public event EventHandler<DiscoveredEventArgs> OnDiscovered;
         public event EventHandler<DiscoveredEventArgs> OnHidden;
         public event EventHandler OnDisposed;
@@ -260,7 +263,7 @@ namespace Uncreated.Warfare.Flags
                 case "polygon":
                     return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
                 default:
-                    F.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString() + ", name: " + data.name);
+                    F.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString(Data.Locale) + ", name: " + data.name);
                     return new RectZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name);
             }
         }
@@ -285,37 +288,37 @@ namespace Uncreated.Warfare.Flags
             PlayersOnFlag.Remove(player);
         }
         public bool IsNeutral() => FullOwner == 0;
-        public void CapT1(int amount)
+        public async Task CapT1(int amount)
         {
-            Points += amount;
+            await SetPoints(Points + amount);
             if (Points >= MaxPoints)
-                Owner = 1;
+                await SetOwner(1);
         }
-        public void CapT1()
+        public async Task CapT1()
         {
-            Points = MaxPoints;
-            Owner = 1;
+            await SetPoints(MaxPoints);
+            await SetOwner(1);
         }
-        public void CapT2(int amount)
+        public async Task CapT2(int amount)
         {
-            Points -= amount;
-            if(Points <= -MaxPoints)
-                Owner = 2;
+            await SetPoints(Points - amount);
+            if (Points <= -MaxPoints)
+                await SetOwner(2);
         }
-        public void CapT2()
+        public async Task CapT2()
         {
-            Points = -MaxPoints;
-            Owner = 2;
+            await SetPoints(-MaxPoints);
+            await SetOwner(2);
         }
-        public void Cap(ulong team, int amount)
+        public async Task Cap(ulong team, int amount)
         {
-            if (team == 1) CapT1(amount);
-            else if (team == 2) CapT2(amount);
+            if (team == 1) await CapT1(amount);
+            else if (team == 2) await CapT2(amount);
         }
-        public void Cap(ulong team)
+        public async Task Cap(ulong team)
         {
-            if (team == 1) CapT1();
-            else if (team == 2) CapT2();
+            if (team == 1) await CapT1();
+            else if (team == 2) await CapT2();
         }
         public bool T1Obj { get => ID == Data.FlagManager.ObjectiveTeam1.ID; }
         public bool T2Obj { get => ID == Data.FlagManager.ObjectiveTeam2.ID; }
@@ -444,7 +447,7 @@ namespace Uncreated.Warfare.Flags
                 return false;
             }
         }
-        public void EvaluatePoints(bool overrideInactiveCheck = false)
+        public async Task EvaluatePoints(bool overrideInactiveCheck = false)
         {
             if (Manager.State == EState.ACTIVE || overrideInactiveCheck)
             {
@@ -456,7 +459,7 @@ namespace Uncreated.Warfare.Flags
                         {
                             if (winner == 1 || winner == 2)
                             {
-                                Cap(winner, 1);
+                                await Cap(winner, 1);
                             }
                         }
                     }
@@ -464,7 +467,7 @@ namespace Uncreated.Warfare.Flags
                     {
                         // invoke points updated method to show contested.
                         this.LastDeltaPoints = 0;
-                        OnPointsChanged?.Invoke(this, new CaptureChangeEventArgs { NewPoints = _points, OldPoints = _points });
+                        await OnPointsChanged?.Invoke(_points, _points, this);
                     }
                 }
             }

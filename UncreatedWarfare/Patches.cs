@@ -241,7 +241,7 @@ namespace Uncreated.Warfare
                 else return true; // no barricades
             }
             public static event OnLandmineExplodeDelegate OnLandmineExplode;
-            public delegate void OnLandmineExplodeDelegate(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner, ref bool allow);
+            public delegate void OnLandmineExplodeDelegate(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner);
 
             // SDG.Unturned.Bumper
             /// <summary>
@@ -298,9 +298,7 @@ namespace Uncreated.Warfare
                 }
                 if (other.isTrigger || Time.realtimeSinceStartup - ___lastActive < 0.25 || __instance.transform.parent != null && other.transform == __instance.transform.parent || !Provider.isServer)
                     return false;
-                bool allow = true;
-                OnLandmineExplode?.Invoke(__instance, other, OwnerComponent, ref allow);
-                if (!allow) return false;
+                OnLandmineExplode?.Invoke(__instance, other, OwnerComponent);
                 if (___isExplosive) // if hurts all in range, makes explosion
                 {
                     if (other.transform.CompareTag("Player")) // if player hit.

@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.Commands
         }
         public static void AdminOffToOn(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_GoOnDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString()), ConsoleColor.Cyan);
+            F.Log(F.Translate("duty_GoOnDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             player.Player.look.sendFreecamAllowed(true);
@@ -54,7 +54,7 @@ namespace Uncreated.Warfare.Commands
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_GoOffDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString()), ConsoleColor.Cyan);
+            F.Log(F.Translate("duty_GoOffDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
             player.Features.GodMode = false;
@@ -67,7 +67,7 @@ namespace Uncreated.Warfare.Commands
         }
         public static void InternOffToOn(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_GoOnDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString()), ConsoleColor.Cyan);
+            F.Log(F.Translate("duty_GoOnDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             player.Player.look.sendFreecamAllowed(true);
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Commands
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_GoOffDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString()), ConsoleColor.Cyan);
+            F.Log(F.Translate("duty_GoOffDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
             player.Features.GodMode = false;
