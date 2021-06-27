@@ -112,7 +112,7 @@ namespace Uncreated.Warfare
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
         public static SquadManager squadManager;
-        internal static WarfareSqlTest DatabaseManager;
+        internal static WarfareSQL DatabaseManager;
         public static WarStatsTracker GameStats;
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
@@ -171,7 +171,7 @@ namespace Uncreated.Warfare
 
             // Managers
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
-            DatabaseManager = new WarfareSqlTest(UCWarfare.I.SQL);
+            DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             await DatabaseManager.OpenAsync();
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();

@@ -8,9 +8,9 @@ using Uncreated.Players;
 
 namespace Uncreated.Warfare
 {
-    public class WarfareSqlTest : MySqlDatabase
+    public class WarfareSQL : MySqlDatabase
     {
-        public WarfareSqlTest(MySqlData data) : base(data) 
+        public WarfareSQL(MySqlData data) : base(data) 
         {
             DebugLogging |= UCWarfare.Config.Debug;
         }
