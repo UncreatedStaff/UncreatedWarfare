@@ -281,6 +281,7 @@ namespace Uncreated.Warfare
             this.TableName = tableName;
             this.Columns = columns;
         }
+        public string GetColumnName(string column_key) => Columns.TryGetValue(column_key, out string val) ? val : column_key;
         public override string ToString() => TableName;
     }
     public static partial class JSONMethods

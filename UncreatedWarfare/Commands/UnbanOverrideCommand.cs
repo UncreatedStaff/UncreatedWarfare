@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Commands
 
         public List<string> Permissions => new List<string> { "uc.unban" };
 
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             if (!Dedicator.isDedicated)
                 return;
@@ -45,18 +45,16 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
                                 Client.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
-                            Data.DatabaseManager.GetUsernameAsync(steamplayer.m_SteamID, (names, success) => 
+                            FPlayerName names = await Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
+                            if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {
-                                if(success)
-                                {
-                                    F.Log(F.Translate("unban_UnbanTextFromConsole_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                                    F.Broadcast("unban_UnbanTextFromConsole_WithName_Broadcast", UCWarfare.GetColor("unban_broadcast"), names.CharacterName);
-                                } else
-                                {
-                                    F.Log(F.Translate("unban_UnbanTextFromConsole_NoName_Console", 0, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                                    F.Broadcast("unban_UnbanTextFromConsole_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(Data.Locale));
-                                }
-                            });
+                                F.Log(F.Translate("unban_UnbanTextFromConsole_NoName_Console", 0, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                F.Broadcast("unban_UnbanTextFromConsole_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(Data.Locale));
+                            } else
+                            {
+                                F.Log(F.Translate("unban_UnbanTextFromConsole_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                F.Broadcast("unban_UnbanTextFromConsole_WithName_Broadcast", UCWarfare.GetColor("unban_broadcast"), names.CharacterName);
+                            }
                         }
                     }
                 }
@@ -80,22 +78,19 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
                                 Client.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
-                            Data.DatabaseManager.GetUsernameAsync(steamplayer.m_SteamID, (names, success) =>
+                            FPlayerName names = await Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
+                            FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
+                            if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {
-                                FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
-                                if (success)
-                                {
-                                    F.Log(F.Translate("unban_UnbanText_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                                    F.SendChat(player, "unban_UnbanText_WithName_Feedback", UCWarfare.GetColor("unban_feedback"), names.CharacterName);
-                                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_WithName_Broadcast", UCWarfare.GetColor("unban_broadcast"), names.CharacterName, callerNames.CharacterName);
-                                }
-                                else
-                                {
-                                    F.Log(F.Translate("unban_UnbanText_NoName_Console", 0, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                                    F.SendChat(player, "unban_UnbanText_NoName_Feedback", UCWarfare.GetColor("unban_feedback"), steamplayer.m_SteamID.ToString(Data.Locale));
-                                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(Data.Locale), callerNames.CharacterName);
-                                }
-                            });
+                                F.Log(F.Translate("unban_UnbanText_NoName_Console", 0, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                F.SendChat(player, "unban_UnbanText_NoName_Feedback", UCWarfare.GetColor("unban_feedback"), steamplayer.m_SteamID.ToString(Data.Locale));
+                                F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_NoName_Broadcast", UCWarfare.GetColor("unban_broadcast"), steamplayer.m_SteamID.ToString(Data.Locale), callerNames.CharacterName);
+                            } else
+                            {
+                                F.Log(F.Translate("unban_UnbanText_WithName_Console", 0, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                F.SendChat(player, "unban_UnbanText_WithName_Feedback", UCWarfare.GetColor("unban_feedback"), names.CharacterName);
+                                F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_UnbanText_WithName_Broadcast", UCWarfare.GetColor("unban_broadcast"), names.CharacterName, callerNames.CharacterName);
+                            }
                         }
                     }
                 }

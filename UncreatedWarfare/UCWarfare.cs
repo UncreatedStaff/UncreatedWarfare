@@ -37,6 +37,7 @@ namespace Uncreated.Warfare
         private bool InitialLoadEventSubscription;
         protected override void Load()
         {
+            ThreadTool.SetGameThread();
             Coroutines = new List<IEnumerator<WaitForSeconds>> { CheckPlayers() };
             Instance = this;
             Data.LoadColoredConsole();
@@ -202,7 +203,6 @@ namespace Uncreated.Warfare
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
-            IAsyncResult CloseSQLAsyncResult = Data.DatabaseManager.CloseAsync(AsyncDatabaseCallbacks.ClosedOnUnload);
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
             Data.FlagManager?.Dispose();
             Data.DatabaseManager?.Dispose();
@@ -214,12 +214,6 @@ namespace Uncreated.Warfare
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            try
-            {
-                if(CloseSQLAsyncResult != default && CloseSQLAsyncResult.AsyncWaitHandle != default)
-                    CloseSQLAsyncResult.AsyncWaitHandle.WaitOne();
-            }
-            catch (ObjectDisposedException) { }
             Networking.TCPClient.I?.Dispose();
         }
         public static Color GetColor(string key)

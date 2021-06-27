@@ -20,52 +20,55 @@ namespace Uncreated.Warfare.XP
             config = new Config<XPData>(Data.XPStorage, "config.json");
         }
 
-        public static void OnPlayerJoined(UCPlayer player)
+        public static async Task OnPlayerJoined(UCPlayer player)
         {
             if (player.IsTeam1() || player.IsTeam2())
             {
-                AddXP(player.Player, player.GetTeam(), 0);
+                await AddXP(player.Player, player.GetTeam(), 0);
             }
         }
-        public static void OnPlayerLeft(UCPlayer player)
+        public static async Task OnPlayerLeft(UCPlayer player)
         {
-
+            await Task.Yield(); // just to remove the warning, feel free to remove, its basically an empty line.
         }
-        public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
+        public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            UpdateUI(player.player, GetXP(player.player, newGroup));
+            uint xp = await GetXP(player.player, newGroup);
+            await ThreadTool.SwitchToGameThread();
+            UpdateUI(player.player, xp);
         }
-        public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)
+        public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
-            AddXP(parameters.killer, parameters.killer.GetTeam(), config.data.EnemyKilledXP);
+            await AddXP(parameters.killer, parameters.killer.GetTeam(), config.data.EnemyKilledXP);
         }
-        public static void OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
+        public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
-            AddXP(parameters.killer, parameters.killer.GetTeam(), config.data.FriendlyKilledXP);
+            await AddXP(parameters.killer, parameters.killer.GetTeam(), config.data.FriendlyKilledXP);
         }
-        public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+        public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            foreach (var player in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            foreach (Player player in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
-                AddXP(player, capturedTeam, config.data.FlagCapturedXP);
+                await AddXP(player, capturedTeam, config.data.FlagCapturedXP);
             }
         }
-        public static void OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+        public static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            foreach (var player in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            foreach (Player player in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
-                AddXP(player, capturedTeam, config.data.FlagNeutralizedXP);
+                await AddXP(player, capturedTeam, config.data.FlagNeutralizedXP);
             }
         }
 
-        public static int GetXP(Player player, ulong team) => Data.SyncDB.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
-        public static void AddXP(Player player, ulong team, int amount)
+        public static async Task<uint> GetXP(Player player, ulong team) => await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
+        public static async Task AddXP(Player player, ulong team, int amount)
         {
-            int newBalance = Data.SyncDB.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.XPMultiplier));
+            uint newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.XPMultiplier));
+            await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
         }
 
-        public static void UpdateUI(Player nelsonplayer, int balance)
+        public static void UpdateUI(Player nelsonplayer, uint balance)
         {
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
 
@@ -89,9 +92,9 @@ namespace Uncreated.Warfare.XP
                );
             }
         }
-        private static string GetProgress(int currentPoints, int totalPoints, int barLength = 50)
+        private static string GetProgress(uint currentPoints, uint totalPoints, uint barLength = 50)
         {
-            float ratio = (float)currentPoints / (float)totalPoints;
+            float ratio = currentPoints / (float)totalPoints;
 
             int progress = (int)Math.Round(ratio * barLength);
 
@@ -102,9 +105,9 @@ namespace Uncreated.Warfare.XP
             }
             return bars;
         }
-        public static Rank GetRank(int xpBalance, out int currentXP, out Rank nextRank)
+        public static Rank GetRank(uint xpBalance, out uint currentXP, out Rank nextRank)
         {
-            int requiredXP = 0;
+            uint requiredXP = 0;
 
             CommandWindow.Log("balance: " + xpBalance);
 
@@ -121,21 +124,21 @@ namespace Uncreated.Warfare.XP
                     if (i + 1 < config.data.Ranks.Count)
                         nextRank = config.data.Ranks[i + 1];
 
-                    currentXP = config.data.Ranks[i].XP - (requiredXP - xpBalance);
+                    currentXP = unchecked((uint)(config.data.Ranks[i].XP - (requiredXP - xpBalance)));
                     return config.data.Ranks[i];
                 }
             }
-            currentXP = xpBalance - requiredXP;
+            currentXP = unchecked((uint)(xpBalance - requiredXP));
             return rank;
         }
     }
     public class Rank
     {
-        public readonly int level;
+        public readonly uint level;
         public readonly string name;
         public readonly string abbreviation;
-        public readonly int XP;
-        public Rank(int level, string name, string abbreviation, int xp)
+        public readonly uint XP;
+        public Rank(uint level, string name, string abbreviation, uint xp)
         {
             this.level = level;
             this.name = name;

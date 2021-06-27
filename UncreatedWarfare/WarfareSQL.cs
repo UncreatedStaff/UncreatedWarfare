@@ -10,499 +10,330 @@ namespace Uncreated.Warfare
 {
     public class WarfareSqlTest : MySqlDatabase
     {
-        public WarfareSqlTest(MySqlData data) : base(data) { }
-    }
-
-    public class WarfareSQL : AsyncDatabase<WarfareCaller>
-    {
-        public WarfareSQL(string connection_string) : base(connection_string) { }
-        public override void Log(string message, ConsoleColor color = ConsoleColor.Gray) => F.Log(message, color);
-        public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow) => F.LogWarning(message, color);
-        public override void LogError(string message, ConsoleColor color = ConsoleColor.Red) => F.LogError(message, color);
-        public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red) => F.LogError(ex, color);
-        /// <summary>
-        /// <para>Asynchronous operation to update a player's saved username in usernames table.</para>
-        /// <para>Sends a UsernameChanged event to node server as well if the username is different from that which is in the SQL database.</para>
-        /// </summary>
-        public void UpdateUsernameAsync(ulong Steam64, FPlayerName player, AsyncCallback callback = null)
+        public WarfareSqlTest(MySqlData data) : base(data) 
         {
-            D_UpdateUsernameAsync caller = _dbCaller.UpdateUsername;
-            caller.BeginInvoke(Steam64, player, callback == null ? AsyncDatabaseCallbacks.DisposeAsyncResult : callback + AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            DebugLogging |= UCWarfare.Config.Debug;
         }
-        /// <summary>
-        /// Add a kill (default 1) to the "playerstats" table.
-        /// </summary>
-        /// <param name="Steam64">Player's Steam64 ID to add a kill to.</param>
-        /// <param name="Team">Team to add the kill to.</param>
-        /// <param name="amount">Amount of kills to add, default 1.</param>
-        public void AddKill(ulong Steam64, byte Team, int amount = 1)
+        public async Task<FPlayerName> GetUsernames(ulong Steam64)
         {
-            D_AddPlayerStat caller = _dbCaller.AddKill;
-            caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            FPlayerName? name = null;
+            MySqlTableLang table = GetTable("usernames");
+            string pn = table.GetColumnName("PlayerName");
+            string cn = table.GetColumnName("CharacterName");
+            string nn = table.GetColumnName("NickName");
+            await Query(
+                $"SELECT `{pn}`, `{cn}`, `{nn}` " +
+                $"FROM `{table.TableName}` " +
+                $"WHERE `{table.GetColumnName("Steam64")}` = @0 LIMIT 1;",
+                new object[] { Steam64 },
+                (R) =>
+                {
+                    name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2) };
+                });
+            if (name.HasValue)
+                return name.Value;
+            string tname = Steam64.ToString(Data.Locale);
+            return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
         }
-        /// <summary>Add a death (default 1) to the "playerstats" table.</summary>
-        public void AddDeath(ulong Steam64, byte Team, int amount = 1)
+        public async Task<uint> GetXP(ulong Steam64, ulong Team)
         {
-            D_AddPlayerStat caller = _dbCaller.AddDeath;
-            caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-        }
-        /// <summary>Add a teamkill (default 1) to the "playerstats" table.</summary>
-        public void AddTeamkill(ulong Steam64, byte Team, int amount = 1)
-        {
-            D_AddPlayerStat caller = _dbCaller.AddTeamkill;
-            caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-        }
-        /// <summary>Add (or subtract with a negative <paramref name="amount"/>) xp to the "levels" table.</summary>
-        public void AddXP(ulong Steam64, byte Team, int amount, bool clampOnSubtract = false, D_Difference amtTooHigh = null)
-        {
-            if (amount < 0)
-            {
-                D_SubtractPlayerStat caller = _dbCaller.SubtractXP;
-                caller.BeginInvoke(Steam64, Team, -amount, amtTooHigh, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-            }
-            else
-            {
-                D_AddPlayerStat caller = _dbCaller.AddXP;
-                caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-            }
-        }
-        /// <summary>Add (or subtract with a negative <paramref name="amount"/>) xp to the "levels" table.</summary>
-        /// <returns>The difference between the amount and the original value if the amount was higher than the value. (or 0 if it was successful)</returns>
-        public long AddXPSync(ulong Steam64, byte Team, int amount, bool clampOnSubtract = false)
-        {
-            if (amount < 0)
-            {
-                D_SubtractPlayerStat caller = _dbCaller.SubtractXP;
-                long difference = 0;
-                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-                ar.AsyncWaitHandle.WaitOne();
-                return difference;
-            }
-            else
-            {
-                D_AddPlayerStat caller = _dbCaller.AddXP;
-                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-                ar.AsyncWaitHandle.WaitOne();
-                return 0;
-            }
-        }
-        /// <summary>Add (or subtract with a negative <paramref name="amount"/>) officer points to the "levels" table.</summary>
-        public void AddOfficerPoints(ulong Steam64, byte Team, int amount, D_Difference amtTooHigh = null, bool clampOnSubtract = false)
-        {
-            if (amount < 0)
-            {
-                D_SubtractPlayerStat caller = _dbCaller.SubtractOfficerPoints;
-                caller.BeginInvoke(Steam64, Team, -amount, amtTooHigh, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-            }
-            else
-            {
-                D_AddPlayerStat caller = _dbCaller.AddOfficerPoints;
-                caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-            }
-        }
-        /// <summary>Add officer points to the "levels" table.</summary>
-        public long AddOfficerPointsSync(ulong Steam64, byte Team, int amount = 1, bool clampOnSubtract = false)
-        {
-            if (amount < 0)
-            {
-                D_SubtractPlayerStat caller = _dbCaller.SubtractOfficerPoints;
-                long difference = 0;
-                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, -amount, (dif) => { difference = dif; }, clampOnSubtract, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-                ar.AsyncWaitHandle.WaitOne();
-                return difference;
-            }
-            else
-            {
-                D_AddPlayerStat caller = _dbCaller.AddOfficerPoints;
-                IAsyncResult ar = caller.BeginInvoke(Steam64, Team, amount, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-                ar.AsyncWaitHandle.WaitOne();
-                return 0;
-            }
-        }
-        /// <summary>Retreive a player's xp from the "levels" table.</summary>
-        public void GetXP(ulong Steam64, byte Team, D_Uint32BalanceReceived callback)
-        {
-            D_GetUInt32Balance caller = _dbCaller.GetXP;
-            caller.BeginInvoke(Steam64, Team, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-        }
-        public void GetOfficerPoints(ulong Steam64, byte Team, D_Uint32BalanceReceived callback)
-        {
-            D_GetUInt32Balance caller = _dbCaller.GetOfficerPoints;
-            caller.BeginInvoke(Steam64, Team, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-        }
-        public uint GetXPSync(ulong Steam64, byte Team)
-        {
-            D_GetUInt32Balance caller = _dbCaller.GetXP;
             uint xp = 0;
-            IAsyncResult ar = caller.BeginInvoke(Steam64, Team,
-                (balance, success) => { if (success) xp = balance; },
-                AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-            ar.AsyncWaitHandle.WaitOne();
+            MySqlTableLang table = GetTable("levels");
+            await Query(
+                $"SELECT `{table.GetColumnName("XP")}` " +
+                $"FROM `{table.TableName}` " +
+                $"WHERE `{table.GetColumnName("Steam64")}` = @0 " +
+                $"AND `{table.GetColumnName("Team")}` = @1 LIMIT 1;", 
+                new object[] { Steam64, Team },
+                (R) =>
+                {
+                    xp = R.GetUInt32(0);
+                });
             return xp;
         }
-        public uint GetOfficerPointsSync(ulong Steam64, byte Team)
+        public async Task<uint> GetOfficerPoints(ulong Steam64, ulong Team)
         {
-            D_GetUInt32Balance caller = _dbCaller.GetOfficerPoints;
-            uint op = 0;
-            IAsyncResult ar = caller.BeginInvoke(Steam64, Team,
-                (balance, success) => { if (success) op = balance; },
-                AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
-            ar.AsyncWaitHandle.WaitOne();
-            return op;
+            uint officer_points = 0;
+            MySqlTableLang table = GetTable("levels");
+            await Query(
+                $"SELECT `{table.GetColumnName("OfficerPoints")}` " +
+                $"FROM `{table.TableName}` " +
+                $"WHERE `{table.GetColumnName("Steam64")}` = @0 " +
+                $"AND `{table.GetColumnName("Team")}` = @1 LIMIT 1;",
+                new object[] { Steam64, Team },
+                (R) =>
+                {
+                    officer_points = R.GetUInt32(0);
+                });
+            return officer_points;
         }
-        public void GetUsernameAsync(ulong ID, D_UsernameReceived callback)
+        public async Task<uint> GetKills(ulong Steam64, ulong Team)
         {
-            D_GetUsername caller = _dbCaller.GetUsername;
-            caller.BeginInvoke(ID, callback, AsyncDatabaseCallbacks.DisposeAsyncResult, caller);
+            uint kills = 0;
+            MySqlTableLang table = GetTable("playerstats");
+            await Query(
+                $"SELECT `{table.GetColumnName("Kills")}` " +
+                $"FROM `{table.TableName}` " +
+                $"WHERE `{table.GetColumnName("Steam64")}` = @0 " +
+                $"AND `{table.GetColumnName("Team")}` = @1 LIMIT 1;",
+                new object[] { Steam64, Team },
+                (R) =>
+                {
+                    kills = R.GetUInt32(0);
+                });
+            return kills;
         }
-        public override string GetTableName(string key)
+        public async Task<uint> GetDeaths(ulong Steam64, ulong Team)
         {
-            if (Data.TableData.TryGetValue(key, out MySqlTableLang lang))
-                return lang.TableName;
-            else return key;
+            uint deaths = 0;
+            MySqlTableLang table = GetTable("playerstats");
+            await Query(
+                $"SELECT `{table.GetColumnName("Deaths")}` " +
+                $"FROM `{table.TableName}` " +
+                $"WHERE `{table.GetColumnName("Steam64")}` = @0 " +
+                $"AND `{table.GetColumnName("Team")}` = @1 LIMIT 1;",
+                new object[] { Steam64, Team },
+                (R) =>
+                {
+                    deaths = R.GetUInt32(0);
+                });
+            return deaths;
         }
-        public override string GetColumnName(string table_key, string column_key, out string table_name)
+        public async Task<uint> GetTeamkills(ulong Steam64, ulong Team)
         {
-            if (Data.TableData.TryGetValue(table_key, out MySqlTableLang lang))
+            uint teamkills = 0;
+            MySqlTableLang table = GetTable("playerstats");
+            await Query(
+                $"SELECT `{table.GetColumnName("Teamkills")}` " +
+                $"FROM `{table.TableName}` " +
+                $"WHERE `{table.GetColumnName("Steam64")}` = @0 " +
+                $"AND `{table.GetColumnName("Team")}` = @1 LIMIT 1;",
+                new object[] { Steam64, Team },
+                (R) =>
+                {
+                    teamkills = R.GetUInt32(0);
+                });
+            return teamkills;
+        }
+        /// <returns>New XP Value</returns>
+        public async Task<uint> AddXP(ulong Steam64, ulong Team, int amount)
+        {
+            MySqlTableLang table = GetTable("levels");
+            string s64 = table.GetColumnName("Steam64");
+            string team = table.GetColumnName("Team");
+            string xp = table.GetColumnName("XP");
+            string op = table.GetColumnName("OfficerPoints");
+            uint oldBalance = await GetXP(Steam64, Team);
+            if (amount == 0) return oldBalance;
+            if (amount > 0)
             {
-                table_name = lang.TableName;
-                if (lang.Columns.TryGetValue(column_key, out string column))
-                    return column;
-                else return column_key;
+                await NonQuery(
+                    $"INSERT INTO `{table.TableName}` " +
+                    $"(`{s64}`, `{team}`, `{xp}`, `{op}`) " +
+                    $"VALUES(@0, @1, @2, '0') " +
+                    $"ON DUPLICATE KEY UPDATE " +
+                    $"`{xp}` = `{xp}` + VALUES(`{xp}`);", 
+                    new object[] { Steam64, Team, amount });
+                return unchecked((uint)(oldBalance + amount));
+            } else
+            {
+                if (amount >= oldBalance)
+                {
+                    await NonQuery(
+                        $"INSERT INTO `{table.TableName}` " +
+                        $"(`{s64}`, `{team}`, `{xp}`, `{op}`) " +
+                        $"VALUES(@0, @1, '0', '0') " +
+                        $"ON DUPLICATE KEY UPDATE " +
+                        $"`{xp}` = 0;", // clamp to 0
+                        new object[] { Steam64, Team });
+                    return 0;
+                } else
+                {
+                    await NonQuery(
+                        $"UPDATE `{table.TableName}` SET " +
+                        $"`{xp}` = `{xp}` - @2 " +
+                        $"WHERE `{s64}` = @0 AND `{team}` = @1;",
+                        new object[] { Steam64, Team, Math.Abs(amount) });
+                    return unchecked((uint)(oldBalance - amount));
+                }
+            }
+        }
+        /// <returns>New Officer Points Value</returns>
+        public async Task<uint> AddOfficerPoints(ulong Steam64, ulong Team, int amount)
+        {
+            MySqlTableLang table = GetTable("levels");
+            string s64 = table.GetColumnName("Steam64");
+            string team = table.GetColumnName("Team");
+            string xp = table.GetColumnName("XP");
+            string op = table.GetColumnName("OfficerPoints");
+            uint oldBalance = await GetXP(Steam64, Team);
+            if (amount == 0) return oldBalance;
+            if (amount > 0)
+            {
+                await NonQuery(
+                    $"INSERT INTO `{table.TableName}` " +
+                    $"(`{s64}`, `{team}`, `{xp}`, `{op}`) " +
+                    $"VALUES(@0, @1, '0', @2) " +
+                    $"ON DUPLICATE KEY UPDATE " +
+                    $"`{op}` = `{op}` + VALUES(`{op}`);",
+                    new object[] { Steam64, Team, amount });
+                return unchecked((uint)(oldBalance + amount));
             }
             else
             {
-                table_name = table_key;
-                return column_key;
+                if (amount >= oldBalance)
+                {
+                    await NonQuery(
+                        $"INSERT INTO `{table.TableName}` " +
+                        $"(`{s64}`, `{team}`, `{xp}`, `{op}`) " +
+                        $"VALUES(@0, @1, '0', '0') " +
+                        $"ON DUPLICATE KEY UPDATE " +
+                        $"`{xp}` = 0;", // clamp to 0
+                        new object[] { Steam64, Team });
+                    return 0;
+                }
+                else
+                {
+                    await NonQuery(
+                        $"UPDATE `{table.TableName}` SET " +
+                        $"`{op}` = `{op}` - @2 " +
+                        $"WHERE `{s64}` = @0 AND `{team}` = @1;",
+                        new object[] { Steam64, Team, Math.Abs(amount) });
+                    return unchecked((uint)(oldBalance - amount));
+                }
             }
         }
-    }
-    public class WarfareCaller : DbCaller
-    {
-        internal void GetUsername(ulong Steam64, D_UsernameReceived callback)
+        public async Task AddKill(ulong Steam64, ulong Team, int amount = 0)
         {
-            SelectData(StructGetUsername(_manager, Steam64), (ar) =>
+            MySqlTableLang table = GetTable("playerstats");
+            string s64 = table.GetColumnName("Steam64");
+            string team = table.GetColumnName("Team");
+            string kills = table.GetColumnName("Kills");
+            string deaths = table.GetColumnName("Deaths");
+            string teamkills = table.GetColumnName("Teamkills");
+            if (amount == 0) return;
+            if (amount > 0)
             {
-                IMySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
-                if (vagueResponse is SelectResponse response)
+                await NonQuery(
+                    $"INSERT INTO `{table.TableName}` " +
+                    $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                    $"VALUES(@0, @1, @2, '0', '0') " +
+                    $"ON DUPLICATE KEY UPDATE " +
+                    $"`{kills}` = `{kills}` + VALUES(`{kills}`);",
+                    new object[] { Steam64, Team, amount });
+            }
+            else
+            {
+                uint oldkills = await GetKills(Steam64, Team);
+                if (amount >= oldkills)
                 {
-                    if (response != null && response.ExecutionStatus == EExecutionStatus.SUCCESS)
-                    {
-                        callback.Invoke(new FPlayerName()
-                        {
-                            Steam64 = Steam64,
-                            CharacterName = response.GetColumn<string>(_manager.GetColumnName("usernames", "CharacterName", out _)).GetValue(0),
-                            PlayerName = response.GetColumn<string>(_manager.GetColumnName("usernames", "PlayerName", out _)).GetValue(0),
-                            NickName = response.GetColumn<string>(_manager.GetColumnName("usernames", "NickName", out _)).GetValue(0)
-                        }, true);
-                    }
-                    else
-                    {
-                        string id = Steam64.ToString(Data.Locale);
-                        callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
-                    }
+                    await NonQuery(
+                        $"INSERT INTO `{table.TableName}` " +
+                        $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                        $"VALUES(@0, @1, '0', '0', '0') " +
+                        $"ON DUPLICATE KEY UPDATE " +
+                        $"`{kills}` = 0;", // clamp to 0
+                        new object[] { Steam64, Team });
                 }
                 else
                 {
-                    _manager.LogError("Couldn't get username from MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    string id = Steam64.ToString(Data.Locale);
-                    callback.Invoke(new FPlayerName() { Steam64 = Steam64, CharacterName = id, NickName = id, PlayerName = id }, false);
-                    return;
+                    await NonQuery(
+                        $"UPDATE `{table.TableName}` SET " +
+                        $"`{kills}` = `{kills}` - @2 " +
+                        $"WHERE `{s64}` = @0 AND `{team}` = @1;",
+                        new object[] { Steam64, Team, Math.Abs(amount) });
                 }
-            });
+            }
         }
-        internal void UpdateUsername(ulong Steam64, FPlayerName player)
+        public async Task AddDeath(ulong Steam64, ulong Team, int amount = 0)
         {
-            SelectData(StructGetUsername(_manager, Steam64), new AsyncCallback((ar) =>
+            MySqlTableLang table = GetTable("playerstats");
+            string s64 = table.GetColumnName("Steam64");
+            string team = table.GetColumnName("Team");
+            string kills = table.GetColumnName("Kills");
+            string deaths = table.GetColumnName("Deaths");
+            string teamkills = table.GetColumnName("Teamkills");
+            if (amount == 0) return;
+            if (amount > 0)
             {
-                IMySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
-                if (vagueResponse is SelectResponse response)
+                await NonQuery(
+                    $"INSERT INTO `{table.TableName}` " +
+                    $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                    $"VALUES(@0, @1, '0', @2, '0') " +
+                    $"ON DUPLICATE KEY UPDATE " +
+                    $"`{deaths}` = `{deaths}` + VALUES(`{deaths}`);",
+                    new object[] { Steam64, Team, amount });
+            }
+            else
+            {
+                uint oldDeaths = await GetDeaths(Steam64, Team);
+                if (amount >= oldDeaths)
                 {
-                    SQLInsertOrUpdateStructure s2;
-                    if (response != null && response.ExecutionStatus == EExecutionStatus.SUCCESS)
-                    {
-                        string oldPlayerName = response.GetColumn<string>(_manager.GetColumnName("usernames", "PlayerName", out _)).GetValue(0);
-                        string oldCharacterName = response.GetColumn<string>(_manager.GetColumnName("usernames", "CharacterName", out _)).GetValue(0);
-                        string oldNickName = response.GetColumn<string>(_manager.GetColumnName("usernames", "NickName", out _)).GetValue(0);
-                        bool updatePlayerName = false;
-                        bool updateCharacterName = false;
-                        bool updateNickName = false;
-                        if (oldPlayerName == null || oldPlayerName != player.PlayerName)
-                            updatePlayerName = true;
-                        if (oldCharacterName == null || oldCharacterName != player.CharacterName)
-                            updateCharacterName = true;
-                        if (oldNickName == null || oldNickName != player.NickName)
-                            updateNickName = true;
-                        if (!updatePlayerName && !updateNickName && !updateCharacterName) return;
-                        Networking.Client.SendPlayerUpdatedUsername(player);
-                        Dictionary<string, EUpdateOperation> varsToUpdate = new Dictionary<string, EUpdateOperation>();
-                        if (updatePlayerName)
-                            varsToUpdate.Add(_manager.GetColumnName("usernames", "PlayerName", out _), EUpdateOperation.SETFROMVALUES);
-                        if (updateNickName)
-                            varsToUpdate.Add(_manager.GetColumnName("usernames", "CharacterName", out _), EUpdateOperation.SETFROMVALUES);
-                        if (updateNickName)
-                            varsToUpdate.Add(_manager.GetColumnName("usernames", "NickName", out _), EUpdateOperation.SETFROMVALUES);
-                        s2 = new SQLInsertOrUpdateStructure(_manager)
-                        {
-                            NewValues = new Dictionary<string, object>
-                            {
-                                { _manager.GetColumnName("usernames", "Steam64", out _), Steam64 },
-                                { _manager.GetColumnName("usernames", "PlayerName", out _), player.PlayerName },
-                                { _manager.GetColumnName("usernames", "CharacterName", out _), player.CharacterName },
-                                { _manager.GetColumnName("usernames", "NickName", out string tablename), player.NickName }
-                            },
-                            VariablesToUpdateIfDuplicate = varsToUpdate,
-                            tableName = tablename,
-                            UpdateValuesIfValid = null
-                        };
-                    }
-                    else
-                    {
-                        s2 = new SQLInsertOrUpdateStructure(_manager)
-                        {
-                            NewValues = new Dictionary<string, object>
-                            {
-                                { _manager.GetColumnName("usernames", "Steam64", out _), Steam64 },
-                                { _manager.GetColumnName("usernames", "PlayerName", out _), player.PlayerName },
-                                { _manager.GetColumnName("usernames", "CharacterName", out _), player.CharacterName },
-                                { _manager.GetColumnName("usernames", "NickName", out _), player.NickName }
-                            },
-                            VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                        {
-                            { _manager.GetColumnName("usernames", "PlayerName", out _), EUpdateOperation.SETFROMVALUES },
-                            { _manager.GetColumnName("usernames", "CharacterName", out _), EUpdateOperation.SETFROMVALUES },
-                            { _manager.GetColumnName("usernames", "NickName", out string tablename), EUpdateOperation.SETFROMVALUES },
-                        },
-                            tableName = tablename,
-                            UpdateValuesIfValid = null
-                        };
-                    }
-                    InsertOrUpdateAsync(s2, AsyncDatabaseCallbacks.DisposeAsyncResult);
+                    await NonQuery(
+                        $"INSERT INTO `{table.TableName}` " +
+                        $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                        $"VALUES(@0, @1, '0', '0', '0') " +
+                        $"ON DUPLICATE KEY UPDATE " +
+                        $"`{deaths}` = 0;", // clamp to 0
+                        new object[] { Steam64, Team });
                 }
                 else
                 {
-                    _manager.LogError("Couldn't save username to MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    return;
+                    await NonQuery(
+                        $"UPDATE `{table.TableName}` SET " +
+                        $"`{deaths}` = `{deaths}` - @2 " +
+                        $"WHERE `{s64}` = @0 AND `{team}` = @1;",
+                        new object[] { Steam64, Team, Math.Abs(amount) });
                 }
-            }));
+            }
         }
-        internal void GetOfficerPoints(ulong Steam64, byte Team, D_Uint32BalanceReceived callback)
+        public async Task AddTeamkill(ulong Steam64, ulong Team, int amount = 0)
         {
-            SelectData(StructS64TeamCompare(_manager, "levels", "OfficerPoints", Steam64, Team, typeof(uint)), (ar) =>
+            MySqlTableLang table = GetTable("playerstats");
+            string s64 = table.GetColumnName("Steam64");
+            string team = table.GetColumnName("Team");
+            string kills = table.GetColumnName("Kills");
+            string deaths = table.GetColumnName("Deaths");
+            string teamkills = table.GetColumnName("Teamkills");
+            if (amount == 0) return;
+            if (amount > 0)
             {
-                IMySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
-                if (vagueResponse is SelectResponse response)
-                {
-                    if (response != null && response.ExecutionStatus == EExecutionStatus.SUCCESS)
-                    {
-                        callback.Invoke(response.GetColumn<uint>(_manager.GetColumnName("levels", "OfficerPoints", out _)).GetValue(0), true);
-                    }
-                    else
-                    {
-                        callback.Invoke(0, false);
-                    }
-                }
-                else
-                {
-                    _manager.LogError("Couldn't get Officer Points balance from MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    string id = Steam64.ToString(Data.Locale);
-                    callback.Invoke(0, false);
-                    return;
-                }
-            });
-        }
-        internal void GetXP(ulong Steam64, byte Team, D_Uint32BalanceReceived callback)
-        {
-            SelectData(StructS64TeamCompare(_manager, "levels", "XP", Steam64, Team, typeof(uint)), (ar) =>
+                await NonQuery(
+                    $"INSERT INTO `{table.TableName}` " +
+                    $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                    $"VALUES(@0, @1, '0', '0', @2) " +
+                    $"ON DUPLICATE KEY UPDATE " +
+                    $"`{teamkills}` = `{teamkills}` + VALUES(`{teamkills}`);",
+                    new object[] { Steam64, Team, amount });
+            }
+            else
             {
-                _manager.Log("Received");
-                IMySqlResponse vagueResponse = GetResponse<SQLSelectCallStructure>(ar);
-                if (vagueResponse is SelectResponse response)
+                uint oldTeamkills = await GetTeamkills(Steam64, Team);
+                if (amount >= oldTeamkills)
                 {
-                    if (response != null && response.ExecutionStatus == EExecutionStatus.SUCCESS)
-                    {
-                        callback.Invoke(response.GetColumn<uint>(_manager.GetColumnName("levels", "XP", out _)).GetValue(0), true);
-                    }
-                    else
-                    {
-                        callback.Invoke(0, false);
-                    }
+                    await NonQuery(
+                        $"INSERT INTO `{table.TableName}` " +
+                        $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                        $"VALUES(@0, @1, '0', '0', '0') " +
+                        $"ON DUPLICATE KEY UPDATE " +
+                        $"`{teamkills}` = 0;", // clamp to 0
+                        new object[] { Steam64, Team });
                 }
                 else
                 {
-                    _manager.LogError("Couldn't get XP balance from MySql Database. Cast error.\n\"" + vagueResponse.Command + "\"");
-                    string id = Steam64.ToString(Data.Locale);
-                    callback.Invoke(0, false);
+                    await NonQuery(
+                        $"UPDATE `{table.TableName}` SET " +
+                        $"`{teamkills}` = `{teamkills}` - @2 " +
+                        $"WHERE `{s64}` = @0 AND `{team}` = @1;",
+                        new object[] { Steam64, Team, Math.Abs(amount) });
                 }
-            });
+            }
         }
-        internal void SubtractOfficerPoints(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null, bool clampOnSubtract = false)
+        public MySqlTableLang GetTable(string key)
         {
-            GetOfficerPoints(Steam64, Team, (balance, success) =>
-            {
-                if (success && balance >= amount)
-                {
-                    InsertOrUpdateAsync(
-                        StructSubtractFromUintS64AndTeam(_manager, "levels", Steam64, Team, "OfficerPoints", amount, new Dictionary<string, object>
-                        { { _manager.GetColumnName("levels", "XP", out _), 0 } }),
-                        AsyncDatabaseCallbacks.DisposeAsyncResult);
-                }
-                else if (onFailureToClamp != null)
-                {
-                    if (clampOnSubtract)
-                    {
-                        InsertOrUpdateAsync(
-                           StructSetUintS64AndTeam(_manager, "levels", Steam64, Team, "OfficerPoints", 0, new Dictionary<string, object>
-                           { { _manager.GetColumnName("levels", "XP", out _), 0 } }),
-                           AsyncDatabaseCallbacks.DisposeAsyncResult);
-                    }
-                    else
-                        onFailureToClamp.Invoke(amount - balance);
-                }
-            });
+            if (Data.TableData.TryGetValue(key, out MySqlTableLang lang))
+                return lang;
+            else return new MySqlTableLang(key, new Dictionary<string, string>());
         }
-        internal void SubtractXP(ulong Steam64, byte Team, int amount = 1, D_Difference onFailureToClamp = null, bool clampOnSubtract = false)
-        {
-            GetXP(Steam64, Team, (balance, success) =>
-            {
-                if (success && balance >= amount)
-                {
-                    InsertOrUpdateAsync(
-                       StructSubtractFromUintS64AndTeam(_manager, "levels", Steam64, Team, "XP", amount, new Dictionary<string, object>
-                       { { _manager.GetColumnName("levels", "OfficerPoints", out _), 0 } }),
-                       AsyncDatabaseCallbacks.DisposeAsyncResult);
-                }
-                else if (onFailureToClamp != null)
-                {
-                    if (clampOnSubtract)
-                    {
-                        InsertOrUpdateAsync(
-                           StructSetUintS64AndTeam(_manager, "levels", Steam64, Team, "XP", 0, new Dictionary<string, object>
-                           { { _manager.GetColumnName("levels", "OfficerPoints", out _), 0 } }),
-                           AsyncDatabaseCallbacks.DisposeAsyncResult);
-                    }
-                    else
-                        onFailureToClamp.Invoke(amount - balance);
-                }
-            });
-        }
-        internal void AddOfficerPoints(ulong Steam64, byte Team, int amount = 1)
-        {
-            InsertOrUpdateAsync(
-                StructAddToUintS64AndTeam(_manager, "levels", Steam64, Team, "OfficerPoints", amount, new Dictionary<string, object>
-                { { _manager.GetColumnName("levels", "XP", out _), 0 } }),
-                AsyncDatabaseCallbacks.DisposeAsyncResult);
-        }
-        internal void AddXP(ulong Steam64, byte Team, int amount = 1)
-        {
-            InsertOrUpdateAsync(
-                StructAddToUintS64AndTeam(_manager, "levels", Steam64, Team, "XP", amount, new Dictionary<string, object>
-                { { _manager.GetColumnName("levels", "OfficerPoints", out _), 0 } }),
-                AsyncDatabaseCallbacks.DisposeAsyncResult);
-        }
-        internal void AddKill(ulong Steam64, byte Team, int amount = 1)
-        {
-            InsertOrUpdateAsync(
-                StructAddToUintS64AndTeam(_manager, "playerstats", Steam64, Team, "Kills", amount, new Dictionary<string, object>
-                { { _manager.GetColumnName("playerstats", "Deaths", out _), 0 }, { _manager.GetColumnName("playerstats", "Teamkills", out _), 0 } }),
-                AsyncDatabaseCallbacks.DisposeAsyncResult);
-        }
-        internal void AddDeath(ulong Steam64, byte Team, int amount = 1)
-        {
-            InsertOrUpdateAsync(
-                StructAddToUintS64AndTeam(_manager, "playerstats", Steam64, Team, "Deaths", amount, new Dictionary<string, object>
-                { { _manager.GetColumnName("playerstats", "Kills", out _), 0 }, { _manager.GetColumnName("playerstats", "Teamkills", out _), 0 } }),
-                AsyncDatabaseCallbacks.DisposeAsyncResult);
-        }
-        internal void AddTeamkill(ulong Steam64, byte Team, int amount = 1)
-        {
-            InsertOrUpdateAsync(
-                StructAddToUintS64AndTeam(_manager, "playerstats", Steam64, Team, "Teamkills", amount, new Dictionary<string, object>
-                { { _manager.GetColumnName("playerstats", "Kills", out _), 0 }, { _manager.GetColumnName("playerstats", "Deaths", out _), 0 } }),
-                AsyncDatabaseCallbacks.DisposeAsyncResult);
-        }
-        /// <summary>Compares a column called "Steam64" and "Team" with equals to a ulong id and byte team, limit 1.</summary>
-        public static SQLSelectCallStructure StructS64TeamCompare(Database manager, string table, string column, ulong Steam64, byte Team, Type expectedReturn) =>
-            new SQLSelectCallStructure(manager)
-            {
-                selectAll = false,
-                Columns = new Dictionary<string, Type>
-                    {
-                        { manager.GetColumnName(table, column, out string tablename), expectedReturn }
-                    },
-                tableName = tablename,
-                comparisons = new EComparisonType[] { EComparisonType.EQUALS, EComparisonType.EQUALS },
-                conditions = new object[] { Steam64, Team },
-                ConditionVariables = new string[] { manager.GetColumnName(table, "Steam64", out _), manager.GetColumnName(table, "Team", out _) },
-                limit = 1
-            };
-        /// <summary>Selects usernames with "PlayerName", "CharacterName", and "NickName", comparing only Steam64.</summary>
-        public static SQLSelectCallStructure StructGetUsername(Database manager, ulong Steam64, string table = "usernames") =>
-            new SQLSelectCallStructure(manager)
-            {
-                selectAll = false,
-                Columns = new Dictionary<string, Type>
-                {
-                    { manager.GetColumnName(table, "PlayerName", out _), typeof(string) },
-                    { manager.GetColumnName(table, "CharacterName", out _), typeof(string) },
-                    { manager.GetColumnName(table, "NickName", out string tablename), typeof(string) },
-                },
-                tableName = tablename,
-                comparisons = new EComparisonType[] { EComparisonType.EQUALS },
-                conditions = new object[] { Steam64 },
-                ConditionVariables = new string[] { manager.GetColumnName(table, "Steam64", out _) },
-                limit = 1
-            };
-        public static SQLInsertOrUpdateStructure StructAddToUintS64AndTeam(Database manager, string table, ulong Steam64, ulong Team,
-            string variable, int amount, Dictionary<string, object> otherdefaults) =>
-            new SQLInsertOrUpdateStructure(manager)
-            {
-                NewValues = (Dictionary<string, object>)new Dictionary<string, object>
-                {
-                    { manager.GetColumnName(table, "Steam64", out _), Steam64 },
-                    { manager.GetColumnName(table, "Team", out _), Team },
-                    { manager.GetColumnName(table, variable, out string tablename), amount }
-                }.Union(otherdefaults),
-                tableName = tablename,
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                    {
-                        { manager.GetColumnName(table, variable, out _), EUpdateOperation.ADD }
-                    },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-        public static SQLInsertOrUpdateStructure StructSubtractFromUintS64AndTeam(Database manager, string table, ulong Steam64, ulong Team,
-            string variable, int amount, Dictionary<string, object> otherdefaults) => 
-            new SQLInsertOrUpdateStructure(manager)
-            {
-                NewValues = (Dictionary<string, object>)new Dictionary<string, object>
-                    {
-                        { manager.GetColumnName(table, "Steam64", out _), Steam64 },
-                        { manager.GetColumnName(table, "Team", out _), Team },
-                        { manager.GetColumnName(table, variable, out string tablename), amount }
-                    }.Union(otherdefaults),
-                tableName = tablename,
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                    {
-                        { manager.GetColumnName(table, variable, out _), EUpdateOperation.SUBTRACT }
-                    },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
-        public static SQLInsertOrUpdateStructure StructSetUintS64AndTeam(Database manager, string table, ulong Steam64, ulong Team,
-            string variable, int amount, Dictionary<string, object> otherdefaults) => 
-            new SQLInsertOrUpdateStructure(manager)
-            {
-                NewValues = (Dictionary<string, object>)new Dictionary<string, object>
-                    {
-                        { manager.GetColumnName(table, "Steam64", out _), Steam64 },
-                        { manager.GetColumnName(table, "Team", out _), Team },
-                        { manager.GetColumnName(table, variable, out string tablename), amount }
-                    }.Union(otherdefaults),
-                tableName = tablename,
-                VariablesToUpdateIfDuplicate = new Dictionary<string, EUpdateOperation>
-                    {
-                        { manager.GetColumnName(table, variable, out _), EUpdateOperation.SET }
-                    },
-                UpdateValuesIfValid = new List<object> { amount }
-            };
     }
 }

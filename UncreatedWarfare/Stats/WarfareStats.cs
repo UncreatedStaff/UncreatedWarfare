@@ -138,7 +138,7 @@ namespace Uncreated.Warfare.Stats
         [JsonConstructor]
         public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
         {
-            XPManager.GetRank((int)xp, out _, out var playerRank);
+            XPManager.GetRank(xp, out _, out Rank playerRank);
 
             this.name = WarfareName;
             this.display_name = WarfareDisplayName;
@@ -346,7 +346,7 @@ namespace Uncreated.Warfare.Stats
         [JsonConstructor]
         public Team(ulong id, string name, string display_name, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Kit> kits, List<string> owned_paid_kits, List<KillTrack> kill_counts, float time_deployed, float playtime)
         {
-            XPManager.GetRank((int)xp, out _, out var playerRank);
+            XPManager.GetRank(xp, out _, out var playerRank);
 
             this.id = id;
             this.name = name ?? string.Empty;
@@ -369,7 +369,7 @@ namespace Uncreated.Warfare.Stats
         }
         public Team(ulong id, string name, string display_name)
         {
-            XPManager.GetRank((int)xp, out _, out var playerRank);
+            XPManager.GetRank(xp, out _, out var playerRank);
 
             this.id = id;
             this.name = name ?? string.Empty;

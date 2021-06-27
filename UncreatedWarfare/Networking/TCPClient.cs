@@ -29,28 +29,33 @@ namespace Uncreated.Networking
         // Player List
         public static NetworkInvocationRaw<List<FPlayerName>> PlayerListInvoc =
             new NetworkInvocationRaw<List<FPlayerName>>(ECall.PLAYER_LIST, Send, 
-                (arr) =>
+                (byte[] arr, int index, out int size) =>
             {
                 if (ByteMath.ReadUInt8(out byte player_count, 0, arr))
                 {
-                    int index = 1;
-                    List<Players.FPlayerName> players = new List<Players.FPlayerName>();
+                    size = index + 1;
+                    List<FPlayerName> players = new List<Players.FPlayerName>();
                     for (int i = 0; i < player_count; i++)
                     {
                         try
                         {
-                            players.Add(FPlayerName.FromBytes(arr, out int length, index));
-                            index += length;
+                            players.Add(FPlayerName.FromBytes(arr, out int length, size));
+                            size += length;
                         }
                         catch (ArgumentException ex)
                         {
                             Console.WriteLine($"Couldn't read FPlayerName: " + ex.Message);
+                            size = 1;
                             return new List<FPlayerName>();
                         }
                     }
                     return players;
                 }
-                else return new List<FPlayerName>();
+                else
+                {
+                    size = 0;
+                    return new List<FPlayerName>();
+                }
             },
                 (players) =>
                 {
@@ -63,17 +68,17 @@ namespace Uncreated.Networking
         // Player Joined
         public static NetworkInvocationRaw<FPlayerName> PlayerJoinedInvoc = 
             new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_JOINED, Send, 
-                (arr) => FPlayerName.FromBytes(arr, out _),
+                (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Player Left
         public static NetworkInvocationRaw<FPlayerName> PlayerLeftInvoc =
-            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_LEFT, Send, 
-                (arr) => FPlayerName.FromBytes(arr, out _),
+            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_LEFT, Send,
+                (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Username Updated
         public static NetworkInvocationRaw<FPlayerName> PlayerUpdatedUsernameInvoc =
-            new NetworkInvocationRaw<FPlayerName>(ECall.USERNAME_UPDATED, Send, 
-                (arr) => FPlayerName.FromBytes(arr, out _),
+            new NetworkInvocationRaw<FPlayerName>(ECall.USERNAME_UPDATED, Send,
+                (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Banned Log
         public static NetworkInvocation<ulong, ulong, string, uint, DateTime> PlayerBannedInvoc =

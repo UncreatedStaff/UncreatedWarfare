@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Officers;
@@ -19,17 +20,17 @@ namespace Uncreated.Warfare
     {
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
         public event EventHandler<KillEventArgs> OnTeamkill;
-        private void Teamkill(KillEventArgs parameters)
+        private async Task Teamkill(KillEventArgs parameters)
         {
             F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
                 F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
-                Data.DatabaseManager?.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                await Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
             }
             OnTeamkill?.Invoke(this, parameters);
-            XPManager.OnFriendlyKilled(parameters);
+            await XPManager.OnFriendlyKilled(parameters);
         }
         public class KillEventArgs : EventArgs
         {
@@ -66,20 +67,20 @@ namespace Uncreated.Warfare
             }
         }
         public event EventHandler<KillEventArgs> OnKill;
-        private void Kill(KillEventArgs parameters)
+        private async Task Kill(KillEventArgs parameters)
         {
             F.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
                 F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
-                Data.DatabaseManager?.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                await Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent pt))
                     pt.stats.KillPlayer();
             }
             OnKill?.Invoke(this, parameters);
-            XPManager.OnEnemyKilled(parameters);
-            OfficerManager.OnEnemyKilled(parameters);
+            await XPManager.OnEnemyKilled(parameters);
+            await OfficerManager.OnEnemyKilled(parameters);
         }
         public class SuicideEventArgs : EventArgs
         {
@@ -103,14 +104,14 @@ namespace Uncreated.Warfare
             }
         }
         public event EventHandler<SuicideEventArgs> OnSuicide;
-        public void Suicide(SuicideEventArgs parameters)
+        public async Task Suicide(SuicideEventArgs parameters)
         {
             F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             OnSuicide?.Invoke(this, parameters);
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
-                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);
             }
         }
@@ -169,15 +170,15 @@ namespace Uncreated.Warfare
             }
         }
         public event EventHandler<DeathEventArgs> OnDeathNotSuicide;
-        public void DeathNotSuicide(DeathEventArgs parameters)
+        public async Task DeathNotSuicide(DeathEventArgs parameters)
         {
             F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
-                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
             OnDeathNotSuicide?.Invoke(this, parameters);
         }
-        private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
+        private async void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
             if (cause == EDeathCause.LANDMINE)
             {
@@ -284,13 +285,12 @@ namespace Uncreated.Warfare
                 {
                     key += "_UNKNOWNKILLER";
                 }
-                LogLandmineMessage(key, dead.Player, placerName, placerTeam, limb, landmineName, triggererName, triggererTeam);
                 if(foundPlacer && foundTriggerer)
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
-                            Suicide(new SuicideEventArgs()
+                            await Suicide(new SuicideEventArgs()
                             {
                                 cause = cause,
                                 dead = dead.Player,
@@ -317,9 +317,9 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = true
                             };
-                            Teamkill(a);
+                            await Teamkill(a);
                             if (Config.DeathMessages.PenalizeTeamkilledPlayers)
-                                DeathNotSuicide(new DeathEventArgs()
+                                await DeathNotSuicide(new DeathEventArgs()
                                 {
                                     killerargs = a,
                                     cause = cause,
@@ -345,8 +345,8 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = false
                             };
-                            Kill(a);
-                            DeathNotSuicide(new DeathEventArgs()
+                            await Kill(a);
+                            await DeathNotSuicide(new DeathEventArgs()
                             {
                                 killerargs = a,
                                 cause = cause,
@@ -376,8 +376,8 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = false
                             };
-                            Kill(a);
-                            DeathNotSuicide(new DeathEventArgs()
+                            await Kill(a);
+                            await DeathNotSuicide(new DeathEventArgs()
                             {
                                 killerargs = a,
                                 cause = cause,
@@ -403,8 +403,8 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = false
                             };
-                            Kill(a);
-                            DeathNotSuicide(new DeathEventArgs()
+                            await Kill(a);
+                            await DeathNotSuicide(new DeathEventArgs()
                             {
                                 killerargs = a,
                                 cause = cause,
@@ -422,7 +422,7 @@ namespace Uncreated.Warfare
                     if (dead.Player.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
-                            Suicide(new SuicideEventArgs()
+                            await Suicide(new SuicideEventArgs()
                             {
                                 cause = cause,
                                 dead = dead.Player,
@@ -447,9 +447,9 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = true
                         };
-                        Teamkill(a);
+                        await Teamkill(a);
                         if(Config.DeathMessages.PenalizeTeamkilledPlayers)
-                            DeathNotSuicide(new DeathEventArgs()
+                            await DeathNotSuicide(new DeathEventArgs()
                             {
                                 killerargs = a,
                                 cause = cause,
@@ -476,8 +476,8 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = false
                         };
-                        Kill(a);
-                        DeathNotSuicide(new DeathEventArgs()
+                        await Kill(a);
+                        await DeathNotSuicide(new DeathEventArgs()
                         {
                             killerargs = a,
                             cause = cause,
@@ -494,7 +494,7 @@ namespace Uncreated.Warfare
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
-                            Suicide(new SuicideEventArgs() 
+                            await Suicide(new SuicideEventArgs() 
                             { 
                                 cause = cause,
                                 dead = dead.Player,
@@ -519,9 +519,9 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = true
                         };
-                        Teamkill(a);
+                        await Teamkill(a);
                         if (Config.DeathMessages.PenalizeTeamkilledPlayers)
-                            DeathNotSuicide(new DeathEventArgs()
+                            await DeathNotSuicide(new DeathEventArgs()
                             {
                                 killerargs = a,
                                 cause = cause,
@@ -548,8 +548,8 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = false
                         };
-                        Kill(a);
-                        DeathNotSuicide(new DeathEventArgs()
+                        await Kill(a);
+                        await DeathNotSuicide(new DeathEventArgs()
                         {
                             killerargs = a,
                             cause = cause,
@@ -562,6 +562,8 @@ namespace Uncreated.Warfare
                         });
                     }
                 }
+                await ThreadTool.SwitchToGameThread();
+                LogLandmineMessage(key, dead.Player, placerName, placerTeam, limb, landmineName, triggererName, triggererTeam);
             } else
             {
                 SteamPlayer killer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
@@ -666,13 +668,12 @@ namespace Uncreated.Warfare
                             killerName = new FPlayerName() { CharacterName = "zombie", NickName = "zombie", PlayerName = "zombie", Steam64 = murderer == null || murderer == CSteamID.Nil ? 0 : murderer.m_SteamID };
                     }
                 }
-                LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
                 if(foundKiller)
                 {
                     if(killer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
-                            Suicide(new SuicideEventArgs()
+                            await Suicide(new SuicideEventArgs()
                             {
                                 cause = cause,
                                 dead = dead.Player,
@@ -699,8 +700,8 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 teamkill = false
                             };
-                            Kill(a);
-                            DeathNotSuicide(new DeathEventArgs()
+                            await Kill(a);
+                            await DeathNotSuicide(new DeathEventArgs()
                             {
                                 limb = limb,
                                 cause = cause,
@@ -727,9 +728,9 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 teamkill = true
                             };
-                            Teamkill(a);
+                            await Teamkill(a);
                             if(Config.DeathMessages.PenalizeTeamkilledPlayers)
-                                DeathNotSuicide(new DeathEventArgs()
+                                await DeathNotSuicide(new DeathEventArgs()
                                 {
                                     limb = limb,
                                     cause = cause,
@@ -744,7 +745,7 @@ namespace Uncreated.Warfare
                     }
                 } else
                 {
-                    DeathNotSuicide(new DeathEventArgs()
+                    await DeathNotSuicide(new DeathEventArgs()
                     {
                         limb = limb,
                         cause = cause,
@@ -756,6 +757,8 @@ namespace Uncreated.Warfare
                         killerargs = default
                     });
                 }
+                await ThreadTool.SwitchToGameThread();
+                LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
             }
             OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
         }

@@ -11,6 +11,7 @@ namespace Uncreated.SQL
     public abstract class MySqlDatabase : IDisposable
     {
         public MySqlConnection SQL;
+        public bool DebugLogging = false;
         protected MySqlData _login;
         protected bool _readerOpen = false;
         public MySqlDatabase(MySqlData data)
@@ -61,6 +62,7 @@ namespace Uncreated.SQL
             try
             {
                 SQL.Open();
+                if (DebugLogging) Log(nameof(OpenSync) + ": Opened Connection.");
                 return true;
             }
             catch (MySqlException ex)
@@ -86,6 +88,7 @@ namespace Uncreated.SQL
             try
             {
                 await SQL.OpenAsync();
+                if (DebugLogging) Log(nameof(OpenAsync) + ": Opened Connection.");
                 return true;
             }
             catch (DbException ex)
@@ -111,6 +114,7 @@ namespace Uncreated.SQL
             try
             {
                 SQL.Close();
+                if (DebugLogging) Log(nameof(CloseSync) + ": Closed Connection.");
                 return true;
             }
             catch (MySqlException ex)
@@ -125,6 +129,7 @@ namespace Uncreated.SQL
             try
             {
                 await SQL.CloseAsync();
+                if (DebugLogging) Log(nameof(CloseAsync) + ": Closed Connection.");
                 return true;
             }
             catch (MySqlException ex)
@@ -134,21 +139,28 @@ namespace Uncreated.SQL
                 return false;
             }
         }
-        public async Task Query(string query, object[] parameters, Action<DbDataReader> ReadLoopAction)
+        public async Task Query(string query, object[] parameters, Action<MySqlDataReader> ReadLoopAction)
         {
             if(query == null) throw new ArgumentNullException(nameof(query));
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
+
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
+                if (DebugLogging) Log(nameof(Query) + ": " + Q.CommandText);
                 while (_readerOpen) await Task.Delay(10);
-                using (DbDataReader R = await Q.ExecuteReaderAsync())
+                using (DbDataReader DbR = await Q.ExecuteReaderAsync())
                 {
-                    while (await R.ReadAsync())
+                    _readerOpen = true;
+                    if (DbR is MySqlDataReader R)
                     {
-                        ReadLoopAction.Invoke(R);
+                        while (await R.ReadAsync())
+                        {
+                            ReadLoopAction.Invoke(R);
+                        }
                     }
-                    R.Close();
-                    R.Dispose();
+                    DbR.Close();
+                    _readerOpen = false;
+                    DbR.Dispose();
                     Q.Dispose();
                 }
             }
@@ -159,13 +171,14 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
+                if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText);
                 try
                 {
                     await Q.ExecuteNonQueryAsync();
                 }
                 catch (Exception ex)
                 {
-                    LogError("FAILURE TO EXECUTE COMMAND:\n" + command);
+                    LogError($"FAILURE TO EXECUTE COMMAND:\n{command}");
                     LogError(ex);
                 }
             }
@@ -176,6 +189,7 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
+                if (DebugLogging) Log(nameof(QuerySync) + ": " + Q.CommandText);
                 while (_readerOpen) System.Threading.Thread.Sleep(10);
                 using (MySqlDataReader R = Q.ExecuteReader())
                 {
@@ -197,6 +211,7 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
+                if (DebugLogging) Log(nameof(NonQuerySync) + ": " + Q.CommandText);
                 try
                 {
                     Q.ExecuteNonQuery();
@@ -208,5 +223,17 @@ namespace Uncreated.SQL
                 }
             }
         }
+    }
+
+    public struct MySqlData
+    {
+        public string Host;
+        public string Database;
+        public string Password;
+        public string Username;
+        public ushort Port;
+        public string CharSet;
+        [Newtonsoft.Json.JsonIgnore]
+        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
     }
 }

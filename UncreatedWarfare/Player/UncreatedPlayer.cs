@@ -406,6 +406,7 @@ namespace Uncreated.Players
                 NickName = nn
             };
         }
+        public override string ToString() => PlayerName;
     }
     public struct BasicSQLStats
     {
