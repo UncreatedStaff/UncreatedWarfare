@@ -37,6 +37,7 @@ namespace Uncreated.Warfare
         public static bool HasSave(CSteamID playerID, out UCPlayer save) => HasSave(playerID.m_SteamID, out save);
         public static bool HasSave(ulong playerID, out UCPlayer save) => ObjectExists(ks => ks.Steam64 == playerID, out save);
         public static UCPlayer GetSave(CSteamID playerID) => GetObject(s => s.Steam64 == playerID.m_SteamID);
+        public static UCPlayer GetSave(ulong playerID) => GetObject(s => s.Steam64 == playerID);
         public static UCPlayer GetPlayer(CSteamID playerID) => GetPlayer(playerID.m_SteamID);
         public static UCPlayer GetPlayer(ulong playerID) => OnlinePlayers.Find(p => p.Steam64 == playerID);
         public static bool PlayerExists(CSteamID playerID, out UCPlayer data)

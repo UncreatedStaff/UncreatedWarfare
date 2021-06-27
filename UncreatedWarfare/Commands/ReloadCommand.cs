@@ -6,6 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.XP;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -31,12 +36,26 @@ namespace Uncreated.Warfare.Commands
                 {
                     ReloadTranslations();
                     ReloadFlags();
+                    ReloadConfig();
+
+                    player.Message("Reload all Uncreated Warfare components.");
                 }
                 else
                     player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
-            } else
+            }
+            else
             {
-                if (cmd == "translations")
+                if (cmd == "config")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
+                    {
+                        player.Message("Reload all Uncreated Warfare config files.");
+                        ReloadConfig();
+                    }
+                    else
+                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                }
+                else if (cmd == "translations")
                 {
                     if(isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
                         ReloadTranslations();
@@ -56,6 +75,16 @@ namespace Uncreated.Warfare.Commands
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 }
             }
+        }
+        internal static void ReloadConfig()
+        {
+            SquadManager.config.Reload();
+            TicketManager.config.Reload();
+            XPManager.config.Reload();
+            OfficerManager.config.Reload();
+            FOBManager.config.Reload();
+
+            UCWarfare.Instance.Configuration.Load();
         }
         internal static void ReloadTranslations()
         {

@@ -90,8 +90,6 @@ namespace Uncreated.Warfare.FOBs
 
             player.Message("fob_built");
 
-
-
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
             barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();

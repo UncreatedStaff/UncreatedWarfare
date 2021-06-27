@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.FOBs
 
         private static void OnLevelLoaded(int level)   
         {
-            LoadFobs();
+            //LoadFobs();
         }
 
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.FOBs
                 Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(), Team2FOBs.Count + 1, Structure));
             }
 
-            UpdateUI(Structure.group);
+            UpdateUIForTeam(Structure.group);
         }
 
         public static void TryDeleteFOB(uint instanceID, ulong team)
@@ -100,7 +100,7 @@ namespace Uncreated.Warfare.FOBs
             else if (TeamManager.IsTeam2(team))
                 Team2FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
 
-            UpdateUI(team);
+            UpdateUIForTeam(team);
         }
 
         public static List<FOB> GetAvailableFobs(UnturnedPlayer player)
@@ -188,26 +188,28 @@ namespace Uncreated.Warfare.FOBs
             return false;
         }
 
-        public static void UpdateUI(UnturnedPlayer player)
+        public static void UpdateUI(UCPlayer player)
         {
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
 
-            List<FOB> FOBList = new List<FOB>();
+            List<FOB> FOBList = null;
 
-            if (TeamManager.IsTeam1(player))
+            if (player.IsTeam1())
             {
                 FOBList = Team1FOBs;
             }
-            if (TeamManager.IsTeam2(player))
+            else if (player.IsTeam2())
             {
                 FOBList = Team2FOBs;
             }
+            else
+                return;
 
             int UINumber = 0;
 
             for (int i = 0; i < 10; i++)
             {
-                EffectManager.askEffectClearByID((ushort)(32371 + i), Provider.findTransportConnection(player.CSteamID));
+                EffectManager.askEffectClearByID((ushort)(32371 + i), player.Player.channel.owner.transportConnection);
             }
 
             for (int i = 0; i < FOBList.Count; i++)
@@ -222,29 +224,27 @@ namespace Uncreated.Warfare.FOBs
 
                 Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - FOBList[i].Structure.point).sqrMagnitude <= (n2.point - FOBList[i].Structure.point).sqrMagnitude ? n1 : n2);
 
-                if (FOBList[i].Structure.barricade.health < 600)
-                    line = "<color=#ffc354>" + FOBList[i].Name + "</color>";
-                else
-                    line = "<color=#54e3ff>" + FOBList[i].Name + "</color>";
+
+                line = "<color=#54e3ff>" + FOBList[i].Name + "</color>";
 
                 line += $" ({((LocationNode)nearerstLocation).name})";
 
-                EffectManager.sendUIEffect((ushort)(32371 + UINumber), (short)(32371 + UINumber), Provider.findTransportConnection(player.CSteamID), true, line);
+                EffectManager.sendUIEffect((ushort)(32371 + UINumber), (short)(32371 + UINumber), player.Player.channel.owner.transportConnection, true, line);
                 UINumber++;
             }
         }
         public static void UpdateUIAll()
         {
-            foreach (var steamPlayer in Provider.clients)
+            foreach (var player in PlayerManager.OnlinePlayers)
             {
-                UpdateUI(UnturnedPlayer.FromSteamPlayer(steamPlayer));
+                UpdateUI(player);
             }
         }
-        public static void UpdateUI(ulong team)
+        public static void UpdateUIForTeam(ulong team)
         {
-            foreach (var steamPlayer in Provider.clients.Where(sp => sp.playerID.group.m_SteamID == team))
+            foreach (var player in PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team))
             {
-                UpdateUI(UnturnedPlayer.FromSteamPlayer(steamPlayer));
+                UpdateUI(player);
             }
         }
         public void Dispose()

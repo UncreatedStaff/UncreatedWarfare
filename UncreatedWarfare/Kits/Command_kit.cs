@@ -82,30 +82,33 @@ namespace Uncreated.Warfare.Kits
                 }
                 return;
             }
-            if (command[0].ToLower() == "set" || command[0].ToLower() == "s")
+            else if (command.Length == 5)
             {
-                if (command[1] == "sign")
+                if (command[0].ToLower() == "set" || command[0].ToLower() == "s")
                 {
-                    if (command.Length > 4)
+                    if (command[1] == "sign")
                     {
-                        StringBuilder sb = new StringBuilder();
-                        for (int i = 4; i < command.Length; i++)
+                        if (command.Length > 4)
                         {
-                            if (i > 4) sb.Append(' ');
-                            sb.Append(command[i]);
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 4; i < command.Length; i++)
+                            {
+                                if (i > 4) sb.Append(' ');
+                                sb.Append(command[i]);
+                            }
+                            string text = sb.ToString();
+                            F.Log(text);
+                            if (KitManager.UpdateText(command[2], text, command[3]))
+                                player.Message("kit_setprop", "sign text", command[2], command[3] + " : " + text);
+                            else
+                                player.Message("kit_e_noexist", command[2]);
+                            return;
                         }
-                        string text = sb.ToString();
-                        F.Log(text);
-                        if (KitManager.UpdateText(command[2], text, command[3]))
-                            player.Message("kit_setprop", "sign text", command[2], command[3] + " : " + text);
                         else
-                            player.Message("kit_e_noexist", command[2]);
-                        return;
-                    }
-                    else
-                    {
-                        player.Message("kit_e_set_sign_syntax", command[2]);
-                        return;
+                        {
+                            player.Message("kit_e_set_sign_syntax", command[2]);
+                            return;
+                        }
                     }
                 }
             }
@@ -151,7 +154,8 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
                 }
-            } else if (command.Length == 3)
+            }
+            else if (command.Length == 3)
             {
                 op = command[0];
                 targetPlayer = command[1];
@@ -217,6 +221,10 @@ namespace Uncreated.Warfare.Kits
                     RequestSigns.UpdateSignsWithName(target.Player.channel.owner, kitName);
                     return;
                 }
+            }
+            else
+            {
+                player.Message("correct_usage", "/kit <create|delete|set>");
             }
         }
     }

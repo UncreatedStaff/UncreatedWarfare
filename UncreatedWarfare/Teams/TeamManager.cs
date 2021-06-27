@@ -113,14 +113,14 @@ namespace Uncreated.Warfare.Teams
         }
         public static bool IsTeam1(ulong ID) => ID == Team1ID;
         public static bool IsTeam1(CSteamID steamID) => steamID.m_SteamID == Team1ID;
-        public static bool IsTeam1(UnturnedPlayer player) => player.CSteamID.m_SteamID == Team1ID;
-        public static bool IsTeam1(Player player) => player.channel.owner.playerID.steamID.m_SteamID == Team1ID;
+        public static bool IsTeam1(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team1ID;
+        public static bool IsTeam1(Player player) => player.quests.groupID.m_SteamID == Team1ID;
         public static bool IsTeam2(ulong ID) => ID == Team2ID;
         public static bool IsTeam2(CSteamID steamID) => steamID.m_SteamID == Team2ID;
         public static bool IsTeam2(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team2ID;
-        public static bool IsTeam2(Player player) => player.channel.owner.playerID.steamID.m_SteamID == Team2ID;
+        public static bool IsTeam2(Player player) => player.quests.groupID.m_SteamID == Team2ID;
 
-        // Same as Team.LocalizedName from before./
+        // Same as Team.LocalizedName from before./ 
         public static string TranslateName(ulong team, UnturnedPlayer player, bool colorize = false) => TranslateName(team, player.CSteamID.m_SteamID, colorize);
         public static string TranslateName(ulong team, SteamPlayer player, bool colorize = false) => TranslateName(team, player.playerID.steamID.m_SteamID, colorize);
         public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);
