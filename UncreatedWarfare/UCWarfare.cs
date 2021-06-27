@@ -92,7 +92,6 @@ namespace Uncreated.Warfare
                 Data.VehicleSpawnSaver = new VehicleSpawner();
                 Data.VehicleBay = new VehicleBay();
             }
-            Data.VehicleBay.FirstSpawn();
             Data.RequestSignManager = new RequestSigns();
             Data.StructureManager = new StructureSaver();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
@@ -105,7 +104,7 @@ namespace Uncreated.Warfare
             F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
             ReplaceBarricadesAndStructures();
             await Data.FlagManager.Load(); // starts new game
-            VehicleBay.StartAllActive();
+            VehicleSpawner.RespawnAllVehicles();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
             await rtn;
             if (Provider.clients.Count > 0)

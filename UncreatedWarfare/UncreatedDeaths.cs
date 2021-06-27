@@ -120,6 +120,8 @@ namespace Uncreated.Warfare
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
+                TicketManager.OnPlayerSuicide(parameters);
+
                 await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);
             }
@@ -185,8 +187,7 @@ namespace Uncreated.Warfare
             F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
-                await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
             OnDeathNotSuicide?.Invoke(this, parameters);
             await rtn;
             await TicketManager.OnPlayerDeath(parameters);

@@ -40,12 +40,46 @@ namespace Uncreated.Warfare.Tickets
                 if (TeamManager.IsTeam1(eventArgs.dead))
                 {
                     await AddTeam1Tickets(-1*kit.TicketCost);
+                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
-                if (TeamManager.IsTeam2(eventArgs.dead))
+                else if (TeamManager.IsTeam2(eventArgs.dead))
                 {
                     await AddTeam2Tickets(-1 * kit.TicketCost);
+                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
+                else
+                    F.Log($"TICKETS: player was not on a team");
             }
+            else
+            {
+                F.Log($"TICKETS: player did not have a kit");
+            }
+            F.Log("Team 1 Tickets: " + Team1Tickets);
+            F.Log("Team 2 Tickets: " + Team2Tickets);
+        }
+        public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
+        {
+            if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
+            {
+                if (TeamManager.IsTeam1(eventArgs.dead))
+                {
+                    AddTeam1Tickets(-1 * kit.TicketCost);
+                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
+                }
+                else if (TeamManager.IsTeam2(eventArgs.dead))
+                {
+                    await AddTeam2Tickets(-1 * kit.TicketCost);
+                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
+                }
+                else
+                    F.Log($"TICKETS: player was not on a team");
+            }
+            else
+            {
+                F.Log($"TICKETS: player did not have a kit");
+            }
+            F.Log("Team 1 Tickets: " + Team1Tickets);
+            F.Log("Team 2 Tickets: " + Team2Tickets);
         }
 
         private static async void OnVehicleExploded(InteractableVehicle vehicle)

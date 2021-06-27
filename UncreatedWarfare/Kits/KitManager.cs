@@ -202,7 +202,10 @@ namespace Uncreated.Warfare.Kits
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
-            PlayerManager.UpdatePlayer(ls => ls.Steam64 == player.CSteamID.m_SteamID, ls => { ls.KitName = kit.Name; ls.KitClass = kit.Class; });
+            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            ucplayer.KitName = kit.Name;
+
+            PlayerManager.Save();
 
             OnKitChanged?.Invoke(player, kit);
         }
@@ -247,12 +250,22 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
-            if (PlayerManager.PlayerExists(steamID, out UCPlayer save))
-                return ObjectExists(k => k.Name == save.KitName, out kit);
+            kit = null;
+            var player = UCPlayer.FromID(steamID);
+
+            if (player is null)
+            {
+                F.Log("HAS KIT: player was offline", ConsoleColor.DarkYellow);
+                kit = GetObject(k => k.Name == PlayerManager.GetSave(steamID).KitName);
+                return kit != null;
+            }
             else
             {
-                kit = default;
-                return false;
+                F.Log("HAS KIT: player was online", ConsoleColor.DarkYellow);
+                F.Log("HAS KIT: kit name: " + player.KitName, ConsoleColor.DarkYellow);
+                kit = GetObject(k => k.Name == player.KitName);
+                F.Log("HAS KIT: found: " + kit != null, ConsoleColor.DarkYellow);
+                return kit != null;
             }
         }
         public static bool HasKit(UnturnedPlayer player, out Kit kit) => HasKit(player.Player.channel.owner.playerID.steamID.m_SteamID, out kit);
@@ -387,7 +400,7 @@ namespace Uncreated.Warfare.Kits
             Team = 0;
             Cost = 0;
             RequiredLevel = 0;
-            TicketCost = 0;
+            TicketCost = 1;
             IsPremium = false;
             PremiumCost = 0;
             SignName = DisplayName;

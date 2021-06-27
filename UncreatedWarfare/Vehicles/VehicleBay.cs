@@ -19,47 +19,8 @@ namespace Uncreated.Warfare.Vehicles
         public VehicleBay()
             : base(Data.VehicleStorage + "vehiclebay.json")
         {
-            VehicleManager.OnVehicleExploded += OnVehicleExploded;
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
-            Patches.BarricadeDestroyedHandler += OnBarricadeDestroyed;
-            Patches.StructureDestroyedHandler += OnStructureDestroyed;
-        }
-        public static void StartAllActive()
-        {
-            foreach(VehicleSpawn data in VehicleSpawner.ActiveObjects)
-            {
-                F.Log("Trying to spawn " + data.VehicleID);
-                if (!TrySpawnNewVehicle(data))
-                    F.Log("Couldn't start spawning " + data.VehicleID);
-            }
-        }
-        public static void Start(VehicleSpawn spawn)
-        {
-            if (!TrySpawnNewVehicle(spawn))
-                F.Log("Couldn't start spawning " + spawn.VehicleID);
-        }
-        private void OnStructureDestroyed(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID)
-        {
-            if (data.structure.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
-            {
-                if (VehicleSpawner.SpawnExists(drop.model, out _))
-                {
-                    Logger.Log("Vehicle spawn was deregistered because it was salvaged or destroyed.");
-                    VehicleSpawner.DeleteSpawn(drop.model);
-                }
-            }
-        }
-        private void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
-        {
-            if (data.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
-            {
-                if (VehicleSpawner.SpawnExists(drop.model, out _))
-                {
-                    Logger.Log("Vehicle spawn was deregistered because it was salvaged or destroyed.");
-                    VehicleSpawner.DeleteSpawn(drop.model);
-                }
-            }
         }
 
         protected override string LoadDefaults() => "[]";
@@ -79,7 +40,7 @@ namespace Uncreated.Warfare.Vehicles
             vehicleExists = false;
             argIsValid = false;
 
-            if (!IsPropertyValid<EVehicleProperty>(property, out var p))
+            if (!IsPropertyValid<EVehicleProperty>(property.ToString().ToUpper(), out var p))
             {
                 return;
             }
@@ -184,9 +145,9 @@ namespace Uncreated.Warfare.Vehicles
             if (!Level.isLoaded)
                 return;
 
-            if (VehicleExists(vehicleID, out var vehicleData))
+            if (VehicleBay.VehicleExists(vehicleID, out var vehicleData))
             {
-                F.Log("Spawning vehicle");
+                F.Log("Spawning vehicle...");
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
                 instanceID = vehicle.instanceID;
 
@@ -213,38 +174,10 @@ namespace Uncreated.Warfare.Vehicles
                     vehicle.updatePhysics();
                 }
             }
-        }
-
-        public static bool TryRespawnVehicle(uint vehicleInstanceID)
-        {
-            if (VehicleSpawner.HasLinkedSpawn(vehicleInstanceID, out VehicleSpawn spawn))
+            else
             {
-                if (spawn.Barricade != default(SerializableTransform))
-                {
-                    SpawnLockedVehicle(spawn.VehicleID, spawn.Barricade.Position, Quaternion.Euler(spawn.Barricade.euler_angles.x * 2,
-                        spawn.Barricade.euler_angles.y * 2, spawn.Barricade.euler_angles.z * 2), out var newInstanceID);
-                    VehicleSpawner.LinkVehicleToSpawn(newInstanceID, spawn.Barricade);
-                    return true;
-                }
-                else return false;
+                F.Log($"VEHICLE SPAWN ERROR: {UCAssetManager.FindVehicleAsset(vehicleID).vehicleName} has not been registered in the VehicleBay.");
             }
-            return false;
-        }
-
-        public static bool TrySpawnNewVehicle(VehicleSpawn spawn)
-        {
-            if (VehicleSpawner.HasLinkedVehicle(spawn, out var vehicle))
-            {
-                if (!(vehicle.isDead || vehicle.isDrowned)) // if the vehicle is not dead or drowned
-                    return false;
-            }
-            if (spawn.Barricade != default(SerializableTransform))
-            {
-                SpawnLockedVehicle(spawn.VehicleID, spawn.Barricade.Position + new Vector3(0, 5, 0), Quaternion.Euler(Vector3.up), out var newInstanceID);
-                VehicleSpawner.LinkVehicleToSpawn(newInstanceID, spawn.Barricade);
-                return true;
-            }
-            else return false;
         }
 
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
@@ -275,9 +208,21 @@ namespace Uncreated.Warfare.Vehicles
 
             EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
         }
-        private void OnVehicleExploded(InteractableVehicle vehicle)
+
+        public static void DeleteVehicle(InteractableVehicle vehicle)
         {
-            UCWarfare.I.StartCoroutine(StartVehicleRespawnTimer(vehicle));
+            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
+
+            for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
+            {
+                if (i >= 0)
+                {
+                    if (vehicleRegion.drops[i].interactable is InteractableStorage store)
+                        store.despawnWhenDestroyed = true;
+                }
+            }
+
+            VehicleManager.askVehicleDestroy(vehicle);
         }
 
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
@@ -421,33 +366,11 @@ namespace Uncreated.Warfare.Vehicles
                 return;
             }
         }
-        public void FirstSpawn()
-        {
-            var allspawns = VehicleSpawner.GetAllSpawns();
-            foreach (var spawn in allspawns)
-                TrySpawnNewVehicle(spawn);
-        }
-
-        private IEnumerator<WaitForSeconds> StartVehicleRespawnTimer(InteractableVehicle vehicle)
-        {
-            if (!VehicleExists(vehicle.id, out var vehicleData))
-                yield break;
-
-            yield return new WaitForSeconds(vehicleData.RespawnTime);
-
-            if (UCWarfare.I.State != PluginState.Loaded)
-                yield break;
-
-            TryRespawnVehicle(vehicle.instanceID);
-        }
 
         public void Dispose()
         {
-            VehicleManager.OnVehicleExploded -= OnVehicleExploded;
             VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
-            Patches.BarricadeDestroyedHandler -= OnBarricadeDestroyed;
-            Patches.StructureDestroyedHandler -= OnStructureDestroyed;
         }
 
         public enum EVehicleProperty
