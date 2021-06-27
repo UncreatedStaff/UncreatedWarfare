@@ -104,7 +104,7 @@ namespace Uncreated.Warfare
             Data.TeamManager = new TeamManager();
             F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
             ReplaceBarricadesAndStructures();
-            Data.FlagManager.Load(); // starts new game
+            await Data.FlagManager.Load(); // starts new game
             VehicleBay.StartAllActive();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
             await rtn;
@@ -205,8 +205,9 @@ namespace Uncreated.Warfare
         protected override void Unload()
         {
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
-            Data.CancelFlags.Cancel();
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
+            Data.CancelFlags.Cancel();
+            Data.CancelTcp.Cancel();
             Data.FlagManager?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();

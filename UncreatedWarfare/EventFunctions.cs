@@ -147,13 +147,13 @@ namespace Uncreated.Warfare
         internal static async void OnPostPlayerConnected(UnturnedPlayer player)
         {
             FPlayerName names = F.GetPlayerOriginalNames(player);
+            PlayerManager.InvokePlayerConnected(player); // must always be first
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             await Client.SendPlayerJoined(names);
             await XPManager.OnPlayerJoined(ucplayer);
             await OfficerManager.OnPlayerJoined(ucplayer);
             await Data.DatabaseManager.CheckUpdateUsernames(names);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            PlayerManager.InvokePlayerConnected(player); // must always be first
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -237,10 +237,10 @@ namespace Uncreated.Warfare
                 UnityEngine.Object.Destroy(c);
                 Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
             }
-            PlayerManager.InvokePlayerDisconnected(player);
             Data.ReviveManager.OnPlayerDisconnected(player);
             SquadManager.InvokePlayerLeft(ucplayer);
             TicketManager.OnPlayerLeft(ucplayer);
+            PlayerManager.InvokePlayerDisconnected(player);
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last within game thread section
             await rtn;
         }

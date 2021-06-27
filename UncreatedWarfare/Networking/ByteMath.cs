@@ -22,7 +22,7 @@ namespace Uncreated.Networking
         public static byte[] Callify(ECall call) => BitConverter.GetBytes((ushort)call);
         public static bool ReadUInt16(out ushort output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(ushort))
+            if (source.Length > index + sizeof(ushort) - 1)
             {
                 try
                 {
@@ -40,7 +40,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadUInt32(out uint output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(uint))
+            if (source.Length > index + sizeof(uint) - 1)
             {
                 try
                 {
@@ -58,7 +58,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadUInt64(out ulong output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(ulong))
+            if (source.Length > index + sizeof(ulong) - 1)
             {
                 try
                 {
@@ -76,7 +76,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadInt16(out short output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(short))
+            if (source.Length > index + sizeof(short) - 1)
             {
                 try
                 {
@@ -94,7 +94,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadInt32(out int output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(int))
+            if (source.Length > index + sizeof(int) - 1)
             {
                 try
                 {
@@ -112,7 +112,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadInt64(out long output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(long))
+            if (source.Length > index + sizeof(long) - 1)
             {
                 try
                 {
@@ -143,9 +143,9 @@ namespace Uncreated.Networking
         }
         public static bool ReadInt8(out sbyte output, int index, byte[] source)
         {
-            if (ReadUInt8(out byte b, index, source))
+            if (source.Length > index)
             {
-                output = unchecked((sbyte)b);
+                output = unchecked((sbyte)source[index]);
                 return true;
             }
             output = -1;
@@ -153,7 +153,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadFloat(out float output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(float))
+            if (source.Length > index + sizeof(float) - 1)
             {
                 try
                 {
@@ -171,7 +171,7 @@ namespace Uncreated.Networking
         }
         public static bool ReadDouble(out double output, int index, byte[] source)
         {
-            if (source.Length > index + sizeof(double))
+            if (source.Length > index + sizeof(double) - 1)
             {
                 try
                 {
@@ -227,6 +227,7 @@ namespace Uncreated.Networking
             size = 0;
             return false;
         }
+        /// <summary>Does not read the length, must be supplied.</summary>
         public static bool ReadString(out string output, int index, byte[] source, ushort length)
         {
             if (source.Length < index + length)
@@ -538,14 +539,17 @@ namespace Uncreated.Networking
                     if (ReadInt64(out long l, index, data))
                     {
                         size = sizeof(long);
-                        return (T)(object)new DateTime(l);
+                        return (T)(new DateTime(l) as object);
                     }
-                    else throw new ArgumentException("Failed to convert DateTime!", nameof(T));
+                    else
+                    {
+                        Console.WriteLine($"Couldn't read datetime from {string.Join(", ", data.Skip(index))}.");
+                        throw new ArgumentException("Failed to convert DateTime!", nameof(T));
+                    }
                 });
             }
             else throw new ArgumentException("Can not convert " + type.Name + "!", nameof(T));
         }
-
         /// <summary><para>
         /// Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></para>
         /// <para>Note: <see cref="decimal"/> objects are written and read as a <see cref="double"/>.</para>
@@ -630,112 +634,16 @@ namespace Uncreated.Networking
             }
             else if (type == typeof(DateTime))
             {
-                return (o) => BitConverter.GetBytes(((DateTime)o).Ticks);
+                return (o) => BitConverter.GetBytes(((DateTime)Convert.ChangeType(o, type)).Ticks);
             }
             else throw new ArgumentException("Can not convert that type!", nameof(type));
         }
         /// <summary>Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></summary>
-        public static object ReadBytes(byte[] data, int index, Type type, out int size)
-        {
-            if (type.IsPrimitive)
-            {
-                if (type == typeof(ulong) && ReadUInt64(out ulong ul, index, data))
-                {
-                    size = sizeof(ulong);
-                    return Convert.ChangeType(ul, type);
-                }
-                else if (type == typeof(float) && ReadFloat(out float fl, index, data))
-                {
-                    size = sizeof(float);
-                    return Convert.ChangeType(fl, type);
-                }
-                else if (type == typeof(long) && ReadInt64(out long l, index, data))
-                {
-                    size = sizeof(long);
-                    return Convert.ChangeType(l, type);
-                }
-                else if (type == typeof(ushort) && ReadUInt16(out ushort ush, index, data))
-                {
-                    size = sizeof(ushort);
-                    return Convert.ChangeType(ush, type);
-                }
-                else if (type == typeof(short) && ReadInt16(out short sh, index, data))
-                {
-                    size = sizeof(short);
-                    return Convert.ChangeType(sh, type);
-                }
-                else if (type == typeof(byte) && ReadUInt8(out byte b, index, data))
-                {
-                    size = 1;
-                    return Convert.ChangeType(b, type);
-                }
-                else if (type == typeof(int) && ReadInt32(out int i32, index, data))
-                {
-                    size = sizeof(int);
-                    return Convert.ChangeType(i32, type);
-                }
-                else if (type == typeof(uint) && ReadUInt32(out uint ui32, index, data))
-                {
-                    size = sizeof(uint);
-                    return Convert.ChangeType(ui32, type);
-                }
-                else if (type == typeof(bool) && ReadBoolean(out bool bo, index, data))
-                {
-                    size = 1;
-                    return Convert.ChangeType(bo, type);
-                }
-                else if (type == typeof(sbyte) && ReadInt8(out sbyte sb, index, data))
-                {
-                    size = 1;
-                    return Convert.ChangeType(sb, type);
-                }
-                else if (type == typeof(decimal) && ReadDouble(out double decdb, index, data))
-                {
-                    size = sizeof(double);
-                    return Convert.ChangeType((decimal)decdb, type);
-                }
-                else if (type == typeof(double) && ReadDouble(out double db, index, data))
-                {
-                    size = sizeof(double);
-                    return Convert.ChangeType(db, type);
-                }
-                else throw new ArgumentException("Can not convert that type!", "t");
-            }
-            else if (type == typeof(string))
-            {
-                if (ReadString(out string output, index, data, out size))
-                {
-                    return Convert.ChangeType(output, type);
-                }
-                else throw new Exception("Failed to convert string");
-            }
-            else if (type.IsEnum)
-            {
-                Type underlying = Enum.GetUnderlyingType(type);
-                try
-                {
-                    if (!underlying.IsEnum)
-                    {
-                        return ReadBytes(data, index, underlying, out size);
-                    }
-                    else throw new ArgumentException("Can not convert that enum type!", "t");
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-            }
-            else if (type == typeof(DateTime))
-            {
-                if (ReadInt64(out long l, index, data))
-                {
-                    size = sizeof(long);
-                    return new DateTime(l);
-                }
-                else throw new ArgumentException("Can not convert that type!", "t");
-            }
-            else throw new ArgumentException("Can not convert that type!", "t");
-        }
-        public static T ReadBytes<T>(byte[] data, int index, out int size) => (T)ReadBytes(data, index, typeof(T), out size);
+        [Obsolete("Use GetReadFunction<T>() in constructor and run that. It's much more effecient.")]
+        public static T ReadBytes<T>(byte[] bytes, int index, out int size) => GetReadFunction<T>().Invoke(bytes, index, out size);
+        /// <summary>Works with all primitives except for <see cref="char"/>. Also works for <see cref="Enum"/>, <see cref="string"/>, and <see cref="DateTime"/></summary>
+        [Obsolete("Use GetWriteFunction<T>() in constructor and run that. It's much more effecient.")]
+        public static byte[] WriteBytes<T>(object o) => GetWriteFunction<T>().Invoke(o);
+
     }
 }

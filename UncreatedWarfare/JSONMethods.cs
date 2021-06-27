@@ -89,7 +89,7 @@ namespace Uncreated.Warfare
         [JsonIgnore]
         public Vector3 Vector3 { 
             get => new Vector3(x, y, z); 
-            set 
+            set
             {
                 if (value == default)
                 {

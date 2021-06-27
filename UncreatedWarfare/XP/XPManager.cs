@@ -23,6 +23,7 @@ namespace Uncreated.Warfare.XP
 
         public static async Task OnPlayerJoined(UCPlayer player)
         {
+            F.Log(player.CharacterName);
             if (player.IsTeam1() || player.IsTeam2())
             {
                 await AddXP(player.Player, player.GetTeam(), 0);
@@ -70,7 +71,6 @@ namespace Uncreated.Warfare.XP
             UpdateUI(player, newBalance);
             await rtn;
         }
-
         public static void UpdateUI(Player nelsonplayer, uint balance)
         {
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);

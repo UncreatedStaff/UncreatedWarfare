@@ -42,7 +42,8 @@ namespace Uncreated.Warfare.Kits
                     } else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                     return;
-                } else if (command[0].ToLower() == "remove")
+                } 
+                else if (command[0].ToLower() == "remove")
                 {
                     if (player.HasPermission("uc.request.remove"))
                     {

@@ -105,6 +105,10 @@ namespace Uncreated.Warfare
                     F.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
                 return msg;
             }
+            public DeathEventArgs DeadArgs { get => new DeathEventArgs()
+            {
+                cause = cause, dead = dead, distance = distance, item = item, itemName = itemName, key = key, killerargs = null, limb = limb
+            }; }
         }
         public event EventHandler<SuicideEventArgs> OnSuicide;
         public async Task Suicide(SuicideEventArgs parameters)
@@ -119,6 +123,7 @@ namespace Uncreated.Warfare
                 await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);
             }
+            await TicketManager.OnPlayerDeath(parameters.DeadArgs);
         }
         public class DeathEventArgs : EventArgs
         {
@@ -184,6 +189,7 @@ namespace Uncreated.Warfare
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnDeathNotSuicide?.Invoke(this, parameters);
             await rtn;
+            await TicketManager.OnPlayerDeath(parameters);
         }
         private async void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
