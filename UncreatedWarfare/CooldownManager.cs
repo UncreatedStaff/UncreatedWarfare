@@ -23,10 +23,10 @@ namespace Uncreated.Warfare
             else
                 cooldowns.Add(new Cooldown(player, ECooldownType.DEPLOY, seconds, data));
         }
-        public static bool HasCooldown(UCPlayer player, ECooldownType type, out Cooldown cooldown)
+        public static bool HasCooldown(UCPlayer player, ECooldownType type, out Cooldown cooldown, params object[] data)
         {
             cooldowns.RemoveAll(c => c.Timeleft.TotalSeconds == 0);
-            cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type);
+            cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
             return cooldown == null;
         }
         public static void RemoveCooldown(UCPlayer player, ECooldownType type)
@@ -72,6 +72,19 @@ namespace Uncreated.Warfare
             this.seconds = seconds;
             this.data = data;
         }
+        public override string ToString()
+        {
+            var time = Timeleft;
+
+            string line = string.Empty;
+            if (time.Hours > 0)
+                line += time.Hours + "h ";
+            if (time.Minutes > 0)
+                line += time.Minutes + "m ";
+            if (time.Seconds > 0)
+                line += time.Seconds + "s";
+            return line;
+        }
     }
     public enum ECooldownType
     {
@@ -79,9 +92,10 @@ namespace Uncreated.Warfare
         DEPLOY,
         AMMO,
         PREMIUM_KIT,
-        VEHICLE,
-        TICKET_BOOST_COMMAND,
-        WARN_COMMAND,
+        REQUEST_KIT,
+        REQUEST_VEHICLE,
+        COMMAND_BOOST,
+        COMMAND_WARN,
         WARNINGS
     }
 }
