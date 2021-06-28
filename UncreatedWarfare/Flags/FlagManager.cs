@@ -12,8 +12,8 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Flags
 {
-    public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-    public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
+    public delegate Task FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
+    public delegate Task FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 
     public class FlagManager : IDisposable
     {

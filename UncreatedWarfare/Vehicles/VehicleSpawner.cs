@@ -184,7 +184,6 @@ namespace Uncreated.Warfare.Vehicles
                 F.Log($"VEHICLE SPAWNER ERROR: could not start respawn timer, unable to get MonoBehavior component from drop");
             }
         }
-        
     }
     public class VehicleSpawnComponent : MonoBehaviour
     {

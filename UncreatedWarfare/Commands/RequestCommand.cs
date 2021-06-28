@@ -1,6 +1,7 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.XP;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -19,10 +22,15 @@ namespace Uncreated.Warfare.Kits
         public string Syntax => "/request";
         public List<string> Aliases => new List<string>() { };
         public List<string> Permissions => new List<string>() { "uc.request" };
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
-            if(command.Length > 0)
+            UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
+
+            var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            var signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+
+            if (command.Length > 0)
             {
                 if(command[0].ToLower() == "save")
                 {
@@ -65,64 +73,100 @@ namespace Uncreated.Warfare.Kits
                     return;
                 }
             }
-            InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
-            if (signlook == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
+            if (signlook != null)
+            {
+                if (!RequestSigns.SignExists(signlook, out RequestSign requestsign))
+                {
+                    ucplayer.Message("request_kit_e_signnoexist");
+                    return;
+                }
+                if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
+                {
+                    ucplayer.Message("request_kit_e_kitnoexist");
+                    return;
+                }
+                if (ucplayer.KitName == kit.Name)
+                {
+                    ucplayer.Message("request_kit_e_alreadyhaskit");
+                    return;
+                }
+                if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64))
+                {
+                    ucplayer.Message("request_kit_e_notallowed");
+                    return;
+                }
+                if (kit.IsLimited(out int currentPlayers, out int allowedPlayers))
+                {
+                    ucplayer.Message("request_kit_e_limited", currentPlayers, allowedPlayers);
+                    return;
+                }
+
+                var xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam());
+                var rank = XPManager.GetRank(xp, out _, out _);
+
+                if (rank?.level < kit.RequiredLevel)
+                {
+                    ucplayer.Message("request_kit_e_wronglevel");
+                    return;
+                }
+                if (kit.Branch != EBranch.DEFAULT && ucplayer.Branch != kit.Branch)
+                {
+                    ucplayer.Message("request_kit_e_wrongbranch");
+                    return;
+                }
+
+                ucplayer.Message("request_kit_given", requestsign.kit_name);
+                KitManager.GiveKit(player, kit);
+                return;
+            }
+            else if (vehicle != null)
+            {
+                if (!VehicleBay.VehicleExists(vehicle.id, out var data))
+                {
+                    ucplayer.Message("request_vehicle_e_notrequestable");
+                    return;
+                }
+                if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out var cooldown, vehicle.id))
+                {
+                    ucplayer.Message("request_vehicle_e_cooldown", cooldown.Timeleft.ToString());
+                    return;
+                }
+                var xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam());
+                var rank = XPManager.GetRank(xp, out _, out _);
+
+                if (rank?.level < data.RequiredLevel)
+                {
+                    ucplayer.Message("request_vehicle_e_wronglevel", rank.level);
+                    return;
+                }
+                if (data.RequiredBranch != EBranch.DEFAULT && ucplayer.Branch != data.RequiredBranch)
+                {
+                    ucplayer.Message("request_vehicle_e_wrongbranch", data.RequiredBranch);
+                    return;
+                }
+                if (!(vehicle.lockedOwner == CSteamID.Nil && vehicle.lockedGroup == CSteamID.Nil))
+                {
+                    ucplayer.Message("request_vehicle_e_alreadyrequested");
+                    return;
+                }
+                if (vehicle.asset.canBeLocked)
+                {
+                    vehicle.tellLocked(player.CSteamID, player.Player.quests.groupID, true);
+
+                    VehicleManager.ServerSetVehicleLock(vehicle, player.CSteamID, player.Player.quests.groupID, true);
+
+                    vehicle.updateVehicle();
+                    vehicle.updatePhysics();
+
+                    EffectManager.sendEffect((ushort)8, EffectManager.SMALL, vehicle.transform.position);
+                }
+
+                ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName);
+                return;
+            }
             else
             {
-                if (RequestSigns.SignExists(signlook, out RequestSign requestsign))
-                {
-                    string teamcolor = TeamManager.NeutralColorHex;
-                    if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
-
-                    if(kit.Cost == 0 && !kit.IsPremium)
-                    {
-                        player.Player.SendChat("request_kit_given_free", UCWarfare.GetColor("request_kit_given_free"), requestsign.kit_name, teamcolor);
-                        KitManager.GiveKit(player, kit);
-                    } else if (kit.Cost > 0 && !kit.IsPremium)
-                    {
-                        uint credits = player.Player.GetCredits();
-                        if(credits >= kit.Cost)
-                        {
-                            player.Player.SendChat("request_kit_given_credits", UCWarfare.GetColor("request_kit_given_credits"), requestsign.kit_name, teamcolor,
-                                kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_credits"));
-                            KitManager.GiveKit(player, kit);
-                            player.Player.ChangeCredits(-kit.Cost);
-                        } else
-                        {
-                            player.Player.SendChat("request_kit_given_credits_cant_afford", UCWarfare.GetColor("request_kit_given_credits_cant_afford"), requestsign.kit_name, teamcolor,
-                                kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_cant_afford_credits"));
-                        }
-                    } else if (kit.IsPremium)
-                    {
-                        if(kit.AllowedUsers.Contains(player.CSteamID.m_SteamID))
-                        {
-                            if (kit.Cost == 0)
-                            {
-                                player.Player.SendChat("request_kit_given_free", UCWarfare.GetColor("request_kit_given_free"), requestsign.kit_name, teamcolor);
-                                KitManager.GiveKit(player, kit);
-                            }
-                            else if (kit.Cost > 0)
-                            {
-                                uint credits = player.Player.GetCredits();
-                                if (credits >= kit.Cost)
-                                {
-                                    player.Player.SendChat("request_kit_given_credits", UCWarfare.GetColor("request_kit_given_credits"), requestsign.kit_name, teamcolor,
-                                        kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_credits"));
-                                    KitManager.GiveKit(player, kit);
-                                    player.Player.ChangeCredits(-kit.Cost);
-                                }
-                                else
-                                {
-                                    player.Player.SendChat("request_kit_given_credits_cant_afford", UCWarfare.GetColor("request_kit_given_credits_cant_afford"), requestsign.kit_name, teamcolor,
-                                        kit.Cost.ToString(Data.Locale), UCWarfare.GetColorHex("request_kit_given_credits_cant_afford_credits"));
-                                }
-                            }
-                        } else
-                        {
-                            player.Player.SendChat("request_kit_given_not_owned", UCWarfare.GetColor("request_kit_given_not_owned"), requestsign.kit_name, teamcolor);
-                        }
-                    }
-                } else player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
+                ucplayer.Message("request_e_notlooking");
             }
         }
     }

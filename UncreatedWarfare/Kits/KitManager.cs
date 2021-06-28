@@ -264,7 +264,7 @@ namespace Uncreated.Warfare.Kits
                 F.Log("HAS KIT: player was online", ConsoleColor.DarkYellow);
                 F.Log("HAS KIT: kit name: " + player.KitName, ConsoleColor.DarkYellow);
                 kit = GetObject(k => k.Name == player.KitName);
-                F.Log("HAS KIT: found: " + kit != null, ConsoleColor.DarkYellow);
+                F.Log("HAS KIT: found: " + (kit != null), ConsoleColor.DarkYellow);
                 return kit != null;
             }
         }
@@ -382,6 +382,8 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public float PremiumCost;
         [JsonSettable]
+        public float TeamLimit;
+        [JsonSettable]
         public bool ShouldClearInventory;
         public List<KitItem> Items;
         public List<KitClothing> Clothes;
@@ -403,12 +405,21 @@ namespace Uncreated.Warfare.Kits
             TicketCost = 1;
             IsPremium = false;
             PremiumCost = 0;
+            TeamLimit = 1;
             SignName = DisplayName;
             ShouldClearInventory = true;
             AllowedUsers = new List<ulong>();
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
+        public bool IsLimited(out int currentPlayers, out int allowedPlayers)
+        {
+            var friendlyPlayers = PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team).ToList();
+            allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count);
+            currentPlayers = friendlyPlayers.Where(k => k.KitName == Name).Count();
+            F.Log($"KIT LIMITER: {currentPlayers}/{allowedPlayers} kits in use");
+            return currentPlayers + 1 > allowedPlayers;
+        }
         public enum EClothingType
         {
             SHIRT,
