@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/join <us|ru>";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.join" };
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             SteamPlayer steamplayer = player.Player.channel.owner;
@@ -68,7 +68,7 @@ namespace Uncreated.Warfare.Commands
                             ulong oldgroup = steamplayer.player.quests.groupID.m_SteamID;
                             steamplayer.player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
                             GroupManager.save();
-                            EventFunctions.OnGroupChangedInvoke(steamplayer, oldgroup, steamplayer.player.quests.groupID.m_SteamID);
+                            await EventFunctions.OnGroupChangedInvoke(steamplayer, oldgroup, steamplayer.player.quests.groupID.m_SteamID);
                             steamplayer.SendChat("joined_team", UCWarfare.GetColor("joined_team"),
                                 t1name, TeamManager.Team1ColorHex);
                             F.Log(F.Translate("player_switched_groups_console", 0,

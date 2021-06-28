@@ -33,18 +33,18 @@ namespace Uncreated.Warfare.Tickets
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
 
-        public static void OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
+        public static async Task OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
         {
             if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
             {
                 if (TeamManager.IsTeam1(eventArgs.dead))
                 {
-                    AddTeam1Tickets(-1*kit.TicketCost);
+                    await AddTeam1Tickets(-1*kit.TicketCost);
                     F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
                 else if (TeamManager.IsTeam2(eventArgs.dead))
                 {
-                    AddTeam2Tickets(-1 * kit.TicketCost);
+                    await AddTeam2Tickets(-1 * kit.TicketCost);
                     F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
                 else
@@ -57,18 +57,18 @@ namespace Uncreated.Warfare.Tickets
             F.Log("Team 1 Tickets: " + Team1Tickets);
             F.Log("Team 2 Tickets: " + Team2Tickets);
         }
-        public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
+        public static async Task OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
         {
             if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
             {
                 if (TeamManager.IsTeam1(eventArgs.dead))
                 {
-                    AddTeam1Tickets(-1 * kit.TicketCost);
+                    await AddTeam1Tickets(-1 * kit.TicketCost);
                     F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
                 else if (TeamManager.IsTeam2(eventArgs.dead))
                 {
-                    AddTeam2Tickets(-1 * kit.TicketCost);
+                    await AddTeam2Tickets(-1 * kit.TicketCost);
                     F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
                 }
                 else
@@ -82,17 +82,17 @@ namespace Uncreated.Warfare.Tickets
             F.Log("Team 2 Tickets: " + Team2Tickets);
         }
 
-        private static void OnVehicleExploded(InteractableVehicle vehicle)
+        private static async void OnVehicleExploded(InteractableVehicle vehicle)
         {
             if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
             {
                 if (TeamManager.IsTeam1(vehicle.lockedGroup))
                 {
-                    AddTeam1Tickets(-1 * vehicleData.TicketCost);
+                    await AddTeam1Tickets(-1 * vehicleData.TicketCost);
                 }
                 if (TeamManager.IsTeam2(vehicle.lockedGroup))
                 {
-                    AddTeam2Tickets(-1 * vehicleData.TicketCost);
+                    await AddTeam2Tickets(-1 * vehicleData.TicketCost);
                 }
             }
         }
@@ -123,23 +123,23 @@ namespace Uncreated.Warfare.Tickets
             UpdateUITeam2();
         }
 
-        public static void AddTeam1Tickets(int number)
+        public static async Task AddTeam1Tickets(int number)
         {
             Team1Tickets += number;
             if (Team1Tickets <= 0)
             {
                 Team1Tickets = 0;
-                Data.FlagManager.DeclareWin(TeamManager.Team2ID);
+                await Data.FlagManager.DeclareWin(TeamManager.Team2ID);
             }
             UpdateUITeam1();
         }
-        public static void AddTeam2Tickets(int number)
+        public static async Task AddTeam2Tickets(int number)
         {
             Team2Tickets += number;
             if (Team2Tickets <= 0)
             {
                 Team2Tickets = 0;
-                Data.FlagManager.DeclareWin(TeamManager.Team1ID);
+                await Data.FlagManager.DeclareWin(TeamManager.Team1ID);
             }
             UpdateUITeam2();
         }

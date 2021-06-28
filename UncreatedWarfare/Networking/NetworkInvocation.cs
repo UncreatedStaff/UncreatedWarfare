@@ -10,13 +10,12 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocationRaw<T>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private Reader<T> reader;
         private Func<T, byte[]> writer;
-        public NetworkInvocationRaw(ECall call, SendTask send, Reader<T> read, Func<T, byte[]> write)
+        public NetworkInvocationRaw(ECall call, Reader<T> read, Func<T, byte[]> write)
         {
             this.call = call;
-            this.send = send;
             this.reader = read;
             this.writer = write;
         }
@@ -39,11 +38,10 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation
     {
         private readonly ECall call;
-        private readonly SendTask send;
-        public NetworkInvocation(ECall call, SendTask send)
+        private SendTask send { get => Client.Send; }
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
         }
         public async Task Invoke()
         {
@@ -53,13 +51,12 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Reader<T1> reader1;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.reader1 = ByteMath.GetReadFunction<T1>();
         }
@@ -84,15 +81,14 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Reader<T1> reader1;
         private readonly Reader<T2> reader2;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.reader1 = ByteMath.GetReadFunction<T1>();
@@ -126,17 +122,16 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
         private readonly Reader<T1> reader1;
         private readonly Reader<T2> reader2;
         private readonly Reader<T3> reader3;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -179,7 +174,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -188,10 +183,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T2> reader2;
         private readonly Reader<T3> reader3;
         private readonly Reader<T4> reader4;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -245,7 +239,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4, T5>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -256,10 +250,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T3> reader3;
         private readonly Reader<T4> reader4;
         private readonly Reader<T5> reader5;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -321,7 +314,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4, T5, T6>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -334,10 +327,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T4> reader4;
         private readonly Reader<T5> reader5;
         private readonly Reader<T6> reader6;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -407,7 +399,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -422,10 +414,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T5> reader5;
         private readonly Reader<T6> reader6;
         private readonly Reader<T7> reader7;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -503,7 +494,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -520,10 +511,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T6> reader6;
         private readonly Reader<T7> reader7;
         private readonly Reader<T8> reader8;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -609,7 +599,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8, T9>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -628,10 +618,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T7> reader7;
         private readonly Reader<T8> reader8;
         private readonly Reader<T9> reader9;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -725,7 +714,7 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
     {
         private ECall call;
-        private SendTask send;
+        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -746,10 +735,9 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T8> reader8;
         private readonly Reader<T9> reader9;
         private readonly Reader<T10> reader10;
-        public NetworkInvocation(ECall call, SendTask send)
+        public NetworkInvocation(ECall call)
         {
             this.call = call;
-            this.send = send;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -810,8 +798,8 @@ namespace Uncreated.Networking.Invocations
         {
             try
             {
-                int i = 0, size = 0;
-                arg1 = reader1.Invoke(bytes, 0, out size);
+                int i = 0;
+                arg1 = reader1.Invoke(bytes, 0, out int size);
                 i += size;
                 arg2 = reader2.Invoke(bytes, i, out size);
                 i += size;

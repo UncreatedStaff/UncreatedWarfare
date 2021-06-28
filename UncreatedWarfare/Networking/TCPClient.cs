@@ -15,20 +15,21 @@ namespace Uncreated.Networking
 {
     public static class Client
     {
-        public static SendTask Send;
+        public static SendTask Send { get => _send; }
+        public static SendTask _send;
         #region INVOCATIONS
         // Identifying
         public static NetworkInvocation<string> IdentifyInvoc = 
-            new NetworkInvocation<string>(ECall.IDENTIFY_TO_SERVER, Send);
+            new NetworkInvocation<string>(ECall.IDENTIFY_TO_SERVER);
         // Shutting down
         public static NetworkInvocation<ulong, string> ShuttingDownInvoc =
-            new NetworkInvocation<ulong, string>(ECall.SERVER_SHUTTING_DOWN, Send);
+            new NetworkInvocation<ulong, string>(ECall.SERVER_SHUTTING_DOWN);
         // Starting up
         public static NetworkInvocation<EStartupStep> StartingUpInvoc = 
-            new NetworkInvocation<EStartupStep>(ECall.SERVER_STARTING_UP, Send);
+            new NetworkInvocation<EStartupStep>(ECall.SERVER_STARTING_UP);
         // Player List
         public static NetworkInvocationRaw<List<FPlayerName>> PlayerListInvoc =
-            new NetworkInvocationRaw<List<FPlayerName>>(ECall.PLAYER_LIST, Send, 
+            new NetworkInvocationRaw<List<FPlayerName>>(ECall.PLAYER_LIST, 
                 (byte[] arr, int index, out int size) =>
             {
                 if (ByteMath.ReadUInt8(out byte player_count, 0, arr))
@@ -67,73 +68,73 @@ namespace Uncreated.Networking
                 });
         // Player Joined
         public static NetworkInvocationRaw<FPlayerName> PlayerJoinedInvoc = 
-            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_JOINED, Send, 
+            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_JOINED, 
                 (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Player Left
         public static NetworkInvocationRaw<FPlayerName> PlayerLeftInvoc =
-            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_LEFT, Send,
+            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_LEFT,
                 (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Username Updated
         public static NetworkInvocationRaw<FPlayerName> PlayerUpdatedUsernameInvoc =
-            new NetworkInvocationRaw<FPlayerName>(ECall.USERNAME_UPDATED, Send,
+            new NetworkInvocationRaw<FPlayerName>(ECall.USERNAME_UPDATED,
                 (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Banned Log
         public static NetworkInvocation<ulong, ulong, string, uint, DateTime> PlayerBannedInvoc =
-            new NetworkInvocation<ulong, ulong, string, uint, DateTime>(ECall.LOG_BAN, Send);
+            new NetworkInvocation<ulong, ulong, string, uint, DateTime>(ECall.LOG_BAN);
         // Kicked Log
         public static NetworkInvocation<ulong, ulong, string, DateTime> PlayerKickedInvoc =
-            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.LOG_KICK, Send);
+            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.LOG_KICK);
         // BE Kicked Log
         public static NetworkInvocation<ulong, string, DateTime> PlayerBEKickedInvoc =
-            new NetworkInvocation<ulong, string, DateTime>(ECall.LOG_BATTLEYEKICK, Send);
+            new NetworkInvocation<ulong, string, DateTime>(ECall.LOG_BATTLEYEKICK);
         // Teamkilled Log
         public static NetworkInvocation<ulong, ulong, ulong, string, DateTime> PlayerTeamkilledInvoc =
-            new NetworkInvocation<ulong, ulong, ulong, string, DateTime>(ECall.LOG_TEAMKILL, Send);
+            new NetworkInvocation<ulong, ulong, ulong, string, DateTime>(ECall.LOG_TEAMKILL);
         // Unbanned Log
         public static NetworkInvocation<ulong, ulong, DateTime> PlayerUnbannedInvoc =
-            new NetworkInvocation<ulong, ulong, DateTime>(ECall.LOG_UNBAN, Send);
+            new NetworkInvocation<ulong, ulong, DateTime>(ECall.LOG_UNBAN);
         // Warned Log
         public static NetworkInvocation<ulong, ulong, string, DateTime> PlayerWarnedInvoc =
-            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.LOG_WARNING, Send);
+            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.LOG_WARNING);
         // On Duty
         public static NetworkInvocation<ulong, bool, DateTime> PlayerOnDutyInvoc = 
-            new NetworkInvocation<ulong, bool, DateTime>(ECall.ON_DUTY, Send);
+            new NetworkInvocation<ulong, bool, DateTime>(ECall.ON_DUTY);
         // Off Duty
         public static NetworkInvocation<ulong, bool, DateTime> PlayerOffDutyInvoc = 
-            new NetworkInvocation<ulong, bool, DateTime>(ECall.OFF_DUTY, Send);
+            new NetworkInvocation<ulong, bool, DateTime>(ECall.OFF_DUTY);
         // Invoke Ban
         public static NetworkInvocation<ulong, ulong, string, uint, DateTime> InvokeBanInvoc =
-            new NetworkInvocation<ulong, ulong, string, uint, DateTime>(ECall.INVOKE_BAN, Send);
+            new NetworkInvocation<ulong, ulong, string, uint, DateTime>(ECall.INVOKE_BAN);
         // Invoke Kick
         public static NetworkInvocation<ulong, ulong, string, DateTime> InvokeKickInvoc =
-            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_KICK, Send);
+            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_KICK);
         // Invoke Warning
         public static NetworkInvocation<ulong, ulong, string, DateTime> InvokeWarnInvoc =
-            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_WARN, Send);
+            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_WARN);
         // Invoke Unban
         public static NetworkInvocation<ulong, ulong, DateTime> InvokeUnbanInvoc =
-            new NetworkInvocation<ulong, ulong, DateTime>(ECall.INVOKE_UNBAN, Send);
+            new NetworkInvocation<ulong, ulong, DateTime>(ECall.INVOKE_UNBAN);
         // Invoke Give Kit
         public static NetworkInvocation<ulong, ulong, string, DateTime> InvokeGiveKitInvoc =
-            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_GIVE_KIT, Send);
+            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_GIVE_KIT);
         // Invoke Revoke Kit
         public static NetworkInvocation<ulong, ulong, string, DateTime> InvokeRevokeKitInvoc =
-            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_REVOKE_KIT, Send);
+            new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.INVOKE_REVOKE_KIT);
         // Invoke Instant Shutdown
         public static NetworkInvocation<ulong, string> InvokeShutdownInvoc =
-            new NetworkInvocation<ulong, string>(ECall.INVOKE_SHUTDOWN, Send);
+            new NetworkInvocation<ulong, string>(ECall.INVOKE_SHUTDOWN);
         // Invoke Shutdown After Current Game
         public static NetworkInvocation<ulong, string> InvokeShutdownAfterGameInvoc =
-            new NetworkInvocation<ulong, string>(ECall.INVOKE_SHUTDOWN_AFTER_GAME, Send);
+            new NetworkInvocation<ulong, string>(ECall.INVOKE_SHUTDOWN_AFTER_GAME);
         // Invoke Set Officer Level
         public static NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, int, byte, DateTime> InvokeSetOfficerLevelInvoc =
-            new NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, int, byte, DateTime>(ECall.INVOKE_SET_OFFICER_LEVEL, Send);
+            new NetworkInvocation<ulong, ulong, Warfare.Kits.EBranch, int, byte, DateTime>(ECall.INVOKE_SET_OFFICER_LEVEL);
         // Invoke Server Reloading
         public static NetworkInvocation<ulong, string> InvokeServerReloadingInvoc =
-            new NetworkInvocation<ulong, string>(ECall.SERVER_RELOADING, Send);
+            new NetworkInvocation<ulong, string>(ECall.SERVER_RELOADING);
         #endregion
         public static async Task Identify() =>
             await IdentifyInvoc.Invoke(TCPClient.I.Identity);
@@ -144,7 +145,7 @@ namespace Uncreated.Networking
         public static async Task SendPlayerList(List<FPlayerName> players) =>
             await PlayerListInvoc.Invoke(players);
         public static async Task SendPlayerJoined(FPlayerName player) =>
-            await PlayerJoinedInvoc.Invoke(player);
+            await PlayerJoinedInvoc?.Invoke(player);
         public static async Task SendPlayerLeft(FPlayerName player) =>
             await PlayerLeftInvoc.Invoke(player);
         public static async Task SendPlayerUpdatedUsername(FPlayerName player) =>
@@ -186,6 +187,8 @@ namespace Uncreated.Networking
             }
             byte[] data = new byte[message.Length - sizeof(ushort)];
             Array.Copy(message, sizeof(ushort), data, 0, data.Length);
+            Warfare.F.Log(string.Join(",", message));
+            Warfare.F.Log(string.Join(",", data));
             switch (call)
             {
                 case ECall.INVOKE_BAN:
@@ -197,6 +200,7 @@ namespace Uncreated.Networking
 
         private static async Task ReceiveInvokeBan(ulong banned, ulong admin, string reason, uint duration, DateTime timestamp)
         {
+            Warfare.F.Log($"Received ban request for {banned} from {admin} because {reason} for {Warfare.F.GetTimeFromMinutes(duration)} at {timestamp:G}");
             await Task.Yield(); // TODO
         }
     }
@@ -229,14 +233,18 @@ namespace Uncreated.Networking
             this.Port = port;
             this.connection = new ClientConnection(this);
             this.Identity = identitiy;
-            Client.Send = Send;
+            Client._send = Send;
         }
-        public async Task Connect() => await connection?.Connect(true);
+        public async Task Connect(CancellationToken token) => await connection?.Connect(token, true);
         public void Shutdown()
         {
             Warfare.F.Log("Shutting down", ConsoleColor.Magenta);
             connection.socket.Close();
-            connection.socket.Dispose();
+            try
+            {
+                connection.socket.Dispose();
+            }
+            catch (ObjectDisposedException) { }
         }
         public async Task SendMessageAsync(byte[] message) => await connection?.SendMessage(message);
         public static async Task SendMessageAsyncStatic(byte[] message) => await I?.SendMessageAsync(message);
@@ -253,7 +261,7 @@ namespace Uncreated.Networking
             }
             int connection_tries = 0;
             const int max_connection_tries = 10;
-            public async Task Connect(bool first = true)
+            public async Task Connect(CancellationToken token, bool first = true)
             {
                 if (first) connection_tries = 0;
                 if (socket != null)
@@ -287,20 +295,34 @@ namespace Uncreated.Networking
                     if (connection_tries <= max_connection_tries)
                     {
                         Warfare.F.LogWarning($"Unable to connect, retrying ({connection_tries}/{max_connection_tries})", ConsoleColor.DarkYellow);
-                        await Connect(false);
+                        await Connect(token, false);
                     }
                     else Warfare.F.LogError($"Unable to connect after {max_connection_tries} tries.", ConsoleColor.Red);
-
+                    return;
                 }
                 if (!socket.Connected) return;
                 stream = socket.GetStream();
                 while (true)
                 {
-                    int received_bytes_count = await stream.ReadAsync(_buffer, 0, BufferSize);
-                    if (received_bytes_count <= 0) _owner.Shutdown();
-                    byte[] received = new byte[received_bytes_count];
-                    Array.Copy(_buffer, 0, received, 0, received_bytes_count);
-                    await _owner.ReceiveData(received);
+                    try
+                    {
+                        if (stream == default)
+                        {
+                            Warfare.F.LogError("Disconnected from TCP host.");
+                            break;
+                        }
+                        int received_bytes_count = await stream.ReadAsync(_buffer, 0, BufferSize, token);
+                        if (token.IsCancellationRequested) break;
+                        if (received_bytes_count <= 0) _owner.Shutdown();
+                        byte[] received = new byte[received_bytes_count];
+                        Array.Copy(_buffer, 0, received, 0, received_bytes_count);
+                        await _owner.ReceiveData(received);
+                    }
+                    catch (SocketException)
+                    {
+                        Warfare.F.LogError("Disconnected from TCP host.");
+                        break;
+                    }
                 }
             }
             public async Task SendMessage(byte[] message)

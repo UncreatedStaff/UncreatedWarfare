@@ -119,6 +119,7 @@ namespace Uncreated.Warfare
         internal static MethodInfo AppendConsoleMethod;
         internal static ConsoleInputOutputBase defaultIOHandler;
         internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
+        internal static CancellationTokenSource CancelTcp = new CancellationTokenSource();
         public static void LoadColoredConsole()
         {
             CommandWindow.Log("Loading Colored Console Method");
@@ -189,7 +190,7 @@ namespace Uncreated.Warfare
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
                     UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                await Networking.TCPClient.I.Connect();
+                _ = Networking.TCPClient.I.Connect(CancelTcp.Token).ConfigureAwait(false);
             }
             if (UCWarfare.Config.Modules.Kits)
             {

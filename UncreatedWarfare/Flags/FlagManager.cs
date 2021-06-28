@@ -112,11 +112,11 @@ namespace Uncreated.Warfare.Flags
                 }
             }
         }
-        public void Load()
+        public async Task Load()
         {
             LoadAllFlags();
             this.State = EState.PAUSED;
-            OnReady?.Invoke(this, EventArgs.Empty);
+            await OnReady?.Invoke();
         }
         public void AddPlayerOnFlag(Player player, Flag flag) {
             if(OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
@@ -563,7 +563,7 @@ namespace Uncreated.Warfare.Flags
         public static event EventHandler<OnTeamWinEventArgs> OnTeamWinGame;
         public static event EventHandler<OnObjectiveChangeEventArgs> OnObjectiveChange;
         public static event EventHandler<OnStateChangedEventArgs> OnStateChanged;
-        public static event EventHandler OnReady;
+        public static event Networking.EmptyTaskDelegate OnReady;
         public static event EventHandler OnNewGameStarting;
         public static event FlagCapturedHandler OnFlagCaptured;
         public static event FlagNeutralizedHandler OnFlagNeutralized;

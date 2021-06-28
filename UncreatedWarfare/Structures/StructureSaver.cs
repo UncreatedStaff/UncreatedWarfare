@@ -43,9 +43,12 @@ namespace Uncreated.Warfare.Structures
         /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
         public static bool AddStructure(Transform structure, out Structure structureadded, out byte reason)
         {
-            structureadded = default;
             reason = 0;
-            if (structure == default) return false;
+            if (structure == default)
+            {
+                structureadded = default;
+                return false;
+            }
             if (!ObjectExists(x => x != null && x.transform.Position == structure.position && x.transform.Rotation == structure.rotation, out structureadded))
             {
                 try

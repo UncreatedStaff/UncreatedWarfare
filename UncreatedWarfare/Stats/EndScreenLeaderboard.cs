@@ -55,7 +55,7 @@ namespace Uncreated.Warfare.Stats
             if (ShuttingDown)
             {
                 await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
-                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                rtn = await ThreadTool.SwitchToGameThread();
                 Provider.shutdown(0, ShuttingDownMessage);
                 await rtn;
             }
