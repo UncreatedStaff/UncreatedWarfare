@@ -183,7 +183,7 @@ namespace Uncreated.Warfare.Officers
             int a = config.data.FirstStarPoints;
             int d = config.data.PointsIncreasePerStar;
 
-            return unchecked((uint)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
+            return unchecked((uint)Math.Floor(((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
         }
 
         protected override string LoadDefaults() => "[]";

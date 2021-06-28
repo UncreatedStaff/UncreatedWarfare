@@ -37,7 +37,7 @@ namespace Uncreated.Warfare
                 { "team_2", "Russia" },
                 { "team_3", "Admins" },
                 { "neutral", "Neutral" },
-                { "undiscovered_flag", "? ? ?" },
+                { "undiscovered_flag", "<color=#4f4f4f>unknown</color>" },
                 { "ui_capturing", "CAPTURING" },
                 { "ui_losing", "LOSING" },
                 { "ui_clearing", "CLEARING" },
