@@ -28,7 +28,6 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void LoadSpawns()
         {
-            F.Log("Loading vehicle spawns...", ConsoleColor.DarkCyan);
             foreach (VehicleSpawn spawn in Spawns)
             {
                 spawn.Initialize();
@@ -47,7 +46,8 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
                 {
-                    F.Log("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.");
+                    if (UCWarfare.Config.Debug)
+                        F.Log("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.");
                     DeleteSpawn(data.instanceID, EStructType.BARRICADE);
                 }
             }
@@ -58,14 +58,15 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
                 {
-                    F.Log("Vehicle spawn was deregistered because the structure was salvaged or destroyed.");
+                    if (UCWarfare.Config.Debug)
+                        F.Log("Vehicle spawn was deregistered because the structure was salvaged or destroyed.");
                     DeleteSpawn(data.instanceID, EStructType.STRUCTURE);
                 }
             }
         }
         public static void RespawnAllVehicles()
         {
-            F.Log("Respawning vehicles...", ConsoleColor.DarkCyan);
+            F.Log("Respawning vehicles...", ConsoleColor.Magenta);
             VehicleManager.askVehicleDestroyAll();
             ItemManager.askClearAllItems();
             foreach (VehicleSpawn spawn in Spawns)
@@ -264,7 +265,8 @@ namespace Uncreated.Warfare.Vehicles
                 InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(BarricadeData.point.x, BarricadeData.point.y + 5, BarricadeData.point.z), rotation, out uint instanceID);
                 veh.gameObject.AddComponent<SpawnedVehicleComponent>().Owner = veh;
                 LinkNewVehicle(instanceID);
-                F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
+                if(UCWarfare.Config.Debug)
+                    F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
             } else if (type == EStructType.STRUCTURE)
             {
                 if(StructureData == default)
@@ -274,7 +276,8 @@ namespace Uncreated.Warfare.Vehicles
                 InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(StructureData.point.x, StructureData.point.y + 5, StructureData.point.z), rotation, out uint instanceID);
                 veh.gameObject.AddComponent<SpawnedVehicleComponent>().Owner = veh;
                 LinkNewVehicle(instanceID);
-                F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
+                if (UCWarfare.Config.Debug)
+                    F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
             }
         }
         public bool HasLinkedVehicle(out InteractableVehicle vehicle)
@@ -320,7 +323,6 @@ namespace Uncreated.Warfare.Vehicles
         public void Initialize(VehicleSpawn parent)
         {
             this.parent = parent;
-            F.Log("VEHICLE SPAWNER: VehicleSpawn script has been initialized.");
         }
         public void StartRespawnVehicleTimer()
         {
@@ -330,12 +332,10 @@ namespace Uncreated.Warfare.Vehicles
         {
             if (VehicleBay.VehicleExists(parent.VehicleID, out VehicleData data))
             {
-                F.Log($"VEHICLE SPAWNER: starting respawn timer - {data.RespawnTime} seconds");
                 parent.Unlink();
                 yield return new WaitForSeconds(data.RespawnTime);
                 if (parent.IsActive)
                 {
-                    F.Log($"VEHICLE SPAWNER: respawn timer complete, respawning vehicle...");
                     parent.SpawnVehicle();
                 }
             }
@@ -351,7 +351,6 @@ namespace Uncreated.Warfare.Vehicles
             if (VehicleBay.VehicleExists(Owner.id, out VehicleData data))
             {
                 CancelIdleVehicleTimer();
-                F.Log($"VEHICLE SPAWNER: starting idle timer - {data.RespawnTime} seconds");
                 timer = StartCoroutine(IdleRespawnVehicle(data));
             }
         }
@@ -362,7 +361,6 @@ namespace Uncreated.Warfare.Vehicles
                 try
                 {
                     StopCoroutine(timer);
-                    F.Log($"VEHICLE SPAWNER: Canceled idle timer.");
                 }
                 catch { }
             }

@@ -3,7 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-UncreatedWarfare.csproj
 
 # User-specific files
 *.rsuser
@@ -11,6 +10,7 @@ UncreatedWarfare.csproj
 *.user
 *.userosscache
 *.sln.docstates
+*.csproj
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

@@ -227,7 +227,7 @@ namespace Uncreated.Warfare
                 { "lblFOBsDestroyedT2", "RU FOBs Destroyed: " },
                 { "lblTeamkillingCasualties", "Teamkill Casualties: " },
                 { "next_game_start_label", "Next Game Starting In" },
-                { "next_game_start_label_shutting_down", "<color=#00ffff>Shutting Down Because: \"{0}\" In</color>" },
+                { "next_game_start_label_shutting_down", "<color=#00ffff>Shutting Down Because: \"{0}\"</color>" },
                 { "next_game_starting_format", "{0:mm\\:ss}" },
 
                 // SIGNS - must prefix with "sign_" for them to work

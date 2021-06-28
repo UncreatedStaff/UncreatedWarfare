@@ -99,6 +99,7 @@ namespace Uncreated.Warfare.Stats
             else
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", Flags.FlagManager.PROGRESS_CHARS[Flags.FlagManager.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength))].ToString());
             List<KeyValuePair<Player, int>> topkills = Data.GameStats.GetTop5MostKills();
             List<KeyValuePair<Player, float>> topkdr = Data.GameStats.GetTop5KDR();
             List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = Data.GameStats.GetTop5OnPointTime();
@@ -268,6 +269,9 @@ namespace Uncreated.Warfare.Stats
             foreach(SteamPlayer player in Provider.clients)
             {
                 EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(newTime)));
+                int time = Mathf.RoundToInt(SecondsEndGameLength);
+                EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameCircleForeground", 
+                    Flags.FlagManager.PROGRESS_CHARS[Flags.FlagManager.FromMax(Mathf.RoundToInt(time - newTime), time)].ToString());
             }
         }
     }

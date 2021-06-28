@@ -63,7 +63,12 @@ namespace Uncreated.Warfare
         public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID, player.quests.groupID.m_SteamID);
         public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => FromID(player.CSteamID.m_SteamID, player.Player.quests.groupID.m_SteamID);
         public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID, player.player.quests.groupID.m_SteamID);
-        public static UCPlayer FromIRocketPlayer(IRocketPlayer caller) => FromUnturnedPlayer((UnturnedPlayer)caller);
+        public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
+        {
+            if (caller.DisplayName == "Console")
+                return null;
+            else return FromUnturnedPlayer(caller as UnturnedPlayer);
+        }
 
         public static UCPlayer FromName(string name)
         {

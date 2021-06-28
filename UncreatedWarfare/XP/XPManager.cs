@@ -112,7 +112,7 @@ namespace Uncreated.Warfare.XP
         {
             uint requiredXP = 0;
 
-            CommandWindow.Log("balance: " + xpBalance);
+            F.Log("balance: " + xpBalance);
 
             Rank rank = config.data.Ranks.Last();
             nextRank = null;
@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.XP
             {
                 requiredXP += config.data.Ranks[i].XP;
 
-                CommandWindow.Log("required XP: " + requiredXP);
+                F.Log("required XP: " + requiredXP);
 
                 if (xpBalance < requiredXP)
                 {

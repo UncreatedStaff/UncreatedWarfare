@@ -11,14 +11,15 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
+using Uncreated.Warfare.Kits;
 
-namespace Uncreated.Warfare.Kits
+namespace Uncreated.Warfare.Commands
 {
-    public class Command_blank : IRocketCommand
+    public class RequestCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "request";
-        public string Help => "Request a kit by looking at a sign and doing /request.";
+        public string Help => "Request a kit by looking at a sign or request a vehicle by looking at the vehicle, then do /request.";
         public string Syntax => "/request";
         public List<string> Aliases => new List<string>() { };
         public List<string> Permissions => new List<string>() { "uc.request" };
@@ -27,8 +28,8 @@ namespace Uncreated.Warfare.Kits
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
 
-            var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
-            var signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
 
             if (command.Length > 0)
             {
@@ -102,10 +103,10 @@ namespace Uncreated.Warfare.Kits
                     return;
                 }
 
-                var xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam());
-                var rank = XPManager.GetRank(xp, out _, out _);
+                uint xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam());
+                Rank rank = XPManager.GetRank(xp, out _, out _);
 
-                if (rank?.level < kit.RequiredLevel)
+                if (rank == default || rank.level < kit.RequiredLevel)
                 {
                     ucplayer.Message("request_kit_e_wronglevel");
                     return;
@@ -122,20 +123,20 @@ namespace Uncreated.Warfare.Kits
             }
             else if (vehicle != null)
             {
-                if (!VehicleBay.VehicleExists(vehicle.id, out var data))
+                if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
                 {
                     ucplayer.Message("request_vehicle_e_notrequestable");
                     return;
                 }
-                if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out var cooldown, vehicle.id))
+                if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
                 {
                     ucplayer.Message("request_vehicle_e_cooldown", cooldown.Timeleft.ToString());
                     return;
                 }
-                var xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam());
-                var rank = XPManager.GetRank(xp, out _, out _);
+                uint xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam());
+                Rank rank = XPManager.GetRank(xp, out _, out _);
 
-                if (rank?.level < data.RequiredLevel)
+                if (rank == default || rank.level < data.RequiredLevel)
                 {
                     ucplayer.Message("request_vehicle_e_wronglevel", rank.level);
                     return;
@@ -145,12 +146,12 @@ namespace Uncreated.Warfare.Kits
                     ucplayer.Message("request_vehicle_e_wrongbranch", data.RequiredBranch);
                     return;
                 }
-                if (!(vehicle.lockedOwner == CSteamID.Nil && vehicle.lockedGroup == CSteamID.Nil))
+                if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
                 {
                     ucplayer.Message("request_vehicle_e_alreadyrequested");
                     return;
                 }
-                if (vehicle.asset.canBeLocked)
+                if (vehicle.asset != default && vehicle.asset.canBeLocked)
                 {
                     vehicle.tellLocked(player.CSteamID, player.Player.quests.groupID, true);
 
@@ -159,7 +160,7 @@ namespace Uncreated.Warfare.Kits
                     vehicle.updateVehicle();
                     vehicle.updatePhysics();
 
-                    EffectManager.sendEffect((ushort)8, EffectManager.SMALL, vehicle.transform.position);
+                    EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 }
 
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName);
