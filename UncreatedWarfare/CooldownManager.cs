@@ -27,7 +27,7 @@ namespace Uncreated.Warfare
         {
             cooldowns.RemoveAll(c => c.Timeleft.TotalSeconds == 0);
             cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
-            return cooldown == null;
+            return cooldown != null;
         }
         public static void RemoveCooldown(UCPlayer player, ECooldownType type)
         {

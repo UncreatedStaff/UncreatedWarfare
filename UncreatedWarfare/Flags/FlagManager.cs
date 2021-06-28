@@ -140,6 +140,7 @@ namespace Uncreated.Warfare.Flags
             }
         }
         public static int FromMax(int cap) => Math.Abs(cap) >= Flag.MaxPoints ? PROGRESS_CHARS.Length - 1 : ((PROGRESS_CHARS.Length - 1) / Flag.MaxPoints) * Math.Abs(cap);
+        public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? PROGRESS_CHARS.Length - 1 : ((PROGRESS_CHARS.Length - 1) / max) * Math.Abs(cap);
         public void ClearPlayersOnFlag() => OnFlag.Clear();
         public async Task LoadNewFlags()
         {
@@ -215,7 +216,7 @@ namespace Uncreated.Warfare.Flags
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < FlagRotation.Count; i++)
             {
-                sb.Append(i.ToString(Data.Locale) + ") (" + FlagRotation[i].index + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString(Data.Locale) + '\n');
+                sb.Append(i.ToString(Data.Locale) + ") (" + FlagRotation[i].index + ") " + FlagRotation[i].Name + " | Level: " + FlagRotation[i].Level.ToString(Data.Locale) + $" | {(FlagRotation[i].Discovered(1) ? "1" : "-")} {(FlagRotation[i].Discovered(2) ? "2" : "-")}\n");
             }
             F.Log(sb.ToString(), ConsoleColor.Green);
         }
@@ -487,13 +488,11 @@ namespace Uncreated.Warfare.Flags
                                 else if (team == 1 && flag.Owner == 1)
                                     objective = "<color=#ba70cc>´</color>";
                             }
-
-
                             EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
                                 $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" :
                                 $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>",
                                 objective
-                                );
+                            );
                         }
                     }
                 }
@@ -572,7 +571,7 @@ namespace Uncreated.Warfare.Flags
         {
             F.Log(TeamManager.TranslateName(Team, 0) + " just won the game!", ConsoleColor.Cyan);
             foreach (SteamPlayer client in Provider.clients)
-                client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(Team));
+                F.Broadcast("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(Team, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(Team));
             this.State = EState.FINISHED;
             OnTeamWinGame?.Invoke(this, new OnTeamWinEventArgs { team = Team });
             if(showEndScreen)
@@ -589,6 +588,9 @@ namespace Uncreated.Warfare.Flags
                 EndScreen.ShuttingDownPlayer = shutdownPlayer;
                 await EndScreen.EndGame();
                 isScreenUp = true;
+            } else
+            {
+                await EndScreen_OnLeaderboardExpired();
             }
         }
         public async Task StartNextGame()
@@ -603,7 +605,8 @@ namespace Uncreated.Warfare.Flags
         }
         private async Task EndScreen_OnLeaderboardExpired()
         {
-            EndScreen.OnLeaderboardExpired -= EndScreen_OnLeaderboardExpired;
+            if(EndScreen != default)
+                EndScreen.OnLeaderboardExpired -= EndScreen_OnLeaderboardExpired;
             await StartNextGame();
             isScreenUp = false;
         }
@@ -645,33 +648,30 @@ namespace Uncreated.Warfare.Flags
                     await rtn;
                 }
             }
-            else if (newowner == 0)
+            if (oldowner == 1)
             {
-                if (oldowner == 1)
+                int oldindex = ObjectiveT1Index;
+                ObjectiveT1Index = flag.index;
+                if (oldindex != flag.index)
                 {
-                    int oldindex = ObjectiveT1Index;
-                    ObjectiveT1Index = flag.index;
-                    if (oldindex != flag.index)
-                    {
-                        SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
-                        { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
-                        OnFlagNeutralized?.Invoke(flag, 2, 1);
-                        await rtn;
-                    }
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                    { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                    OnFlagNeutralized?.Invoke(flag, 2, 1);
+                    await rtn;
                 }
-                else if (oldowner == 2)
+            }
+            else if (oldowner == 2)
+            {
+                int oldindex = ObjectiveT2Index;
+                ObjectiveT2Index = flag.index;
+                if (oldindex != flag.index)
                 {
-                    int oldindex = ObjectiveT2Index;
-                    ObjectiveT2Index = flag.index;
-                    if (oldindex != flag.index)
-                    {
-                        SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-                        OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
-                        { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
-                        OnFlagNeutralized?.Invoke(flag, 1, 2);
-                        await rtn;
-                    }
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    OnObjectiveChange?.Invoke(this, new OnObjectiveChangeEventArgs
+                    { oldFlagObj = FlagRotation[oldindex], newFlagObj = flag, NewObj = flag.index, OldObj = oldindex, Team = 0 });
+                    OnFlagNeutralized?.Invoke(flag, 1, 2);
+                    await rtn;
                 }
             }
             SendUIParameters t1;
@@ -697,8 +697,6 @@ namespace Uncreated.Warfare.Flags
                         flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
                     SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team);
-
-                        
                 }
             }
             else

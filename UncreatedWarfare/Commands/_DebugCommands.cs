@@ -107,9 +107,26 @@ namespace Uncreated.Warfare.Commands
                     }
                     ulong team = player.GetTeam();
                     if (team == 1)
-                        await flag.CapT1(Flag.MaxPoints - flag.Points - 1);
+                    {
+                        if (flag.Points < 0)
+                        {
+                            await flag.CapT1(Math.Abs(flag.Points));
+                        } else
+                        {
+                            await flag.CapT1(Flag.MaxPoints - flag.Points - 1);
+                        }
+                    }
                     else if (team == 2)
-                        await flag.CapT2(Flag.MaxPoints - flag.Points - 1);
+                    {
+                        if (flag.Points > 0)
+                        {
+                            await flag.CapT2(flag.Points);
+                        }
+                        else
+                        {
+                            await flag.CapT2(Flag.MaxPoints - flag.Points - 2);
+                        }
+                    }
                     else player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
                 }
                 else if (command[0] == "quickwin")

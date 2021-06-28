@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (cmd == "config")
                 {
-                    if (isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
+                    if (isConsole || player.HasPermission("uc.reload.config") || player.HasPermission("uc.reload.all"))
                     {
                         player.Message("Reload all Uncreated Warfare config files.");
                         ReloadConfig();
@@ -83,39 +83,71 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadConfig()
         {
-            SquadManager.config.Reload();
-            TicketManager.config.Reload();
-            XPManager.config.Reload();
-            OfficerManager.config.Reload();
-            FOBManager.config.Reload();
+            try
+            {
+                SquadManager.config.Reload();
+                TicketManager.config.Reload();
+                XPManager.config.Reload();
+                OfficerManager.config.Reload();
+                FOBManager.config.Reload();
 
-            UCWarfare.Instance.Configuration.Load();
+                UCWarfare.Instance.Configuration.Load();
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Execption when reloading config.");
+                F.LogError(ex);
+            }
         }
         internal static void ReloadTranslations()
         {
-            Data.LanguageAliases = JSONMethods.LoadLangAliases();
-            Data.Languages = JSONMethods.LoadLanguagePreferences();
-            Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
-            Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            OnTranslationsReloaded?.Invoke(null, EventArgs.Empty);
+            try
+            {
+                Data.LanguageAliases = JSONMethods.LoadLangAliases();
+                Data.Languages = JSONMethods.LoadLanguagePreferences();
+                Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
+                Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+                OnTranslationsReloaded?.Invoke(null, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            { 
+                F.LogError("Execption when reloading translations.");
+                F.LogError(ex);
+            }
         }
         internal static async Task ReloadFlags()
         {
-            await Data.FlagManager.StartNextGame();
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            OnFlagsReloaded?.Invoke(null, EventArgs.Empty);
-            await rtn;
+            try
+            {
+                await Data.FlagManager.StartNextGame();
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                OnFlagsReloaded?.Invoke(null, EventArgs.Empty);
+                await rtn;
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Execption when reloading flags.");
+                F.LogError(ex);
+            }
         }
         internal static async Task ReloadTCPServer(ulong admin, string reason)
         {
-            await Networking.Client.SendReloading(admin, reason);
-            Networking.TCPClient.I?.Shutdown();
-            Data.CancelTcp.Cancel();
-            Data.CancelTcp.Token.WaitHandle.WaitOne();
-            Data.CancelTcp = new CancellationTokenSource();
-            Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
-                UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-            _ = Networking.TCPClient.I.Connect(Data.CancelTcp.Token).ConfigureAwait(false);
+            try
+            {
+                await Networking.Client.SendReloading(admin, reason);
+                Networking.TCPClient.I?.Shutdown();
+                Data.CancelTcp.Cancel();
+                Data.CancelTcp.Token.WaitHandle.WaitOne();
+                Data.CancelTcp = new CancellationTokenSource();
+                Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
+                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
+                _ = Networking.TCPClient.I.Connect(Data.CancelTcp.Token).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Execption when reloading flags.");
+                F.LogError(ex);
+            }
         }
     }
 }

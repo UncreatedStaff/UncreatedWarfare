@@ -27,7 +27,7 @@ namespace Uncreated.Warfare
             OnlinePlayers = new List<UCPlayer>();
             Team1Players = new List<UCPlayer>();
             Team2Players = new List<UCPlayer>();
-            foreach (var steamplayer in Provider.clients)
+            foreach (SteamPlayer steamplayer in Provider.clients)
                 OnlinePlayers.Add(GetSave(steamplayer.playerID.steamID));
         }
         protected override string LoadDefaults() => "[]";
@@ -96,30 +96,38 @@ namespace Uncreated.Warfare
 
         public static void VerifyTeam(Player nelsonplayer)
         {
-            CommandWindow.Log("Player Team: " + nelsonplayer.GetTeam());
+            if (nelsonplayer == default) return;
 
-            var player = OnlinePlayers.Find(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+            UCPlayer player = OnlinePlayers.Find(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+            if (player == default)
+            {
+                F.LogError("Failed to get UCPlayer instance of " + nelsonplayer.name);
+                return;
+            }
             player.Team = nelsonplayer.GetTeam();
 
             if (TeamManager.IsTeam1(nelsonplayer))
             {
-                Team2Players.RemoveAll(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
-                if (!Team1Players.Exists(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
+                Team2Players.RemoveAll(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+                if (!Team1Players.Exists(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
                 {
                     Team1Players.Add(player);
                 }
             }
             else if (TeamManager.IsTeam2(nelsonplayer))
             {
-                Team1Players.RemoveAll(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
-                if (!Team2Players.Exists(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
+                Team1Players.RemoveAll(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
+                if (!Team2Players.Exists(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
                 {
                     Team2Players.Add(player);
                 }
             }
 
-            CommandWindow.Log("Team 1 Count: " + Team1Players.Count);
-            CommandWindow.Log("Team 2 Count: " + Team2Players.Count);
+            if (UCWarfare.Config.Debug)
+            {
+                F.Log("Team 1 Count: " + Team1Players.Count);
+                F.Log("Team 2 Count: " + Team2Players.Count);
+            }
         }
     }
 }

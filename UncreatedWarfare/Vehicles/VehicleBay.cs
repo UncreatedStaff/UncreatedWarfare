@@ -142,8 +142,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             instanceID = 0;
             if (VehicleBay.VehicleExists(vehicleID, out VehicleData vehicleData))
-            {
-                F.Log("Spawning vehicle...");
+            { 
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
                 instanceID = vehicle.instanceID;
 

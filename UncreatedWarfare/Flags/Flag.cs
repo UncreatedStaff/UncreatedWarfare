@@ -119,10 +119,13 @@ namespace Uncreated.Warfare.Flags
         }
         public async Task ResetFlag()
         {
-            await SetOwner(0);
+            await SetOwner(0, false);
             _points = 0;
+            Hide(1);
+            Hide(2);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            OnReset?.Invoke(this, EventArgs.Empty);
+            if(OnReset != null)
+                OnReset.Invoke(this, EventArgs.Empty);
             await rtn;
         }
         public void Dispose()
@@ -134,13 +137,14 @@ namespace Uncreated.Warfare.Flags
         public ulong Owner {
             get => _owner;
         }
-        public async Task SetOwner(ulong value)
+        public async Task SetOwner(ulong value, bool invokeEvent = true)
         {
             if (_owner != value)
             {
                 ulong oldowner = _owner;
                 _owner = value;
-                await OnOwnerChanged?.Invoke(oldowner, _owner, this);
+                if(invokeEvent)
+                    await OnOwnerChanged?.Invoke(oldowner, _owner, this);
             }
         }
         public void SetOwnerNoEventInvocation(ulong newOwner)
@@ -336,13 +340,13 @@ namespace Uncreated.Warfare.Flags
                 if (value == true && _discovered1 == false)
                 {
                     OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
-                    _discovered1 = value;
+                    _discovered1 = true;
                     return;
                 }
-                if(value == false && _discovered2 == true)
+                if(value == false && _discovered1 == true)
                 {
                     OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
-                    _discovered1 = value;
+                    _discovered1 = false;
                     return;
                 }
             } 
@@ -354,14 +358,14 @@ namespace Uncreated.Warfare.Flags
             {
                 if (value == true && _discovered2 == false)
                 {
-                    OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
-                    _discovered2 = value;
+                    OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 2 });
+                    _discovered2 = true;
                     return;
                 }
                 if (value == false && _discovered2 == true)
                 {
                     OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 2 });
-                    _discovered2 = value;
+                    _discovered2 = false;
                     return;
                 }
             }
@@ -384,6 +388,7 @@ namespace Uncreated.Warfare.Flags
         }
         public void Hide(ulong team)
         {
+            F.Log($"{team} forgot {Name} ({index})", ConsoleColor.Yellow);
             if (team == 1) DiscoveredT1 = false;
             else if (team == 2) DiscoveredT2 = false;
         }

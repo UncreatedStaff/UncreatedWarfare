@@ -135,10 +135,10 @@ namespace Uncreated.Warfare.Squads
 
                 foreach (var rally in rallypoints)
                 {
-                    CommandWindow.Log("Rally point: " + rally.squad.Name);
-                    CommandWindow.Log("Rally point: " + rally.IsActive);
-                    CommandWindow.Log("Rally point: " + rally.structure.instanceID);
-                    CommandWindow.Log("Rally point: " + rally.drop.instanceID);
+                    F.Log("Rally point: " + rally.squad.Name);
+                    F.Log("Rally point: " + rally.IsActive);
+                    F.Log("Rally point: " + rally.structure.instanceID);
+                    F.Log("Rally point: " + rally.drop.instanceID);
                 }
             }
         }
