@@ -15,9 +15,6 @@ namespace Uncreated.Warfare
         {
             yield return new WaitForSeconds(Config.PlayerStatsSettings.StatUpdateFrequency);
             List<SteamPlayer> online = Provider.clients;
-            List<PlayerStatsCoroutineData> data = new List<PlayerStatsCoroutineData>();
-            foreach(SteamPlayer player in online)
-                data.Add(new PlayerStatsCoroutineData(player.playerID.steamID.m_SteamID, player.player.transform.position.x, player.player.transform.position.z));
         }
     }
 }

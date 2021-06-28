@@ -18,23 +18,9 @@ namespace Uncreated.Warfare.Kits
         {
             foreach(RequestSign sign in ActiveObjects)
             {
-                Transform barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(sign.sign_id), sign.transform.Position, sign.transform.Rotation, sign.owner, sign.group);
-                if (barricade == default)
-                    F.LogError($"Failed to spawn sign of id {sign.sign_id}: \"{sign.kit_name}\" at ({Math.Round(sign.transform.position.x, 2)}, " +
-                        $"{Math.Round(sign.transform.position.y, 2)}, {Math.Round(sign.transform.position.z, 2)}.");
-                else
-                {
-                    if(barricade.TryGetComponent(out InteractableSign signobj))
-                    {
-                        signobj.updateText(sign.SignText);
-                        sign.barricadetransform = barricade;
-                        if (BarricadeManager.tryGetInfo(barricade, out byte x, out byte y, out ushort plant, out ushort index, out _))
-                            F.InvokeSignUpdateForAllKits(x, y, plant, index, sign.SignText);
-                    } else
-                    {
-                        F.LogError(sign.kit_name + " is not using a valid sign's id.");
-                    }
-                }
+                sign.SpawnCheck();
+                if (!sign.exists)
+                    F.LogError("Failed to spawn sign " + sign.kit_name);
             }
         }
         public static bool AddRequestSign(InteractableSign sign, out RequestSign signadded)
@@ -54,7 +40,9 @@ namespace Uncreated.Warfare.Kits
             sign.InvokeUpdate();
         }
         public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
-        public static bool SignExists(InteractableSign sign, out RequestSign found) => ObjectExists(s => s != default && sign != default && s.transform == sign.transform, out found);
+        public static bool SignExists(InteractableSign sign, out RequestSign found) => ObjectExists(s => s != default && sign != default && 
+        BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && s.instance_id == region.drops[index].instanceID, out found);
+        public static bool SignExists(uint instance_id, out RequestSign found) => ObjectExists(s => s != default && s.instance_id == instance_id, out found);
         public static bool SignExists(string kitName, out RequestSign sign) => ObjectExists(x => x.kit_name == kitName, out sign);
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
         public static void UpdateSignsWithName(SteamPlayer player, string kitName) => GetObjectsWhere(x => x.kit_name == kitName).ForEach(x => x.InvokeUpdate(player));
@@ -96,32 +84,32 @@ namespace Uncreated.Warfare.Kits
         public ulong group;
         [JsonIgnore]
         public Transform barricadetransform = default;
-
+        public uint instance_id;
+        [JsonIgnore]
+        public bool exists;
         [JsonConstructor]
-        public RequestSign(string kit_name, SerializableTransform transform, ushort sign_id, ulong owner, ulong group)
+        public RequestSign(string kit_name, SerializableTransform transform, ushort sign_id, ulong owner, ulong group, uint instance_id)
         {
             this.kit_name = kit_name;
             this.transform = transform;
             this.sign_id = sign_id;
             this.owner = owner;
             this.group = group;
+            this.instance_id = instance_id;
+            this.exists = false;
         }
         public RequestSign(InteractableSign sign)
         {
-            if (sign == default) throw new ArgumentNullException("sign");
-            this.transform = new SerializableTransform(sign.transform);
-            this.SignText = sign.text;
-            this.group = sign.group.m_SteamID;
-            this.owner = sign.owner.m_SteamID;
+            if (sign == default) throw new ArgumentNullException(nameof(sign));
             if (BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
             {
                 this.sign_id = region.barricades[index].barricade.id;
-            } else if (ushort.TryParse(sign.name, System.Globalization.NumberStyles.Any, Data.Locale, out ushort id))
-            {
-                sign_id = id;
-            }
-            else sign_id = 0;
-            this.barricadetransform = sign.transform;
+                this.instance_id = region.drops[index].instanceID;
+                this.transform = new SerializableTransform(this.instance_id, sign.transform);
+                this.SignText = sign.text;
+                this.group = sign.group.m_SteamID;
+                this.owner = sign.owner.m_SteamID;
+            } else throw new ArgumentNullException(nameof(sign));
         }
         public void InvokeUpdate(SteamPlayer player)
         {
@@ -134,6 +122,36 @@ namespace Uncreated.Warfare.Kits
             if (barricadetransform != default)
                 if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
                     F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
+        }
+        /// <summary>Spawns the sign if it is not already placed.</summary>
+        public void SpawnCheck()
+        {
+            BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+            if (data == default)
+            {
+                this.barricadetransform = BarricadeManager.dropNonPlantedBarricade(
+                    new Barricade(sign_id),
+                    transform.position.Vector3, transform.Rotation, owner, group
+                    );
+                if (BarricadeManager.tryGetInfo(this.barricadetransform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                {
+                    if (region != default)
+                    {
+                        instance_id = region.drops[index].instanceID;
+                        exists = true;
+                        RequestSigns.Save();
+                    }
+                    else
+                    {
+                        exists = false;
+                    }
+                }
+                else
+                {
+                    exists = false;
+                }
+            }
+            else exists = true;
         }
     }
 }

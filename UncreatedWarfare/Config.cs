@@ -120,7 +120,7 @@ namespace Uncreated
             this.EnablePlayerCount = true;
             this.ShowPointsOnUI = true;
             this.HideUnknownFlags = true;
-            this.DiscoveryForesight = 3;
+            this.DiscoveryForesight = 2;
             this.ShowObjectives = true;
             this.AllowPlayersToCaptureInVehicle = false;
             this.RequiredPlayerDifferenceToCapture = 2;

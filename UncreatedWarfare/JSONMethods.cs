@@ -157,6 +157,8 @@ namespace Uncreated.Warfare
         public Vector3 Position { get => position.Vector3; }
         public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.instanceID == b.instanceID;
         public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.instanceID != b.instanceID;
+        public static bool operator ==(SerializableTransform a, Transform b) => a.position == b.position && a.euler_angles == b.rotation.eulerAngles;
+        public static bool operator !=(SerializableTransform a, Transform b) => a.position != b.position || a.euler_angles != b.rotation.eulerAngles;
         public override bool Equals(object obj)
         {
             if (obj == default) return false;

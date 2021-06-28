@@ -181,6 +181,27 @@ namespace Uncreated.Warfare
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
             await rtn;
         }
+        internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
+        {
+            if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure found))
+            {
+                found.transform = new SerializableTransform(instanceID, new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                Structures.StructureSaver.Save();
+            }
+        }
+        internal static void OnPlayerLeavesVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
+        {
+            if(shouldAllow)
+                Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+        }
+        internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
+        {
+            if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.BARRICADE, out Structures.Structure found)) 
+            {
+                found.transform = new SerializableTransform(instanceID, new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                Structures.StructureSaver.Save();
+            }
+        }
         internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
         {
             if (!UCWarfare.Config.AllowBatteryStealing)

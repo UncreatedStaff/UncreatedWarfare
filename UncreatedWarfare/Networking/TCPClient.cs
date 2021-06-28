@@ -135,6 +135,24 @@ namespace Uncreated.Networking
         // Invoke Server Reloading
         public static NetworkInvocation<ulong, string> InvokeServerReloadingInvoc =
             new NetworkInvocation<ulong, string>(ECall.SERVER_RELOADING);
+        // Invoke Give Admin
+        public static NetworkInvocation<ulong, ulong> InvokeGiveAdminInvoc =
+            new NetworkInvocation<ulong, ulong>(ECall.GIVE_ADMIN);
+        // Invoke Give Intern
+        public static NetworkInvocation<ulong, ulong> InvokeGiveInternInvoc =
+            new NetworkInvocation<ulong, ulong>(ECall.GIVE_INTERN);
+        // Invoke Give Helper
+        public static NetworkInvocation<ulong, ulong> InvokeGiveHelperInvoc =
+            new NetworkInvocation<ulong, ulong>(ECall.GIVE_HELPER);        
+        // Invoke Revoke Admin
+        public static NetworkInvocation<ulong, ulong> InvokeRevokeAdminInvoc =
+            new NetworkInvocation<ulong, ulong>(ECall.REVOKE_ADMIN);
+        // Invoke Revoke Intern
+        public static NetworkInvocation<ulong, ulong> InvokeRevokeInternInvoc =
+            new NetworkInvocation<ulong, ulong>(ECall.REVOKE_INTERN);
+        // Invoke Revoke Helper
+        public static NetworkInvocation<ulong, ulong> InvokeRevokeHelperInvoc =
+            new NetworkInvocation<ulong, ulong>(ECall.REVOKE_HELPER);
         #endregion
         public static async Task Identify() =>
             await IdentifyInvoc.Invoke(TCPClient.I.Identity);
@@ -378,7 +396,13 @@ namespace Uncreated.Networking
         INVOKE_SHUTDOWN = 22,
         INVOKE_SHUTDOWN_AFTER_GAME = 23,
         INVOKE_SET_OFFICER_LEVEL = 24,
-        SERVER_RELOADING = 25
+        SERVER_RELOADING = 25,
+        GIVE_ADMIN = 26,
+        GIVE_INTERN = 27,
+        GIVE_HELPER = 28,
+        REVOKE_ADMIN = 29,
+        REVOKE_INTERN = 30,
+        REVOKE_HELPER = 31
     }
     public enum EStartupStep : byte
     {

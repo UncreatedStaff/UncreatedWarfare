@@ -76,7 +76,7 @@ namespace Uncreated.Warfare.Commands
             }
             else if (operation == "v" || operation == "vehicles" || operation == "vehicle")
             {
-                ItemManager.askClearAllItems();
+                VehicleManager.askVehicleDestroyAll();
                 Reply.Invoke("clear_vehicles_cleared", UCWarfare.GetColor("clear_vehicles_cleared"), new object[0]);
             }
             else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" || 

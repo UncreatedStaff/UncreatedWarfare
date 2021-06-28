@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Kits
@@ -23,7 +24,7 @@ namespace Uncreated.Warfare.Kits
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
-            var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
             if (vehicle != null)
             {
@@ -98,7 +99,7 @@ namespace Uncreated.Warfare.Kits
                         {
                             if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
                             {
-                                if (Byte.TryParse(seat, System.Globalization.NumberStyles.Any, Data.Locale, out var index))
+                                if (byte.TryParse(seat, System.Globalization.NumberStyles.Any, Data.Locale, out var index))
                                 {
                                     if (!vehicleData.CrewSeats.Contains(index))
                                     {
@@ -123,7 +124,7 @@ namespace Uncreated.Warfare.Kits
                         {
                             if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
                             {
-                                if (Byte.TryParse(seat, System.Globalization.NumberStyles.Any, Data.Locale, out var index))
+                                if (byte.TryParse(seat, System.Globalization.NumberStyles.Any, Data.Locale, out var index))
                                 {
                                     if (vehicleData.CrewSeats.Contains(index))
                                     {
@@ -166,7 +167,7 @@ namespace Uncreated.Warfare.Kits
                                 if (page == PlayerInventory.AREA)
                                     continue;
 
-                                var pageCount = player.Player.inventory.getItemCount(page);
+                                byte pageCount = player.Player.inventory.getItemCount(page);
 
                                 for (byte index = 0; index < pageCount; index++)
                                 {
@@ -201,15 +202,15 @@ namespace Uncreated.Warfare.Kits
 
                         if (op == "register" || op == "reg")
                         {
-                            if (UInt16.TryParse(ID, System.Globalization.NumberStyles.Any, Data.Locale, out var vehicleID))
+                            if (ushort.TryParse(ID, System.Globalization.NumberStyles.Any, Data.Locale, out var vehicleID))
                             {
-                                var asset = UCAssetManager.FindVehicleAsset(vehicleID);
+                                VehicleAsset asset = UCAssetManager.FindVehicleAsset(vehicleID);
 
                                 if (asset != null)
                                 {
-                                    if (!VehicleSpawner.IsRegistered(barricadeDrop.model.transform, out _))
+                                    if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                                     {
-                                        VehicleSpawner.CreateSpawn(vehicleID, barricadeDrop.model.transform);
+                                        VehicleSpawner.CreateSpawn(barricadeDrop, barricade, vehicleID);
                                         player.Message("vehiclebay_spawn_registered", asset.vehicleName);
                                     }
                                     else
@@ -230,9 +231,9 @@ namespace Uncreated.Warfare.Kits
 
                         if (op == "deregister" || op == "dereg")
                         {
-                            if (VehicleSpawner.IsRegistered(barricadeDrop.model.transform, out _))
+                            if (VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                             {
-                                VehicleSpawner.DeleteSpawn(barricadeDrop.model.transform);
+                                VehicleSpawner.DeleteSpawn(barricade.instanceID, EStructType.BARRICADE);
                                 player.Message("vehiclebay_spawn_remove");
                             }
                             else
@@ -240,11 +241,11 @@ namespace Uncreated.Warfare.Kits
                         }
                         else if (op == "check")
                         {
-                            if (VehicleSpawner.IsRegistered(barricadeDrop.model.transform, out var spawn))
+                            if (VehicleSpawner.IsRegistered(barricade.instanceID, out Vehicles.VehicleSpawn spawn, EStructType.BARRICADE))
                             {
-                                var asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
+                                VehicleAsset asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
                                 if (asset != null)
-                                    player.Message("vehiclebay_check_registered", spawn.BarricadeInstanceID.ToString(), asset.vehicleName, spawn.VehicleID);
+                                    player.Message("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(), asset.vehicleName, spawn.VehicleID);
                                 else
                                     player.Message("vehiclebay_e_idnotfound", spawn.VehicleID);
                             }
@@ -260,7 +261,7 @@ namespace Uncreated.Warfare.Kits
                 else
                     player.Message("vehiclebay_e_novehicle");
             }
-            else
+            else // check for structure
             {
                 StructureData structure = UCBarricadeManager.GetStructureDataFromLook(player, out StructureDrop structureDrop);
                 if (structure != default)
@@ -274,15 +275,15 @@ namespace Uncreated.Warfare.Kits
 
                             if (op == "register" || op == "reg")
                             {
-                                if (UInt16.TryParse(ID, System.Globalization.NumberStyles.Any, Data.Locale, out var vehicleID))
+                                if (ushort.TryParse(ID, System.Globalization.NumberStyles.Any, Data.Locale, out var vehicleID))
                                 {
-                                    var asset = UCAssetManager.FindVehicleAsset(vehicleID);
+                                    VehicleAsset asset = UCAssetManager.FindVehicleAsset(vehicleID);
 
                                     if (asset != null)
                                     {
-                                        if (!VehicleSpawner.IsRegistered(structureDrop.model.transform, out _))
+                                        if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                                         {
-                                            VehicleSpawner.CreateSpawn(vehicleID, structureDrop.model.transform);
+                                            VehicleSpawner.CreateSpawn(structureDrop, structure, vehicleID);
                                             player.Message("vehiclebay_spawn_registered", asset.vehicleName);
                                         }
                                         else
@@ -303,9 +304,9 @@ namespace Uncreated.Warfare.Kits
 
                             if (op == "deregister" || op == "dereg")
                             {
-                                if (VehicleSpawner.IsRegistered(structureDrop.model.transform, out _))
+                                if (VehicleSpawner.IsRegistered(structureDrop.instanceID, out _, EStructType.STRUCTURE))
                                 {
-                                    VehicleSpawner.DeleteSpawn(structureDrop.model.transform);
+                                    VehicleSpawner.DeleteSpawn(structureDrop.instanceID, EStructType.STRUCTURE);
                                     player.Message("vehiclebay_spawn_remove");
                                 }
                                 else
@@ -313,11 +314,11 @@ namespace Uncreated.Warfare.Kits
                             }
                             else if (op == "check")
                             {
-                                if (VehicleSpawner.IsRegistered(structureDrop.model.transform, out var spawn))
+                                if (VehicleSpawner.IsRegistered(structureDrop.instanceID, out var spawn, EStructType.STRUCTURE))
                                 {
                                     var asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
                                     if (asset != null)
-                                        player.Message("vehiclebay_check_registered", spawn.BarricadeInstanceID.ToString(), asset.vehicleName, spawn.VehicleID);
+                                        player.Message("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(), asset.vehicleName, spawn.VehicleID);
                                     else
                                         player.Message("vehiclebay_e_idnotfound", spawn.VehicleID);
                                 }

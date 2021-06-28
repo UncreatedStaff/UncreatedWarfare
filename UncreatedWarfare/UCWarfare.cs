@@ -104,7 +104,7 @@ namespace Uncreated.Warfare
             F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
             ReplaceBarricadesAndStructures();
             await Data.FlagManager.Load(); // starts new game
-            VehicleSpawner.RespawnAllVehicles();
+            Data.VehicleSpawnSaver.OnLevelLoaded();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
             await rtn;
             if (Provider.clients.Count > 0)
@@ -116,8 +116,41 @@ namespace Uncreated.Warfare
         }
         public static void ReplaceBarricadesAndStructures()
         {
-            BarricadeManager.askClearAllBarricades();
-            StructureManager.askClearAllStructures();
+            for (byte x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (byte y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    for (ushort i = 0; i < BarricadeManager.regions[x, y].barricades.Count; i++)
+                    {
+                        uint instid = BarricadeManager.regions[x, y].barricades[i].instanceID;
+                        if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
+                        {
+                            if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
+                                storage.despawnWhenDestroyed = true;
+                            BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y], x, y, ushort.MaxValue, i);
+                        }
+                    }
+                    for (ushort i = 0; i < StructureManager.regions[x, y].structures.Count; i++)
+                    {
+                        uint instid = StructureManager.regions[x, y].structures[i].instanceID;
+                        if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
+                            StructureManager.destroyStructure(StructureManager.regions[x, y], x, y, i, Vector3.zero);
+                    }
+                }
+            }
+            for (ushort vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
+            {
+                for (ushort i = 0; i < BarricadeManager.vehicleRegions[vr].barricades.Count; i++)
+                {
+                    uint instid = BarricadeManager.vehicleRegions[vr].barricades[i].instanceID;
+                    if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
+                    {
+                        if (BarricadeManager.vehicleRegions[vr].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
+                            storage.despawnWhenDestroyed = true;
+                        BarricadeManager.destroyBarricade(BarricadeManager.vehicleRegions[vr], 0, 0, vr, i);
+                    }
+                }
+            }
             RequestSigns.DropAllSigns();
             StructureSaver.DropAllStructures();
         }
@@ -149,6 +182,9 @@ namespace Uncreated.Warfare
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             FlagManager.OnFlagCaptured += EventFunctions.OnFlagCaptured;
             FlagManager.OnFlagNeutralized += EventFunctions.OnFlagNeutralized;
+            BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
+            StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
+            VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
         }
         private void UnsubscribeFromEvents()
         {
@@ -170,6 +206,9 @@ namespace Uncreated.Warfare
             Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
+            BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
+            StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
+            VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;
@@ -212,6 +251,7 @@ namespace Uncreated.Warfare
             Data.ReviveManager?.Dispose();
             Data.FOBManager?.Dispose();
             Data.Whitelister?.Dispose();
+            Data.VehicleSpawnSaver?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);

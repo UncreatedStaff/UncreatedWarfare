@@ -188,6 +188,7 @@ namespace Uncreated.Warfare
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnDeathNotSuicide?.Invoke(this, parameters);
             await rtn;
             await TicketManager.OnPlayerDeath(parameters);

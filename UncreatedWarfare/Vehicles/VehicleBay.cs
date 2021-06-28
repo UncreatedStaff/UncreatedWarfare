@@ -137,15 +137,11 @@ namespace Uncreated.Warfare.Vehicles
 
         public static void AddCrewmanSeat(ushort vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
         public static void RemoveCrewmanSeat(ushort vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
-
-        public static void SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
+        /// <summary>Level must be loaded.</summary>
+        public static InteractableVehicle SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
             instanceID = 0;
-
-            if (!Level.isLoaded)
-                return;
-
-            if (VehicleBay.VehicleExists(vehicleID, out var vehicleData))
+            if (VehicleBay.VehicleExists(vehicleID, out VehicleData vehicleData))
             {
                 F.Log("Spawning vehicle...");
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
@@ -173,10 +169,12 @@ namespace Uncreated.Warfare.Vehicles
                     vehicle.updateVehicle();
                     vehicle.updatePhysics();
                 }
+                return vehicle;
             }
             else
             {
                 F.Log($"VEHICLE SPAWN ERROR: {UCAssetManager.FindVehicleAsset(vehicleID).vehicleName} has not been registered in the VehicleBay.");
+                return null;
             }
         }
 

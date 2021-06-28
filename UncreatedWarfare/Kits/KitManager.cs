@@ -264,7 +264,7 @@ namespace Uncreated.Warfare.Kits
                 F.Log("HAS KIT: player was online", ConsoleColor.DarkYellow);
                 F.Log("HAS KIT: kit name: " + player.KitName, ConsoleColor.DarkYellow);
                 kit = GetObject(k => k.Name == player.KitName);
-                F.Log("HAS KIT: found: " + kit != null, ConsoleColor.DarkYellow);
+                F.Log("HAS KIT: found: " + (kit != null).ToString(), ConsoleColor.DarkYellow);
                 return kit != null;
             }
         }
@@ -289,7 +289,7 @@ namespace Uncreated.Warfare.Kits
                     k.SignTexts.Remove(language);
                     k.SignTexts.Add(language, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>");
                     F.Log(k.SignName);
-                    if (RequestSigns.SignExists(k.Name, out RequestSign sign)) sign.InvokeUpdate();
+                    RequestSigns.UpdateSignsWithName(k.Name);
                 });
                 return true;
             }

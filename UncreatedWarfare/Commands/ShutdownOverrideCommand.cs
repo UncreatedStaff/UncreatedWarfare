@@ -45,7 +45,10 @@ namespace Uncreated.Warfare.Commands
                 }
                 StringBuilder sb = new StringBuilder();
                 for (int i = 1; i < command.Length; i++)
-                    sb.Append((i == 1 ? '\0' : ' ') + command[i]);
+                {
+                    if (i != 1) sb.Append(' ');
+                    sb.Append(command[i]);
+                }
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
@@ -95,6 +98,14 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("shutdown_not_server", UCWarfare.GetColor("defaulterror"));
                     return;
                 }
+                if (command.Length == 0)
+                {
+                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    await Networking.Client.SendShuttingDown(0, "None specified.");
+                    await rtn;
+                    Provider.shutdown(0);
+                    return;
+                }
                 string option = command[0].ToLower();
                 if (command.Length < 2 && option != "cancel" && option != "abort")
                 {
@@ -103,7 +114,10 @@ namespace Uncreated.Warfare.Commands
                 }
                 StringBuilder sb = new StringBuilder();
                 for (int i = 1; i < command.Length; i++)
-                    sb.Append((i == 1 ? '\0' : ' ') + command[i]);
+                {
+                    if (i != 1) sb.Append(' ');
+                    sb.Append(command[i]);
+                }
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {

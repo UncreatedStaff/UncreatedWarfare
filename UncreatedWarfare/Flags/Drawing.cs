@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Flags
                     SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
                 SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
                 if (player != default)
-                    player.SendChat("Picture finished generating, check the Config\\Flags\\Presets folder menu.", UCWarfare.GetColor("default"));
+                    player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
             }
             else
             {
@@ -95,7 +95,7 @@ namespace Uncreated.Warfare.Flags
                                 SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
                             SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
                             if (player != default)
-                                player.SendChat("Picture finished generating, check the Config\\Flags\\Presets folder menu.", UCWarfare.GetColor("default"));
+                                player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
                             overlayStep = 0;
                         }
                     }
@@ -173,7 +173,7 @@ namespace Uncreated.Warfare.Flags
             {
                 img.Apply();
                 Texture2D flipped = F.FlipVertical(img);
-                F.SavePhotoToDisk(Data.FlagStorage + (filename == default ? "zonearea.png" : filename + ".png"), flipped);
+                F.SavePhotoToDisk(filename == default ? Data.FlagStorage + "zonearea.png" : filename + ".png", flipped);
                 UnityEngine.Object.Destroy(flipped);
                 UnityEngine.Object.Destroy(img);
                 complete = true;

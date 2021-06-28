@@ -17,77 +17,55 @@ namespace Uncreated.Warfare.Structures
         {
             foreach (Structure structure in ActiveObjects)
             {
-                if(structure.Asset is ItemBarricadeAsset barricadeasset)
-                {
-                    Transform barricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(structure.id, 100, structure.Metadata, barricadeasset), 
-                        structure.transform.Position, structure.transform.Rotation, structure.owner, structure.group);
-                    if (barricade == default)
-                        F.LogError($"Failed to spawn barricade of id {structure.id}: \"{structure.Asset.itemName}\" at ({Math.Round(structure.transform.position.x, 2)}, " +
-                            $"{Math.Round(structure.transform.position.y, 2)}, {Math.Round(structure.transform.position.z, 2)}).");
-                } else if (structure.Asset is ItemStructureAsset structureasset)
-                {
-                    if(!StructureManager.dropStructure(new SDG.Unturned.Structure(structure.id, 100, structureasset),
-                        structure.transform.Position, structure.transform.euler_angles.x, structure.transform.euler_angles.y, structure.transform.euler_angles.z, 
-                        structure.owner, structure.group))
-                    {
-                        F.LogError($"Failed to spawn structure of id {structure.id}: \"{structure.Asset.itemName}\" at ({Math.Round(structure.transform.position.x, 2)}, " +
-                            $"{Math.Round(structure.transform.position.y, 2)}, {Math.Round(structure.transform.position.z, 2)}).");
-                    }
-                }
+                structure.SpawnCheck();
+                if (!structure.exists)
+                    F.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
             }
         }
-        /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
-        public static bool AddStructure(Interactable barricade, out Structure structureadded, out byte reason) => AddStructure(barricade.transform, out structureadded, out reason);
-        /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
-        public static bool AddStructure(Interactable2 structure, out Structure structureadded, out byte reason) => AddStructure(structure.transform, out structureadded, out reason);
-        /// <summary>0: success, 1: barricade not found, 2: vehicle inputted, 3: unknown error, 4: already exists</summary>
-        public static bool AddStructure(Transform structure, out Structure structureadded, out byte reason)
+        public static bool AddStructure(StructureDrop drop, StructureData data, out Structure structureadded)
         {
-            reason = 0;
-            if (structure == default)
+            if (data == default || drop == default)
             {
                 structureadded = default;
                 return false;
             }
-            if (!ObjectExists(x => x != null && x.transform.Position == structure.position && x.transform.Rotation == structure.rotation, out structureadded))
+            if (!ObjectExists(s => s != null && s.instance_id == drop.instanceID, out Structure structure))
             {
-                try
-                {
-                    structureadded = new Structure(structure);
-                }
-                catch (ArgumentException ex)
-                {
-                    switch (ex.Message)
-                    {
-                        case Structure.ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND:
-                            F.Log($"Structure not found at ({Math.Round(structure.position.x, 2)}, " +
-                                    $"{Math.Round(structure.position.y, 2)}, {Math.Round(structure.position.z, 2)}).");
-                            reason = 1;
-                            return false;
-                        case Structure.ARGUMENT_EXCEPTION_VEHICLE_SAVED:
-                            F.Log($"A vehicle was attempted to add to the structure list.");
-                            reason = 2;
-                            return false;
-                    }
-                }
-                if (structureadded == default)
-                {
-                    reason = 3;
-                    return false;
-                }
-                AddObjectToSave(structureadded);
-                return true;
+                structureadded = AddObjectToSave(new Structure(drop, data));
+                return structureadded != default;
+            } else
+            {
+                structureadded = default;
+                return false;
             }
-            else reason = 4;
-            return false;
         }
-        public static void RemoveStructure(Structure structure) => RemoveWhere(x => structure != default && x != default && x.transform == structure.transform);
-        private static bool StructureExists(Transform barricade, out Structure found) => ObjectExists(s => s.transform == barricade, out found);
-        public static bool StructureExists(Interactable2 structure, out Structure found) => StructureExists(structure.transform, out found);
-        public static bool StructureExists(Interactable barricade, out Structure found) => StructureExists(barricade.transform, out found);
-        public static bool StructureExists(SerializableTransform barricade, out Structure found) => ObjectExists(s => s.transform == barricade, out found);
+        public static bool AddStructure(BarricadeDrop drop, BarricadeData data, out Structure structureadded)
+        {
+            if (data == default || drop == default)
+            {
+                structureadded = default;
+                return false;
+            }
+            if (!ObjectExists(s => s != null && s.instance_id == drop.instanceID, out Structure structure))
+            {
+                structureadded = AddObjectToSave(new Structure(drop, data));
+                return structureadded != default;
+            }
+            else
+            {
+                structureadded = default;
+                return false;
+            }
+        }
+        public static void RemoveStructure(Structure structure) => RemoveWhere(x => structure != default && x != default && x.instance_id == structure.instance_id);
+        public static bool StructureExists(uint instance_id, EStructType type, out Structure found) => ObjectExists(s => s.instance_id == instance_id && s.type == type, out found);
         public static void SetOwner(Structure structure, ulong newOwner) => SetProperty(structure, nameof(structure.owner), newOwner, out _, out _, out _);
         public static void SetGroupOwner(Structure structure, ulong group) => SetProperty(structure, nameof(structure.group), group, out _, out _, out _);
+    }
+    public enum EStructType : byte
+    {
+        STRUCTURE = 1,
+        BARRICADE = 2
     }
 
     public class Structure
@@ -126,140 +104,140 @@ namespace Uncreated.Warfare.Structures
         private byte[] _metadata;
         public string state;
         public SerializableTransform transform;
+        public uint instance_id;
+        public EStructType type;
         [JsonSettable]
         public ulong owner;
         [JsonSettable]
         public ulong group;
+        [JsonIgnore]
+        public bool exists;
         [JsonConstructor]
-        public Structure(ushort id, string state, SerializableTransform transform, ulong owner, ulong group)
+        public Structure(ushort id, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
         {
             this.id = id;
             this.state = state;
-            this.transform = transform;
+            this.type = type;
+            this.instance_id = instance_id;
+            if (type == EStructType.BARRICADE)
+            {
+                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                if (drop == default)
+                {
+                    this.transform = transform;
+                    exists = false;
+                } else
+                {
+                    this.transform = new SerializableTransform(data.instanceID, drop.model.transform);
+                    exists = true;
+                }
+            } 
+            else if (type == EStructType.STRUCTURE)
+            {
+                StructureData data = F.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                if (drop == default)
+                {
+                    this.transform = transform;
+                    exists = false;
+                }
+                else
+                {
+                    this.transform = new SerializableTransform(data.instanceID, drop.model.transform);
+                    exists = true;
+                }
+            } 
+            else exists = false;
             this.owner = owner;
             this.group = group;
+            exists = false;
         }
-        public Structure(Transform transform)
+        /// <summary>Spawns the structure if it is not already placed.</summary>
+        public void SpawnCheck()
         {
-            if(transform.TryGetComponent(out Interactable interactable))
+            if (type == EStructType.BARRICADE)
             {
-                if(interactable is InteractableVehicle)
-                    throw new ArgumentException(ARGUMENT_EXCEPTION_VEHICLE_SAVED, "transform");
-                if (BarricadeManager.tryGetInfo(transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                if (data == default)
                 {
-                    BarricadeData data = region.barricades[index];
-                    this.id = data.barricade.id;
-                    this.state = Convert.ToBase64String(data.barricade.state);
-                    this._metadata = data.barricade.state;
-                    this.transform = new SerializableTransform(transform);
-                    this.owner = data.owner;
-                    this.group = data.group;
-                }
-                else
-                {
-                    throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "transform");
-                }
-
-            } else if (transform.TryGetComponent(out Interactable2 structure))
-            {
-                if (structure is Interactable2SalvageBarricade)
-                {
-                    if (BarricadeManager.tryGetInfo(structure.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                    Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
+                        new Barricade(id, ushort.MaxValue, Metadata, Asset as ItemBarricadeAsset),
+                        transform.position.Vector3, transform.Rotation, owner, group
+                        );
+                    if (BarricadeManager.tryGetInfo(newBarricade, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
                     {
-                        BarricadeData data = region.barricades[index];
-                        this.id = data.barricade.id;
-                        this.state = Convert.ToBase64String(data.barricade.state);
-                        this._metadata = data.barricade.state;
-                        this.transform = new SerializableTransform(transform);
-                        this.owner = data.owner;
-                        this.group = data.group;
+                        if (newBarricade.TryGetComponent(out InteractableSign sign))
+                        {
+                            F.InvokeSignUpdateForAll(x, y, plant, index, sign.text);
+                        }
+                        if (region != default)
+                        {
+                            instance_id = region.drops[index].instanceID;
+                            exists = true;
+                            StructureSaver.Save();
+                        }
+                        else
+                        {
+                            exists = false;
+                        }
                     }
                     else
                     {
-                        throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "transform");
+                        exists = false;
                     }
                 }
-                else if (structure is Interactable2SalvageStructure)
+                else exists = true;
+            }
+            else if (type == EStructType.STRUCTURE)
+            {
+                StructureData data = F.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                if (data == default)
                 {
-                    if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region))
+                    if (!StructureManager.dropStructure(
+                        new SDG.Unturned.Structure(id, ushort.MaxValue, Asset as ItemStructureAsset),
+                        transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
+                        transform.euler_angles.z, owner, group))
                     {
-                        StructureData data = region.structures[index];
-                        this.id = data.structure.id;
-                        this.state = Convert.ToBase64String(new byte[0]);
-                        this._metadata = new byte[0];
-                        this.transform = new SerializableTransform(structure.transform);
-                        this.owner = data.owner;
-                        this.group = data.group;
+                        F.LogError("STRUCTURE SAVER ERROR: Structure could not be replaced");
                     }
                     else
                     {
-                        throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "transform");
+                        StructureData newdata = F.GetStructureFromTransform(transform, out StructureDrop newdrop);
+                        if (newdata == default || newdrop == default)
+                        {
+                            F.LogError("STRUCTURE SAVER ERROR: spawned structure could not be found");
+                            exists = false;
+                        }
+                        else
+                        {
+                            instance_id = newdata.instanceID;
+                            StructureSaver.Save();
+                            exists = true;
+                        }
                     }
-                }
-                else
-                {
-                    throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "transform");
-                }
-            } else
-            {
-                throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "transform");
+                } else exists = true;
             }
         }
-        public Structure(Interactable barricade)
+        public Structure(StructureDrop drop, StructureData data)
         {
-            if(BarricadeManager.tryGetInfo(barricade.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
-            {
-                BarricadeData data = region.barricades[index];
-                this.id = data.barricade.id;
-                this.state = Convert.ToBase64String(data.barricade.state);
-                this._metadata = data.barricade.state;
-                this.transform = new SerializableTransform(barricade.transform);
-                this.owner = data.owner;
-                this.group = data.group;
-            } else
-            {
-                throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "barricade");
-            }
+            this.id = data.structure.id;
+            this._metadata = new byte[0];
+            this.state = Convert.ToBase64String(_metadata);
+            this.transform = new SerializableTransform(drop.instanceID, drop.model.transform);
+            this.owner = data.owner;
+            this.group = data.group;
+            this.instance_id = data.instanceID;
+            this.type = EStructType.STRUCTURE;
         }
-        public Structure(Interactable2 structure)
+        public Structure(BarricadeDrop drop, BarricadeData data)
         {
-            if(structure is Interactable2SalvageBarricade barricade)
-            {
-                if (BarricadeManager.tryGetInfo(structure.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
-                {
-                    BarricadeData data = region.barricades[index];
-                    this.id = data.barricade.id;
-                    this.state = Convert.ToBase64String(data.barricade.state);
-                    this._metadata = data.barricade.state;
-                    this.transform = new SerializableTransform(structure.transform);
-                    this.owner = data.owner;
-                    this.group = data.group;
-                }
-                else
-                {
-                    throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "structure");
-                }
-            } else if (structure is Interactable2SalvageStructure)
-            {
-                if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region))
-                {
-                    StructureData data = region.structures[index];
-                    this.id = data.structure.id;
-                    this.state = Convert.ToBase64String(new byte[0]);
-                    this._metadata = new byte[0];
-                    this.transform = new SerializableTransform(structure.transform);
-                    this.owner = data.owner;
-                    this.group = data.group;
-                }
-                else
-                {
-                    throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "structure");
-                }
-            }
-            else
-            {
-                throw new ArgumentException(ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND, "structure");
-            }
+            this.id = data.barricade.id;
+            this._metadata = data.barricade.state;
+            this.state = Convert.ToBase64String(_metadata);
+            this.transform = new SerializableTransform(drop.instanceID, drop.model.transform);
+            this.owner = data.owner;
+            this.group = data.group;
+            this.instance_id = data.instanceID;
+            this.type = EStructType.BARRICADE;
         }
     }
 }

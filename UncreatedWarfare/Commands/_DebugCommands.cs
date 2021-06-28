@@ -155,7 +155,9 @@ namespace Uncreated.Warfare.Commands
                     for (int i = 0; i < times; i++)
                     {
                         await ReloadCommand.ReloadFlags();
-                        ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
+                        if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
+                            Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
+                        ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
                         F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
                     }
                 }
@@ -163,7 +165,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     try
                     {
-                        MethodInfo info = type.GetMethod(command[0]);
+                        MethodInfo info = type.GetMethod(command[0], BindingFlags.NonPublic | BindingFlags.Instance);
                         if (info == null)
                         {
                             if (caller.DisplayName == "Console") F.LogError("No method for " + command[0]);
@@ -173,7 +175,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             try
                             {
-                                info.Invoke(this, BindingFlags.NonPublic | BindingFlags.Instance, null, new object[2] { command, player }, Data.Locale);
+                                info.Invoke(this, new object[2] { command, player });
                             }
                             catch (Exception ex)
                             {

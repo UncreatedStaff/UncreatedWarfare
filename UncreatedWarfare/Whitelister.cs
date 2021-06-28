@@ -125,9 +125,7 @@ namespace Uncreated.Warfare
             ref bool shouldAllow)
         {
             var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
-
-            if (F.OnDuty(player))
-                return;
+            if (player == null || player.Player == null || F.OnDuty(player)) return;
 
             if (KitManager.HasKit(player.CSteamID, out var kit))
             {
@@ -157,10 +155,7 @@ namespace Uncreated.Warfare
             )
         {
             var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
-
-            if (F.OnDuty(player))
-                return;
-
+            if (player == null || player.Player == null || F.OnDuty(player)) return;
             if (KitManager.HasKit(player.CSteamID, out var kit))
             {
                 if (kit.Items.Exists(k => k.ID == structure.id))
@@ -184,7 +179,9 @@ namespace Uncreated.Warfare
         {
             ItemManager.onTakeItemRequested -= OnItemPickup;
             BarricadeManager.onSalvageBarricadeRequested -= OnBarricadeSalvageRequested;
-            BarricadeManager.onDeployBarricadeRequested -= OnBarricadePlaceRequested;
+            StructureManager.onSalvageStructureRequested -= OnStructureSalvageRequested;
+            StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
+            BarricadeManager.onModifySignRequested -= OnEditSignRequest;
         }
     }
     public class WhitelistItem
