@@ -53,15 +53,16 @@ namespace Uncreated.Warfare.Squads
                     if (squad.Members[i] == squad.Leader)
                     {
                         EffectManager.sendUIEffect(30071, 30071, member.Player.channel.owner.transportConnection, true,
-                                 squad.Members[i].SteamPlayer().playerID.nickName,
+                                 squad.Members[i].NickName,
                                  squad.Members[i].Icon,
-                                 squad.IsLocked ? $"{squad.Name} <color=#cf6a59>({squad.Members.Count}/6)</color>" : $"{squad.Name} ({squad.Members.Count}/6)"
+                                 $"{squad.Name}  <color=#8c8c8c>{squad.Members.Count}/6</color>",
+                                 squad.IsLocked ? "<color=#bd6b5b>²</color>" : ""
                              );
                     }
                     else
                     {
                         EffectManager.sendUIEffect((ushort)(30071 + i), (short)(30071 + i), member.SteamPlayer().transportConnection, true,
-                               squad.Members[i].SteamPlayer().playerID.nickName,
+                               squad.Members[i].NickName,
                                squad.Members[i].Icon
                            );
                     }
@@ -112,7 +113,8 @@ namespace Uncreated.Warfare.Squads
                                 steamplayer.transportConnection,
                                 true,
                                 !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
+                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>",
+                                Squads[i].Leader.NickName
                             );
                         }
                     }
@@ -142,7 +144,7 @@ namespace Uncreated.Warfare.Squads
 
         public static void CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
         {
-            var squad = new Squad(name, leader, team, branch);
+            var squad = new Squad(name.ToUpper(), leader, team, branch);
             Squads.Add(squad);
 
             leader.Squad = squad;
