@@ -42,6 +42,8 @@ namespace Uncreated.Warfare
         public Rank OfficerRank;
         [JsonIgnore]
         public Vector3 Position { get { return Player.transform.position; } }
+        [JsonIgnore]
+        public uint cachedXp;
 
         public static UCPlayer FromID(ulong steamID, ulong team = 0)
         {
@@ -105,41 +107,14 @@ namespace Uncreated.Warfare
             }
             return null;
         }
-        const int MaxChatSizeAmount = 2047;
-        public void Message(string text, params object[] formatting)
-        {
-            Color textColor = new Color(255, 255, 255);
-
-            string localizedString = F.Translate(text, Steam64, formatting);
-            if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
-                ChatManager.say(Player.channel.owner.playerID.steamID, localizedString, textColor, localizedString.Contains("</"));
-            else
-            {
-                F.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                string defaultMessage = text;
-                string newMessage;
-                if (JSONMethods.DefaultTranslations.ContainsKey(text))
-                    defaultMessage = JSONMethods.DefaultTranslations[text];
-                try
-                {
-                    newMessage = string.Format(defaultMessage, formatting);
-                }
-                catch (FormatException)
-                {
-                    newMessage = defaultMessage + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                    F.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
-                }
-                if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                    ChatManager.say(Player.channel.owner.playerID.steamID, newMessage, textColor, newMessage.Contains("</"));
-                else
-                    F.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
-                        + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
-            }
-        }
+        public void Message(string text, params object[] formatting) => F.Message(Player, text, formatting);
         public ulong GetTeam() => Player.quests.groupID.m_SteamID;
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
-
+        public async Task RedownloadCachedXP()
+        {
+            cachedXp = await Data.DatabaseManager?.GetXP(Steam64, Player.GetTeam());
+        }
         public UCPlayer(CSteamID steamID, ulong team, Kit.EClass kitClass, EBranch branch, string kitName, Player player, string characterName, string nickName)
         {
             Steam64 = steamID.m_SteamID;
@@ -153,6 +128,7 @@ namespace Uncreated.Warfare
             CharacterName = characterName;
             NickName = nickName;
             OfficerRank = null;
+            cachedXp = 0;
         }
         [JsonIgnore]
         public string Icon
@@ -161,8 +137,9 @@ namespace Uncreated.Warfare
             {
                 switch (KitClass)
                 {
+                    default:
                     case Kit.EClass.NONE:
-                        return "";
+                        return "±";
                     case Kit.EClass.UNARMED:
                         return "±";
                     case Kit.EClass.SQUADLEADER:
@@ -195,8 +172,6 @@ namespace Uncreated.Warfare
                         return "§";
                     case Kit.EClass.PILOT:
                         return "°";
-                    default:
-                        return "";
                 }
             }
         }

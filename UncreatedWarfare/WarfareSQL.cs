@@ -207,7 +207,7 @@ namespace Uncreated.Warfare
                         $"`{xp}` = `{xp}` - @2 " +
                         $"WHERE `{s64}` = @0 AND `{team}` = @1;",
                         new object[] { Steam64, Team, Math.Abs(amount) });
-                    return unchecked((uint)(oldBalance - amount));
+                    return unchecked((uint)(oldBalance + amount));
                 }
             }
         }

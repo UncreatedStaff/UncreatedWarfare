@@ -24,7 +24,23 @@ namespace Uncreated.Warfare.Vehicles
         }
 
         protected override string LoadDefaults() => "[]";
-        public static void AddRequestableVehicle(InteractableVehicle vehicle) => AddObjectToSave(new VehicleData(vehicle.id));
+        public static void AddRequestableVehicle(InteractableVehicle vehicle)
+        {
+            VehicleData data = new VehicleData(vehicle.id);
+            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
+            if (vehicleRegion != null)
+            {
+                List<VBarricade> barricades = new List<VBarricade>();
+                for (int i = 0; i < vehicleRegion.drops.Count; i++)
+                {
+                    BarricadeData bdata = vehicleRegion.barricades[i];
+                    barricades.Add(new VBarricade(bdata.barricade.id, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y, 
+                        bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
+                }
+                if (barricades.Count > 0) data.Metadata = new MetaSave(vehicle.id, barricades);
+            }
+            AddObjectToSave(data);
+        }
         public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static void RemoveAllVehicles() => RemoveAllObjectsFromSave();
         public static List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
@@ -34,6 +50,7 @@ namespace Uncreated.Warfare.Vehicles
             vehicleData = v;
             return result;
         }
+        [Obsolete]
         public static void SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
         {
             propertyIsValid = false;
@@ -132,9 +149,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-
         public static void SetItems(ushort vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
-
         public static void AddCrewmanSeat(ushort vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
         public static void RemoveCrewmanSeat(ushort vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
         /// <summary>Level must be loaded.</summary>
@@ -148,14 +163,20 @@ namespace Uncreated.Warfare.Vehicles
 
                 if (vehicleData.Metadata != null)
                 {
-                    foreach (var vBarricade in vehicleData.Metadata.Barricades)
+                    foreach (VBarricade vb in vehicleData.Metadata.Barricades)
                     {
-                        Barricade newBarricade = new Barricade(vBarricade.BarricadeID);
-                        newBarricade.state = Convert.FromBase64String(vBarricade.State);
-
-                        Quaternion quarternion = Quaternion.Euler(vBarricade.AngleX * 2, vBarricade.AngleY * 2, vBarricade.AngleZ * 2);
-
-                        BarricadeManager.dropPlantedBarricade(vehicle.transform, newBarricade, new Vector3(vBarricade.PosX, vBarricade.PosY, vBarricade.PosZ), quarternion, vBarricade.OwnerID, vBarricade.GroupID);
+                        Barricade barricade;
+                        if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
+                        {
+                            barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
+                        }
+                        else
+                        {
+                            barricade = new Barricade(vb.BarricadeID)
+                            { state = Convert.FromBase64String(vb.State) };
+                        }
+                        Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
+                        BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
                     }
                 }
 
@@ -176,36 +197,39 @@ namespace Uncreated.Warfare.Vehicles
                 return null;
             }
         }
-
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
         {
-            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
-
-            ushort plant = (ushort)BarricadeManager.vehicleRegions.ToList().IndexOf(vehicleRegion);
-            for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
+            VehicleBarricadeRegion vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out int index);
+            if (index > -1)
             {
-                if (i >= 0)
+                ushort plant = unchecked((ushort)index);
+                for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
                 {
-                    if (vehicleRegion.drops[i].interactable is InteractableStorage store)
-                        store.despawnWhenDestroyed = true;
+                    if (i >= 0)
+                    {
+                        if (vehicleRegion.drops[i].interactable is InteractableStorage store)
+                            store.despawnWhenDestroyed = true;
 
-                    BarricadeManager.destroyBarricade(vehicleRegion, 0, 0, plant, (ushort)i);
+                        BarricadeManager.destroyBarricade(vehicleRegion, 0, 0, plant, unchecked((ushort)i));
+                    }
                 }
             }
-
-            foreach (var vb in vehicleData.Metadata.Barricades)
+            foreach (VBarricade vb in vehicleData.Metadata.Barricades)
             {
-                Barricade barricade = new Barricade(vb.BarricadeID);
-                barricade.state = Convert.FromBase64String(vb.State);
-
+                Barricade barricade;
+                if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
+                {
+                    barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
+                } else
+                {
+                    barricade = new Barricade(vb.BarricadeID)
+                    { state = Convert.FromBase64String(vb.State) };
+                }
                 Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-
                 BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
             }
-
             EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
         }
-
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
             VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
@@ -387,6 +411,7 @@ namespace Uncreated.Warfare.Vehicles
 
     public class VehicleData
     {
+        [JsonSettable]
         public ushort VehicleID;
         [JsonSettable]
         public ulong Team;
@@ -411,7 +436,6 @@ namespace Uncreated.Warfare.Vehicles
         public List<ushort> Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
-
         public VehicleData(ushort vehicleID)
         {
             VehicleID = vehicleID;
@@ -428,6 +452,16 @@ namespace Uncreated.Warfare.Vehicles
             Items = new List<ushort>() { 1440, 277 };
             CrewSeats = new List<byte>();
             Metadata = null;
+        }
+        public List<VehicleSpawn> GetSpawners()
+        {
+            List<VehicleSpawn> rtn = new List<VehicleSpawn>();
+            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+            {
+                if (VehicleSpawner.ActiveObjects[i].VehicleID == VehicleID)
+                    rtn.Add(VehicleSpawner.ActiveObjects[i]);
+            }
+            return rtn;
         }
     }
 

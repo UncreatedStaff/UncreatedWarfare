@@ -18,8 +18,8 @@ namespace Uncreated.Warfare.Commands
 {
     public class ReloadCommand : IRocketCommand
     {
-        public static event EventHandler OnTranslationsReloaded;
-        public static event EventHandler OnFlagsReloaded;
+        public static event Networking.EmptyTaskDelegate OnTranslationsReloaded;
+        public static event Networking.EmptyTaskDelegate OnFlagsReloaded;
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "reload";
         public string Help => "Reload certain parts of UCWarfare.";
@@ -36,7 +36,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
-                    ReloadTranslations();
+                    await ReloadTranslations();
                     ReloadConfig();
                     await ReloadFlags();
 
@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Commands
                 else if (cmd == "translations")
                 {
                     if(isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
-                        ReloadTranslations();
+                        await ReloadTranslations();
                     else
                         player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
                 } else if (cmd == "flags")
@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(ex);
             }
         }
-        internal static void ReloadTranslations()
+        internal static async Task ReloadTranslations()
         {
             try
             {
@@ -107,7 +107,8 @@ namespace Uncreated.Warfare.Commands
                 Data.Languages = JSONMethods.LoadLanguagePreferences();
                 Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
                 Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-                OnTranslationsReloaded?.Invoke(null, EventArgs.Empty);
+                if(OnTranslationsReloaded != null)
+                    await OnTranslationsReloaded.Invoke();
             }
             catch (Exception ex)
             { 
@@ -121,7 +122,8 @@ namespace Uncreated.Warfare.Commands
             {
                 await Data.FlagManager.StartNextGame();
                 SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-                OnFlagsReloaded?.Invoke(null, EventArgs.Empty);
+                if(OnFlagsReloaded != null)
+                    await OnFlagsReloaded.Invoke();
                 await rtn;
             }
             catch (Exception ex)

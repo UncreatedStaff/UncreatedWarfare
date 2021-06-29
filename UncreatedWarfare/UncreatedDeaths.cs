@@ -29,6 +29,8 @@ namespace Uncreated.Warfare
             {
                 F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
                 await Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                    pt.stats.AddTeamkill();
             }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnTeamkill?.Invoke(this, parameters);
@@ -79,7 +81,7 @@ namespace Uncreated.Warfare
                 F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
                 await Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent pt))
-                    pt.stats.KillPlayer();
+                    pt.stats.AddKill();
             }
             OnKill?.Invoke(this, parameters);
             await XPManager.OnEnemyKilled(parameters);
@@ -121,7 +123,8 @@ namespace Uncreated.Warfare
             if (team == 1 || team == 2)
             {
                 await TicketManager.OnPlayerSuicide(parameters);
-
+                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                    pt.stats.AddDeath();
                 await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);
             }
@@ -187,7 +190,11 @@ namespace Uncreated.Warfare
             F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
-                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+            {
+                await Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                    pt.stats.AddDeath();
+            }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnDeathNotSuicide?.Invoke(this, parameters);
             await rtn;

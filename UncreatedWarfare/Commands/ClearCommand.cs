@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using SDG.Unturned;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -18,7 +19,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.clear" };
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == "Console" || player == default;
@@ -76,13 +77,18 @@ namespace Uncreated.Warfare.Commands
             }
             else if (operation == "v" || operation == "vehicles" || operation == "vehicle")
             {
+                List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                    if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out _)) spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
                 VehicleManager.askVehicleDestroyAll();
+                for (int i = 0; i < spawnsToReset.Count; i++)
+                    spawnsToReset[i].SpawnVehicle();
                 Reply.Invoke("clear_vehicles_cleared", UCWarfare.GetColor("clear_vehicles_cleared"), new object[0]);
             }
             else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" || 
                 operation == "struct" || operation == "barricades" || operation == "barricade")
             {
-                UCWarfare.ReplaceBarricadesAndStructures();
+                await UCWarfare.ReplaceBarricadesAndStructures();
                 Reply.Invoke("clear_structures_cleared", UCWarfare.GetColor("clear_structures_cleared"), new object[0]);
             } else
             {

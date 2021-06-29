@@ -9,17 +9,17 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class PlayerChangedLanguageEventArgs : EventArgs { public UnturnedPlayer player; public LanguageAliasSet OldLanguage; public LanguageAliasSet NewLanguage; }
+    public delegate Task PlayerChangedLanguageDelegate(UnturnedPlayer player, LanguageAliasSet oldLanguage, LanguageAliasSet newLanguage);
     public class LangCommand : IRocketCommand
     {
-        public static event EventHandler<PlayerChangedLanguageEventArgs> OnPlayerChangedLanguage;
+        public static event PlayerChangedLanguageDelegate OnPlayerChangedLanguage;
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "lang";
         public string Help => "Switch your language to some of our supported languages.";
         public string Syntax => "/lang";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.lang" };
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             if(command.Length == 0)
@@ -76,7 +76,8 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DefaultLanguage);
-                            OnPlayerChangedLanguage?.Invoke(this, new PlayerChangedLanguageEventArgs { player = player, NewLanguage = alias, OldLanguage = oldSet });
+                            if(OnPlayerChangedLanguage != null)
+                                await OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
                             player.SendChat("reset_language", UCWarfare.GetColor("reset_language"), fullname, UCWarfare.GetColorHex("reset_language_language"));
                         }
                     } else
@@ -104,7 +105,8 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, aliases.key);
-                            OnPlayerChangedLanguage?.Invoke(this, new PlayerChangedLanguageEventArgs { player = player, NewLanguage = aliases, OldLanguage = oldSet });
+                            if (OnPlayerChangedLanguage != null)
+                                await OnPlayerChangedLanguage.Invoke(player, oldSet, aliases);
                             player.SendChat("changed_language", UCWarfare.GetColor("changed_language"), aliases.display_name, UCWarfare.GetColorHex("changed_language_language"));
                         }
                     }

@@ -85,12 +85,12 @@ namespace Uncreated.Warfare
         }
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {
-            OnlinePlayers.RemoveAll(s => s.Steam64 == rocketplayer.CSteamID.m_SteamID);
+            OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
 
             if (TeamManager.IsTeam1(rocketplayer))
-                Team1Players.RemoveAll(s => s.Steam64 == rocketplayer.CSteamID.m_SteamID);
+                Team1Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
             else if (TeamManager.IsTeam2(rocketplayer))
-                Team2Players.RemoveAll(s => s.Steam64 == rocketplayer.CSteamID.m_SteamID);
+                Team2Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
         }
         public static string GetKitName(ulong playerID) => PlayerExists(playerID, out var data)? data.KitName : "";
 

@@ -24,6 +24,7 @@ namespace Uncreated.Warfare
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
+        public delegate void PlayerTriedStoreItem(Player player, byte page, byte index, ItemJar jar, ref bool allow);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
@@ -32,6 +33,7 @@ namespace Uncreated.Warfare
         public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
         public static event BatteryStealingDelegate OnBatterySteal_Global;
+        public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
 
         /// <summary>
         /// Stores all <see cref="Harmony"/> patches.
@@ -46,6 +48,33 @@ namespace Uncreated.Warfare
                 harmony.PatchAll();
             }
 #pragma warning disable IDE0051
+            // SDG.Unturned.PlayerInventory
+            ///<summary>
+            /// Prefix of <see cref="PlayerInventory.onItemAdded(byte, byte, ItemJar)"/> to disallow players leaving their group.
+            ///</summary>
+            [HarmonyPatch(typeof(PlayerInventory), "onItemAdded")]
+            [HarmonyPrefix]
+            static bool CancelLeavingGroup(PlayerInventory __instance, byte page, byte index, ItemJar jar)
+            {
+                if (!UCWarfare.Config.Patches.onItemAdded) return true;
+                bool allow = true;
+                OnPlayerTriedStoreItem_Global?.Invoke(__instance.player, page, index, jar, ref allow);
+                if (!allow && __instance.isStoring)
+                    __instance.closeStorageAndNotifyClient();
+                return allow;
+            }
+            // SDG.Unturned.GroupManager
+            ///<summary>
+            /// Prefix of <see cref="GroupManager.requestGroupExit(Player)"/> to disallow players leaving their group.
+            ///</summary>
+            [HarmonyPatch(typeof(GroupManager), "requestGroupExit")]
+            [HarmonyPrefix]
+            static bool CancelLeavingGroup(Player player)
+            {
+                if (!UCWarfare.Config.Patches.requestGroupExit) return true;
+                player.SendChat("cant_leave_group", UCWarfare.GetColor("cant_leave_group"));
+                return false;
+            }
             // SDG.Unturned.PlayerClothing
             /// <summary>
             /// Prefix of <see cref="PlayerClothing.ReceiveVisualToggleRequest(EVisualToggleType)"/> to use an event to cancel it.
@@ -101,11 +130,11 @@ namespace Uncreated.Warfare
                     if(trimmedText.Length > 5)
                     {
                         if(Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText);
+                            F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText).GetAwaiter().GetResult();
                         else
-                            F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText);
+                            F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText).GetAwaiter().GetResult();
                     } else 
-                        F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText);
+                        F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText).GetAwaiter().GetResult();
                     byte[] state = region.barricades[index].barricade.state;
                     byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
@@ -149,7 +178,7 @@ namespace Uncreated.Warfare
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;
                         }
-                        Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, (writer =>
+                        Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, async writer =>
                         {
                             writer.WriteUInt8(x);
                             writer.WriteUInt8(y);
@@ -197,9 +226,9 @@ namespace Uncreated.Warfare
                                         string newtext = sign.text;
                                         if (newtext.StartsWith("sign_"))
                                         {
-                                            newtext = F.TranslateSign(newtext, client.playerID.steamID.m_SteamID);
-                                            // size is not allowed in signs.
-                                            newtext.Replace("<size=", "");
+                                            newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID);
+                                        // size is not allowed in signs.
+                                        newtext.Replace("<size=", "");
                                             newtext.Replace("</size>", "");
                                         }
                                         byte[] state = region.barricades[index].barricade.state;
@@ -233,7 +262,7 @@ namespace Uncreated.Warfare
                                 writer.WriteUInt64(barricade.group);
                                 writer.WriteUInt32(barricade.instanceID);
                             }
-                        }));
+                        });
                         packet++;
                     }
                     return false;

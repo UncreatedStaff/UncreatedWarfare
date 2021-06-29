@@ -30,5 +30,24 @@ namespace Uncreated.Warfare.Vehicles
                 return null;
             }
         }
+        public static VehicleBarricadeRegion FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out int index, int subvehicleIndex = 0)
+        {
+            if (vehicle == null)
+            {
+                index = -1;
+                return null;
+            }
+            for (int i = 0; i < BarricadeManager.vehicleRegions.Count; i++)
+            {
+                VehicleBarricadeRegion vehicleRegion = BarricadeManager.vehicleRegions[i];
+                if (vehicleRegion.vehicle == vehicle && vehicleRegion.subvehicleIndex == subvehicleIndex)
+                {
+                    index = i;
+                    return vehicleRegion;
+                }
+            }
+            index = -1;
+            return null;
+        }
     }
 }

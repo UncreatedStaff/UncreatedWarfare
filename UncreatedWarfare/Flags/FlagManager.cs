@@ -19,6 +19,8 @@ namespace Uncreated.Warfare.Flags
     {
         public const string PROGRESS_CHARS = "¶·¸¹º»:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         public const char PLAYER_ICON = '³';
+        public const char ATTACK_ICON = 'µ';
+        public const char DEFEND_ICON = '´';
         public List<Flag> FlagRotation { get; private set; }
         public List<Flag> AllFlags { get; private set; }
         const int FLAGS_PER_LEVEL_MAX = 2;
@@ -461,36 +463,24 @@ namespace Uncreated.Warfare.Flags
                         unchecked
                         {
                             Flag flag = FlagRotation[index];
-                            string nameprefix = string.Empty;
-                            if (UCWarfare.Config.FlagSettings.ShowObjectives)
-                            {
-                                if (flag.T1Obj)
-                                {
-                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
-                                }
-                                if (flag.T2Obj)
-                                {
-                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
-                                }
-                            }
                             string objective = string.Empty;
                             if (flag.T1Obj)
                             {
                                 if (team == 1)
-                                    objective = "<color=#ffca61>µ</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{ATTACK_ICON}</color>";
                                 else if (team == 2 && flag.Owner == 2)
-                                    objective = "<color=#ba70cc>´</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{DEFEND_ICON}</color>";
                             }
                             if (flag.T2Obj)
                             {
                                 if (team == 2)
-                                    objective = "<color=#ffca61>µ</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{ATTACK_ICON}</color>";
                                 else if (team == 1 && flag.Owner == 1)
-                                    objective = "<color=#ba70cc>´</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{DEFEND_ICON}</color>";
                             }
                             EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
-                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" :
-                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + F.Translate("undiscovered_flag", playerid)}</color>",
+                                $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
+                                $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{F.Translate("undiscovered_flag", playerid)}</color>",
                                 objective
                             );
                         }
@@ -506,27 +496,28 @@ namespace Uncreated.Warfare.Flags
                     }
                     else
                     {
-                        if (FlagRotation[i] == default) continue;
+                        if (FlagRotation.Count <= i || FlagRotation[i] == default) continue;
                         unchecked
                         {
                             Flag flag = FlagRotation[i];
-                            string nameprefix = string.Empty;
-                            if (UCWarfare.Config.FlagSettings.ShowObjectives)
+                            string objective = string.Empty;
+                            if (flag.T1Obj)
                             {
-                                if (flag.T1Obj)
-                                {
-                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>•</color>";
-                                }
-                                if (flag.T2Obj)
-                                {
-                                    nameprefix += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>•</color>";
-                                }
+                                objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{ATTACK_ICON}</color>";
+                                if (flag.Owner == 2)
+                                    objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{DEFEND_ICON}</color>";
+                            }
+                            if (flag.T2Obj)
+                            {
+                                objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{ATTACK_ICON}</color>";
+                                if (flag.Owner == 1)
+                                    objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{DEFEND_ICON}</color>";
                             }
                             EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true,
-                                $"<color=#{flag.TeamSpecificHexColor}>{nameprefix + flag.Name}</color>" +
+                                $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
                                 $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
                                 $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}",
-                                ""
+                                objective
                                 );
                         }
                     }
@@ -612,7 +603,6 @@ namespace Uncreated.Warfare.Flags
         }
         private async Task FlagOwnerChanged(ulong oldowner, ulong newowner, Flag flag)
         {
-            F.Log($"Owner changed of flag {flag.Name} ({flag.index}) to Team {newowner} from Team {oldowner}", ConsoleColor.DarkYellow);
             // owner of flag changed (full caputure or loss)
             if (newowner == 1)
             {

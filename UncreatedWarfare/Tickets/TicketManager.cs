@@ -191,8 +191,8 @@ namespace Uncreated.Warfare.Tickets
 
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
-            int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.FullOwner == team).Count();
-            int enemyCount = Data.FlagManager.AllFlags.Where(f => f.FullOwner != team).Count();
+            int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.Owner == team).Count();
+            int enemyCount = Data.FlagManager.AllFlags.Where(f => f.Owner != team).Count();
 
             int diff = friendlyCount - enemyCount;
 

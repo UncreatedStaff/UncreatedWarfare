@@ -14,11 +14,11 @@ namespace Uncreated.Warfare.Kits
     {
         public RequestSigns() : base(Data.StructureStorage + "request_signs.json") { }
         protected override string LoadDefaults() => "[]";
-        public static void DropAllSigns()
+        public static async Task DropAllSigns()
         {
             foreach(RequestSign sign in ActiveObjects)
             {
-                sign.SpawnCheck();
+                await sign.SpawnCheck();
                 if (!sign.exists)
                     F.LogError("Failed to spawn sign " + sign.kit_name);
             }
@@ -34,10 +34,10 @@ namespace Uncreated.Warfare.Kits
             }
             return false;
         }
-        public static void RemoveRequestSign(RequestSign sign)
+        public static async Task RemoveRequestSign(RequestSign sign)
         {
             RemoveWhere(x => x.transform == sign.transform);
-            sign.InvokeUpdate();
+            await sign.InvokeUpdate();
         }
         public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
         public static bool SignExists(InteractableSign sign, out RequestSign found) => ObjectExists(s => s != default && sign != default && 
@@ -45,8 +45,22 @@ namespace Uncreated.Warfare.Kits
         public static bool SignExists(uint instance_id, out RequestSign found) => ObjectExists(s => s != default && s.instance_id == instance_id, out found);
         public static bool SignExists(string kitName, out RequestSign sign) => ObjectExists(x => x.kit_name == kitName, out sign);
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
-        public static void UpdateSignsWithName(SteamPlayer player, string kitName) => GetObjectsWhere(x => x.kit_name == kitName).ForEach(x => x.InvokeUpdate(player));
-        public static void UpdateSignsWithName(string kitName) => GetObjectsWhere(x => x.kit_name == kitName).ForEach(x => x.InvokeUpdate());
+        public static async Task InvokeLangUpdateForSignsOfKit(SteamPlayer player, string kitName)
+        {
+            List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
+            for (int i = 0; i < s.Count; i++)
+            {
+                await s[i].InvokeUpdate(player);
+            }
+        }
+        public static async Task InvokeLangUpdateForSignsOfKit(string kitName)
+        {
+            List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
+            for (int i = 0; i < s.Count; i++)
+            {
+                await s[i].InvokeUpdate();
+            }
+        }
         public static void SetOwner(RequestSign sign, ulong newOwner) => SetProperty(sign, nameof(sign.owner), newOwner, out _, out _, out _);
         public static void SetGroupOwner(RequestSign sign, ulong group) => SetProperty(sign, nameof(sign.group), group, out _, out _, out _);
     }
@@ -105,26 +119,26 @@ namespace Uncreated.Warfare.Kits
             {
                 this.sign_id = region.barricades[index].barricade.id;
                 this.instance_id = region.drops[index].instanceID;
-                this.transform = new SerializableTransform(this.instance_id, sign.transform);
+                this.transform = new SerializableTransform(sign.transform);
                 this.SignText = sign.text;
                 this.group = sign.group.m_SteamID;
                 this.owner = sign.owner.m_SteamID;
             } else throw new ArgumentNullException(nameof(sign));
         }
-        public void InvokeUpdate(SteamPlayer player)
+        public async Task InvokeUpdate(SteamPlayer player)
         {
             if (barricadetransform != default)
                 if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
-                    F.InvokeSignUpdateFor(player, x, y, plant, index, SignText);
+                    await F.InvokeSignUpdateFor(player, x, y, plant, index, SignText);
         }
-        public void InvokeUpdate()
+        public async Task InvokeUpdate()
         {
             if (barricadetransform != default)
                 if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
-                    F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
+                    await F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
         }
         /// <summary>Spawns the sign if it is not already placed.</summary>
-        public void SpawnCheck()
+        public async Task SpawnCheck()
         {
             BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (data == default)
@@ -139,6 +153,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         instance_id = region.drops[index].instanceID;
                         exists = true;
+                        await InvokeUpdate();
                         RequestSigns.Save();
                     }
                     else
@@ -151,7 +166,11 @@ namespace Uncreated.Warfare.Kits
                     exists = false;
                 }
             }
-            else exists = true;
+            else
+            {
+                exists = true;
+                await InvokeUpdate();
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -15,8 +16,8 @@ namespace Uncreated.Warfare.Stats
     {
         public const float SecondsEndGameLength = 30f;
         public const short UiIdentifier = 10000;
-        readonly string[] headers = new string[] { "MostKillsHeader", "HighestKDRHeader", "TimeOnPointHeader", "TimeDrivingHeader" };
-        readonly string[] headerPrefixes = new string[] { "MK", "KD", "TP", "XP" };
+        readonly string[] headers = new string[] { "TopSquadHeader", "MostKillsHeader", "TimeOnPointHeader", "TimeDrivingHeader" };
+        readonly string[] headerPrefixes = new string[] { "TS", "MK", "TP", "XP" };
         public event Networking.EmptyTaskDelegate OnLeaderboardExpired;
         private float secondsLeft;
         public bool ShuttingDown = false;
@@ -100,70 +101,77 @@ namespace Uncreated.Warfare.Stats
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", Flags.FlagManager.PROGRESS_CHARS[Flags.FlagManager.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength))].ToString());
+            List<KeyValuePair<Player, string>> topsquadplayers = Data.GameStats.GetTopSquad(out string squadname, out ulong squadteam);
             List<KeyValuePair<Player, int>> topkills = Data.GameStats.GetTop5MostKills();
-            List<KeyValuePair<Player, float>> topkdr = Data.GameStats.GetTop5KDR();
             List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = Data.GameStats.GetTop5OnPointTime();
             List<KeyValuePair<Player, int>> topxpgain = Data.GameStats.GetTop5XP();
-            for (int h = 1; h <= 4; h++)
+            for (int h = 2; h <= 4; h++)
                 if (headers.Length > h - 1)
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h - 1], F.Translate("lb_header_" + h.ToString(Data.Locale), player));
+            if (squadteam != 0)
+            {
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[0], F.Translate("lb_header_1", player, squadname, TeamManager.GetTeamHexColor(squadteam))); // squad header
+            } else
+            {
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[0], F.Translate("lb_header_1_no_squad", player)); // squad header
+            }
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.Translate("player_name_header", player, originalName, F.GetTeamColorHex(player)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
                 TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
                 TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
+            {
+                if (i >= topsquadplayers.Count)
+                {
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
+                }
+                else if (topsquadplayers[i].Key == null)
+                {
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
+                }
+                else
+                {
+                    string color = topsquadplayers[i].Key.GetTeamColorHex();
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
+                        F.GetPlayerOriginalNames(topsquadplayers[i].Key).CharacterName, color));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_float_player_value", player,
+                        topsquadplayers[i].Value, color));
+                }
+            }
+            for (int i = 0; i < 6; i++)
             {
                 if (i >= topkills.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
                 }
                 else if (topkills[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
                 }
                 else
                 {
                     string color = F.GetTeamColorHex(topkills[i].Key);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topkills[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value", player,
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value", player,
                         topkills[i].Value, color));
                 }
             }
-            for (int i = 0; i < 5; i++)
-            {
-                if (i >= topkdr.Count)
-                {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
-                }
-                else if (topkdr[i].Key == null)
-                {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
-                }
-                else
-                {
-                    string color = F.GetTeamColorHex(topkdr[i].Key);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
-                        F.GetPlayerOriginalNames(topkdr[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_float_player_value", player,
-                        topkdr[i].Value, color));
-                }
-            }
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
                 if (i >= toptimeonpoint.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
                 }
                 else if (toptimeonpoint[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
                 }
                 else
                 {
@@ -174,17 +182,17 @@ namespace Uncreated.Warfare.Stats
                         toptimeonpoint[i].Value, color));
                 }
             }
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
                 if (i >= topxpgain.Count)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
                 }
                 else if (topxpgain[i].Key == null)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.noPlayerNameText);
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.noPlayerValueText);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', WarStatsTracker.NO_PLAYER_VALUE_PLACEHOLDER);
                 }
                 else
                 {
@@ -210,7 +218,7 @@ namespace Uncreated.Warfare.Stats
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTimeInVehicle", F.Translate("lblTimeInVehicle", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTeamkills", F.Translate("lblTeamkills", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblEnemyFOBsDestroyed", F.Translate("lblFOBsDestroyed", player));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblCreditsGainedValue", F.Translate("lblCreditsGained", player));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblOfficerPointsGainedValue", F.Translate("lblOfficerPointsGained", player));
 
             string defaultColor = UCWarfare.GetColorHex("default");
             // values
@@ -225,7 +233,7 @@ namespace Uncreated.Warfare.Stats
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.Translate("stats_player_time_value", player, stats.TimeDriving, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillsValue", F.Translate("stats_player_value", player, stats.teamkills, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "EnemyFOBsDestroyedValue", F.Translate("stats_player_value", player, stats.fobsdestroyed, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CreditsGainedValue", F.Translate("stats_player_value", player, stats.creditsgained, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "OfficerPointsGainedValue", F.Translate("stats_player_value", player, stats.officerpointsgained, defaultColor));
 
             /*
              *  WAR
@@ -242,6 +250,7 @@ namespace Uncreated.Warfare.Stats
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblFOBsDestroyedT1", F.Translate("lblFOBsDestroyedT1", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblFOBsDestroyedT2", F.Translate("lblFOBsDestroyedT2", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTeamkillingCasualties", F.Translate("lblTeamkillingCasualties", player));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTopRankingOfficer", F.Translate("lblTopRankingOfficer", player));
 
             // values
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DurationValue", F.Translate("stats_war_time_value", player, warstats.Duration, defaultColor));
@@ -255,6 +264,7 @@ namespace Uncreated.Warfare.Stats
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT1Value", F.Translate("stats_war_value", player, warstats.fobsDestroyedT1, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT2Value", F.Translate("stats_war_value", player, warstats.fobsDestroyedT2, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.Translate("stats_war_value", player, warstats.teamkills, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", " TODO "); // do this after eating grilled cheese
         }
         public void SendEndScreen(ulong winner)
         {
@@ -284,7 +294,7 @@ namespace Uncreated.Warfare.Stats
         public float KDR { get => deaths == 0 ? kills : kills / deaths; }
         public int killsonpoint;
         public int xpgained;
-        public int creditsgained;
+        public int officerpointsgained;
         public TimeSpan TimeDeployed { get => TimeSpan.FromSeconds(timeDeployedCounter); }
         private float timeDeployedCounter;
         public TimeSpan TimeOnPoint { get => TimeSpan.FromSeconds(timeOnPointCounter); }
@@ -312,21 +322,17 @@ namespace Uncreated.Warfare.Stats
             this.fobsdestroyed = 0;
             this.timeDrivingCounter = 0;
             this.xpgained = 0;
-            this.creditsgained = 0;
+            this.officerpointsgained = 0;
         }
-        public void KillPlayer()
+        public void AddKill()
         {
             kills++;
             if (player != default && Data.FlagManager.FlagRotation.Exists(x => x.ZoneData.IsInside(player.transform.position))) killsonpoint++;
         }
-        public void AddXP(int amount)
-        {
-            xpgained += amount;
-        }
-        public void AddOfficerPoints(int amount)
-        {
-            xpgained += amount;
-        }
+        public void AddDeath() => deaths++;
+        public void AddTeamkill() => teamkills++;
+        public void AddXP(int amount) => xpgained += amount;
+        public void AddOfficerPoints(int amount) => officerpointsgained += amount;
         public void AddToTimeDeployed(float amount) => timeDeployedCounter += amount;
         public void AddToTimeOnPoint(float amount) => timeOnPointCounter += amount;
         public void AddToTimeDriving(float amount) => timeDrivingCounter += amount;
@@ -414,8 +420,8 @@ namespace Uncreated.Warfare.Stats
                 return false;
             }
         }
-        public const string noPlayerNameText = "---";
-        public const string noPlayerValueText = "--";
+        public const string NO_PLAYER_NAME_PLACEHOLDER = "---";
+        public const string NO_PLAYER_VALUE_PLACEHOLDER = "--";
         public List<KeyValuePair<Player, int>> GetTop5MostKills()
         {
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
@@ -430,27 +436,91 @@ namespace Uncreated.Warfare.Stats
                 return a.kills.CompareTo(b.kills);
             });
             List<KeyValuePair<Player, int>> rtnList = new List<KeyValuePair<Player, int>>();
-            for(int i = 0; i < Math.Min(stats.Count, 5); i++)
+            for(int i = 0; i < Math.Min(stats.Count, 6); i++)
                 rtnList.Add(new KeyValuePair<Player, int>(stats[i].player, stats[i].kills));
             return rtnList;
         }
-        public List<KeyValuePair<Player, float>> GetTop5KDR()
+        public List<KeyValuePair<Player, string>> GetTopSquad(out string squadname, out ulong squadteam)
         {
-            List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
-            stats.Sort((PlayerCurrentGameStats a, PlayerCurrentGameStats b) =>
+            List<Squad> squads = SquadManager.Squads.ToList();
+            if (squads.Count == 0)
             {
-                if (a.player == default)
+                squadname = NO_PLAYER_NAME_PLACEHOLDER;
+                squadteam = 0;
+                return new List<KeyValuePair<Player, string>>();
+            }
+            squads.Sort((a, b) =>
+            {
+                int totalxpgaina = 0;
+                for (int i = 0; i < a.Members.Count; i++)
                 {
-                    SteamPlayer player = PlayerTool.getSteamPlayer(a.id);
-                    if (player == default || player.player == default) return -1;
-                    else a.player = player.player;
+                    if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                        totalxpgaina += c.stats.xpgained;
                 }
-                return a.KDR.CompareTo(b.KDR);
+                int totalxpgainb = 0;
+                for (int i = 0; i < b.Members.Count; i++)
+                {
+                    if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                        totalxpgainb += c.stats.xpgained;
+                }
+                if (totalxpgaina == totalxpgainb)
+                {
+                    int totalopgaina = 0;
+                    for (int i = 0; i < a.Members.Count; i++)
+                    {
+                        if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                            totalopgaina += c.stats.officerpointsgained;
+                    }
+                    int totalopgainb = 0;
+                    for (int i = 0; i < b.Members.Count; i++)
+                    {
+                        if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                            totalopgainb += c.stats.officerpointsgained;
+                    }
+                    if (totalxpgaina == totalxpgainb)
+                    {
+                        int totalkillsa = 0;
+                        for (int i = 0; i < a.Members.Count; i++)
+                        {
+                            if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                                totalkillsa += c.stats.kills;
+                        }
+                        int totalkillsb = 0;
+                        for (int i = 0; i < b.Members.Count; i++)
+                        {
+                            if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                                totalkillsb += c.stats.kills;
+                        }
+                        return totalkillsa.CompareTo(totalkillsb);
+                    }
+                    return totalopgaina.CompareTo(totalopgainb);
+                }
+                return totalxpgaina.CompareTo(totalxpgainb);
             });
-            List<KeyValuePair<Player, float>> rtnList = new List<KeyValuePair<Player, float>>();
-            for (int i = 0; i < Math.Min(stats.Count, 5); i++)
-                rtnList.Add(new KeyValuePair<Player, float>(stats[i].player, stats[i].KDR));
-            return rtnList;
+            Squad topsquad = squads[0];
+            squadname = topsquad.Name;
+            squadteam = topsquad.Team;
+            List<UCPlayer> players = topsquad.Members.ToList();
+            players.Sort((a, b) =>
+            {
+                if (topsquad.Leader.Steam64 == a.Steam64) return 1;
+                else
+                {
+                    int axp = 0, bxp = 0;
+                    if (a.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent ca))
+                        axp = ca.stats.xpgained;
+                    if (b.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent cb))
+                        bxp = cb.stats.xpgained;
+                    return axp.CompareTo(bxp);
+                }
+            });
+            List<KeyValuePair<Player, string>> rtn = new List<KeyValuePair<Player, string>>(players.Count > 6 ? 6 : players.Count);
+            for (int i = 0; i < (players.Count > 6 ? 6 : players.Count); i++)
+            {
+                rtn.Add(new KeyValuePair<Player, string>(players[i].Player, players[i].Icon));
+            }
+            return rtn;
+
         }
         public List<KeyValuePair<Player, TimeSpan>> GetTop5OnPointTime()
         {
@@ -466,7 +536,7 @@ namespace Uncreated.Warfare.Stats
                 return a.KDR.CompareTo(b.KDR);
             });
             List<KeyValuePair<Player, TimeSpan>> rtnList = new List<KeyValuePair<Player, TimeSpan>>();
-            for (int i = 0; i < Math.Min(stats.Count, 5); i++)
+            for (int i = 0; i < Math.Min(stats.Count, 6); i++)
                 rtnList.Add(new KeyValuePair<Player, TimeSpan>(stats[i].player, stats[i].TimeOnPoint));
             return rtnList;
         }
@@ -484,7 +554,7 @@ namespace Uncreated.Warfare.Stats
                 return a.xpgained.CompareTo(b.xpgained);
             });
             List<KeyValuePair<Player, int>> rtnList = new List<KeyValuePair<Player, int>>();
-            for (int i = 0; i < Math.Min(stats.Count, 5); i++)
+            for (int i = 0; i < Math.Min(stats.Count, 6); i++)
                 rtnList.Add(new KeyValuePair<Player, int>(stats[i].player, stats[i].xpgained));
             return rtnList;
         }

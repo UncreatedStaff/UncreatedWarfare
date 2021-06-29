@@ -37,6 +37,7 @@ namespace Uncreated
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
         public bool AllowCosmetics;
+        public bool ModifySkillLevels;
         public bool AllowBatteryStealing;
         public bool RemoveLandminesOnDisconnect;
         public void LoadDefaults()
@@ -58,6 +59,7 @@ namespace Uncreated
             this.EndScreenUI = 10000;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
+            this.ModifySkillLevels = true;
             this.AllowBatteryStealing = false;
             this.RemoveLandminesOnDisconnect = false;
         }
@@ -106,7 +108,6 @@ namespace Uncreated
         public bool AllowPlayersToCaptureInVehicle;
         public bool HideUnknownFlags;
         public uint DiscoveryForesight;
-        public bool ShowObjectives;
         public int RequiredPlayerDifferenceToCapture;
         public FlagSettings()
         {
@@ -121,7 +122,6 @@ namespace Uncreated
             this.ShowPointsOnUI = true;
             this.HideUnknownFlags = true;
             this.DiscoveryForesight = 2;
-            this.ShowObjectives = true;
             this.AllowPlayersToCaptureInVehicle = false;
             this.RequiredPlayerDifferenceToCapture = 2;
         }
@@ -158,6 +158,8 @@ namespace Uncreated
         public bool explodeInteractableVehicle;
         public bool outputToConsole;
         public bool ReceiveStealVehicleBattery;
+        public bool requestGroupExit;
+        public bool onItemAdded;
 
         public PatchToggles()
         {
@@ -176,6 +178,8 @@ namespace Uncreated
             this.explodeInteractableVehicle = true;
             this.outputToConsole = true;
             this.ReceiveStealVehicleBattery = true;
+            this.requestGroupExit = true;
+            this.onItemAdded = true;
         }
 
     }

@@ -37,7 +37,7 @@ namespace Uncreated.Warfare
                 { "team_2", "Russia" },
                 { "team_3", "Admins" },
                 { "neutral", "Neutral" },
-                { "undiscovered_flag", "? ? ?" },
+                { "undiscovered_flag", "unknown" },
                 { "ui_capturing", "CAPTURING" },
                 { "ui_losing", "LOSING" },
                 { "ui_clearing", "CLEARING" },
@@ -187,8 +187,9 @@ namespace Uncreated.Warfare
                 // End UI
                 { "game_over", "Game Over!" },
                 { "winner", "<color=#{1}>{0}</color> Won!" },
-                { "lb_header_1", "Most Kills" },
-                { "lb_header_2", "K/D Ratio" },
+                { "lb_header_1", "Top Squad: <color=#{1}>{0}</color>" },
+                { "lb_header_1_no_squad", "No Squads Participated." },
+                { "lb_header_2", "Most Kills" },
                 { "lb_header_3", "Time On Point" },
                 { "lb_header_4", "Most XP Gained" },
                 { "lb_player_name", "<color=#{1}>{0}</color>" },
@@ -214,7 +215,7 @@ namespace Uncreated.Warfare
                 { "lblTimeInVehicle", "Time Driving: " },
                 { "lblTeamkills", "Teamkills: " },
                 { "lblFOBsDestroyed", "FOBs Destroyed: " },
-                { "lblCreditsGained", "Credits Gained: " },
+                { "lblOfficerPointsGained", "Officer Points Gained: " },
                 { "lblDuration", "Duration: " },
                 { "lblDeathsT1", "US Casualties: " },
                 { "lblDeathsT2", "RU Casualties: " },
@@ -226,6 +227,7 @@ namespace Uncreated.Warfare
                 { "lblFOBsDestroyedT1", "US FOBs Destroyed: " },
                 { "lblFOBsDestroyedT2", "RU FOBs Destroyed: " },
                 { "lblTeamkillingCasualties", "Teamkill Casualties: " },
+                { "lblTopRankingOfficer", "Highest Ranker: " },
                 { "next_game_start_label", "Next Game Starting In" },
                 { "next_game_start_label_shutting_down", "<color=#00ffff>Shutting Down Because: \"{0}\"</color>" },
                 { "next_game_starting_format", "{0:mm\\:ss}" },
@@ -309,9 +311,11 @@ namespace Uncreated.Warfare
                 { "duty_KilledOnDuty_Console", "{0} ({1}) killed {2} ({3}) while on duty!!" },
                 // tk system
                 { "tk_Teamkilled_Console", "{0} ({1}) teamkilled {2} ({3})!!" },
-                // vehicle placement
+                // restrictions
                 { "no_placement_on_vehicle", "You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!" },
                 { "cant_steal_batteries", "Stealing batteries is not allowed." },
+                { "cant_leave_group", "You are not allowed to manually change groups." },
+                { "cant_store_this_item", "You are not allowed to store <color=#{1}>{0}</color>." },
                 // battleye
                 { "battleye_kicked_Console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kicked_Broadcast", "<color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>." },
@@ -323,7 +327,20 @@ namespace Uncreated.Warfare
                 { "request_kit_given_credits", "Kit requested: <color=#{1}>{0}</color>. <color=#{3}>-{2}</color> credits." },
                 { "request_kit_given_credits_cant_afford", "You do not have <color=#{1}>{0}</color> credits." },
                 { "request_kit_given_not_owned", "You do not own <color=#{1}>{0}</color>." },
-                { "request_not_looking", "You must be looking at a request sign." },
+                { "request_not_looking", "You must be looking at a request sign or vehicle." },
+                { "request_kit_e_signnoexist", "This is not a request sign." },                             // FILL IN FORMATTING HERE \/
+                { "request_kit_e_kitnoexist", "This kit has not been created yet." },
+                { "request_kit_e_alreadyhaskit", "You already have this kit." },
+                { "request_kit_e_notallowed", "You do not have access to this kit." },
+                { "request_kit_e_limited", "Too many players are already using this kit, try again when there are less than {1} players." },
+                { "request_kit_e_wronglevel", "You must be a higher level to use this kit." },
+                { "request_kit_e_wrongbranch", "You must be a different branch." },
+                { "request_vehicle_e_notrequestable", "This vehicle is not available." },
+                { "request_vehicle_e_cooldown", "This vehicle is not available for another {0}." },
+                { "request_vehicle_e_wronglevel", "You must be a higher level" },
+                { "request_vehicle_e_wrongbranch", "You must be in the <color=#{1}>{0}</color> branch to use this vehicle." },
+                { "request_vehicle_e_alreadyrequested", "This vehicle has already been requested by someone." },
+                { "request_vehicle_given", "Unlocked <color=#{1}>{0}</color>." },
                 { "kit_free", "FREE" },
                 { "kit_owned", "OWNED" },
                 { "kit_price_dollars", "$ {0}" },
@@ -378,13 +395,19 @@ namespace Uncreated.Warfare
                 { "vehiclebay_e_noexist", "<color=#ff8c69>That vehicle has not been added to the vehicle bay.</color>" },
                 { "vehiclebay_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a vehicle property. Try putting 'level', 'team', 'rearmcost' etc.</color>" },
                 { "vehiclebay_e_invalidarg", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
+                { "vehiclebay_e_not_settable", "<color=#ff8c69>{0} is not marked as settable.</color>" },
                 { "vehiclebay_e_invalidseat", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
                 { "vehiclebay_e_seatexist", "<color=#ff8c69>This vehicle already has a crew seat with index: {0}</color>" },
                 { "vehiclebay_e_seatnoexist", "<color=#ff8c69>This vehicle does not have a crew seat with index: {0}</color>" },
+
                 // vehiclebay spawns
                 { "vehiclebay_spawn_registered", "<color=#a0ad8e>Successfully registered spawn. <color=#ffffff>{0}s</color> will spawn here.</color>" },
                 { "vehiclebay_spawn_deregistered", "<color=#a0ad8e>Successfully deregistered spawn.</color>" },
+                { "vehiclebay_link_started", "<color=#a0ad8e>Started linking, do /vb link on the sign now.</color>" },
+                { "vehiclebay_link_finished", "<color=#a0ad8e>Successfully registered vehicle sign link.</color>" },
+                { "vehiclebay_link_not_started", "<color=#ff8c69>You must do /vb link on a vehicle bay first.</color>" },
                 { "vehiclebay_spawn_removed", "<color=#a0ad8e>Vehicle spawn was deregistered it's barricade was salvaged.</color>" },
+                { "vehiclebay_spawn_forced", "<color=#a0ad8e>Skipped timer for <color=#ffffff>{0}</color>.</color>" },
                 { "vehiclebay_e_invalidid", "<color=#ff8c69>{0} is not a valid vehicle ID.</color>" },
                 { "vehiclebay_e_idnotfound", "<color=#ff8c69>Could not find vehicle with ID: {0}</color>" },
                 { "vehiclebay_e_spawnexist", "<color=#ff8c69>This spawn is already registered. Unregister it first.</color>" },
@@ -392,7 +415,11 @@ namespace Uncreated.Warfare
                 { "vehiclebay_check_registered", "<color=#a0ad8e>This spawn (<color=#8ce4ff>{0}</color>) is registered with vehicle: <color=#ffffff>{1} - {2}</color></color>" },
                 { "vehiclebay_check_notregistered", "<color=#a0ad8e>This spawn is not registered.</color>" },
 
-                //Officers
+                // vehicle bay signs
+                { "vehiclebay_sign_no_min_level", "<color=#{4}><color=#{1}>{0}</color>\nTickets: <color=#{3}>{2}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: Ticket cost, 3: Ticket cost color , 4: background color
+                { "vehiclebay_sign_min_level", "<color=#{6}><color=#{1}>{0}</color>\n<color=#{3}>{2}</color>\nTickets: <color=#{5}>{4}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: rank, 3: rank color, 4: Ticket cost, 5: Ticket cost color, 6: background color
+
+                // Officers
                 { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of <color=#baccca>{1}</color>!</color>" },
                 { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
                 { "officer_discharged", "<color=#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.</color>" },
@@ -459,6 +486,9 @@ namespace Uncreated.Warfare
             new ColorData("join_message_name", "ffff1a"),
             new ColorData("leave_message_background", "e6e3d5"),
             new ColorData("leave_message_name", "ffff1a"),
+            new ColorData("attack_icon_color", "ffca61"),
+            new ColorData("defend_icon_color", "ba70cc"),
+            new ColorData("undiscovered_flag", "696969"),
             new ColorData("team_count_ui_color_team_1", "ffffff"),
             new ColorData("team_count_ui_color_team_2", "ffffff"),
             new ColorData("team_count_ui_color_team_1_icon", "4785ff"),
@@ -646,10 +676,32 @@ namespace Uncreated.Warfare
             new ColorData("request_kit_given_credits_cant_afford_credits", "c6d4b8"),
             new ColorData("request_kit_given_not_owned", "00fffff"),
             new ColorData("request_not_looking", "ff8c69"),
+            new ColorData("request_kit_e_signnoexist", "ff8c69"),
+            new ColorData("request_kit_e_kitnoexist", "ff8c69"),
+            new ColorData("request_kit_e_alreadyhaskit", "ff8c69"),
+            new ColorData("request_kit_e_notallowed", "ff8c69"),
+            new ColorData("request_kit_e_limited", "ff8c69"),
+            new ColorData("request_kit_e_wronglevel", "ff8c69"),
+            new ColorData("request_kit_e_wrongbranch", "ff8c69"),
+            new ColorData("request_vehicle_e_notrequestable", "ff8c69"),
+            new ColorData("request_vehicle_e_cooldown", "ff8c69"),
+            new ColorData("request_vehicle_e_wronglevel", "ff8c69"),
+            new ColorData("request_vehicle_e_wrongbranch", "ff8c69"),
+            new ColorData("request_vehicle_e_wrongbranch_branch", "c6d4b8"),
+            new ColorData("request_vehicle_e_alreadyrequested", "ff8c69"),
+            new ColorData("request_vehicle_given", "00fffff"),
+            new ColorData("request_vehicle_given_vehicle_name", "c6d4b8"),
             new ColorData("kit_price_free", "f53b3b"),
             new ColorData("kit_price_credits", "f53b3b"),
             new ColorData("kit_price_dollars", "f53b3b"),
             new ColorData("kit_price_owned", "f53b3b"),
+
+            // Vehicle Sign
+            new ColorData("vbs_background", "222222"),
+            new ColorData("vbs_vehicle_name_color", "a0ad8e"),
+            new ColorData("vbs_locked_vehicle_color", "800000"),
+            new ColorData("vbs_rank_color", "e6e3d5"),
+            new ColorData("vbs_ticket_cost", "e6e3d5"),
 
             // Structure
             new ColorData("structure_saved", "e6e3d5"),
@@ -696,6 +748,10 @@ namespace Uncreated.Warfare
 
             // Restrictions
             new ColorData("cant_steal_batteries", "f53b3b"),
+            new ColorData("cant_place_structures_on_vehicles", "f53b3b"),
+            new ColorData("cant_leave_group", "f53b3b"),
+            new ColorData("cant_store_this_item", "f53b3b"),
+            new ColorData("cant_store_this_item_item", "e6e3d5"),
         };
         public static readonly List<XPData> DefaultXPData = new List<XPData>
         {

@@ -1,4 +1,5 @@
-﻿using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Enumerations;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -48,6 +49,10 @@ namespace Uncreated.Warfare
             await XPManager.OnGroupChanged(player, oldGroup, newGroup);
             await OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
         }
+        internal static void OnStructureDestroyed(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID)
+        {
+            Data.VehicleSpawner.OnStructureDestroyed(region, data, drop, instanceID);
+        }
         internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
             if (Data.OwnerComponents != null)
@@ -61,6 +66,8 @@ namespace Uncreated.Warfare
             }
             FOBManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
             RallyManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
+            Data.VehicleSpawner.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
+            Data.VehicleSigns.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow) 
         {
@@ -117,10 +124,10 @@ namespace Uncreated.Warfare
                 c.lastShot = gun.equippedGunAsset.id;
             }
         }
-        internal static void ReloadCommand_onTranslationsReloaded(object sender, EventArgs e)
+        internal static async Task ReloadCommand_onTranslationsReloaded()
         {
             foreach (SteamPlayer player in Provider.clients)
-                UCWarfare.I.UpdateLangs(player);
+                await UCWarfare.I.UpdateLangs(player);
         }
         internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x,
             ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
@@ -172,6 +179,11 @@ namespace Uncreated.Warfare
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
             }
+            if (!UCWarfare.Config.ModifySkillLevels)
+            {
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);
+            }
             Data.ReviveManager.OnPlayerConnected(player);
 
             SquadManager.InvokePlayerJoined(ucplayer);
@@ -181,26 +193,80 @@ namespace Uncreated.Warfare
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
             await rtn;
         }
+        internal static void OnTryStoreItem(Player player, byte page, byte index, ItemJar jar, ref bool allow)
+        {
+            if (!player.inventory.isStoring) return;
+            UnturnedPlayer utplayer = UnturnedPlayer.FromPlayer(player);
+            if (utplayer.OnDuty())
+            {
+                F.Log("Player on duty.");
+                return;
+            }
+            if (!Whitelister.IsWhitelisted(jar.item.id, out _))
+            {
+                F.Log("Not whitelisted");
+                allow = false;
+                player.SendChat("cant_store_this_item", UCWarfare.GetColor("cant_store_this_item"),
+                    !(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset) || asset.itemName == null ? jar.item.id.ToString(Data.Locale) : asset.itemName, UCWarfare.GetColorHex("cant_store_this_item_item"));
+            }
+            F.Log("Whitelisted");
+        }
         internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
         {
             if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure found))
             {
-                found.transform = new SerializableTransform(instanceID, new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                 Structures.StructureSaver.Save();
+                if (Vehicles.VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, Structures.EStructType.STRUCTURE))
+                {
+                    List<Vehicles.VehicleSign> linked = Vehicles.VehicleSigns.GetLinkedSigns(spawn);
+                    if (linked.Count > 0)
+                    {
+                        for (int i = 0; i < linked.Count; i++)
+                        {
+                            linked[i].bay_transform = found.transform;
+                        }
+                        Vehicles.VehicleSigns.Save();
+                    }
+                }
             }
-        }
-        internal static void OnPlayerLeavesVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
-        {
-            if(shouldAllow)
-                Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
         }
         internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
         {
             if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.BARRICADE, out Structures.Structure found)) 
             {
-                found.transform = new SerializableTransform(instanceID, new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                 Structures.StructureSaver.Save();
+                if (Vehicles.VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, Structures.EStructType.BARRICADE))
+                {
+                    List<Vehicles.VehicleSign> linked = Vehicles.VehicleSigns.GetLinkedSigns(spawn);
+                    if (linked.Count > 0)
+                    {
+                        for (int i = 0; i < linked.Count; i++)
+                        {
+                            linked[i].bay_transform = found.transform;
+                        }
+                        Vehicles.VehicleSigns.Save();
+                    }
+                }
             }
+            F.GetBarricadeFromInstID(instanceID, out BarricadeDrop drop);
+            if (drop != default)
+            {
+                if (drop.model.TryGetComponent(out InteractableSign sign))
+                {
+                    if (Vehicles.VehicleSigns.SignExists(sign, out Vehicles.VehicleSign vbsign))
+                    {
+                        vbsign.sign_transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                        Vehicles.VehicleSigns.Save();
+                    }
+                }
+            }
+        }
+        internal static void OnPlayerLeavesVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
+        {
+            if (shouldAllow)
+                Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
         }
         internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
         {
@@ -265,8 +331,8 @@ namespace Uncreated.Warfare
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last within game thread section
             await rtn;
         }
-        internal static void LangCommand_OnPlayerChangedLanguage(object sender, Commands.PlayerChangedLanguageEventArgs e) 
-            => UCWarfare.I.UpdateLangs(e.player.Player.channel.owner);
+        internal static async Task LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet) 
+            => await UCWarfare.I.UpdateLangs(player.Player.channel.owner);
 
         internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
         {

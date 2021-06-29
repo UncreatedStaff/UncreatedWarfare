@@ -149,7 +149,7 @@ namespace Uncreated.Warfare.Stats
             this.teamkills = teamkills;
             this.credits = credits;
             this.xp = xp;
-            this.level = (uint)playerRank.level;
+            this.level = playerRank.level;
             this.rank = playerRank.name;
             this.rank_abbreviation = playerRank.abbreviation;
             this.teams = teams ?? new List<Team>();

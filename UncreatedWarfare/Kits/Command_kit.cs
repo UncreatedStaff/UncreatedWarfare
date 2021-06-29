@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Kits
         public string Syntax => "/kit";
         public List<string> Aliases => new List<string>() { "kit" };
         public List<string> Permissions => new List<string>() { "uc.kit" };
-        public void Execute(IRocketPlayer caller, string[] command)
+        public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
@@ -37,14 +37,14 @@ namespace Uncreated.Warfare.Kits
                     if (!KitManager.KitExists(kitName, out var kit)) // create kit
                     {
                         KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
-                        RequestSigns.UpdateSignsWithName(kitName);
+                        await RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         player.Message("kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
                         KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
-                        RequestSigns.UpdateSignsWithName(kitName);
+                        await RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         player.Message("kit_overwritten", kitName);
                         return;
                     }
@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Kits
                             }
                             string text = sb.ToString();
                             F.Log(text);
-                            if (KitManager.UpdateText(command[2], text, command[3]))
+                            if (await KitManager.UpdateText(command[2], text, command[3]))
                                 player.Message("kit_setprop", "sign text", command[2], command[3] + " : " + text);
                             else
                                 player.Message("kit_e_noexist", command[2]);
@@ -150,7 +150,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         // success
                         player.Message("kit_setprop", property, kitName, newValue);
-                        RequestSigns.UpdateSignsWithName(kitName);
+                        await RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         return;
                     }
                 }
@@ -188,7 +188,7 @@ namespace Uncreated.Warfare.Kits
                     //success
                     player.Message("kit_accessgiven", targetPlayer, kitName);
                     KitManager.GiveAccess(player.CSteamID.m_SteamID, kit.Name);
-                    RequestSigns.UpdateSignsWithName(target.Player.channel.owner, kitName);
+                    await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
                 // remove player access to kit
@@ -218,7 +218,7 @@ namespace Uncreated.Warfare.Kits
                     //success
                     player.Message("kit_accessremoved", targetPlayer, kitName);
                     KitManager.RemoveAccess(player.CSteamID.m_SteamID, kit.Name);
-                    RequestSigns.UpdateSignsWithName(target.Player.channel.owner, kitName);
+                    await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
             }

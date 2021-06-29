@@ -183,35 +183,6 @@ namespace Uncreated.Warfare.Flags
             NewPlayers = PlayersOnFlag.Where(p => !OldPlayers.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
             return OldPlayers.Where(p => !PlayersOnFlag.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
         }
-        public ulong FullOwner { 
-            get
-            {
-                if (_points >= MaxPoints)
-                    return 1;
-                else if (_points <= MaxPoints * -1)
-                    return 2;
-                else return 0;
-            }
-        }
-        public async Task SetFullOwner(ulong value)
-        {
-            if (value == 1)
-            {
-                await SetPoints(MaxPoints);
-                await SetOwner(1);
-            }
-            else if (value == 2)
-            {
-                await SetPoints(-MaxPoints);
-                await SetOwner(2);
-            }
-            else if (value == 0)
-            {
-                await SetPoints(0);
-                await SetOwner(0);
-            }
-            else F.LogError($"Tried to set owner of flag {_id}: \"{Name}\" to an invalid team: {value}.");
-        }
         private int _points;
         public int LastDeltaPoints { get; protected set; }
         public int Points
@@ -291,7 +262,7 @@ namespace Uncreated.Warfare.Flags
             OnPlayerLeft?.Invoke(this, new PlayerEventArgs { player = player });
             PlayersOnFlag.Remove(player);
         }
-        public bool IsNeutral() => FullOwner == 0;
+        public bool IsNeutral() => _points == 0;
         public async Task CapT1(int amount)
         {
             await SetPoints(Points + amount);
@@ -382,13 +353,11 @@ namespace Uncreated.Warfare.Flags
         public bool Hidden(ulong team) => !Discovered(team);
         public void Discover(ulong team)
         {
-            F.Log($"{team} discovered {Name} ({index})", ConsoleColor.Yellow);
             if (team == 1) DiscoveredT1 = true;
             else if (team == 2) DiscoveredT2 = true;
         }
         public void Hide(ulong team)
         {
-            F.Log($"{team} forgot {Name} ({index})", ConsoleColor.Yellow);
             if (team == 1) DiscoveredT1 = false;
             else if (team == 2) DiscoveredT2 = false;
         }

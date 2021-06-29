@@ -278,19 +278,18 @@ namespace Uncreated.Warfare.Kits
                 return kit.AllowedUsers.Contains(playerID);
             else return false;
         }
-        public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DefaultLanguage)
+        public static async Task<bool> UpdateText(string kitname, string SignName, string language = JSONMethods.DefaultLanguage)
         {
             if (KitExists(kitname, out Kit kit))
             {
-                UpdateObjectsWhere(k => k.Name == kit.Name, k =>
+                List<Kit> matches = GetObjectsWhere(k => k.Name == kit.Name);
+                for (int i = 0; i < matches.Count; i++)
                 {
-                    F.Log(k.SignName);
-                    k.SignName = SignName;
-                    k.SignTexts.Remove(language);
-                    k.SignTexts.Add(language, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>");
-                    F.Log(k.SignName);
-                    RequestSigns.UpdateSignsWithName(k.Name);
-                });
+                    matches[i].SignName = SignName;
+                    matches[i].SignTexts.Remove(language);
+                    matches[i].SignTexts.Add(language, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>");
+                    await RequestSigns.InvokeLangUpdateForSignsOfKit(matches[i].Name);
+                }
                 return true;
             }
             else return false;

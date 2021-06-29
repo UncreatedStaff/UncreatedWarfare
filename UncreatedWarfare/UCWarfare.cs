@@ -89,8 +89,9 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.VehicleStorage, out _, true);
             if (Config.Modules.VehicleSpawning)
             {
-                Data.VehicleSpawnSaver = new VehicleSpawner();
+                Data.VehicleSpawner = new VehicleSpawner();
                 Data.VehicleBay = new VehicleBay();
+                Data.VehicleSigns = new VehicleSigns();
             }
             Data.RequestSignManager = new RequestSigns();
             Data.StructureManager = new StructureSaver();
@@ -102,9 +103,10 @@ namespace Uncreated.Warfare
             }
             Data.TeamManager = new TeamManager();
             F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
-            ReplaceBarricadesAndStructures();
+            await ReplaceBarricadesAndStructures();
             await Data.FlagManager.Load(); // starts new game
-            Data.VehicleSpawnSaver.OnLevelLoaded();
+            Data.VehicleSpawner.OnLevelLoaded();
+            VehicleSigns.InitAllSigns();
             Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
             await rtn;
             if (Provider.clients.Count > 0)
@@ -114,7 +116,7 @@ namespace Uncreated.Warfare
                 await Networking.Client.SendPlayerList(playersOnline);
             }
         }
-        public static void ReplaceBarricadesAndStructures()
+        public static async Task ReplaceBarricadesAndStructures()
         {
             for (byte x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -151,8 +153,8 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            RequestSigns.DropAllSigns();
-            StructureSaver.DropAllStructures();
+            await RequestSigns.DropAllSigns();
+            await StructureSaver.DropAllStructures();
         }
         internal async Task OnFlagManagerReady()
         {
@@ -176,9 +178,11 @@ namespace Uncreated.Warfare
             PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler += EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
+            Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             FlagManager.OnFlagCaptured += EventFunctions.OnFlagCaptured;
             FlagManager.OnFlagNeutralized += EventFunctions.OnFlagNeutralized;
@@ -202,9 +206,11 @@ namespace Uncreated.Warfare
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler -= EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
+            Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
@@ -221,7 +227,7 @@ namespace Uncreated.Warfare
             F.Log("Subscribing to events...", ConsoleColor.Magenta);
             SubscribeToEvents();
         }
-        internal void UpdateLangs(SteamPlayer player)
+        internal async Task UpdateLangs(SteamPlayer player)
         {
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
@@ -233,7 +239,7 @@ namespace Uncreated.Warfare
                         if (sign.text.StartsWith("sign_"))
                         {
                             if (BarricadeManager.tryGetInfo(drop.model, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion _))
-                                F.InvokeSignUpdateFor(player, x, y, plant, index, region, false); 
+                                await F.InvokeSignUpdateFor(player, x, y, plant, index, region, false); 
                         }
                     }
                 }
@@ -251,7 +257,7 @@ namespace Uncreated.Warfare
             Data.ReviveManager?.Dispose();
             Data.FOBManager?.Dispose();
             Data.Whitelister?.Dispose();
-            Data.VehicleSpawnSaver?.Dispose();
+            Data.VehicleSpawner?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);

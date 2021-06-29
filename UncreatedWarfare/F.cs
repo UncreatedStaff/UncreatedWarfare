@@ -18,6 +18,8 @@ using System.Reflection;
 using Uncreated.Players;
 using Flag = Uncreated.Warfare.Flags.Flag;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.XP;
+using System.Threading.Tasks;
 
 namespace Uncreated.Warfare
 {
@@ -238,6 +240,14 @@ namespace Uncreated.Warfare
         /// <summary>
         /// Send a message in chat using the RocketMod translation file.
         /// </summary>
+        /// <param name="player"><see cref="UCPlayer"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void SendChat(this UCPlayer player, string text, Color textColor, params object[] formatting) => SendChat(player.Player.channel.owner.playerID.steamID, text, textColor, formatting);
+        /// <summary>
+        /// Send a message in chat using the RocketMod translation file.
+        /// </summary>
         /// <param name="player"><see cref="Player"/> to send the chat to.</param>
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
@@ -320,8 +330,8 @@ namespace Uncreated.Warfare
             foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
                 SendChat(player.playerID.steamID, text, textColor, formatting);
         }
-        public static bool OnDuty(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
-        public static bool OffDuty(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup);
+        public static bool OnDuty(this UnturnedPlayer player) => player.Player.channel.owner.isAdmin || R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
+        public static bool OffDuty(this UnturnedPlayer player) => !OnDuty(player);
         public static bool IsIntern(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
         public static bool IsAdmin(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup);
         /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
@@ -602,14 +612,14 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this ulong playerID) => playerID.GetBaseSpawn(out _);
         public static string QuickSerialize(object obj) => JsonConvert.SerializeObject(obj);
         public static T QuickDeserialize<T>(string json) => JsonConvert.DeserializeObject<T>(json);
-        public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, string text)
+        public static async Task InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, string text)
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
-                newtext = TranslateSign(text, client.playerID.steamID.m_SteamID);
+                newtext = await TranslateSign(text, client.playerID.steamID.m_SteamID);
             Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
         }
-        public static void InvokeSignUpdateForAll(byte x, byte y, ushort plant, ushort index, string text)
+        public static async Task InvokeSignUpdateForAll(byte x, byte y, ushort plant, ushort index, string text)
         {
             Dictionary<string, List<SteamPlayer>> playergroups = new Dictionary<string, List<SteamPlayer>>();
             foreach (SteamPlayer client in Provider.clients)
@@ -635,7 +645,7 @@ namespace Uncreated.Warfare
                 {
                     string newtext = text;
                     if (text.StartsWith("sign_"))
-                        newtext = TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
+                        newtext = await TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
                     List<ITransportConnection> connections = new List<ITransportConnection>();
                     languageGroup.Value.ForEach(l => connections.Add(l.transportConnection));
                     Data.SendUpdateSign.Invoke(ENetReliability.Reliable, connections, x, y, plant, index, newtext);
@@ -643,18 +653,18 @@ namespace Uncreated.Warfare
             }
         }
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-        public static void InvokeSignUpdateForAllKits(byte x, byte y, ushort plant, ushort index, string text)
+        public static async Task InvokeSignUpdateForAllKits(byte x, byte y, ushort plant, ushort index, string text)
         {
             if (text == null) return;
             foreach (SteamPlayer player in Provider.clients)
             {
                 string newtext = text;
                 if (text.StartsWith("sign_"))
-                    newtext = TranslateSign(text, player.playerID.steamID.m_SteamID);
+                    newtext = await TranslateSign(text, player.playerID.steamID.m_SteamID);
                 Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, player.transportConnection, x, y, plant, index, newtext);
             }
         }
-        public static void InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
+        public static async Task InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
         {
             if (text == default || client == default || region == default) return;
             string newtext;
@@ -664,7 +674,7 @@ namespace Uncreated.Warfare
             }
             else newtext = text;
             if (newtext.StartsWith("sign_"))
-                newtext = TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID);
+                newtext = await TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID);
             Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
         }
         public static string GetSignText(ushort index, BarricadeRegion region)
@@ -1015,13 +1025,35 @@ namespace Uncreated.Warfare
             else return false;
         }
         public static bool IsOnFlag(this Player player) => Data.FlagManager.FlagRotation.Exists(F => F.ZoneData.IsInside(player.transform.position));
-        public static string TranslateSign(string key, ulong player, params object[] formatting)
+        public static async Task<string> TranslateSign(string key, ulong player, params object[] formatting)
         {
             string norm = Translate(key, player, formatting);
             if (!key.StartsWith("sign_") || norm != key) return norm;
             if (key.Length <= 5) return key;
             string kitname = key.Substring(5);
-            if (Kits.KitManager.KitExists(kitname, out Kits.Kit kit))
+            if (kitname.StartsWith("vbs_") && ushort.TryParse(kitname.Substring(4), System.Globalization.NumberStyles.Any, Data.Locale, out ushort vehicleid))
+            {
+                if (Vehicles.VehicleBay.VehicleExists(vehicleid, out Vehicles.VehicleData data))
+                {
+                    VehicleAsset asset = UCAssetManager.FindVehicleAsset(vehicleid);
+                    if (asset == default) return norm;
+                    if (data.RequiredLevel > 0)
+                    {
+                        Rank rank = XPManager.GetRankFromLevel(data.RequiredLevel);
+                        Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, player.GetTeamFromPlayerSteam64ID(), false), out _, out _);
+                        if (rank == default) return norm;
+                        return Translate("vehiclebay_sign_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), rank.TranslateName(player), 
+                            player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"), data.TicketCost.ToString(Data.Locale),
+                            UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
+                    }
+                    else
+                    {
+                        return Translate("vehiclebay_sign_no_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), data.TicketCost.ToString(Data.Locale), 
+                            UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
+                    }
+                }
+                else return norm;
+            } else if (KitManager.KitExists(kitname, out Kit kit))
             {
                 string pricestring;
                 string pricecolor;

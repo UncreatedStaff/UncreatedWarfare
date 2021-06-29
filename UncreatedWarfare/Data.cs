@@ -97,8 +97,9 @@ namespace Uncreated.Warfare
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
         public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
         public static KitManager KitManager;
-        public static VehicleSpawner VehicleSpawnSaver;
+        public static VehicleSpawner VehicleSpawner;
         public static VehicleBay VehicleBay; 
+        public static VehicleSigns VehicleSigns; 
         public static FlagManager FlagManager;
         public static FOBManager FOBManager;
         public static BuildManager BuildManager;
@@ -111,7 +112,7 @@ namespace Uncreated.Warfare
         public static RequestSigns RequestSignManager;
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
-        public static SquadManager squadManager;
+        public static SquadManager SquadManager;
         internal static WarfareSQL DatabaseManager;
         public static WarStatsTracker GameStats;
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
@@ -177,7 +178,7 @@ namespace Uncreated.Warfare
             await DatabaseManager.OpenAsync();
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
-            squadManager = new SquadManager();
+            SquadManager = new SquadManager();
             CommandWindow.shouldLogDeaths = false;
 
             FlagManager = new FlagManager();

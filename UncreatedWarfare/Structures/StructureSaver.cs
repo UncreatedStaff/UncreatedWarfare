@@ -13,11 +13,11 @@ namespace Uncreated.Warfare.Structures
     {
         public StructureSaver() : base(Data.StructureStorage + "structures.json") { }
         protected override string LoadDefaults() => "[]";
-        public static void DropAllStructures()
+        public static async Task DropAllStructures()
         {
             foreach (Structure structure in ActiveObjects)
             {
-                structure.SpawnCheck();
+                await structure.SpawnCheck();
                 if (!structure.exists)
                     F.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
             }
@@ -102,6 +102,11 @@ namespace Uncreated.Warfare.Structures
         }
         [JsonIgnore]
         private byte[] _metadata;
+        internal void ResetMetadata()
+        {
+            _metadata = default;
+        }
+        public ushort health;
         public string state;
         public SerializableTransform transform;
         public uint instance_id;
@@ -113,28 +118,29 @@ namespace Uncreated.Warfare.Structures
         [JsonIgnore]
         public bool exists;
         [JsonConstructor]
-        public Structure(ushort id, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
+        public Structure(ushort id, ushort health, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
         {
             this.id = id;
+            this.health = health;
             this.state = state;
             this.type = type;
             this.instance_id = instance_id;
             if (type == EStructType.BARRICADE)
             {
-                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                 F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (drop == default)
                 {
                     this.transform = transform;
                     exists = false;
                 } else
                 {
-                    this.transform = new SerializableTransform(data.instanceID, drop.model.transform);
+                    this.transform = new SerializableTransform(drop.model.transform);
                     exists = true;
                 }
             } 
             else if (type == EStructType.STRUCTURE)
             {
-                StructureData data = F.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                F.GetStructureFromInstID(instance_id, out StructureDrop drop);
                 if (drop == default)
                 {
                     this.transform = transform;
@@ -142,7 +148,7 @@ namespace Uncreated.Warfare.Structures
                 }
                 else
                 {
-                    this.transform = new SerializableTransform(data.instanceID, drop.model.transform);
+                    this.transform = new SerializableTransform(drop.model.transform);
                     exists = true;
                 }
             } 
@@ -152,22 +158,23 @@ namespace Uncreated.Warfare.Structures
             exists = false;
         }
         /// <summary>Spawns the structure if it is not already placed.</summary>
-        public void SpawnCheck()
+        public async Task SpawnCheck()
         {
             if (type == EStructType.BARRICADE)
             {
-                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out _);
                 if (data == default)
                 {
+                    ItemBarricadeAsset asset = Asset as ItemBarricadeAsset;
                     Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
-                        new Barricade(id, ushort.MaxValue, Metadata, Asset as ItemBarricadeAsset),
+                        new Barricade(id, asset.health, Metadata, asset),
                         transform.position.Vector3, transform.Rotation, owner, group
                         );
                     if (BarricadeManager.tryGetInfo(newBarricade, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
                     {
                         if (newBarricade.TryGetComponent(out InteractableSign sign))
                         {
-                            F.InvokeSignUpdateForAll(x, y, plant, index, sign.text);
+                            await F.InvokeSignUpdateForAll(x, y, plant, index, sign.text);
                         }
                         if (region != default)
                         {
@@ -189,11 +196,12 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                StructureData data = F.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                StructureData data = F.GetStructureFromInstID(instance_id, out _);
                 if (data == default)
                 {
+                    ItemStructureAsset asset = Asset as ItemStructureAsset;
                     if (!StructureManager.dropStructure(
-                        new SDG.Unturned.Structure(id, ushort.MaxValue, Asset as ItemStructureAsset),
+                        new SDG.Unturned.Structure(id, asset.health, asset),
                         transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
                         transform.euler_angles.z, owner, group))
                     {
@@ -222,7 +230,7 @@ namespace Uncreated.Warfare.Structures
             this.id = data.structure.id;
             this._metadata = new byte[0];
             this.state = Convert.ToBase64String(_metadata);
-            this.transform = new SerializableTransform(drop.instanceID, drop.model.transform);
+            this.transform = new SerializableTransform(drop.model.transform);
             this.owner = data.owner;
             this.group = data.group;
             this.instance_id = data.instanceID;
@@ -233,7 +241,7 @@ namespace Uncreated.Warfare.Structures
             this.id = data.barricade.id;
             this._metadata = data.barricade.state;
             this.state = Convert.ToBase64String(_metadata);
-            this.transform = new SerializableTransform(drop.instanceID, drop.model.transform);
+            this.transform = new SerializableTransform(drop.model.transform);
             this.owner = data.owner;
             this.group = data.group;
             this.instance_id = data.instanceID;

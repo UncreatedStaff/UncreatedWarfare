@@ -130,7 +130,7 @@ namespace Uncreated.Warfare.Squads
                     true,
                     Squads[i].Name,
                     !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
+                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
                 );
             }
         }
@@ -309,6 +309,7 @@ namespace Uncreated.Warfare.Squads
         public ushort Team1RallyID;
         public ushort Team2RallyID;
         public ushort rallyUI;
+        public char lockCharacter;
 
         public override void SetDefaults()
         {
@@ -316,6 +317,7 @@ namespace Uncreated.Warfare.Squads
             Team1RallyID = 38381;
             Team1RallyID = 38382;
             rallyUI = 32395;
+            lockCharacter = '²';
         }
 
         public SquadConfigData() { }

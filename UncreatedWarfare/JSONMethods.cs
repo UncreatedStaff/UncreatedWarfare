@@ -147,16 +147,15 @@ namespace Uncreated.Warfare
     }
     public struct SerializableTransform
     {
-        public static readonly SerializableTransform Zero = new SerializableTransform(0 ,SerializableVector3.Zero, SerializableVector3.Zero);
+        public static readonly SerializableTransform Zero = new SerializableTransform(SerializableVector3.Zero, SerializableVector3.Zero);
         public SerializableVector3 position;
         public SerializableVector3 euler_angles;
-        public uint instanceID;
         [JsonIgnore]
         public Quaternion Rotation { get => Quaternion.Euler(euler_angles.Vector3); }
         [JsonIgnore]
         public Vector3 Position { get => position.Vector3; }
-        public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.instanceID == b.instanceID;
-        public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.instanceID != b.instanceID;
+        public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.position == b.position && a.euler_angles == b.euler_angles;
+        public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.position != b.position || a.euler_angles != b.euler_angles;
         public static bool operator ==(SerializableTransform a, Transform b) => a.position == b.position && a.euler_angles == b.rotation.eulerAngles;
         public static bool operator !=(SerializableTransform a, Transform b) => a.position != b.position || a.euler_angles != b.rotation.eulerAngles;
         public override bool Equals(object obj)
@@ -177,29 +176,25 @@ namespace Uncreated.Warfare
             return hashCode;
         }
         [JsonConstructor]
-        public SerializableTransform(uint instanceID, SerializableVector3 position, SerializableVector3 euler_angles)
+        public SerializableTransform(SerializableVector3 position, SerializableVector3 euler_angles)
         {
             this.position = position;
             this.euler_angles = euler_angles;
-            this.instanceID = instanceID;
         }
-        public SerializableTransform(uint instanceID, Transform transform)
+        public SerializableTransform(Transform transform)
         {
             this.position = new SerializableVector3(transform.position);
             this.euler_angles = new SerializableVector3(transform.rotation.eulerAngles);
-            this.instanceID = instanceID;
         }
-        public SerializableTransform(uint instanceID, Vector3 position, Vector3 eulerAngles)
+        public SerializableTransform(Vector3 position, Vector3 eulerAngles)
         {
             this.position = new SerializableVector3(position);
             this.euler_angles = new SerializableVector3(eulerAngles);
-            this.instanceID = instanceID;
         }
-        public SerializableTransform(uint instanceID, Vector3 position, Quaternion rotation)
+        public SerializableTransform(Vector3 position, Quaternion rotation)
         {
             this.position = new SerializableVector3(position);
             this.euler_angles = new SerializableVector3(rotation.eulerAngles);
-            this.instanceID = instanceID;
         }
     }
     public struct CreditsData
