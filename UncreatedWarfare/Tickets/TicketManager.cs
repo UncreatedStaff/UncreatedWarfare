@@ -162,7 +162,7 @@ namespace Uncreated.Warfare.Tickets
                 
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
-                bleed.ToString(Data.Locale),
+                bleed < 0 ? bleed.ToString(Data.Locale) : "",
                 message
                 );
         }
@@ -191,45 +191,46 @@ namespace Uncreated.Warfare.Tickets
 
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
-            int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.FullOwner == team).Count();
-            int enemyCount = Data.FlagManager.AllFlags.Where(f => f.FullOwner != team).Count();
+            int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.Owner == team).Count();
+            int enemyCount = Data.FlagManager.AllFlags.Where(f => f.Owner != team && !f.IsNeutral()).Count();
 
-            int diff = friendlyCount - enemyCount;
+            float friendlyRatio = (float)friendlyCount * Data.FlagManager.AllFlags.Count();
+            float enemyRatio = (float)enemyCount / Data.FlagManager.AllFlags.Count();
 
-            if (diff == 0 || diff == 1)
+            if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
             {
                 bleed = 0;
                 message = "";
             }
-            else if (diff == 2 || diff == 3)
-            {
-                message = "Your team is in control!";
-                bleed = 1;
-            }
-            else if (diff >= 3 && enemyCount != 0)
-            {
-                message = "Your team is dominating!";
-                bleed = 2;
-            }
-            else if (diff == -1 || diff == -2)
+            else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
             {
                 message = "The enemy is in control!";
                 bleed = -1;
             }
-            else if (diff <= -3 && friendlyCount != 0)
+            else if (0.8F < enemyRatio && enemyRatio < 1F)
             {
                 message = "The enemy is dominating!";
                 bleed = -2;
             }
-            else if (friendlyCount == Data.FlagManager.AllFlags.Count)
+            else if (enemyRatio  == 1)
+            {
+                message = "You are defeated!";
+                bleed = -3;
+            }
+            else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
+            {
+                message = "Your team is in control!";
+                bleed = 1;
+            }
+            else if (0.8F < friendlyRatio && friendlyRatio < 1F)
+            {
+                message = "Your team is dominating!";
+                bleed = 2;
+            }
+            else if (friendlyRatio == 1)
             {
                 message = "You are victorious!";
                 bleed = 3;
-            }
-            else if (enemyCount == Data.FlagManager.AllFlags.Count)
-            {
-                message = "You are defeated.";
-                bleed = -3;
             }
             else
             {
