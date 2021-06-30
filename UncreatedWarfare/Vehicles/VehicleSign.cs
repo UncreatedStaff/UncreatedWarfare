@@ -109,37 +109,48 @@ namespace Uncreated.Warfare.Vehicles
         public VehicleSpawn bay;
         public uint instance_id;
         public uint bay_instance_id;
+        public ushort sign_id;
+        public ushort bay_id;
         public EStructType bay_type;
         public SerializableTransform sign_transform;
         public SerializableTransform bay_transform;
         public string placeholder_text;
         [JsonConstructor]
-        public VehicleSign(uint instance_id, uint bay_instance_id, SerializableTransform sign_transform, SerializableTransform bay_transform, string placeholder_text, EStructType bay_type)
+        public VehicleSign(ushort sign_id, ushort bay_id, uint instance_id, uint bay_instance_id, SerializableTransform sign_transform, SerializableTransform bay_transform, string placeholder_text, EStructType bay_type)
         {
+            this.sign_id = sign_id;
+            this.bay_id = bay_id;
             this.instance_id = instance_id;
             this.bay_instance_id = bay_instance_id;
             this.placeholder_text = placeholder_text;
             this.bay_type = bay_type;
+            this.sign_transform = sign_transform;
+            this.bay_transform = bay_transform;
         }
         public void InitVars()
         {
             if (!StructureSaver.StructureExists(this.instance_id, EStructType.BARRICADE, out save))
             {
                 BarricadeData data = F.GetBarricadeFromTransform(sign_transform, out BarricadeDrop drop);
-                if (!StructureSaver.StructureExists(data.instanceID, EStructType.BARRICADE, out save))
+                if (data == default || !StructureSaver.StructureExists(data.instanceID, EStructType.BARRICADE, out save))
                 {
                     if (data != default)
                     {
-                        if (StructureSaver.AddStructure(drop, data, out Structure structure))
+                        if (StructureSaver.AddStructure(drop, data, out save))
                         {
-                            save = structure;
-                            this.instance_id = structure.instance_id;
-                            structure.SpawnCheck().GetAwaiter().GetResult();
+                            save.SpawnCheck().GetAwaiter().GetResult();
+                            this.instance_id = save.instance_id;
                         }
                     }
                     else
                     {
-                        F.LogWarning("Failed to link sign to the correct instance id.");
+                        if (StructureSaver.AddUnspawnedStructure(sign_id, EStructType.BARRICADE, sign_transform, 0, Teams.TeamManager.AdminID, out save))
+                        {
+                            this.instance_id = save.instance_id;
+                        } else
+                        {
+                            F.LogWarning("Failed to link sign to the correct instance id.");
+                        }
                     }
                 }
                 else
@@ -177,18 +188,31 @@ namespace Uncreated.Warfare.Vehicles
             this.bay_type = bay.type;
             this.placeholder_text = $"sign_vbs_" + bay.VehicleID.ToString(Data.Locale);
             this.sign_transform = save.transform;
+            this.sign_id = save.id;
             if (StructureSaver.StructureExists(bay.SpawnPadInstanceID, bay.type, out Structure s))
+            {
+                this.bay_id = s.id;
                 this.bay_transform = s.transform;
+            }
             else
             {
                 if (bay.type == EStructType.BARRICADE)
                 {
-                    F.GetBarricadeFromInstID(bay.SpawnPadInstanceID, out BarricadeDrop drop);
-                    if (drop != default) this.bay_transform = new SerializableTransform(drop.model);
-                } else if (bay.type == EStructType.STRUCTURE)
+                    BarricadeData data = F.GetBarricadeFromInstID(bay.SpawnPadInstanceID, out BarricadeDrop drop);
+                    if (drop != default)
+                    {
+                        this.bay_id = data.barricade.id;
+                        this.bay_transform = new SerializableTransform(drop.model);
+                    }
+                }
+                else if (bay.type == EStructType.STRUCTURE)
                 {
-                    F.GetStructureFromInstID(bay.SpawnPadInstanceID, out StructureDrop drop);
-                    if (drop != default) this.bay_transform = new SerializableTransform(drop.model);
+                    StructureData data = F.GetStructureFromInstID(bay.SpawnPadInstanceID, out StructureDrop drop);
+                    if (drop != default)
+                    {
+                        this.bay_id = data.structure.id;
+                        this.bay_transform = new SerializableTransform(drop.model);
+                    }
                 }
             }
         }

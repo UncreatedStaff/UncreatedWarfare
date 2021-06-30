@@ -192,6 +192,7 @@ namespace Uncreated.Warfare
         }
         private void UnsubscribeFromEvents()
         {
+            FlagManager.OnReady -= OnFlagManagerReady;
             Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
             UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;

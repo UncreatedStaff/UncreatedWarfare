@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
-using Logger = Rocket.Core.Logging.Logger;
 
 namespace Uncreated.Warfare.Vehicles
 {

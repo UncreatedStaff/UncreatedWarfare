@@ -27,13 +27,16 @@ namespace Uncreated
         [XmlElement("Patches")]
         public PatchToggles Patches;
         [XmlElement("MySQL")]
-        public SQL.MySqlData SQL;
+        public MySqlData SQL;
         [XmlElement("VehicleBay")]
         public VehicleBaySettings VehicleBaySettings;
         public bool Debug;
         public bool SendAssetsOnStartup;
         public float DelayAfterConnectionToSendTranslations;
         public float MaxMapHeight;
+        public ushort ToastIDInfo;
+        public ushort ToastIDWarning;
+        public ushort ToastIDSevere;
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
         public bool AllowCosmetics;
@@ -56,7 +59,10 @@ namespace Uncreated
             this.SendAssetsOnStartup = false;
             this.DelayAfterConnectionToSendTranslations = 0.5f;
             this.MaxMapHeight = 150;
-            this.EndScreenUI = 10000;
+            this.ToastIDInfo = 32367;
+            this.ToastIDWarning = 32368;
+            this.ToastIDSevere = 32369;
+            this.EndScreenUI = 32370;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;
@@ -159,7 +165,7 @@ namespace Uncreated
         public bool outputToConsole;
         public bool ReceiveStealVehicleBattery;
         public bool requestGroupExit;
-        public bool onItemAdded;
+        public bool ReceiveDragItem;
 
         public PatchToggles()
         {
@@ -179,7 +185,7 @@ namespace Uncreated
             this.outputToConsole = true;
             this.ReceiveStealVehicleBattery = true;
             this.requestGroupExit = true;
-            this.onItemAdded = true;
+            this.ReceiveDragItem = true;
         }
 
     }

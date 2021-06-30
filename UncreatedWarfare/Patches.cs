@@ -24,7 +24,7 @@ namespace Uncreated.Warfare
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
-        public delegate void PlayerTriedStoreItem(Player player, byte page, byte index, ItemJar jar, ref bool allow);
+        public delegate void PlayerTriedStoreItem(Player player, byte page, ItemJar jar, ref bool allow);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
@@ -52,15 +52,15 @@ namespace Uncreated.Warfare
             ///<summary>
             /// Prefix of <see cref="PlayerInventory.onItemAdded(byte, byte, ItemJar)"/> to disallow players leaving their group.
             ///</summary>
-            [HarmonyPatch(typeof(PlayerInventory), "onItemAdded")]
+            [HarmonyPatch(typeof(PlayerInventory), "ReceiveDragItem")]
             [HarmonyPrefix]
-            static bool CancelLeavingGroup(PlayerInventory __instance, byte page, byte index, ItemJar jar)
+            static bool CancelStoringNonWhitelistedItem(PlayerInventory __instance, byte page_0, byte x_0, byte y_0, byte page_1, byte x_1, byte y_1, byte rot_1)
             {
-                if (!UCWarfare.Config.Patches.onItemAdded) return true;
+                if (!UCWarfare.Config.Patches.ReceiveDragItem) return true;
                 bool allow = true;
-                OnPlayerTriedStoreItem_Global?.Invoke(__instance.player, page, index, jar, ref allow);
-                if (!allow && __instance.isStoring)
-                    __instance.closeStorageAndNotifyClient();
+                ItemJar jar = __instance.getItem(page_0, __instance.getIndex(page_0, x_0, y_0));
+                if(page_1 == PlayerInventory.STORAGE)
+                    OnPlayerTriedStoreItem_Global?.Invoke(__instance.player, page_0, jar, ref allow);
                 return allow;
             }
             // SDG.Unturned.GroupManager

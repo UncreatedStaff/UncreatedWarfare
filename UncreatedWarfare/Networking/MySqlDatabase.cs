@@ -13,7 +13,7 @@ namespace Uncreated.SQL
         public MySqlConnection SQL;
         public bool DebugLogging = false;
         protected MySqlData _login;
-        protected bool _readerOpen = false;
+        protected volatile bool _readerOpen = false;
         public MySqlDatabase(MySqlData data)
         {
             _login = data;
@@ -165,6 +165,21 @@ namespace Uncreated.SQL
                 }
             }
         }
+        public async Task<T> Scalar<T>(string query, object[] parameters, Func<object, T> converter)
+        {
+            if (query == null) throw new ArgumentNullException(nameof(query));
+            using (MySqlCommand Q = new MySqlCommand(query, SQL))
+            {
+
+                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
+                if (DebugLogging) Log(nameof(Scalar) + ": " + Q.CommandText);
+                while (_readerOpen) await Task.Delay(10);
+                object res = await Q.ExecuteScalarAsync();
+                Q.Dispose();
+                if (res == null) return default;
+                else return converter.Invoke(res);
+            }
+        }
         public async Task NonQuery(string command, object[] parameters)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
@@ -203,6 +218,24 @@ namespace Uncreated.SQL
                     R.Dispose();
                     Q.Dispose();
                 }
+            }
+        }
+        public T ScalarSync<T>(string query, object[] parameters)
+        {
+            if (query == null) throw new ArgumentNullException(nameof(query));
+            using (MySqlCommand Q = new MySqlCommand(query, SQL))
+            {
+
+                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
+                if (DebugLogging) Log(nameof(ScalarSync) + ": " + Q.CommandText);
+                while (_readerOpen) System.Threading.Thread.Sleep(10);
+                object res = Q.ExecuteScalar();
+                if (res is T a)
+                {
+                    Q.Dispose();
+                    return a;
+                }
+                else return default;
             }
         }
         public void NonQuerySync(string command, object[] parameters)

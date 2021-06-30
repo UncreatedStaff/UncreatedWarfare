@@ -408,6 +408,35 @@ namespace Uncreated.Players
         }
         public override string ToString() => PlayerName;
     }
+    public struct ToastMessage
+    {
+        public ToastMessageSeverity Severity;
+        public string Message;
+        public ToastMessage(string message, ToastMessageSeverity severity = ToastMessageSeverity.Info)
+        {
+            this.Message = message;
+            this.Severity = severity;
+        }
+        public static void QueueMessage(UnturnedPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(UnturnedPlayer player, ToastMessage message) => QueueMessage(player.Player, message);
+        public static void QueueMessage(UCPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(UCPlayer player, ToastMessage message) =>  QueueMessage(player.Player, message);
+        public static void QueueMessage(SteamPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(SteamPlayer player, ToastMessage message) => QueueMessage(player.player, message);
+        public static void QueueMessage(Player player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(Player player, ToastMessage message)
+        {
+            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
+                c.QueueMessage(message);
+        }
+    }
+    public enum ToastMessageSeverity : byte
+    {
+        Info = 0,
+        Warning = 1,
+        Severe = 2
+    }
+
     public struct BasicSQLStats
     {
         public ulong Steam64;

@@ -91,6 +91,10 @@ namespace Uncreated.Warfare
                 { "dont_have_language", "We don't have translations for <color=#{1}>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations." },
                 { "reset_language_not_needed", "You are already on the default language: <color=#{1}>{0}</color>." },
 
+                // Toasts
+                { "welcome_message", "Thank's for playing <color=#{0}>Uncreated Warfare</color>!\nWelcome back <color=#{2}>{1}</color>." },
+                { "welcome_message_first_time", "Welcome to <color=#{0}>Uncreated Warfare</color>!\nTalk to the NPCs to get started." },
+
                 // Kits
                 { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_given", "<color=#a0ad8e>Received kit: <color=#ffffff>{0}</color></color>" },
@@ -396,6 +400,7 @@ namespace Uncreated.Warfare
                 { "vehiclebay_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a vehicle property. Try putting 'level', 'team', 'rearmcost' etc.</color>" },
                 { "vehiclebay_e_invalidarg", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
                 { "vehiclebay_e_not_settable", "<color=#ff8c69>{0} is not marked as settable.</color>" },
+                { "vehiclebay_e_not_added", "<color=#ff8c69><color=#ffffff>{0}</color> has not been added to the vehicle bay yet. Look at one and do /vb add.</color>" },
                 { "vehiclebay_e_invalidseat", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
                 { "vehiclebay_e_seatexist", "<color=#ff8c69>This vehicle already has a crew seat with index: {0}</color>" },
                 { "vehiclebay_e_seatnoexist", "<color=#ff8c69>This vehicle does not have a crew seat with index: {0}</color>" },
@@ -481,6 +486,7 @@ namespace Uncreated.Warfare
         {
             new ColorData("default", "ffffff"),
             new ColorData("defaulterror", "ff8c69"),
+            new ColorData("uncreated", "9cb6a4"),
             new ColorData("correct_usage_c", "ff8c69"),
             new ColorData("join_message_background", "e6e3d5"),
             new ColorData("join_message_name", "ffff1a"),

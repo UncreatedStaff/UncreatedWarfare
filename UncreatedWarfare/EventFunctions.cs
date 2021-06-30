@@ -160,6 +160,8 @@ namespace Uncreated.Warfare
             await XPManager.OnPlayerJoined(ucplayer);
             await OfficerManager.OnPlayerJoined(ucplayer);
             await Data.DatabaseManager.CheckUpdateUsernames(names);
+            bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            await Data.DatabaseManager.RegisterLogin(player.Player);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             Data.GameStats.AddPlayer(player.Player);
@@ -169,10 +171,12 @@ namespace Uncreated.Warfare
                 Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             }
             PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
+            pt.Init();
             pt.StartTracking(player.Player);
             Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
             pt.UCPlayer?.LogIn(player.Player.channel.owner, names);
-
+            ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player, 
+                UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()) ), ToastMessageSeverity.Info);
             if (!UCWarfare.Config.AllowCosmetics)
             {
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -193,23 +197,18 @@ namespace Uncreated.Warfare
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
             await rtn;
         }
-        internal static void OnTryStoreItem(Player player, byte page, byte index, ItemJar jar, ref bool allow)
+        internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
         {
             if (!player.inventory.isStoring) return;
             UnturnedPlayer utplayer = UnturnedPlayer.FromPlayer(player);
             if (utplayer.OnDuty())
-            {
-                F.Log("Player on duty.");
                 return;
-            }
             if (!Whitelister.IsWhitelisted(jar.item.id, out _))
             {
-                F.Log("Not whitelisted");
                 allow = false;
                 player.SendChat("cant_store_this_item", UCWarfare.GetColor("cant_store_this_item"),
                     !(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset) || asset.itemName == null ? jar.item.id.ToString(Data.Locale) : asset.itemName, UCWarfare.GetColorHex("cant_store_this_item_item"));
             }
-            F.Log("Whitelisted");
         }
         internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
         {

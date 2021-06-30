@@ -52,10 +52,50 @@ namespace Uncreated.Warfare.Components
         private Coroutine _currentTeleportRequest;
         public UncreatedPlayer UCPlayer;
         public Vehicles.VehicleSpawn currentlylinking;
-        public void Start()
+        public void Init()
         {
             this.thrown = new List<ThrowableOwnerDataComponent>();
+            toastMessageOpen = 0;
+            toastMessages = new Queue<ToastMessage>();
         }
+        public void QueueMessage(ToastMessage message)
+        {
+            if (toastMessages.Count == 0)
+                SendToastMessage(message);
+            else
+                toastMessages.Enqueue(message);
+        }
+        Queue<ToastMessage> toastMessages;
+        ushort toastMessageOpen;
+        private const float TOAST_LIFETIME = 13f;
+        private void SendToastMessage(ToastMessage message)
+        {
+            switch(message.Severity)
+            {
+                default:
+                case ToastMessageSeverity.Info:
+                    toastMessageOpen = UCWarfare.Config.ToastIDInfo;
+                    break;
+                case ToastMessageSeverity.Warning:
+                    toastMessageOpen = UCWarfare.Config.ToastIDWarning;
+                    break;
+                case ToastMessageSeverity.Severe:
+                    toastMessageOpen = UCWarfare.Config.ToastIDSevere;
+                    break;
+            }
+            EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message);
+            StartCoroutine(ToastDelay());
+        }
+        private IEnumerator<WaitForSeconds> ToastDelay()
+        {
+            yield return new WaitForSeconds(TOAST_LIFETIME);
+            EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection);
+            toastMessageOpen = 0;
+            if (toastMessages.Count > 0)
+                SendToastMessage(toastMessages.Dequeue());
+        }
+
+
         public void StartTracking(Player player)
         {
             this.player = player;

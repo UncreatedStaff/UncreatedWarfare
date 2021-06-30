@@ -20,6 +20,7 @@ using Flag = Uncreated.Warfare.Flags.Flag;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
 using System.Threading.Tasks;
+using SDG.NetPak;
 
 namespace Uncreated.Warfare
 {

@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Structures
                 return structureadded != default;
             } else
             {
-                structureadded = default;
+                structureadded = structure;
                 return false;
             }
         }
@@ -53,9 +53,26 @@ namespace Uncreated.Warfare.Structures
             }
             else
             {
-                structureadded = default;
+                structureadded = structure;
                 return false;
             }
+        }
+        /// <summary>Contains a non-asynchronously called thread-blocking call: <see cref="Structure.SpawnCheck"/></summary>
+        public static bool AddUnspawnedStructure(ushort id, EStructType type, SerializableTransform transform, ulong owner, ulong group, out Structure structureadded)
+        {
+            if (!ObjectExists(s => s.transform == transform, out structureadded))
+            {
+                ushort hp = ushort.MaxValue;
+                if (type == EStructType.BARRICADE && Assets.find(EAssetType.ITEM, id) is ItemBarricadeAsset barasset)
+                    hp = barasset.health;
+                else if (type == EStructType.STRUCTURE && Assets.find(EAssetType.ITEM, id) is ItemStructureAsset strasset)
+                    hp = strasset.health;
+                structureadded = new Structure(id, hp, string.Empty, transform, 0, owner, group, type);
+                structureadded.SpawnCheck().GetAwaiter().GetResult();
+                AddObjectToSave(structureadded);
+                return true;
+            }
+            else return false;
         }
         public static void RemoveStructure(Structure structure) => RemoveWhere(x => structure != default && x != default && x.instance_id == structure.instance_id);
         public static bool StructureExists(uint instance_id, EStructType type, out Structure found) => ObjectExists(s => s.instance_id == instance_id && s.type == type, out found);
@@ -122,6 +139,13 @@ namespace Uncreated.Warfare.Structures
         {
             this.id = id;
             this.health = health;
+            if (this.health == 0)
+            {
+                if(type == EStructType.STRUCTURE && Asset is ItemStructureAsset strasset)
+                    this.health = strasset.health;
+                else if (type == EStructType.BARRICADE && Asset is ItemBarricadeAsset barasset)
+                    this.health = barasset.health;
+            }
             this.state = state;
             this.type = type;
             this.instance_id = instance_id;
@@ -160,69 +184,88 @@ namespace Uncreated.Warfare.Structures
         /// <summary>Spawns the structure if it is not already placed.</summary>
         public async Task SpawnCheck()
         {
-            if (type == EStructType.BARRICADE)
+            try
             {
-                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out _);
-                if (data == default)
+                if (type == EStructType.BARRICADE)
                 {
-                    ItemBarricadeAsset asset = Asset as ItemBarricadeAsset;
-                    Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
-                        new Barricade(id, asset.health, Metadata, asset),
-                        transform.position.Vector3, transform.Rotation, owner, group
-                        );
-                    if (BarricadeManager.tryGetInfo(newBarricade, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                    BarricadeData data = F.GetBarricadeFromInstID(instance_id, out _);
+                    if (data == default)
                     {
-                        if (newBarricade.TryGetComponent(out InteractableSign sign))
+                        ItemBarricadeAsset asset = Asset as ItemBarricadeAsset;
+                        if (asset == null)
                         {
-                            await F.InvokeSignUpdateForAll(x, y, plant, index, sign.text);
+                            F.LogError("STRUCTURE SAVER ERROR: Couldn't locate asset for " + id.ToString());
+                            return;
                         }
-                        if (region != default)
+                        Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
+                            new Barricade(id, health == 0 ? asset.health : health, Metadata, asset),
+                            transform.position.Vector3, transform.Rotation, owner, group
+                            );
+                        if (BarricadeManager.tryGetInfo(newBarricade, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
                         {
-                            instance_id = region.drops[index].instanceID;
-                            exists = true;
-                            StructureSaver.Save();
+                            if (newBarricade.TryGetComponent(out InteractableSign sign))
+                            {
+                                await F.InvokeSignUpdateForAll(x, y, plant, index, sign.text);
+                            }
+                            if (region != default)
+                            {
+                                instance_id = region.drops[index].instanceID;
+                                exists = true;
+                                StructureSaver.Save();
+                            }
+                            else
+                            {
+                                exists = false;
+                            }
                         }
                         else
                         {
                             exists = false;
                         }
                     }
-                    else
-                    {
-                        exists = false;
-                    }
+                    else exists = true;
                 }
-                else exists = true;
-            }
-            else if (type == EStructType.STRUCTURE)
-            {
-                StructureData data = F.GetStructureFromInstID(instance_id, out _);
-                if (data == default)
+                else if (type == EStructType.STRUCTURE)
                 {
-                    ItemStructureAsset asset = Asset as ItemStructureAsset;
-                    if (!StructureManager.dropStructure(
-                        new SDG.Unturned.Structure(id, asset.health, asset),
-                        transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
-                        transform.euler_angles.z, owner, group))
+                    StructureData data = F.GetStructureFromInstID(instance_id, out _);
+                    if (data == default)
                     {
-                        F.LogError("STRUCTURE SAVER ERROR: Structure could not be replaced");
-                    }
-                    else
-                    {
-                        StructureData newdata = F.GetStructureFromTransform(transform, out StructureDrop newdrop);
-                        if (newdata == default || newdrop == default)
+                        ItemStructureAsset asset = Asset as ItemStructureAsset;
+                        if (asset == null)
                         {
-                            F.LogError("STRUCTURE SAVER ERROR: spawned structure could not be found");
-                            exists = false;
+                            F.LogError("STRUCTURE SAVER ERROR: Couldn't locate asset for " + id.ToString());
+                            return;
+                        }
+                        if (!StructureManager.dropStructure(
+                            new SDG.Unturned.Structure(id, health == 0 ? asset.health : health, asset),
+                            transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
+                            transform.euler_angles.z, owner, group))
+                        {
+                            F.LogError("STRUCTURE SAVER ERROR: Structure could not be replaced");
                         }
                         else
                         {
-                            instance_id = newdata.instanceID;
-                            StructureSaver.Save();
-                            exists = true;
+                            StructureData newdata = F.GetStructureFromTransform(transform, out StructureDrop newdrop);
+                            if (newdata == default || newdrop == default)
+                            {
+                                F.LogError("STRUCTURE SAVER ERROR: spawned structure could not be found");
+                                exists = false;
+                            }
+                            else
+                            {
+                                instance_id = newdata.instanceID;
+                                StructureSaver.Save();
+                                exists = true;
+                            }
                         }
                     }
-                } else exists = true;
+                    else exists = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError($"ERROR SPAWNCHECKING ID {id}.");
+                F.LogError(ex);
             }
         }
         public Structure(StructureDrop drop, StructureData data)
@@ -230,6 +273,7 @@ namespace Uncreated.Warfare.Structures
             this.id = data.structure.id;
             this._metadata = new byte[0];
             this.state = Convert.ToBase64String(_metadata);
+            this.health = data.structure.health;
             this.transform = new SerializableTransform(drop.model.transform);
             this.owner = data.owner;
             this.group = data.group;
@@ -241,6 +285,7 @@ namespace Uncreated.Warfare.Structures
             this.id = data.barricade.id;
             this._metadata = data.barricade.state;
             this.state = Convert.ToBase64String(_metadata);
+            this.health = data.barricade.health;
             this.transform = new SerializableTransform(drop.model.transform);
             this.owner = data.owner;
             this.group = data.group;
