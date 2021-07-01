@@ -90,6 +90,10 @@ namespace Uncreated.Warfare
                 { "reset_language_how", "Do <color=#{0}>/lang reset</color> to reset back to default language." },
                 { "dont_have_language", "We don't have translations for <color=#{1}>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations." },
                 { "reset_language_not_needed", "You are already on the default language: <color=#{1}>{0}</color>." },
+                
+                // Toasts
+                { "welcome_message", "Thank's for playing <color=#{0}>Uncreated Warfare</color>!\nWelcome back <color=#{2}>{1}</color>." },
+                { "welcome_message_first_time", "Welcome to <color=#{0}>Uncreated Warfare</color>!\nTalk to the NPCs to get started." },
 
                 // Kits
                 { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
@@ -405,7 +409,7 @@ namespace Uncreated.Warfare
                 { "whitelist_nosalvage", "<color=#ff8c69>You are not allowed to salvage that.</color> " },
                 { "whitelist_noplace", "<color=#ff8c69>You are not allowed to place that.</color> " },
                 { "whitelist_noeditsign", "<color=#ff8c69>You are not allowed to edit that sign.</color> " },
-
+                
                 //vehiclebay
                 { "vehiclebay_added", "<color=#a0ad8e>Added requestable vehicle to the vehicle bay: <color=#ffffff>{0}</color></color>" },
                 { "vehiclebay_removed", "<color=#a0ad8e>Removed requestable vehicle from the vehicle bay: <color=#ffffff>{0}</color></color>" },
@@ -420,6 +424,7 @@ namespace Uncreated.Warfare
                 { "vehiclebay_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a vehicle property. Try putting 'level', 'team', 'rearmcost' etc.</color>" },
                 { "vehiclebay_e_invalidarg", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
                 { "vehiclebay_e_not_settable", "<color=#ff8c69>{0} is not marked as settable.</color>" },
+                { "vehiclebay_e_not_added", "<color=#ff8c69><color=#ffffff>{0}</color> has not been added to the vehicle bay yet. Look at one and do /vb add.</color>" },
                 { "vehiclebay_e_invalidseat", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
                 { "vehiclebay_e_seatexist", "<color=#ff8c69>This vehicle already has a crew seat with index: {0}</color>" },
                 { "vehiclebay_e_seatnoexist", "<color=#ff8c69>This vehicle does not have a crew seat with index: {0}</color>" },
@@ -514,6 +519,7 @@ namespace Uncreated.Warfare
         {
             new ColorData("default", "ffffff"),
             new ColorData("defaulterror", "ff8c69"),
+            new ColorData("uncreated", "9cb6a4"),
             new ColorData("correct_usage_c", "ff8c69"),
             new ColorData("join_message_background", "e6e3d5"),
             new ColorData("join_message_name", "ffff1a"),
@@ -735,7 +741,7 @@ namespace Uncreated.Warfare
             new ColorData("vbs_locked_vehicle_color", "800000"),
             new ColorData("vbs_rank_color", "e6e3d5"),
             new ColorData("vbs_ticket_cost", "e6e3d5"),
-
+            
             // Structure
             new ColorData("structure_saved", "e6e3d5"),
             new ColorData("structure_saved_already", "e6e3d5"),

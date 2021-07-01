@@ -55,9 +55,6 @@ namespace Uncreated.Warfare.Components
         public Vehicles.VehicleSpawn currentlylinking;
         public void Start()
         {
-            this.thrown = new List<ThrowableOwnerDataComponent>();
-            toastMessageOpen = 0;
-            toastMessages = new Queue<ToastMessage>();
         }
         public void QueueMessage(ToastMessage message)
         {
@@ -106,14 +103,16 @@ namespace Uncreated.Warfare.Components
             if (toastMessages.Count > 0)
                 SendToastMessage(toastMessages.Dequeue());
         }
-
-
         public void StartTracking(Player player)
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
             UCPlayer = UncreatedPlayer.Load(player.channel.owner.playerID.steamID.m_SteamID);
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
+            this.thrown = new List<ThrowableOwnerDataComponent>();
+            toastMessageOpen = 0;
+            toastMessages = new Queue<ToastMessage>();
+            F.Log("Started tracking playtime of " + player.name);
         }
         public void Update()
         {
