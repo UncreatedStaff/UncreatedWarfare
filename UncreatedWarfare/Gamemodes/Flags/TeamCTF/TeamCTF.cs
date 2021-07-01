@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
@@ -180,15 +181,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if (OnFlagCaptured != null)
                 await OnFlagCaptured.Invoke(flag, capturedTeam, lostTeam);
-            await XP.XPManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-            await Officers.OfficerManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+            await TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         }
         private async Task InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
             if (OnFlagNeutralized != null)
                 await OnFlagNeutralized.Invoke(flag, capturedTeam, lostTeam);
-            await XP.XPManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
-            await Officers.OfficerManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+            await TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
         private async Task InvokeOnNewGameStarting()
         {

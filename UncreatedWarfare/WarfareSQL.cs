@@ -5,11 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.SQL;
 using Uncreated.Players;
+using SDG.Unturned;
+using Steamworks;
 
 namespace Uncreated.Warfare
 {
     public class WarfareSQL : MySqlDatabase
     {
+        const string DEFAULT_GATEWAY_BEGINNING = "192.168.1.";
+        const string LOCAL_IP = "127.0.0.1";
+        const string TIME_FORMAT_SQL = "{0:yyyy-MM-dd HH:mm:ss}";
         public WarfareSQL(MySqlData data) : base(data) 
         {
             DebugLogging |= UCWarfare.Config.Debug;
@@ -391,6 +396,43 @@ namespace Uncreated.Warfare
             if (Data.TableData.TryGetValue(key, out MySqlTableLang lang))
                 return lang;
             else return new MySqlTableLang(key, new Dictionary<string, string>());
+        }
+        public async Task<bool> HasPlayerJoined(ulong Steam64)
+        {
+            MySqlTableLang table = GetTable("logindata");
+            string s64 = table.GetColumnName("Steam64");
+            int amt = await Scalar(
+                $"SELECT COUNT(*) " +
+                $"FROM `{table}` " +
+                $"WHERE `{s64}` = @0;",
+                new object[1] { Steam64 },
+                o => Convert.ToInt32(o));
+            return amt > 0;
+        }
+        public async Task RegisterLogin(Player player)
+        {
+            MySqlTableLang table = GetTable("logindata");
+            string s64 = table.GetColumnName("Steam64");
+            string ip = table.GetColumnName("IP");
+            string lastentry = table.GetColumnName("LastLoggedIn");
+            string ipaddress;
+            if (player.channel.owner.getIPv4Address(out uint ipnum))
+            {
+                ipaddress = Parser.getIPFromUInt32(ipnum);
+                if (ipaddress == LOCAL_IP || ipaddress.StartsWith(DEFAULT_GATEWAY_BEGINNING))
+                    if (SteamGameServer.GetPublicIP().TryGetIPv4Address(out ipnum))
+                        ipaddress = Parser.getIPFromUInt32(ipnum);
+            }
+            else if (SteamGameServer.GetPublicIP().TryGetIPv4Address(out ipnum))
+                ipaddress = Parser.getIPFromUInt32(ipnum);
+            else ipaddress = LOCAL_IP;
+            await NonQuery(
+                $"INSERT INTO `{table.TableName}` " +
+                $"(`{s64}`, `{ip}`, `{lastentry}`) " +
+                $"VALUES(@0, @1, @2) " +
+                $"ON DUPLICATE KEY UPDATE " +
+                $"`{ip}` = VALUES(`{ip}`), `{lastentry}` = VALUES(`{lastentry}`);",
+                new object[3] { player.channel.owner.playerID.steamID.m_SteamID, ipaddress, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         }
     }
 }

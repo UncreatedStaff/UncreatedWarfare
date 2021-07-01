@@ -158,6 +158,8 @@ namespace Uncreated.Warfare
             await XPManager.OnPlayerJoined(ucplayer);
             await OfficerManager.OnPlayerJoined(ucplayer);
             await Data.DatabaseManager.CheckUpdateUsernames(names);
+            bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            await Data.DatabaseManager.RegisterLogin(player.Player);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -191,7 +193,7 @@ namespace Uncreated.Warfare
             await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
             await rtn;
         }
-        internal static void OnTryStoreItem(Player player, byte page, byte index, ItemJar jar, ref bool allow)
+        internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
         {
             if (!player.inventory.isStoring) return;
             UnturnedPlayer utplayer = UnturnedPlayer.FromPlayer(player);
