@@ -13,7 +13,6 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Flags;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -68,7 +67,7 @@ namespace Uncreated.Warfare
             Data.LoadVariables().GetAwaiter().GetResult();
             if (Level.isLoaded)
             {
-                StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
+                //StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
                 SubscribeToEvents();
                 OnLevelLoaded(2);
                 InitialLoadEventSubscription = true;
@@ -97,17 +96,12 @@ namespace Uncreated.Warfare
             Data.StructureManager = new StructureSaver();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
-            if (Configuration.Instance.SendAssetsOnStartup)
-            {
-                F.Log("Sending assets...", ConsoleColor.Magenta);
-            }
             Data.TeamManager = new TeamManager();
             F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
             await ReplaceBarricadesAndStructures();
-            await Data.FlagManager.Load(); // starts new game
             Data.VehicleSpawner.OnLevelLoaded();
             VehicleSigns.InitAllSigns();
-            Data.GameStats = gameObject.AddComponent<WarStatsTracker>();
+            await Data.Gamemode.OnLevelLoaded();
             await rtn;
             if (Provider.clients.Count > 0)
             {
@@ -156,10 +150,6 @@ namespace Uncreated.Warfare
             await RequestSigns.DropAllSigns();
             await StructureSaver.DropAllStructures();
         }
-        internal async Task OnFlagManagerReady()
-        {
-            await Data.FlagManager.StartNextGame();
-        }
         private void SubscribeToEvents()
         {
             U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
@@ -184,15 +174,12 @@ namespace Uncreated.Warfare
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
             Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
-            FlagManager.OnFlagCaptured += EventFunctions.OnFlagCaptured;
-            FlagManager.OnFlagNeutralized += EventFunctions.OnFlagNeutralized;
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
         }
         private void UnsubscribeFromEvents()
         {
-            FlagManager.OnReady -= OnFlagManagerReady;
             Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
             UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
@@ -224,7 +211,6 @@ namespace Uncreated.Warfare
         }
         private void OnPluginsLoaded()
         {
-            StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
             F.Log("Subscribing to events...", ConsoleColor.Magenta);
             SubscribeToEvents();
         }
@@ -253,7 +239,7 @@ namespace Uncreated.Warfare
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
             Data.CancelFlags.Cancel();
             Data.CancelTcp.Cancel();
-            Data.FlagManager?.Dispose();
+            Data.Gamemode?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
             Data.FOBManager?.Dispose();

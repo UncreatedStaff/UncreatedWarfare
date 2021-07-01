@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Flags
+namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
     public static class ObjectivePathing
     {
-        public static float MAIN_RADIUS_SEARCH = 1200f;
+        public static float MAIN_SEARCH_RADIUS = 1200f;
         public static float MAIN_STOP_RADIUS = 1600f;
         public static float ABSOLUTE_MAX_DISTANCE_FROM_MAINS = 1900f;
         public static float FLAG_RADIUS_SEARCH = 1200f; // can double if no flags are found
@@ -20,15 +20,43 @@ namespace Uncreated.Warfare.Flags
         public static float SIDE_BIAS = 0.3f;
         public static float DISTANCE_EFFECT = 0.1f;
         public static float AVERAGE_DISTANCE_BUFFER = 2400f; // idea for tomorrow, get average distance from each main and check with buffer.
+        public static float RADIUS_TUNING_RESOLUTION = 40f;
         public static int MAX_FLAGS = 8;
         public static int MIN_FLAGS = 5;
         public static int MAX_REDOS = 20;
-        public const float RADIUS_TUNING_RESOLUTION = 40f;
-        public static List<Flag> CreatePath()
+        public static void SetVariables(
+            float MAIN_SEARCH_RADIUS,
+            float MAIN_STOP_RADIUS,
+            float ABSOLUTE_MAX_DISTANCE_FROM_MAINS,
+            float FLAG_RADIUS_SEARCH,
+            float FORWARD_BIAS,
+            float BACK_BIAS,
+            float SIDE_BIAS,
+            float DISTANCE_EFFECT,
+            float AVERAGE_DISTANCE_BUFFER,
+            float RADIUS_TUNING_RESOLUTION,
+            int MAX_FLAGS,
+            int MIN_FLAGS,
+            int MAX_REDOS)
+        {
+            ObjectivePathing.MAIN_SEARCH_RADIUS = MAIN_SEARCH_RADIUS;
+            ObjectivePathing.MAIN_STOP_RADIUS = MAIN_STOP_RADIUS;
+            ObjectivePathing.ABSOLUTE_MAX_DISTANCE_FROM_MAINS = ABSOLUTE_MAX_DISTANCE_FROM_MAINS;
+            ObjectivePathing.FLAG_RADIUS_SEARCH = FLAG_RADIUS_SEARCH;
+            ObjectivePathing.FORWARD_BIAS = FORWARD_BIAS;
+            ObjectivePathing.BACK_BIAS = BACK_BIAS;
+            ObjectivePathing.SIDE_BIAS = SIDE_BIAS;
+            ObjectivePathing.DISTANCE_EFFECT = DISTANCE_EFFECT;
+            ObjectivePathing.AVERAGE_DISTANCE_BUFFER = AVERAGE_DISTANCE_BUFFER;
+            ObjectivePathing.RADIUS_TUNING_RESOLUTION = RADIUS_TUNING_RESOLUTION;
+            ObjectivePathing.MAX_FLAGS = MAX_FLAGS;
+            ObjectivePathing.MIN_FLAGS = MIN_FLAGS;
+            ObjectivePathing.MAX_REDOS = MAX_REDOS;
+        }
+        public static List<Flag> CreatePath(List<Flag> rotation)
         {
             List<Flag> path = new List<Flag>();
-            UnityEngine.Random random = new UnityEngine.Random();
-            StartLoop(ref path, random);
+            StartLoop(ref path, rotation);
             int redoCounter = 0;
             while(redoCounter < MAX_REDOS && 
                 (path.Count < MIN_FLAGS || 
@@ -37,22 +65,27 @@ namespace Uncreated.Warfare.Flags
                 ))
             { // checks for paths with too few flags or that end too far away from team 2 main
                 path.Clear();
-                StartLoop(ref path, random);
+                StartLoop(ref path, rotation);
                 redoCounter++;
             }
             if(redoCounter >= MAX_REDOS)
                 F.LogError("Unable to correct bad path after " + MAX_REDOS.ToString(Data.Locale) + " tries.");
             return path;
         }
-        private static void StartLoop(ref List<Flag> list, UnityEngine.Random r)
+        private static void StartLoop(ref List<Flag> list, List<Flag> rotation)
         {
-            List<Flag> StarterFlags = GetFlagsInRadius(TeamManager.Team1Main.Center, MAIN_RADIUS_SEARCH);
+            List<Flag> StarterFlags = GetFlagsInRadius(TeamManager.Team1Main.Center, MAIN_SEARCH_RADIUS, rotation);
+            if (StarterFlags.Count == 0)
+            {
+                F.LogError("Objective Pathing was unable to find the first flags around main in a " + MAIN_SEARCH_RADIUS + "m radius of " + TeamManager.Team1Main.Center + " out of " + rotation.Count + " flags.");
+                return;
+            }
             Flag first = PickRandomFlagWithBias(TeamManager.Team1Main.Center, StarterFlags);
             first.index = 0;
             list.Add(first);
             //F.Log(list.Count + ". " + list[0].Name, ConsoleColor.Green);
             int counter = 0;
-            FlagLoop(ref list, ref counter);
+            FlagLoop(ref list, ref counter, rotation);
         }
         private static float GetAverageDistanceFromTeamMain(bool team1, List<Flag> list)
         {
@@ -65,10 +98,10 @@ namespace Uncreated.Warfare.Flags
             float avg = Mathf.Sqrt(total / i);
             return avg;
         }
-        private static void FlagLoop(ref List<Flag> list,  ref int counter)
+        private static void FlagLoop(ref List<Flag> list,  ref int counter, List<Flag> rotation)
         {
             Flag lastFlag = list.Last();
-            List<Flag> candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, lastFlag.ID, list);
+            List<Flag> candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, rotation, lastFlag.ID, list);
             float oldradius = FLAG_RADIUS_SEARCH;
             int uppingCounter = 0;
             int countermax = (int)Mathf.Round(FLAG_RADIUS_SEARCH / RADIUS_TUNING_RESOLUTION);
@@ -76,7 +109,7 @@ namespace Uncreated.Warfare.Flags
             {
                 uppingCounter++;
                 FLAG_RADIUS_SEARCH = oldradius + RADIUS_TUNING_RESOLUTION * uppingCounter;
-                candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, lastFlag.ID, list);
+                candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, rotation, lastFlag.ID, list);
                 //F.Log(uppingCounter.ToString(Data.Locale) + "th search: " + candidates.Count + " results in " + FLAG_RADIUS_SEARCH.ToString(Data.Locale) + 'm');
                 if (candidates.Count < 1) continue;
                 lastFlag = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
@@ -95,7 +128,7 @@ namespace Uncreated.Warfare.Flags
             counter++;
             if (counter < MAX_FLAGS - 1 && (TeamManager.Team2Main.Center - pick.Position2D).sqrMagnitude > MAIN_STOP_RADIUS * MAIN_STOP_RADIUS) // if the picked flag is not in range of team 2 main base. 
             {
-                FlagLoop(ref list, ref counter);
+                FlagLoop(ref list, ref counter, rotation);
             }
         }
         private static Flag PickRandomFlagWithBias(Vector2 origin, List<Flag> candidates)
@@ -127,9 +160,7 @@ namespace Uncreated.Warfare.Flags
             else if (angle.Between(4f * Mathf.PI / 3f  /* 240° */, 7f * Mathf.PI / 6f  /* 210° */, false, true)) return SIDE_BIAS / 2;
             else return FORWARD_BIAS;
         }
-        public static List<Flag> GetFlagsInRadius(Vector2 center, float radius) => GetFlagsInRadius(center, radius, Data.FlagManager.AllFlags);
         public static List<Flag> GetFlagsInRadius(Vector2 center, float radius, List<Flag> Rotation) => Rotation.Where(flag => (flag.Position2D - center).sqrMagnitude <= radius * radius).ToList();
-        public static List<Flag> GetFlagsInRadiusExclude(Vector2 center, float radius, int excluded_flag_id, List<Flag> history) => GetFlagsInRadiusExclude(center, radius, Data.FlagManager.AllFlags, excluded_flag_id, history);
         public static List<Flag> GetFlagsInRadiusExclude(Vector2 center, float radius, List<Flag> Rotation, int excluded_flag_id, List<Flag> history) => 
             Rotation.Where(flag => !history.Exists(f => f.ID == flag.ID) && flag.ID != excluded_flag_id && (flag.Position2D - center).sqrMagnitude <= radius * radius).ToList();
         public static float GetAngleFromCenter(Vector2 center, Vector2 point, out float distance, bool degrees = false)
@@ -148,6 +179,34 @@ namespace Uncreated.Warfare.Flags
             if (center.x > 0) return degrees ? (Mathf.PI / 180) * arccos : arccos; // return arccos if in q1 or q2
             else if (center.y > 0) return degrees ? (Mathf.PI / 180) * arcsin : arcsin; // return arcsin if in q4
             else return degrees ? (Mathf.PI / 180) * (arccos + (Mathf.PI / 2)) : arccos + (Mathf.PI / 2); // add 90° to arccos if in q3
+        }
+        public static List<Flag> CreatePathUsingLevels(List<Flag> rotation, int MaxFlagsPerLevel)
+        {
+            List<Flag> Rotation = new List<Flag>();
+            List<KeyValuePair<int, List<Flag>>> lvls = new List<KeyValuePair<int, List<Flag>>>();
+            for (int i = 0; i < rotation.Count; i++)
+            {
+                KeyValuePair<int, List<Flag>> flag = lvls.FirstOrDefault(x => x.Key == rotation[i].Level);
+                if (flag.Equals(default(KeyValuePair<int, List<Flag>>)))
+                    lvls.Add(new KeyValuePair<int, List<Flag>>(rotation[i].Level, new List<Flag> { rotation[i] }));
+                else
+                    flag.Value.Add(rotation[i]);
+            }
+            lvls.Sort((KeyValuePair<int, List<Flag>> a, KeyValuePair<int, List<Flag>> b) => a.Key.CompareTo(b.Key));
+            for (int i = 0; i < lvls.Count; i++)
+            {
+                int amtToAdd = lvls[i].Value.Count > MaxFlagsPerLevel ? MaxFlagsPerLevel : lvls[i].Value.Count;
+                int counter = 0;
+                while (counter < amtToAdd)
+                {
+                    int index = UnityEngine.Random.Range(0, lvls[i].Value.Count - 1);
+                    lvls[i].Value[index].index = Rotation.Count;
+                    Rotation.Add(lvls[i].Value[index]);
+                    lvls[i].Value.RemoveAt(index);
+                    counter++;
+                }
+            }
+            return Rotation;
         }
     }
 }

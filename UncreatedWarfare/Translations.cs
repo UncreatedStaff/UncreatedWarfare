@@ -5,10 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Flags;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Stats;
-using FlagData = Uncreated.Warfare.Flags.FlagData;
+using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 using Kit = Uncreated.Warfare.Kits.Kit;
 
 namespace Uncreated.Warfare
@@ -456,6 +456,15 @@ namespace Uncreated.Warfare
                 { "shutdown_broadcast_after_game_console_player", "A shutdown has been scheduled after this game by {0} because: \"{1}\"" },
                 { "shutdown_broadcast_after_time_console", "A shutdown has been scheduled in {0} because: \"{1}\"" },
                 { "shutdown_broadcast_after_time_console_player", "A shutdown has been scheduled in {0} by {1} because: \"{2}\"" },
+
+                // Tickets
+                { "enemy_controlling", "The enemy is in control!" },
+                { "enemy_dominating", "The enemy is dominating!" },
+                { "defeated", "You are defeated!" },
+                { "victorious", "You are victorious!" },
+                { "controlling", "Your team is in control!" },
+                { "dominating", "Your team is dominating!" }
+
             };
         }
         public static Dictionary<string, string> DefaultTranslations;

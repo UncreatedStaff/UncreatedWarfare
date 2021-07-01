@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -29,7 +28,6 @@ namespace Uncreated.Warfare.Tickets
             Team1Tickets = config.data.StartingTickets;
             Team2Tickets = config.data.StartingTickets;
 
-            FlagManager.OnNewGameStarting += OnNewGameStarting;
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
 
@@ -99,8 +97,8 @@ namespace Uncreated.Warfare.Tickets
         public static void OnPlayerJoined(UCPlayer player)
         {
             ulong team = player.GetTeam();
-            GetTeamBleed(team, out int bleed, out var message);
-            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, message);
+            GetTeamBleed(team, out int bleed, out string message);
+            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, F.Translate(message, player.Steam64));
 
         }
         public static void OnPlayerLeft(UCPlayer player)
@@ -111,11 +109,11 @@ namespace Uncreated.Warfare.Tickets
         {
             EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
             EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
-            GetTeamBleed(newGroup, out int bleed, out var message);
-            UpdateUI(player.transportConnection, newGroup, bleed, message);
+            GetTeamBleed(newGroup, out int bleed, out string message);
+            UpdateUI(player.transportConnection, newGroup, bleed, F.Translate(message, player.playerID.steamID.m_SteamID));
         }
 
-        private static void OnNewGameStarting(object sender, EventArgs e)
+        public static void OnNewGameStarting()
         {
             Team1Tickets = config.data.StartingTickets;
             Team2Tickets = config.data.StartingTickets;
@@ -129,7 +127,7 @@ namespace Uncreated.Warfare.Tickets
             if (Team1Tickets <= 0)
             {
                 Team1Tickets = 0;
-                await Data.FlagManager.DeclareWin(TeamManager.Team2ID);
+                await Data.Gamemode.DeclareWin(2);
             }
             UpdateUITeam1();
         }
@@ -139,7 +137,7 @@ namespace Uncreated.Warfare.Tickets
             if (Team2Tickets <= 0)
             {
                 Team2Tickets = 0;
-                await Data.FlagManager.DeclareWin(TeamManager.Team1ID);
+                await Data.Gamemode.DeclareWin(1);
             }
             UpdateUITeam2();
         }
@@ -174,7 +172,7 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team1ID, bleed, message);
+                UpdateUI(players[i].Player.channel.owner.transportConnection, 1, bleed, F.Translate(message, players[i].Steam64));
             }
         }
         public static void UpdateUITeam2()
@@ -185,63 +183,70 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, message);
+                UpdateUI(players[i].Player.channel.owner.transportConnection, 2, bleed, F.Translate(message, players[i].Steam64));
             }
         }
 
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
-            int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.Owner == team).Count();
-            int enemyCount = Data.FlagManager.AllFlags.Where(f => f.Owner != team && !f.IsNeutral()).Count();
+            if (Data.Gamemode is Gamemodes.Flags.FlagGamemode fg)
+            {
+                int friendlyCount = fg.Rotation.Where(f => f.Owner == team).Count();
+                int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();
 
-            float friendlyRatio = (float)friendlyCount * Data.FlagManager.AllFlags.Count();
-            float enemyRatio = (float)enemyCount / Data.FlagManager.AllFlags.Count();
+                float friendlyRatio = (float)friendlyCount * fg.Rotation.Count();
+                float enemyRatio = (float)enemyCount / fg.Rotation.Count();
 
-            if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
+                if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
+                {
+                    bleed = 0;
+                    message = "";
+                }
+                else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
+                {
+                    message = "enemy_controlling";
+                    bleed = -1;
+                }
+                else if (0.8F < enemyRatio && enemyRatio < 1F)
+                {
+                    message = "enemy_dominating";
+                    bleed = -2;
+                }
+                else if (enemyRatio == 1)
+                {
+                    message = "defeated";
+                    bleed = -3;
+                }
+                else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
+                {
+                    message = "controlling";
+                    bleed = 1;
+                }
+                else if (0.8F < friendlyRatio && friendlyRatio < 1F)
+                {
+                    message = "dominating";
+                    bleed = 2;
+                }
+                else if (friendlyRatio == 1)
+                {
+                    message = "victorious";
+                    bleed = 3;
+                }
+                else
+                {
+                    bleed = 0;
+                    message = "";
+                }
+            } else
             {
                 bleed = 0;
                 message = "";
             }
-            else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
-            {
-                message = "The enemy is in control!";
-                bleed = -1;
-            }
-            else if (0.8F < enemyRatio && enemyRatio < 1F)
-            {
-                message = "The enemy is dominating!";
-                bleed = -2;
-            }
-            else if (enemyRatio  == 1)
-            {
-                message = "You are defeated!";
-                bleed = -3;
-            }
-            else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
-            {
-                message = "Your team is in control!";
-                bleed = 1;
-            }
-            else if (0.8F < friendlyRatio && friendlyRatio < 1F)
-            {
-                message = "Your team is dominating!";
-                bleed = 2;
-            }
-            else if (friendlyRatio == 1)
-            {
-                message = "You are victorious!";
-                bleed = 3;
-            }
-            else
-            {
-                bleed = 0;
-                message = "";
-            }
+            
         }
 
         public void Dispose()
         {
-            FlagManager.OnNewGameStarting -= OnNewGameStarting;
             VehicleManager.OnVehicleExploded -= OnVehicleExploded;
         }
     }

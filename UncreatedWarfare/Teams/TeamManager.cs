@@ -7,10 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Teams
 {

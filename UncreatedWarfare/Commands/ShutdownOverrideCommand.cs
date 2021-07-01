@@ -61,10 +61,10 @@ namespace Uncreated.Warfare.Commands
                     F.Broadcast("shutdown_broadcast_after_game", UCWarfare.GetColor("shutdown_broadcast_after_game"),
                         reason, UCWarfare.GetColorHex("shutdown_broadcast_after_game_reason"));
                     F.Log(F.Translate("shutdown_broadcast_after_game_console", 0, reason), ConsoleColor.Cyan);
-                    Data.FlagManager.ShutdownAfterGame(reason, 0);
+                    Data.Gamemode.ShutdownAfterGame(reason, 0);
                 } else if (option == "cancel" || option == "abort")
                 {
-                    Data.FlagManager.CancelShutdownAfterGame();
+                    Data.Gamemode.CancelShutdownAfterGame();
                     F.Broadcast("shutdown_broadcast_after_game_canceled", UCWarfare.GetColor("shutdown_broadcast_after_game_canceled"));
                     F.Log(F.Translate("shutdown_broadcast_after_game_canceled_console", 0), ConsoleColor.Cyan);
                     if (Messager != null)
@@ -128,7 +128,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {
-                    Data.FlagManager.ShutdownAfterGame(reason, player.playerID.steamID.m_SteamID);
+                    Data.Gamemode.ShutdownAfterGame(reason, player.playerID.steamID.m_SteamID);
                     F.Broadcast("shutdown_broadcast_after_game", UCWarfare.GetColor("shutdown_broadcast_after_game"),
                         reason, UCWarfare.GetColorHex("shutdown_broadcast_after_game_reason"));
                     F.Log(F.Translate("shutdown_broadcast_after_game_console_player", 0, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
@@ -144,7 +144,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (option == "cancel" || option == "abort")
                 {
-                    Data.FlagManager.CancelShutdownAfterGame();
+                    Data.Gamemode.CancelShutdownAfterGame();
                     F.Broadcast("shutdown_broadcast_after_game_canceled", UCWarfare.GetColor("shutdown_broadcast_after_game_canceled"));
                     F.Log(F.Translate("shutdown_broadcast_after_game_canceled_console_player", 0, F.GetPlayerOriginalNames(player).PlayerName), ConsoleColor.Cyan);
                     if (Messager != null)

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Flags
+namespace Uncreated.Warfare.Gamemodes.Flags
 {
     // +x > right, +y > up
     public class FlagData
@@ -36,17 +36,6 @@ namespace Uncreated.Warfare.Flags
             this.level = level;
             this.use_map_size_multiplier = use_map_size_multiplier;
             this.color = UCWarfare.Config.FlagSettings.NeutralColor;
-        }
-    }
-    public class ZoneData
-    {
-        public string type;
-        public string data;
-        [JsonConstructor]
-        public ZoneData(string type, string data)
-        {
-            this.type = type;
-            this.data = data;
         }
     }
 }

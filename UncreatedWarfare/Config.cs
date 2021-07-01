@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Xml.Serialization;
 using Uncreated.SQL;
 
-namespace Uncreated
+namespace Uncreated.Warfare
 {
     public class Config : IRocketPluginConfiguration
     {
@@ -37,12 +37,15 @@ namespace Uncreated
         public ushort ToastIDInfo;
         public ushort ToastIDWarning;
         public ushort ToastIDSevere;
+        public ushort MiniToastXP;
+        public ushort MiniToastOfficerPoints;
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
         public bool AllowCosmetics;
         public bool ModifySkillLevels;
         public bool AllowBatteryStealing;
         public bool RemoveLandminesOnDisconnect;
+        public string ActiveGamemode;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -59,15 +62,18 @@ namespace Uncreated
             this.SendAssetsOnStartup = false;
             this.DelayAfterConnectionToSendTranslations = 0.5f;
             this.MaxMapHeight = 150;
-            this.ToastIDInfo = 32367;
-            this.ToastIDWarning = 32368;
-            this.ToastIDSevere = 32369;
             this.EndScreenUI = 32370;
+            this.ToastIDInfo = 32380;
+            this.ToastIDWarning = 32381;
+            this.ToastIDSevere = 32382;
+            this.MiniToastXP = 32385;
+            this.MiniToastOfficerPoints = 32387;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;
             this.AllowBatteryStealing = false;
             this.RemoveLandminesOnDisconnect = false;
+            this.ActiveGamemode = "TeamCTF";
         }
     }
     public class Modules

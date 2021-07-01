@@ -5,15 +5,16 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Flags
+namespace Uncreated.Warfare.Gamemodes.Flags
 {
     public static class ZoneDrawing
     {
         private static int overlayStep = 0;
-        public static void CreateFlagTestAreaOverlay(Player player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool lockthreaduntildone = false, string filename = default)
+        public static void CreateFlagTestAreaOverlay(FlagGamemode gamemode, Player player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool lockthreaduntildone = false, string filename = default)
         {
             if (lockthreaduntildone)
             {
@@ -37,19 +38,19 @@ namespace Uncreated.Warfare.Flags
                     bool done = false;
                     while (!done)
                     {
-                        SendPlayerZoneOverlay(img, player, newZones, PointsToTest, step, out done, filename);
+                        SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, step, out done, filename);
                         step++;
                     }
                 }
                 else
                 {
-                    SendPlayerZoneOverlay(img, player, newZones, PointsToTest, 0, out _, filename);
+                    SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out _, filename);
                 }
                 if (drawrange)
-                    SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -3, out _, filename);
+                    SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename);
                 if (drawpath)
-                    SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
-                SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
+                    SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename);
+                SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename);
                 if (player != default)
                     player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
             }
@@ -77,11 +78,11 @@ namespace Uncreated.Warfare.Flags
                         bool done = !drawIsInTest;
                         if (drawIsInTest)
                         {
-                            SendPlayerZoneOverlay(img, player, newZones, PointsToTest, overlayStep, out done, filename);
+                            SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, overlayStep, out done, filename);
                         }
                         else if (overlayStep == 0)
                         {
-                            SendPlayerZoneOverlay(img, player, newZones, PointsToTest, 0, out done, filename);
+                            SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out done, filename);
                         }
                         overlayStep++;
                         yield return new WaitForSeconds(0.5f);
@@ -90,10 +91,10 @@ namespace Uncreated.Warfare.Flags
                         else
                         {
                             if (drawrange)
-                                SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -3, out _, filename);
+                                SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename);
                             if (drawpath)
-                                SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -2, out _, filename);
-                            SendPlayerZoneOverlay(img, player, newZones, PointsToTest, -1, out _, filename);
+                                SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename);
+                            SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename);
                             if (player != default)
                                 player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
                             overlayStep = 0;
@@ -107,7 +108,7 @@ namespace Uncreated.Warfare.Flags
                 }
             }
         }
-        internal static void SendPlayerZoneOverlay(Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename)
+        internal static void SendPlayerZoneOverlay(FlagGamemode gamemode, Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename)
         {
             complete = false;
             F.Log("STEP " + step.ToString(Data.Locale));
@@ -180,23 +181,23 @@ namespace Uncreated.Warfare.Flags
             }
             else if (step == -2) // drawing path
             {
-                for (int i = 0; i <= Data.FlagManager.FlagRotation.Count; i++)
+                for (int i = 0; i <= gamemode.Rotation.Count; i++)
                 {
-                    F.DrawLine(img, new Line(i == Data.FlagManager.FlagRotation.Count ? TeamManager.Team2Main.InverseZone.Center : Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center,
-                        i == 0 ? TeamManager.Team1Main.InverseZone.Center : Data.FlagManager.FlagRotation[i - 1].ZoneData.InverseZone.Center), Color.cyan, false, 8);
+                    F.DrawLine(img, new Line(i == gamemode.Rotation.Count ? TeamManager.Team2Main.InverseZone.Center : gamemode.Rotation[i].ZoneData.InverseZone.Center,
+                        i == 0 ? TeamManager.Team1Main.InverseZone.Center : gamemode.Rotation[i - 1].ZoneData.InverseZone.Center), Color.cyan, false, 8);
                 }
                 img.Apply();
             }
             else if (step == -3)
             {
                 System.Random r = new System.Random();
-                for (int i = 0; i < Data.FlagManager.FlagRotation.Count; i++)
+                for (int i = 0; i < gamemode.Rotation.Count; i++)
                 {
                     Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
-                    F.DrawCircle(img, Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center.x, Data.FlagManager.FlagRotation[i].ZoneData.InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * Data.FlagManager.FlagRotation[i].ZoneData.CoordinateMultiplier, zonecolor, 5, false, true);
+                    F.DrawCircle(img, gamemode.Rotation[i].ZoneData.InverseZone.Center.x, gamemode.Rotation[i].ZoneData.InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * gamemode.Rotation[i].ZoneData.CoordinateMultiplier, zonecolor, 5, false, true);
                 }
-                F.DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_RADIUS_SEARCH * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
-                F.DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_RADIUS_SEARCH * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
+                F.DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
+                F.DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
                 img.Apply();
             }
         }

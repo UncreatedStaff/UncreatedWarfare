@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
-using Flag = Uncreated.Warfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.XP
 {

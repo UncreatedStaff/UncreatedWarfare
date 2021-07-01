@@ -568,7 +568,7 @@ namespace Uncreated.Warfare.Stats
                 }
             }
 
-            decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Flags.Flag closestObjective, false)));
+            decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Gamemodes.Flags.Flag closestObjective, false)));
             if (playstyle != default)
             {
                 playstyle.avg_distance_from_objective_on_kill = ((playstyle.avg_distance_from_objective_on_kill * (kills - 1)) + DistanceFromObjective) / kills;
@@ -600,7 +600,7 @@ namespace Uncreated.Warfare.Stats
                     AddItem(item);
                 }
             }
-            decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Flags.Flag closestObjective, false)));
+            decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Gamemodes.Flags.Flag closestObjective, false)));;
             if (save) Save();
         }
         public void AddDeath(bool save, UCWarfare.DeathEventArgs parameters)

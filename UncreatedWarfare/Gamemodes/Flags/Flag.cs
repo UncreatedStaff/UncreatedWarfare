@@ -9,8 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
-namespace Uncreated.Warfare.Flags
+namespace Uncreated.Warfare.Gamemodes.Flags
 {
     public class PlayerEventArgs : EventArgs { public Player player; }
     public class DiscoveredEventArgs : EventArgs { public ulong Team; }
@@ -19,7 +20,7 @@ namespace Uncreated.Warfare.Flags
         public int index = -1;
         public const int MaxPoints = 64;
         public Zone ZoneData { get; private set; }
-        public FlagManager Manager { get; private set; }
+        public FlagGamemode Manager { get; private set; }
         public int Level { get => _level; }
         private readonly int _level;
         public int ObjectivePlayerCount 
@@ -201,9 +202,10 @@ namespace Uncreated.Warfare.Flags
                 await OnPointsChanged?.Invoke(_points, OldPoints, this);
             }
         }
-        public event EventHandler<PlayerEventArgs> OnPlayerEntered;
-        public event EventHandler<PlayerEventArgs> OnPlayerLeft;
+        public event PlayerDelegate OnPlayerEntered;
+        public event PlayerDelegate OnPlayerLeft;
         public delegate Task PointsChangedDelegate(int NewPoints, int OldPoints, Flag flag);
+        public delegate Task PlayerDelegate(Flag flag, Player player);
         public event PointsChangedDelegate OnPointsChanged;
         public delegate Task OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
         public event OwnerChangedDelegate OnOwnerChanged;
@@ -212,7 +214,7 @@ namespace Uncreated.Warfare.Flags
         public event EventHandler OnDisposed;
         public event EventHandler OnReset;
         public List<Player> PlayersOnFlag { get; private set; }
-        public Flag(FlagData data, FlagManager manager)
+        public Flag(FlagData data, FlagGamemode manager)
         {
             this.Manager = manager;
             this._id = data.id;
@@ -254,12 +256,12 @@ namespace Uncreated.Warfare.Flags
         public bool PlayerInRange(Player player) => PlayerInRange(player.transform.position);
         public void EnterPlayer(Player player)
         {
-            OnPlayerEntered?.Invoke(this, new PlayerEventArgs { player = player });
+            OnPlayerEntered?.Invoke(this, player);
             if (!PlayersOnFlag.Exists(p => p.channel.owner.playerID.steamID.m_SteamID == player.channel.owner.playerID.steamID.m_SteamID)) PlayersOnFlag.Add(player);
         }
         public void ExitPlayer(Player player)
         {
-            OnPlayerLeft?.Invoke(this, new PlayerEventArgs { player = player });
+            OnPlayerLeft?.Invoke(this, player);
             PlayersOnFlag.Remove(player);
         }
         public bool IsNeutral() => _points == 0;
@@ -295,8 +297,8 @@ namespace Uncreated.Warfare.Flags
             if (team == 1) await CapT1();
             else if (team == 2) await CapT2();
         }
-        public bool T1Obj { get => ID == Data.FlagManager.ObjectiveTeam1.ID; }
-        public bool T2Obj { get => ID == Data.FlagManager.ObjectiveTeam2.ID; }
+        public bool T1Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam1.ID == ID; }
+        public bool T2Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam2.ID == ID; }
         public bool IsObj(ulong team)
         {
             if (team == 1) return T1Obj;

@@ -9,6 +9,7 @@ using UnityEngine;
 using Uncreated.Warfare.Stats;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Components
 {
@@ -67,28 +68,39 @@ namespace Uncreated.Warfare.Components
         }
         Queue<ToastMessage> toastMessages;
         ushort toastMessageOpen;
-        private const float TOAST_LIFETIME = 13f;
         private void SendToastMessage(ToastMessage message)
         {
             switch(message.Severity)
             {
                 default:
-                case ToastMessageSeverity.Info:
+                case ToastMessageSeverity.INFO:
                     toastMessageOpen = UCWarfare.Config.ToastIDInfo;
                     break;
-                case ToastMessageSeverity.Warning:
+                case ToastMessageSeverity.WARNING:
                     toastMessageOpen = UCWarfare.Config.ToastIDWarning;
                     break;
-                case ToastMessageSeverity.Severe:
+                case ToastMessageSeverity.SEVERE:
                     toastMessageOpen = UCWarfare.Config.ToastIDSevere;
                     break;
+                case ToastMessageSeverity.MINIXP:
+                    toastMessageOpen = UCWarfare.Config.MiniToastXP;
+                    break;
+                case ToastMessageSeverity.MINIOFFICERPTS: 
+                    toastMessageOpen = UCWarfare.Config.MiniToastOfficerPoints;
+                    break;
             }
-            EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message);
-            StartCoroutine(ToastDelay());
+            if (message.Message != null)
+            {
+                if(message.SecondaryMessage != null)
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
+                else
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message);
+            }
+            StartCoroutine(ToastDelay(message.delay));
         }
-        private IEnumerator<WaitForSeconds> ToastDelay()
+        private IEnumerator<WaitForSeconds> ToastDelay(float delay)
         {
-            yield return new WaitForSeconds(TOAST_LIFETIME);
+            yield return new WaitForSeconds(delay);
             EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection);
             toastMessageOpen = 0;
             if (toastMessages.Count > 0)
@@ -107,12 +119,12 @@ namespace Uncreated.Warfare.Components
         {
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
-            if (stats == null)
+            if (stats == null && Data.Gamemode is TeamCTF ctf)
             {
-                if (!Data.GameStats.TryGetPlayer(player.channel.owner.playerID.steamID.m_SteamID, out stats))
+                if (!ctf.GameStats.TryGetPlayer(player.channel.owner.playerID.steamID.m_SteamID, out stats))
                 {
                     stats = new PlayerCurrentGameStats(player);
-                    Data.GameStats.playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, stats);
+                    ctf.GameStats.playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, stats);
                 }
             }
             if (player.IsOnFlag())

@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Flags;
 using System.IO;
 using UnityEngine;
 using SDG.Unturned;
-using FlagData = Uncreated.Warfare.Flags.FlagData;
+using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 using Uncreated.Warfare.Teams;
-using Flag = Uncreated.Warfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare

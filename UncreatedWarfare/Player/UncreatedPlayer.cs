@@ -412,18 +412,59 @@ namespace Uncreated.Players
     {
         public ToastMessageSeverity Severity;
         public string Message;
-        public ToastMessage(string message, ToastMessageSeverity severity = ToastMessageSeverity.Info)
+        public string SecondaryMessage;
+        public float delay;
+        public const float FULL_TOAST_TIME = 12f;
+        public const float MINI_TOAST_TIME = 3f;
+        public ToastMessage(string message, ToastMessageSeverity severity)
         {
             this.Message = message;
+            this.SecondaryMessage = null;
             this.Severity = severity;
+            switch (severity)
+            {
+                case ToastMessageSeverity.INFO:
+                case ToastMessageSeverity.WARNING:
+                case ToastMessageSeverity.SEVERE:
+                default:
+                    this.delay = FULL_TOAST_TIME;
+                    break;
+                case ToastMessageSeverity.MINIXP:
+                case ToastMessageSeverity.MINIOFFICERPTS:
+                    this.delay = MINI_TOAST_TIME;
+                    break;
+            }
         }
-        public static void QueueMessage(UnturnedPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public ToastMessage(string message, string secondmessage, ToastMessageSeverity severity = ToastMessageSeverity.INFO)
+        {
+            this.Message = message;
+            this.SecondaryMessage = secondmessage;
+            this.Severity = severity;
+            switch (severity)
+            {
+                case ToastMessageSeverity.INFO:
+                case ToastMessageSeverity.WARNING:
+                case ToastMessageSeverity.SEVERE:
+                default:
+                    this.delay = FULL_TOAST_TIME;
+                    break;
+                case ToastMessageSeverity.MINIXP:
+                case ToastMessageSeverity.MINIOFFICERPTS:
+                    this.delay = MINI_TOAST_TIME;
+                    break;
+            }
+        }
+        public static void QueueMessage(UnturnedPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, severity));
+        public static void QueueMessage(UnturnedPlayer player, string message, string second_message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, second_message, severity));
         public static void QueueMessage(UnturnedPlayer player, ToastMessage message) => QueueMessage(player.Player, message);
-        public static void QueueMessage(UCPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(UCPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, severity));
+        public static void QueueMessage(UCPlayer player, string message, string second_message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, second_message, severity));
         public static void QueueMessage(UCPlayer player, ToastMessage message) =>  QueueMessage(player.Player, message);
-        public static void QueueMessage(SteamPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(SteamPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.player, new ToastMessage(message, severity));
+        public static void QueueMessage(SteamPlayer player, string message, string second_message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.player, new ToastMessage(message, second_message, severity));
         public static void QueueMessage(SteamPlayer player, ToastMessage message) => QueueMessage(player.player, message);
-        public static void QueueMessage(Player player, string message, ToastMessageSeverity severity = ToastMessageSeverity.Info) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(Player player, string message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player, new ToastMessage(message, severity));
+        public static void QueueMessage(Player player, string message, string second_message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player, new ToastMessage(message, second_message, severity));
         public static void QueueMessage(Player player, ToastMessage message)
         {
             if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
@@ -432,9 +473,11 @@ namespace Uncreated.Players
     }
     public enum ToastMessageSeverity : byte
     {
-        Info = 0,
-        Warning = 1,
-        Severe = 2
+        INFO = 0,
+        WARNING = 1,
+        SEVERE = 2,
+        MINIXP = 3,
+        MINIOFFICERPTS = 4
     }
 
     public struct BasicSQLStats

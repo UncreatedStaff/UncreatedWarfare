@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
@@ -20,7 +19,7 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare
 {
@@ -32,15 +31,12 @@ namespace Uncreated.Warfare
         internal static async Task GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+            ulong oldteam = oldGroup.GetTeam();
             ulong newteam = newGroup.GetTeam();
 
             PlayerManager.VerifyTeam(player.player);
+            await Data.Gamemode?.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
 
-            Data.FlagManager.ClearListUI(player.transportConnection);
-            if (Data.FlagManager.OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
-                Data.FlagManager.RefreshStaticUI(newteam, Data.FlagManager.FlagRotation.FirstOrDefault(x => x.ID == Data.FlagManager.OnFlag[player.playerID.steamID.m_SteamID])
-                    ?? Data.FlagManager.FlagRotation[0]).SendToPlayer(player, player.transportConnection);
-            Data.FlagManager.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newteam);
 
             SquadManager.ClearUIsquad(player.player);
             SquadManager.UpdateUIMemberCount(newGroup);
@@ -164,7 +160,6 @@ namespace Uncreated.Warfare
             await Data.DatabaseManager.RegisterLogin(player.Player);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
-            Data.GameStats.AddPlayer(player.Player);
             if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
             {
                 UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
@@ -176,7 +171,7 @@ namespace Uncreated.Warfare
             Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
             pt.UCPlayer?.LogIn(player.Player.channel.owner, names);
             ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player, 
-                UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()) ), ToastMessageSeverity.Info);
+                UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()) ), ToastMessageSeverity.INFO);
             if (!UCWarfare.Config.AllowCosmetics)
             {
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -194,7 +189,7 @@ namespace Uncreated.Warfare
             
             TicketManager.OnPlayerJoined(ucplayer);
 
-            Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
+            await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
             await rtn;
         }
         internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
@@ -327,7 +322,8 @@ namespace Uncreated.Warfare
             SquadManager.InvokePlayerLeft(ucplayer);
             TicketManager.OnPlayerLeft(ucplayer);
             PlayerManager.InvokePlayerDisconnected(player);
-            Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last within game thread section
+
+            await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner);
             await rtn;
         }
         internal static async Task LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet) 
@@ -351,17 +347,6 @@ namespace Uncreated.Warfare
                 player.playerID.characterName = prefix + player.playerID.characterName;
             if (team < 3 && team > 0 && !player.playerID.nickName.StartsWith(prefix))
                 player.playerID.nickName = prefix + player.playerID.nickName;
-        }
-
-        internal static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
-        {
-            await XPManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-            await OfficerManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-        }
-        internal static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
-        {
-            await XPManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
-            await OfficerManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
     }
 }

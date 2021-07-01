@@ -10,7 +10,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Stats
+namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
     public class EndScreenLeaderboard : MonoBehaviour
     {
@@ -25,22 +25,23 @@ namespace Uncreated.Warfare.Stats
         public ulong ShuttingDownPlayer = 0;
         const float updateTimeFrequency = 1f;
         private readonly Dictionary<ulong, EPluginWidgetFlags> oldFlags = new Dictionary<ulong, EPluginWidgetFlags>();
+        public WarStatsTracker warstats;
         public ulong winner;
         public CancellationTokenSource CancelToken = new CancellationTokenSource();
-        public async Task EndGame()
+        public async Task EndGame(string progresschars)
         {
-            SendEndScreen(winner);
+            SendEndScreen(winner, progresschars);
             secondsLeft = SecondsEndGameLength;
-            _ = StartUpdatingTimer(CancelToken.Token).ConfigureAwait(false);
+            _ = StartUpdatingTimer(CancelToken.Token, progresschars).ConfigureAwait(false);
             await Task.Yield();
         }
-        private async Task StartUpdatingTimer(CancellationToken token)
+        private async Task StartUpdatingTimer(CancellationToken token, string progresschars)
         {
             while (secondsLeft > 0 && !token.IsCancellationRequested)
             {
                 secondsLeft -= updateTimeFrequency;
                 await Task.Delay(Mathf.RoundToInt(updateTimeFrequency * 1000));
-                UpdateLeaderboard(secondsLeft);
+                UpdateLeaderboard(secondsLeft, progresschars);
             }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
@@ -64,12 +65,11 @@ namespace Uncreated.Warfare.Stats
             {
                 await OnLeaderboardExpired.Invoke();
             }
-            Destroy(this);
             await rtn;
         }
-        public void SendScreenToPlayer(ulong winner, SteamPlayer player) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
-        public void SendScreenToPlayer(SteamPlayer player) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
-        public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor)
+        public void SendScreenToPlayer(ulong winner, SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
+        public void SendScreenToPlayer(SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
+        public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor, string progresschars)
         {
             oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
             player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
@@ -81,7 +81,6 @@ namespace Uncreated.Warfare.Stats
             player.player.life.serverModifyStamina(100);
             player.player.movement.sendPluginJumpMultiplier(0f);
             player.player.teleportToLocation(F.GetBaseSpawn(player.player.channel.owner), winner == 1 ? 0f : (winner == 2 ? 85f : 0));
-            WarStatsTracker warstats = Data.GameStats;
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
             PlayerCurrentGameStats stats;
             if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
@@ -100,11 +99,11 @@ namespace Uncreated.Warfare.Stats
             else
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", Flags.FlagManager.PROGRESS_CHARS[Flags.FlagManager.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength))].ToString());
-            List<KeyValuePair<Player, string>> topsquadplayers = Data.GameStats.GetTopSquad(out string squadname, out ulong squadteam);
-            List<KeyValuePair<Player, int>> topkills = Data.GameStats.GetTop5MostKills();
-            List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = Data.GameStats.GetTop5OnPointTime();
-            List<KeyValuePair<Player, int>> topxpgain = Data.GameStats.GetTop5XP();
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
+            List<KeyValuePair<Player, string>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam);
+            List<KeyValuePair<Player, int>> topkills = warstats.GetTop5MostKills();
+            List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = warstats.GetTop5OnPointTime();
+            List<KeyValuePair<Player, int>> topxpgain = warstats.GetTop5XP();
             for (int h = 2; h <= 4; h++)
                 if (headers.Length > h - 1)
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h - 1], F.Translate("lb_header_" + h.ToString(Data.Locale), player));
@@ -266,22 +265,22 @@ namespace Uncreated.Warfare.Stats
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.Translate("stats_war_value", player, warstats.teamkills, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", " TODO "); // do this after eating grilled cheese
         }
-        public void SendEndScreen(ulong winner)
+        public void SendEndScreen(ulong winner, string progresschars)
         {
             string teamcolor = TeamManager.GetTeamHexColor(winner);
             for (int players = 0; players < Provider.clients.Count; players++)
             {
-                SendScreenToPlayer(winner, Provider.clients[players], teamcolor);
+                SendScreenToPlayer(winner, Provider.clients[players], teamcolor, progresschars);
             }
         }
-        public void UpdateLeaderboard(float newTime)
+        public void UpdateLeaderboard(float newTime, string progresschars)
         {
             foreach(SteamPlayer player in Provider.clients)
             {
                 EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(newTime)));
                 int time = Mathf.RoundToInt(SecondsEndGameLength);
-                EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameCircleForeground", 
-                    Flags.FlagManager.PROGRESS_CHARS[Flags.FlagManager.FromMax(Mathf.RoundToInt(time - newTime), time)].ToString());
+                EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameCircleForeground",
+                    progresschars[CTFUI.FromMax(Mathf.RoundToInt(time - newTime), time, progresschars)].ToString());
             }
         }
     }
@@ -327,7 +326,7 @@ namespace Uncreated.Warfare.Stats
         public void AddKill()
         {
             kills++;
-            if (player != default && Data.FlagManager.FlagRotation.Exists(x => x.ZoneData.IsInside(player.transform.position))) killsonpoint++;
+            if (player != default && Data.Gamemode is FlagGamemode fg && fg.Rotation.Exists(x => x.ZoneData.IsInside(player.transform.position))) killsonpoint++;
         }
         public void AddDeath() => deaths++;
         public void AddTeamkill() => teamkills++;
@@ -366,7 +365,10 @@ namespace Uncreated.Warfare.Stats
         public void Start() => Reset();
         public void Reset()
         {
-            playerstats = new Dictionary<ulong, PlayerCurrentGameStats>();
+            if (playerstats == null)
+                playerstats = new Dictionary<ulong, PlayerCurrentGameStats>();
+            else
+                playerstats.Clear();
             durationCounter = 0;
             casualtiesT1 = 0;
             casualtiesT2 = 0;

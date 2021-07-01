@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Stats;
 using SDG.Unturned;
-using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Revives;
@@ -25,12 +24,15 @@ using Rocket.API.Serialisation;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.XP;
 using System.Globalization;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare
 {
     public static class Data
     {
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
+        public static readonly Type[] GAME_MODES = new Type[] { typeof(TeamCTF) };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
@@ -38,9 +40,9 @@ namespace Uncreated.Warfare
         public static string FlagStorage {
             get
             {
-                if(Level.level == default) return DataDirectory + @"Maps\Unloaded\Flags\";
+                if(Provider.map == default) return DataDirectory + @"Maps\Unloaded\Flags\";
                 if (_flagStorageTemp == default)
-                    _flagStorageTemp = string.Format(_flagStorage, Level.level.name.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
+                    _flagStorageTemp = string.Format(_flagStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _flagStorageTemp;
             } 
         }
@@ -50,9 +52,9 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (Level.level == default) return DataDirectory + @"Maps\Unloaded\Structures\";
+                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Structures\";
                 if (_structStorageTemp == default)
-                    _structStorageTemp = string.Format(_structuresStorage, Level.level.name.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
+                    _structStorageTemp = string.Format(_structuresStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _structStorageTemp;
             }
         }
@@ -70,9 +72,9 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (Level.level == default) return DataDirectory + @"Maps\Unloaded\Vehicles\";
+                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Vehicles\";
                 if (_vehicleStorageTemp == default)
-                    _vehicleStorageTemp = string.Format(_vehicleStorage, Level.level.name.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
+                    _vehicleStorageTemp = string.Format(_vehicleStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _vehicleStorageTemp;
             }
         }
@@ -100,7 +102,6 @@ namespace Uncreated.Warfare
         public static VehicleSpawner VehicleSpawner;
         public static VehicleBay VehicleBay; 
         public static VehicleSigns VehicleSigns; 
-        public static FlagManager FlagManager;
         public static FOBManager FOBManager;
         public static BuildManager BuildManager;
         public static TeamManager TeamManager;
@@ -114,7 +115,15 @@ namespace Uncreated.Warfare
         public static Whitelister Whitelister;
         public static SquadManager SquadManager;
         internal static WarfareSQL DatabaseManager;
-        public static WarStatsTracker GameStats;
+        public static Gamemode Gamemode;
+        public static TeamCTF FlagGamemode
+        {
+            get
+            {
+                if (Gamemode is TeamCTF ctf) return ctf;
+                else return null;
+            }
+        }
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static MethodInfo AppendConsoleMethod;
@@ -180,12 +189,19 @@ namespace Uncreated.Warfare
             Whitelister = new Whitelister();
             SquadManager = new SquadManager();
             CommandWindow.shouldLogDeaths = false;
-
-            FlagManager = new FlagManager();
-            FlagManager.OnReady += UCWarfare.I.OnFlagManagerReady;
             TicketManager = new TicketManager();
             XPManager = new XPManager();
             OfficerManager = new OfficerManager();
+
+            F.Log("Searching for gamemode: " + UCWarfare.Config.ActiveGamemode, ConsoleColor.Magenta);
+            Gamemode = Gamemode.FindGamemode(UCWarfare.Config.ActiveGamemode, GAME_MODES);
+            if (Gamemode == null)
+            { 
+                F.LogError("Unable to find gamemode by the name " + UCWarfare.Config.ActiveGamemode + ", defaulting to " + nameof(TeamCTF));
+                Gamemode = TeamCTF.Create();
+            }
+            await Gamemode.Init();
+            F.Log("Initialized gamemode.", ConsoleColor.Magenta);
             if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
             {
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);

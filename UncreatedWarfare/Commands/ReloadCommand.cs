@@ -120,7 +120,8 @@ namespace Uncreated.Warfare.Commands
         {
             try
             {
-                await Data.FlagManager.StartNextGame();
+                if (Data.Gamemode is Gamemodes.Flags.FlagGamemode flaggm)
+                    await flaggm.StartNextGame();
                 SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 if(OnFlagsReloaded != null)
                     await OnFlagsReloaded.Invoke();

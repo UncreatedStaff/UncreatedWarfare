@@ -5,10 +5,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Flags;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Flags
+namespace Uncreated.Warfare
 {
     public abstract class Zone
     {
@@ -409,6 +408,17 @@ namespace Uncreated.Warfare.Flags
             }
             if (intersects % 2 == 1) return true; // is odd
             else return false;
+        }
+    }
+    public struct ZoneData
+    {
+        public string type;
+        public string data;
+        [Newtonsoft.Json.JsonConstructor]
+        public ZoneData(string type, string data)
+        {
+            this.type = type;
+            this.data = data;
         }
     }
 }

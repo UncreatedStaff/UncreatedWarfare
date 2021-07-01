@@ -14,14 +14,15 @@ using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.XP;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Flags.Flag;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using System.Reflection;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -62,7 +63,8 @@ namespace Uncreated.Warfare.Commands
                         await XPManager.AddXP(target.Player, target.GetTeam(), amount);
                         await rtn;
                         player.SendChat($"Given {amount} XP to {target.CharacterName}.", UCWarfare.GetColor("default"));
-                    } else
+                    }
+                    else
                         player.SendChat($"'{command[2]}' is not a valid amount.", UCWarfare.GetColor("default"));
                 }
                 else if (command[0] == "giveof" || command[0] == "giveop")
@@ -99,35 +101,40 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "quickcap")
                 {
-                    Flag flag = Data.FlagManager.FlagRotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
-                    if (flag == default)
+                    if (Data.Gamemode is FlagGamemode fg)
                     {
-                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, Data.FlagManager.FlagRotation.Count);
-                        return;
-                    }
-                    ulong team = player.GetTeam();
-                    if (team == 1)
-                    {
-                        if (flag.Points < 0)
+                        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
+                        if (flag == default)
                         {
-                            await flag.CapT1(Math.Abs(flag.Points));
-                        } else
-                        {
-                            await flag.CapT1(Flag.MaxPoints - flag.Points - 1);
+                            player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, fg.Rotation.Count);
+                            return;
                         }
-                    }
-                    else if (team == 2)
-                    {
-                        if (flag.Points > 0)
+                        ulong team = player.GetTeam();
+                        if (team == 1)
                         {
-                            await flag.CapT2(flag.Points);
+                            if (flag.Points < 0)
+                            {
+                                await flag.CapT1(Math.Abs(flag.Points));
+                            }
+                            else
+                            {
+                                await flag.CapT1(Flag.MaxPoints - flag.Points - 1);
+                            }
                         }
-                        else
+                        else if (team == 2)
                         {
-                            await flag.CapT2(Flag.MaxPoints - flag.Points - 2);
+                            if (flag.Points > 0)
+                            {
+                                await flag.CapT2(flag.Points);
+                            }
+                            else
+                            {
+                                await flag.CapT2(Flag.MaxPoints - flag.Points - 2);
+                            }
                         }
+                        else player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
                     }
-                    else player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
+                    else player.SendChat("A flag gamemode is not loaded.", UCWarfare.GetColor("default"));
                 }
                 else if (command[0] == "quickwin")
                 {
@@ -135,26 +142,33 @@ namespace Uncreated.Warfare.Commands
                     if (command.Length > 1 && ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong id))
                         team = id;
                     else team = F.GetTeam(player);
-                    if (team != 1 && team != 2)
+                    if (Data.Gamemode is TeamCTF fg)
                     {
-                        if (caller.DisplayName == "Console")
-                            F.Log("That's not a team that can capture flags.", ConsoleColor.Red);
-                        player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
-                        return;
-                    }
-                    if (team == 1)
-                    {
-                        while (!Data.FlagManager.isScreenUp)
+                        if (team != 1 && team != 2)
                         {
-                            await Data.FlagManager.ObjectiveTeam1.CapT1();
+                            if (caller.DisplayName == "Console")
+                                F.Log("That's not a team that can capture flags.", ConsoleColor.Red);
+                            player.SendChat("You're not on a team that can capture flags.", UCWarfare.GetColor("default"));
+                            return;
+                        }
+                        if (team == 1)
+                        {
+                            while (!fg.isScreenUp)
+                            {
+                                await fg.ObjectiveTeam1.CapT1();
+                            }
+                        }
+                        else
+                        {
+                            while (!fg.isScreenUp)
+                            {
+                                await fg.ObjectiveTeam2.CapT2();
+                            }
                         }
                     }
                     else
                     {
-                        while (!Data.FlagManager.isScreenUp)
-                        {
-                            await Data.FlagManager.ObjectiveTeam2.CapT2();
-                        }
+                        await Data.Gamemode.DeclareWin(team);
                     }
                 }
                 else if (command[0] == "delay")
@@ -165,19 +179,24 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "savemanyzones")
                 {
-                    if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
-                        times = 1U;
-                    List<Zone> zones = new List<Zone>();
-                    Data.FlagManager.FlagRotation.ForEach(x => { zones.Add(x.ZoneData); });
-                    for (int i = 0; i < times; i++)
+                    if (Data.Gamemode is FlagGamemode fg)
                     {
-                        await ReloadCommand.ReloadFlags();
-                        if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
-                            Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
-                        ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
-                        F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                        if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
+                            times = 1U;
+                        List<Zone> zones = new List<Zone>();
+                        fg.Rotation.ForEach(x => { zones.Add(x.ZoneData); });
+                        for (int i = 0; i < times; i++)
+                        {
+                            await ReloadCommand.ReloadFlags();
+                            if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
+                                Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
+                            ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
+                            F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                        }
                     }
+                    else player.SendChat("A flag gamemode is not loaded.", UCWarfare.GetColor("default"));
                 }
+                else if (command[0] == "goto") go(command, player);
                 else
                 {
                     try
@@ -220,15 +239,19 @@ namespace Uncreated.Warfare.Commands
                 F.LogError("No player found");
                 return;
             }
-            Flag flag = Data.FlagManager.FlagRotation.FirstOrDefault(f => f.PlayerInRange(player));
-            if (flag == default(Flag))
+            if (Data.Gamemode is FlagGamemode fg)
             {
-                player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, player.transform.rotation.eulerAngles.y, Data.FlagManager.FlagRotation.Count);
+                Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(player));
+                if (flag == default(Flag))
+                {
+                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, player.transform.rotation.eulerAngles.y, fg.Rotation.Count);
+                }
+                else
+                {
+                    player.SendChat("current_zone", UCWarfare.GetColor("default"), flag.Name, player.transform.position.x, player.transform.position.y, player.transform.position.z);
+                }
             }
-            else
-            {
-                player.SendChat("current_zone", UCWarfare.GetColor("default"), flag.Name, player.transform.position.x, player.transform.position.y, player.transform.position.z);
-            }
+            else player.SendChat("A flag gamemode is not loaded.", UCWarfare.GetColor("default"));
         }
         private void sign(string[] command, Player player)
         {
@@ -252,11 +275,39 @@ namespace Uncreated.Warfare.Commands
                 F.LogError("No player found");
                 return;
             }
-            Flag flag = Data.FlagManager.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
             Zone zone;
             string zoneName;
             string zoneColor;
-            if (flag == default)
+            if (Data.Gamemode is FlagGamemode fg)
+            {
+                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                if (flag == default)
+                {
+                    List<Zone> zones = Data.ExtraZones.Values.ToList();
+                    zones.Sort(delegate (Zone a, Zone b)
+                    {
+                        return a.BoundsArea.CompareTo(b.BoundsArea);
+                    });
+                    Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
+                    if (extrazone == default)
+                    {
+                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, fg.AllFlags.Count);
+                        return;
+                    }
+                    else
+                    {
+                        zone = extrazone;
+                        zoneName = extrazone.Name;
+                        zoneColor = UCWarfare.GetColorHex("default");
+                    }
+                }
+                else
+                {
+                    zone = flag.ZoneData;
+                    zoneName = flag.Name;
+                    zoneColor = flag.TeamSpecificHexColor;
+                }
+            } else
             {
                 List<Zone> zones = Data.ExtraZones.Values.ToList();
                 zones.Sort(delegate (Zone a, Zone b)
@@ -266,7 +317,7 @@ namespace Uncreated.Warfare.Commands
                 Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                 if (extrazone == default)
                 {
-                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, Data.FlagManager.FlagRotation.Count);
+                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, zones.Count);
                     return;
                 }
                 else
@@ -275,12 +326,6 @@ namespace Uncreated.Warfare.Commands
                     zoneName = extrazone.Name;
                     zoneColor = UCWarfare.GetColorHex("default");
                 }
-            }
-            else
-            {
-                zone = flag.ZoneData;
-                zoneName = flag.Name;
-                zoneColor = flag.TeamSpecificHexColor;
             }
             Vector2[] points;
             Vector2[] corners;
@@ -334,26 +379,36 @@ namespace Uncreated.Warfare.Commands
                 F.LogError("No player found");
                 return;
             }
-            if (command.Length > 1)
+            if (command.Length == 1)
             {
-                string arg = command[1].ToLower();
-                if (command.Length > 2)
+                player.SendChat("Syntax: /test goto <flag name|zone name|flag id|zone id>", UCWarfare.GetColor(""));
+                return;
+            }
+            string arg = command[1].ToLower();
+            if (command.Length > 2)
+            {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 1; i < command.Length; i++)
                 {
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 1; i < command.Length; i++)
-                    {
-                        if (i != 1) sb.Append(' ');
-                        sb.Append(command[i]);
-                    }
-                    arg = sb.ToString().ToLower();
+                    if (i != 1) sb.Append(' ');
+                    sb.Append(command[i]);
                 }
+                arg = sb.ToString().ToLower();
+            }
+            if (Data.Gamemode is FlagGamemode fg)
+            {
                 Flag flag;
-                if (arg == "obj1" && Data.FlagManager.ObjectiveTeam1 != null)
-                    flag = Data.FlagManager.ObjectiveTeam1;
-                else if (arg == "obj2" && Data.FlagManager.ObjectiveTeam2 != null)
-                    flag = Data.FlagManager.ObjectiveTeam2;
+                if (fg is TeamCTF ctf)
+                {
+                    if (arg == "obj1" && ctf.ObjectiveTeam1 != null)
+                        flag = ctf.ObjectiveTeam1;
+                    else if (arg == "obj2" && ctf.ObjectiveTeam2 != null)
+                        flag = ctf.ObjectiveTeam2;
+                    else
+                        flag = fg.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
+                }
                 else
-                    flag = Data.FlagManager.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
+                    flag = fg.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
                 if (flag == default)
                 {
                     Dictionary<int, Zone> eZones = Data.ExtraZones;
@@ -373,7 +428,16 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                player.SendChat("Syntax: /test goto <flag name|zone name|flag id|zone id>", UCWarfare.GetColor(""));
+                Dictionary<int, Zone> eZones = Data.ExtraZones;
+                KeyValuePair<int, Zone> zone = eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.Key == o));
+                if (zone.Equals(default(KeyValuePair<int, Zone>)))
+                {
+                    player.SendChat("No zone found from search terms: \"" + arg + "\"", UCWarfare.GetColor("default"));
+                    return;
+                }
+                player.teleportToLocation(zone.Value.Center3DAbove, 90f);
+                player.SendChat("Teleported to extra zone " + zone.Value.Name + '.', UCWarfare.GetColor("default"));
+                return;
             }
         }
         private void player(string[] command, Player player)
@@ -409,47 +473,51 @@ namespace Uncreated.Warfare.Commands
         }
         private void zonearea(string[] command, Player player)
         {
-            const string zonesyntax = "Syntax: /test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false>";
-            bool all = false;
-            bool extra = false;
-            bool path = true;
-            bool range = false;
-            bool drawIn = false;
-            if (command.Length > 4)
+            if (Data.Gamemode is FlagGamemode fg)
             {
-                if (command[1] == "all") all = true;
-                else if (command[1] != "active") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
-                if (command[2] == "true") extra = true;
-                else if (command[2] != "false") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
-                if (command[3] == "false") path = false;
-                else if (command[3] != "true") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
-                if (command[4] == "true") range = true;
-                else if (command[4] != "false") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
-                if (command[5] == "true") drawIn = true;
-                else if (command[5] != "false") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
-            }
-            else if (command.Length != 1)
-            {
-                if (player == default)
+                const string zonesyntax = "Syntax: /test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false>";
+                bool all = false;
+                bool extra = false;
+                bool path = true;
+                bool range = false;
+                bool drawIn = false;
+                if (command.Length > 4)
                 {
-                    F.LogError(zonesyntax);
+                    if (command[1] == "all") all = true;
+                    else if (command[1] != "active") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
+                    if (command[2] == "true") extra = true;
+                    else if (command[2] != "false") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
+                    if (command[3] == "false") path = false;
+                    else if (command[3] != "true") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
+                    if (command[4] == "true") range = true;
+                    else if (command[4] != "false") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
+                    if (command[5] == "true") drawIn = true;
+                    else if (command[5] != "false") player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
+                }
+                else if (command.Length != 1)
+                {
+                    if (player == default)
+                    {
+                        F.LogError(zonesyntax);
+                        return;
+                    }
+                    player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
                     return;
                 }
-                player.SendChat(zonesyntax, UCWarfare.GetColor("defaulterror"));
-                return;
+                List<Zone> zones = new List<Zone>();
+                foreach (Flag flag in all ? fg.AllFlags : fg.Rotation)
+                    zones.Add(flag.ZoneData);
+                if (extra)
+                {
+                    foreach (Zone zone in Data.ExtraZones.Values)
+                        zones.Add(zone);
+                }
+                if (player != default)
+                    player.SendChat("Picture has to generate, wait around a minute.", UCWarfare.GetColor("default"));
+                else F.Log("Picture has to generate, wait around a minute.");
+                ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, path, range, drawIn);
             }
-            List<Zone> zones = new List<Zone>();
-            foreach (Flag flag in all ? Data.FlagManager.AllFlags : Data.FlagManager.FlagRotation)
-                zones.Add(flag.ZoneData);
-            if (extra)
-            {
-                foreach (Zone zone in Data.ExtraZones.Values)
-                    zones.Add(zone);
-            }
-            if (player != default)
-                player.SendChat("Picture has to generate, wait around a minute.", UCWarfare.GetColor("default"));
-            else F.Log("Picture has to generate, wait around a minute.");
-            ZoneDrawing.CreateFlagTestAreaOverlay(player, zones, path, range, drawIn);
+            else player.SendChat("A flag gamemode is not loaded.", UCWarfare.GetColor("default"));
         }
         private void playtime(string[] command, Player player)
         {
@@ -462,7 +530,8 @@ namespace Uncreated.Warfare.Commands
         }
         private void rotation(string[] command, Player player)
         {
-            Data.FlagManager.PrintFlagRotation();
+            if(Data.Gamemode is FlagGamemode fg)
+                fg.PrintFlagRotation();
         }
         private void lastshot(string[] command, Player player)
         {
@@ -521,11 +590,38 @@ namespace Uncreated.Warfare.Commands
                 F.LogError("No player found");
                 return;
             }
-            Flag flag = Data.FlagManager.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
             Zone zone;
             string zoneName;
             string type;
-            if (flag == default(Flag))
+            if (Data.Gamemode is FlagGamemode fg)
+            {
+                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                if (flag == default(Flag))
+                {
+                    List<Zone> zones = Data.ExtraZones.Values.ToList();
+                    zones.Sort(delegate (Zone a, Zone b)
+                    {
+                        return a.BoundsArea.CompareTo(b.BoundsArea);
+                    });
+                    zone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
+                    if (zone == default(Zone))
+                    {
+                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, fg.Rotation.Count);
+                        return;
+                    }
+                    else
+                    {
+                        zoneName = zone.Name;
+                        type = "Extra Zone";
+                    }
+                }
+                else
+                {
+                    zone = flag.ZoneData;
+                    zoneName = flag.Name;
+                    type = "Flag";
+                }
+            } else
             {
                 List<Zone> zones = Data.ExtraZones.Values.ToList();
                 zones.Sort(delegate (Zone a, Zone b)
@@ -535,7 +631,7 @@ namespace Uncreated.Warfare.Commands
                 zone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                 if (zone == default(Zone))
                 {
-                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, Data.FlagManager.FlagRotation.Count);
+                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, zones.Count);
                     return;
                 }
                 else
@@ -543,12 +639,6 @@ namespace Uncreated.Warfare.Commands
                     zoneName = zone.Name;
                     type = "Extra Zone";
                 }
-            }
-            else
-            {
-                zone = flag.ZoneData;
-                zoneName = flag.Name;
-                type = "Flag";
             }
             StringBuilder sb = new StringBuilder();
             sb.Append(type + " - " + zoneName + ":\n");
@@ -573,7 +663,7 @@ namespace Uncreated.Warfare.Commands
         private void setmainradius(string[] command, Player player)
         {
             if (command.Length > 1 && float.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out float newValue) && !newValue.Equals(float.NaN) && !newValue.Equals(float.NegativeInfinity) && !newValue.Equals(float.PositiveInfinity))
-                ObjectivePathing.MAIN_RADIUS_SEARCH = newValue;
+                ObjectivePathing.MAIN_SEARCH_RADIUS = newValue;
         }
         private void setmaxflags(string[] command, Player player)
         {
