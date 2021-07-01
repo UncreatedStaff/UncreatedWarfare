@@ -31,18 +31,17 @@ namespace Uncreated.Warfare.Commands
                         if (rallypoint.timer <= 0)
                         {
                             rallypoint.TeleportPlayer(player);
-                            player.Message("You have rallied with your squad.");
                         }
                         else
                         {
                             if (!rallypoint.AwaitingPlayers.Exists(p => p.Steam64 == player.Steam64))
                             {
                                 rallypoint.AwaitingPlayers.Add(player);
-                                player.Message($"<color=#89917e>Standby for rally in <color=#5eff87>{rallypoint.timer}</color> seconds. Do '<color=#bfbfbf>/rally cancel</color>' to abort.</color>");
+                                player.Message("rally_wait", rallypoint.timer);
                             }
                             else
                             {
-                                player.Message("You are already awaiting <color=#5eff87>rally</color> deployment. Do '/rally cancel' to abort.");
+                                player.Message("really_e_alreadywaiting");
                             }
                         }
                     }
@@ -51,22 +50,22 @@ namespace Uncreated.Warfare.Commands
                         if (rallypoint.AwaitingPlayers.Exists(p => p.Steam64 == player.Steam64))
                         {
                             rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == player.Steam64);
-                            player.Message($"<color=#89917e>Cancelled rally deployment.</color>");
+                            player.Message("rally_aborted");
                         }
                         else
                         {
-                            player.Message("You are not awaiting deployment.");
+                            player.Message("rally_e_notwaiting");
                         }
                     }
                 }
                 else
                 {
-                    player.Message("Rallypoint is unavailable right now");
+                    player.Message("rally_e_unavailable");
                 }
             }
             else
             {
-                player.Message("You are not in squad.");
+                player.Message("rally_e_notinsquad");
             }
         }
     }

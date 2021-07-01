@@ -8,10 +8,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.XP;
+using UnityEngine;
+using Flag = Uncreated.Warfare.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets
 {
@@ -32,7 +38,6 @@ namespace Uncreated.Warfare.Tickets
             FlagManager.OnNewGameStarting += OnNewGameStarting;
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
-
         public static async Task OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
         {
             if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
@@ -81,21 +86,152 @@ namespace Uncreated.Warfare.Tickets
             F.Log("Team 1 Tickets: " + Team1Tickets);
             F.Log("Team 2 Tickets: " + Team2Tickets);
         }
-
+        public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
+        {
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.data.EnemyKilledXP);
+            //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
+        }
+        public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
+        {
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.data.FriendlyKilledXP);
+            //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
+        }
         private static async void OnVehicleExploded(InteractableVehicle vehicle)
         {
-            if (VehicleBay.VehicleExists(vehicle.id, out var vehicleData))
+            if (VehicleBay.VehicleExists(vehicle.id, out var data))
             {
                 if (TeamManager.IsTeam1(vehicle.lockedGroup))
                 {
-                    await AddTeam1Tickets(-1 * vehicleData.TicketCost);
+                    await AddTeam1Tickets(-1 * data.TicketCost);
                 }
                 if (TeamManager.IsTeam2(vehicle.lockedGroup))
                 {
-                    await AddTeam2Tickets(-1 * vehicleData.TicketCost);
+                    await AddTeam2Tickets(-1 * data.TicketCost);
+                }
+                if (vehicle.transform.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
+                {
+                    if (XPManager.config.data.VehicleDestroyedXP.ContainsKey(data.Type))
+                    {
+                        var player = UCPlayer.FromCSteamID(vc.owner);
+
+                        bool vehicleWasEnemy = (player.IsTeam1() && TeamManager.IsTeam2(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam1(vehicle.lockedGroup));
+                        bool vehicleWasFriendly = (player.IsTeam1() && TeamManager.IsTeam1(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam2(vehicle.lockedGroup));
+
+                        int amount = XPManager.config.data.VehicleDestroyedXP[data.Type];
+
+                        if (vehicleWasEnemy)
+                        {
+                            await XPManager.AddXP(player.Player, player.GetTeam(), amount);
+                            if (player.IsNearSquadLeader(100))
+                            {
+                                await XPManager.AddXP(player.Squad.Leader.Player, player.GetTeam(), amount);
+                            }
+                        }
+                        else if (vehicleWasFriendly)
+                        {
+                            await XPManager.AddXP(player.Player, player.GetTeam(), -amount);
+                        }
+                    }
+                    
                 }
             }
         }
+        public static async Task OnRoundWin(ulong team)
+        {
+            var players = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team).ToList();
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                var player = players[i];
+
+                if (F.TryGetPlaytimeComponent(player.CSteamID, out var component))
+                {
+                    await XPManager.AddXP(player.Player, team, (int)(component.stats.xpgained * 0.2F));
+
+                    if (player.IsSquadLeader())
+                    {
+                        await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, (int)(component.stats.xpgained * 0.2F));
+                    }
+                }
+            }
+        }
+        public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+        {
+            Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
+
+            foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            {
+                var player = UCPlayer.FromPlayer(nelsonplayer);
+
+                await XPManager.AddXP(player.Player, capturedTeam, XPManager.config.data.FlagCapturedXP);
+
+                if (player.IsNearSquadLeader(100))
+                {
+                    if (alreadyUpdated.TryGetValue(player.Squad.Name, out var amount))
+                    {
+                        amount += OfficerManager.config.data.MemberFlagCapturePoints;
+                    }
+                    else
+                    {
+                        alreadyUpdated.Add(player.Squad.Name, OfficerManager.config.data.MemberFlagCapturePoints);
+                    }
+                }
+            }
+
+            for (int i = 0; i < SquadManager.Squads.Count; i++)
+            {
+                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
+                {
+                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount);
+                }
+            }
+        }
+        public static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+        {
+            Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
+
+            foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            {
+                var player = UCPlayer.FromPlayer(nelsonplayer);
+
+                await XPManager.AddXP(player.Player, capturedTeam, XPManager.config.data.FlagNeutralizedXP);
+
+                if (player.IsNearSquadLeader(100))
+                {
+                    if (alreadyUpdated.TryGetValue(player.Squad.Name, out var amount))
+                    {
+                        amount += OfficerManager.config.data.MemberFlagCapturePoints;
+                    }
+                    else
+                    {
+                        alreadyUpdated.Add(player.Squad.Name, OfficerManager.config.data.MemberFlagNeutralizedPoints);
+                    }
+                }
+            }
+
+            for (int i = 0; i < SquadManager.Squads.Count; i++)
+            {
+                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
+                {
+                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount);
+                }
+            }
+        }
+        public static async Task OnFlagTick(Player nelsonplayer)
+        {
+            var player = UCPlayer.FromPlayer(nelsonplayer);
+
+            await XPManager.AddXP(player.Player, nelsonplayer.GetTeam(), XPManager.config.data.FlagNeutralizedXP);
+
+            if (player.Squad?.Members.Count > 1 && player.Steam64 != player.Squad.Leader.Steam64)
+            {
+                if (player.IsNearSquadLeader(100))
+                {
+                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.data.MemberFlagTickPoints);
+                }
+            }
+        }
+
         public static void OnPlayerJoined(UCPlayer player)
         {
             ulong team = player.GetTeam();
@@ -188,7 +324,6 @@ namespace Uncreated.Warfare.Tickets
                 UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, message);
             }
         }
-
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
             int friendlyCount = Data.FlagManager.AllFlags.Where(f => f.Owner == team).Count();
@@ -236,6 +371,44 @@ namespace Uncreated.Warfare.Tickets
             {
                 bleed = 0;
                 message = "";
+            }
+        }
+
+        private IEnumerator<WaitForSeconds> TicketLoop()
+        {
+            int count = 0;
+
+            while (UCWarfare.I.State == Rocket.API.PluginState.Loaded)
+            {
+                GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
+                GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
+
+                if (count % 12 == 0) // every 1 minute
+                {
+                    if (Team1Bleed == -1)
+                        Team1Tickets--;
+                    if (Team2Bleed == -1)
+                        Team2Tickets--;
+                }
+                if (count % 6 == 0) // every 30 seconds
+                {
+                    if (Team1Bleed == -2)
+                        Team1Tickets--;
+                    if (Team2Bleed == -2)
+                        Team2Tickets--;
+                }
+                if (count % 2 == 0) // every 10 seconds
+                {
+                    if (Team1Bleed == -3)
+                        Team1Tickets--;
+                    if (Team2Bleed == -3)
+                        Team2Tickets--;
+                }
+
+                count++;
+                if (count >= 12)
+                    count = 0;
+                yield return new WaitForSeconds(5);
             }
         }
 

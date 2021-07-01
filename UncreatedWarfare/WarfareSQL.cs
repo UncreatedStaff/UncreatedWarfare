@@ -88,9 +88,9 @@ namespace Uncreated.Warfare
                 $";", 
                 parameters);
         }
-        public async Task<uint> GetXP(ulong Steam64, ulong Team)
+        public async Task<int> GetXP(ulong Steam64, ulong Team)
         {
-            uint xp = 0;
+            int xp = 0;
             MySqlTableLang table = GetTable("levels");
             await Query(
                 $"SELECT `{table.GetColumnName("XP")}` " +
@@ -100,13 +100,13 @@ namespace Uncreated.Warfare
                 new object[] { Steam64, Team },
                 (R) =>
                 {
-                    xp = R.GetUInt32(0);
+                    xp = R.GetInt32(0);
                 });
             return xp;
         }
-        public async Task<uint> GetOfficerPoints(ulong Steam64, ulong Team)
+        public async Task<int> GetOfficerPoints(ulong Steam64, ulong Team)
         {
-            uint officer_points = 0;
+            int officer_points = 0;
             MySqlTableLang table = GetTable("levels");
             await Query(
                 $"SELECT `{table.GetColumnName("OfficerPoints")}` " +
@@ -116,7 +116,7 @@ namespace Uncreated.Warfare
                 new object[] { Steam64, Team },
                 (R) =>
                 {
-                    officer_points = R.GetUInt32(0);
+                    officer_points = R.GetInt32(0);
                 });
             return officer_points;
         }
@@ -169,14 +169,14 @@ namespace Uncreated.Warfare
             return teamkills;
         }
         /// <returns>New XP Value</returns>
-        public async Task<uint> AddXP(ulong Steam64, ulong Team, int amount)
+        public async Task<int> AddXP(ulong Steam64, ulong Team, int amount)
         {
             MySqlTableLang table = GetTable("levels");
             string s64 = table.GetColumnName("Steam64");
             string team = table.GetColumnName("Team");
             string xp = table.GetColumnName("XP");
             string op = table.GetColumnName("OfficerPoints");
-            uint oldBalance = await GetXP(Steam64, Team);
+            int oldBalance = await GetXP(Steam64, Team);
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
@@ -187,7 +187,7 @@ namespace Uncreated.Warfare
                     $"ON DUPLICATE KEY UPDATE " +
                     $"`{xp}` = `{xp}` + VALUES(`{xp}`);", 
                     new object[] { Steam64, Team, amount });
-                return unchecked((uint)(oldBalance + amount));
+                return unchecked((int)(oldBalance + amount));
             } else
             {
                 if (amount >= oldBalance)
@@ -207,19 +207,23 @@ namespace Uncreated.Warfare
                         $"`{xp}` = `{xp}` - @2 " +
                         $"WHERE `{s64}` = @0 AND `{team}` = @1;",
                         new object[] { Steam64, Team, Math.Abs(amount) });
-                    return unchecked((uint)(oldBalance + amount));
+                    return unchecked((int)(oldBalance + amount));
                 }
             }
         }
         /// <returns>New Officer Points Value</returns>
-        public async Task<uint> AddOfficerPoints(ulong Steam64, ulong Team, int amount)
+        public async Task<int> AddOfficerPoints(ulong Steam64, ulong Team, int amount)
         {
             MySqlTableLang table = GetTable("levels");
             string s64 = table.GetColumnName("Steam64");
             string team = table.GetColumnName("Team");
             string xp = table.GetColumnName("XP");
             string op = table.GetColumnName("OfficerPoints");
-            uint oldBalance = await GetXP(Steam64, Team);
+            int oldBalance = await GetOfficerPoints(Steam64, Team);
+
+            F.Log("old balance: " + oldBalance.ToString());
+            F.Log("amount: " + amount.ToString());
+
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
@@ -230,7 +234,7 @@ namespace Uncreated.Warfare
                     $"ON DUPLICATE KEY UPDATE " +
                     $"`{op}` = `{op}` + VALUES(`{op}`);",
                     new object[] { Steam64, Team, amount });
-                return unchecked((uint)(oldBalance + amount));
+                return unchecked((int)(oldBalance + amount));
             }
             else
             {
@@ -252,7 +256,7 @@ namespace Uncreated.Warfare
                         $"`{op}` = `{op}` - @2 " +
                         $"WHERE `{s64}` = @0 AND `{team}` = @1;",
                         new object[] { Steam64, Team, Math.Abs(amount) });
-                    return unchecked((uint)(oldBalance - amount));
+                    return unchecked((int)(oldBalance - amount));
                 }
             }
         }

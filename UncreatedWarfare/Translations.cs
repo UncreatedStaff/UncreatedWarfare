@@ -107,6 +107,16 @@ namespace Uncreated.Warfare
                 { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
                 { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
                 { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
+                { "kit_e_notallowed", "<color=#ab8b82>You are not allowed to access that kit.</color>" },
+                { "kit_e_wrongteam", "<color=#ab8b82>You cannot request this kit while on the wrong team.</color>" },
+                { "kit_e_cooldown", "<color=#c2b39b>You can request this kit again in: <color=#bafeff>{0}</color></color>" },
+                { "kits_heading", "<color=#b0a99d>You have access to the following <color=#ffd494>PREMIUM</color> kits:</color>" },
+                { "kits_nokits", "<color=#b0a99d>You have no premium kits.</color> Go and <b><color=#e6c6b3>request a regular kit at the <color=#99a38e>ARMORY</color></color></b>" },
+
+                // Range
+                { "range", "<color=#9e9c99>The range to your marker is: <color=#8aff9f>{0}m</color></color>" },
+                { "range_nomarker", "<color=#9e9c99>Place a marker first.</color>" },
+                { "range_notsquadleader", "<color=#9e9c99>You must be a SQUAD LEADER.</color>" },
 
                 // Squads
                 { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
@@ -131,6 +141,20 @@ namespace Uncreated.Warfare
                 { "squad_player_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
                 { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from the squad.</color>" },
                 { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
+
+                // rally
+                { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
+                { "rally_active", "<color=#959c8c>Squad <color=#5eff87>RALLY POINT</color> is now active. Do '<color=#bfbfbf>/rally</color>' to rally with your squad.</color>" },
+                { "rally_wait", "<color=#959c8c>Standby for <color=#5eff87>RALLY</color> in: <color=#ffe4b5>{0}s</color>. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
+                { "rally_aborted", "<color=#a1a1a1>Cancelled rally deployment.</color>" },
+                { "rally_cancelled", "<color=#959c8c><color=#bfbfbf></color> is no longer available - there are enemies nearby.</color>" },
+                { "rally_e_unavailable", "<color=#ad9990>Rally is unavailable right now</color>" },
+                { "rally_e_enemies", "<color=#ad9990>There are enemies nearby.</color>" },
+                { "rally_e_nosquadmember", "<color=#99918d>You need at least <color=#cedcde>1 SQUAD MEMBER</color> near you in order to place this.</color>" },
+                { "rally_e_notsquadleader", "<color=#99918d>You must be a <color=#cedcde>SQUAD LEADER</color> in order to place this.</color>" },
+                { "rally_e_alreadywaiting", "<color=#959c8c>You are already waiting on rally deployment. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
+                { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
+                { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
 
                 // fobs
                 { "time_left", "<color=#FFAA42>Time left: <color=#FFE4B5>{0}</color><color=#FFAA42></color>" },

@@ -30,6 +30,7 @@ namespace Uncreated.Warfare.FOBs
         private static void OnLevelLoaded(int level)   
         {
             //LoadFobs();
+            RepairManager.OnLevelLoaded(level);
         }
 
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)

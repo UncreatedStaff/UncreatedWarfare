@@ -106,9 +106,14 @@ namespace Uncreated.Warfare.Commands
                 else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers))
                 {
                     ucplayer.SendChat("request_kit_e_limited", UCWarfare.GetColor("request_kit_e_limited"), currentPlayers, allowedPlayers);
-                } else
+                }
+                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
                 {
-                    uint xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true); 
+                    player.Message("kit_e_cooldown", cooldown.ToString()); return;
+                }
+                else
+                {
+                    int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true); 
                     Rank rank = XPManager.GetRank(xp, out _, out _);
                     SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     if (rank == default || rank.level < kit.RequiredLevel)
@@ -148,7 +153,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.SendChat("request_vehicle_e_cooldown", UCWarfare.GetColor("request_vehicle_e_cooldown"), F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds))));
                 return;
             }
-            uint xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
+            int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
             Rank rank = XPManager.GetRank(xp, out _, out _);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (rank == default || rank.level < data.RequiredLevel)

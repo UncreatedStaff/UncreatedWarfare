@@ -66,10 +66,11 @@ namespace Uncreated.Warfare
             }
             FOBManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
             RallyManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
+            RepairManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
             Data.VehicleSpawner.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
             Data.VehicleSigns.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
         }
-        internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow) 
+        internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
         {
             if (!UCWarfare.Config.AllowCosmetics) allow = UnturnedPlayer.FromSteamPlayer(player).OnDuty();
         }
@@ -84,6 +85,7 @@ namespace Uncreated.Warfare
             c.SetData(data, region, location);
             Data.OwnerComponents.Add(c);
             RallyManager.OnBarricadePlaced(region, data, ref location);
+            RepairManager.OnBarricadePlaced(region, data, ref location);
         }
         internal static async void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner)
         {
@@ -187,7 +189,7 @@ namespace Uncreated.Warfare
             Data.ReviveManager.OnPlayerConnected(player);
 
             SquadManager.InvokePlayerJoined(ucplayer);
-            
+
             TicketManager.OnPlayerJoined(ucplayer);
 
             Data.FlagManager?.PlayerJoined(player.Player.channel.owner); // needs to happen last
@@ -233,7 +235,7 @@ namespace Uncreated.Warfare
         }
         internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
         {
-            if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.BARRICADE, out Structures.Structure found)) 
+            if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.BARRICADE, out Structures.Structure found))
             {
                 found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                 Structures.StructureSaver.Save();
@@ -303,7 +305,7 @@ namespace Uncreated.Warfare
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
-            if(UCWarfare.Config.RemoveLandminesOnDisconnect)
+            if (UCWarfare.Config.RemoveLandminesOnDisconnect)
             {
                 IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
                && x.barricade?.asset?.type == EItemType.TRAP);
@@ -331,7 +333,7 @@ namespace Uncreated.Warfare
             Data.FlagManager?.PlayerLeft(player.Player.channel.owner); // needs to happen last within game thread section
             await rtn;
         }
-        internal static async Task LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet) 
+        internal static async Task LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
             => await UCWarfare.I.UpdateLangs(player.Player.channel.owner);
 
         internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
@@ -343,26 +345,60 @@ namespace Uncreated.Warfare
                 Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
             else
                 Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
-            ulong team = F.GetTeamFromPlayerSteam64ID(player.playerID.steamID.m_SteamID);
-            string prefix;
-            if (team == 1) prefix = $"[{TeamManager.Team1Code.ToUpper()}]";
-            else if (team == 2) prefix = $"[{TeamManager.Team2Code.ToUpper()}]";
-            else prefix = "";
-            if (team < 3 && team > 0 && !player.playerID.characterName.StartsWith(prefix))
-                player.playerID.characterName = prefix + player.playerID.characterName;
-            if (team < 3 && team > 0 && !player.playerID.nickName.StartsWith(prefix))
-                player.playerID.nickName = prefix + player.playerID.nickName;
+            ulong team = 0;
+            if (PlayerManager.HasSave(player.playerID.steamID, out var save))
+            {
+                team = save.Team;
+            }
+
+            string globalPrefix = "";
+            string teamPrefix = "";
+
+            // add team tags to global prefix
+            if (TeamManager.IsTeam1(team)) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
+            else if (TeamManager.IsTeam2(team)) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
+
+            int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
+            int stars = 0;
+
+            Rank rank = null;
+
+            if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
+            {
+                rank = OfficerManager.GetOfficerRank(officer.officerLevel);
+                var officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team).GetAwaiter().GetResult();
+                stars = OfficerManager.GetStars(officerPoints);
+            }
+            else
+            {
+                rank = XPManager.GetRank(xp, out _, out _);
+            }
+
+            if (TeamManager.IsTeam1(team) || TeamManager.IsTeam2(team))
+            {
+                globalPrefix += rank.name;
+                teamPrefix += rank.name;
+
+                //if (stars >= 3)
+                //{
+                //    globalPrefix.Replace('.', ' ');
+                //    globalPrefix += stars.ToString() + ".";
+                //    teamPrefix.Replace('.', ' ');
+                //    teamPrefix += stars.ToString() + ".";
+                //}
+
+                globalPrefix += " ";
+                teamPrefix += " ";
+            }
         }
 
         internal static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            await XPManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-            await OfficerManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+            await TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         }
         internal static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            await XPManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
-            await OfficerManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+            await TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
     }
 }
