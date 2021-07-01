@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
@@ -110,7 +111,7 @@ namespace Uncreated.Warfare.Tickets
                 {
                     if (XPManager.config.data.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        UCPlayer player = UCPlayer.FromCSteamID(vc.owner);
+                        var player = UCPlayer.FromCSteamID(vc.owner);
 
                         bool vehicleWasEnemy = (player.IsTeam1() && TeamManager.IsTeam2(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam1(vehicle.lockedGroup));
                         bool vehicleWasFriendly = (player.IsTeam1() && TeamManager.IsTeam1(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam2(vehicle.lockedGroup));
@@ -233,8 +234,8 @@ namespace Uncreated.Warfare.Tickets
         public static void OnPlayerJoined(UCPlayer player)
         {
             ulong team = player.GetTeam();
-            GetTeamBleed(team, out int bleed, out string message);
-            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, F.Translate(message, player.Steam64));
+            GetTeamBleed(team, out int bleed, out var message);
+            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, message);
 
         }
         public static void OnPlayerLeft(UCPlayer player)
@@ -245,8 +246,8 @@ namespace Uncreated.Warfare.Tickets
         {
             EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
             EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
-            GetTeamBleed(newGroup, out int bleed, out string message);
-            UpdateUI(player.transportConnection, newGroup, bleed, F.Translate(message, player.playerID.steamID.m_SteamID));
+            GetTeamBleed(newGroup, out int bleed, out var message);
+            UpdateUI(player.transportConnection, newGroup, bleed, message);
         }
 
         public static void OnNewGameStarting()
@@ -263,7 +264,7 @@ namespace Uncreated.Warfare.Tickets
             if (Team1Tickets <= 0)
             {
                 Team1Tickets = 0;
-                await Data.Gamemode.DeclareWin(2);
+                await Data.Gamemode.DeclareWin(TeamManager.Team2ID);
             }
             UpdateUITeam1();
         }
@@ -273,7 +274,7 @@ namespace Uncreated.Warfare.Tickets
             if (Team2Tickets <= 0)
             {
                 Team2Tickets = 0;
-                await Data.Gamemode.DeclareWin(1);
+                await Data.Gamemode.DeclareWin(TeamManager.Team1ID);
             }
             UpdateUITeam2();
         }
@@ -308,7 +309,7 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, 1, bleed, F.Translate(message, players[i].Steam64));
+                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team1ID, bleed, message);
             }
         }
         public static void UpdateUITeam2()
@@ -319,12 +320,12 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, 2, bleed, F.Translate(message, players[i].Steam64));
+                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, message);
             }
         }
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
-            if (Data.Gamemode is Gamemodes.Flags.FlagGamemode fg)
+            if (Data.Gamemode is FlagGamemode fg)
             {
                 int friendlyCount = fg.Rotation.Where(f => f.Owner == team).Count();
                 int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();
@@ -339,32 +340,32 @@ namespace Uncreated.Warfare.Tickets
                 }
                 else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
                 {
-                    message = "enemy_controlling";
+                    message = "The enemy is in control!";
                     bleed = -1;
                 }
                 else if (0.8F < enemyRatio && enemyRatio < 1F)
                 {
-                    message = "enemy_dominating";
+                    message = "The enemy is dominating!";
                     bleed = -2;
                 }
                 else if (enemyRatio == 1)
                 {
-                    message = "defeated";
+                    message = "You are defeated!";
                     bleed = -3;
                 }
                 else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
                 {
-                    message = "controlling";
+                    message = "Your team is in control!";
                     bleed = 1;
                 }
                 else if (0.8F < friendlyRatio && friendlyRatio < 1F)
                 {
-                    message = "dominating";
+                    message = "Your team is dominating!";
                     bleed = 2;
                 }
                 else if (friendlyRatio == 1)
                 {
-                    message = "victorious";
+                    message = "You are victorious!";
                     bleed = 3;
                 }
                 else
@@ -372,12 +373,12 @@ namespace Uncreated.Warfare.Tickets
                     bleed = 0;
                     message = "";
                 }
-            } else
+            }
+            else
             {
                 bleed = 0;
                 message = "";
             }
-            
         }
 
         private IEnumerator<WaitForSeconds> TicketLoop()

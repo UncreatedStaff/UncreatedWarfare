@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -61,7 +62,7 @@ namespace Uncreated.Warfare.XP
                 return await Data.DatabaseManager.GetXP(player, team);
             else return ucplayer.cachedXp;
         }
-        public static async Task AddXP(Player player, ulong team, int amount)
+        public static async Task AddXP(Player player, ulong team, int amount, string message = "")
         {
             int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.XPMultiplier));
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -69,6 +70,10 @@ namespace Uncreated.Warfare.XP
                 ucplayer.cachedXp = newBalance;
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
+
+            if (message != "")
+                ToastMessage.QueueMessage(player, "+" + amount + " XP", message, ToastMessageSeverity.MINIXP);
+
             for (int i = 0; i < Vehicles.VehicleSigns.ActiveObjects.Count; i++)
                 await Vehicles.VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
             await rtn;

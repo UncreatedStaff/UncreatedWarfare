@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -52,10 +54,14 @@ namespace Uncreated.Warfare.Officers
 
         public static async Task<int> GetOfficerPoints(Player player, ulong team) => await Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
         public static async Task<int> GetOfficerPoints(ulong playerID, ulong team) => await Data.DatabaseManager.GetOfficerPoints(playerID, team);
-        public static async Task AddOfficerPoints(Player player, ulong team, int amount)
+        public static async Task AddOfficerPoints(Player player, ulong team, int amount, string message ="")
         {
             int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(Math.Round(amount * config.data.PointsMultiplier)));
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+
+            if (message != "")
+                ToastMessage.QueueMessage(player, "+" + amount + " OF", message, ToastMessageSeverity.MINIOFFICERPTS);
+
             UpdateUI(player, newBalance);
             await rtn;
         }
