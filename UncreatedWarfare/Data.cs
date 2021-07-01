@@ -233,9 +233,9 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get SendUpdateSign from BarricadeManager:");
-                F.LogWarning("The sign translation system will likely not work!");
+                F.LogError("Couldn't get SendUpdateSign from BarricadeManager:");
                 F.LogError(ex);
+                F.LogError("The sign translation system will likely not work!");
             }
             try
             {
@@ -244,9 +244,9 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get SendMultipleBarricades from BarricadeManager:");
-                F.LogWarning("The sign translation system will likely not work!");
+                F.LogError("Couldn't get SendMultipleBarricades from BarricadeManager:");
                 F.LogError(ex);
+                F.LogError("The sign translation system will likely not work!");
             }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)

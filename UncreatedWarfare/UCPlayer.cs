@@ -43,7 +43,7 @@ namespace Uncreated.Warfare
         [JsonIgnore]
         public Vector3 Position { get { return Player.transform.position; } }
         [JsonIgnore]
-        public uint cachedXp;
+        public int cachedXp;
 
         public static UCPlayer FromID(ulong steamID, ulong team = 0)
         {
@@ -174,6 +174,33 @@ namespace Uncreated.Warfare
                         return "°";
                 }
             }
+        }
+        public bool IsSquadLeader()
+        {
+            if (Squad is null)
+                return false;
+
+            return Squad.Leader.Steam64 == Steam64;
+        }
+        public bool IsNearSquadLeader(float distance)
+        {
+            if (Squad is null)
+                return false;
+
+            if (Squad.Leader.Steam64 == Steam64)
+                return false;
+
+            return (Position - Squad.Leader.Position).sqrMagnitude < Math.Pow(distance, 2);
+        }
+        public bool IsOrIsNearLeader(float distance)
+        {
+            if (Squad is null)
+                return false;
+
+            if (Squad.Leader.Steam64 == Steam64)
+                return true;
+
+            return (Position - Squad.Leader.Position).sqrMagnitude < Math.Pow(distance, 2);
         }
     }
 }

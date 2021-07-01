@@ -28,16 +28,15 @@ namespace Uncreated.Warfare.Officers
 
         public static async Task OnPlayerJoined(UCPlayer player)
         {
-            uint points = await GetOfficerPoints(player.Player, player.GetTeam());
+            int points = await GetOfficerPoints(player.Player, player.GetTeam());
 
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            if (points > 0)
-                UpdateUI(player.Player, points);
             await rtn;
             if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
             {
-                player.OfficerRank = config.data.OfficerRanks.Where(r => r.level == officer.officerLevel).FirstOrDefault();
+                player.OfficerRank = GetOfficerRank(officer.officerLevel);
             }
+            UpdateUI(player.Player, points);
         }
         public static async Task OnPlayerLeft(UCPlayer player)
         {
@@ -45,55 +44,24 @@ namespace Uncreated.Warfare.Officers
         }
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            uint op = await GetOfficerPoints(player.player, newGroup);
+            int op = await GetOfficerPoints(player.player, newGroup);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player.player, op);
             await rtn;
         }
-        public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
-        {
-            await AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), config.data.MemberEnemyKilledPoints);
-        }
-        public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
-        {
-            await AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), config.data.FriendlyKilledPoints);
-        }
-        public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
-        {
-            foreach (var nelsonplayer in flag.PlayersOnFlag)
-            {
-                var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                if (player.Squad?.Members.Count > 1)
-                {
-                    int PointsToGive = 0;
-
-                    foreach (var member in player.Squad.Members)
-                    {
-                        if ((member.Position - player.Squad.Leader.Position).sqrMagnitude < Math.Pow(100, 2))
-                        {
-                            PointsToGive += config.data.MemberFlagCapturePoints;
-                        }
-                    }
-                    if (PointsToGive > 0)
-                    {
-                        await AddOfficerPoints(player.Player, capturedTeam, PointsToGive);
-                    }
-                }
-            }
-        }
-        public static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
-        {
-            await Task.Yield(); // just to remove the warning, feel free to remove, its basically an empty line.
-        }
-
-        public static async Task<uint> GetOfficerPoints(Player player, ulong team) => await Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
+        public static async Task<int> GetOfficerPoints(Player player, ulong team) => await Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
+        public static async Task<int> GetOfficerPoints(ulong playerID, ulong team) => await Data.DatabaseManager.GetOfficerPoints(playerID, team);
         public static async Task AddOfficerPoints(Player player, ulong team, int amount)
         {
-            uint newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.PointsMultiplier));
+            int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(Math.Round(amount * config.data.PointsMultiplier)));
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
             await rtn;
+        }
+        public static Rank GetOfficerRank(int officerRankLevel)
+        {
+            return config.data.OfficerRanks.Where(r => r.level == officerRankLevel).FirstOrDefault();
         }
 
         public static void ChangeOfficerRank(UCPlayer player, int newLevel, EBranch branch)
@@ -134,19 +102,31 @@ namespace Uncreated.Warfare.Officers
             officer = GetObject(o => o.steamID == playerID.m_SteamID);
             return officer != null;
         }
-
-        public static void UpdateUI(Player player, uint balance)
+        public static void UpdateUI(Player player, int balance)
         {
-            uint currentPoints = GetCurrentLevelPoints(balance);
-            uint requiredPoints = GetRequiredLevelPoints(balance);
+            int currentPoints = GetCurrentLevelPoints(balance);
+            int requiredPoints = GetRequiredLevelPoints(balance);
 
-            EffectManager.sendUIEffect(config.data.StarsUI, (short)config.data.StarsUI, player.channel.owner.transportConnection, true,
-                GetStars(balance).ToString(Data.Locale),
-                currentPoints + "/" + requiredPoints,
+            int stars = GetStars(balance);
+
+            EffectManager.sendUIEffect(config.data.StarsUI, (short)config.data.StarsUI, player.channel.owner.transportConnection, true);
+            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Icon",
+                stars == 0 ? "<color=#737373>¼</color>" : "<color=#ffd683>¼</color>"
+            );
+            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Count",
+                stars < 2 ? "" : stars.ToString()
+            );
+            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Info",
+                stars == 0 ? "<color=#737373>no stars</color>" : (stars.ToString() + " star" + (stars == 1 ? "" : "s"))
+            );
+            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Points",
+                currentPoints + "/" + requiredPoints
+            );
+            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Progress",
                 GetProgress(currentPoints, requiredPoints)
             );
         }
-        private static string GetProgress(uint currentPoints, uint totalPoints, uint barLength = 40)
+        private static string GetProgress(int currentPoints, int totalPoints, uint barLength = 40)
         {
             float ratio = currentPoints / (float)totalPoints;
 
@@ -159,30 +139,30 @@ namespace Uncreated.Warfare.Officers
             }
             return bars;
         }
-        public static uint GetRequiredLevelPoints(uint totalPoints)
+        public static int GetRequiredLevelPoints(int totalPoints)
         {
             int a = config.data.FirstStarPoints;
             int d = config.data.PointsIncreasePerStar;
 
-            uint stars = GetStars(totalPoints);
+            int stars = unchecked((int)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
 
-            return unchecked((uint)(stars / 2.0 * ((2 * a) + ((stars - 1) * d)) - (stars - 1) / 2.0 * ((2 * a) + ((stars - 2) * d))));
+            return unchecked((int)(stars / 2.0 * ((2 * a) + ((stars - 1) * d)) - (stars - 1) / 2.0 * ((2 * a) + ((stars - 2) * d))));
         }
-        public static uint GetCurrentLevelPoints(uint totalPoints)
+        public static int GetCurrentLevelPoints(int totalPoints)
         {
             int a = config.data.FirstStarPoints;
             int d = config.data.PointsIncreasePerStar;
 
-            uint stars = GetStars(totalPoints);
+            int stars = unchecked((int)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
 
-            return unchecked((uint)(GetRequiredLevelPoints(totalPoints) - ((stars / 2.0 * ((2 * a) + ((stars - 1) * d))) - totalPoints)));
+            return unchecked((int)(GetRequiredLevelPoints(totalPoints) - ((stars / 2.0 * ((2 * a) + ((stars - 1) * d))) - totalPoints)));
         }
-        public static uint GetStars(uint totalPoints)
+        public static int GetStars(int totalPoints)
         {
             int a = config.data.FirstStarPoints;
             int d = config.data.PointsIncreasePerStar;
 
-            return unchecked((uint)Math.Floor(((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
+            return unchecked((int)Math.Floor(((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
         }
 
         protected override string LoadDefaults() => "[]";
@@ -208,8 +188,16 @@ namespace Uncreated.Warfare.Officers
     {
         public int FriendlyKilledPoints;
         public int MemberEnemyKilledPoints;
+        public int MemberFlagTickPoints;
         public int MemberFlagCapturePoints;
-        public int MemberFlagNeutralized;
+        public int MemberFlagNeutralizedPoints;
+        public int TransportPlayerPoints;
+        public int SpawnOnRallyPoints;
+        public int BuiltFOBPoints;
+        public int BuiltAmmoCratePoints;
+        public int BuiltRepairStationPoints;
+        public int BuiltEmplacementPoints;
+        public int BuiltBarricadePoints;
         public int FirstStarPoints;
         public int PointsIncreasePerStar;
         public float PointsMultiplier;
@@ -220,9 +208,16 @@ namespace Uncreated.Warfare.Officers
         {
             FriendlyKilledPoints = -1;
             MemberEnemyKilledPoints = 1;
+            MemberFlagTickPoints = 1;
             MemberFlagCapturePoints = 30;
-            MemberFlagNeutralized = 10;
-
+            MemberFlagNeutralizedPoints = 10;
+            TransportPlayerPoints = 1;
+            SpawnOnRallyPoints = 1;
+            BuiltFOBPoints = 70;
+            BuiltAmmoCratePoints = 10;
+            BuiltAmmoCratePoints = 40;
+            BuiltEmplacementPoints = 5;
+            BuiltBarricadePoints = 1;
             FirstStarPoints = 1000;
             PointsIncreasePerStar = 500;
             PointsMultiplier = 1;

@@ -27,7 +27,7 @@ namespace Uncreated.Warfare
         [XmlElement("Patches")]
         public PatchToggles Patches;
         [XmlElement("MySQL")]
-        public MySqlData SQL;
+        public SQL.MySqlData SQL;
         [XmlElement("VehicleBay")]
         public VehicleBaySettings VehicleBaySettings;
         public bool Debug;

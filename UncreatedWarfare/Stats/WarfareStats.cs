@@ -20,8 +20,8 @@ namespace Uncreated.Warfare.Stats
         public uint deaths;
         public uint teamkills;
         public uint credits;
-        public uint xp;
-        public uint level;
+        public int xp;
+        public int level;
         public string rank;
         public string rank_abbreviation;
         public List<Team> teams;
@@ -136,7 +136,7 @@ namespace Uncreated.Warfare.Stats
             Save();
         }
         [JsonConstructor]
-        public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
+        public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint credits, int xp, int level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
         {
             XPManager.GetRank(xp, out _, out Rank playerRank);
 
@@ -323,8 +323,8 @@ namespace Uncreated.Warfare.Stats
         public uint deaths;
         public uint teamkills;
         public uint credits;
-        public uint xp;
-        public uint level;
+        public int xp;
+        public int level;
         public string rank;
         public string rank_abbreviation;
         public List<Kit> kits;
@@ -344,7 +344,7 @@ namespace Uncreated.Warfare.Stats
         public float playtime;
 
         [JsonConstructor]
-        public Team(ulong id, string name, string display_name, uint kills, uint deaths, uint teamkills, uint credits, uint xp, uint level, string rank, string rank_abbreviation, List<Kit> kits, List<string> owned_paid_kits, List<KillTrack> kill_counts, float time_deployed, float playtime)
+        public Team(ulong id, string name, string display_name, uint kills, uint deaths, uint teamkills, uint credits, int xp, int level, string rank, string rank_abbreviation, List<Kit> kits, List<string> owned_paid_kits, List<KillTrack> kill_counts, float time_deployed, float playtime)
         {
             XPManager.GetRank(xp, out _, out var playerRank);
 
@@ -356,7 +356,7 @@ namespace Uncreated.Warfare.Stats
             this.teamkills = teamkills;
             this.credits = credits;
             this.xp = xp;
-            this.level = (uint)playerRank.level;
+            this.level = playerRank.level;
             this.rank = playerRank.name;
             this.rank_abbreviation = playerRank.abbreviation;
             this.kits = kits ?? new List<Kit>();
@@ -379,7 +379,7 @@ namespace Uncreated.Warfare.Stats
             this.teamkills = 0;
             this.credits = 0;
             this.xp = 0;
-            this.level = (uint)playerRank.level;
+            this.level = playerRank.level;
             this.rank = playerRank.name;
             this.rank_abbreviation = playerRank.abbreviation;
             this.kits = new List<Kit>();

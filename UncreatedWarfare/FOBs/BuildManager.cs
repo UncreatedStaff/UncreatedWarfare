@@ -6,7 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 using static Uncreated.Warfare.FOBs.FOBConfig;
 
@@ -89,6 +91,15 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
             player.Message("fob_built");
+
+            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
+            XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.data.BuiltFOBXP).GetAwaiter().GetResult();
+
+            if (ucplayer.IsOrIsNearLeader(50))
+            {
+                OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.data.BuiltFOBPoints).GetAwaiter().GetResult();
+            }
 
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
@@ -180,6 +191,15 @@ namespace Uncreated.Warfare.FOBs
 
             player.Message("ammocrate_built");
 
+            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
+            XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.data.BuiltAmmoCrateXP).GetAwaiter().GetResult();
+
+            if (ucplayer.IsOrIsNearLeader(50))
+            {
+                OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.data.BuiltAmmoCratePoints).GetAwaiter().GetResult();
+            }
+
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
             barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
@@ -260,6 +280,13 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
             player.Message("repairstation_built");
+
+            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.data.BuiltRepairStationXP).GetAwaiter().GetResult();
+            if (ucplayer.IsOrIsNearLeader(50))
+            {
+                OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.data.BuiltRepairStationPoints).GetAwaiter().GetResult();
+            }
 
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
@@ -361,6 +388,13 @@ namespace Uncreated.Warfare.FOBs
             }
 
             player.Message("emplacement_built", vehicle.asset.vehicleName);
+
+            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.data.BuiltEmplacementXP).GetAwaiter().GetResult();
+            if (ucplayer.IsOrIsNearLeader(50))
+            {
+                OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.data.BuiltEmplacementPoints).GetAwaiter().GetResult();
+            }
 
             vehicle.updateVehicle();
             vehicle.updatePhysics();

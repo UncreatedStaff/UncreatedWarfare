@@ -1729,7 +1729,6 @@ namespace Uncreated.Warfare
                 return UncreatedPlayer.Load(player);
             }
         }
-        /// <summary>Ineffecient</summary>
         public static bool Between<T>(this T number, T highBound, T lowBound, bool inclusiveHigh = true, bool inclusiveLow = false) where T : IComparable
         {
             int high = number.CompareTo(highBound);

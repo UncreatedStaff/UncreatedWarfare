@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.XP
@@ -36,34 +37,13 @@ namespace Uncreated.Warfare.XP
         }
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            uint xp = await GetXP(player.player, newGroup, false);
+            int xp = await GetXP(player.player, newGroup, false);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player.player, xp);
             await rtn;
         }
-        public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
-        {
-            await AddXP(parameters.killer, parameters.killer.GetTeam(), config.data.EnemyKilledXP);
-        }
-        public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
-        {
-            await AddXP(parameters.killer, parameters.killer.GetTeam(), config.data.FriendlyKilledXP);
-        }
-        public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
-        {
-            foreach (Player player in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
-            {
-                await AddXP(player, capturedTeam, config.data.FlagCapturedXP);
-            }
-        }
-        public static async Task OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
-        {
-            foreach (Player player in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
-            {
-                await AddXP(player, capturedTeam, config.data.FlagNeutralizedXP);
-            }
-        }
-        public static async Task<uint> GetXP(Player player, ulong team, bool important)
+        
+        public static async Task<int> GetXP(Player player, ulong team, bool important)
         {
             if(important)
                 return await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
@@ -72,7 +52,7 @@ namespace Uncreated.Warfare.XP
                 return await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
             else return ucplayer.cachedXp;
         }
-        public static async Task<uint> GetXP(ulong player, ulong team, bool important)
+        public static async Task<int> GetXP(ulong player, ulong team, bool important)
         {
             if (important)
                 return await Data.DatabaseManager.GetXP(player, team);
@@ -83,7 +63,7 @@ namespace Uncreated.Warfare.XP
         }
         public static async Task AddXP(Player player, ulong team, int amount)
         {
-            uint newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.XPMultiplier));
+            int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.data.XPMultiplier));
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             if (ucplayer != null)
                 ucplayer.cachedXp = newBalance;
@@ -93,11 +73,11 @@ namespace Uncreated.Warfare.XP
                 await Vehicles.VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
             await rtn;
         }
-        public static void UpdateUI(Player nelsonplayer, uint balance)
+        public static void UpdateUI(Player nelsonplayer, int balance)
         {
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
 
-            Rank rank = GetRank(balance, out uint currentXP, out Rank nextRank);
+            Rank rank = GetRank(balance, out int currentXP, out Rank nextRank);
             if (player.OfficerRank != null)
             {
                 EffectManager.sendUIEffect(config.data.RankUI, unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
@@ -117,7 +97,7 @@ namespace Uncreated.Warfare.XP
                );
             }
         }
-        private static string GetProgress(uint currentPoints, uint totalPoints, uint barLength = 50)
+        private static string GetProgress(int currentPoints, int totalPoints, int barLength = 50)
         {
             float ratio = currentPoints / (float)totalPoints;
 
@@ -130,15 +110,15 @@ namespace Uncreated.Warfare.XP
             }
             return bars.ToString();
         }
-        public static Rank GetRankFromLevel(uint level)
+        public static Rank GetRankFromLevel(int level)
         {
             if (level == 0) return null;
-            if (config.data.Ranks.Count > level - 1) return config.data.Ranks[unchecked((int)level - 1)];
+            if (config.data.Ranks.Count > level - 1) return config.data.Ranks[unchecked(level - 1)];
             return null;
         }
-        public static Rank GetRank(uint xpBalance, out uint currentXP, out Rank nextRank)
+        public static Rank GetRank(int xpBalance, out int currentXP, out Rank nextRank)
         {
-            uint requiredXP = 0;
+            int requiredXP = 0;
             nextRank = null;
             for (int i = 0; i < config.data.Ranks.Count; i++)
             {
@@ -159,15 +139,15 @@ namespace Uncreated.Warfare.XP
     public class Rank
     {
         [JsonSettable]
-        public readonly uint level;
+        public readonly int level;
         public readonly string name;
         public readonly Dictionary<string, string> name_translations;
         public readonly Dictionary<string, string> abbreviation_translations;
         [JsonSettable]
         public readonly string abbreviation;
-        public readonly uint XP;
+        public readonly int XP;
         [JsonConstructor]
-        public Rank(uint level, string name, Dictionary<string, string> name_translations, string abbreviation, Dictionary<string, string> abbreviation_translations, uint xp)
+        public Rank(int level, string name, Dictionary<string, string> name_translations, string abbreviation, Dictionary<string, string> abbreviation_translations, int xp)
         {
             this.level = level;
             this.name = name;
@@ -176,7 +156,7 @@ namespace Uncreated.Warfare.XP
             this.abbreviation_translations = abbreviation_translations;
             this.XP = xp;
         }
-        public Rank(uint level, string name, string abbreviation, uint xp)
+        public Rank(int level, string name, string abbreviation, int xp)
         {
             this.level = level;
             this.name = name;
@@ -300,6 +280,17 @@ namespace Uncreated.Warfare.XP
         public int FlagCapturedXP;
         public int FlagCapIncreasedXP;
         public int FlagNeutralizedXP;
+        public int TransportPlayerXP;
+        public int BuiltFOBXP;
+        public int BuiltAmmoCrateXP;
+        public int BuiltRepairStationXP;
+        public int BuiltEmplacementXP;
+        public int BuiltBarricadeXP;
+
+        public Dictionary<EVehicleType, int> VehicleDestroyedXP;
+
+
+
         public float XPMultiplier;
 
         public ushort RankUI;
@@ -310,10 +301,29 @@ namespace Uncreated.Warfare.XP
         {
             EnemyKilledXP = 10;
             FriendlyKilledXP = -50;
-            FOBKilledXP = 50;
-            FlagCapturedXP = 100;
+            FOBKilledXP = 100;
+            FlagCapturedXP = 200;
             FlagCapIncreasedXP = 1;
-            FlagNeutralizedXP = 30;
+            FlagNeutralizedXP = 50;
+            TransportPlayerXP = 1;
+            BuiltFOBXP = 50;
+            BuiltAmmoCrateXP = 10;
+            BuiltRepairStationXP = 25;
+            BuiltEmplacementXP = 15;
+            BuiltBarricadeXP = 5;
+
+            VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
+            {
+                {EVehicleType.HUMVEE, 50},
+                {EVehicleType.TRANSPORT, 50},
+                {EVehicleType.LOGISTICS, 80},
+                {EVehicleType.APC, 300},
+                {EVehicleType.IFV, 400},
+                {EVehicleType.MBT, 700},
+                {EVehicleType.HELI_TRANSPORT, 200},
+                {EVehicleType.EMPLACEMENT, 30},
+            };
+
             XPMultiplier = 1;
 
             RankUI = 32365;

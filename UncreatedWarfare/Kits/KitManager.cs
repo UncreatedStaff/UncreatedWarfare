@@ -205,6 +205,11 @@ namespace Uncreated.Warfare.Kits
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
             ucplayer.KitName = kit.Name;
 
+            if (kit.IsPremium && kit.Cooldown > 0)
+            {
+                CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
+            }
+
             PlayerManager.Save();
 
             OnKitChanged?.Invoke(player, kit);
@@ -383,6 +388,8 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public float TeamLimit;
         [JsonSettable]
+        public float Cooldown;
+        [JsonSettable]
         public bool ShouldClearInventory;
         public List<KitItem> Items;
         public List<KitClothing> Clothes;
@@ -405,6 +412,7 @@ namespace Uncreated.Warfare.Kits
             IsPremium = false;
             PremiumCost = 0;
             TeamLimit = 1;
+            Cooldown = 0;
             SignName = DisplayName;
             ShouldClearInventory = true;
             AllowedUsers = new List<ulong>();

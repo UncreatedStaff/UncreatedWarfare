@@ -20,12 +20,54 @@ namespace Uncreated.Warfare.Kits
         public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
+            UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
 
             string op = "";
             string property = "";
             string kitName = "";
             string newValue = "";
             string targetPlayer = "";
+
+            if (command.Length == 1)
+            {
+                kitName = command[1];
+
+                if (!KitManager.KitExists(kitName, out var kit)) // create kit
+                {
+                    if (kit.AllowedUsers.Contains(player.CSteamID.m_SteamID))
+                    {
+                        if (player.GetTeam() == kit.Team)
+                        {
+                            if (!CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
+                            {
+                                KitManager.GiveKit(player, kit);
+                                player.Message("kit_given", kitName);
+                                return;
+                            }
+                            else
+                            {
+                                player.Message("kit_e_cooldown", cooldown.ToString());
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            player.Message("kit_e_wrongteam", kitName);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        player.Message("kit_e_notallowed", kitName);
+                        return;
+                    }
+                }
+                else
+                {
+                    player.Message("kit_e_noexist", kitName);
+                    return;
+                }
+            }
 
             if (command.Length == 2)
             {

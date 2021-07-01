@@ -6,7 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles
@@ -143,7 +145,10 @@ namespace Uncreated.Warfare.Vehicles
         internal static void OnPlayerLeaveVehicle(Player player, InteractableVehicle vehicle)
         {
             if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
-                c.StartIdleVehicleTimer();
+            {
+                c.StartCoroutines();
+            }
+                
         }
     }
     public class VehicleSpawn
@@ -176,153 +181,124 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void Initialize()
         {
-            try
+            if (type == EStructType.BARRICADE)
             {
-                if (type == EStructType.BARRICADE)
+                BarricadeData = F.GetBarricadeFromInstID(SpawnPadInstanceID, out BarricadeDrop drop);
+                BarricadeDrop = drop;
+                initialized = true;
+                if (BarricadeData is null)
                 {
-                    BarricadeData = F.GetBarricadeFromInstID(SpawnPadInstanceID, out BarricadeDrop drop);
-                    BarricadeDrop = drop;
-                    initialized = true;
-                    if (BarricadeData is null)
+                    F.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
+                    if (StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.BARRICADE, out Structures.Structure structure))
                     {
-                        F.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
-                        if (StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.BARRICADE, out Structures.Structure structure))
+                        Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
+                            new Barricade(structure.id, ushort.MaxValue, structure.Metadata, structure.Asset as ItemBarricadeAsset),
+                            structure.transform.position.Vector3, structure.transform.Rotation, structure.owner, structure.group
+                            );
+                        if (BarricadeManager.tryGetInfo(newBarricade, out _, out _, out _, out ushort index, out BarricadeRegion region))
                         {
-                            Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
-                                new Barricade(structure.id, ushort.MaxValue, structure.Metadata, structure.Asset as ItemBarricadeAsset),
-                                structure.transform.position.Vector3, structure.transform.Rotation, structure.owner, structure.group
-                                );
-                            if (BarricadeManager.tryGetInfo(newBarricade, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                            if (region != default)
                             {
-                                if (region != default)
-                                {
-                                    BarricadeDrop = region.drops[index];
-                                    BarricadeData = region.barricades[index];
-                                    structure.instance_id = BarricadeDrop.instanceID;
-                                    SpawnPadInstanceID = BarricadeDrop.instanceID;
-                                    VehicleSpawner.Save();
-                                    StructureSaver.Save();
-                                    initialized = true;
-                                }
-                                else
-                                {
-                                    F.LogError("VEHICLE SPAWNER ERROR: spawned barricade could not be found.");
-                                    initialized = false;
-                                }
-                            }
-                            else
+                                BarricadeDrop = region.drops[index];
+                                BarricadeData = region.barricades[index];
+                                structure.instance_id = BarricadeDrop.instanceID;
+                                SpawnPadInstanceID = BarricadeDrop.instanceID;
+                                VehicleSpawner.Save();
+                                StructureSaver.Save();
+                                initialized = true;
+                            } else
                             {
-                                F.LogError("VEHICLE SPAWNER ERROR: Barricade could not be replaced");
+                                F.LogError("VEHICLE SPAWNER ERROR: spawned barricade could not be found.");
                                 initialized = false;
                             }
-                        }
-                        else
+                        } else
                         {
-                            F.LogError("VEHICLE SPAWNER ERROR: corresponding BarricadeData could not be found");
+                            F.LogError("VEHICLE SPAWNER ERROR: Barricade could not be replaced");
                             initialized = false;
                         }
-                    }
-                    BarricadeDrop.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(this);
-                }
-                else if (type == EStructType.STRUCTURE)
-                {
-                    StructureData = F.GetStructureFromInstID(SpawnPadInstanceID, out StructureDrop drop);
-                    StructureDrop = drop;
-                    initialized = true;
-                    if (StructureData is null)
+                    } else
                     {
-                        F.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
-                        if (StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.STRUCTURE, out Structures.Structure structure))
+                        F.LogError("VEHICLE SPAWNER ERROR: corresponding BarricadeData could not be found");
+                        initialized = false;
+                    }
+                }
+                BarricadeDrop.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(this);
+            } 
+            else if (type == EStructType.STRUCTURE)
+            {
+                StructureData = F.GetStructureFromInstID(SpawnPadInstanceID, out StructureDrop drop);
+                StructureDrop = drop;
+                initialized = true;
+                if (StructureData is null)
+                {
+                    F.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
+                    if (StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.STRUCTURE, out Structures.Structure structure))
+                    {
+                        if (!StructureManager.dropStructure(
+                            new SDG.Unturned.Structure(structure.id, ushort.MaxValue, structure.Asset as ItemStructureAsset),
+                            structure.transform.position.Vector3, structure.transform.euler_angles.x, structure.transform.euler_angles.y,
+                            structure.transform.euler_angles.z, structure.owner, structure.group))
                         {
-                            if (!StructureManager.dropStructure(
-                                new SDG.Unturned.Structure(structure.id, ushort.MaxValue, structure.Asset as ItemStructureAsset),
-                                structure.transform.position.Vector3, structure.transform.euler_angles.x, structure.transform.euler_angles.y,
-                                structure.transform.euler_angles.z, structure.owner, structure.group))
-                            {
-                                F.LogError("VEHICLE SPAWNER ERROR: Structure could not be replaced");
-                            }
-                            else
-                            {
-                                StructureData newdata = F.GetStructureFromTransform(structure.transform, out StructureDrop newdrop);
-                                if (newdata == default || newdrop == default)
-                                {
-                                    F.LogError("VEHICLE SPAWNER ERROR: spawned structure could not be found");
-                                    initialized = false;
-                                }
-                                else
-                                {
-                                    StructureData = newdata;
-                                    StructureDrop = newdrop;
-                                    structure.instance_id = newdata.instanceID;
-                                    SpawnPadInstanceID = newdrop.instanceID;
-                                    VehicleSpawner.Save();
-                                    StructureSaver.Save();
-                                    initialized = true;
-                                }
-                            }
-                        }
-                        else
+                            F.LogError("VEHICLE SPAWNER ERROR: Structure could not be replaced");
+                        } else
                         {
-                            F.LogError("VEHICLE SPAWNER ERROR: corresponding StructureData could not be found");
-                            initialized = false;
+                            StructureData newdata = F.GetStructureFromTransform(structure.transform, out StructureDrop newdrop);
+                            if (newdata == default || newdrop == default)
+                            {
+                                F.LogError("VEHICLE SPAWNER ERROR: spawned structure could not be found");
+                                initialized = false;
+                            } else
+                            {
+                                StructureData = newdata;
+                                StructureDrop = newdrop;
+                                structure.instance_id = newdata.instanceID;
+                                SpawnPadInstanceID = newdrop.instanceID;
+                                VehicleSpawner.Save();
+                                StructureSaver.Save();
+                                initialized = true;
+                            }
                         }
                     }
-                    StructureDrop.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(this);
+                    else
+                    {
+                        F.LogError("VEHICLE SPAWNER ERROR: corresponding StructureData could not be found");
+                        initialized = false;
+                    }
                 }
-                IsActive = initialized;
+                StructureDrop.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(this);
             }
-            catch (Exception ex)
-            {
-                F.LogError("VEHICLE SPAWNER ERROR: Initializing " + VehicleID.ToString(Data.Locale));
-                F.LogError(ex);
-            }
+            IsActive = initialized;
         }
         public void SpawnVehicle()
         {
-            try
+            if (!initialized)
             {
-                if (!initialized)
-                {
-                    F.LogError($"VEHICLE SPAWNER ERROR: Tried to spawn vehicle without Initializing. {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} spawn.");
-                    return;
-                }
-                if (type == EStructType.BARRICADE)
-                {
-                    if (BarricadeData == default)
-                    {
-                        F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point} was unable to find BarricadeData.");
-                        return;
-                    }
-                    Quaternion rotation = new Quaternion
-                    { eulerAngles = new Vector3((BarricadeData.angle_x * 2) + 90, BarricadeData.angle_y * 2, BarricadeData.angle_z * 2) };
-                    InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(BarricadeData.point.x, BarricadeData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, BarricadeData.point.z), rotation, out uint instanceID);
-                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Owner = veh;
-                    LinkNewVehicle(instanceID);
-                    if (UCWarfare.Config.Debug)
-                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
-                }
-                else if (type == EStructType.STRUCTURE)
-                {
-                    if (StructureData == default)
-                    {
-                        F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point} was unable to find StructureData.");
-                        return;
-                    }
-                    Quaternion rotation = new Quaternion
-                    { eulerAngles = new Vector3((StructureData.angle_x * 2) + 90, StructureData.angle_y * 2, StructureData.angle_z * 2) };
-                    InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(StructureData.point.x, StructureData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, StructureData.point.z), rotation, out uint instanceID);
-                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Owner = veh;
-                    LinkNewVehicle(instanceID);
-                    if (UCWarfare.Config.Debug)
-                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
-                }
+                F.LogError($"VEHICLE SPAWNER ERROR: Tried to spawn vehicle without Initializing. {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} spawn.");
+                return;
             }
-            catch (Exception ex)
+            if (type == EStructType.BARRICADE)
             {
-                F.LogError("VEHICLE SPAWNER ERROR: Spawning " + VehicleID);
-                F.LogError(ex);
+                if (BarricadeData == default)
+                    F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point} was unable to find BarricadeData.");
+                Quaternion rotation = new Quaternion
+                { eulerAngles = new Vector3((BarricadeData.angle_x * 2) + 90, BarricadeData.angle_y * 2, BarricadeData.angle_z * 2) };
+                InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(BarricadeData.point.x, BarricadeData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, BarricadeData.point.z), rotation, out uint instanceID);
+                veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
+                LinkNewVehicle(instanceID);
+                if(UCWarfare.Config.Debug)
+                    F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
+            } else if (type == EStructType.STRUCTURE)
+            {
+                if(StructureData == default)
+                    F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point} was unable to find StructureData.");
+                Quaternion rotation = new Quaternion
+                { eulerAngles = new Vector3((StructureData.angle_x * 2) + 90, StructureData.angle_y * 2, StructureData.angle_z * 2) };
+                InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(StructureData.point.x, StructureData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, StructureData.point.z), rotation, out uint instanceID);
+                veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
+                LinkNewVehicle(instanceID);
+                if (UCWarfare.Config.Debug)
+                    F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
             }
-            
         }
         public bool HasLinkedVehicle(out InteractableVehicle vehicle)
         {
@@ -417,23 +393,40 @@ namespace Uncreated.Warfare.Vehicles
     public class SpawnedVehicleComponent : MonoBehaviour
     {
         Coroutine timer;
-        public InteractableVehicle Owner;
-        public void StartIdleVehicleTimer()
+        Coroutine xploop;
+        private InteractableVehicle Owner;
+        private VehicleData data;
+
+        public void Initialize(InteractableVehicle vehicle)
         {
-            if (Owner == null) return;
-            if (VehicleBay.VehicleExists(Owner.id, out VehicleData data))
+            Owner = vehicle;
+            
+            if (VehicleBay.VehicleExists(vehicle.id, out var data))
             {
-                CancelIdleVehicleTimer();
-                timer = StartCoroutine(IdleRespawnVehicle(data));
+                this.data = data;
             }
         }
-        public void CancelIdleVehicleTimer()
+        public void StartCoroutines()
+        {
+            if (Owner == null) return;
+            if (data != null)
+            {
+                CancelCoroutines();
+                timer = StartCoroutine(IdleRespawnVehicle(data));
+                xploop = StartCoroutine(XPLoop());
+            }
+        }
+        public void CancelCoroutines()
         {
             if (timer != null)
             {
                 try
                 {
                     StopCoroutine(timer);
+                    if (Owner.isEmpty)
+                    {
+                        StopCoroutine(xploop);
+                    }
                 }
                 catch { }
             }
@@ -444,8 +437,44 @@ namespace Uncreated.Warfare.Vehicles
             if (!Owner.anySeatsOccupied)
             {
                 VehicleManager.askVehicleDestroy(Owner);
-                if (VehicleSpawner.HasLinkedSpawn(Owner.instanceID, out Vehicles.VehicleSpawn spawn))
+                if (VehicleSpawner.HasLinkedSpawn(Owner.instanceID, out var spawn))
                     spawn.SpawnVehicle();
+            }
+        }
+        private IEnumerator<WaitForSeconds> XPLoop()
+        {
+            if (data is null) yield break;
+
+            while (!Owner.isDead)
+            {
+                F.Log("VEHICLE: looking to give transport xp...");
+
+                int count = 0;
+                for (int i = 0; i < Owner.passengers.Length; i++)
+                {
+                    if (Owner.passengers[i] != null)
+                    {
+                        var passenger = Owner.passengers[i];
+                        count++;
+                    }
+                }
+
+                if (Owner.passengers[0] != null && count >= 3 && Owner.speed > 0)
+                {
+                    var player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
+                    if (player.Squad != null)
+                    {
+                        OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.data.TransportPlayerPoints * (count - 2)).GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.data.TransportPlayerXP * (count - 2)).GetAwaiter().GetResult();
+                    }
+
+                    F.Log("VEHICLE: successfully given transport XP");
+                }
+
+                yield return new WaitForSeconds(5);
             }
         }
     }

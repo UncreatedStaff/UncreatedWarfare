@@ -303,6 +303,8 @@ namespace Uncreated.Warfare.Squads
             Members = new List<UCPlayer>();
             Members.Add(leader);
         }
+
+        public bool IsNotSolo() => Members.Count > 1;
     }
 
     public class SquadConfigData : ConfigData

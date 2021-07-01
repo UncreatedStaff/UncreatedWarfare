@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -54,19 +55,19 @@ namespace Uncreated.Warfare.Squads
 
                         if (nearbyEnemiesCount > 0)
                         {
-                            player.Message("cannot place because there are enemies nearby");
+                            player.Message("rally_e_enemies");
                             shouldAllow = false;
                         }
                     }
                     else
                     {
-                        player.Message("you must be near 1 squad member to place a rally");
+                        player.Message("rally_e_nosquadmember");
                         shouldAllow = false;
                     }
                 }
                 else
                 {
-                    player.Message("you must be a squad leader in order to place that");
+                    player.Message("rally_e_notsquadleader");
                     shouldAllow = false;
                 }
             }
@@ -129,7 +130,7 @@ namespace Uncreated.Warfare.Squads
                 rallypoints.Add(rallypoint);
 
                 foreach (var member in rallypoint.squad.Members)
-                    member.Message("<color=#89917e>Squad <color=#5eff87>RALLY POINT</color> is now active. Do '<color=#bfbfbf>/rally</color>' to rally with your squad.</color>");
+                    member.Message("rally_active");
 
                 rallypoint.UpdateUIForSquad();
 
@@ -208,6 +209,10 @@ namespace Uncreated.Warfare.Squads
         public void TeleportPlayer(UCPlayer player)
         {
             player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + 2, structure.point.z), structure.angle_y);
+
+            player.Message("rally_success");
+
+            OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.data.SpawnOnRallyPoints).GetAwaiter().GetResult();
         }
     }
 
@@ -239,6 +244,33 @@ namespace Uncreated.Warfare.Squads
                     parent.timer = 60;
 
                 parent.UpdateUIForSquad();
+
+                if (parent.timer % 5 == 0)
+                {
+                    ulong enemyTeam = 0;
+                    if (parent.squad.Team == TeamManager.Team1ID)
+                        enemyTeam = TeamManager.Team2ID;
+                    else if (parent.squad.Team == TeamManager.Team2ID)
+                        enemyTeam = TeamManager.Team1ID;
+
+                    var enemies = PlayerManager.OnlinePlayers.Where(p =>
+                        p.Team == TeamManager.Team2ID &&
+                        (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(70, 2)
+                        ).ToList();
+
+                    if (enemies.Count > 0)
+                    {
+                        if (BarricadeManager.tryGetInfo(parent.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                            BarricadeManager.destroyBarricade(region, x, y, plant, index);
+
+                        RallyManager.TryDeleteRallyPoint(parent.structure.instanceID);
+
+                        foreach (var member in parent.squad.Members)
+                            member.Message("rally_cancelled");
+
+                        yield break;
+                    }
+                }
 
                 yield return new WaitForSeconds(1);
             }

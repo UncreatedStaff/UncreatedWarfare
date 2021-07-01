@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public class EndScreenLeaderboard : MonoBehaviour
     {
         public const float SecondsEndGameLength = 30f;
-        public const short UiIdentifier = 32370;
+        public const short UiIdentifier = 10000;
         readonly string[] headers = new string[] { "TopSquadHeader", "MostKillsHeader", "TimeOnPointHeader", "TimeDrivingHeader" };
         readonly string[] headerPrefixes = new string[] { "TS", "MK", "TP", "XP" };
         public event Networking.EmptyTaskDelegate OnLeaderboardExpired;

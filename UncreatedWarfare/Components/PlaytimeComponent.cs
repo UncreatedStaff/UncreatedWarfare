@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Components
         private Coroutine _currentTeleportRequest;
         public UncreatedPlayer UCPlayer;
         public Vehicles.VehicleSpawn currentlylinking;
-        public void Init()
+        public void Start()
         {
             this.thrown = new List<ThrowableOwnerDataComponent>();
             toastMessageOpen = 0;

@@ -223,18 +223,13 @@ namespace Uncreated.Warfare.Kits
 
                                 if (asset != null)
                                 {
-                                    if (VehicleBay.VehicleExists(vehicleID, out _))
+                                    if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                                     {
-                                        if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
-                                        {
-                                            VehicleSpawner.CreateSpawn(barricadeDrop, barricade, vehicleID);
-                                            player.Message("vehiclebay_spawn_registered", asset.vehicleName);
-                                        }
-                                        else
-                                            player.Message("vehiclebay_e_spawnexist", vehicleID);
+                                        VehicleSpawner.CreateSpawn(barricadeDrop, barricade, vehicleID);
+                                        player.Message("vehiclebay_spawn_registered", asset.vehicleName);
                                     }
                                     else
-                                        player.Message("vehiclebay_e_not_added", vehicleID, asset.vehicleName);
+                                        player.Message("vehiclebay_e_spawnexist", vehicleID);
                                 }
                                 else
                                     player.Message("vehiclebay_e_idnotfound", vehicleID);
@@ -360,18 +355,13 @@ namespace Uncreated.Warfare.Kits
 
                                     if (asset != null)
                                     {
-                                        if (VehicleBay.VehicleExists(vehicleID, out _))
+                                        if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                                         {
-                                            if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
-                                            {
-                                                VehicleSpawner.CreateSpawn(structureDrop, structure, vehicleID);
-                                                player.Message("vehiclebay_spawn_registered", asset.vehicleName);
-                                            }
-                                            else
-                                                player.Message("vehiclebay_e_spawnexist", vehicleID);
+                                            VehicleSpawner.CreateSpawn(structureDrop, structure, vehicleID);
+                                            player.Message("vehiclebay_spawn_registered", asset.vehicleName);
                                         }
                                         else
-                                            player.Message("vehiclebay_e_not_added", vehicleID, asset.vehicleName);
+                                            player.Message("vehiclebay_e_spawnexist", vehicleID);
                                     }
                                     else
                                         player.Message("vehiclebay_e_idnotfound", vehicleID);

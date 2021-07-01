@@ -35,7 +35,7 @@ namespace Uncreated.Warfare
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnTeamkill?.Invoke(this, parameters);
             await rtn;
-            await XPManager.OnFriendlyKilled(parameters);
+            await TicketManager.OnFriendlyKilled(parameters);
         }
         public class KillEventArgs : EventArgs
         {
@@ -84,8 +84,7 @@ namespace Uncreated.Warfare
                     pt.stats.AddKill();
             }
             OnKill?.Invoke(this, parameters);
-            await XPManager.OnEnemyKilled(parameters);
-            await OfficerManager.OnEnemyKilled(parameters);
+            await TicketManager.OnEnemyKilled(parameters);
         }
         public class SuicideEventArgs : EventArgs
         {
