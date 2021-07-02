@@ -37,11 +37,9 @@ namespace Uncreated.Warfare.Gamemodes
             this.EventLoopSpeed = Mathf.RoundToInt(NewSpeed * 1000f);
             this.useEventLoop = NewSpeed > 0;
         }
-        public void Cancel(bool lockUntilCanceled = false)
+        public void Cancel()
         {
             this.Token.Cancel();
-            if(lockUntilCanceled && useEventLoop)
-                EventLoopTask.GetAwaiter().GetResult();
         }
         public virtual Task Init()
         {
@@ -91,13 +89,13 @@ namespace Uncreated.Warfare.Gamemodes
         protected async Task AwardOfficerPoints(Player player, ulong team, int amount) => await Officers.OfficerManager.AddOfficerPoints(player, team, amount);
         public virtual void Dispose()
         {
-            Cancel(true);
+            Cancel();
         }
         public virtual async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
             await Task.Yield();
         }
-        public virtual async Task OnPlayerJoined(SteamPlayer player) 
+        public virtual async Task OnPlayerJoined(SteamPlayer player)
         {
             await Task.Yield();
         }
