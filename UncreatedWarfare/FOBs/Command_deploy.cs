@@ -39,13 +39,13 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0].ToLower() == "lobby")
                 {
-                    c.TeleportDelayed(new Vector3(0, 0, 0), 0, FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#bb80d1>lobby</color>");
+                    c.TeleportDelayed(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle, FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#bb80d1>lobby</color>");
                 }
                 else
                 {
                     if (FOBManager.FindFOBByName(command[0], player.GetTeam(), out var FOB))
                     {
-                        c.TeleportDelayed(new Vector3(0, 0, 0), 0, FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
+                        c.TeleportDelayed(FOB.Structure.point, 0, FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
                     }
                     else
                     {

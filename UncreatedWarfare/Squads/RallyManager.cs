@@ -80,6 +80,19 @@ namespace Uncreated.Warfare.Squads
             }
         }
 
+        public static void WipeAllRallies()
+        {
+            rallypoints.Clear();
+
+            var barricades = GetRallyPointBarricades();
+
+            foreach (var barricade in barricades)
+            {
+                if (BarricadeManager.tryGetInfo(UCBarricadeManager.GetDropFromBarricadeData(barricade).model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                    BarricadeManager.destroyBarricade(region, x, y, plant, index);
+            }
+        }
+
         public static void LoadRallyPoints()
         {
             rallypoints.Clear();
@@ -254,7 +267,7 @@ namespace Uncreated.Warfare.Squads
                         enemyTeam = TeamManager.Team1ID;
 
                     var enemies = PlayerManager.OnlinePlayers.Where(p =>
-                        p.Team == TeamManager.Team2ID &&
+                        p.GetTeam() == TeamManager.Team2ID &&
                         (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(70, 2)
                         ).ToList();
 

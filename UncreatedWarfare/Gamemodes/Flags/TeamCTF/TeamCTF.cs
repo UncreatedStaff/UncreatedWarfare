@@ -193,7 +193,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if (OnNewGameStarting != null)
                 await OnNewGameStarting.Invoke();
-            Tickets.TicketManager.OnNewGameStarting();
+            TicketManager.OnNewGameStarting();
         }
         protected override async Task PlayerEnteredFlagRadius(Flag flag, Player player)
         {

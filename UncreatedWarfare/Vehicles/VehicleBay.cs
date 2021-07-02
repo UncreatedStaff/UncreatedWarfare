@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
-using Logger = Rocket.Core.Logging.Logger;
 
 namespace Uncreated.Warfare.Vehicles
 {
@@ -433,7 +432,10 @@ namespace Uncreated.Warfare.Vehicles
         public byte RearmCost;
         [JsonSettable]
         public byte RepairCost;
+        [JsonSettable]
         public EVehicleType Type;
+        [JsonSettable]
+        public bool RequiresSL;
         public List<ushort> Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
@@ -451,6 +453,7 @@ namespace Uncreated.Warfare.Vehicles
             RearmCost = 3;
             RepairCost = 3;
             Type = EVehicleType.NONE;
+            RequiresSL = false;
             Items = new List<ushort>() { 1440, 277 };
             CrewSeats = new List<byte>();
             Metadata = null;
@@ -514,6 +517,7 @@ namespace Uncreated.Warfare.Vehicles
         NONE,
         HUMVEE,
         TRANSPORT,
+        SCOUT_CAR,
         LOGISTICS,
         APC,
         IFV,
@@ -522,6 +526,5 @@ namespace Uncreated.Warfare.Vehicles
         HELI_ATTACK,
         JET,
         EMPLACEMENT,
-
     }
 }

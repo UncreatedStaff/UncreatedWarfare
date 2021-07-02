@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 
@@ -122,18 +123,27 @@ namespace Uncreated.Warfare.Squads
             }
         }
 
-        public static void InvokePlayerJoined(UCPlayer player)
+        public static void InvokePlayerJoined(UCPlayer player, string squadName)
         {
-            for (int i = 0; i < Squads.Count; i++)
+            var squad = Squads.Find(s => s.Name == squadName);
+
+            if (squad != null && !squad.IsFull())
             {
-                EffectManager.sendUIEffect((ushort)(30061 + i),
-                    (short)(30061 + i),
-                    player.SteamPlayer().transportConnection,
-                    true,
-                    Squads[i].Name,
-                    !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
-                );
+                JoinSquad(player, ref squad);
+            }
+            else
+            {
+                for (int i = 0; i < Squads.Count; i++)
+                {
+                    EffectManager.sendUIEffect((ushort)(30061 + i),
+                        (short)(30061 + i),
+                        player.SteamPlayer().transportConnection,
+                        true,
+                        Squads[i].Name,
+                        !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
+                                    !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
+                    );
+                }
             }
         }
         public static void InvokePlayerLeft(UCPlayer player)
@@ -172,6 +182,11 @@ namespace Uncreated.Warfare.Squads
             ClearUIList(player.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
+
+            if (RallyManager.HasRally(player, out var rally))
+                rally.UpdateUIForSquad();
+
+            PlayerManager.Save();
         }
         public static void LeaveSquad(UCPlayer player, ref Squad squad)
         {
@@ -193,6 +208,9 @@ namespace Uncreated.Warfare.Squads
                 ClearUIsquad(squad.Leader.Player);
 
                 UpdateUIMemberCount(squad.Team);
+
+                PlayerManager.Save();
+
                 return;
             }
 
@@ -207,6 +225,8 @@ namespace Uncreated.Warfare.Squads
             UpdateUISquad(squad);
             ClearUIsquad(player.Player);
             UpdateUIMemberCount(squad.Team);
+
+            PlayerManager.Save();
         }
         public static void DisbandSquad(Squad squad)
         {
@@ -220,6 +240,8 @@ namespace Uncreated.Warfare.Squads
                 ClearUIsquad(member.Player);
                 UpdateUIMemberCount(squad.Team);
             }
+
+            PlayerManager.Save();
         }
         public static void KickPlayerFromSquad(UCPlayer player, ref Squad squad)
         {
@@ -239,6 +261,8 @@ namespace Uncreated.Warfare.Squads
             ClearUIsquad(player.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
+
+            PlayerManager.Save();
         }
         public static void PromoteToLeader(ref Squad squad, UCPlayer newLeader)
         {
@@ -304,23 +328,26 @@ namespace Uncreated.Warfare.Squads
             Members.Add(leader);
         }
 
+        public bool IsFull() => Members.Count < 6;
         public bool IsNotSolo() => Members.Count > 1;
     }
 
     public class SquadConfigData : ConfigData
     {
-        public float MemberNearXPMultiplier;
         public ushort Team1RallyID;
         public ushort Team2RallyID;
+        public ushort RallyTimer;
         public ushort rallyUI;
+        public int SquadDisconnectTime;
         public char lockCharacter;
 
         public override void SetDefaults()
         {
-            MemberNearXPMultiplier = 1.1F;
             Team1RallyID = 38381;
             Team1RallyID = 38382;
+            RallyTimer = 60;
             rallyUI = 32395;
+            SquadDisconnectTime = 120;
             lockCharacter = '²';
         }
 

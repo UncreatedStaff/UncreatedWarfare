@@ -12,6 +12,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
@@ -70,37 +71,69 @@ namespace Uncreated.Warfare.Officers
             return config.data.OfficerRanks.Where(r => r.level == officerRankLevel).FirstOrDefault();
         }
 
-        public static void ChangeOfficerRank(UCPlayer player, int newLevel, EBranch branch)
+        public static void ChangeOfficerRank(UCPlayer player, Rank newRank, EBranch branch)
         {
             if (ObjectExists(o => o.steamID == player.Steam64, out var officer))
             {
-                if (newLevel == officer.officerLevel && branch == officer.branch)
+                if (newRank.level == officer.officerLevel && branch == officer.branch)
                     return;
 
-                UpdateObjectsWhere(o => o.steamID == player.CSteamID.m_SteamID, o => o.officerLevel = newLevel);
+                UpdateObjectsWhere(o => o.steamID == player.CSteamID.m_SteamID, o => o.officerLevel = newRank.level);
 
-                if (branch != officer.branch || newLevel >= officer.officerLevel)
+                if (branch != officer.branch || newRank.level >= officer.officerLevel)
                 {
-                    player.Message("officer_promoted", newLevel.ToString(Data.Locale), branch.ToString());
+                    player.Message("officer_promoted", newRank.TranslateName(player.Steam64), F.TranslateBranch(branch, player));
+
+                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                    {
+                        if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
+                        {
+                            player.Message("officer_announce_promoted", F.GetPlayerOriginalNames(player.Steam64).CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                        }
+                    }
                 }
                 else
                 {
-                    player.Message("officer_demoted", newLevel.ToString(Data.Locale));
+                    player.Message("officer_demoted", newRank.TranslateName(player.Steam64));
+
+                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                    {
+                        if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
+                        {
+                            player.Message("officer_announce_demoted", F.GetPlayerOriginalNames(player.Steam64).CharacterName);
+                        }
+                    }
                 }
             }
             else
             {
-                AddObjectToSave(new Officer(player.CSteamID.m_SteamID, player.GetTeam(), newLevel, branch));
+                AddObjectToSave(new Officer(player.CSteamID.m_SteamID, player.GetTeam(), newRank.level, branch));
 
-                player.Message("officer_promoted", newLevel.ToString(Data.Locale), branch.ToString());
+                player.Message("officer_promoted", newRank.TranslateName(player.Steam64), F.TranslateBranch(branch, player));
+
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
+                    {
+                        player.Message("officer_announce_promoted", F.GetPlayerOriginalNames(player.Steam64).CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                    }
+                }
             }
         }
 
-        public static void DischargeOfficer(UCPlayer player)
+        public static void DischargeOfficer(UCPlayer player, Rank currentRank)
         {
             RemoveWhere(o => o.steamID == player.CSteamID.m_SteamID);
 
-            player.Message("officer_discharged");
+            player.Message("officer_discharged", currentRank.TranslateName(player.Steam64));
+
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
+                {
+                    player.Message("officer_announce_discharged", F.GetPlayerOriginalNames(player.Steam64).CharacterName, currentRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64));
+                }
+            }
         }
 
         public static bool IsOfficer(CSteamID playerID, out Officer officer)
@@ -204,9 +237,13 @@ namespace Uncreated.Warfare.Officers
         public int BuiltRepairStationPoints;
         public int BuiltEmplacementPoints;
         public int BuiltBarricadePoints;
+        public int RallyDeployPoints;
+        public Dictionary<EVehicleType, int> VehicleDestroyedPoints;
+
         public int FirstStarPoints;
         public int PointsIncreasePerStar;
         public float PointsMultiplier;
+
         public ushort StarsUI;
         public List<Rank> OfficerRanks;
 
@@ -221,9 +258,25 @@ namespace Uncreated.Warfare.Officers
             SpawnOnRallyPoints = 1;
             BuiltFOBPoints = 70;
             BuiltAmmoCratePoints = 10;
-            BuiltAmmoCratePoints = 40;
+            BuiltRepairStationPoints = 40;
             BuiltEmplacementPoints = 5;
             BuiltBarricadePoints = 1;
+            RallyDeployPoints = 10;
+            VehicleDestroyedPoints = new Dictionary<EVehicleType, int>()
+            {
+                {EVehicleType.HUMVEE, 50},
+                {EVehicleType.TRANSPORT, 50},
+                {EVehicleType.LOGISTICS, 80},
+                {EVehicleType.SCOUT_CAR, 120},
+                {EVehicleType.APC, 300},
+                {EVehicleType.IFV, 400},
+                {EVehicleType.MBT, 700},
+                {EVehicleType.HELI_TRANSPORT, 200},
+                {EVehicleType.EMPLACEMENT, 30},
+            };
+
+
+
             FirstStarPoints = 1000;
             PointsIncreasePerStar = 500;
             PointsMultiplier = 1;

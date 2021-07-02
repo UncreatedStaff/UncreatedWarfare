@@ -409,8 +409,8 @@ namespace Uncreated.Warfare
             SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
             if (pl == default)
             {
-                if (PlayerManager.HasSave(s64, out UCPlayer save))
-                    return GetTeam(save.Team);
+                if (PlayerManager.HasSave(s64, out PlayerSave save))
+                    return save.Team;
                 else return 0;
             }
             else return pl.GetTeam();
@@ -1876,6 +1876,16 @@ namespace Uncreated.Warfare
             }
             drop = default;
             return default;
+        }
+        public static string TranslateBranch(EBranch branch, UCPlayer player)
+        {
+            string branchName = "team";
+            if (player.IsTeam1())
+                branchName += "1_";
+            else if (player.IsTeam2())
+                branchName += "2_";
+
+            return F.Translate(branchName + branch.ToString().ToLower(), player.Steam64);
         }
     }
 }

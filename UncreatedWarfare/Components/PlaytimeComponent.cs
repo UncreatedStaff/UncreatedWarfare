@@ -10,6 +10,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Components
 {

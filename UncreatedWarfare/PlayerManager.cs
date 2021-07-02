@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -16,83 +17,88 @@ using UnityEngine;
 
 namespace Uncreated.Warfare
 {
-    public class PlayerManager : JSONSaver<UCPlayer>
+    public class PlayerManager : JSONSaver<PlayerSave>
     {
         public static List<UCPlayer> OnlinePlayers;
         public static List<UCPlayer> Team1Players;
         public static List<UCPlayer> Team2Players;
+
+        private static List<PlayerSave> _onlineSaves;
 
         public PlayerManager() : base(Data.KitsStorage + "playersaves.json")
         {
             OnlinePlayers = new List<UCPlayer>();
             Team1Players = new List<UCPlayer>();
             Team2Players = new List<UCPlayer>();
-            foreach (SteamPlayer steamplayer in Provider.clients)
-                OnlinePlayers.Add(GetSave(steamplayer.playerID.steamID));
+            _onlineSaves = new List<PlayerSave>();
         }
         protected override string LoadDefaults() => "[]";
-        public static void SaveData() => OverwriteSavedList(OnlinePlayers);
-        private static void RemoveSave(CSteamID playerID) => RemoveSave(playerID.m_SteamID);
-        private static void RemoveSave(ulong playerID) => RemoveWhere(ks => ks.Steam64 == playerID);
-        public static bool HasSave(CSteamID playerID, out UCPlayer save) => HasSave(playerID.m_SteamID, out save);
-        public static bool HasSave(ulong playerID, out UCPlayer save) => ObjectExists(ks => ks.Steam64 == playerID, out save);
-        public static UCPlayer GetSave(CSteamID playerID) => GetObject(s => s.Steam64 == playerID.m_SteamID);
-        public static UCPlayer GetSave(ulong playerID) => GetObject(s => s.Steam64 == playerID);
-        public static UCPlayer GetPlayer(CSteamID playerID) => GetPlayer(playerID.m_SteamID);
-        public static UCPlayer GetPlayer(ulong playerID) => OnlinePlayers.Find(p => p.Steam64 == playerID);
-        public static bool PlayerExists(CSteamID playerID, out UCPlayer data)
+        public static bool HasSave(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, true);
+        public static PlayerSave GetSave(ulong playerID) => GetObject(ks => ks.Steam64 == playerID, true);
+        public static new void Save()
         {
-            data = GetPlayer(playerID);
-            return data != null;
-        }
-        public static bool PlayerExists(ulong playerID, out UCPlayer data)
-        {
-            data = GetPlayer(playerID);
-            return data != null;
-        }
-        public static void UpdatePlayer(Func<UCPlayer, bool> selector, Action<UCPlayer> operation)
-        {
-            OnlinePlayers.Where(selector).ToList().ForEach(operation);
-            OverwriteSavedList(OnlinePlayers);
+            for (int i = 0; i < OnlinePlayers.Count; i++)
+            {
+                UpdateObjectsWhere(p => p.Steam64 == OnlinePlayers[i].Steam64, p =>
+                {
+                    p.Team = OnlinePlayers[i].GetTeam();
+                    p.KitClass = OnlinePlayers[i].KitClass;
+                    p.Branch = OnlinePlayers[i].Branch;
+                    p.KitName = OnlinePlayers[i].KitName;
+                    p.SquadName = OnlinePlayers[i].Squad != null ? OnlinePlayers[i].Squad.Name : "";
+                });
+            }
         }
         public static void InvokePlayerConnected(UnturnedPlayer player) => OnPlayerConnected(player);
         public static void InvokePlayerDisconnected(UnturnedPlayer player) => OnPlayerDisconnected(player);
         private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
-            if (!HasSave(rocketplayer.CSteamID, out var currentSave))
+            PlayerSave save = null;
+
+            if (!HasSave(rocketplayer.CSteamID.m_SteamID, out var existingSave))
             {
-                var newSave = new UCPlayer(rocketplayer.CSteamID, rocketplayer.GetTeam(), Kit.EClass.NONE, EBranch.DEFAULT, "", rocketplayer.Player, rocketplayer.CharacterName, rocketplayer.DisplayName);
-                AddObjectToSave(newSave);
-                OnlinePlayers.Add(newSave);
-                if (TeamManager.IsTeam1(rocketplayer))
-                    Team1Players.Add(currentSave);
-                else if (TeamManager.IsTeam2(rocketplayer))
-                    Team2Players.Add(currentSave);
+                save = new PlayerSave(rocketplayer.CSteamID.m_SteamID);
+                AddObjectToSave(save);
             }
             else
             {
-                currentSave.Player = rocketplayer.Player;
-                currentSave.CSteamID = rocketplayer.CSteamID;
-                currentSave.CharacterName = rocketplayer.CharacterName;
-                currentSave.NickName = rocketplayer.DisplayName;
-
-                OnlinePlayers.Add(currentSave);
-                if (TeamManager.IsTeam1(rocketplayer))
-                    Team1Players.Add(currentSave);
-                else if (TeamManager.IsTeam2(rocketplayer))
-                    Team2Players.Add(currentSave);
+                save = existingSave;
             }
+
+            var player = new UCPlayer(
+                    rocketplayer.CSteamID,
+                    save.KitClass,
+                    save.Branch,
+                    save.KitName,
+                    rocketplayer.Player,
+                    rocketplayer.CharacterName,
+                    rocketplayer.DisplayName
+                );
+
+            OnlinePlayers.Add(player);
+            if (player.IsTeam1())
+                Team1Players.Add(player);
+            else if (player.IsTeam2())
+                Team2Players.Add(player);
+
+            SquadManager.InvokePlayerJoined(player, save.SquadName);
+            FOBManager.UpdateUI(player);
         }
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {
+            UCPlayer player = UCPlayer.FromUnturnedPlayer(rocketplayer);
+            player.IsOnline = false;
+
             OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
 
             if (TeamManager.IsTeam1(rocketplayer))
                 Team1Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
             else if (TeamManager.IsTeam2(rocketplayer))
                 Team2Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
+
+            SquadManager.InvokePlayerLeft(player);
         }
-        public static string GetKitName(ulong playerID) => PlayerExists(playerID, out var data)? data.KitName : "";
+        public static string GetKitName(ulong playerID) => ObjectExists(p => p.Steam64 == playerID, out var data)? data.KitName : "";
 
         public static void VerifyTeam(Player nelsonplayer)
         {
@@ -104,7 +110,6 @@ namespace Uncreated.Warfare
                 F.LogError("Failed to get UCPlayer instance of " + nelsonplayer.name);
                 return;
             }
-            player.Team = nelsonplayer.GetTeam();
 
             if (TeamManager.IsTeam1(nelsonplayer))
             {

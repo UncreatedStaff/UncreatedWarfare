@@ -28,6 +28,8 @@ namespace Uncreated.Warfare.Tickets
         public static int Team1Tickets;
         public static int Team2Tickets;
 
+        private static Coroutine ticketloop;
+
         public TicketManager()
         {
             config = new Config<TicketData>(Data.TicketStorage, "config.json");
@@ -87,12 +89,12 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
-            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.data.EnemyKilledXP);
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.data.EnemyKilledXP, 75), "ENEMY KILLED");
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
-            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.data.FriendlyKilledXP);
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.data.FriendlyKilledXP, "FRIENDLY KILLED");
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         private static async void OnVehicleExploded(InteractableVehicle vehicle)
@@ -117,18 +119,48 @@ namespace Uncreated.Warfare.Tickets
                         bool vehicleWasFriendly = (player.IsTeam1() && TeamManager.IsTeam1(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam2(vehicle.lockedGroup));
 
                         int amount = XPManager.config.data.VehicleDestroyedXP[data.Type];
+                        string message = "";
+
+                        switch (data.Type)
+                        {
+                            case EVehicleType.HUMVEE:
+                                message = "HUMVEE DESTROYED";
+                                break;
+                            case EVehicleType.TRANSPORT:
+                                message = "TRANSPORT DESTROYED";
+                                break;
+                            case EVehicleType.LOGISTICS:
+                                message = "LOGISTICS DESTROYED";
+                                break;
+                            case EVehicleType.APC:
+                                message = "APC DESTROYED";
+                                break;
+                            case EVehicleType.IFV:
+                                message = "IFV DESTROYED";
+                                break;
+                            case EVehicleType.MBT:
+                                message = "TANK DESTROYED";
+                                break;
+                            case EVehicleType.HELI_TRANSPORT:
+                                message = "HELICOPTER DESTROYED";
+                                break;
+                            case EVehicleType.EMPLACEMENT:
+                                message = "EMPLACEMENT DESTROYED";
+                                break;
+                        }
 
                         if (vehicleWasEnemy)
                         {
-                            await XPManager.AddXP(player.Player, player.GetTeam(), amount);
+                            await XPManager.AddXP(player.Player, player.GetTeam(), player.NearbyMemberBonus(amount, 75), message);
                             if (player.IsNearSquadLeader(100))
                             {
-                                await XPManager.AddXP(player.Squad.Leader.Player, player.GetTeam(), amount);
+                                await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, player.GetTeam(), amount, "ELIMINATED VEHICLE");
                             }
                         }
                         else if (vehicleWasFriendly)
                         {
-                            await XPManager.AddXP(player.Player, player.GetTeam(), -amount);
+                            if (message != "") message = "FRIENDLY " + message;
+                            await XPManager.AddXP(player.Player, player.GetTeam(), -amount, message);
                         }
                     }
                     
@@ -145,11 +177,11 @@ namespace Uncreated.Warfare.Tickets
 
                 if (F.TryGetPlaytimeComponent(player.CSteamID, out var component))
                 {
-                    await XPManager.AddXP(player.Player, team, (int)(component.stats.xpgained * 0.2F));
+                    await XPManager.AddXP(player.Player, team, (int)(component.stats.xpgained * 0.2F), "VICTORY");
 
                     if (player.IsSquadLeader())
                     {
-                        await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, (int)(component.stats.xpgained * 0.2F));
+                        await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, (int)(component.stats.xpgained * 0.2F), "VICTORY");
                     }
                 }
             }
@@ -162,7 +194,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, XPManager.config.data.FlagCapturedXP);
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.data.FlagCapturedXP, 100), "FLAG CAPTURED");
 
                 if (player.IsNearSquadLeader(100))
                 {
@@ -181,7 +213,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
                 {
-                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount);
+                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, "SQUAD CAPTURED FLAG");
                 }
             }
         }
@@ -193,7 +225,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, XPManager.config.data.FlagNeutralizedXP);
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.data.FlagNeutralizedXP, 100), "FLAG NEUTRALIZED");
 
                 if (player.IsNearSquadLeader(100))
                 {
@@ -212,7 +244,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
                 {
-                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount);
+                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, "SQUAD NEUTRALIZED FLAG");
                 }
             }
         }
@@ -236,7 +268,6 @@ namespace Uncreated.Warfare.Tickets
             ulong team = player.GetTeam();
             GetTeamBleed(team, out int bleed, out var message);
             UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, message);
-
         }
         public static void OnPlayerLeft(UCPlayer player)
         {
@@ -256,6 +287,16 @@ namespace Uncreated.Warfare.Tickets
             Team2Tickets = config.data.StartingTickets;
             UpdateUITeam1();
             UpdateUITeam2();
+
+            if (ticketloop != null)
+            {
+                try
+                {
+                    UCWarfare.I.StopCoroutine(ticketloop);
+                }
+                catch { }
+            }
+            ticketloop = UCWarfare.I.StartCoroutine(TicketLoop());
         }
 
         public static async Task AddTeam1Tickets(int number)
@@ -381,7 +422,7 @@ namespace Uncreated.Warfare.Tickets
             }
         }
 
-        private IEnumerator<WaitForSeconds> TicketLoop()
+        private static IEnumerator<WaitForSeconds> TicketLoop()
         {
             int count = 0;
 

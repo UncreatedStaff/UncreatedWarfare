@@ -15,6 +15,8 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare
 {
@@ -100,6 +102,9 @@ namespace Uncreated.Warfare
             F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
             await ReplaceBarricadesAndStructures();
             Data.VehicleSpawner.OnLevelLoaded();
+            FOBManager.LoadFobs();
+            RepairManager.LoadRepairStations();
+            RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
             await Data.Gamemode.OnLevelLoaded();
             await rtn;
@@ -242,7 +247,6 @@ namespace Uncreated.Warfare
             Data.Gamemode?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
-            Data.FOBManager?.Dispose();
             Data.Whitelister?.Dispose();
             Data.VehicleSpawner?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);

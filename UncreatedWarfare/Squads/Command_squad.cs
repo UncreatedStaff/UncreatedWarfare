@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Squads
                 {
                     if (!SquadManager.FindSquad(name, player.GetTeam(), out var squad))
                     {
-                        SquadManager.CreateSquad(name, player, player.GetTeam(), PlayerManager.GetPlayer(player.CSteamID).Branch);
+                        SquadManager.CreateSquad(name, player, player.GetTeam(), player.Branch);
 
                         player.Message("squad_created", name);
                     }

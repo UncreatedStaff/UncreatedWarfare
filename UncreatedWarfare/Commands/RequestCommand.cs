@@ -39,18 +39,18 @@ namespace Uncreated.Warfare.Commands
                     if(player.HasPermission("uc.request.save"))
                     {
                         InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
-                        if (sign == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
+                        if (sign == default) player.Message("request_not_looking");
                         else
                         {
                             if (RequestSigns.AddRequestSign(sign, out RequestSign signadded))
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
                                 if (KitManager.KitExists(signadded.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
-                                player.Player.SendChat("request_saved_sign", UCWarfare.GetColor("request_saved_sign"), signadded.kit_name, teamcolor);
+                                player.Message("request_saved_sign", signadded.kit_name, teamcolor);
                             }
                         }
                     } else
-                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                        player.Message("no_permissions");
                     return;
                 } 
                 else if (command[0].ToLower() == "remove")
@@ -58,21 +58,21 @@ namespace Uncreated.Warfare.Commands
                     if (player.HasPermission("uc.request.remove"))
                     {
                         InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
-                        if (sign == default) player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
+                        if (sign == default) player.Message("request_not_looking");
                         else
                         {
                             if(RequestSigns.SignExists(sign, out RequestSign requestsign))
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
                                 if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
-                                player.Player.SendChat("request_removed_sign", UCWarfare.GetColor("request_removed_sign"), requestsign.kit_name, teamcolor);
+                                player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
                                 await RequestSigns.RemoveRequestSign(requestsign);
                             }
-                            else player.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
+                            else player.Message("request_not_looking");
                         }
                     }
                     else
-                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                        player.Message("no_permissions");
                     return;
                 }
             }
@@ -82,7 +82,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (!VehicleSigns.SignExists(signlook, out VehicleSign vbsign))
                     {
-                        ucplayer.SendChat("request_kit_e_kitnoexist", UCWarfare.GetColor("request_kit_e_kitnoexist"));
+                        ucplayer.Message("request_kit_e_kitnoexist");
                         return;
                     }
                     if (vbsign.bay != default && vbsign.bay.HasLinkedVehicle(out InteractableVehicle veh))
@@ -93,23 +93,27 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
                 {
-                    ucplayer.SendChat("request_kit_e_kitnoexist", UCWarfare.GetColor("request_kit_e_kitnoexist"));
+                    ucplayer.Message("request_kit_e_kitnoexist");
                 }
                 else if (ucplayer.KitName == kit.Name)
                 {
-                    ucplayer.SendChat("request_kit_e_alreadyhaskit", UCWarfare.GetColor("request_kit_e_alreadyhaskit"));
+                    ucplayer.Message("request_kit_e_alreadyhaskit");
                 }
                 else if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64))
                 {
-                    ucplayer.SendChat("request_kit_e_notallowed", UCWarfare.GetColor("request_kit_e_notallowed"));
+                    ucplayer.Message("request_kit_e_notallowed");
                 }
                 else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers))
                 {
-                    ucplayer.SendChat("request_kit_e_limited", UCWarfare.GetColor("request_kit_e_limited"), currentPlayers, allowedPlayers);
+                    ucplayer.Message("request_kit_e_limited", currentPlayers, allowedPlayers);
+                }
+                else if (kit.Class == Kit.EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
+                {
+                    ucplayer.Message("request_kit_e_notsquadleader");
                 }
                 else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
                 {
-                    player.Message("kit_e_cooldown", cooldown.ToString()); return;
+                    player.Message("kit_e_cooldown", cooldown.ToString());
                 }
                 else
                 {
@@ -118,16 +122,29 @@ namespace Uncreated.Warfare.Commands
                     SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     if (rank == default || rank.level < kit.RequiredLevel)
                     {
-                        ucplayer.SendChat("request_kit_e_wronglevel", UCWarfare.GetColor("request_kit_e_wronglevel"));
+                        ucplayer.Message("request_kit_e_wronglevel");
                     }
                     else if (kit.Branch != EBranch.DEFAULT && ucplayer.Branch != kit.Branch)
                     {
-                        ucplayer.SendChat("request_kit_e_wrongbranch", UCWarfare.GetColor("request_kit_e_wrongbranch"));
+                        ucplayer.Message("request_kit_e_wrongbranch");
                     }
                     else
                     {
+                        bool branchChanged = false;
+                        if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                            branchChanged = true;
+
                         KitManager.GiveKit(player, kit);
-                        ucplayer.SendChat("request_kit_given", UCWarfare.GetColor("request_kit_given_free"), requestsign.kit_name);
+                        ucplayer.Message("request_kit_given", kit.Name);
+
+                        if (branchChanged)
+                        {
+                            ucplayer.Branch = kit.Branch;
+                            ucplayer.Message("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                        }
+
+                        PlayerManager.Save();
+
                     }
                     await rtn;
                 }
@@ -138,19 +155,41 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                ucplayer.SendChat("request_not_looking", UCWarfare.GetColor("request_not_looking"));
+                ucplayer.Message("request_not_looking");
             }
         }
         private async Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle)
         {
             if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
             {
-                ucplayer.SendChat("request_vehicle_e_notrequestable", UCWarfare.GetColor("request_vehicle_e_notrequestable"));
+                ucplayer.Message("request_vehicle_e_notrequestable");
                 return;
             }
-            if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
+            else if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
             {
-                ucplayer.SendChat("request_vehicle_e_cooldown", UCWarfare.GetColor("request_vehicle_e_cooldown"), F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds))));
+                ucplayer.Message("request_vehicle_e_alreadyrequested");
+                return;
+            }
+            else if (data.RequiresSL && !ucplayer.IsSquadLeader())
+            {
+                ucplayer.Message("request_vehicle_e_notsquadleader");
+                return;
+            }
+            else if (!KitManager.HasKit(ucplayer.CSteamID, out var kit))
+            {
+                ucplayer.Message("request_vehicle_e_nokit");
+                return;
+            }
+            else if (data.RequiredClass != Kit.EClass.NONE && kit.Class != data.RequiredClass)
+            {
+                var requiredKit = KitManager.GetKitsWhere(k => k.Class == data.RequiredClass).FirstOrDefault();
+
+                ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ? requiredKit.DisplayName.ToUpper() : "UNKNOWN");
+                return;
+            }
+            else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
+            {
+                ucplayer.Message("request_vehicle_e_cooldown", F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds))));
                 return;
             }
             int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
@@ -158,15 +197,13 @@ namespace Uncreated.Warfare.Commands
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (rank == default || rank.level < data.RequiredLevel)
             {
-                ucplayer.SendChat("request_vehicle_e_wronglevel", UCWarfare.GetColor("request_vehicle_e_wronglevel"), rank.level);
+                ucplayer.Message("request_vehicle_e_wronglevel", rank.level);
+                return;
             }
             else if (data.RequiredBranch != EBranch.DEFAULT && ucplayer.Branch != data.RequiredBranch)
             {
-                ucplayer.SendChat("request_vehicle_e_wrongbranch", UCWarfare.GetColor("request_vehicle_e_wrongbranch"), data.RequiredBranch.ToString().ToLower(), UCWarfare.GetColorHex("request_vehicle_e_wrongbranch_branch"));
-            }
-            else if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
-            {
-                ucplayer.SendChat("request_vehicle_e_alreadyrequested", UCWarfare.GetColor("request_vehicle_e_alreadyrequested"));
+                ucplayer.Message("request_vehicle_e_wrongbranch", data.RequiredBranch.ToString().ToLower());
+                return;
             }
             else if (vehicle.asset != default && vehicle.asset.canBeLocked)
             {
@@ -178,10 +215,12 @@ namespace Uncreated.Warfare.Commands
                 vehicle.updatePhysics();
 
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
-                ucplayer.SendChat("request_vehicle_given", UCWarfare.GetColor("request_vehicle_given"), vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
-            } else
+                ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
+            }
+            else
             {
-                ucplayer.SendChat("request_vehicle_e_alreadyrequested", UCWarfare.GetColor("request_vehicle_e_alreadyrequested"));
+                ucplayer.Message("request_vehicle_e_alreadyrequested");
+                return;
             }
             await rtn;
             return;

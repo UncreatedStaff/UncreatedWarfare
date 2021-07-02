@@ -464,11 +464,11 @@ namespace Uncreated.Warfare.Vehicles
                     var player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
                     if (player.Squad != null)
                     {
-                        OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.data.TransportPlayerPoints * (count - 2)).GetAwaiter().GetResult();
+                        OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.data.TransportPlayerPoints * (count - 2), "TRANSPORTING PLAYERS").GetAwaiter().GetResult();
                     }
                     else
                     {
-                        XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.data.TransportPlayerXP * (count - 2)).GetAwaiter().GetResult();
+                        XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.data.TransportPlayerXP * (count - 2), "TRANSPORTING PLAYERS").GetAwaiter().GetResult();
                     }
 
                     F.Log("VEHICLE: successfully given transport XP");

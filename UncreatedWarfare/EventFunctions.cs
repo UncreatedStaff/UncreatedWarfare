@@ -155,8 +155,8 @@ namespace Uncreated.Warfare
             PlayerManager.InvokePlayerConnected(player); // must always be first
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             await Client.SendPlayerJoined(names);
-            await XPManager.OnPlayerJoined(ucplayer);
             await OfficerManager.OnPlayerJoined(ucplayer);
+            await XPManager.OnPlayerJoined(ucplayer);
             await Data.DatabaseManager.CheckUpdateUsernames(names);
             bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
             await Data.DatabaseManager.RegisterLogin(player.Player);
@@ -185,8 +185,6 @@ namespace Uncreated.Warfare
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);
             }
             Data.ReviveManager.OnPlayerConnected(player);
-
-            SquadManager.InvokePlayerJoined(ucplayer);
 
             TicketManager.OnPlayerJoined(ucplayer);
 
@@ -320,7 +318,6 @@ namespace Uncreated.Warfare
                 Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
             }
             Data.ReviveManager.OnPlayerDisconnected(player);
-            SquadManager.InvokePlayerLeft(ucplayer);
             TicketManager.OnPlayerLeft(ucplayer);
             PlayerManager.InvokePlayerDisconnected(player);
 
@@ -340,10 +337,11 @@ namespace Uncreated.Warfare
             else
                 Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
             ulong team = 0;
-            if (PlayerManager.HasSave(player.playerID.steamID, out var save))
+            if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out var save))
             {
                 team = save.Team;
             }
+            F.Log("PLAYER TEAM: " + team);
 
             string globalPrefix = "";
             string teamPrefix = "";
@@ -370,8 +368,8 @@ namespace Uncreated.Warfare
 
             if (TeamManager.IsTeam1(team) || TeamManager.IsTeam2(team))
             {
-                globalPrefix += rank.name;
-                teamPrefix += rank.name;
+                globalPrefix += rank.abbreviation;
+                teamPrefix += rank.abbreviation;
 
                 //if (stars >= 3)
                 //{
@@ -383,6 +381,9 @@ namespace Uncreated.Warfare
 
                 globalPrefix += " ";
                 teamPrefix += " ";
+
+                player.playerID.characterName = globalPrefix + player.playerID.characterName;
+                player.playerID.nickName = teamPrefix + player.playerID.nickName;
             }
         }
     }

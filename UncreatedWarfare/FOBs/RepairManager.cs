@@ -15,11 +15,6 @@ namespace Uncreated.Warfare.FOBs
     {
         private static List<RepairStation> stations = new List<RepairStation>();
 
-        public static void OnLevelLoaded(int level)
-        {
-            LoadRepairStations();
-        }
-
         public static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
         {
             if (data.barricade.id == FOBManager.config.data.RepairStationID)

@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Kits
                         if (VehicleBay.VehicleExists(vehicle.id, out _))
                         {
                             VehicleBay.RemoveRequestableVehicle(vehicle.id);
-                            player.Message("vehiclebay_removed");
+                            player.Message("vehiclebay_removed", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                         }
                         else // error
                             player.Message("vehiclebay_e_noexist");
@@ -92,7 +92,7 @@ namespace Uncreated.Warfare.Kits
                             player.Message("vehiclebay_e_noexist");
                         } else
                         {
-                            player.Message("vehiclebay_setprop", property, vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName, newValue);
+                            player.Message("vehiclebay_setprop", property.ToUpper(), vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName, newValue.ToUpper());
                             if (VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
                             {
                                 List<VehicleSpawn> spawners = data.GetSpawners();

@@ -40,8 +40,20 @@ namespace Uncreated.Warfare.Kits
                         {
                             if (!CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
                             {
+                                bool branchChanged = false;
+                                if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                                    branchChanged = true;
+
                                 KitManager.GiveKit(player, kit);
-                                player.Message("kit_given", kitName);
+                                ucplayer.Message("request_kit_given", kit.Name);
+
+                                if (branchChanged)
+                                {
+                                    ucplayer.Branch = kit.Branch;
+                                    ucplayer.Message("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                                }
+
+                                PlayerManager.Save();
                                 return;
                             }
                             else
@@ -67,6 +79,12 @@ namespace Uncreated.Warfare.Kits
                     player.Message("kit_e_noexist", kitName);
                     return;
                 }
+            }
+
+            if (command.Length != 1 && !player.OnDuty())
+            {
+                player.Message("kits_notonduty", kitName);
+                return;
             }
 
             if (command.Length == 2)
@@ -112,9 +130,20 @@ namespace Uncreated.Warfare.Kits
                 {
                     if(KitManager.KitExists(kitName, out Kit kit))
                     {
+                        bool branchChanged = false;
+                        if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                            branchChanged = true;
+
                         KitManager.GiveKit(player, kit);
-                        player.Message("kit_given", kitName);
-                        return;
+                        ucplayer.Message("request_kit_given", kit.Name);
+
+                        if (branchChanged)
+                        {
+                            ucplayer.Branch = kit.Branch;
+                            ucplayer.Message("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                        }
+
+                        PlayerManager.Save();
                     }
                     else // error
                     {

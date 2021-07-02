@@ -100,7 +100,7 @@ namespace Uncreated.Warfare
                 { "kit_given", "<color=#a0ad8e>Received kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
-                { "kit_setprop", "<color=#a0ad8e>Set {0} for kit <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
+                { "kit_setprop", "<color=#a0ad8e>Set <color=#8ce4ff>{0}</color> for kit <color=#ffb89c>{1}</color> to: <color=#ffffff>{2}</color></color>" },
                 { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
                 { "kit_accessremoved", "<color=#a0ad8e>Disallowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
                 { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
@@ -116,6 +116,7 @@ namespace Uncreated.Warfare
                 { "kit_e_cooldown", "<color=#c2b39b>You can request this kit again in: <color=#bafeff>{0}</color></color>" },
                 { "kits_heading", "<color=#b0a99d>You have access to the following <color=#ffd494>PREMIUM</color> kits:</color>" },
                 { "kits_nokits", "<color=#b0a99d>You have no premium kits.</color> Go and <b><color=#e6c6b3>request a regular kit at the <color=#99a38e>ARMORY</color></color></b>" },
+                { "kits_notonduty", "<color=#a6918a>You must be on duty to execute that command.</color>" },
 
                 // Range
                 { "range", "<color=#9e9c99>The range to your marker is: <color=#8aff9f>{0}m</color></color>" },
@@ -348,31 +349,28 @@ namespace Uncreated.Warfare
                 { "battleye_kicked_Console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kicked_Broadcast", "<color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>." },
                 // request
-                { "request_saved_sign", "Saved kit: <color=#{1}>{0}</color>." },
-                { "request_removed_sign", "Removed kit sign: <color=#{1}>{0}</color>." },
-                { "request_sign_exists", "A sign is already registered at that location, remove it with /request remove." },
-                { "request_kit_given_free", "Kit requested: <color=#{1}>{0}</color>." },
-                { "request_kit_given_credits", "Kit requested: <color=#{1}>{0}</color>. <color=#{3}>-{2}</color> credits." },
-                { "request_kit_given_credits_cant_afford", "You do not have <color=#{1}>{0}</color> credits." },
-                { "request_kit_given_not_owned", "You do not own <color=#{1}>{0}</color>." },
-                { "request_not_looking", "You must be looking at a request sign or vehicle." },
-                { "request_kit_e_signnoexist", "This is not a request sign." },                             // FILL IN FORMATTING HERE \/
-                { "request_kit_e_kitnoexist", "This kit has not been created yet." },
-                { "request_kit_e_alreadyhaskit", "You already have this kit." },
-                { "request_kit_e_notallowed", "You do not have access to this kit." },
-                { "request_kit_e_limited", "Too many players are already using this kit, try again when there are less than {1} players." },
-                { "request_kit_e_wronglevel", "You must be a higher level to use this kit." },
-                { "request_kit_e_wrongbranch", "You must be a different branch." },
-                { "request_vehicle_e_notrequestable", "This vehicle is not available." },
-                { "request_vehicle_e_cooldown", "This vehicle is not available for another {0}." },
-                { "request_vehicle_e_wronglevel", "You must be a higher level" },
-                { "request_vehicle_e_wrongbranch", "You must be in the <color=#{1}>{0}</color> branch to use this vehicle." },
-                { "request_vehicle_e_alreadyrequested", "This vehicle has already been requested by someone." },
-                { "request_vehicle_given", "Unlocked <color=#{1}>{0}</color>." },
-                { "kit_free", "FREE" },
-                { "kit_owned", "OWNED" },
-                { "kit_price_dollars", "$ {0}" },
-                { "kit_price_credits", "C {0}" },
+                { "request_saved_sign", "<color=#a4baa9>Saved kit: <color=#ffebbd>{0}</color></color>" },
+                { "request_removed_sign", "<color=#a4baa9>Removed kit sign: <color=#ffebbd>{0}</color></color>" },
+                { "request_sign_exists", "<color=#a8918a>A sign is already registered at that location, remove it with /request remove.</color>" },
+                { "request_not_looking", "<color=#a8918a>You must be looking at a request sign or vehicle.</color>" },
+                { "request_kit_e_signnoexist", "<color=#a8918a>This is not a request sign.</color>" },
+                { "request_kit_e_kitnoexist", "<color=#a8918a>This kit has not been created yet.</color>" },
+                { "request_kit_e_alreadyhaskit", "<color=#a8918a>You already have this kit.</color>" },
+                { "request_kit_e_notallowed", "<color=#a8918a>You do not have access to this kit.</color>" },
+                { "request_kit_e_limited", "<color=#a8918a>Your team already has a max of {0} players using this kit. Try again later</color>" },
+                { "request_kit_e_wronglevel", "<color=#a8918a>You must be <color=#ffc29c>Level {0}</color> to request this kit.</color>" },
+                { "request_kit_e_wrongbranch", "<color=#a8918a>You must be a different branch.</color>" },
+                { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a SQUAD LEADER in order to get this kit.</color>" },
+                { "request_vehicle_e_notrequestable", "<color=#a8918a>This vehicle cannot be reqested.</color>" },
+                { "request_vehicle_e_cooldown", "<color=#b3ab9f>This vehicle can be requested in: <color=#ffe2ab>{0}</color>.</color>" },
+                { "request_vehicle_e_notsquadleader", "<color=#b3ab9f>You must be a SQUAD LEADER in order to request this vehicle.</color>" },
+                { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
+                { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
+                { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
+                { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
+                { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
+                { "request_vehicle_given", "<color=#b3a591>This <color=#ffe2ab>{0}</color> is now yours to take into battle.</color>" },
+
                 // structure
                 { "structure_not_looking", "You must be looking at a barricade, structure, or vehicle." },
                 { "structure_saved", "Saved <color=#{1}>{0}</color>." },
@@ -413,7 +411,7 @@ namespace Uncreated.Warfare
                 //vehiclebay
                 { "vehiclebay_added", "<color=#a0ad8e>Added requestable vehicle to the vehicle bay: <color=#ffffff>{0}</color></color>" },
                 { "vehiclebay_removed", "<color=#a0ad8e>Removed requestable vehicle from the vehicle bay: <color=#ffffff>{0}</color></color>" },
-                { "vehiclebay_setprop", "<color=#a0ad8e>Set {0} for the <color=#ffffff>{1}</color> to: <color=#8ce4ff>{2}</color></color>" },
+                { "vehiclebay_setprop", "<color=#a0ad8e>Set <color=#8ce4ff>{0}</color> for vehicle <color=#ffb89c>{1}</color> to: <color=#ffffff>{2}</color></color>" },
                 { "vehiclebay_setitems", "<color=#a0ad8e>Successfuly set the rearm list for the <color=#ffffff>{1}</color> from your inventory. It will now drop <color=#8ce4ff>{2}</color> items with /ammo.</color>" },
                 { "vehiclebay_cleareditems", "<color=#a0ad8e>Successfuly set the rearm list for the <color=#ffffff>{1}</color> from your inventory. It will <color=#8ce4ff>no longer</color> drop any items with /ammo.</color>" },
                 { "vehiclebay_seatadded", "<color=#a0ad8e>Made seat <color=#ffffff>{0}</color> a crewman seat for this vehicle.</color>" },
@@ -449,9 +447,12 @@ namespace Uncreated.Warfare
                 { "vehiclebay_sign_min_level", "<color=#{6}><color=#{1}>{0}</color>\n<color=#{3}>{2}</color>\nTickets: <color=#{5}>{4}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: rank, 3: rank color, 4: Ticket cost, 5: Ticket cost color, 6: background color
 
                 // Officers
-                { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of <color=#baccca>{1}</color>!</color>" },
+                { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of the <color=#baccca>{1}</color>!</color>" },
                 { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
                 { "officer_discharged", "<color=#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.</color>" },
+                { "officer_announce_promoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#e3b552>PROMOTED</color> to <color=#e05353>{1}</color> of the <color=#baccca>{2}</color>!</color>" },
+                { "officer_announce_demoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
+                { "officer_announce_discharged", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#ab2e2e>DISCHARGED</color> from the rank of <color=#e05353>{1}s</color> for unacceptable behaviour.</color>" },
 
                 // Clear
                 { "clear_not_enough_args", "The clear command requires 1 argument." },
@@ -487,7 +488,19 @@ namespace Uncreated.Warfare
                 { "defeated", "You are defeated!" },
                 { "victorious", "You are victorious!" },
                 { "controlling", "Your team is in control!" },
-                { "dominating", "Your team is dominating!" }
+                { "dominating", "Your team is dominating!" },
+
+                // Branch names
+
+                { "branch_changed", "<color=#ccb89f>You have joined the <color=#ff9182>{0}</color>.</color>" },
+                { "team1_infantry", "Infantry Division" },
+                { "team2_infantry", "Infantry Division" },
+                { "team1_armor", "Armor Division" },
+                { "team2_armor", "Armor Division" },
+                { "team1_airforce", "Airforce" },
+                { "team2_airforce", "Airforce" },
+                { "team1_specops", "Navy Seals" },
+                { "team2_specops", "Spetsnaz" },
 
             };
         }

@@ -20,29 +20,17 @@ namespace Uncreated.Warfare
     public class UCPlayer
     {
         public readonly ulong Steam64;
-        [JsonSettable]
-        public ulong Team;
-        [JsonSettable]
         public Kit.EClass KitClass;
-        [JsonSettable]
         public EBranch Branch;
-        [JsonSettable]
         public string KitName;
-        [JsonIgnore]
         public Squad Squad;
-        [JsonIgnore]
         public Player Player { get; internal set; }
-        [JsonIgnore]
         public CSteamID CSteamID { get; internal set; }
-        [JsonIgnore]
         public string CharacterName;
-        [JsonIgnore]
         public string NickName;
-        [JsonIgnore]
         public Rank OfficerRank;
-        [JsonIgnore]
         public Vector3 Position { get { return Player.transform.position; } }
-        [JsonIgnore]
+        public bool IsOnline;
         public int cachedXp;
 
         public static UCPlayer FromID(ulong steamID, ulong team = 0)
@@ -91,7 +79,7 @@ namespace Uncreated.Warfare
         {
             KitName = kit.Name;
             KitClass = kit.Class;
-            PlayerManager.SaveData();
+            PlayerManager.Save();
         }
 
         public SteamPlayer SteamPlayer()
@@ -115,10 +103,9 @@ namespace Uncreated.Warfare
         {
             cachedXp = await Data.DatabaseManager?.GetXP(Steam64, Player.GetTeam());
         }
-        public UCPlayer(CSteamID steamID, ulong team, Kit.EClass kitClass, EBranch branch, string kitName, Player player, string characterName, string nickName)
+        public UCPlayer(CSteamID steamID, Kit.EClass kitClass, EBranch branch, string kitName, Player player, string characterName, string nickName)
         {
             Steam64 = steamID.m_SteamID;
-            Team = team;
             KitClass = kitClass;
             Branch = branch;
             KitName = kitName;
@@ -128,9 +115,9 @@ namespace Uncreated.Warfare
             CharacterName = characterName;
             NickName = nickName;
             OfficerRank = null;
+            IsOnline = true;
             cachedXp = 0;
         }
-        [JsonIgnore]
         public string Icon
         {
             get
@@ -201,6 +188,45 @@ namespace Uncreated.Warfare
                 return true;
 
             return (Position - Squad.Leader.Position).sqrMagnitude < Math.Pow(distance, 2);
+        }
+        public int NearbyMemberBonus(int amount, float distance)
+        {
+            if (Squad is null)
+                return amount;
+
+            int count = 0;
+            for (int i = 0; i < Squad.Members.Count; i++)
+            {
+                if (Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
+                    count++;
+            }
+            return (int)Math.Round(amount * (1 + 0.5 * ((float)count / 5)));
+        }
+    }
+
+    public class PlayerSave
+    {
+        [JsonSettable]
+        public readonly ulong Steam64;
+        [JsonSettable]
+        public ulong Team;
+        [JsonSettable]
+        public Kit.EClass KitClass;
+        [JsonSettable]
+        public EBranch Branch;
+        [JsonSettable]
+        public string KitName;
+        [JsonSettable]
+        public string SquadName;
+
+        public PlayerSave(ulong Steam64)
+        {
+            this.Steam64 = Steam64;
+            Team = 0;
+            KitClass = Kit.EClass.NONE;
+            Branch = EBranch.DEFAULT;
+            KitName = "";
+            SquadName = "";
         }
     }
 }

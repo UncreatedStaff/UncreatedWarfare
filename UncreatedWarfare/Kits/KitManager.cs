@@ -204,13 +204,12 @@ namespace Uncreated.Warfare.Kits
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
             ucplayer.KitName = kit.Name;
+            ucplayer.KitClass = kit.Class;
 
             if (kit.IsPremium && kit.Cooldown > 0)
             {
                 CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
             }
-
-            PlayerManager.Save();
 
             OnKitChanged?.Invoke(player, kit);
         }
@@ -422,6 +421,7 @@ namespace Uncreated.Warfare.Kits
         public bool IsLimited(out int currentPlayers, out int allowedPlayers)
         {
             var friendlyPlayers = PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team).ToList();
+            F.Log($"FRIENDLY PLAYERS: {friendlyPlayers.Count}");
             allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count);
             currentPlayers = friendlyPlayers.Where(k => k.KitName == Name).Count();
             F.Log($"KIT LIMITER: {currentPlayers}/{allowedPlayers} kits in use");

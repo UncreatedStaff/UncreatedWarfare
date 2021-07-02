@@ -11,7 +11,7 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.FOBs
 {
-    public class FOBManager : IDisposable
+    public class FOBManager
     {
         public static Config<FOBConfig> config;
         static readonly List<FOB> Team1FOBs = new List<FOB>();
@@ -20,17 +20,6 @@ namespace Uncreated.Warfare.FOBs
         public FOBManager()
         {
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
-
-            if (Level.isLoaded)
-                LoadFobs();
-            else
-                Level.onLevelLoaded += OnLevelLoaded;
-        }
-
-        private static void OnLevelLoaded(int level)   
-        {
-            //LoadFobs();
-            RepairManager.OnLevelLoaded(level);
         }
 
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
@@ -247,10 +236,6 @@ namespace Uncreated.Warfare.FOBs
             {
                 UpdateUI(player);
             }
-        }
-        public void Dispose()
-        {
-            Level.onLevelLoaded -= OnLevelLoaded;
         }
     }
 

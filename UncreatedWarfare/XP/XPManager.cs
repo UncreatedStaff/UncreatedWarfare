@@ -85,21 +85,41 @@ namespace Uncreated.Warfare.XP
             Rank rank = GetRank(balance, out int currentXP, out Rank nextRank);
             if (player.OfficerRank != null)
             {
-                EffectManager.sendUIEffect(config.data.RankUI, unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
-                    player.OfficerRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID),
-                    nextRank != null ? currentXP + "/" + rank.level : currentXP.ToString(),
-                    "",
-                    GetProgress(currentXP, rank.XP)
-               );
+                EffectManager.sendUIEffect(config.data.RankUI, unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true);
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Rank", player.OfficerRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Level", "O" + player.OfficerRank.level
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Next", nextRank != null ? "E" + nextRank.level + " equivalent" : ""
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Progress", GetProgress(currentXP, rank.XP)
+                );
             }
             else
             {
-                EffectManager.sendUIEffect(config.data.RankUI, unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
-                    rank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID),
-                    nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString(),
-                    nextRank != null ? nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID) : "",
-                    GetProgress(currentXP, rank.XP)
-               );
+                EffectManager.sendUIEffect(config.data.RankUI, unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true);
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Rank", rank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Level", "E" + rank.level
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Next", nextRank != null ? nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID) + "  E" + nextRank.level : ""
+                );
+                EffectManager.sendUIEffectText(unchecked((short)config.data.RankUI), player.Player.channel.owner.transportConnection, true,
+                    "Progress", GetProgress(currentXP, rank.XP)
+                );
             }
         }
         private static string GetProgress(int currentPoints, int totalPoints, int barLength = 50)
@@ -291,7 +311,6 @@ namespace Uncreated.Warfare.XP
         public int BuiltRepairStationXP;
         public int BuiltEmplacementXP;
         public int BuiltBarricadeXP;
-
         public Dictionary<EVehicleType, int> VehicleDestroyedXP;
 
 
@@ -322,6 +341,7 @@ namespace Uncreated.Warfare.XP
                 {EVehicleType.HUMVEE, 50},
                 {EVehicleType.TRANSPORT, 50},
                 {EVehicleType.LOGISTICS, 80},
+                {EVehicleType.SCOUT_CAR, 120},
                 {EVehicleType.APC, 300},
                 {EVehicleType.IFV, 400},
                 {EVehicleType.MBT, 700},
