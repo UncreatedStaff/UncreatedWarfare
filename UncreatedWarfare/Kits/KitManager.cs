@@ -355,7 +355,7 @@ namespace Uncreated.Warfare.Kits
                     case EClass.SNIPER:
                         return "Sniper";
                     case EClass.AP_RIFLEMAN:
-                        return "Anti-Personel Rifleman";
+                        return "Anti-Personnel Rifleman";
                     case EClass.COMBAT_ENGINEER:
                         return "Combat Engineer";
                     case EClass.CREWMAN:
@@ -439,23 +439,24 @@ namespace Uncreated.Warfare.Kits
         }
         public enum EClass
         {
-            NONE,
-            UNARMED,
-            SQUADLEADER,
-            RIFLEMAN,
-            MEDIC,
-            BREACHER,
-            AUTOMATIC_RIFLEMAN,
-            GRENADIER,
-            MACHINE_GUNNER,
-            LAT,
-            HAT,
-            MARKSMAN,
-            SNIPER,
-            AP_RIFLEMAN,
-            COMBAT_ENGINEER,
-            CREWMAN,
-            PILOT
+            NONE, //0 
+            UNARMED, //1
+            SQUADLEADER, //2
+            RIFLEMAN, //3
+            MEDIC, //4
+            BREACHER, //5
+            AUTOMATIC_RIFLEMAN, //6
+            GRENADIER, //7
+            MACHINE_GUNNER, //8
+            LAT, //9
+            HAT, //10
+            MARKSMAN, //11
+            SNIPER, //12
+            AP_RIFLEMAN, //13
+            COMBAT_ENGINEER, //14
+            CREWMAN, //15
+            PILOT, //16
+            SPEC_OPS // 17
         }
 
         public enum EKitProperty

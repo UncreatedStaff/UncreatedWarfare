@@ -46,6 +46,7 @@ namespace Uncreated.Warfare
         public bool AllowBatteryStealing;
         public bool RemoveLandminesOnDisconnect;
         public string ActiveGamemode;
+        public string DiscordInviteCode;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -74,6 +75,7 @@ namespace Uncreated.Warfare
             this.AllowBatteryStealing = false;
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
+            this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
         }
     }
     public class Modules
