@@ -131,7 +131,7 @@ namespace Uncreated.Warfare.Commands
                             branchChanged = true;
 
                         KitManager.GiveKit(player, kit);
-                        ucplayer.Message("request_kit_given", kit.Name);
+                        ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)
                         {
