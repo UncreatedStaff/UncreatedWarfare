@@ -31,15 +31,18 @@ namespace Uncreated.Warfare.Officers
 
         public static async Task OnPlayerJoined(UCPlayer player)
         {
-            int points = await GetOfficerPoints(player.Player, player.GetTeam());
-
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            await rtn;
-            if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
+            if (player.IsTeam1() || player.IsTeam2())
             {
-                player.OfficerRank = GetOfficerRank(officer.officerLevel);
+                int points = await GetOfficerPoints(player.Player, player.GetTeam());
+
+                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                await rtn;
+                if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
+                {
+                    player.OfficerRank = GetOfficerRank(officer.officerLevel);
+                }
+                UpdateUI(player.Player, points);
             }
-            UpdateUI(player.Player, points);
         }
         public static async Task OnPlayerLeft(UCPlayer player)
         {
@@ -60,8 +63,8 @@ namespace Uncreated.Warfare.Officers
             int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(Math.Round(amount * config.data.PointsMultiplier)));
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
 
-            if (message != "")
-                ToastMessage.QueueMessage(player, "+" + amount + " OF", message, ToastMessageSeverity.MINIOFFICERPTS);
+            if (message != "" && amount != 0)
+                ToastMessage.QueueMessage(player, amount >= 0 ? "+" : "-" + amount + " OF", message, ToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance);
             await rtn;

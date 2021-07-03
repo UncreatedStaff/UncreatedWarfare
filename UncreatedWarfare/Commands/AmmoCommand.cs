@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     player.Message("This vehicle cannot be rearmed."); return;
                 }
-                if (vehicleData.Metadata != null)
+                if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades.Count > 0)
                 {
                     if (!player.Player.IsInMain())
                     {

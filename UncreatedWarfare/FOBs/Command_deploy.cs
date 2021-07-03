@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,14 +29,34 @@ namespace Uncreated.Warfare.Commands
             {
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.Player, out _);
 
-                bool shouldCancelOnMove = !player.Player.IsInMain();
-                bool shouldCancelOnDamage = !player.Player.IsInMain();
+                bool IsInMain = player.Player.IsInMain();
+                bool shouldCancelOnMove = !IsInMain;
+                bool shouldCancelOnDamage = !IsInMain;
 
                 ulong team = player.GetTeam();
 
+                if (!IsInMain)
+                {
+                    if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out var combatlog))
+                    {
+                        player.Message("deploy_e_incombat", combatlog.ToString());
+                        return;
+                    }
+                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out var cooldown))
+                    {
+                        player.Message("deploy_e_cooldown", cooldown.ToString());
+                        return;
+                    }
+                    if (!player.IsNearFOB())
+                    {
+                        player.Message("deploy_e_cooldown", cooldown.ToString());
+                        return;
+                    }
+                }
+
                 if (command[0].ToLower() == "main")
                 {
-                    c.TeleportDelayed(team.GetBaseSpawn(), team.GetBaseAngle(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
+                    c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
                 }
                 else if (command[0].ToLower() == "lobby")
                 {
@@ -49,7 +70,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        player.Message("deploy_e_fobnoexist", command[0]);
+                        player.Message("deploy_e_fobnotfound", command[0]);
                     }
                 }
             }

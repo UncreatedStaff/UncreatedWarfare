@@ -79,6 +79,12 @@ namespace Uncreated.Warfare
                 Level.onLevelLoaded += OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded += OnPluginsLoaded;
             }
+
+            Provider.configData.Normal.Players.Lose_Items_PvP = 1;
+            Provider.configData.Normal.Players.Lose_Items_PvE = 1;
+            Provider.configData.Normal.Players.Lose_Clothes_PvP = false;
+            Provider.configData.Normal.Players.Lose_Clothes_PvE = false;
+
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }

@@ -41,6 +41,8 @@ namespace Uncreated.Warfare
             SquadManager.ClearUIsquad(player.player);
             SquadManager.UpdateUIMemberCount(newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
+            FOBManager.UpdateUI(UCPlayer.FromSteamPlayer(player));
+
             await rtn;
             await XPManager.OnGroupChanged(player, oldGroup, newGroup);
             await OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
@@ -179,7 +181,7 @@ namespace Uncreated.Warfare
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
             }
-            if (!UCWarfare.Config.ModifySkillLevels)
+            if (UCWarfare.Config.ModifySkillLevels)
             {
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);

@@ -58,6 +58,17 @@ namespace Uncreated.Warfare.Kits
                         else // error
                             player.Message("vehiclebay_e_noexist");
                     }
+                    else if (op == "savemeta")
+                    {
+                        if (VehicleBay.VehicleExists(vehicle.id, out var data))
+                        {
+                            data.SaveMetaData(vehicle);
+                            VehicleBay.Save();
+                            player.Message("vehiclebay_savemeta", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                        }
+                        else // error
+                            player.Message("vehiclebay_e_noexist");
+                    }
                     else
                         player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
                 }
@@ -90,9 +101,11 @@ namespace Uncreated.Warfare.Kits
                         else if (!set) // error - invalid argument value
                         {
                             player.Message("vehiclebay_e_noexist");
-                        } else
+                        }
+                        else
                         {
                             player.Message("vehiclebay_setprop", property.ToUpper(), vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName, newValue.ToUpper());
+
                             if (VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
                             {
                                 List<VehicleSpawn> spawners = data.GetSpawners();
@@ -263,7 +276,7 @@ namespace Uncreated.Warfare.Kits
                             if (VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                             {
                                 VehicleSpawner.DeleteSpawn(barricade.instanceID, EStructType.BARRICADE);
-                                player.Message("vehiclebay_spawn_remove");
+                                player.Message("vehiclebay_spawn_deregistered");
                             }
                             else
                                 player.Message("vehiclebay_e_spawnnoexist");

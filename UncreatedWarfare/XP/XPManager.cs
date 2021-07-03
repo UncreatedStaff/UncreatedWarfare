@@ -71,11 +71,11 @@ namespace Uncreated.Warfare.XP
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
 
-            if (message != "")
-                ToastMessage.QueueMessage(player, "+" + amount + " XP", message, ToastMessageSeverity.MINIXP);
+            if (message != "" && amount != 0)
+                ToastMessage.QueueMessage(player, amount >= 0 ? "+" : "-" + amount + " XP", message, ToastMessageSeverity.MINIXP);
 
-            for (int i = 0; i < Vehicles.VehicleSigns.ActiveObjects.Count; i++)
-                await Vehicles.VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
+            for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
+                await VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
             await rtn;
         }
         public static void UpdateUI(Player nelsonplayer, int balance)

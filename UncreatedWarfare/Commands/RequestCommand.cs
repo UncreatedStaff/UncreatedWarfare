@@ -122,11 +122,7 @@ namespace Uncreated.Warfare.Commands
                     SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     if (rank == default || rank.level < kit.RequiredLevel)
                     {
-                        ucplayer.Message("request_kit_e_wronglevel");
-                    }
-                    else if (kit.Branch != EBranch.DEFAULT && ucplayer.Branch != kit.Branch)
-                    {
-                        ucplayer.Message("request_kit_e_wrongbranch");
+                        ucplayer.Message("request_kit_e_wronglevel", rank.level);
                     }
                     else
                     {
@@ -200,11 +196,6 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_wronglevel", rank.level);
                 return;
             }
-            else if (data.RequiredBranch != EBranch.DEFAULT && ucplayer.Branch != data.RequiredBranch)
-            {
-                ucplayer.Message("request_vehicle_e_wrongbranch", data.RequiredBranch.ToString().ToLower());
-                return;
-            }
             else if (vehicle.asset != default && vehicle.asset.canBeLocked)
             {
                 vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
@@ -216,6 +207,11 @@ namespace Uncreated.Warfare.Commands
 
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
+
+                foreach (var item in data.Items)
+                {
+                    ItemManager.dropItem(new Item(item, true), ucplayer.Position, true, true, true);
+                }
             }
             else
             {

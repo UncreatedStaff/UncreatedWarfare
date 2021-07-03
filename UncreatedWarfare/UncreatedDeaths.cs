@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
@@ -19,6 +20,8 @@ namespace Uncreated.Warfare
 {
     partial class UCWarfare
     {
+        public delegate void PlayerDeathHandler(DeathEventArgs death);
+        public static event PlayerDeathHandler OnPlayerDeathGlobal;
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
         public event EventHandler<KillEventArgs> OnTeamkill;
         private async Task Teamkill(KillEventArgs parameters)
@@ -117,6 +120,19 @@ namespace Uncreated.Warfare
             F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnSuicide?.Invoke(this, parameters);
+            OnPlayerDeathGlobal?.Invoke(
+                    new DeathEventArgs
+                    {
+                        cause = parameters.cause,
+                        killerargs = null,
+                        dead = parameters.dead,
+                        distance = parameters.distance,
+                        item = parameters.item,
+                        itemName = parameters.itemName,
+                        key = parameters.key,
+                        limb = parameters.limb
+                    }
+                );
             await rtn;
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
@@ -196,6 +212,7 @@ namespace Uncreated.Warfare
             }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnDeathNotSuicide?.Invoke(this, parameters);
+            OnPlayerDeathGlobal?.Invoke(parameters);
             await rtn;
             await TicketManager.OnPlayerDeath(parameters);
         }

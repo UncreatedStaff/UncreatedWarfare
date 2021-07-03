@@ -477,7 +477,7 @@ namespace Uncreated.Warfare.Tickets
             StartingTickets = 600;
             FOBCost = 20;
             Team1TicketUIID = 32390;
-            Team1TicketUIID = 32391;
+            Team2TicketUIID = 32391;
         }
         public TicketData() { }
     }

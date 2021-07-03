@@ -202,6 +202,17 @@ namespace Uncreated.Warfare
             }
             return (int)Math.Round(amount * (1 + 0.5 * ((float)count / 5)));
         }
+
+        public bool IsNearFOB()
+        {
+            int nearbyFOBs = BarricadeManager.regions.Cast<BarricadeRegion>().ToList().SelectMany(brd => brd.barricades).ToList().Where(b =>
+                            b.barricade.id == FOBs.FOBManager.config.data.FOBID &&
+                            b.group == GetTeam() &&
+                            (b.point - Position).sqrMagnitude <= Math.Pow(20, 2))
+                        .Count();
+
+            return nearbyFOBs != 0;
+        }
     }
 
     public class PlayerSave

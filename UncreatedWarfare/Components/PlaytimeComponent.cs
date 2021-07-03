@@ -174,7 +174,7 @@ namespace Uncreated.Warfare.Components
                 if (player.life.isDead)
                 {
                     if (shouldMessagePlayer)
-                        player.Message("deploy_c_death");
+                        player.Message("deploy_c_dead");
                     yield break;
                 }
                 if (shouldCancelOnMove && player.transform.position != originalPosition)
@@ -192,7 +192,7 @@ namespace Uncreated.Warfare.Components
                 if (fob != null && fob.Structure.barricade.isDead)
                 {
                     if (shouldMessagePlayer)
-                        player.Message("deploy_c_fobdestroyed");
+                        player.Message("deploy_c_fobdead");
                     yield break;
                 }
                 counter++;

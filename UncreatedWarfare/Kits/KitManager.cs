@@ -8,22 +8,56 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
+using static Uncreated.Warfare.UCWarfare;
 
 namespace Uncreated.Warfare.Kits
 {
 
     public delegate void KitChangedHandler(UnturnedPlayer player, Kit kit);
 
-    public class KitManager : JSONSaver<Kit>
+    public class KitManager : JSONSaver<Kit>, IDisposable
     {
         public static event KitChangedHandler OnKitChanged;
 
-        public KitManager() : base(Data.KitsStorage + "kits.json") { }
+        public KitManager() : base(Data.KitsStorage + "kits.json")
+        {
+            OnPlayerDeathGlobal += OnPlayerDeath;
+        }
         protected override string LoadDefaults() 
         {
             if (JSONMethods.DefaultKits != default)
                 return JsonConvert.SerializeObject(JSONMethods.DefaultKits, Formatting.Indented);
             else return "[]";
+        }
+        public static void OnPlayerDeath(DeathEventArgs death)
+        {
+            if (HasKit(death.dead.channel.owner.playerID.steamID, out var kit))
+            {
+                List<ItemJar> nonKitItems = new List<ItemJar>();
+
+                for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+                {
+                    if (page == PlayerInventory.AREA)
+                        continue;
+
+                    byte count = death.dead.inventory.getItemCount(page);
+
+                    for (byte index = 0; index < count; index++)
+                    {
+                        ItemJar jar = death.dead.inventory.getItem(page, 0);
+
+                        if (!kit.HasItemOfID(jar.item.id) && !(jar.item.id == 38324 || jar.item.id == 38322))
+                        {
+                            nonKitItems.Add(jar);
+                        }
+                    }
+                }
+
+                for (int i = 0; i < nonKitItems.Count; i++)
+                {
+                    ItemManager.dropItem(nonKitItems[i].item, death.dead.transform.position, true, true, true);
+                }
+            }
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
@@ -38,89 +72,6 @@ namespace Uncreated.Warfare.Kits
                 kit.Clothes = newClothes ?? kit.Clothes;
                 if(save) Save();
                 return true;
-            }
-            return false;
-        }
-        [Obsolete]
-        public static bool SetPropertyOld(string kitName, object property, object newValue, out bool propertyIsValid, out bool kitExists, out bool argIsValid)
-        {
-            propertyIsValid = false;
-            kitExists = false;
-            argIsValid = false;
-
-            if (!IsPropertyValid(property, out Kit.EKitProperty p))
-            {
-                return false;
-            }
-            propertyIsValid = true;
-            if(KitExists(kitName, out Kit kit))
-            {
-                kitExists = true;
-                switch (p)
-                {
-                    case Kit.EKitProperty.CLASS:
-                        if (Enum.TryParse<Kit.EClass>(newValue.ToString().ToUpper(), out var kitclass))
-                        {
-                            kit.Class = kitclass;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.BRANCH:
-                        if (Enum.TryParse<EBranch>(newValue.ToString().ToUpper(), out var branch))
-                        {
-                            kit.Branch = branch;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.TEAM:
-
-                        if (UInt64.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var team))
-                        {
-                            kit.Team = team;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.COST:
-                        if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var cost))
-                        {
-                            kit.Cost = cost;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.LEVEL:
-                        if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var level))
-                        {
-                            kit.RequiredLevel = level;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.TICKETS:
-                        if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var tickets))
-                        {
-                            kit.TicketCost = tickets;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.PREMIUM:
-                        if (Boolean.TryParse(newValue.ToString(), out var ispremium))
-                        {
-                            kit.IsPremium = ispremium;
-                            argIsValid = true;
-                        }
-                        break;
-                    case Kit.EKitProperty.CLEARINV:
-                        if (Boolean.TryParse(newValue.ToString(), out var clearinv))
-                        {
-                            kit.ShouldClearInventory = clearinv;
-                            argIsValid = true;
-                        }
-                        break;
-                }
-                if (argIsValid)
-                {
-                    Save();
-                    return true;
-                }
             }
             return false;
         }
@@ -317,6 +268,11 @@ namespace Uncreated.Warfare.Kits
                 kit.AllowedUsers.RemoveAll(i => i == playerID);
                 Save();
             }
+        }
+
+        public void Dispose()
+        {
+            OnPlayerDeathGlobal -= OnPlayerDeath;
         }
     }
 

@@ -26,18 +26,7 @@ namespace Uncreated.Warfare.Vehicles
         public static void AddRequestableVehicle(InteractableVehicle vehicle)
         {
             VehicleData data = new VehicleData(vehicle.id);
-            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
-            if (vehicleRegion != null)
-            {
-                List<VBarricade> barricades = new List<VBarricade>();
-                for (int i = 0; i < vehicleRegion.drops.Count; i++)
-                {
-                    BarricadeData bdata = vehicleRegion.barricades[i];
-                    barricades.Add(new VBarricade(bdata.barricade.id, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y, 
-                        bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
-                }
-                if (barricades.Count > 0) data.Metadata = new MetaSave(vehicle.id, barricades);
-            }
+            data.SaveMetaData(vehicle);
             AddObjectToSave(data);
         }
         public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
@@ -48,105 +37,6 @@ namespace Uncreated.Warfare.Vehicles
             bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
             vehicleData = v;
             return result;
-        }
-        [Obsolete]
-        public static void SetProperty(ushort vehicleID, object property, object newValue, out bool propertyIsValid, out bool vehicleExists, out bool argIsValid)
-        {
-            propertyIsValid = false;
-            vehicleExists = false;
-            argIsValid = false;
-
-            if (!IsPropertyValid<EVehicleProperty>(property.ToString().ToUpper(), out var p))
-            {
-                return;
-            }
-            propertyIsValid = true;
-
-            var vehicles = GetExistingObjects();
-            foreach (var data in vehicles)
-            {
-                if (data.VehicleID == vehicleID)
-                {
-                    vehicleExists = true;
-
-                    switch (p)
-                    {
-                        case EVehicleProperty.TEAM:
-                            if (UInt64.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var team))
-                            {
-                                argIsValid = true;
-                                data.Team = team;
-                            } break;
-                        case EVehicleProperty.RESPAWNTIME:
-                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var time))
-                            {
-                                argIsValid = true;
-                                data.RespawnTime = time;
-                            }
-                            break;
-                        case EVehicleProperty.COST:
-                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var cost))
-                            {
-                                argIsValid = true;
-                                data.Cost = cost;
-                            }
-                            break;
-                        case EVehicleProperty.LEVEL:
-                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var level))
-                            {
-                                argIsValid = true;
-                                data.RequiredLevel = level;
-                            }
-                            break;
-                        case EVehicleProperty.TICKETS:
-                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var tickets))
-                            {
-                                argIsValid = true;
-                                data.TicketCost = tickets;
-                            }
-                            break;
-                        case EVehicleProperty.COOLDOWN:
-                            if (UInt16.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var cooldown))
-                            {
-                                argIsValid = true;
-                                data.Cooldown = cooldown;
-                            }
-                            break;
-                        case EVehicleProperty.BRANCH:
-                            if (Enum.TryParse<EBranch>(newValue.ToString(), out var branch))
-                            {
-                                argIsValid = true;
-                                data.RequiredBranch = branch;
-                            }
-                            break;
-                        case EVehicleProperty.CLASS:
-                            if (Enum.TryParse<Kit.EClass>(newValue.ToString(), out var kitclass))
-                            {
-                                argIsValid = true;
-                                data.RequiredClass = kitclass;
-                            }
-                            break;
-                        case EVehicleProperty.REARMCOST:
-                            if (byte.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var rearmCost))
-                            {
-                                argIsValid = true;
-                                data.RearmCost = rearmCost;
-                            }
-                            break;
-                        case EVehicleProperty.REPAIRCOST:
-                            if (byte.TryParse(newValue.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var repairCost))
-                            {
-                                argIsValid = true;
-                                data.RepairCost = repairCost;
-                            }
-                            break;
-                    }
-                    if (argIsValid)
-                    {
-                        OverwriteSavedList(vehicles);
-                    }
-                }
-            }
         }
         public static void SetItems(ushort vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
         public static void AddCrewmanSeat(ushort vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
@@ -467,6 +357,21 @@ namespace Uncreated.Warfare.Vehicles
                     rtn.Add(VehicleSpawner.ActiveObjects[i]);
             }
             return rtn;
+        }
+        public void SaveMetaData(InteractableVehicle vehicle)
+        {
+            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
+            if (vehicleRegion != null)
+            {
+                List<VBarricade> barricades = new List<VBarricade>();
+                for (int i = 0; i < vehicleRegion.drops.Count; i++)
+                {
+                    BarricadeData bdata = vehicleRegion.barricades[i];
+                    barricades.Add(new VBarricade(bdata.barricade.id, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
+                        bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
+                }
+                if (barricades.Count > 0) Metadata = new MetaSave(vehicle.id, barricades);
+            }
         }
     }
 

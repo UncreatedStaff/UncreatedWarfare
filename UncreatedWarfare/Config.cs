@@ -64,9 +64,9 @@ namespace Uncreated.Warfare
             this.DelayAfterConnectionToSendTranslations = 0.5f;
             this.MaxMapHeight = 150;
             this.EndScreenUI = 32370;
-            this.ToastIDInfo = 32380;
-            this.ToastIDWarning = 32381;
-            this.ToastIDSevere = 32382;
+            this.ToastIDInfo = 32381;
+            this.ToastIDWarning = 32382;
+            this.ToastIDSevere = 32383;
             this.MiniToastXP = 32385;
             this.MiniToastOfficerPoints = 32387;
             this.UseColoredConsoleModule = true;

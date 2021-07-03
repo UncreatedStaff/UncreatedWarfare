@@ -47,6 +47,7 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
+        public static void ClearInventory(UCPlayer player) => ClearInventory(player.SteamPlayer());
         public static void ClearInventory(UnturnedPlayer player) => ClearInventory(player.Player.channel.owner);
         public static void ClearInventory(SteamPlayer player)
         {
