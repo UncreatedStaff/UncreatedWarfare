@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Commands
         public string Help => "Deploys you to a rallypoint";
         public string Syntax => "/rally";
         public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "rally" };
+        public List<string> Permissions => new List<string>() { "uc.rally" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);

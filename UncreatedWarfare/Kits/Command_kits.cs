@@ -16,26 +16,25 @@ namespace Uncreated.Warfare.Commands
         public string Help => "shows you a list of kits";
         public string Syntax => "/kits";
         public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "kits" };
+        public List<string> Permissions => new List<string>() { "uc.kits" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            var kits = KitManager.GetAccessibleKits(player.Steam64).ToList();
+            List<Kit> kits = KitManager.GetAccessibleKits(player.Steam64).ToList();
 
             if (kits.Count > 0) // create kit
             {
-                string list = "";
+                StringBuilder sb = new StringBuilder();
 
                 for (int i = 0; i < kits.Count; i++)
                 {
-                    list += kits[i].Team == player.GetTeam() ? $"<color=#c2fff5>{kits[i].Name}</color>" : $"<color=#97adaa>{kits[i].Name}</color>";
-                    if (i < kits.Count - 1)
-                        list += ", ";
+                    if (i != 0) sb.Append(", ");
+                    sb.Append(kits[i].Team == player.GetTeam() ? $"<color=#c2fff5>{kits[i].Name}</color>" : $"<color=#97adaa>{kits[i].Name}</color>");
                 }
 
                 player.Message("kits_heading");
-                player.Message(list);
+                player.Message(sb.ToString());
             }
             else
             {

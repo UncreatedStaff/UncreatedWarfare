@@ -33,26 +33,14 @@ namespace Uncreated.Warfare
         public bool IsOnline;
         public int cachedXp;
 
-        public static UCPlayer FromID(ulong steamID, ulong team = 0)
+        public static UCPlayer FromID(ulong steamID)
         {
-            //if (TeamManager.IsTeam1(team))
-            //{
-            //    return PlayerManager.Team1Players.Find(p => p.Steam64 == steamID);
-            //}
-            //else if (TeamManager.IsTeam2(team))
-            //{w
-            //    return PlayerManager.Team2Players.Find(p => p.Steam64 == steamID);
-            //}
-            //else
-            //{
-            //    return PlayerManager.OnlinePlayers.Find(p => p.Steam64 == steamID);
-            //}
             return PlayerManager.OnlinePlayers.Find(p => p.Steam64 == steamID);
         }
         public static UCPlayer FromCSteamID(CSteamID steamID) => FromID(steamID.m_SteamID);
-        public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID, player.quests.groupID.m_SteamID);
-        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => FromID(player.CSteamID.m_SteamID, player.Player.quests.groupID.m_SteamID);
-        public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID, player.player.quests.groupID.m_SteamID);
+        public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
+        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => FromID(player.CSteamID.m_SteamID);
+        public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID);
         public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
         {
             if (caller.DisplayName == "Console")

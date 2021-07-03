@@ -1072,26 +1072,32 @@ namespace Uncreated.Warfare
                         pricestring = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? Translate("kit_owned", player) : Translate("kit_price_credits", player, kit.Cost))
                             : Translate("kit_price_dollars", player, kit.PremiumCost);
                     }
-                    else if (kit.Cost == 0)
+                    else if (kit.RequiredLevel == 0)
                     {
-                        pricestring = Translate("kit_free", player);
+                        pricestring = Translate("kit_available", player);
                         pricecolor = UCWarfare.GetColorHex("kit_price_free");
                     }
                     else
                     {
-                        pricestring = Translate("kit_price_credits", player, kit.Cost);
-                        pricecolor = UCWarfare.GetColorHex("kit_price_credits");
+                        Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
+                        Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, player.GetTeamFromPlayerSteam64ID(), false), out _, out _);
+                        pricestring = Translate("kit_required_level", player, kit.RequiredLevel, 
+                            player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
+                        pricecolor = UCWarfare.GetColorHex("kit_price_tickets");
                     }
                 }
-                else if (kit.Cost == 0)
+                else if (kit.RequiredLevel == 0)
                 {
-                    pricestring = Translate("kit_free", player);
+                    pricestring = Translate("kit_available", player);
                     pricecolor = UCWarfare.GetColorHex("kit_price_free");
                 }
                 else
                 {
-                    pricestring = Translate("kit_price_credits", player, kit.Cost);
-                    pricecolor = UCWarfare.GetColorHex("kit_price_credits");
+                    Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
+                    Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, player.GetTeamFromPlayerSteam64ID(), false), out _, out _);
+                    pricestring = Translate("kit_required_level", player, kit.RequiredLevel,
+                        player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
+                    pricecolor = UCWarfare.GetColorHex("kit_price_tickets");
                 }
                 formatting = new object[3] { GetTeamNumberColorHex(kit.Team), pricestring, pricecolor };
                 if (player == 0)
