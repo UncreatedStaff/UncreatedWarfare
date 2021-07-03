@@ -65,11 +65,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             foreach (SteamPlayer client in Provider.clients)
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
             this.State = EState.FINISHED;
+            await Task.Delay(Config.end_delay * 1000);
             await InvokeOnTeamWin(winner);
             if (Config.ShowLeaderboard)
             {
                 EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
                 EndScreen.winner = winner;
+                EndScreen.warstats = GameStats;
                 EndScreen.OnLeaderboardExpired += OnShouldStartNewGame;
                 EndScreen.ShuttingDown = shutdownAfterGame;
                 EndScreen.ShuttingDownMessage = shutdownMessage;
@@ -400,6 +402,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public char DefendIcon;
         public bool ShowLeaderboard;
         public AutoObjectiveData PathingData;
+        public int end_delay;
         public TeamCTFData() => SetDefaults();
         public override void SetDefaults()
         {
@@ -424,6 +427,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.DefendIcon = '´';
             this.ShowLeaderboard = true;
             this.PathingData = new AutoObjectiveData();
+            this.end_delay = 5;
         }
         public class AutoObjectiveData
         {
@@ -470,7 +474,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 float radius_tuning_resolution, 
                 int max_flags, 
                 int min_flags, 
-                int max_redos
+                int max_redos,
+                int end_delay
                 )
             {
                 this.main_search_radius = main_search_radius;

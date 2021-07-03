@@ -2,24 +2,125 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Uncreated.Networking.Invocations
 {
     public delegate Task SendTask(byte[] data);
-    public class NetworkInvocationRaw<T>
+    public abstract class NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
-        private Reader<T> reader;
-        private Func<T, byte[]> writer;
-        public NetworkInvocationRaw(ECall call, Reader<T> read, Func<T, byte[]> write)
+        protected readonly ECall call;
+        protected const int WAIT_TIMEOUT = 2000; // 2 seconds
+        protected const int COUNTER_MAX = 20;
+        static byte _id = 0;
+        public static byte ID { 
+            get
+            {
+                _id++;
+                if (_id >= byte.MaxValue) _id = 1;
+                return _id;
+            }
+        }
+        protected SendTask send { get => Client.Send; }
+        public NetworkCall(ECall call)
         {
             this.call = call;
+        }
+        protected CancellationTokenSource AddPending(byte id)
+        {
+            CancellationTokenSource canceller = new CancellationTokenSource();
+            Client.Waits.Add(id, new KeyValuePair<bool, CancellationTokenSource>(true, canceller));
+            return canceller;
+        }
+        public static void RemovePending(byte id, bool dispose, bool cancel)
+        {
+            Warfare.F.Log("removed " + id.ToString());
+            if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
+            {
+                if (cancel)
+                    d.Value.Cancel();
+                if (dispose)
+                    d.Value.Dispose();
+                Client.Waits.Remove(id);
+            }
+        }
+        public static void RemovePending(byte id, CancellationTokenSource d, bool dispose, bool cancel)
+        {
+            Warfare.F.Log("removed with token " + id.ToString());
+            if (cancel)
+                d.Cancel();
+            if(dispose)
+                d.Dispose();
+            Client.Waits.Remove(id);
+        }
+        protected void InvokeAndWaitInternal(byte id, byte[] data, int counter, CancellationTokenSource canceller)
+        {
+             _ = Task.Run(async () =>
+            {
+                await send.Invoke(data);
+                int c = counter;
+                Warfare.F.Log("Starting delay " + counter.ToString());
+                try
+                {
+                    await Task.Delay(WAIT_TIMEOUT, canceller.Token);
+                }
+                catch (OperationCanceledException) when (canceller.Token.IsCancellationRequested)
+                {
+                    Warfare.F.Log("Task cancelled caught", ConsoleColor.Cyan);
+                    if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d2))
+                    {
+                        Warfare.F.Log("found in list", ConsoleColor.Cyan);
+                        Warfare.F.Log("was cancelled, success: " + d2.Key.ToString(), ConsoleColor.Cyan);
+                        RemovePending(id, d2.Value, true, false);
+                        if (!d2.Key && c++ < COUNTER_MAX) InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
+                    }
+                }
+                Warfare.F.Log("done", ConsoleColor.Cyan);
+                if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
+                {
+                    Warfare.F.Log("found in list", ConsoleColor.Cyan);
+                    if (!d.Value.IsCancellationRequested)
+                    {
+                        Warfare.F.Log("not cancelled yet", ConsoleColor.Cyan);
+                        if (c++ >= COUNTER_MAX)
+                        {
+                            RemovePending(id, d.Value, true, true);
+                        }
+                        else
+                            InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
+                    }
+                    else
+                    {
+                        Warfare.F.Log("was cancelled, success: " + d.Key.ToString(), ConsoleColor.Cyan);
+                        RemovePending(id, d.Value, true, false);
+                        if (!d.Key && c++ < COUNTER_MAX) InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
+                    }
+                }
+            }).ConfigureAwait(false);
+        }
+    }
+
+    public class NetworkInvocationRaw<T> : NetworkCall
+    {
+        private readonly Reader<T> reader;
+        private readonly Func<T, byte[]> writer;
+        public NetworkInvocationRaw(ECall call, Reader<T> read, Func<T, byte[]> write) : base(call)
+        {
             this.reader = read;
             this.writer = write;
         }
-        public async Task Invoke(T arg) => await send?.Invoke(writer.Invoke(arg).Callify(call));
+        public async Task Invoke(T arg) => await send?.Invoke(GetBytes(arg));
+        public byte[] GetBytes(T arg, byte id = 0) => writer.Invoke(arg).Callify(call, id);
+        public async Task InvokeAndWaitAsync(T arg)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
+        }
         public bool Read(byte[] bytes, out T output)
         {
             try
@@ -35,34 +136,52 @@ namespace Uncreated.Networking.Invocations
         }
     }
     public delegate TOutput Reader<TOutput>(byte[] bytes, int index, out int size);
-    public class NetworkInvocation
+    public class NetworkInvocation : NetworkCall
     {
-        private readonly ECall call;
-        private SendTask send { get => Client.Send; }
-        public NetworkInvocation(ECall call)
-        {
-            this.call = call;
-        }
+        public NetworkInvocation(ECall call) : base(call) { }
         public async Task Invoke()
         {
-            await send?.Invoke(ByteMath.Callify(call));
+            await send?.Invoke(GetBytes());
+        }
+        public byte[] GetBytes(byte id = 0)
+        {
+            return ByteMath.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync()
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
     }
-    public class NetworkInvocation<T1>
+    public class NetworkInvocation<T1> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Reader<T1> reader1;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.reader1 = ByteMath.GetReadFunction<T1>();
         }
         public async Task Invoke(T1 arg1)
         {
-            await send?.Invoke(writer1.Invoke(arg1).Callify(call));
+            await send?.Invoke(GetBytes(arg1));
+        }
+        public byte[] GetBytes(T1 arg1, byte id = 0)
+        {
+            return writer1.Invoke(arg1).Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1)
         {
@@ -78,17 +197,14 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2>
+    public class NetworkInvocation<T1, T2> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Reader<T1> reader1;
         private readonly Reader<T2> reader2;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.reader1 = ByteMath.GetReadFunction<T1>();
@@ -96,12 +212,25 @@ namespace Uncreated.Networking.Invocations
         }
         public async Task Invoke(T1 arg1, T2 arg2)
         {
+            await send?.Invoke(GetBytes(arg1, arg2));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, byte id = 0)
+        {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
             byte[] rtn = new byte[b1.Length + b2.Length];
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2)
         {
@@ -119,19 +248,16 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3>
+    public class NetworkInvocation<T1, T2, T3> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
         private readonly Reader<T1> reader1;
         private readonly Reader<T2> reader2;
         private readonly Reader<T3> reader3;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -141,6 +267,10 @@ namespace Uncreated.Networking.Invocations
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3)
         {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, byte id = 0)
+        {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
             byte[] b3 = writer3.Invoke(arg3);
@@ -148,7 +278,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
             Array.Copy(b3, 0, rtn, b1.Length + b2.Length, b3.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3)
         {
@@ -171,10 +310,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3, T4>
+    public class NetworkInvocation<T1, T2, T3, T4> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -183,9 +320,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T2> reader2;
         private readonly Reader<T3> reader3;
         private readonly Reader<T4> reader4;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -196,6 +332,10 @@ namespace Uncreated.Networking.Invocations
             this.reader4 = ByteMath.GetReadFunction<T4>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -210,7 +350,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b3, 0, rtn, i, b3.Length);
             i += b3.Length;
             Array.Copy(b4, 0, rtn, i, b4.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4)
         {
@@ -236,10 +385,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3, T4, T5>
+    public class NetworkInvocation<T1, T2, T3, T4, T5> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -250,9 +397,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T3> reader3;
         private readonly Reader<T4> reader4;
         private readonly Reader<T5> reader5;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -265,6 +411,10 @@ namespace Uncreated.Networking.Invocations
             this.reader5 = ByteMath.GetReadFunction<T5>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -282,7 +432,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b4, 0, rtn, i, b4.Length);
             i += b4.Length;
             Array.Copy(b5, 0, rtn, i, b5.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5)
         {
@@ -311,10 +470,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3, T4, T5, T6>
+    public class NetworkInvocation<T1, T2, T3, T4, T5, T6> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -327,9 +484,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T4> reader4;
         private readonly Reader<T5> reader5;
         private readonly Reader<T6> reader6;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -344,6 +500,10 @@ namespace Uncreated.Networking.Invocations
             this.reader6 = ByteMath.GetReadFunction<T6>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -364,7 +524,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b5, 0, rtn, i, b5.Length);
             i += b5.Length;
             Array.Copy(b6, 0, rtn, i, b6.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6)
         {
@@ -396,10 +565,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7>
+    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -414,9 +581,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T5> reader5;
         private readonly Reader<T6> reader6;
         private readonly Reader<T7> reader7;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -433,6 +599,10 @@ namespace Uncreated.Networking.Invocations
             this.reader7 = ByteMath.GetReadFunction<T7>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -456,7 +626,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b6, 0, rtn, i, b6.Length);
             i += b6.Length;
             Array.Copy(b7, 0, rtn, i, b7.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7)
         {
@@ -491,10 +670,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8>
+    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -511,9 +688,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T6> reader6;
         private readonly Reader<T7> reader7;
         private readonly Reader<T8> reader8;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -532,6 +708,10 @@ namespace Uncreated.Networking.Invocations
             this.reader8 = ByteMath.GetReadFunction<T8>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -558,7 +738,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b7, 0, rtn, i, b7.Length);
             i += b7.Length;
             Array.Copy(b8, 0, rtn, i, b8.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8)
         {
@@ -596,10 +785,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }
-    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -618,9 +805,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T7> reader7;
         private readonly Reader<T8> reader8;
         private readonly Reader<T9> reader9;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -641,6 +827,10 @@ namespace Uncreated.Networking.Invocations
             this.reader9 = ByteMath.GetReadFunction<T9>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -670,7 +860,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b8, 0, rtn, i, b8.Length);
             i += b8.Length;
             Array.Copy(b9, 0, rtn, i, b9.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9)
         {
@@ -711,10 +910,8 @@ namespace Uncreated.Networking.Invocations
             }
         }
     }    
-    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+    public class NetworkInvocation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : NetworkCall
     {
-        private ECall call;
-        private SendTask send { get => Client.Send; }
         private readonly Func<object, byte[]> writer1;
         private readonly Func<object, byte[]> writer2;
         private readonly Func<object, byte[]> writer3;
@@ -735,9 +932,8 @@ namespace Uncreated.Networking.Invocations
         private readonly Reader<T8> reader8;
         private readonly Reader<T9> reader9;
         private readonly Reader<T10> reader10;
-        public NetworkInvocation(ECall call)
+        public NetworkInvocation(ECall call) : base(call)
         {
-            this.call = call;
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.writer2 = ByteMath.GetWriteFunction<T2>();
             this.writer3 = ByteMath.GetWriteFunction<T3>();
@@ -760,6 +956,10 @@ namespace Uncreated.Networking.Invocations
             this.reader10 = ByteMath.GetReadFunction<T10>();
         }
         public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+        {
+            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10));
+        }
+        public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, byte id = 0)
         {
             byte[] b1 = writer1.Invoke(arg1);
             byte[] b2 = writer2.Invoke(arg2);
@@ -792,7 +992,16 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b9, 0, rtn, i, b9.Length);
             i += b9.Length;
             Array.Copy(b10, 0, rtn, i, b10.Length);
-            await send?.Invoke(rtn.Callify(call));
+            return rtn.Callify(call, id);
+        }
+        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+        {
+            if (send != null)
+            {
+                byte id = ID;
+                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, id);
+                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9, out T10 arg10)
         {

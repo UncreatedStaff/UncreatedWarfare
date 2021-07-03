@@ -40,6 +40,7 @@ namespace Uncreated.Players
             this.language = language ?? JSONMethods.DefaultLanguage;
             this.discord_account = discord_account ?? new DiscordInfo();
             this.warfare_stats = warfare_stats ?? new WarfareStats();
+            this.warfare_stats.player = this;
             this.warfare_stats.OnNeedsSave += SaveEscalator;
             this.discord_account.OnNeedsSave += SaveEscalator;
             this.globalization_data.OnNeedsSave += SaveEscalator;
@@ -60,7 +61,7 @@ namespace Uncreated.Players
             this.globalization_data = new GlobalizationData();
             this.language = Data.Languages.ContainsKey(this.steam_id) ? Data.Languages[this.steam_id] : JSONMethods.DefaultLanguage;
             this.discord_account = new DiscordInfo();
-            this.warfare_stats = new WarfareStats();
+            this.warfare_stats = new WarfareStats() { player = this };
             this.addresses.OnNeedsSave += SaveEscalator;
             this.warfare_stats.OnNeedsSave += SaveEscalator;
             this.discord_account.OnNeedsSave += SaveEscalator;
@@ -84,7 +85,7 @@ namespace Uncreated.Players
             this.globalization_data = new GlobalizationData();
             this.language = Data.Languages.ContainsKey(this.steam_id) ? Data.Languages[this.steam_id] : JSONMethods.DefaultLanguage;
             this.discord_account = new DiscordInfo();
-            this.warfare_stats = new WarfareStats();
+            this.warfare_stats = new WarfareStats() { player = this };
             this.warfare_stats.OnNeedsSave += SaveEscalator;
             this.discord_account.OnNeedsSave += SaveEscalator;
             this.globalization_data.OnNeedsSave += SaveEscalator;
@@ -145,6 +146,7 @@ namespace Uncreated.Players
                 }
                 usernames.PlayerNameObject = name;
             }
+            sessions.StartSession(DateTime.Now, 0);
         }
     }
     public abstract class StatsCollection : PlayerObject
@@ -161,9 +163,20 @@ namespace Uncreated.Players
         /// <summary>
         /// Adds a session to <see cref="sessions"/> and auto-saves.
         /// </summary>
-        public void AddSession(DateTime start, int duration_seconds)
+        [JsonIgnore]
+        public long current_session;
+        public void StartSession(DateTime start, int duration_seconds)
         {
-            sessions.Add(start.Ticks, duration_seconds);
+            current_session = start.Ticks;
+            sessions.Add(current_session, duration_seconds);
+            Save();
+        }
+        public void ModifyCurrentSession(int duration_seconds)
+        {
+            if (current_session == default) return;
+            if (sessions.ContainsKey(current_session))
+                sessions[current_session] = duration_seconds;
+            else sessions.Add(current_session, duration_seconds);
             Save();
         }
         [JsonConstructor]

@@ -17,19 +17,27 @@ namespace Uncreated.Networking
     {
         public static SendTask Send { get => _send; }
         public static SendTask _send;
+        public static Dictionary<byte, KeyValuePair<bool, CancellationTokenSource>> Waits =
+            new Dictionary<byte, KeyValuePair<bool, CancellationTokenSource>>();
         #region INVOCATIONS
+        // Confirm Received
+        public static NetworkInvocation<byte> ReceivedInvoc =
+            new NetworkInvocation<byte>(ECall.CONFIRM_RECEIVED);
+        // Failed to Receive
+        public static NetworkInvocation<byte> FailedToReceiveInvoc =
+            new NetworkInvocation<byte>(ECall.TELL_FAILED_TO_READ);
         // Identifying
-        public static NetworkInvocation<string> IdentifyInvoc = 
+        public static NetworkInvocation<string> IdentifyInvoc =
             new NetworkInvocation<string>(ECall.IDENTIFY_TO_SERVER);
         // Shutting down
         public static NetworkInvocation<ulong, string> ShuttingDownInvoc =
             new NetworkInvocation<ulong, string>(ECall.SERVER_SHUTTING_DOWN);
         // Starting up
-        public static NetworkInvocation<EStartupStep> StartingUpInvoc = 
+        public static NetworkInvocation<EStartupStep> StartingUpInvoc =
             new NetworkInvocation<EStartupStep>(ECall.SERVER_STARTING_UP);
         // Player List
         public static NetworkInvocationRaw<List<FPlayerName>> PlayerListInvoc =
-            new NetworkInvocationRaw<List<FPlayerName>>(ECall.PLAYER_LIST, 
+            new NetworkInvocationRaw<List<FPlayerName>>(ECall.PLAYER_LIST,
                 (byte[] arr, int index, out int size) =>
             {
                 if (ByteMath.ReadUInt8(out byte player_count, 0, arr))
@@ -67,8 +75,8 @@ namespace Uncreated.Networking
                     return bytes.ToArray();
                 });
         // Player Joined
-        public static NetworkInvocationRaw<FPlayerName> PlayerJoinedInvoc = 
-            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_JOINED, 
+        public static NetworkInvocationRaw<FPlayerName> PlayerJoinedInvoc =
+            new NetworkInvocationRaw<FPlayerName>(ECall.PLAYER_JOINED,
                 (byte[] arr, int index, out int size) => FPlayerName.FromBytes(arr, out size, index),
                 (player) => player.GetBytes());
         // Player Left
@@ -100,10 +108,10 @@ namespace Uncreated.Networking
         public static NetworkInvocation<ulong, ulong, string, DateTime> PlayerWarnedInvoc =
             new NetworkInvocation<ulong, ulong, string, DateTime>(ECall.LOG_WARNING);
         // On Duty
-        public static NetworkInvocation<ulong, bool, DateTime> PlayerOnDutyInvoc = 
+        public static NetworkInvocation<ulong, bool, DateTime> PlayerOnDutyInvoc =
             new NetworkInvocation<ulong, bool, DateTime>(ECall.ON_DUTY);
         // Off Duty
-        public static NetworkInvocation<ulong, bool, DateTime> PlayerOffDutyInvoc = 
+        public static NetworkInvocation<ulong, bool, DateTime> PlayerOffDutyInvoc =
             new NetworkInvocation<ulong, bool, DateTime>(ECall.OFF_DUTY);
         // Invoke Ban
         public static NetworkInvocation<ulong, ulong, string, uint, DateTime> InvokeBanInvoc =
@@ -143,7 +151,7 @@ namespace Uncreated.Networking
             new NetworkInvocation<ulong, ulong>(ECall.GIVE_INTERN);
         // Invoke Give Helper
         public static NetworkInvocation<ulong, ulong> InvokeGiveHelperInvoc =
-            new NetworkInvocation<ulong, ulong>(ECall.GIVE_HELPER);        
+            new NetworkInvocation<ulong, ulong>(ECall.GIVE_HELPER);
         // Invoke Revoke Admin
         public static NetworkInvocation<ulong, ulong> InvokeRevokeAdminInvoc =
             new NetworkInvocation<ulong, ulong>(ECall.REVOKE_ADMIN);
@@ -154,32 +162,36 @@ namespace Uncreated.Networking
         public static NetworkInvocation<ulong, ulong> InvokeRevokeHelperInvoc =
             new NetworkInvocation<ulong, ulong>(ECall.REVOKE_HELPER);
         #endregion
+        public static async Task ConfirmReceived(byte message_id) =>
+            await ReceivedInvoc.Invoke(message_id);
+        public static async Task FailureToReceive(byte message_id) =>
+            await FailedToReceiveInvoc.Invoke(message_id);
         public static async Task Identify() =>
-            await IdentifyInvoc.Invoke(TCPClient.I.Identity);
+            await IdentifyInvoc.InvokeAndWaitAsync(TCPClient.I.Identity);
         public static async Task SendShuttingDown(ulong admin, string reason) =>
             await ShuttingDownInvoc.Invoke(admin, reason);
         public static async Task SendStartingUp(EStartupStep step) =>
             await StartingUpInvoc.Invoke(step);
         public static async Task SendPlayerList(List<FPlayerName> players) =>
-            await PlayerListInvoc.Invoke(players);
+            await PlayerListInvoc.InvokeAndWaitAsync(players);
         public static async Task SendPlayerJoined(FPlayerName player) =>
-            await PlayerJoinedInvoc?.Invoke(player);
+            await PlayerJoinedInvoc?.InvokeAndWaitAsync(player);
         public static async Task SendPlayerLeft(FPlayerName player) =>
-            await PlayerLeftInvoc.Invoke(player);
+            await PlayerLeftInvoc.InvokeAndWaitAsync(player);
         public static async Task SendPlayerUpdatedUsername(FPlayerName player) =>
-            await PlayerUpdatedUsernameInvoc.Invoke(player);
+            await PlayerUpdatedUsernameInvoc.InvokeAndWaitAsync(player);
         public static async Task LogPlayerBanned(ulong violator, ulong admin_id, string reason, uint duration, DateTime time) =>
-            await PlayerBannedInvoc.Invoke(violator, admin_id, reason, duration, time);
+            await PlayerBannedInvoc.InvokeAndWaitAsync(violator, admin_id, reason, duration, time);
         public static async Task LogPlayerKicked(ulong violator, ulong admin_id, string reason, DateTime time) =>
-            await PlayerKickedInvoc.Invoke(violator, admin_id, reason, time);
+            await PlayerKickedInvoc.InvokeAndWaitAsync(violator, admin_id, reason, time);
         public static async Task LogPlayerBattleyeKicked(ulong violator, string reason, DateTime time) =>
-            await PlayerBEKickedInvoc.Invoke(violator, reason, time);
+            await PlayerBEKickedInvoc.InvokeAndWaitAsync(violator, reason, time);
         public static async Task LogPlayerTeamkilled(ulong violator, ulong dead, ulong landmine_assoc, string death_cause, DateTime time) =>
-            await PlayerTeamkilledInvoc.Invoke(violator, dead, landmine_assoc, death_cause, time);
+            await PlayerTeamkilledInvoc.InvokeAndWaitAsync(violator, dead, landmine_assoc, death_cause, time);
         public static async Task LogPlayerUnbanned(ulong pardoned, ulong admin_id, DateTime time) =>
-            await PlayerUnbannedInvoc.Invoke(pardoned, admin_id, time);
+            await PlayerUnbannedInvoc.InvokeAndWaitAsync(pardoned, admin_id, time);
         public static async Task LogPlayerWarned(ulong violator, ulong admin_id, string reason, DateTime time) =>
-            await PlayerWarnedInvoc.Invoke(violator, admin_id, reason, time);
+            await PlayerWarnedInvoc.InvokeAndWaitAsync(violator, admin_id, reason, time);
         public static async Task SendPlayerOnDuty(ulong player, bool intern) =>
             await PlayerOnDutyInvoc.Invoke(player, intern, DateTime.Now);
         public static async Task SendPlayerOffDuty(ulong player, bool intern) =>
@@ -189,30 +201,72 @@ namespace Uncreated.Networking
         public static async Task SendReloading(ulong admin, string reason) =>
             await InvokeServerReloadingInvoc.Invoke(admin, reason);
 
-
+        private static void ReceiveConfirmation(byte id)
+        {
+            Warfare.F.Log("Confirmed message " + id.ToString(), ConsoleColor.Cyan);
+            NetworkCall.RemovePending(id, false, true);
+        }
+        private static void ReceiveFailure(byte id)
+        {
+            Warfare.F.Log("Failure to read message " + id.ToString(), ConsoleColor.Cyan);
+            if (Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> result))
+            {
+                result = new KeyValuePair<bool, CancellationTokenSource>(false, result.Value);
+                NetworkCall.RemovePending(id, result.Value, false, true);
+            }
+        }
         internal static async Task ProcessResponse(byte[] message)
         {
             if (message.Length <= 0) return;
+            if (message.Length < sizeof(ushort) + 1)
+            {
+                Warfare.F.LogError("Received a message under the minimum size of 3");
+            }
             ECall call;
+            byte id;
             if (ByteMath.ReadUInt16(out ushort callid, 0, message))
             {
                 call = (ECall)callid;
+                id = message[2];
             }
             else
             {
                 Warfare.F.LogError("Incorrect call enumerator given in response: " + message[0].ToString(Warfare.Data.Locale));
                 return;
             }
-            byte[] data = new byte[message.Length - sizeof(ushort)];
-            Array.Copy(message, sizeof(ushort), data, 0, data.Length);
+            byte[] data = new byte[message.Length - sizeof(ushort) - 1];
+            Array.Copy(message, sizeof(ushort) + 1, data, 0, data.Length);
             Warfare.F.Log(string.Join(",", message));
             Warfare.F.Log(string.Join(",", data));
+            bool success = false;
             switch (call)
             {
-                case ECall.INVOKE_BAN:
-                    InvokeBanInvoc.Read(data, out ulong banned, out ulong admin, out string reason, out uint duration, out DateTime timestamp);
-                    await ReceiveInvokeBan(banned, admin, reason, duration, timestamp);
+                case ECall.CONFIRM_RECEIVED:
+                    if (ReceivedInvoc.Read(data, out byte receive_id))
+                    {
+                        ReceiveConfirmation(receive_id);
+                        success = true;
+                    }
                     break;
+                case ECall.TELL_FAILED_TO_READ:
+                    if (FailedToReceiveInvoc.Read(data, out byte fail_id))
+                    {
+                        ReceiveFailure(fail_id);
+                        success = true;
+                    }
+                    break;
+                case ECall.INVOKE_BAN:
+                    if (InvokeBanInvoc.Read(data, out ulong banned, out ulong admin, out string reason, out uint duration, out DateTime timestamp))
+                    {
+                        await ReceiveInvokeBan(banned, admin, reason, duration, timestamp);
+                        success = true;
+                    }
+                    break;
+            }
+            if (id > 0)
+            {
+                if (success) await ConfirmReceived(id);
+                else await FailureToReceive(id);
             }
         }
         private static async Task ReceiveInvokeBan(ulong banned, ulong admin, string reason, uint duration, DateTime timestamp)
@@ -371,37 +425,39 @@ namespace Uncreated.Networking
     }
     public enum ECall : ushort
     {
-        IDENTIFY_TO_SERVER = 1,
-        SERVER_SHUTTING_DOWN = 2,
-        SERVER_STARTING_UP = 3,
-        PLAYER_LIST = 4,
-        PLAYER_JOINED = 5,
-        PLAYER_LEFT = 6,
-        USERNAME_UPDATED = 7,
-        LOG_BAN = 8,
-        LOG_KICK = 9,
-        LOG_BATTLEYEKICK = 10,
-        LOG_TEAMKILL = 11,
-        LOG_UNBAN = 12,
-        LOG_WARNING = 13,
-        ON_DUTY = 14,
-        OFF_DUTY = 15,
-        INVOKE_BAN = 16,
-        INVOKE_KICK = 17,
-        INVOKE_WARN = 18,
-        INVOKE_UNBAN = 19,
-        INVOKE_GIVE_KIT = 20,
-        INVOKE_REVOKE_KIT = 21,
-        INVOKE_SHUTDOWN = 22,
-        INVOKE_SHUTDOWN_AFTER_GAME = 23,
-        INVOKE_SET_OFFICER_LEVEL = 24,
-        SERVER_RELOADING = 25,
-        GIVE_ADMIN = 26,
-        GIVE_INTERN = 27,
-        GIVE_HELPER = 28,
-        REVOKE_ADMIN = 29,
-        REVOKE_INTERN = 30,
-        REVOKE_HELPER = 31
+        CONFIRM_RECEIVED = 0,
+        TELL_FAILED_TO_READ = 1,
+        IDENTIFY_TO_SERVER = 2,
+        SERVER_SHUTTING_DOWN = 3,
+        SERVER_STARTING_UP = 4,
+        PLAYER_LIST = 5,
+        PLAYER_JOINED = 6,
+        PLAYER_LEFT = 7,
+        USERNAME_UPDATED = 8,
+        LOG_BAN = 9,
+        LOG_KICK = 10,
+        LOG_BATTLEYEKICK = 11,
+        LOG_TEAMKILL = 12,
+        LOG_UNBAN = 13,
+        LOG_WARNING = 14,
+        ON_DUTY = 15,
+        OFF_DUTY = 16,
+        INVOKE_BAN = 17,
+        INVOKE_KICK = 18,
+        INVOKE_WARN = 19,
+        INVOKE_UNBAN = 20,
+        INVOKE_GIVE_KIT = 21,
+        INVOKE_REVOKE_KIT = 22,
+        INVOKE_SHUTDOWN = 23,
+        INVOKE_SHUTDOWN_AFTER_GAME = 24,
+        INVOKE_SET_OFFICER_LEVEL = 25,
+        SERVER_RELOADING = 26,
+        GIVE_ADMIN = 27,
+        GIVE_INTERN = 28,
+        GIVE_HELPER = 29,
+        REVOKE_ADMIN = 30,
+        REVOKE_INTERN = 31,
+        REVOKE_HELPER = 32
     }
     public enum EStartupStep : byte
     {

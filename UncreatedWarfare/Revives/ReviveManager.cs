@@ -56,7 +56,7 @@ namespace Uncreated.Warfare.Revives
             F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
-                if (parameters.damage > parameters.player.life.health && parameters.damage < 100 && parameters.player.life.health > 0 && !parameters.player.life.isDead) // insta kills break this...
+                if (parameters.damage > parameters.player.life.health && parameters.damage < 100 && parameters.player.life.health > 0 && !parameters.player.life.isDead)
                 {
                     F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
 
@@ -64,7 +64,7 @@ namespace Uncreated.Warfare.Revives
 
                     parameters.player.equipment.dequip();
 
-                    parameters.player.life.serverModifyHealth(10F - parameters.player.life.health);
+                    parameters.player.life.serverModifyHealth(UCWarfare.Config.ReviveTimeSeconds - parameters.player.life.health);
                     parameters.player.life.serverSetBleeding(true);
 
                     parameters.player.movement.sendPluginSpeedMultiplier(0.1F);
@@ -121,7 +121,6 @@ namespace Uncreated.Warfare.Revives
                 reviver.TellStanceNoDelay(EPlayerStance.PRONE);
             }
         }
-
         public void Dispose()
         {
             foreach(DamagePlayerParameters paramaters in DownedPlayers.Values)
@@ -140,7 +139,6 @@ namespace Uncreated.Warfare.Revives
             DamageTool.damagePlayerRequested -= OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
         }
-
         private class Reviver : UnturnedPlayerComponent
         {
             private Coroutine bleedout;

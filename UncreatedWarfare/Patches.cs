@@ -439,13 +439,16 @@ namespace Uncreated.Warfare
                     {
                         if (!__instance.isBleeding)
                         {
-                            if (Data.ReviveManager != null && Data.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
+                            if (simulation - ___lastBleed > Provider.modeConfigData.Players.Bleed_Damage_Ticks)
                             {
-                                ___lastBleed = simulation;
-                                ____isBleeding = true;
-                                DamagePlayerParameters p = Data.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID];
-                                p.damage = 1;
-                                __instance.askDamage(1, p.direction, p.cause, p.limb, p.killer, out EPlayerKill _, canCauseBleeding: false, bypassSafezone: true);
+                                if (Data.ReviveManager != null && Data.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
+                                {
+                                    ___lastBleed = simulation;
+                                    ____isBleeding = true;
+                                    DamagePlayerParameters p = Data.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID];
+                                    p.damage = 1;
+                                    __instance.askDamage(1, p.direction, p.cause, p.limb, p.killer, out EPlayerKill _, canCauseBleeding: false, bypassSafezone: true);
+                                }
                             }
                         }
                     }

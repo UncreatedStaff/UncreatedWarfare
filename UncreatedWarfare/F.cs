@@ -1723,7 +1723,7 @@ namespace Uncreated.Warfare
         {
             if (TryGetPlaytimeComponent(player, out PlaytimeComponent c))
             {
-                return c.UCPlayer;
+                return c.UCPlayerStats;
             } else
             {
                 return UncreatedPlayer.Load(player);

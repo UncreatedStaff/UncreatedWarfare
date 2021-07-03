@@ -13,14 +13,16 @@ namespace Uncreated.Warfare.Stats
 {
     public class WarfareStats : StatsCollection
     {
+        [JsonIgnore]
+        public UncreatedPlayer player;
         public const string WarfareName = "ucwarfare";
         public const string WarfareDisplayName = "Uncreated Warfare";
         public float time_deployed;
         public uint kills;
         public uint deaths;
         public uint teamkills;
-        public uint credits;
-        public int xp;
+        public uint officer_points;
+        public uint xp;
         public int level;
         public string rank;
         public string rank_abbreviation;
@@ -136,9 +138,9 @@ namespace Uncreated.Warfare.Stats
             Save();
         }
         [JsonConstructor]
-        public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint credits, int xp, int level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
+        public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint officer_points, uint xp, int level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
         {
-            XPManager.GetRank(xp, out _, out Rank playerRank);
+            XPManager.GetRank(unchecked((int)xp), out _, out Rank playerRank);
 
             this.name = WarfareName;
             this.display_name = WarfareDisplayName;
@@ -147,7 +149,7 @@ namespace Uncreated.Warfare.Stats
             this.kills = kills;
             this.deaths = deaths;
             this.teamkills = teamkills;
-            this.credits = credits;
+            this.officer_points = officer_points;
             this.xp = xp;
             this.level = playerRank.level;
             this.rank = playerRank.name;
@@ -159,7 +161,7 @@ namespace Uncreated.Warfare.Stats
         }
         public WarfareStats()
         {
-            XPManager.GetRank(0, out _, out var rank);
+            Rank rank = XPManager.GetRankFromLevel(1);
 
             this.name = WarfareName;
             this.display_name = WarfareDisplayName;
@@ -168,7 +170,7 @@ namespace Uncreated.Warfare.Stats
             this.kills = 0;
             this.deaths = 0;
             this.teamkills = 0;
-            this.credits = 0;
+            this.officer_points = 0;
             this.xp = 0;
             this.level = 0;
             this.rank = rank.name;
@@ -176,6 +178,52 @@ namespace Uncreated.Warfare.Stats
             this.teams = new List<Team>();
             this.offences = new Offences();
             this.offences.OnNeedsSave += SaveEscalator;
+        }
+        public void AddOfficerPoints(int amount)
+        {
+            if (amount > 0)
+                this.officer_points += unchecked((uint)amount);
+            else if (amount < 0)
+                this.officer_points -= unchecked((uint)-amount);
+            ulong team_number = player.steam_id.GetTeamFromPlayerSteam64ID();
+                int teamindex = teams.FindIndex(x => x.id == team_number);
+            if (teamindex != -1)
+            {
+                teams[teamindex].AddOfficerPoints(amount);
+            }
+            else
+            {
+                if (team_number == 1 || team_number == 2)
+                {
+                    Team team = new Team(team_number, team_number == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(team_number, 0, false));
+                    team.AddOfficerPoints(amount);
+                    AddTeam(team);
+                }
+            }
+            Save();
+        }
+        public void AddXP(int amount)
+        {
+            if (amount > 0)
+                this.xp += unchecked((uint)amount);
+            else if (amount < 0)
+                this.xp -= unchecked((uint)-amount);
+            ulong team_number = player.steam_id.GetTeamFromPlayerSteam64ID();
+            int teamindex = teams.FindIndex(x => x.id == team_number);
+            if (teamindex != -1)
+            {
+                teams[teamindex].AddXP(amount);
+            }
+            else
+            {
+                if (team_number == 1 || team_number == 2)
+                {
+                    Team team = new Team(team_number, team_number == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(team_number, 0, false));
+                    team.AddXP(amount);
+                    AddTeam(team);
+                }
+            }
+            Save();
         }
     }
     public class Offences : PlayerObject
@@ -322,8 +370,8 @@ namespace Uncreated.Warfare.Stats
         public uint kills;
         public uint deaths;
         public uint teamkills;
-        public uint credits;
-        public int xp;
+        public uint officer_points;
+        public uint xp;
         public int level;
         public string rank;
         public string rank_abbreviation;
@@ -344,9 +392,9 @@ namespace Uncreated.Warfare.Stats
         public float playtime;
 
         [JsonConstructor]
-        public Team(ulong id, string name, string display_name, uint kills, uint deaths, uint teamkills, uint credits, int xp, int level, string rank, string rank_abbreviation, List<Kit> kits, List<string> owned_paid_kits, List<KillTrack> kill_counts, float time_deployed, float playtime)
+        public Team(ulong id, string name, string display_name, uint kills, uint deaths, uint teamkills, uint credits, uint xp, List<Kit> kits, List<string> owned_paid_kits, List<KillTrack> kill_counts, float time_deployed, float playtime)
         {
-            XPManager.GetRank(xp, out _, out var playerRank);
+            XPManager.GetRank(unchecked((int)xp), out _, out Rank rank);
 
             this.id = id;
             this.name = name ?? string.Empty;
@@ -354,11 +402,11 @@ namespace Uncreated.Warfare.Stats
             this.kills = kills;
             this.deaths = deaths;
             this.teamkills = teamkills;
-            this.credits = credits;
+            this.officer_points = credits;
             this.xp = xp;
-            this.level = playerRank.level;
-            this.rank = playerRank.name;
-            this.rank_abbreviation = playerRank.abbreviation;
+            this.level = rank.level;
+            this.rank = rank.name;
+            this.rank_abbreviation = rank.abbreviation;
             this.kits = kits ?? new List<Kit>();
             this.owned_paid_kits = owned_paid_kits ?? new List<string>();
             this.kill_counts = kill_counts ?? new List<KillTrack>();
@@ -369,7 +417,7 @@ namespace Uncreated.Warfare.Stats
         }
         public Team(ulong id, string name, string display_name)
         {
-            XPManager.GetRank(xp, out _, out var playerRank);
+            Rank rank = XPManager.GetRankFromLevel(1);
 
             this.id = id;
             this.name = name ?? string.Empty;
@@ -377,11 +425,11 @@ namespace Uncreated.Warfare.Stats
             this.kills = 0;
             this.deaths = 0;
             this.teamkills = 0;
-            this.credits = 0;
+            this.officer_points = 0;
             this.xp = 0;
-            this.level = playerRank.level;
-            this.rank = playerRank.name;
-            this.rank_abbreviation = playerRank.abbreviation;
+            this.level = rank.level;
+            this.rank = rank.name;
+            this.rank_abbreviation = rank.abbreviation;
             this.kits = new List<Kit>();
             this.owned_paid_kits = new List<string>();
             this.kill_counts = new List<KillTrack>();
@@ -489,6 +537,23 @@ namespace Uncreated.Warfare.Stats
             }
             else F.Log("dead was null");
             if (save) Save();
+        }
+
+        public void AddOfficerPoints(int amount)
+        {
+            if (amount > 0)
+                this.officer_points += unchecked((uint)amount);
+            else if (amount < 0)
+                this.officer_points -= unchecked((uint)-amount);
+            Save();
+        }
+        public void AddXP(int amount)
+        {
+            if (amount > 0)
+                this.xp += unchecked((uint)amount);
+            else if (amount < 0)
+                this.xp -= unchecked((uint)-amount);
+            Save();
         }
     }
     public class Kit : PlayerObject

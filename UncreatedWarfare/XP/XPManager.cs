@@ -77,6 +77,11 @@ namespace Uncreated.Warfare.XP
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
                 await VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
             await rtn;
+            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            {
+                c.stats.AddXP(amount);
+                c.UCPlayerStats.warfare_stats.AddXP(amount);
+            }
         }
         public static void UpdateUI(Player nelsonplayer, int balance)
         {

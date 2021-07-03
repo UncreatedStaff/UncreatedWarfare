@@ -68,6 +68,11 @@ namespace Uncreated.Warfare.Officers
 
             UpdateUI(player, newBalance);
             await rtn;
+            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            {
+                c.stats.AddXP(amount);
+                c.UCPlayerStats.warfare_stats.AddXP(amount);
+            }
         }
         public static Rank GetOfficerRank(int officerRankLevel)
         {

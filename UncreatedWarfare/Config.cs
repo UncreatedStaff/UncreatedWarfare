@@ -47,6 +47,7 @@ namespace Uncreated.Warfare
         public bool RemoveLandminesOnDisconnect;
         public string ActiveGamemode;
         public string DiscordInviteCode;
+        public float ReviveTimeSeconds;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -76,6 +77,7 @@ namespace Uncreated.Warfare
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
+            this.ReviveTimeSeconds = 50f;
         }
     }
     public class Modules

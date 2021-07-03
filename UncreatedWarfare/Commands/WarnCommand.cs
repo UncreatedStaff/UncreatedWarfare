@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                     await Client.LogPlayerWarned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 F.SendChat(player, "warn_WarnedPlayer_Feedback", UCWarfare.GetColor("warn_feedback"), name.CharacterName);
-                                ToastMessage.QueueMessage(player, F.Translate("warn_WarnedPlayer_DM", player, callerName.CharacterName, reason), ToastMessageSeverity.WARNING);
+                                ToastMessage.QueueMessage(steamplayer, F.Translate("warn_WarnedPlayer_DM", player, callerName.CharacterName, reason), ToastMessageSeverity.WARNING);
                                 F.SendChat(steamplayer.playerID.steamID, "warn_WarnedPlayer_DM", UCWarfare.GetColor("warn_message"), callerName.CharacterName, reason);
                                 F.BroadcastToAllExcept(new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID }, "warn_WarnedPlayer_Broadcast", UCWarfare.GetColor("warn_broadcast"), name.CharacterName, callerName.CharacterName);
                             }
