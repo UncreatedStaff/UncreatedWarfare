@@ -47,6 +47,7 @@ namespace Uncreated.Warfare
         public bool RemoveLandminesOnDisconnect;
         public string ActiveGamemode;
         public string DiscordInviteCode;
+        public float ReviveTimeSeconds;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -64,9 +65,9 @@ namespace Uncreated.Warfare
             this.DelayAfterConnectionToSendTranslations = 0.5f;
             this.MaxMapHeight = 150;
             this.EndScreenUI = 32370;
-            this.ToastIDInfo = 32380;
-            this.ToastIDWarning = 32381;
-            this.ToastIDSevere = 32382;
+            this.ToastIDInfo = 32381;
+            this.ToastIDWarning = 32382;
+            this.ToastIDSevere = 32383;
             this.MiniToastXP = 32385;
             this.MiniToastOfficerPoints = 32387;
             this.UseColoredConsoleModule = true;
@@ -76,6 +77,7 @@ namespace Uncreated.Warfare
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
+            this.ReviveTimeSeconds = 50f;
         }
     }
     public class Modules

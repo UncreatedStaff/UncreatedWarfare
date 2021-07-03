@@ -114,6 +114,7 @@ namespace Uncreated.Warfare
         public static StructureSaver StructureManager;
         public static Whitelister Whitelister;
         public static SquadManager SquadManager;
+        public static CooldownManager Cooldowns;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
         public static TeamCTF FlagGamemode
@@ -192,6 +193,7 @@ namespace Uncreated.Warfare
             TicketManager = new TicketManager();
             XPManager = new XPManager();
             OfficerManager = new OfficerManager();
+            Cooldowns = new CooldownManager();
 
             F.Log("Searching for gamemode: " + UCWarfare.Config.ActiveGamemode, ConsoleColor.Magenta);
             Gamemode = Gamemode.FindGamemode(UCWarfare.Config.ActiveGamemode, GAME_MODES);

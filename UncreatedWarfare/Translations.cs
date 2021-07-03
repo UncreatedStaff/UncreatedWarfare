@@ -262,7 +262,6 @@ namespace Uncreated.Warfare
                 { "next_game_starting_format", "{0:mm\\:ss}" },
 
                 // SIGNS - must prefix with "sign_" for them to work
-                { "sign_test", "<color=#ff00ff>This is the english translation for that sign.</color>" },
                 { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
 
                 // Admin Commands
@@ -491,7 +490,6 @@ namespace Uncreated.Warfare
                 { "dominating", "Your team is dominating!" },
 
                 // Branch names
-
                 { "branch_changed", "<color=#ccb89f>You have joined the <color=#ff9182>{0}</color>.</color>" },
                 { "team1_infantry", "Infantry Division" },
                 { "team2_infantry", "Infantry Division" },
@@ -501,6 +499,10 @@ namespace Uncreated.Warfare
                 { "team2_airforce", "Airforce" },
                 { "team1_specops", "Navy Seals" },
                 { "team2_specops", "Spetsnaz" },
+
+                // Kit Signs
+                { "kit_price_credits", "C {0}" },
+                { "kit_price_dollars", "$ {0}" }
 
             };
         }

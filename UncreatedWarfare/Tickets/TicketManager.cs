@@ -305,7 +305,7 @@ namespace Uncreated.Warfare.Tickets
             if (Team1Tickets <= 0)
             {
                 Team1Tickets = 0;
-                await Data.Gamemode.DeclareWin(TeamManager.Team2ID);
+                await Data.Gamemode.DeclareWin(2);
             }
             UpdateUITeam1();
         }
@@ -315,7 +315,7 @@ namespace Uncreated.Warfare.Tickets
             if (Team2Tickets <= 0)
             {
                 Team2Tickets = 0;
-                await Data.Gamemode.DeclareWin(TeamManager.Team1ID);
+                await Data.Gamemode.DeclareWin(1);
             }
             UpdateUITeam2();
         }

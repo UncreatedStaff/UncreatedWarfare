@@ -11,15 +11,24 @@ namespace Uncreated.Networking
     public static class ByteMath
     {
         public static byte ToByte(this bool source) => (byte)(source ? 1 : 0);
-        public static byte[] Callify(this byte[] source, ECall call)
+        public static byte[] Callify(this byte[] source, ECall call, byte id = 0)
         {
-            byte[] n = new byte[source.Length + sizeof(ushort)];
-            Array.Copy(source, 0, n, sizeof(ushort), source.Length);
+            byte[] n = new byte[source.Length + sizeof(ushort) + 1];
+            Array.Copy(source, 0, n, sizeof(ushort) + 1, source.Length);
             byte[] b = BitConverter.GetBytes((ushort)call);
             Array.Copy(b, 0, n, 0, b.Length);
+            n[2] = id;
             return n;
         }
-        public static byte[] Callify(ECall call) => BitConverter.GetBytes((ushort)call);
+        public static byte[] Callify(ECall call, byte id = 0)
+        {
+            byte[] n = new byte[sizeof(ushort) + 1];
+            byte[] us = BitConverter.GetBytes((ushort)call);
+            n[0] = us[0];
+            n[1] = us[1];
+            n[2] = id;
+            return n;
+        }
         public static bool ReadUInt16(out ushort output, int index, byte[] source)
         {
             if (source.Length > index + sizeof(ushort) - 1)

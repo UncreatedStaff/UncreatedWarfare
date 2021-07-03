@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (command[0].ToLower() == "main")
                 {
-                    c.TeleportDelayed(team.GetBaseSpawn(), team.GetBaseAngle(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
+                    c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
                 }
                 else if (command[0].ToLower() == "lobby")
                 {

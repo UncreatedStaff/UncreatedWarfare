@@ -67,8 +67,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             await rtn;
         }
-        public void SendScreenToPlayer(ulong winner, SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
-        public void SendScreenToPlayer(SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner));
+        public void SendScreenToPlayer(SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner), progresschars);
         public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor, string progresschars)
         {
             oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
@@ -81,15 +80,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             player.player.life.serverModifyStamina(100);
             player.player.movement.sendPluginJumpMultiplier(0f);
             player.player.teleportToLocation(F.GetBaseSpawn(player.player.channel.owner), winner == 1 ? 0f : (winner == 2 ? 85f : 0));
+            // error is here
+            F.Log("0");
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
+            F.Log("1");
             PlayerCurrentGameStats stats;
+            F.Log("2");
             if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
                 stats = new PlayerCurrentGameStats(player.player);
             else stats = statsvalue.Value;
+            F.Log("3");
             string originalName;
             if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
                 originalName = Data.OriginalNames[player.playerID.steamID.m_SteamID].PlayerName;
             else originalName = player.playerID.playerName;
+            F.Log("4");
             ITransportConnection channel = player.transportConnection;
             EffectManager.sendUIEffect(UCWarfare.Config.EndScreenUI, UiIdentifier, channel, true);
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "Title1", F.Translate("game_over", player));
@@ -100,10 +105,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
+            F.Log("5");
             List<KeyValuePair<Player, string>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam);
             List<KeyValuePair<Player, int>> topkills = warstats.GetTop5MostKills();
             List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = warstats.GetTop5OnPointTime();
             List<KeyValuePair<Player, int>> topxpgain = warstats.GetTop5XP();
+            F.Log("6");
             for (int h = 2; h <= 4; h++)
                 if (headers.Length > h - 1)
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[h - 1], F.Translate("lb_header_" + h.ToString(Data.Locale), player));
@@ -118,6 +125,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
                 TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
                 TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
+            F.Log("7");
             for (int i = 0; i < 6; i++)
             {
                 if (i >= topsquadplayers.Count)
@@ -139,6 +147,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         topsquadplayers[i].Value, color));
                 }
             }
+            F.Log("8");
             for (int i = 0; i < 6; i++)
             {
                 if (i >= topkills.Count)
@@ -160,6 +169,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         topkills[i].Value, color));
                 }
             }
+            F.Log("9");
             for (int i = 0; i < 6; i++)
             {
                 if (i >= toptimeonpoint.Count)
@@ -181,6 +191,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         toptimeonpoint[i].Value, color));
                 }
             }
+            F.Log("10");
             for (int i = 0; i < 6; i++)
             {
                 if (i >= topxpgain.Count)
@@ -219,6 +230,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblEnemyFOBsDestroyed", F.Translate("lblFOBsDestroyed", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblOfficerPointsGainedValue", F.Translate("lblOfficerPointsGained", player));
 
+            F.Log("11");
             string defaultColor = UCWarfare.GetColorHex("default");
             // values
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsValue", F.Translate("stats_player_value", player, stats.kills, defaultColor));
@@ -237,6 +249,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             /*
              *  WAR
              */
+            F.Log("12");
             // titles
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblDuration", F.Translate("lblDuration", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblCasualtiesT1", F.Translate("lblDeathsT1", player));
@@ -251,6 +264,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTeamkillingCasualties", F.Translate("lblTeamkillingCasualties", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTopRankingOfficer", F.Translate("lblTopRankingOfficer", player));
 
+            F.Log("13");
             // values
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DurationValue", F.Translate("stats_war_time_value", player, warstats.Duration, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT1", F.Translate("stats_war_value", player, warstats.casualtiesT1, defaultColor));

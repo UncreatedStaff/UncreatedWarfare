@@ -154,9 +154,9 @@ namespace Uncreated.Warfare
             FPlayerName names = F.GetPlayerOriginalNames(player);
             PlayerManager.InvokePlayerConnected(player); // must always be first
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            await Client.SendPlayerJoined(names);
             await OfficerManager.OnPlayerJoined(ucplayer);
             await XPManager.OnPlayerJoined(ucplayer);
+            await Client.SendPlayerJoined(names);
             await Data.DatabaseManager.CheckUpdateUsernames(names);
             bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
             await Data.DatabaseManager.RegisterLogin(player.Player);
@@ -170,7 +170,7 @@ namespace Uncreated.Warfare
             PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
             pt.StartTracking(player.Player);
             Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-            pt.UCPlayer?.LogIn(player.Player.channel.owner, names);
+            pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names);
             ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player, 
                 UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()) ), ToastMessageSeverity.INFO);
             if (!UCWarfare.Config.AllowCosmetics)

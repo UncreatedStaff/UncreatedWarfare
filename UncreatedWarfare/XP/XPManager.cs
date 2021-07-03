@@ -72,11 +72,16 @@ namespace Uncreated.Warfare.XP
             UpdateUI(player, newBalance);
 
             if (message != "")
-                ToastMessage.QueueMessage(player, "+" + amount + " XP", message, ToastMessageSeverity.MINIXP);
+                ToastMessage.QueueMessage(player, (amount > 0 ? "+" + amount.ToString(Data.Locale) : amount.ToString(Data.Locale)) + " XP", message, ToastMessageSeverity.MINIXP);
 
-            for (int i = 0; i < Vehicles.VehicleSigns.ActiveObjects.Count; i++)
-                await Vehicles.VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
+            for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
+                await VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
             await rtn;
+            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            {
+                c.stats.AddXP(amount);
+                c.UCPlayerStats.warfare_stats.AddXP(amount);
+            }
         }
         public static void UpdateUI(Player nelsonplayer, int balance)
         {
