@@ -22,7 +22,37 @@ namespace Uncreated.Warfare.Kits
         public KitManager() : base(Data.KitsStorage + "kits.json")
         {
             OnPlayerDeathGlobal += OnPlayerDeath;
+            PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
+
         }
+
+        private void PlayerLife_OnPreDeath(PlayerLife life)
+        {
+            if (HasKit(life.player.channel.owner.playerID.steamID, out var kit))
+            {
+                for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+                {
+                    if (page == PlayerInventory.AREA)
+                        continue;
+
+                    for (byte index = 0; index < life.player.inventory.getItemCount(page); index++)
+                    {
+                        ItemJar jar = life.player.inventory.getItem(page, 0);
+
+                        byte asset_amount = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id).amount;
+                        float percentage = (float)jar.item.amount / (float)asset_amount;
+
+                        if (!kit.HasItemOfID(jar.item.id) || percentage < 0.3)
+                        {
+                            ItemManager.dropItem(jar.item, life.player.transform.position, true, true, true);
+                            life.player.inventory.removeItem(page, index);
+                            index--;
+                        }
+                    }
+                }
+            }
+        }
+
         protected override string LoadDefaults() 
         {
             if (JSONMethods.DefaultKits != default)
@@ -31,33 +61,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static void OnPlayerDeath(DeathEventArgs death)
         {
-            if (HasKit(death.dead.channel.owner.playerID.steamID, out var kit))
-            {
-                List<ItemJar> nonKitItems = new List<ItemJar>();
-
-                for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
-                {
-                    if (page == PlayerInventory.AREA)
-                        continue;
-
-                    byte count = death.dead.inventory.getItemCount(page);
-
-                    for (byte index = 0; index < count; index++)
-                    {
-                        ItemJar jar = death.dead.inventory.getItem(page, 0);
-
-                        if (!kit.HasItemOfID(jar.item.id) && !(jar.item.id == 38324 || jar.item.id == 38322))
-                        {
-                            nonKitItems.Add(jar);
-                        }
-                    }
-                }
-
-                for (int i = 0; i < nonKitItems.Count; i++)
-                {
-                    ItemManager.dropItem(nonKitItems[i].item, death.dead.transform.position, true, true, true);
-                }
-            }
+            
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
@@ -179,7 +183,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     ItemJar jar = player.Player.inventory.getItem(page, 0);
 
-                    if (!kit.HasItemOfID(jar.item.id) && !(jar.item.id == 38324 || jar.item.id == 38322))
+                    if (!kit.HasItemOfID(jar.item.id))
                     {
                         nonKitItems.Add(jar);
                     }
@@ -273,6 +277,7 @@ namespace Uncreated.Warfare.Kits
         public void Dispose()
         {
             OnPlayerDeathGlobal -= OnPlayerDeath;
+            PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
         }
     }
 
@@ -376,8 +381,14 @@ namespace Uncreated.Warfare.Kits
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public bool IsLimited(out int currentPlayers, out int allowedPlayers)
         {
+            currentPlayers = 0;
+            allowedPlayers = 24;
+            if (IsPremium)
+                return false;
+
             var friendlyPlayers = PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team).ToList();
             F.Log($"FRIENDLY PLAYERS: {friendlyPlayers.Count}");
+            F.Log($"TEAM: {Team}");
             allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count);
             currentPlayers = friendlyPlayers.Where(k => k.KitName == Name).Count();
             F.Log($"KIT LIMITER: {currentPlayers}/{allowedPlayers} kits in use");
