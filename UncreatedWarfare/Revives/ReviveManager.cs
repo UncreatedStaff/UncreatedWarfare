@@ -54,6 +54,14 @@ namespace Uncreated.Warfare.Revives
         }
         internal void OnPlayerHealed(Player medic, Player target)
         {
+            UCPlayer player = UCPlayer.FromPlayer(medic);
+
+            if (player.KitClass != Kits.Kit.EClass.MEDIC)
+                return;
+
+            if (medic.GetTeam() != target.quests.groupID.m_SteamID)
+                return;
+
             if (target.TryGetComponent(out Reviver r))
             {
                 r.RevivePlayer();
@@ -64,7 +72,7 @@ namespace Uncreated.Warfare.Revives
             F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
-                if (parameters.damage > parameters.player.life.health && parameters.damage < 100 && parameters.player.life.health > 0 && !parameters.player.life.isDead)
+                if (parameters.damage > parameters.player.life.health && parameters.limb != ELimb.SKULL && parameters.player.life.health > 0 && !parameters.player.life.isDead)
                 {
                     F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
 

@@ -71,8 +71,8 @@ namespace Uncreated.Warfare
                     save.Branch,
                     save.KitName,
                     rocketplayer.Player,
-                    rocketplayer.CharacterName,
-                    rocketplayer.DisplayName
+                    rocketplayer.Player.channel.owner.playerID.characterName,
+                    rocketplayer.Player.channel.owner.playerID.nickName
                 );
 
             OnlinePlayers.Add(player);

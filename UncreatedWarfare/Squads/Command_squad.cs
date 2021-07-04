@@ -69,8 +69,6 @@ namespace Uncreated.Warfare.Squads
                             if (!squad.IsLocked)
                             {
                                 SquadManager.JoinSquad(player, ref squad);
-
-                                player.Message("squad_joined", squad.Name);
                             }
                             else
                                 player.Message("squad_e_locked");

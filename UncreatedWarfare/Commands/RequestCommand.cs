@@ -122,7 +122,7 @@ namespace Uncreated.Warfare.Commands
                     SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     if (rank == default || rank.level < kit.RequiredLevel)
                     {
-                        ucplayer.Message("request_kit_e_wronglevel", rank.level);
+                        ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel);
                     }
                     else
                     {
@@ -193,7 +193,7 @@ namespace Uncreated.Warfare.Commands
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (rank == default || rank.level < data.RequiredLevel)
             {
-                ucplayer.Message("request_vehicle_e_wronglevel", rank.level);
+                ucplayer.Message("request_vehicle_e_wronglevel", data.RequiredLevel);
                 return;
             }
             else if (vehicle.asset != default && vehicle.asset.canBeLocked)

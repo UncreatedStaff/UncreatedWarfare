@@ -30,8 +30,6 @@ namespace Uncreated.Warfare.Vehicles
             AddObjectToSave(data);
         }
         public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
-        public static void RemoveAllVehicles() => RemoveAllObjectsFromSave();
-        public static List<VehicleData> GetVehiclesWhere(Func<VehicleData, bool> predicate) => GetObjectsWhere(predicate);
         public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
         {
             bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
