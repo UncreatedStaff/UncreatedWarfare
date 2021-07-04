@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Players;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -257,8 +258,8 @@ namespace Uncreated.Warfare.Kits
                     }
 
                     //success
-
-                    player.Message("kit_accessgiven", F.TryGetPlayerOriginalNames(target.Player, out PlayerNames p) ? p.CharacterName : target.CharacterName, kitName);
+                    FPlayerName name = F.GetPlayerOriginalNames(target.Player);
+                    player.Message("kit_accessgiven", name.CharacterName, kitName);
                     KitManager.GiveAccess(target.Steam64, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
@@ -288,7 +289,8 @@ namespace Uncreated.Warfare.Kits
                     }
 
                     //success
-                    player.Message("kit_accessremoved", F.TryGetPlayerOriginalNames(target.Player, out PlayerNames p) ? p.CharacterName : target.CharacterName, kitName);
+                    FPlayerName name = F.GetPlayerOriginalNames(target.Player);
+                    player.Message("kit_accessremoved", name.CharacterName, kitName);
                     KitManager.RemoveAccess(target.Steam64, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
