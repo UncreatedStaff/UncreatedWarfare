@@ -7,8 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
@@ -65,6 +68,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             foreach (SteamPlayer client in Provider.clients)
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
             this.State = EState.FINISHED;
+            await TicketManager.OnRoundWin(winner);
             await Task.Delay(Config.end_delay * 1000);
             await InvokeOnTeamWin(winner);
             if (Config.ShowLeaderboard)
@@ -196,6 +200,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (OnNewGameStarting != null)
                 await OnNewGameStarting.Invoke();
             TicketManager.OnNewGameStarting();
+            VehicleSpawner.RespawnAllVehicles();
+            FOBManager.WipeAllFOBRelatedBarricades();
+            RallyManager.WipeAllRallies();
         }
         protected override async Task PlayerEnteredFlagRadius(Flag flag, Player player)
         {

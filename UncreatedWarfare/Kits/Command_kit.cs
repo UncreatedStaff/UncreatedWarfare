@@ -241,7 +241,7 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
 
-                    UnturnedPlayer target = UnturnedPlayer.FromName(targetPlayer);
+                    UCPlayer target = UCPlayer.FromName(targetPlayer);
 
                     // error - no player found
                     if (target == null)
@@ -257,8 +257,8 @@ namespace Uncreated.Warfare.Kits
                     }
 
                     //success
-                    player.Message("kit_accessgiven", targetPlayer, kitName);
-                    KitManager.GiveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    player.Message("kit_accessgiven", target.CharacterName, kitName);
+                    KitManager.GiveAccess(target.Steam64, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
@@ -271,7 +271,7 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
 
-                    UnturnedPlayer target = UnturnedPlayer.FromName(targetPlayer);
+                    UCPlayer target = UCPlayer.FromName(targetPlayer);
 
                     // error - no player found
                     if (target == null)
@@ -282,13 +282,13 @@ namespace Uncreated.Warfare.Kits
                     // error - player already has no access
                     if (!KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
                     {
-                        player.Message("kit_e_noaccess", targetPlayer, kitName);
+                        player.Message("kit_e_noaccess", target.CharacterName, kitName);
                         return; 
                     }
 
                     //success
-                    player.Message("kit_accessremoved", targetPlayer, kitName);
-                    KitManager.RemoveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    player.Message("kit_accessremoved", target.CharacterName, kitName);
+                    KitManager.RemoveAccess(target.Steam64, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }

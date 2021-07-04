@@ -50,7 +50,6 @@ namespace Uncreated.Warfare.FOBs
             }
             UpdateUIAll();
         }
-
         public static void RegisterNewFOB(BarricadeData Structure)
         {
             if (TeamManager.IsTeam1(Structure.group))
@@ -127,7 +126,7 @@ namespace Uncreated.Warfare.FOBs
                 ).ToList();
         }
 
-        public static void RemoveAllFOBBarricadesFromWorld()
+        public static void WipeAllFOBRelatedBarricades()
         {
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
 

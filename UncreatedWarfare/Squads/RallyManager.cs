@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Squads
                 var player = UCPlayer.FromID(owner);
                 if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
                 {
-                    if (player.Squad.Members.Where(p => p.Steam64 != player.Steam64 && (p.Position - player.Position).sqrMagnitude < Math.Pow(20, 2)).Count() >= 0)
+                    if (player.Squad.Members.Count > 1)
                     {
                         int nearbyEnemiesCount = 0;
                         if (player.IsTeam1())
@@ -267,7 +267,7 @@ namespace Uncreated.Warfare.Squads
                         enemyTeam = TeamManager.Team1ID;
 
                     var enemies = PlayerManager.OnlinePlayers.Where(p =>
-                        p.GetTeam() == TeamManager.Team2ID &&
+                        p.GetTeam() == enemyTeam &&
                         (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(70, 2)
                         ).ToList();
 

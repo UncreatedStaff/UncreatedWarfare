@@ -37,14 +37,19 @@ namespace Uncreated.Warfare.Kits
 
                     for (byte index = 0; index < life.player.inventory.getItemCount(page); index++)
                     {
-                        ItemJar jar = life.player.inventory.getItem(page, 0);
+                        ItemJar jar = life.player.inventory.getItem(page, index);
 
-                        byte asset_amount = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id).amount;
-                        float percentage = (float)jar.item.amount / (float)asset_amount;
+                        var asset = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id);
+                        float percentage = (float)jar.item.amount / (float)asset.amount;
 
-                        if (!kit.HasItemOfID(jar.item.id) || percentage < 0.3)
+                        bool notInKit = !kit.HasItemOfID(jar.item.id);
+                        if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
                         {
-                            ItemManager.dropItem(jar.item, life.player.transform.position, true, true, true);
+                            if (notInKit)
+                            {
+                                ItemManager.dropItem(jar.item, life.player.transform.position, false, true, true);
+                            }
+
                             life.player.inventory.removeItem(page, index);
                             index--;
                         }

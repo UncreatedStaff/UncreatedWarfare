@@ -169,9 +169,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
                     PlayersOnFlag.Add(player.player);
             }
-            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team1ID).ToList();
+            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team1ID && !player.life.isDead && player.movement.getVehicle() == null).ToList();
             Team1TotalPlayers = PlayersOnFlagTeam1.Count;
-            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team2ID).ToList();
+            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team2ID && !player.life.isDead && player.movement.getVehicle() == null).ToList();
             Team2TotalPlayers = PlayersOnFlagTeam2.Count;
         }
         /// <param name="NewPlayers">Players that have entered the flag since last check.</param>

@@ -73,6 +73,8 @@ namespace Uncreated.Warfare.Squads
 
         public static void UpdateUIMemberCount(ulong team)
         {
+            var friendlySquads = Squads.Where(s => s.Team == team).ToList();
+
             foreach (var steamplayer in Provider.clients)
             {
                 if (TeamManager.IsFriendly(steamplayer, team))
@@ -82,7 +84,7 @@ namespace Uncreated.Warfare.Squads
                         for (int i = 0; i < 8; i++)
                             EffectManager.askEffectClearByID((ushort)(30081 + i), steamplayer.transportConnection);
 
-                        var sortedSquads = Squads.OrderBy(s => s.Name != currentSquad.Name).ToList();
+                        var sortedSquads = friendlySquads.OrderBy(s => s.Name != currentSquad.Name).ToList();
 
                         for (int i = 0; i < sortedSquads.Count; i++)
                         {
@@ -107,15 +109,15 @@ namespace Uncreated.Warfare.Squads
                         for (int i = 0; i < 8; i++)
                             EffectManager.askEffectClearByID((ushort)(30061 + i), steamplayer.transportConnection);
 
-                        for (int i = 0; i < Squads.Count; i++)
+                        for (int i = 0; i < friendlySquads.Count; i++)
                         {
                             EffectManager.sendUIEffect((ushort)(30061 + i),
                                 (short)(30061 + i),
                                 steamplayer.transportConnection,
                                 true,
-                                !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>",
-                                Squads[i].Leader.NickName
+                                !friendlySquads[i].IsLocked ? friendlySquads[i].Name : $"<color=#969696>{friendlySquads[i].Name}</color>",
+                                friendlySquads[i].Leader.NickName,
+                                !friendlySquads[i].IsLocked ? $"{friendlySquads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{friendlySquads[i].Members.Count}/6</color>"
                             );
                         }
                     }
@@ -141,7 +143,7 @@ namespace Uncreated.Warfare.Squads
                         true,
                         Squads[i].Name,
                         !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                                    !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
+                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
                     );
                 }
             }
@@ -173,7 +175,13 @@ namespace Uncreated.Warfare.Squads
         public static void JoinSquad(UCPlayer player, ref Squad squad)
         {
             foreach (var p in squad.Members)
-                p.Message("squad_player_joined", p.Player.channel.owner.playerID.nickName);
+            {
+                if (p.Steam64 != player.Steam64)
+                    p.Message("squad_player_joined", player.Player.channel.owner.playerID.nickName);
+                else
+                    p.Message("squad_joined", squad.Name);
+            }
+                
 
             squad.Members.Add(player);
 
@@ -197,7 +205,12 @@ namespace Uncreated.Warfare.Squads
             player.Squad = null;
 
             foreach (var p in squad.Members)
-                p.Message("squad_player_left", p.SteamPlayer().playerID.nickName);
+            {
+                if (p.Steam64 != player.Steam64)
+                    p.Message("squad_player_left", p.SteamPlayer().playerID.nickName);
+                else
+                    p.Message("squad_left", squad.Name);
+            }
 
             if (squad.Members.Count == 0)
             {
@@ -238,8 +251,17 @@ namespace Uncreated.Warfare.Squads
 
                 member.Message("squad_disbanded");
                 ClearUIsquad(member.Player);
-                UpdateUIMemberCount(squad.Team);
             }
+            UpdateUIMemberCount(squad.Team);
+
+            PlayerManager.Save();
+        }
+        public static void RenameSquad(Squad squad, string newName)
+        {
+            squad.Name = newName.ToUpper();
+
+            UpdateUISquad(squad);
+            UpdateUIMemberCount(squad.Team);
 
             PlayerManager.Save();
         }
@@ -250,11 +272,14 @@ namespace Uncreated.Warfare.Squads
 
             squad.Members.RemoveAll(p => p.CSteamID == player.CSteamID);
 
-            if (Provider.clients.Exists(p => p.playerID.steamID == player.CSteamID))
-                player.Message("squad_kicked");
-
             foreach (var p in squad.Members)
-                p.Message("squad_player_kicked", player.SteamPlayer().playerID.nickName);
+            {
+                if (p.Steam64 != player.Steam64)
+                    p.Message("squad_player_kicked", player.SteamPlayer().playerID.nickName);
+                else
+                    p.Message("squad_kicked");
+
+            }
 
             player.Squad = null;
 
@@ -270,16 +295,17 @@ namespace Uncreated.Warfare.Squads
 
             foreach (var p in squad.Members)
             {
-                if (p.CSteamID == squad.Leader.CSteamID)
-                    p.Message("squad_promoted");
-                else
+                if (p.CSteamID != squad.Leader.CSteamID)
                     p.Message("squad_player_promoted", p.SteamPlayer().playerID.nickName);
+                else
+                    p.Message("squad_promoted");
             }
 
             var leaderID = squad.Leader.CSteamID;
             squad.Members = squad.Members.OrderBy(p => p.CSteamID != leaderID).ToList();
 
             UpdateUISquad(squad);
+            UpdateUIMemberCount(squad.Team);
         }
         public static bool FindSquad(string name, ulong teamID, out Squad squad)
         {

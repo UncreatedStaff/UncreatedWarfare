@@ -153,6 +153,8 @@ namespace Uncreated.Warfare.Components
                 _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(position, angle, seconds, shouldCancelOnMove, shouldCancelOnDamage, shouldMessagePlayer, locationName, fob));
                 return true;
             }
+            else
+                player.Message("deploy_e_alreadydeploying");
             return false;
         }
         public void CancelTeleport()
@@ -203,6 +205,8 @@ namespace Uncreated.Warfare.Components
             if (shouldMessagePlayer)
                 player.Message("deploy_s", locationName);
             CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.data.DeployFOBCooldown);
+
+            _currentTeleportRequest = default;
 
             yield break;
         }

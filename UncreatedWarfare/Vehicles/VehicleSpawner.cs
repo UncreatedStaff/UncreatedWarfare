@@ -68,8 +68,10 @@ namespace Uncreated.Warfare.Vehicles
         public static void RespawnAllVehicles()
         {
             F.Log("Respawning vehicles...", ConsoleColor.Magenta);
-            VehicleManager.askVehicleDestroyAll();
-            ItemManager.askClearAllItems();
+            foreach (var v in VehicleManager.vehicles)
+            {
+                VehicleBay.DeleteVehicle(v);
+            }
             foreach (VehicleSpawn spawn in ActiveObjects)
             {
                 spawn.SpawnVehicle();

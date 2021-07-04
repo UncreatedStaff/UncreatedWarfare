@@ -41,51 +41,25 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
         {
-            if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
+            if (TeamManager.IsTeam1(eventArgs.dead))
             {
-                if (TeamManager.IsTeam1(eventArgs.dead))
-                {
-                    await AddTeam1Tickets(-1*kit.TicketCost);
-                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
-                }
-                else if (TeamManager.IsTeam2(eventArgs.dead))
-                {
-                    await AddTeam2Tickets(-1 * kit.TicketCost);
-                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
-                }
-                else
-                    F.Log($"TICKETS: player was not on a team");
+                await AddTeam1Tickets(-1);
             }
-            else
+            else if (TeamManager.IsTeam2(eventArgs.dead))
             {
-                F.Log($"TICKETS: player did not have a kit");
+                await AddTeam2Tickets(-1);
             }
-            F.Log("Team 1 Tickets: " + Team1Tickets);
-            F.Log("Team 2 Tickets: " + Team2Tickets);
         }
         public static async Task OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
         {
-            if (KitManager.HasKit(eventArgs.dead.channel.owner.playerID.steamID, out var kit))
+            if (TeamManager.IsTeam1(eventArgs.dead))
             {
-                if (TeamManager.IsTeam1(eventArgs.dead))
-                {
-                    await AddTeam1Tickets(-1 * kit.TicketCost);
-                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
-                }
-                else if (TeamManager.IsTeam2(eventArgs.dead))
-                {
-                    await AddTeam2Tickets(-1 * kit.TicketCost);
-                    F.Log($"TICKETS: Subtracted {kit.TicketCost} ticket from Team 1");
-                }
-                else
-                    F.Log($"TICKETS: player was not on a team");
+                await AddTeam1Tickets(-1);
             }
-            else
+            else if (TeamManager.IsTeam2(eventArgs.dead))
             {
-                F.Log($"TICKETS: player did not have a kit");
+                await AddTeam2Tickets(-1);
             }
-            F.Log("Team 1 Tickets: " + Team1Tickets);
-            F.Log("Team 2 Tickets: " + Team2Tickets);
         }
         public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
@@ -188,6 +162,15 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+            if (TeamManager.IsTeam1(capturedTeam))
+                Team1Tickets += config.data.TicketsFlagCaptured;
+            if (TeamManager.IsTeam2(capturedTeam))
+                Team1Tickets += config.data.TicketsFlagCaptured;
+            if (TeamManager.IsTeam1(lostTeam))
+                Team1Tickets += config.data.TicketsFlagLost;
+            if (TeamManager.IsTeam2(lostTeam))
+                Team1Tickets += config.data.TicketsFlagLost;
+
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
             foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
@@ -467,8 +450,10 @@ namespace Uncreated.Warfare.Tickets
     }
     public class TicketData : ConfigData
     {
-        public ushort StartingTickets;
-        public ushort FOBCost;
+        public int StartingTickets;
+        public int FOBCost;
+        public int TicketsFlagCaptured;
+        public int TicketsFlagLost;
         public ushort Team1TicketUIID;
         public ushort Team2TicketUIID;
 
@@ -476,6 +461,8 @@ namespace Uncreated.Warfare.Tickets
         {
             StartingTickets = 600;
             FOBCost = 20;
+            TicketsFlagCaptured = 50;
+            TicketsFlagLost = -10;
             Team1TicketUIID = 32390;
             Team2TicketUIID = 32391;
         }
