@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.Kits
 
                     for (byte index = 0; index < life.player.inventory.getItemCount(page); index++)
                     {
-                        ItemJar jar = life.player.inventory.getItem(page, 0);
+                        ItemJar jar = life.player.inventory.getItem(page, index);
 
                         byte asset_amount = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id).amount;
                         float percentage = (float)jar.item.amount / (float)asset_amount;

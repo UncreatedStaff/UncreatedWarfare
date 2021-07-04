@@ -57,12 +57,18 @@ namespace Uncreated.Warfare.Commands
             F.Log(F.Translate("duty_GoOffDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
-            player.Features.GodMode = false;
-            player.Features.VanishMode = false;
-            player.Player.look.sendFreecamAllowed(false);
-            player.Player.look.sendSpecStatsAllowed(false);
-            player.Player.look.sendWorkzoneAllowed(false);
-            player.SendChat("duty_GoOffDuty_Feedback", UCWarfare.GetColor("duty_feedback"));
+            if (player.Features != null && player.Features.gameObject != null)
+            {
+                player.Features.GodMode = false;
+                player.Features.VanishMode = false;
+            }
+            if (player.Player != null && player.Player.look != null)
+            {
+                player.Player.look.sendFreecamAllowed(false);
+                player.Player.look.sendSpecStatsAllowed(false);
+                player.Player.look.sendWorkzoneAllowed(false);
+                player.SendChat("duty_GoOffDuty_Feedback", UCWarfare.GetColor("duty_feedback"));
+            }
             F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_GoOffDuty_Broadcast", UCWarfare.GetColor("duty_broadcast"), names.CharacterName);
         }
         public static void InternOffToOn(UnturnedPlayer player, FPlayerName names)
@@ -81,12 +87,18 @@ namespace Uncreated.Warfare.Commands
             F.Log(F.Translate("duty_GoOffDuty_Console", 0, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
-            player.Features.GodMode = false;
-            player.Features.VanishMode = false;
-            player.Player.look.sendFreecamAllowed(false);
-            player.Player.look.sendSpecStatsAllowed(false);
-            player.Player.look.sendWorkzoneAllowed(false);
-            player.SendChat("duty_GoOffDuty_Feedback", UCWarfare.GetColor("duty_feedback"));
+            if (player.Features != null && player.Features.gameObject != null)
+            {
+                player.Features.GodMode = false;
+                player.Features.VanishMode = false;
+            }
+            if (player.Player != null && player.Player.look != null)
+            {
+                player.Player.look.sendFreecamAllowed(false);
+                player.Player.look.sendSpecStatsAllowed(false);
+                player.Player.look.sendWorkzoneAllowed(false);
+                player.SendChat("duty_GoOffDuty_Feedback", UCWarfare.GetColor("duty_feedback"));
+            }
             F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_GoOffDuty_Broadcast", UCWarfare.GetColor("duty_broadcast"), names.CharacterName);
         }
     }

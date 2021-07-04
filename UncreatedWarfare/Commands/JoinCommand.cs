@@ -60,7 +60,7 @@ namespace Uncreated.Warfare.Commands
                             player.Message("join_e_teamfull", teamName);
                             return;
                         }
-                        if (!TeamManager.CanJoinTeam(1))
+                        if (!TeamManager.CanJoinTeam(newTeam))
                         {
                             player.Message("join_e_autobalance", teamName);
                             return;

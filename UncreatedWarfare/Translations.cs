@@ -71,7 +71,7 @@ namespace Uncreated.Warfare
                 { "join_s", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
                 { "joined_standby", "<color=#d1c5b0>Joining team...</color>" },
                 { "join_e_notinlobby", "<color=#a8a194>You must be in the <color=#fce5bb>lobby</color> to switch teams. Do <color=#fce5bb>/deploy lobby</color>.</color>" },
-                { "join_correctusage", "<color=#a8a194>Do <color=#fce5bb>/join usa</color> or <color=#fce5bb>/join russia</color> to join a team.</color>" },
+                { "join_correctusage", "<color=#a8a194>Do <color=#fce5bb>/join us</color> or <color=#fce5bb>/join ru</color> to join a team.</color>" },
                 { "join_e_groupnoexist", "<color=#a8a194>That group is not set up correctly. Contact an admin to fix it.</color>" },
                 { "join_e_teamfull", "<color=#a8a194>That group is full! Contact an admin to remove the server's group limit.</color>" },
                 { "join_e_autobalance", "<color=#a8a194>That group currently has too many players. Please try again later.</color>" },

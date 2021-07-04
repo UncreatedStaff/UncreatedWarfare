@@ -19,6 +19,7 @@ namespace Uncreated.Warfare.Revives
 
             DamageTool.damagePlayerRequested += OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
+            PlayerLife.OnRevived_Global += OnPlayerRespawned;
             foreach(SteamPlayer player in Provider.clients)
             {
                 player.player.stance.onStanceUpdated += delegate
@@ -28,6 +29,13 @@ namespace Uncreated.Warfare.Revives
                 player.player.equipment.onEquipRequested += OnEquipRequested;
             }
         }
+
+        private void OnPlayerRespawned(PlayerLife obj)
+        {
+            if(obj.player.transform.TryGetComponent(out Reviver r))
+                r.TellStanceNoDelay(EPlayerStance.STAND);
+        }
+
         internal void OnPlayerConnected(UnturnedPlayer player)
         {
             player.Player.equipment.onEquipRequested += OnEquipRequested;
@@ -128,7 +136,6 @@ namespace Uncreated.Warfare.Revives
                 if (paramaters.player.transform.TryGetComponent(out Reviver reviver))
                 {
                     reviver.FinishKillingPlayer(this);
-                    reviver.TellStandDelayed();
                 }
             }
             foreach (SteamPlayer player in Provider.clients)
@@ -138,6 +145,7 @@ namespace Uncreated.Warfare.Revives
             }
             DamageTool.damagePlayerRequested -= OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
+            PlayerLife.OnRevived_Global -= OnPlayerRespawned;
         }
         private class Reviver : UnturnedPlayerComponent
         {
@@ -146,10 +154,6 @@ namespace Uncreated.Warfare.Revives
             public void TellProneDelayed(float time = 0.5f)
             {
                 stance = StartCoroutine(WaitToChangeStance(EPlayerStance.PRONE, time));
-            }
-            public void TellStandDelayed(float time = 0.5f)
-            {
-                stance = StartCoroutine(WaitToChangeStance(EPlayerStance.STAND, time));
             }
             public void TellStanceNoDelay(EPlayerStance stance)
             {

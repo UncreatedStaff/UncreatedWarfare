@@ -114,8 +114,8 @@ namespace Uncreated.Warfare.Squads
                                 steamplayer.transportConnection,
                                 true,
                                 !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>",
-                                Squads[i].Leader.NickName
+                                Squads[i].Leader.NickName,
+                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
                             );
                         }
                     }

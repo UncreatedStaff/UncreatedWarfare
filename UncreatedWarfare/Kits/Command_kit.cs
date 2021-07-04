@@ -258,7 +258,7 @@ namespace Uncreated.Warfare.Kits
 
                     //success
                     player.Message("kit_accessgiven", targetPlayer, kitName);
-                    KitManager.GiveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    KitManager.GiveAccess(target.CSteamID.m_SteamID, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
@@ -288,7 +288,7 @@ namespace Uncreated.Warfare.Kits
 
                     //success
                     player.Message("kit_accessremoved", targetPlayer, kitName);
-                    KitManager.RemoveAccess(player.CSteamID.m_SteamID, kit.Name);
+                    KitManager.RemoveAccess(target.CSteamID.m_SteamID, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }

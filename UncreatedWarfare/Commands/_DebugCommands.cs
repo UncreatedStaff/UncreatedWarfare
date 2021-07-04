@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/test <mode>";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string> { "uc.test" };
-        private Type type = typeof(_DebugCommand);
+        private readonly Type type = typeof(_DebugCommand);
         public async void Execute(IRocketPlayer caller, string[] command)
         {
             Player player = caller.DisplayName == "Console" ? Provider.clients.FirstOrDefault()?.player : (caller as UnturnedPlayer).Player;
@@ -195,6 +195,13 @@ namespace Uncreated.Warfare.Commands
                         }
                     }
                     else player.SendChat("A flag gamemode is not loaded.", UCWarfare.GetColor("default"));
+                }
+                else if (command[0] == "sendtest")
+                {
+                    DateTime start = DateTime.Now;
+                    F.Log("Sending");
+                    await Networking.Client.SendServerReloading(123456789L, "Test command reloading server.");
+                    F.Log("Calledback " + (DateTime.Now - start).TotalMilliseconds.ToString() + "ms later");
                 }
                 else if (command[0] == "goto") go(command, player);
                 else

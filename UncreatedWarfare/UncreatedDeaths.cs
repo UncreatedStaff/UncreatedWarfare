@@ -645,8 +645,7 @@ namespace Uncreated.Warfare
                             distance = Vector3.Distance(killer.player.transform.position, dead.Position);
                     }
                     catch { }
-                    PlaytimeComponent c = F.GetPlaytimeComponent(killer.player, out bool success);
-                    if (success)
+                    if (killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                     {
                         if (cause == EDeathCause.GUN && c.lastShot != default)
                             item = c.lastShot;

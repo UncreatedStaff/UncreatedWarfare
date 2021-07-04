@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace Uncreated.Networking.Invocations
     {
         protected readonly ECall call;
         protected const int WAIT_TIMEOUT = 2000; // 2 seconds
-        protected const int COUNTER_MAX = 20;
+        protected const int COUNTER_MAX = 5;
         static byte _id = 0;
         public static byte ID { 
             get
@@ -52,42 +53,55 @@ namespace Uncreated.Networking.Invocations
                 d.Dispose();
             Client.Waits.Remove(id);
         }
-        protected void InvokeAndWaitInternal(byte id, byte[] data, int counter, CancellationTokenSource canceller)
+        protected async Task<bool> InvokeReliableInternal(byte id, byte[] data, int counter, CancellationTokenSource canceller)
         {
-            _ = Task.Run(async () =>
+            await InvokeAndWaitTask(id, data, counter, canceller);
+            return false;
+        }
+        private async Task<bool> InvokeAndWaitTask(byte id, byte[] data, int counter, CancellationTokenSource canceller)
+        {
+            await send.Invoke(data);
+            CancellationTokenSource temp = new CancellationTokenSource();
+            temp.CancelAfter(WAIT_TIMEOUT);
+            await Client.BeginReadCancellableAwaitable.Invoke(temp.Token);
+            temp.Dispose();
+            int c = counter;
+            try
             {
-                await send.Invoke(data);
-                int c = counter;
-                try
+                await Task.Delay(WAIT_TIMEOUT, canceller.Token);
+            }
+            catch (OperationCanceledException) when (canceller.Token.IsCancellationRequested)
+            {
+                if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d2))
                 {
-                    await Task.Delay(WAIT_TIMEOUT, canceller.Token);
+                    RemovePending(id, d2.Value, true, false);
+                    if (d2.Key) return true;
+                    else if (c++ < COUNTER_MAX) return await InvokeAndWaitTask(id, data, c, canceller); // loop until counter >= COUNTER_MAX
+                    else return false;
                 }
-                catch (OperationCanceledException) when (canceller.Token.IsCancellationRequested)
+                return true;
+            }
+            if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
+            {
+                if (!d.Value.IsCancellationRequested)
                 {
-                    if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d2))
+                    if (c++ >= COUNTER_MAX)
                     {
-                        RemovePending(id, d2.Value, true, false);
-                        if (!d2.Key && c++ < COUNTER_MAX) InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
-                    }
-                }
-                if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
-                {
-                    if (!d.Value.IsCancellationRequested)
-                    {
-                        if (c++ >= COUNTER_MAX)
-                        {
-                            RemovePending(id, d.Value, true, true);
-                        }
-                        else
-                            InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
+                        RemovePending(id, d.Value, true, true);
+                        return false;
                     }
                     else
-                    {
-                        RemovePending(id, d.Value, true, false);
-                        if (!d.Key && c++ < COUNTER_MAX) InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
-                    }
+                        return await InvokeAndWaitTask(id, data, c, canceller); // loop until counter >= COUNTER_MAX
                 }
-            }).ConfigureAwait(false);
+                else
+                {
+                    RemovePending(id, d.Value, true, false);
+                    if (d.Key) return true;
+                    else if (c++ < COUNTER_MAX) return await InvokeAndWaitTask(id, data, c, canceller); // loop until counter >= COUNTER_MAX
+                    else return false;
+                }
+            }
+            else return true;
         }
     }
 
@@ -108,7 +122,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T output)
@@ -143,7 +157,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
     }
@@ -170,7 +184,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1)
@@ -219,7 +233,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2)
@@ -276,7 +290,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3)
@@ -348,7 +362,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4)
@@ -430,7 +444,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5)
@@ -522,7 +536,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6)
@@ -624,7 +638,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7)
@@ -736,7 +750,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8)
@@ -858,7 +872,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9)
@@ -990,7 +1004,7 @@ namespace Uncreated.Networking.Invocations
             {
                 byte id = ID;
                 byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, id);
-                InvokeAndWaitInternal(id, data, 0, AddPending(id));
+                await InvokeReliableInternal(id, data, 0, AddPending(id));
             }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9, out T10 arg10)

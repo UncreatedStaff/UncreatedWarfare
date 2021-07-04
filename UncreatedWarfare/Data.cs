@@ -209,7 +209,7 @@ namespace Uncreated.Warfare
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
                     UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                _ = Networking.TCPClient.I.Connect(CancelTcp.Token).ConfigureAwait(false);
+                _ = Networking.TCPClient.I.Connect(CancelTcp).ConfigureAwait(false);
             }
             if (UCWarfare.Config.Modules.Kits)
             {

@@ -10,15 +10,22 @@ using System.IO;
 using Uncreated.Warfare.Stats;
 using Uncreated.Networking.Invocations;
 using Uncreated.Players;
+using System.Runtime.CompilerServices;
 
 namespace Uncreated.Networking
 {
     public static class Client
     {
         public static SendTask Send { get => _send; }
+        public static Action BeginRead { get => _beginRead; }
+        public static Func<CancellationToken, ConfiguredTaskAwaitable<bool>> BeginReadCancellableAwaitable { get => _beginReadCancellableAwaitable; }
         public static SendTask _send;
+        public static Action _beginRead;
+        public static Func<CancellationToken, ConfiguredTaskAwaitable<bool>> _beginReadCancellableAwaitable;
         public static Dictionary<byte, KeyValuePair<bool, CancellationTokenSource>> Waits =
             new Dictionary<byte, KeyValuePair<bool, CancellationTokenSource>>();
+        public static Dictionary<byte, SynchronizationContext> WaitLoopbacks = 
+            new Dictionary<byte, SynchronizationContext>();
         #region INVOCATIONS
         // Confirm Received
         public static NetworkInvocation<byte> ReceivedInvoc =
@@ -169,9 +176,9 @@ namespace Uncreated.Networking
         public static async Task Identify() =>
             await IdentifyInvoc.InvokeAndWaitAsync(TCPClient.I.Identity);
         public static async Task SendShuttingDown(ulong admin, string reason) =>
-            await ShuttingDownInvoc.Invoke(admin, reason);
+            await ShuttingDownInvoc.InvokeAndWaitAsync(admin, reason);
         public static async Task SendStartingUp(EStartupStep step) =>
-            await StartingUpInvoc.Invoke(step);
+            await StartingUpInvoc.InvokeAndWaitAsync(step);
         public static async Task SendPlayerList(List<FPlayerName> players) =>
             await PlayerListInvoc.InvokeAndWaitAsync(players);
         public static async Task SendPlayerJoined(FPlayerName player) =>
@@ -193,22 +200,22 @@ namespace Uncreated.Networking
         public static async Task LogPlayerWarned(ulong violator, ulong admin_id, string reason, DateTime time) =>
             await PlayerWarnedInvoc.InvokeAndWaitAsync(violator, admin_id, reason, time);
         public static async Task SendPlayerOnDuty(ulong player, bool intern) =>
-            await PlayerOnDutyInvoc.Invoke(player, intern, DateTime.Now);
+            await PlayerOnDutyInvoc.InvokeAndWaitAsync(player, intern, DateTime.Now);
         public static async Task SendPlayerOffDuty(ulong player, bool intern) =>
-            await PlayerOffDutyInvoc.Invoke(player, intern, DateTime.Now);
+            await PlayerOffDutyInvoc.InvokeAndWaitAsync(player, intern, DateTime.Now);
         public static async Task SendServerReloading(ulong admin, string reason) =>
             await InvokeServerReloadingInvoc.Invoke(admin, reason);
         public static async Task SendReloading(ulong admin, string reason) =>
-            await InvokeServerReloadingInvoc.Invoke(admin, reason);
+            await InvokeServerReloadingInvoc.InvokeAndWaitAsync(admin, reason);
 
         private static void ReceiveConfirmation(byte id)
         {
-            Warfare.F.Log("Confirmed message " + id.ToString(), ConsoleColor.Cyan);
+            //Warfare.F.Log("Confirmed message " + id.ToString(), ConsoleColor.Cyan);
             NetworkCall.RemovePending(id, false, true);
         }
         private static void ReceiveFailure(byte id)
         {
-            Warfare.F.Log("Failure to read message " + id.ToString(), ConsoleColor.Cyan);
+            //Warfare.F.Log("Failure to read message " + id.ToString(), ConsoleColor.Cyan);
             if (Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> result))
             {
                 result = new KeyValuePair<bool, CancellationTokenSource>(false, result.Value);
@@ -217,56 +224,70 @@ namespace Uncreated.Networking
         }
         internal static async Task ProcessResponse(byte[] message)
         {
-            if (message.Length <= 0) return;
-            if (message.Length < sizeof(ushort) + 1)
+            try
             {
-                Warfare.F.LogError("Received a message under the minimum size of 3");
+                if (message.Length <= 0) return;
+                if (message.Length < sizeof(ushort) + 1)
+                {
+                    Warfare.F.LogError("Received a message under the minimum size of 3");
+                    BeginRead.Invoke();
+                    return;
+                }
+                ECall call;
+                byte id;
+                if (ByteMath.ReadUInt16(out ushort callid, 0, message))
+                {
+                    call = (ECall)callid;
+                    id = message[2];
+                }
+                else
+                {
+                    Warfare.F.LogError("Incorrect call enumerator given in response: " + message[0].ToString(Warfare.Data.Locale));
+                    BeginRead.Invoke();
+                    return;
+                }
+                byte[] data = new byte[message.Length - sizeof(ushort) - 1];
+                Array.Copy(message, sizeof(ushort) + 1, data, 0, data.Length);
+                bool success = false;
+                switch (call)
+                {
+                    case ECall.CONFIRM_RECEIVED:
+                        if (ReceivedInvoc.Read(data, out byte receive_id))
+                        {
+                            ReceiveConfirmation(receive_id);
+                            success = true;
+                        }
+                        break;
+                    case ECall.TELL_FAILED_TO_READ:
+                        if (FailedToReceiveInvoc.Read(data, out byte fail_id))
+                        {
+                            ReceiveFailure(fail_id);
+                            success = true;
+                        }
+                        break;
+                    case ECall.INVOKE_BAN:
+                        if (InvokeBanInvoc.Read(data, out ulong banned, out ulong admin, out string reason, out uint duration, out DateTime timestamp))
+                        {
+                            await ReceiveInvokeBan(banned, admin, reason, duration, timestamp);
+                            success = true;
+                        } else
+                        {
+                            Warfare.F.Log("FAILED TO READ BAN: " + string.Join(", ", data));
+                        }
+                        break;
+                }
+                if (id > 0)
+                {
+                    if (success) await ConfirmReceived(id);
+                    else await FailureToReceive(id);
+                }
+                BeginRead.Invoke();
             }
-            ECall call;
-            byte id;
-            if (ByteMath.ReadUInt16(out ushort callid, 0, message))
+            catch (Exception ex)
             {
-                call = (ECall)callid;
-                id = message[2];
-            }
-            else
-            {
-                Warfare.F.LogError("Incorrect call enumerator given in response: " + message[0].ToString(Warfare.Data.Locale));
-                return;
-            }
-            byte[] data = new byte[message.Length - sizeof(ushort) - 1];
-            Array.Copy(message, sizeof(ushort) + 1, data, 0, data.Length);
-            Warfare.F.Log(string.Join(",", message));
-            Warfare.F.Log(string.Join(",", data));
-            bool success = false;
-            switch (call)
-            {
-                case ECall.CONFIRM_RECEIVED:
-                    if (ReceivedInvoc.Read(data, out byte receive_id))
-                    {
-                        ReceiveConfirmation(receive_id);
-                        success = true;
-                    }
-                    break;
-                case ECall.TELL_FAILED_TO_READ:
-                    if (FailedToReceiveInvoc.Read(data, out byte fail_id))
-                    {
-                        ReceiveFailure(fail_id);
-                        success = true;
-                    }
-                    break;
-                case ECall.INVOKE_BAN:
-                    if (InvokeBanInvoc.Read(data, out ulong banned, out ulong admin, out string reason, out uint duration, out DateTime timestamp))
-                    {
-                        await ReceiveInvokeBan(banned, admin, reason, duration, timestamp);
-                        success = true;
-                    }
-                    break;
-            }
-            if (id > 0)
-            {
-                if (success) await ConfirmReceived(id);
-                else await FailureToReceive(id);
+                Warfare.F.LogError("Caught exception while processing response.");
+                Warfare.F.LogError(ex);
+                BeginRead.Invoke();
             }
         }
         private static async Task ReceiveInvokeBan(ulong banned, ulong admin, string reason, uint duration, DateTime timestamp)
@@ -305,11 +326,15 @@ namespace Uncreated.Networking
             this.connection = new ClientConnection(this);
             this.Identity = identitiy;
             Client._send = Send;
+            Client._beginRead = () => _ = I?.connection?.BeginRead(false);
+            Client._beginReadCancellableAwaitable = (token) => I.connection.BeginRead(token, true);
         }
-        public async Task Connect(CancellationToken token) => await connection?.Connect(token, true);
+        public async Task Connect(CancellationTokenSource token) => await connection?.Connect(token, true);
         public void Shutdown()
         {
             Warfare.F.Log("Shutting down", ConsoleColor.Magenta);
+            connection.connected = false;
+            if (connection == null || connection.socket == null) return;
             connection.socket.Close();
             try
             {
@@ -326,14 +351,18 @@ namespace Uncreated.Networking
             private readonly TCPClient _owner;
             private NetworkStream stream;
             private byte[] _buffer;
+            private CancellationTokenSource _waiterToken;
+            private bool listening = false;
+            public bool connected = false;
             public ClientConnection(TCPClient owner)
             {
                 this._owner = owner;
             }
             int connection_tries = 0;
             const int max_connection_tries = 10;
-            public async Task Connect(CancellationToken token, bool first = true)
+            public async Task Connect(CancellationTokenSource token, bool first = true)
             {
+                this._waiterToken = token;
                 if (first) connection_tries = 0;
                 if (socket != null)
                 {
@@ -358,7 +387,9 @@ namespace Uncreated.Networking
                 try
                 {
                     await socket.ConnectAsync(_owner.IP, _owner.Port);
+                    connected = true;
                     Warfare.F.Log($"Connected to {socket.Client.RemoteEndPoint}.", ConsoleColor.DarkYellow);
+                    DateTime start = DateTime.Now;
                     await Client.Identify();
                 }
                 catch (SocketException)
@@ -373,17 +404,27 @@ namespace Uncreated.Networking
                 }
                 if (!socket.Connected) return;
                 stream = socket.GetStream();
-                while (true)
+                _ = BeginRead(_waiterToken.Token, false);
+            }
+            public ConfiguredTaskAwaitable<bool> BeginRead() => BeginRead(_waiterToken.Token, true);
+            public ConfiguredTaskAwaitable<bool> BeginRead(bool wait) => BeginRead(_waiterToken.Token, wait);
+            public ConfiguredTaskAwaitable<bool> BeginRead(CancellationToken token, bool wait)
+            {
+                if (listening) return Task.FromResult(true).ConfigureAwait(true);
+                return Task.Run(async () =>
                 {
+                    Warfare.F.Log("LISTENING", ConsoleColor.Cyan);
                     try
                     {
                         if (stream == default)
                         {
                             Warfare.F.LogError("Disconnected from TCP host.");
-                            break;
+                            return false;
                         }
+                        listening = true;
                         int received_bytes_count = await stream.ReadAsync(_buffer, 0, BufferSize, token);
-                        if (token.IsCancellationRequested) break;
+                        listening = false;
+                        if (token.IsCancellationRequested) return false;
                         if (received_bytes_count <= 0) _owner.Shutdown();
                         byte[] received = new byte[received_bytes_count];
                         Array.Copy(_buffer, 0, received, 0, received_bytes_count);
@@ -391,13 +432,26 @@ namespace Uncreated.Networking
                     }
                     catch (SocketException)
                     {
-                        Warfare.F.LogError("Disconnected from TCP host.");
-                        break;
+                        goto Error;
                     }
-                }
+                    catch (InvalidOperationException)
+                    {
+                        goto Error;
+                    }
+                    catch (IOException)
+                    {
+                        goto Error;
+                    }
+                    return false;
+                Error:
+                    Warfare.F.LogError("Disconnected from TCP host.");
+                    I.Dispose();
+                    return false;
+                }).ConfigureAwait(wait);
             }
             public async Task SendMessage(byte[] message)
             {
+                if (!connected) return;
                 try
                 {
                     if (socket != null && socket.Connected)
@@ -408,17 +462,35 @@ namespace Uncreated.Networking
                 }
                 catch (SocketException)
                 {
-                    Warfare.F.LogError("Unable to write message.", ConsoleColor.Red);
+                    goto Error;
                 }
                 catch (InvalidOperationException)
                 {
-                    Warfare.F.LogError("Unable to write message.", ConsoleColor.Red);
+                    goto Error;
                 }
+                catch (IOException)
+                {
+                    goto Error;
+                }
+                catch (Exception ex)
+                {
+                    Warfare.F.LogError("Unknown error in ClientConnection.SendMessage(byte[]):");
+                    Warfare.F.LogError(ex);
+                }
+                return;
+
+                Error:
+                    Warfare.F.LogError("Unable to write message.", ConsoleColor.Red);
+            }
+            public void Dispose()
+            {
+                this._waiterToken?.Cancel();
             }
         }
         public void Dispose()
         {
             this.Shutdown();
+            this.connection?.Dispose();
             I = null;
             GC.SuppressFinalize(this);
         }

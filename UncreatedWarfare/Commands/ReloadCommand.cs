@@ -137,18 +137,21 @@ namespace Uncreated.Warfare.Commands
         {
             try
             {
-                await Networking.Client.SendReloading(admin, reason);
-                Networking.TCPClient.I?.Shutdown();
+                if (Networking.TCPClient.I != null && Networking.TCPClient.I.connection != null)
+                {
+                    await Networking.Client.SendReloading(admin, reason);
+                    Networking.TCPClient.I?.Shutdown();
+                }
                 Data.CancelTcp.Cancel();
                 Data.CancelTcp.Token.WaitHandle.WaitOne();
                 Data.CancelTcp = new CancellationTokenSource();
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
                     UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                _ = Networking.TCPClient.I.Connect(Data.CancelTcp.Token).ConfigureAwait(false);
+                _ = Networking.TCPClient.I.Connect(Data.CancelTcp).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                F.LogError("Execption when reloading flags.");
+                F.LogError("Execption when reloading TCP client.");
                 F.LogError(ex);
             }
         }
