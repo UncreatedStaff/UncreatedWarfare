@@ -35,7 +35,6 @@ namespace Uncreated.Networking.Invocations
         }
         public static void RemovePending(byte id, bool dispose, bool cancel)
         {
-            Warfare.F.Log("removed " + id.ToString());
             if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
             {
                 if (cancel)
@@ -47,7 +46,6 @@ namespace Uncreated.Networking.Invocations
         }
         public static void RemovePending(byte id, CancellationTokenSource d, bool dispose, bool cancel)
         {
-            Warfare.F.Log("removed with token " + id.ToString());
             if (cancel)
                 d.Cancel();
             if(dispose)
@@ -56,33 +54,26 @@ namespace Uncreated.Networking.Invocations
         }
         protected void InvokeAndWaitInternal(byte id, byte[] data, int counter, CancellationTokenSource canceller)
         {
-             _ = Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 await send.Invoke(data);
                 int c = counter;
-                Warfare.F.Log("Starting delay " + counter.ToString());
                 try
                 {
                     await Task.Delay(WAIT_TIMEOUT, canceller.Token);
                 }
                 catch (OperationCanceledException) when (canceller.Token.IsCancellationRequested)
                 {
-                    Warfare.F.Log("Task cancelled caught", ConsoleColor.Cyan);
                     if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d2))
                     {
-                        Warfare.F.Log("found in list", ConsoleColor.Cyan);
-                        Warfare.F.Log("was cancelled, success: " + d2.Key.ToString(), ConsoleColor.Cyan);
                         RemovePending(id, d2.Value, true, false);
                         if (!d2.Key && c++ < COUNTER_MAX) InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
                     }
                 }
-                Warfare.F.Log("done", ConsoleColor.Cyan);
                 if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
                 {
-                    Warfare.F.Log("found in list", ConsoleColor.Cyan);
                     if (!d.Value.IsCancellationRequested)
                     {
-                        Warfare.F.Log("not cancelled yet", ConsoleColor.Cyan);
                         if (c++ >= COUNTER_MAX)
                         {
                             RemovePending(id, d.Value, true, true);
@@ -92,7 +83,6 @@ namespace Uncreated.Networking.Invocations
                     }
                     else
                     {
-                        Warfare.F.Log("was cancelled, success: " + d.Key.ToString(), ConsoleColor.Cyan);
                         RemovePending(id, d.Value, true, false);
                         if (!d.Key && c++ < COUNTER_MAX) InvokeAndWaitInternal(id, data, c, canceller); // loop until counter >= COUNTER_MAX
                     }

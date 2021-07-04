@@ -38,29 +38,45 @@ namespace Uncreated.Warfare.XP
         }
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            int xp = await GetXP(player.player, newGroup, false);
+            int xp = await GetXP(player.player, newGroup, true);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player.player, xp);
             await rtn;
         }
-        
         public static async Task<int> GetXP(Player player, ulong team, bool important)
         {
-            if(important)
-                return await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
+            if (team == 0 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (ucplayer == null || ucplayer.cachedXp == 0)
-                return await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
-            else return ucplayer.cachedXp;
+            if (important)
+            {
+                int newxp = await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
+                if (ucplayer != null)
+                    ucplayer.cachedXp = newxp;
+                return newxp;
+            } else
+            {
+                if (ucplayer == null)
+                    return await GetXP(player, team, true);
+                else return ucplayer.cachedXp;
+            }
         }
         public static async Task<int> GetXP(ulong player, ulong team, bool important)
         {
-            if (important)
-                return await Data.DatabaseManager.GetXP(player, team);
+            if (team == 0 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromID(player);
-            if (ucplayer == null || ucplayer.cachedXp == 0)
-                return await Data.DatabaseManager.GetXP(player, team);
-            else return ucplayer.cachedXp;
+            if (important)
+            {
+                int newxp = await Data.DatabaseManager.GetXP(player, team);
+                if (ucplayer != null)
+                    ucplayer.cachedXp = newxp;
+                return newxp;
+            }
+            else
+            {
+                if (ucplayer == null)
+                    return await GetXP(player, team, true);
+                else return ucplayer.cachedXp;
+            }
         }
         public static async Task AddXP(Player player, ulong team, int amount, string message = "")
         {

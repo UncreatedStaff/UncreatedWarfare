@@ -19,8 +19,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "deploy";
         public string Help => "deploys you to a nearby FOB";
         public string Syntax => "/deploy";
-        public List<string> Aliases => new List<string>() { "deploy" };
-        public List<string> Permissions => new List<string>() { "deploy" };
+        public List<string> Aliases => new List<string>();
+        public List<string> Permissions => new List<string>() { "uc.deploy" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);

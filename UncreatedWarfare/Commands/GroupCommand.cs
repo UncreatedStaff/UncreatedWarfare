@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Commands
 
         public List<string> Aliases => new List<string>();
 
-        public List<string> Permissions => new List<string> { "uc.group" }; //.join, .create, .delete, .rename, .current
+        public List<string> Permissions => new List<string> { "uc.group" }; //.join, .create, .current
 
         public async void Execute(IRocketPlayer caller, string[] command)
         {

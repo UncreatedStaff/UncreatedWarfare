@@ -259,6 +259,11 @@ namespace Uncreated.Warfare
                 R.Permissions.AddGroup(InternOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup) == default)
                 R.Permissions.AddGroup(InternOffDutyGroup);
+            RocketPermissionsGroup defgroup = R.Permissions.GetGroup("default");
+            if (defgroup == default)
+                R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
+            else defgroup.Permissions = DefaultPerms;
+            R.Permissions.SaveGroup(defgroup);
             await rtn;
         }
         private static void DuplicateKeyError(Exception ex)
@@ -368,6 +373,27 @@ namespace Uncreated.Warfare
                     new Permission("uc.build"),
                     new Permission("uc.ammo"),
                     new Permission("uc.squad"),
+                };
+        }
+        private static List<Permission> DefaultPerms
+        {
+            get =>
+                new List<Permission>()
+                {
+                    new Permission("uc.request"),
+                    new Permission("uc.join"),
+                    new Permission("uc.range"),
+                    new Permission("uc.repair"),
+                    new Permission("uc.lang"),
+                    new Permission("uc.discord"),
+                    new Permission("uc.ammo"),
+                    new Permission("uc.build"),
+                    new Permission("uc.deploy"),
+                    new Permission("uc.kits"),
+                    new Permission("uc.squad"),
+                    new Permission("uc.rally"),
+                    new Permission("uc.group"),
+                    new Permission("uc.group.current")
                 };
         }
     }

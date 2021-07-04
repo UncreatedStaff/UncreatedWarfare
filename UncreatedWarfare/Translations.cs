@@ -500,8 +500,12 @@ namespace Uncreated.Warfare
                 { "team2_specops", "Spetsnaz" },
 
                 // Kit Signs
+                { "kit_free", "FREE" },
+                { "kit_available", "Anyone" },
                 { "kit_price_credits", "C {0}" },
-                { "kit_price_dollars", "$ {0}" }
+                { "kit_price_tickets", "{0} Tickets" },
+                { "kit_price_dollars", "$ {0}" },
+                { "kit_required_level", "Level: <color=#{1}>{0}</color>" }
 
             };
         }

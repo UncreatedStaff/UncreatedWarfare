@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Commands
         public string Help => "repairs vehicles";
         public string Syntax => "/repair";
         public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "repair" };
+        public List<string> Permissions => new List<string>() { "uc.repair" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
