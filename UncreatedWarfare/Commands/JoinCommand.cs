@@ -89,7 +89,6 @@ namespace Uncreated.Warfare.Commands
                     GroupManager.save();
                     await EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, player.GetTeam());
 
-
                     F.Log($"Player {player.CharacterName} switched to {teamName}", ConsoleColor.Cyan);
 
                     player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());
