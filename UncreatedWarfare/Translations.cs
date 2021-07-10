@@ -112,6 +112,7 @@ namespace Uncreated.Warfare
                 { "kit_e_notallowed", "<color=#ab8b82>You are not allowed to access that kit.</color>" },
                 { "kit_e_wrongteam", "<color=#ab8b82>You cannot request this kit while on the wrong team.</color>" },
                 { "kit_e_cooldown", "<color=#c2b39b>You can request this kit again in: <color=#bafeff>{0}</color></color>" },
+                { "kit_e_cooldownglobal", "<color=#c2b39b>You can request another kit in: <color=#bafeff>{0}</color></color>" },
                 { "kits_heading", "<color=#b0a99d>You have access to the following <color=#ffd494>PREMIUM</color> kits:</color>" },
                 { "kits_nokits", "<color=#b0a99d>You have no premium kits.</color> Go and <b><color=#e6c6b3>request a regular kit at the <color=#99a38e>ARMORY</color></color></b>" },
                 { "kits_notonduty", "<color=#a6918a>You must be on duty to execute that command.</color>" },
@@ -505,7 +506,12 @@ namespace Uncreated.Warfare
                 { "kit_price_credits", "C {0}" },
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0}" },
-                { "kit_required_level", "Level: <color=#{1}>{0}</color>" }
+                { "kit_required_level", "Level: <color=#{1}>{0}</color>" },
+                { "kit_owned", "OWNED" },
+
+                // revives
+                { "heal_e_notmedic", "<color=#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.</color>" },
+                { "heal_e_enemy", "<color=#bdae9d>You cannot aid enemy soldiers.</color>" },
 
             };
         }

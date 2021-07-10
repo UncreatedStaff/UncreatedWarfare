@@ -342,7 +342,7 @@ namespace Uncreated.Warfare.Vehicles
             RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
-            Items = new List<ushort>() { 1440, 277 };
+            Items = new List<ushort>() { 28, 277 };
             CrewSeats = new List<byte>();
             Metadata = null;
         }

@@ -89,7 +89,6 @@ namespace Uncreated.Warfare.Commands
                     GroupManager.save();
                     await EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, player.GetTeam());
 
-
                     F.Log($"Player {player.CharacterName} switched to {teamName}", ConsoleColor.Cyan);
 
                     player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());
@@ -99,7 +98,12 @@ namespace Uncreated.Warfare.Commands
                     foreach (var p in PlayerManager.OnlinePlayers)
                     {
                         if (p.Steam64 != player.Steam64)
-                            p.Message("join_announce", F.GetPlayerOriginalNames(p.Player.channel.owner).CharacterName, teamName);
+                            p.Message("join_announce", F.GetPlayerOriginalNames(player.Player.channel.owner).CharacterName, teamName);
+                    }
+
+                    if (player.Squad != null)
+                    {
+                        Squads.SquadManager.LeaveSquad(player, ref player.Squad);
                     }
 
                     PlayerManager.Save();
