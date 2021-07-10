@@ -11,7 +11,7 @@ namespace Uncreated
     public class Config<TData> where TData : ConfigData, new()
     {
         public readonly string directory;
-        public TData data { get; private set; }
+        public TData Data { get; private set; }
 
         public Config(string directory, string filename)
         {
@@ -31,12 +31,16 @@ namespace Uncreated
             JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
             try
             {
-                serializer.Serialize(writer, data);
+                serializer.Serialize(writer, Data);
                 writer.Close();
+                file.Close();
+                file.Dispose();
             }
             catch (Exception ex)
             {
                 writer.Close();
+                file.Close();
+                file.Dispose();
                 throw ex;
             }
         }
@@ -46,7 +50,7 @@ namespace Uncreated
             try
             {
                 string json = r.ReadToEnd();
-                data = JsonConvert.DeserializeObject<TData>(json);
+                Data = JsonConvert.DeserializeObject<TData>(json);
 
                 r.Close();
                 r.Dispose();
@@ -68,15 +72,19 @@ namespace Uncreated
             JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
             try
             {
-                data = new TData();
-                data.SetDefaults();
+                Data = new TData();
+                Data.SetDefaults();
 
-                serializer.Serialize(writer, data);
+                serializer.Serialize(writer, Data);
                 writer.Close();
+                file.Close();
+                file.Dispose();
             }
             catch (Exception ex)
             {
                 writer.Close();
+                file.Close();
+                file.Dispose();
                 throw ex;
             }
         }
@@ -84,7 +92,7 @@ namespace Uncreated
 
     public abstract class ConfigData
     {
-        public ConfigData() { }
+        public ConfigData() => SetDefaults();
         public abstract void SetDefaults();
     }
 }

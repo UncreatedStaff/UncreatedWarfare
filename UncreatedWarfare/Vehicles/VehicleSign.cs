@@ -121,6 +121,13 @@ namespace Uncreated.Warfare.Vehicles
             this.placeholder_text = placeholder_text;
             this.bay_type = bay_type;
         }
+        public VehicleSign()
+        {
+            this.instance_id = 0;
+            this.bay_instance_id = 0;
+            this.placeholder_text = string.Empty;
+            this.bay_type = EStructType.BARRICADE;
+        }
         public void InitVars()
         {
             if (!StructureSaver.StructureExists(this.instance_id, EStructType.BARRICADE, out save))

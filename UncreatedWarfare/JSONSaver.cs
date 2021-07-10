@@ -12,7 +12,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated
 {
-    public abstract class JSONSaver<T>
+    public abstract class JSONSaver<T> where T : new()
     {
         protected static string directory;
         public static readonly Type Type = typeof(T);
@@ -23,6 +23,7 @@ namespace Uncreated
             directory = _directory;
             CreateFileIfNotExists(LoadDefaults());
             Reload();
+            TryUpgrade();
         }
         public static void Save() => OverwriteSavedList(ActiveObjects);
         public static void Reload() => ActiveObjects = GetExistingObjects();
@@ -112,18 +113,14 @@ namespace Uncreated
                 }
             } else return ActiveObjects;
         }
-
         protected static List<T> GetObjectsWhere(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).Where(predicate).ToList();
-
         protected static T GetObject(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).FirstOrDefault(predicate);
         protected static bool ObjectExists(Func<T, bool> match, out T item, bool readFile = false)
         {
             item = GetObject(match);
             return item != null;
         }
-        /// <summary>
-        /// reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]
-        /// </summary>
+        /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
         private static FieldInfo GetField(string property, out byte reason)
         {
             for (int i = 0; i < fields.Length; i++)
@@ -313,9 +310,7 @@ namespace Uncreated
             parsed = false;
             return default;
         }
-        /// <summary>
-        /// Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.
-        /// </summary>
+        /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static T SetProperty(T obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
         {
             FieldInfo field = GetField(property, out byte reason);
@@ -382,9 +377,7 @@ namespace Uncreated
                 return obj;
             }
         }
-        /// <summary>
-        /// reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]
-        /// </summary>
+        /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
         private static bool ValidateField(FieldInfo field, out byte reason)
         {
             if (field == default)
@@ -424,9 +417,7 @@ namespace Uncreated
             reason = 0;
             return true;
         }
-        /// <summary>
-        /// Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.
-        /// </summary>
+        /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static bool SetProperty(Func<T, bool> selector, string property, string value, out bool foundObject, out bool setSuccessfully, out bool parsed, out bool found, out bool allowedToChange)
         {
             if(ObjectExists(selector, out T selected))
@@ -551,7 +542,6 @@ namespace Uncreated
                 throw ex;
             }
         }
-
         public static bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
         {
             if (Enum.TryParse<TEnum>(name.ToString(), out var p))
@@ -562,7 +552,45 @@ namespace Uncreated
             property = p;
             return false;
         }
-
+        public void TryUpgrade()
+        {
+            if (ActiveObjects == default) throw new NullReferenceException("Error upgrading in JsonSaver: Not yet loaded.");
+            try
+            {
+                bool needsSaving = false;
+                for (int t = 0; t < ActiveObjects.Count; t++)
+                {
+                    T defaultConfig = new T();
+                    if (ActiveObjects[t] == null)
+                    {
+                        ActiveObjects[t] = defaultConfig;
+                        needsSaving = true;
+                        continue;
+                    }
+                    FieldInfo[] fields = Type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+                    for (int i = 0; i < fields.Length; i++)
+                    {
+                        if (fields[i].IsStatic ||  // if the field is static or it contains [JsonIgnore] in its attributes.
+                            fields[i].CustomAttributes.Count(x => x.AttributeType == typeof(JsonIgnoreAttribute)) > 0) continue;
+                        object currentvalue = fields[i].GetValue(ActiveObjects[t]);
+                        object defaultvalue = fields[i].GetValue(defaultConfig);
+                        if (currentvalue == defaultvalue) continue;
+                        else if (currentvalue != fields[i].FieldType.getDefaultValue()) continue;
+                        else
+                        {
+                            fields[i].SetValue(ActiveObjects[t], defaultvalue);
+                            needsSaving = true;
+                        }
+                    }
+                }
+                if (needsSaving) Save();
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error upgrading in JsonSaver:");
+                F.LogError(ex);
+            }
+        }
         protected class TypeArgumentException : Exception
         {
             public TypeArgumentException() { }

@@ -551,7 +551,6 @@ namespace Uncreated.Warfare
             /// </summary>
             [HarmonyPatch(typeof(BarricadeManager), "dropBarricadeIntoRegionInternal")]
             [HarmonyPostfix]
-            [UsedImplicitly]
             static void DropBarricadePostFix(BarricadeRegion region, BarricadeData data, ref Transform result, ref uint instanceID)
             {
                 if (!UCWarfare.Config.Patches.dropBarricadeIntoRegionInternal) return;

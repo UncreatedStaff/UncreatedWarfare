@@ -17,14 +17,14 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
         {
-            if (data.barricade.id == FOBManager.config.data.RepairStationID)
+            if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
                 RegisterNewRepairStation(data);
             }
         }
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
-            if (data.barricade.id == FOBManager.config.data.RepairStationID)
+            if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
                 TryDeleteRepairStation(instanceID);
             }
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare.FOBs
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
-            return barricadeDatas.Where(b => b.barricade.id == FOBManager.config.data.RepairStationID).ToList();
+            return barricadeDatas.Where(b => b.barricade.id == FOBManager.config.Data.RepairStationID).ToList();
         }
     }
 
@@ -171,9 +171,9 @@ namespace Uncreated.Warfare.FOBs
 
                             foreach (ItemJar jar in parent.storage.items.items)
                             {
-                                if (TeamManager.IsTeam1(parent.structure.group) && jar.item.id == FOBManager.config.data.Team1BuildID)
+                                if (TeamManager.IsTeam1(parent.structure.group) && jar.item.id == FOBManager.config.Data.Team1BuildID)
                                     build_count++;
-                                else if (TeamManager.IsTeam2(parent.structure.group) && jar.item.id == FOBManager.config.data.Team2BuildID)
+                                else if (TeamManager.IsTeam2(parent.structure.group) && jar.item.id == FOBManager.config.Data.Team2BuildID)
                                     build_count++;
                             }
 
@@ -183,9 +183,9 @@ namespace Uncreated.Warfare.FOBs
                                 parent.RepairVehicle(nearby[i]);
 
                                 if (TeamManager.IsTeam1(parent.structure.group))
-                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, FOBManager.config.data.Team1BuildID);
+                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, FOBManager.config.Data.Team1BuildID);
                                 else if (TeamManager.IsTeam2(parent.structure.group))
-                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, FOBManager.config.data.Team2BuildID);
+                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, FOBManager.config.Data.Team2BuildID);
                             }
                         }
                     }

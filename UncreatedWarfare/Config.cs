@@ -69,7 +69,7 @@ namespace Uncreated.Warfare
             this.ToastIDWarning = 32382;
             this.ToastIDSevere = 32383;
             this.MiniToastXP = 32385;
-            this.MiniToastOfficerPoints = 32387;
+            this.MiniToastOfficerPoints = 32386;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
-            this.ReviveTimeSeconds = 50f;
+            this.ReviveTimeSeconds = 5f;
         }
     }
     public class Modules

@@ -45,21 +45,21 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            if (foundation.barricade.id == FOBManager.config.data.FOBBaseID)
+            if (foundation.barricade.id == FOBManager.config.Data.FOBBaseID)
             {
                 BuildManager.TryBuildFOB(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.data.AmmoCrateBaseID)
+            else if (foundation.barricade.id == FOBManager.config.Data.AmmoCrateBaseID)
             {
                 BuildManager.TryBuildAmmoCrate(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.data.RepairStationBaseID)
+            else if (foundation.barricade.id == FOBManager.config.Data.RepairStationBaseID)
             {
                 BuildManager.TryBuildRepairStation(foundation, player);
             }
             else
             {
-                Emplacement emplacement = FOBManager.config.data.Emplacements.Find(e => e.baseID == foundation.barricade.id);
+                Emplacement emplacement = FOBManager.config.Data.Emplacements.Find(e => e.baseID == foundation.barricade.id);
 
                 if (emplacement != null)
                 {
@@ -67,7 +67,7 @@ namespace Uncreated.Warfare.FOBs
                     return;
                 }
 
-                Fortification fortification = FOBManager.config.data.Fortifications.Find(f => f.base_id == foundation.barricade.id);
+                Fortification fortification = FOBManager.config.Data.Fortifications.Find(f => f.base_id == foundation.barricade.id);
 
                 if (fortification != null)
                 {

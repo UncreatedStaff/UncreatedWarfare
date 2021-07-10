@@ -61,6 +61,7 @@ namespace Uncreated.Networking.Invocations
         private async Task<bool> InvokeAndWaitTask(byte id, byte[] data, int counter, CancellationTokenSource canceller)
         {
             await send.Invoke(data);
+            if (!TCPClient.I.IsConnected()) return false;
             CancellationTokenSource temp = new CancellationTokenSource();
             temp.CancelAfter(WAIT_TIMEOUT);
             await Client.BeginReadCancellableAwaitable.Invoke(temp.Token);

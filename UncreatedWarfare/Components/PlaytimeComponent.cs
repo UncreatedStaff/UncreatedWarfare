@@ -204,7 +204,7 @@ namespace Uncreated.Warfare.Components
 
             if (shouldMessagePlayer)
                 player.Message("deploy_s", locationName);
-            CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.data.DeployFOBCooldown);
+            CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
 
             _currentTeleportRequest = default;
 

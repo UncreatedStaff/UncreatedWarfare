@@ -30,43 +30,43 @@ namespace Uncreated.Warfare.Commands
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.Player, out _);
 
                 bool IsInMain = player.Player.IsInMain();
+                bool IsInLobby = TeamManager.LobbyZone.IsInside(player.Player.transform.position);
                 bool shouldCancelOnMove = !IsInMain;
                 bool shouldCancelOnDamage = !IsInMain;
 
                 ulong team = player.GetTeam();
 
-                if (!IsInMain)
+                if (!IsInMain && !IsInLobby)
                 {
-                    if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out var combatlog))
+                    if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out Cooldown combatlog))
                     {
                         player.Message("deploy_e_incombat", combatlog.ToString());
                         return;
                     }
-                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out var cooldown))
+                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
                     {
                         player.Message("deploy_e_cooldown", cooldown.ToString());
                         return;
                     }
                     if (!player.IsNearFOB())
                     {
-                        player.Message("deploy_e_cooldown", cooldown.ToString());
+                        player.Message("deploy_e_notnearfob");
                         return;
                     }
                 }
-
                 if (command[0].ToLower() == "main")
                 {
-                    c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
+                    c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
                 }
                 else if (command[0].ToLower() == "lobby")
                 {
-                    c.TeleportDelayed(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle, FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#bb80d1>lobby</color>");
+                    c.TeleportDelayed(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#bb80d1>lobby</color>");
                 }
                 else
                 {
                     if (FOBManager.FindFOBByName(command[0], player.GetTeam(), out var FOB))
                     {
-                        c.TeleportDelayed(FOB.Structure.point, 0, FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
+                        c.TeleportDelayed(FOB.Structure.point, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
                     }
                     else
                     {

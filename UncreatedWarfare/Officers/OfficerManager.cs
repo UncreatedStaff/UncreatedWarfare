@@ -60,7 +60,7 @@ namespace Uncreated.Warfare.Officers
         public static async Task<int> GetOfficerPoints(ulong playerID, ulong team) => await Data.DatabaseManager.GetOfficerPoints(playerID, team);
         public static async Task AddOfficerPoints(Player player, ulong team, int amount, string message ="")
         {
-            int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(Math.Round(amount * config.data.PointsMultiplier)));
+            int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(Math.Round(amount * config.Data.PointsMultiplier)));
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
 
             if (message != "" && amount != 0)
@@ -76,7 +76,7 @@ namespace Uncreated.Warfare.Officers
         }
         public static Rank GetOfficerRank(int officerRankLevel)
         {
-            return config.data.OfficerRanks.Where(r => r.level == officerRankLevel).FirstOrDefault();
+            return config.Data.OfficerRanks.Where(r => r.level == officerRankLevel).FirstOrDefault();
         }
 
         public static void ChangeOfficerRank(UCPlayer player, Rank newRank, EBranch branch)
@@ -156,20 +156,20 @@ namespace Uncreated.Warfare.Officers
 
             int stars = GetStars(balance);
 
-            EffectManager.sendUIEffect(config.data.StarsUI, (short)config.data.StarsUI, player.channel.owner.transportConnection, true);
-            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Icon",
+            EffectManager.sendUIEffect(config.Data.StarsUI, (short)config.Data.StarsUI, player.channel.owner.transportConnection, true);
+            EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Icon",
                 stars == 0 ? "<color=#737373>¼</color>" : "<color=#ffd683>¼</color>"
             );
-            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Count",
+            EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Count",
                 stars < 2 ? "" : stars.ToString()
             );
-            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Info",
+            EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Info",
                 stars == 0 ? "<color=#737373>no stars</color>" : (stars.ToString() + " star" + (stars == 1 ? "" : "s"))
             );
-            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Points",
+            EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Points",
                 currentPoints + "/" + requiredPoints
             );
-            EffectManager.sendUIEffectText((short)config.data.StarsUI, player.channel.owner.transportConnection, true, "Progress",
+            EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Progress",
                 GetProgress(currentPoints, requiredPoints)
             );
         }
@@ -188,8 +188,8 @@ namespace Uncreated.Warfare.Officers
         }
         public static int GetRequiredLevelPoints(int totalPoints)
         {
-            int a = config.data.FirstStarPoints;
-            int d = config.data.PointsIncreasePerStar;
+            int a = config.Data.FirstStarPoints;
+            int d = config.Data.PointsIncreasePerStar;
 
             int stars = unchecked((int)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
 
@@ -197,8 +197,8 @@ namespace Uncreated.Warfare.Officers
         }
         public static int GetCurrentLevelPoints(int totalPoints)
         {
-            int a = config.data.FirstStarPoints;
-            int d = config.data.PointsIncreasePerStar;
+            int a = config.Data.FirstStarPoints;
+            int d = config.Data.PointsIncreasePerStar;
 
             int stars = unchecked((int)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
 
@@ -206,8 +206,8 @@ namespace Uncreated.Warfare.Officers
         }
         public static int GetStars(int totalPoints)
         {
-            int a = config.data.FirstStarPoints;
-            int d = config.data.PointsIncreasePerStar;
+            int a = config.Data.FirstStarPoints;
+            int d = config.Data.PointsIncreasePerStar;
 
             return unchecked((int)Math.Floor(((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
         }
@@ -228,6 +228,13 @@ namespace Uncreated.Warfare.Officers
             this.team = team;
             this.officerLevel = officerLevel;
             this.branch = branch;
+        }
+        public Officer()
+        {
+            this.steamID = 0;
+            this.team = 0;
+            this.officerLevel = 0;
+            this.branch = EBranch.DEFAULT;
         }
     }
 

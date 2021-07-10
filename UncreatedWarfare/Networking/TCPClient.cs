@@ -342,6 +342,7 @@ namespace Uncreated.Networking
             }
             catch (ObjectDisposedException) { }
         }
+        public bool IsConnected() => connection.connected;
         public async Task SendMessageAsync(byte[] message) => await connection?.SendMessage(message);
         public static async Task SendMessageAsyncStatic(byte[] message) => await I?.SendMessageAsync(message);
         internal async Task ReceiveData(byte[] data) => await OnReceivedData?.Invoke(data);

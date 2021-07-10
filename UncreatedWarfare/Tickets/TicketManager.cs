@@ -34,8 +34,8 @@ namespace Uncreated.Warfare.Tickets
         {
             config = new Config<TicketData>(Data.TicketStorage, "config.json");
 
-            Team1Tickets = config.data.StartingTickets;
-            Team2Tickets = config.data.StartingTickets;
+            Team1Tickets = config.Data.StartingTickets;
+            Team2Tickets = config.Data.StartingTickets;
 
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
@@ -63,12 +63,12 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
-            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.data.EnemyKilledXP, 75), "ENEMY KILLED");
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75), "ENEMY KILLED");
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
-            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.data.FriendlyKilledXP, "FRIENDLY KILLED");
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.Data.FriendlyKilledXP, "FRIENDLY KILLED");
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         private static async void OnVehicleExploded(InteractableVehicle vehicle)
@@ -85,14 +85,14 @@ namespace Uncreated.Warfare.Tickets
                 }
                 if (vehicle.transform.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
                 {
-                    if (XPManager.config.data.VehicleDestroyedXP.ContainsKey(data.Type))
+                    if (XPManager.config.Data.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
                         var player = UCPlayer.FromCSteamID(vc.owner);
 
                         bool vehicleWasEnemy = (player.IsTeam1() && TeamManager.IsTeam2(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam1(vehicle.lockedGroup));
                         bool vehicleWasFriendly = (player.IsTeam1() && TeamManager.IsTeam1(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam2(vehicle.lockedGroup));
 
-                        int amount = XPManager.config.data.VehicleDestroyedXP[data.Type];
+                        int amount = XPManager.config.Data.VehicleDestroyedXP[data.Type];
                         string message = "";
 
                         switch (data.Type)
@@ -163,13 +163,13 @@ namespace Uncreated.Warfare.Tickets
         public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
             if (TeamManager.IsTeam1(capturedTeam))
-                Team1Tickets += config.data.TicketsFlagCaptured;
+                Team1Tickets += config.Data.TicketsFlagCaptured;
             if (TeamManager.IsTeam2(capturedTeam))
-                Team1Tickets += config.data.TicketsFlagCaptured;
+                Team1Tickets += config.Data.TicketsFlagCaptured;
             if (TeamManager.IsTeam1(lostTeam))
-                Team1Tickets += config.data.TicketsFlagLost;
+                Team1Tickets += config.Data.TicketsFlagLost;
             if (TeamManager.IsTeam2(lostTeam))
-                Team1Tickets += config.data.TicketsFlagLost;
+                Team1Tickets += config.Data.TicketsFlagLost;
 
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
@@ -177,17 +177,17 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.data.FlagCapturedXP, 100), "FLAG CAPTURED");
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagCapturedXP, 100), "FLAG CAPTURED");
 
                 if (player.IsNearSquadLeader(100))
                 {
                     if (alreadyUpdated.TryGetValue(player.Squad.Name, out var amount))
                     {
-                        amount += OfficerManager.config.data.MemberFlagCapturePoints;
+                        amount += OfficerManager.config.Data.MemberFlagCapturePoints;
                     }
                     else
                     {
-                        alreadyUpdated.Add(player.Squad.Name, OfficerManager.config.data.MemberFlagCapturePoints);
+                        alreadyUpdated.Add(player.Squad.Name, OfficerManager.config.Data.MemberFlagCapturePoints);
                     }
                 }
             }
@@ -208,17 +208,17 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.data.FlagNeutralizedXP, 100), "FLAG NEUTRALIZED");
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagNeutralizedXP, 100), "FLAG NEUTRALIZED");
 
                 if (player.IsNearSquadLeader(100))
                 {
                     if (alreadyUpdated.TryGetValue(player.Squad.Name, out var amount))
                     {
-                        amount += OfficerManager.config.data.MemberFlagCapturePoints;
+                        amount += OfficerManager.config.Data.MemberFlagCapturePoints;
                     }
                     else
                     {
-                        alreadyUpdated.Add(player.Squad.Name, OfficerManager.config.data.MemberFlagNeutralizedPoints);
+                        alreadyUpdated.Add(player.Squad.Name, OfficerManager.config.Data.MemberFlagNeutralizedPoints);
                     }
                 }
             }
@@ -235,13 +235,13 @@ namespace Uncreated.Warfare.Tickets
         {
             var player = UCPlayer.FromPlayer(nelsonplayer);
 
-            await XPManager.AddXP(player.Player, nelsonplayer.GetTeam(), XPManager.config.data.FlagNeutralizedXP);
+            await XPManager.AddXP(player.Player, nelsonplayer.GetTeam(), XPManager.config.Data.FlagNeutralizedXP);
 
             if (player.Squad?.Members.Count > 1 && player.Steam64 != player.Squad.Leader.Steam64)
             {
                 if (player.IsNearSquadLeader(100))
                 {
-                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.data.MemberFlagTickPoints);
+                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.MemberFlagTickPoints);
                 }
             }
         }
@@ -258,16 +258,16 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
-            EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.Data.Team1TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.Data.Team2TicketUIID, player.transportConnection);
             GetTeamBleed(newGroup, out int bleed, out var message);
             UpdateUI(player.transportConnection, newGroup, bleed, message);
         }
 
         public static void OnNewGameStarting()
         {
-            Team1Tickets = config.data.StartingTickets;
-            Team2Tickets = config.data.StartingTickets;
+            Team1Tickets = config.Data.StartingTickets;
+            Team2Tickets = config.Data.StartingTickets;
             UpdateUITeam1();
             UpdateUITeam2();
 
@@ -310,13 +310,13 @@ namespace Uncreated.Warfare.Tickets
             if (TeamManager.IsTeam1(team))
             {
                 tickets = Team1Tickets;
-                UIID = config.data.Team1TicketUIID;
+                UIID = config.Data.Team1TicketUIID;
             }
 
             else if (TeamManager.IsTeam2(team))
             {
                 tickets = Team2Tickets;
-                UIID = config.data.Team2TicketUIID;
+                UIID = config.Data.Team2TicketUIID;
             }
                 
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,

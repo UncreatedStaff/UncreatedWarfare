@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Squads
 
         public static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
         {
-            if (data.barricade.id == SquadManager.config.data.Team1RallyID || data.barricade.id == SquadManager.config.data.Team2RallyID)
+            if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
                 var player = UCPlayer.FromID(data.owner);
                 if (player.Squad != null)
@@ -40,7 +40,7 @@ namespace Uncreated.Warfare.Squads
             ref bool shouldAllow
             )
         {
-            if (barricade.id == SquadManager.config.data.Team1RallyID || barricade.id == SquadManager.config.data.Team2RallyID)
+            if (barricade.id == SquadManager.config.Data.Team1RallyID || barricade.id == SquadManager.config.Data.Team2RallyID)
             {
                 var player = UCPlayer.FromID(owner);
                 if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
-            if (data.barricade.id == SquadManager.config.data.Team1RallyID || data.barricade.id == SquadManager.config.data.Team2RallyID)
+            if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
                 TryDeleteRallyPoint(instanceID);
             }
@@ -168,8 +168,8 @@ namespace Uncreated.Warfare.Squads
             List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
             return barricadeDatas.Where(b =>
-                (b.barricade.id == SquadManager.config.data.Team1RallyID ||
-                b.barricade.id == SquadManager.config.data.Team2RallyID )   // All barricades that are RallyPoints
+                (b.barricade.id == SquadManager.config.Data.Team1RallyID ||
+                b.barricade.id == SquadManager.config.Data.Team2RallyID )   // All barricades that are RallyPoints
                 ).ToList();
         }
     }
@@ -211,13 +211,13 @@ namespace Uncreated.Warfare.Squads
             //line += $" ({((LocationNode)nearerstLocation).name})";
 
             foreach (var member in squad.Members)
-                EffectManager.sendUIEffect(SquadManager.config.data.rallyUI, (short)SquadManager.config.data.rallyUI, member.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
                 line);
         }
         public void ClearUIForSquad()
         {
             foreach (var member in squad.Members)
-                EffectManager.askEffectClearByID(SquadManager.config.data.rallyUI, member.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection);
         }
         public void TeleportPlayer(UCPlayer player)
         {
@@ -225,7 +225,7 @@ namespace Uncreated.Warfare.Squads
 
             player.Message("rally_success");
 
-            OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.data.SpawnOnRallyPoints).GetAwaiter().GetResult();
+            OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.Data.SpawnOnRallyPoints).GetAwaiter().GetResult();
         }
     }
 

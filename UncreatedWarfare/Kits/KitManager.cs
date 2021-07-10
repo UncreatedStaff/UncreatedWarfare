@@ -383,6 +383,26 @@ namespace Uncreated.Warfare.Kits
             AllowedUsers = new List<ulong>();
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
         }
+        public Kit()
+        {
+            Name = "default";
+            Items = new List<KitItem>();
+            Clothes = new List<KitClothing>();
+            Class = EClass.NONE;
+            Branch = EBranch.DEFAULT;
+            Team = 0;
+            Cost = 0;
+            RequiredLevel = 0;
+            TicketCost = 1;
+            IsPremium = false;
+            PremiumCost = 0;
+            TeamLimit = 1;
+            Cooldown = 0;
+            SignName = "Default";
+            ShouldClearInventory = true;
+            AllowedUsers = new List<ulong>();
+            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
+        }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public bool IsLimited(out int currentPlayers, out int allowedPlayers)
         {

@@ -155,7 +155,17 @@ namespace Uncreated.Warfare.Structures
             else exists = false;
             this.owner = owner;
             this.group = group;
-            exists = false;
+        }
+        public Structure()
+        {
+            this.id = 0;
+            this.health = 100;
+            this.state = string.Empty;
+            this.type = EStructType.BARRICADE;
+            this.instance_id = 0;
+            this.owner = 0;
+            this.group = 0;
+            this.exists = false;
         }
         /// <summary>Spawns the structure if it is not already placed.</summary>
         public async Task SpawnCheck()

@@ -34,13 +34,13 @@ namespace Uncreated.Warfare.Commands
                 var target = UCPlayer.FromName(command[1]);
                 if (target != null)
                 {
-                    Rank rank = OfficerManager.config.data.OfficerRanks.Find(r => r.name.Replace(" ", "").ToLower().Contains(command[2].ToLower()));
+                    Rank rank = OfficerManager.config.Data.OfficerRanks.Find(r => r.name.Replace(" ", "").ToLower().Contains(command[2].ToLower()));
 
                     if (rank is null)
                     {
                         if (Int32.TryParse(command[2], out var level))
                         {
-                            rank = OfficerManager.config.data.OfficerRanks.Find(r => r.level == level);
+                            rank = OfficerManager.config.Data.OfficerRanks.Find(r => r.level == level);
                         }
                     }
 

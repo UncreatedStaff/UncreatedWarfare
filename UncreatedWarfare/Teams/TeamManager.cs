@@ -13,51 +13,49 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Teams
 {
-    public class TeamManager : JSONSaver<TeamConfig>
+    public class TeamManager
     {
-        private static TeamConfig _data;
+        //private static TeamConfig _data;
+        private static Config<TeamConfig> _data;
         public const ulong ZombieTeamID = ulong.MaxValue;
 
         public static ushort Team1Tickets;
         public static ushort Team2Tickets;
 
         public TeamManager()
-            : base(Data.TeamStorage + "teams.json")
         {
-            _data = ReloadSingle(LoadDefaults(), () => { return new TeamConfig(); });
-            if (!KitManager.KitExists(_data.team1unarmedkit, out _)) 
-                F.LogError("Team 1's unarmed kit, \"" + _data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if(!KitManager.KitExists(_data.team2unarmedkit, out _)) 
-                F.LogError("Team 2's unarmed kit, \"" + _data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if(!KitManager.KitExists(_data.defaultkit, out _)) 
-                F.LogError("The default kit, \"" + _data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            _data = new Config<TeamConfig>(Data.TeamStorage, "teams.json");
+            if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _)) 
+                F.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if(!KitManager.KitExists(_data.Data.team2unarmedkit, out _)) 
+                F.LogError("Team 2's unarmed kit, \"" + _data.Data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if(!KitManager.KitExists(_data.Data.defaultkit, out _)) 
+                F.LogError("The default kit, \"" + _data.Data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             
         }
-        public new static void Save() => WriteSingleObject(_data);
-        protected override string LoadDefaults() => F.QuickSerialize(new TeamConfig());
-        public static ulong Team1ID { get => _data.team1id; }
-        public static ulong Team2ID { get => _data.team2id; }
-        public static ulong AdminID { get => _data.adminid; }
-        public static string Team1Name { get => _data.team1name; }
-        public static string Team2Name { get => _data.team2name; }
-        public static string AdminName { get => _data.adminname; }
-        public static string Team1Code { get => _data.team1code; }
-        public static string Team2Code { get => _data.team2code; }
-        public static string AdminCode { get => _data.admincode; }
-        public static Color Team1Color { get => _data.Team1Color; }
-        public static Color Team2Color { get => _data.Team2Color; }
-        public static Color AdminColor { get => _data.AdminColor; }
-        public static Color NeutralColor { get => _data.AdminColor; }
-        public static string Team1ColorHex { get => _data.Team1ColorHex; }
-        public static string Team2ColorHex { get => _data.Team2ColorHex; }
-        public static string AdminColorHex { get => _data.AdminColorHex; }
-        public static string NeutralColorHex { get => _data.AdminColorHex; }
-        public static string Team1UnarmedKit { get => _data.team1unarmedkit; }
-        public static string Team2UnarmedKit { get => _data.team2unarmedkit; }
-        public static float Team1SpawnAngle { get => _data.team1spawnangle; }
-        public static float Team2SpawnAngle { get => _data.team2spawnangle; }
-        public static float LobbySpawnAngle { get => _data.lobbyspawnangle; }
-        public static string DefaultKit { get => _data.defaultkit; }
+        public static ulong Team1ID { get => _data.Data.team1id; }
+        public static ulong Team2ID { get => _data.Data.team2id; }
+        public static ulong AdminID { get => _data.Data.adminid; }
+        public static string Team1Name { get => _data.Data.team1name; }
+        public static string Team2Name { get => _data.Data.team2name; }
+        public static string AdminName { get => _data.Data.adminname; }
+        public static string Team1Code { get => _data.Data.team1code; }
+        public static string Team2Code { get => _data.Data.team2code; }
+        public static string AdminCode { get => _data.Data.admincode; }
+        public static Color Team1Color { get => _data.Data.Team1Color; }
+        public static Color Team2Color { get => _data.Data.Team2Color; }
+        public static Color AdminColor { get => _data.Data.AdminColor; }
+        public static Color NeutralColor { get => _data.Data.AdminColor; }
+        public static string Team1ColorHex { get => _data.Data.Team1ColorHex; }
+        public static string Team2ColorHex { get => _data.Data.Team2ColorHex; }
+        public static string AdminColorHex { get => _data.Data.AdminColorHex; }
+        public static string NeutralColorHex { get => _data.Data.AdminColorHex; }
+        public static string Team1UnarmedKit { get => _data.Data.team1unarmedkit; }
+        public static string Team2UnarmedKit { get => _data.Data.team2unarmedkit; }
+        public static float Team1SpawnAngle { get => _data.Data.team1spawnangle; }
+        public static float Team2SpawnAngle { get => _data.Data.team2spawnangle; }
+        public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
+        public static string DefaultKit { get => _data.Data.defaultkit; }
         public static Zone Team1Main { get {
                 if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(1))
                     return Data.ExtraZones[1];
@@ -237,7 +235,7 @@ namespace Uncreated.Warfare.Teams
         }
     }
 
-    public class TeamConfig
+    public class TeamConfig : ConfigData
     {
         public ulong team1id;
         public ulong team2id;
@@ -335,25 +333,8 @@ namespace Uncreated.Warfare.Teams
                 else return "ffffff";
             }
         }
-        
-        public TeamConfig()
-        {
-            team1id = 1;
-            team2id = 2;
-            adminid = 3;
-            team1name = "USA";
-            team2name = "Russia";
-            adminname = "Admins";
-            team1code = "us";
-            team2code = "ru";
-            admincode = "ad";
-            team1unarmedkit = "usunarmed";
-            team2unarmedkit = "ruunarmed";
-            defaultkit = "default";
-            team1spawnangle = 0f;
-            team2spawnangle = 0f;
-            lobbyspawnangle = 0f;
-        }
+
+        public TeamConfig() => SetDefaults();
         [JsonConstructor]
         public TeamConfig(ulong team1id, 
             ulong team2id, 
@@ -386,6 +367,24 @@ namespace Uncreated.Warfare.Teams
             this.team1spawnangle = team1spawnangle;
             this.team2spawnangle = team2spawnangle;
             this.lobbyspawnangle = lobbyspawnangle;
+        }
+        public override void SetDefaults()
+        {
+            team1id = 1;
+            team2id = 2;
+            adminid = 3;
+            team1name = "USA";
+            team2name = "Russia";
+            adminname = "Admins";
+            team1code = "us";
+            team2code = "ru";
+            admincode = "ad";
+            team1unarmedkit = "usunarmed";
+            team2unarmedkit = "ruunarmed";
+            defaultkit = "default";
+            team1spawnangle = 0f;
+            team2spawnangle = 0f;
+            lobbyspawnangle = 0f;
         }
     }
 }

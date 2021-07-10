@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Commands
             var storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
-            if (barricade != null && FOBManager.config.data.AmmoBagIDs.Contains(barricade.barricade.id))
+            if (barricade != null && FOBManager.config.Data.AmmoBagIDs.Contains(barricade.barricade.id))
             {
                 if (storage is null)
                 {
@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     player.Message("Please join a team first."); return;
                 }
-                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.data.Team1AmmoID)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.data.Team2AmmoID)))
+                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
                 {
                     player.Message("This ammo crate has no ammo. Fill it up with AMMO BOXES in order to resupply."); return;
                 }
@@ -55,9 +55,9 @@ namespace Uncreated.Warfare.Commands
                 player.Message("Your kit has been resupplied using <color=#d1c597>1x</color> <color=#d1c597>AMMO BOX</color>.");
 
                 if (player.IsTeam1())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.data.Team1AmmoID);
+                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
                 else if (player.IsTeam2())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.data.Team2AmmoID);
+                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team2AmmoID);
             }
             else if (vehicle != null)
             {
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Commands
 
                 List<BarricadeData> NearbyAmmoStations = barricadeDatas.Where(
                     b => (b.point - vehicle.transform.position).sqrMagnitude <= Math.Pow(100, 2) &&
-                    b.barricade.id == FOBManager.config.data.AmmoCrateID)
+                    b.barricade.id == FOBManager.config.Data.AmmoCrateID)
                     .OrderBy(b => (b.point - vehicle.transform.position).sqrMagnitude)
                     .ToList();
 
@@ -106,9 +106,9 @@ namespace Uncreated.Warfare.Commands
 
                 foreach (ItemJar jar in storage.items.items)
                 {
-                    if (player.IsTeam1() && jar.item.id == FOBManager.config.data.Team1AmmoID)
+                    if (player.IsTeam1() && jar.item.id == FOBManager.config.Data.Team1AmmoID)
                         ammo_count++;
-                    else if (player.IsTeam2() && jar.item.id == FOBManager.config.data.Team2AmmoID)
+                    else if (player.IsTeam2() && jar.item.id == FOBManager.config.Data.Team2AmmoID)
                         ammo_count++;
                 }
 
@@ -131,14 +131,14 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 if (player.IsTeam1())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.data.Team1AmmoID);
+                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
                 else if (player.IsTeam2())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.data.Team2AmmoID);
+                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team2AmmoID);
             }
             else
             {
                 int ammoBagsCount = 0;
-                foreach (var itemID in FOBManager.config.data.AmmoBagIDs)
+                foreach (var itemID in FOBManager.config.Data.AmmoBagIDs)
                 {
                     ammoBagsCount += UCInventoryManager.CountItems(player.Player, itemID);
                 }
@@ -162,7 +162,7 @@ namespace Uncreated.Warfare.Commands
 
                     for (byte index = 0; index < pageCount; index++)
                     {
-                        if (FOBManager.config.data.AmmoBagIDs.Contains(player.Player.inventory.getItem(page, index).item.id))
+                        if (FOBManager.config.Data.AmmoBagIDs.Contains(player.Player.inventory.getItem(page, index).item.id))
                         {
                             player.Player.inventory.removeItem(page, index);
                             return;

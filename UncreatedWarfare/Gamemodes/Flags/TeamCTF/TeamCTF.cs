@@ -22,7 +22,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     {
         // vars
         protected Config<TeamCTFData> _config;
-        public TeamCTFData Config { get => _config.data; }
+        public TeamCTFData Config { get => _config.Data; }
         public int ObjectiveT1Index;
         public int ObjectiveT2Index;
         public Flag ObjectiveTeam1 { get => Rotation[ObjectiveT1Index]; }

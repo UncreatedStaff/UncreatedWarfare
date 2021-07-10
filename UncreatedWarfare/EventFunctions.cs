@@ -105,6 +105,7 @@ namespace Uncreated.Warfare
             ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
             PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
             t.Set(useable, throwable, c);
+            F.Log(useable.player.name + " spawned a throwable: " + useable.equippedThrowableAsset != null ? useable.equippedThrowableAsset.itemName : useable.name);
             if (success)
                 c.thrown.Add(t);
         }

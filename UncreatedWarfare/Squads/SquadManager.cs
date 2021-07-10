@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Squads
                 EffectManager.askEffectClearByID((ushort)(30071 + i), player.channel.owner.transportConnection);
             for (int i = 0; i < 8; i++)
                 EffectManager.askEffectClearByID((ushort)(30081 + i), player.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(config.data.rallyUI, player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(config.Data.rallyUI, player.channel.owner.transportConnection);
         }
         public static void ClearUIList(Player player)
         {
@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.Squads
                         true,
                         Squads[i].Name,
                         !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
+                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.Data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
                     );
                 }
             }

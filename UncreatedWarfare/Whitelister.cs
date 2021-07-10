@@ -195,5 +195,10 @@ namespace Uncreated.Warfare
             this.itemID = itemID;
             this.amount = amount;
         }
+        public WhitelistItem()
+        {
+            this.itemID = 0;
+            this.amount = 1;
+        }
     }
 }

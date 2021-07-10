@@ -192,10 +192,11 @@ namespace Uncreated.Warfare
                     $"ON DUPLICATE KEY UPDATE " +
                     $"`{xp}` = `{xp}` + VALUES(`{xp}`);", 
                     new object[] { Steam64, Team, amount });
-                return unchecked((int)(oldBalance + amount));
+                return unchecked(oldBalance + amount);
             } else
             {
-                if (amount >= oldBalance)
+                int absamount = Math.Abs(amount);
+                if (absamount >= oldBalance)
                 {
                     await NonQuery(
                         $"INSERT INTO `{table.TableName}` " +
@@ -211,8 +212,8 @@ namespace Uncreated.Warfare
                         $"UPDATE `{table.TableName}` SET " +
                         $"`{xp}` = `{xp}` - @2 " +
                         $"WHERE `{s64}` = @0 AND `{team}` = @1;",
-                        new object[] { Steam64, Team, Math.Abs(amount) });
-                    return unchecked((int)(oldBalance + amount));
+                        new object[] { Steam64, Team, absamount });
+                    return unchecked(oldBalance - absamount);
                 }
             }
         }

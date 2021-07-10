@@ -193,13 +193,24 @@ namespace Uncreated.Warfare
 
         public bool IsNearFOB()
         {
-            int nearbyFOBs = BarricadeManager.regions.Cast<BarricadeRegion>().ToList().SelectMany(brd => brd.barricades).ToList().Where(b =>
-                            b.barricade.id == FOBs.FOBManager.config.data.FOBID &&
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.barricades.Count; i++)
+                    {
+                        BarricadeData b = region.barricades[i];
+                        if (b == default) continue;
+                        if (b.barricade.id == FOBs.FOBManager.config.Data.FOBID &&
                             b.group == GetTeam() &&
-                            (b.point - Position).sqrMagnitude <= Math.Pow(20, 2))
-                        .Count();
-
-            return nearbyFOBs != 0;
+                            (b.point - Position).sqrMagnitude <= 20 * 20)
+                            return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 
@@ -224,8 +235,17 @@ namespace Uncreated.Warfare
             Team = 0;
             KitClass = Kit.EClass.NONE;
             Branch = EBranch.DEFAULT;
-            KitName = "";
-            SquadName = "";
+            KitName = string.Empty;
+            SquadName = string.Empty;
+        }
+        public PlayerSave()
+        {
+            this.Steam64 = 0;
+            Team = 0;
+            KitClass = Kit.EClass.NONE;
+            Branch = EBranch.DEFAULT;
+            KitName = string.Empty;
+            SquadName = string.Empty;
         }
     }
 }

@@ -125,6 +125,16 @@ namespace Uncreated.Warfare.Kits
                 this.owner = sign.owner.m_SteamID;
             } else throw new ArgumentNullException(nameof(sign));
         }
+        public RequestSign()
+        {
+            this.kit_name = "default";
+            this.transform = SerializableTransform.Zero;
+            this.sign_id = 0;
+            this.owner = 0;
+            this.group = 0;
+            this.instance_id = 0;
+            this.exists = false;
+        }
         public async Task InvokeUpdate(SteamPlayer player)
         {
             if (barricadetransform != default)

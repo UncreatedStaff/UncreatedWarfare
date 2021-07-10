@@ -68,7 +68,7 @@ namespace Uncreated.Warfare.Vehicles
         public static void RespawnAllVehicles()
         {
             F.Log("Respawning vehicles...", ConsoleColor.Magenta);
-            foreach (var v in VehicleManager.vehicles)
+            foreach (InteractableVehicle v in VehicleManager.vehicles.ToList())
             {
                 VehicleBay.DeleteVehicle(v);
             }
@@ -179,6 +179,15 @@ namespace Uncreated.Warfare.Vehicles
             VehicleInstanceID = 0;
             IsActive = true;
             this.type = type;
+            initialized = false;
+        }
+        public VehicleSpawn()
+        {
+            SpawnPadInstanceID = 0;
+            VehicleID = 0;
+            VehicleInstanceID = 0;
+            IsActive = true;
+            this.type = EStructType.BARRICADE;
             initialized = false;
         }
         public void Initialize()
@@ -466,11 +475,11 @@ namespace Uncreated.Warfare.Vehicles
                     var player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
                     if (player.Squad != null)
                     {
-                        OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.data.TransportPlayerPoints * (count - 2), "TRANSPORTING PLAYERS").GetAwaiter().GetResult();
+                        OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), "TRANSPORTING PLAYERS").GetAwaiter().GetResult();
                     }
                     else
                     {
-                        XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.data.TransportPlayerXP * (count - 2), "TRANSPORTING PLAYERS").GetAwaiter().GetResult();
+                        XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 2), "TRANSPORTING PLAYERS").GetAwaiter().GetResult();
                     }
 
                     F.Log("VEHICLE: successfully given transport XP");

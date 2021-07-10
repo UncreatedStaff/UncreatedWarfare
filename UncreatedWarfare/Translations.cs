@@ -1065,8 +1065,7 @@ namespace Uncreated.Warfare
                 "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
                 "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
             new LanguageAliasSet("zh-tw", "Chinese (Traditional)", new List<string> { "traditional chinese", "chinese traditional",
-                "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
-            new LanguageAliasSet("en-gb", "Bri'ish", new List<string> { "british", "great british", "gb", "engb"})
+                "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" })
         };
         public static readonly Dictionary<string, string> DefaultDeathTranslations = new Dictionary<string, string> {
             { "ACID", "{0} was burned by an acid zombie." },

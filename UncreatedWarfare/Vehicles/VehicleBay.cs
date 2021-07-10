@@ -346,6 +346,25 @@ namespace Uncreated.Warfare.Vehicles
             CrewSeats = new List<byte>();
             Metadata = null;
         }
+        public VehicleData()
+        {
+            VehicleID = 0;
+            Team = 0;
+            RespawnTime = 600;
+            Cost = 0;
+            RequiredLevel = 0;
+            TicketCost = 0;
+            Cooldown = 0;
+            RequiredBranch = EBranch.DEFAULT;
+            RequiredClass = Kit.EClass.NONE;
+            RearmCost = 3;
+            RepairCost = 3;
+            Type = EVehicleType.NONE;
+            RequiresSL = false;
+            Items = new List<ushort>() { 1440, 277 };
+            CrewSeats = new List<byte>();
+            Metadata = null;
+        }
         public List<VehicleSpawn> GetSpawners()
         {
             List<VehicleSpawn> rtn = new List<VehicleSpawn>();

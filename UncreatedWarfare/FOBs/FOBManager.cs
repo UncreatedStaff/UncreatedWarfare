@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
-            if (data.barricade.id == config.data.FOBID)
+            if (data.barricade.id == config.Data.FOBID)
             {
                 TryDeleteFOB(instanceID, data.group);
             }
@@ -117,11 +117,11 @@ namespace Uncreated.Warfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             Team1Barricades = barricadeDatas.Where(b =>
-                b.barricade.id == config.data.FOBID &&   // All barricades that are FOB Structures
+                b.barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam1(b.group)        // All barricades that are friendly
                 ).ToList();
             Team2Barricades = barricadeDatas.Where(b =>
-                b.barricade.id == config.data.FOBID &&   // All barricades that are FOB Structures
+                b.barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam2(b.group)        // All barricades that are friendly
                 ).ToList();
         }
@@ -135,15 +135,15 @@ namespace Uncreated.Warfare.FOBs
 
             List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
             TeamManager.HasTeam(b.group) &&
-            (b.barricade.id == config.data.FOBID ||
-            b.barricade.id == config.data.FOBBaseID ||
-            b.barricade.id == config.data.AmmoCrateID ||
-            b.barricade.id == config.data.AmmoCrateBaseID ||
-            b.barricade.id == config.data.RepairStationID ||
-            b.barricade.id == config.data.RepairStationBaseID) ||
-            config.data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
-            config.data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
-            config.data.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
+            (b.barricade.id == config.Data.FOBID ||
+            b.barricade.id == config.Data.FOBBaseID ||
+            b.barricade.id == config.Data.AmmoCrateID ||
+            b.barricade.id == config.Data.AmmoCrateBaseID ||
+            b.barricade.id == config.Data.RepairStationID ||
+            b.barricade.id == config.Data.RepairStationBaseID) ||
+            config.Data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
+            config.Data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
+            config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
             ).ToList();
 
             foreach (BarricadeData data in FOBComponents)
