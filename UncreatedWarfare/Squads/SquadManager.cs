@@ -115,9 +115,9 @@ namespace Uncreated.Warfare.Squads
                                 (short)(30061 + i),
                                 steamplayer.transportConnection,
                                 true,
-                                !friendlySquads[i].IsLocked ? friendlySquads[i].Name : $"<color=#969696>{friendlySquads[i].Name}</color>",
-                                friendlySquads[i].Leader.NickName,
-                                !friendlySquads[i].IsLocked ? $"{friendlySquads[i].Members.Count}/6" : $"<color=#bd6b5b>²</color>  <color=#969696>{friendlySquads[i].Members.Count}/6</color>"
+                                Squads[i].Name,
+                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
+                                Squads[i].Leader.NickName
                             );
                         }
                     }
@@ -137,14 +137,17 @@ namespace Uncreated.Warfare.Squads
             {
                 for (int i = 0; i < Squads.Count; i++)
                 {
-                    EffectManager.sendUIEffect((ushort)(30061 + i),
+                    if (Squads[i].Team == player.GetTeam())
+                    {
+                        EffectManager.sendUIEffect((ushort)(30061 + i),
                         (short)(30061 + i),
                         player.SteamPlayer().transportConnection,
                         true,
                         Squads[i].Name,
-                        !Squads[i].IsLocked ? Squads[i].Name : $"<color=#969696>{Squads[i].Name}</color>",
-                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  <color=#969696>{Squads[i].Members.Count}/6</color>"
+                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
+                        Squads[i].Leader.NickName
                     );
+                    }
                 }
             }
         }
@@ -207,7 +210,7 @@ namespace Uncreated.Warfare.Squads
             foreach (var p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
-                    p.Message("squad_player_left", p.SteamPlayer().playerID.nickName);
+                    p.Message("squad_player_left", player.Player.channel.owner.playerID.nickName);
                 else
                     p.Message("squad_left", squad.Name);
             }
@@ -275,7 +278,7 @@ namespace Uncreated.Warfare.Squads
             foreach (var p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
-                    p.Message("squad_player_kicked", player.SteamPlayer().playerID.nickName);
+                    p.Message("squad_player_kicked", player.Player.channel.owner.playerID.nickName);
                 else
                     p.Message("squad_kicked");
 
@@ -296,7 +299,7 @@ namespace Uncreated.Warfare.Squads
             foreach (var p in squad.Members)
             {
                 if (p.CSteamID != squad.Leader.CSteamID)
-                    p.Message("squad_player_promoted", p.SteamPlayer().playerID.nickName);
+                    p.Message("squad_player_promoted", newLeader.Player.channel.owner.playerID.nickName);
                 else
                     p.Message("squad_promoted");
             }

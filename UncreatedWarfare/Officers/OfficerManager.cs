@@ -64,7 +64,7 @@ namespace Uncreated.Warfare.Officers
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
 
             if (message != "" && amount != 0)
-                ToastMessage.QueueMessage(player, amount >= 0 ? "+" : "-" + amount + " OF", message, ToastMessageSeverity.MINIOFFICERPTS);
+                ToastMessage.QueueMessage(player, amount >= 0 ? ("+" + amount + " OF") : amount + " OF", message, ToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance);
             await rtn;

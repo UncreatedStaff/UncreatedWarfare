@@ -40,12 +40,14 @@ namespace Uncreated.Warfare
             public float CombatCooldown;
             public float DeployMainCooldown;
             public float DeployFOBCooldown;
+            public float RequestKitCooldown;
             public override void SetDefaults()
             {
                 EnableCombatLogger = true;
                 CombatCooldown = 120;
                 DeployMainCooldown = 3;
-                DeployFOBCooldown = 10;
+                DeployFOBCooldown = 90;
+                RequestKitCooldown = 300;
             }
             public CooldownConfig() { }
         }

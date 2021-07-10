@@ -165,11 +165,11 @@ namespace Uncreated.Warfare.Tickets
             if (TeamManager.IsTeam1(capturedTeam))
                 Team1Tickets += config.data.TicketsFlagCaptured;
             if (TeamManager.IsTeam2(capturedTeam))
-                Team1Tickets += config.data.TicketsFlagCaptured;
+                Team2Tickets += config.data.TicketsFlagCaptured;
             if (TeamManager.IsTeam1(lostTeam))
                 Team1Tickets += config.data.TicketsFlagLost;
             if (TeamManager.IsTeam2(lostTeam))
-                Team1Tickets += config.data.TicketsFlagLost;
+                Team2Tickets += config.data.TicketsFlagLost;
 
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
@@ -459,7 +459,7 @@ namespace Uncreated.Warfare.Tickets
 
         public override void SetDefaults()
         {
-            StartingTickets = 600;
+            StartingTickets = 350;
             FOBCost = 20;
             TicketsFlagCaptured = 50;
             TicketsFlagLost = -10;

@@ -29,7 +29,19 @@ namespace Uncreated.Warfare
         public string CharacterName;
         public string NickName;
         public Rank OfficerRank;
-        public Vector3 Position { get { return Player.transform.position; } }
+        public Vector3 Position
+        {
+            get
+            {
+                if (Player.transform is null)
+                {
+                    F.LogWarning("DEPLOY ERROR: Player transform was null");
+                    return new Vector3(0, 0, 0);
+                }
+
+                return Player.transform.position;
+            }
+        }
         public bool IsOnline;
         public int cachedXp;
 

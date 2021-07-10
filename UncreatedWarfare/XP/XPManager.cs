@@ -88,7 +88,7 @@ namespace Uncreated.Warfare.XP
             UpdateUI(player, newBalance);
 
             if (message != "" && amount != 0)
-                ToastMessage.QueueMessage(player, amount >= 0 ? "+" : "-" + amount + " XP", message, ToastMessageSeverity.MINIXP);
+                ToastMessage.QueueMessage(player, amount >= 0 ? ("+" + amount + " XP") : amount + " XP", message, ToastMessageSeverity.MINIXP);
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
                 await VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
@@ -322,6 +322,7 @@ namespace Uncreated.Warfare.XP
     {
         public int EnemyKilledXP;
         public int FriendlyKilledXP;
+        public int FriendlyRevivedXP;
         public int FOBKilledXP;
         public int FlagCapturedXP;
         public int FlagCapIncreasedXP;
@@ -346,6 +347,7 @@ namespace Uncreated.Warfare.XP
         {
             EnemyKilledXP = 10;
             FriendlyKilledXP = -50;
+            FriendlyRevivedXP = 10;
             FOBKilledXP = 100;
             FlagCapturedXP = 200;
             FlagCapIncreasedXP = 1;

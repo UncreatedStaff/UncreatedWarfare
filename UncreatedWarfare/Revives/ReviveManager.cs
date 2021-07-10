@@ -4,6 +4,8 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Revives
@@ -20,6 +22,7 @@ namespace Uncreated.Warfare.Revives
             DamageTool.damagePlayerRequested += OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
+            UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
             foreach(SteamPlayer player in Provider.clients)
             {
                 player.player.stance.onStanceUpdated += delegate
@@ -27,6 +30,25 @@ namespace Uncreated.Warfare.Revives
                     StanceUpdatedLocal(player);
                 };
                 player.player.equipment.onEquipRequested += OnEquipRequested;
+            }
+        }
+
+        private void UseableConsumeable_onPerformingAid(Player healer, Player downed, ItemConsumeableAsset asset, ref bool shouldAllow)
+        {
+            UCPlayer medic = UCPlayer.FromPlayer(healer);
+
+            if (medic.KitClass != Kits.Kit.EClass.MEDIC)
+            {
+                medic.Message("heal_e_notmedic");
+                shouldAllow = false;
+                return;
+            }
+
+            if (medic.GetTeam() != downed.quests.groupID.m_SteamID)
+            {
+                medic.Message("heal_e_enemy");
+                shouldAllow = false;
+                return;
             }
         }
 
@@ -52,19 +74,12 @@ namespace Uncreated.Warfare.Revives
                 StanceUpdatedLocal(player.Player.channel.owner);
             };
         }
-        internal void OnPlayerHealed(Player medic, Player target)
+        internal async Task OnPlayerHealedAsync(Player medic, Player target)
         {
-            UCPlayer player = UCPlayer.FromPlayer(medic);
-
-            if (player.KitClass != Kits.Kit.EClass.MEDIC)
-                return;
-
-            if (medic.GetTeam() != target.quests.groupID.m_SteamID)
-                return;
-
             if (target.TryGetComponent(out Reviver r))
             {
                 r.RevivePlayer();
+                await XPManager.AddXP(medic, medic.GetTeam(), XPManager.config.data.FriendlyRevivedXP);
             }
         }
         private void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)

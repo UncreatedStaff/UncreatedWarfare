@@ -111,9 +111,13 @@ namespace Uncreated.Warfare.Commands
                 {
                     ucplayer.Message("request_kit_e_notsquadleader");
                 }
-                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
+                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out var requestCooldown))
                 {
-                    player.Message("kit_e_cooldown", cooldown.ToString());
+                    player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
+                }
+                else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var premiumCooldown, kit.Name))
+                {
+                    player.Message("kit_e_cooldown", premiumCooldown.ToString());
                 }
                 else
                 {
@@ -139,8 +143,13 @@ namespace Uncreated.Warfare.Commands
                             ucplayer.Message("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                         }
 
-                        PlayerManager.Save();
+                        if (kit.IsPremium)
+                        {
+                            CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
+                        }
+                        CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.data.RequestKitCooldown);
 
+                        PlayerManager.Save();
                     }
                     await rtn;
                 }

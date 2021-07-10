@@ -149,7 +149,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {
-            Data.ReviveManager.OnPlayerHealed(instigator, target);
+            Data.ReviveManager.OnPlayerHealedAsync(instigator, target);
         }
         internal static async void OnPostPlayerConnected(UnturnedPlayer player)
         {

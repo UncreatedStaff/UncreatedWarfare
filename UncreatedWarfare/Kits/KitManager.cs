@@ -392,6 +392,7 @@ namespace Uncreated.Warfare.Kits
                 return false;
 
             var friendlyPlayers = PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team).ToList();
+            F.Log($"ONLINE PLAYERS: {PlayerManager.OnlinePlayers.Count}");
             F.Log($"FRIENDLY PLAYERS: {friendlyPlayers.Count}");
             F.Log($"TEAM: {Team}");
             allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count);
