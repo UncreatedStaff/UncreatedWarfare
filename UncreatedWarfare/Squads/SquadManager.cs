@@ -12,7 +12,7 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Squads
 {
-    public class SquadManager
+    public class SquadManager : IDisposable
     {
         public static Config<SquadConfigData> config;
         public static List<Squad> Squads;
@@ -24,10 +24,10 @@ namespace Uncreated.Warfare.Squads
             Squads = new List<Squad>();
             KitManager.OnKitChanged += OnKitChanged;
         }
-        private static void OnKitChanged(UnturnedPlayer player, Kit kit)
+        private static void OnKitChanged(UnturnedPlayer player, Kit kit, string oldkit)
         {
-            if (IsInAnySquad(player.CSteamID, out var squad))
-                UpdateUISquad(squad);
+            if (IsInAnySquad(player.CSteamID, out Squad squad))
+                UpdateUISquad(squad); 
         }
         public static void ClearUIsquad(Player player)
         {
@@ -62,7 +62,7 @@ namespace Uncreated.Warfare.Squads
                     }
                     else
                     {
-                        EffectManager.sendUIEffect((ushort)(30071 + i), (short)(30071 + i), member.SteamPlayer().transportConnection, true,
+                        EffectManager.sendUIEffect((ushort)(30071 + i), (short)(30071 + i), member.SteamPlayer.transportConnection, true,
                                squad.Members[i].NickName,
                                squad.Members[i].Icon
                            );
@@ -116,7 +116,7 @@ namespace Uncreated.Warfare.Squads
                                 steamplayer.transportConnection,
                                 true,
                                 Squads[i].Name,
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
+                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.Data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
                                 Squads[i].Leader.NickName
                             );
                         }
@@ -141,10 +141,10 @@ namespace Uncreated.Warfare.Squads
                     {
                         EffectManager.sendUIEffect((ushort)(30061 + i),
                         (short)(30061 + i),
-                        player.SteamPlayer().transportConnection,
+                        player.SteamPlayer.transportConnection,
                         true,
                         Squads[i].Name,
-                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
+                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.Data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
                         Squads[i].Leader.NickName
                     );
                     }
@@ -233,9 +233,9 @@ namespace Uncreated.Warfare.Squads
             if (squad.Leader.CSteamID == player.CSteamID)
             {
                 squad.Leader = squad.Members[0];
-                var leaderID = squad.Leader.CSteamID;
+                CSteamID leaderID = squad.Leader.CSteamID;
                 squad.Members = squad.Members.OrderBy(p => p.CSteamID != leaderID).ToList();
-                squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer().playerID.nickName);
+                squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
 
             UpdateUISquad(squad);
@@ -335,6 +335,11 @@ namespace Uncreated.Warfare.Squads
             squad.IsLocked = value;
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
+        }
+
+        public void Dispose()
+        {
+            KitManager.OnKitChanged -= OnKitChanged;
         }
     }
 

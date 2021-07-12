@@ -102,12 +102,30 @@ namespace Uncreated.Warfare
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
-            ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
-            PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
-            t.Set(useable, throwable, c);
-            F.Log(useable.player.name + " spawned a throwable: " + useable.equippedThrowableAsset != null ? useable.equippedThrowableAsset.itemName : useable.name);
-            if (success)
-                c.thrown.Add(t);
+            try
+            {
+                if (useable == null)
+                    F.Log("useable null");
+                if (throwable == null)
+                    F.Log("throwable null");
+                if (useable.player == null)
+                    F.Log("useable.player null");
+                if (useable.equippedThrowableAsset == null)
+                    F.Log("useable.asset null");
+                if (useable.name == null)
+                    F.Log("useable.name null");
+                ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
+                PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
+                t.Set(useable, throwable, c);
+                F.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ? useable.equippedThrowableAsset.itemName : useable.name));
+                if (success)
+                    c.thrown.Add(t);
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Exception in ThrowableSpawned:");
+                F.LogError(ex);
+            }
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
@@ -150,51 +168,71 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {
-            Data.ReviveManager.OnPlayerHealedAsync(instigator, target);
+            Task.Run(async() => await Data.ReviveManager.OnPlayerHealedAsync(instigator, target));
         }
-        internal static async void OnPostPlayerConnected(UnturnedPlayer player)
+        internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
-            FPlayerName names = F.GetPlayerOriginalNames(player);
-            PlayerManager.InvokePlayerConnected(player); // must always be first
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            await OfficerManager.OnPlayerJoined(ucplayer);
-            await XPManager.OnPlayerJoined(ucplayer);
-            await Client.SendPlayerJoined(names);
-            await Data.DatabaseManager.CheckUpdateUsernames(names);
-            bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            await Data.DatabaseManager.RegisterLogin(player.Player);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
-            if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+            try
             {
-                UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
-                Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                PlayerManager.InvokePlayerConnected(player); // must always be first
             }
-            PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
-            pt.StartTracking(player.Player);
-            Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-            pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names);
-            ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player, 
-                UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()) ), ToastMessageSeverity.INFO);
-            if (!UCWarfare.Config.AllowCosmetics)
+            catch (Exception ex)
             {
-                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
-                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
-                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
+                F.LogError("Error in the main OnPostPlayerConnected loading player into OnlinePlayers:");
+                F.LogError(ex);
             }
-            if (UCWarfare.Config.ModifySkillLevels)
+            try
             {
-                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);
-                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 4);
-                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
-            }
-            Data.ReviveManager.OnPlayerConnected(player);
+                FPlayerName names = F.GetPlayerOriginalNames(player);
+                UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+                Task.Run(async () =>
+                {
+                    await OfficerManager.OnPlayerJoined(ucplayer);
+                    await XPManager.OnPlayerJoined(ucplayer);
+                    await Client.SendPlayerJoined(names);
+                    await Data.DatabaseManager.CheckUpdateUsernames(names);
+                    bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    await Data.DatabaseManager.RegisterLogin(player.Player);
+                    await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
+                    ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam())), ToastMessageSeverity.INFO);
+                    if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
+                        await KitManager.GiveKit(player, previousKit);
+                });
+                F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
+                if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                {
+                    UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
+                    Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                }
+                PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
+                pt.StartTracking(player.Player);
+                Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
+                pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names);
+                if (!UCWarfare.Config.AllowCosmetics)
+                {
+                    player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
+                    player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
+                    player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
+                }
+                if (UCWarfare.Config.ModifySkillLevels)
+                {
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 4);
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
+                }
+                Data.ReviveManager.OnPlayerConnected(player);
 
-            TicketManager.OnPlayerJoined(ucplayer);
+                TicketManager.OnPlayerJoined(ucplayer);
 
-            await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
-            await rtn;
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error in the main OnPostPlayerConnected:");
+                F.LogError(ex);
+            }
+            
         }
         internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
         {
@@ -280,13 +318,13 @@ namespace Uncreated.Warfare
             position = team.GetBaseSpawnFromTeam();
             yaw = team.GetBaseAngle();
         }
-        internal static async void OnPlayerDisconnected(UnturnedPlayer player)
+        internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-
-            if (Data.OriginalNames.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
+            string kit = ucplayer.KitName;
+            try
             {
-                await Client.SendPlayerLeft(names);
+                FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
                 if (player.OnDuty())
                 {
                     if (player.IsAdmin())
@@ -295,39 +333,64 @@ namespace Uncreated.Warfare
                         Commands.DutyCommand.InternOnToOff(player, names);
                 }
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            }
-            await XPManager.OnPlayerLeft(ucplayer);
-            await OfficerManager.OnPlayerLeft(ucplayer);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            if (Data.OriginalNames.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("leave_message_name"));
-            if (UCWarfare.Config.RemoveLandminesOnDisconnect)
-            {
-                IEnumerable<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
-               && x.barricade?.asset?.type == EItemType.TRAP);
-                foreach (BarricadeOwnerDataComponent comp in ownedTraps.ToList())
-                {
-                    if (comp == null) continue;
-                    if (BarricadeManager.tryGetInfo(comp.barricadeTransform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                Task.Run(
+                    async () =>
                     {
-                        BarricadeManager.destroyBarricade(region, x, y, plant, index);
-                        F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
+                        Task s = Client.SendPlayerLeft(names);
+                        await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                        await s;
+                    });
+                F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), names.CharacterName, UCWarfare.GetColorHex("leave_message_name"));
+                if (UCWarfare.Config.RemoveLandminesOnDisconnect)
+                {
+                    IEnumerator<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
+                   && x.barricade?.asset?.type == EItemType.TRAP).GetEnumerator();
+                    while (ownedTraps.MoveNext())
+                    {
+                        BarricadeOwnerDataComponent comp = ownedTraps.Current;
+                        if (comp == null) continue;
+                        if (BarricadeManager.tryGetInfo(comp.barricadeTransform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                        {
+                            BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                            F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
+                        }
+                        Data.OwnerComponents.Remove(comp);
+                        UnityEngine.Object.Destroy(comp);
                     }
-                    UnityEngine.Object.Destroy(comp);
-                    Data.OwnerComponents.Remove(comp);
+                    ownedTraps.Dispose();
                 }
+                if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
+                {
+                    UnityEngine.Object.Destroy(c);
+                    Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
+                }
+                Data.ReviveManager.OnPlayerDisconnected(player);
+                TicketManager.OnPlayerLeft(ucplayer);
             }
-            if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
+            catch (Exception ex)
             {
-                UnityEngine.Object.Destroy(c);
-                Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
+                F.LogError("Error in the main OnPlayerDisconnected:");
+                F.LogError(ex);
             }
-            Data.ReviveManager.OnPlayerDisconnected(player);
-            TicketManager.OnPlayerLeft(ucplayer);
-            PlayerManager.InvokePlayerDisconnected(player);
-
-            await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner);
-            await rtn;
+            try
+            {
+                PlayerManager.InvokePlayerDisconnected(player);
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Failed to remove a player from the list:");
+                F.LogError(ex);
+            }
+            try
+            {
+                if (RequestSigns.SignExists(kit, out RequestSign sign))
+                    sign.InvokeUpdate().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Failed to update kit sign for leaving player:");
+                F.LogError(ex);
+            }
         }
         internal static async Task LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
             => await UCWarfare.I.UpdateLangs(player.Player.channel.owner);

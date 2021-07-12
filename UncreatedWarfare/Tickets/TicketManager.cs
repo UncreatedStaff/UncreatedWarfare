@@ -165,11 +165,11 @@ namespace Uncreated.Warfare.Tickets
             if (TeamManager.IsTeam1(capturedTeam))
                 Team1Tickets += config.Data.TicketsFlagCaptured;
             if (TeamManager.IsTeam2(capturedTeam))
-                Team2Tickets += config.data.TicketsFlagCaptured;
+                Team2Tickets += config.Data.TicketsFlagCaptured;
             if (TeamManager.IsTeam1(lostTeam))
                 Team1Tickets += config.Data.TicketsFlagLost;
             if (TeamManager.IsTeam2(lostTeam))
-                Team2Tickets += config.data.TicketsFlagLost;
+                Team2Tickets += config.Data.TicketsFlagLost;
 
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 

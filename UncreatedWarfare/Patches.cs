@@ -130,11 +130,11 @@ namespace Uncreated.Warfare
                     if(trimmedText.Length > 5)
                     {
                         if(Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText).GetAwaiter().GetResult();
+                            Task.Run( async () => await F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText));
                         else
-                            F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText).GetAwaiter().GetResult();
-                    } else 
-                        F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText).GetAwaiter().GetResult();
+                            Task.Run(async () => await F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText));
+                    } else
+                        Task.Run(async () => await F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText));
                     byte[] state = region.barricades[index].barricade.state;
                     byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
@@ -226,7 +226,7 @@ namespace Uncreated.Warfare
                                         string newtext = sign.text;
                                         if (newtext.StartsWith("sign_"))
                                         {
-                                            newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID);
+                                            newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
                                         // size is not allowed in signs.
                                         newtext.Replace("<size=", "");
                                             newtext.Replace("</size>", "");
@@ -235,7 +235,7 @@ namespace Uncreated.Warfare
                                         byte[] bytes = Encoding.UTF8.GetBytes(newtext);
                                         if (bytes.Length + 17 > byte.MaxValue)
                                         {
-                                            F.LogError(sign.text + " sign translation is too long, must be <= 128 UTF8 bytes!");
+                                            F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 17} UTF8 bytes!");
                                             bytes = Encoding.UTF8.GetBytes(sign.text);
                                         }
                                         byte[] numArray1 = new byte[17 + bytes.Length];
@@ -469,7 +469,7 @@ namespace Uncreated.Warfare
                 float newtimes = times * Provider.modeConfigData.Vehicles.Armor_Multiplier;
                 if (Mathf.RoundToInt(damage * newtimes) >= vehicle.health)
                 {
-                    if (instigatorSteamID != null && instigatorSteamID != CSteamID.Nil)
+                    if (instigatorSteamID != default && instigatorSteamID != CSteamID.Nil)
                     {
                         if (vehicle.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
                         {

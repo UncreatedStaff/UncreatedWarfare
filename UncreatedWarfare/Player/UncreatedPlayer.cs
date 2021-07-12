@@ -101,8 +101,17 @@ namespace Uncreated.Players
             if (File.Exists(path))
             {
                 string json = File.ReadAllText(path);
-                player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
-                return player != default;
+                try
+                {
+                    player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
+                    return player != default;
+                }
+                catch (Exception ex)
+                {
+                    File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
+                    F.LogError($"Error in UncreatedPlayer.TryLoad with id {id}, saved a backup then rewrote the file:");
+                    F.LogError(ex);
+                }
             }
             player = default;
             return false;
@@ -114,8 +123,17 @@ namespace Uncreated.Players
             if (File.Exists(path))
             {
                 string json = File.ReadAllText(path);
-                UncreatedPlayer player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
-                if (player != default) return player;
+                try
+                {
+                    UncreatedPlayer player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
+                    if (player != default) return player;
+                }
+                catch (Exception ex)
+                {
+                    File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
+                    F.LogError($"Error in UncreatedPlayer.Load with id {id}, saved a backup then rewrote the file:");
+                    F.LogError(ex);
+                }
             }
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
             newplayer.SavePath(path);

@@ -54,9 +54,6 @@ namespace Uncreated.Warfare.Components
         private Coroutine _currentTeleportRequest;
         public UncreatedPlayer UCPlayerStats;
         public Vehicles.VehicleSpawn currentlylinking;
-        public void Start()
-        {
-        }
         public void QueueMessage(ToastMessage message)
         {
             if (toastMessages.Count == 0)
@@ -89,17 +86,17 @@ namespace Uncreated.Warfare.Components
             }
             if (message.Message != null)
             {
-                if(message.SecondaryMessage != null)
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
+                if (message.SecondaryMessage != null)
+                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage));
                 else
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message);
+                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message));
             }
             StartCoroutine(ToastDelay(message.delay));
         }
         private IEnumerator<WaitForSeconds> ToastDelay(float delay)
         {
             yield return new WaitForSeconds(delay);
-            EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection);
+            UCWarfare.I.QueueMainThreadAction(() => EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection));
             toastMessageOpen = 0;
             if (toastMessages.Count > 0)
                 SendToastMessage(toastMessages.Dequeue());

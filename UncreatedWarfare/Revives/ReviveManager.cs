@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.Revives
             if (target.TryGetComponent(out Reviver r))
             {
                 r.RevivePlayer();
-                await XPManager.AddXP(medic, medic.GetTeam(), XPManager.config.data.FriendlyRevivedXP);
+                await XPManager.AddXP(medic, medic.GetTeam(), XPManager.config.Data.FriendlyRevivedXP);
             }
         }
         private void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
@@ -87,7 +87,7 @@ namespace Uncreated.Warfare.Revives
             F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
-                if (parameters.damage > parameters.player.life.health && parameters.limb != ELimb.SKULL && parameters.player.life.health > 0 && !parameters.player.life.isDead)
+                if (parameters.damage > parameters.player.life.health && parameters.limb != ELimb.SKULL && parameters.player.life.health > 0 && !parameters.player.life.isDead && parameters.damage < 100)
                 {
                     F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
 

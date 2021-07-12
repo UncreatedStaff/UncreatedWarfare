@@ -13,7 +13,7 @@ using static Uncreated.Warfare.UCWarfare;
 namespace Uncreated.Warfare.Kits
 {
 
-    public delegate void KitChangedHandler(UnturnedPlayer player, Kit kit);
+    public delegate void KitChangedHandler(UnturnedPlayer player, Kit kit, string oldKit);
 
     public class KitManager : JSONSaver<Kit>, IDisposable
     {
@@ -21,9 +21,7 @@ namespace Uncreated.Warfare.Kits
 
         public KitManager() : base(Data.KitsStorage + "kits.json")
         {
-            OnPlayerDeathGlobal += OnPlayerDeath;
             PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
-
         }
 
         private void PlayerLife_OnPreDeath(PlayerLife life)
@@ -63,10 +61,6 @@ namespace Uncreated.Warfare.Kits
             if (JSONMethods.DefaultKits != default)
                 return JsonConvert.SerializeObject(JSONMethods.DefaultKits, Formatting.Indented);
             else return "[]";
-        }
-        public static void OnPlayerDeath(DeathEventArgs death)
-        {
-            
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
         public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
@@ -125,7 +119,7 @@ namespace Uncreated.Warfare.Kits
 
             return clothes;
         }
-        public static void GiveKit(UnturnedPlayer player, Kit kit)
+        public static async Task GiveKit(UnturnedPlayer player, Kit kit)
         {
             if (kit == null)
                 return;
@@ -154,15 +148,17 @@ namespace Uncreated.Warfare.Kits
 
             foreach (KitItem k in kit.Items)
             {
-                var item = new Item(k.ID, k.amount, k.quality);
-                item.metadata = Convert.FromBase64String(k.metadata);
+                Item item = new Item(k.ID, k.amount, k.quality) 
+                { metadata = Convert.FromBase64String(k.metadata) };
 
                 if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                     if (player.Inventory.tryAddItem(item, true))
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
 
-            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            string oldkit = ucplayer.KitName;
+
             ucplayer.KitName = kit.Name;
             ucplayer.KitClass = kit.Class;
 
@@ -171,7 +167,11 @@ namespace Uncreated.Warfare.Kits
                 CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
             }
 
-            OnKitChanged?.Invoke(player, kit);
+            OnKitChanged?.Invoke(player, kit, oldkit);
+            if (oldkit != null && oldkit != string.Empty)
+                await RequestSigns.InvokeLangUpdateForSignsOfKit(oldkit);
+            await RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
+
         }
         public static void ResupplyKit(UCPlayer player, Kit kit)
         {
@@ -259,7 +259,7 @@ namespace Uncreated.Warfare.Kits
             else return false;
         }
         public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => GetObjectsWhere(k => k.AllowedUsers.Contains(playerID));
-        public static void GiveAccess(ulong playerID, string kitName)
+        public static async Task GiveAccess(ulong playerID, string kitName)
         {
             if (KitExists(kitName, out Kit kit))
             {
@@ -267,21 +267,24 @@ namespace Uncreated.Warfare.Kits
                 {
                     kit.AllowedUsers.Add(playerID);
                     Save();
+                    if (RequestSigns.SignExists(kit.Name, out RequestSign sign))
+                        await sign.InvokeUpdate();
                 }
             }
         }
-        public static void RemoveAccess(ulong playerID, string kitName)
+        public static async Task RemoveAccess(ulong playerID, string kitName)
         {
             if (KitExists(kitName, out Kit kit))
             {
                 kit.AllowedUsers.RemoveAll(i => i == playerID);
                 Save();
+                if (RequestSigns.SignExists(kit.Name, out RequestSign sign))
+                    await sign.InvokeUpdate();
             }
         }
 
         public void Dispose()
         {
-            OnPlayerDeathGlobal -= OnPlayerDeath;
             PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
         }
     }
@@ -404,23 +407,21 @@ namespace Uncreated.Warfare.Kits
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
-        public bool IsLimited(out int currentPlayers, out int allowedPlayers)
+        public bool IsLimited(out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
+            ulong Team = team == 1 || team == 2 ? team : this.Team;
             currentPlayers = 0;
             allowedPlayers = 24;
-            if (IsPremium)
+            if (!requireCounts && (IsPremium || TeamLimit >= 1f))
                 return false;
-
-            var friendlyPlayers = PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team).ToList();
-            F.Log($"ONLINE PLAYERS: {PlayerManager.OnlinePlayers.Count}");
-            F.Log($"FRIENDLY PLAYERS: {friendlyPlayers.Count}");
-            F.Log($"TEAM: {Team}");
-            allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count);
-            currentPlayers = friendlyPlayers.Where(k => k.KitName == Name).Count();
-            F.Log($"KIT LIMITER: {currentPlayers}/{allowedPlayers} kits in use");
+            IEnumerable<UCPlayer> friendlyPlayers = Team == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team);
+            allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count());
+            currentPlayers = friendlyPlayers.Count(k => k.KitName == Name);
+            if (IsPremium || TeamLimit >= 1f)
+                return false;
             return currentPlayers + 1 > allowedPlayers;
         }
-        public enum EClothingType
+        public enum EClothingType : byte
         {
             SHIRT,
             PANTS,
@@ -430,7 +431,7 @@ namespace Uncreated.Warfare.Kits
             BACKPACK,
             GLASSES
         }
-        public enum EClass
+        public enum EClass : byte
         {
             NONE, //0 
             UNARMED, //1
@@ -450,18 +451,6 @@ namespace Uncreated.Warfare.Kits
             CREWMAN, //15
             PILOT, //16
             SPEC_OPS // 17
-        }
-
-        public enum EKitProperty
-        {
-            CLASS,
-            BRANCH,
-            TEAM,
-            COST,
-            LEVEL,
-            TICKETS,
-            PREMIUM,
-            CLEARINV
         }
     }
     public class KitItem

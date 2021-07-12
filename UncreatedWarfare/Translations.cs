@@ -69,7 +69,7 @@ namespace Uncreated.Warfare
                 { "deleted_group_console", "{0} ({1}) deleted group \"{2}\": \"{3}\"" },
                 { "no_permissions", "You do not have permission to use this command." },
                 { "join_s", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
-                { "join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
+                { "join_announce", "{0} joined {1}!" },
                 { "joined_standby", "<color=#d1c5b0>Joining team...</color>" },
                 { "join_e_alreadyonteam", "<color=#a8a194>You are already on that team.</color>" },
                 { "join_e_notinlobby", "<color=#a8a194>You must be in the <color=#fce5bb>lobby</color> to switch teams. Do <color=#fce5bb>/deploy lobby</color>.</color>" },
@@ -261,6 +261,7 @@ namespace Uncreated.Warfare
 
                 // SIGNS - must prefix with "sign_" for them to work
                 { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
+                { "sign_kit_request", "<color=#{1}>{0}</color>\n<color=#{3}>{2}</color>\n<color=#{6}>{4}/{5}</color>" },
 
                 // Admin Commands
                 { "NotRunningErrorText", "This is not a server." },
@@ -755,9 +756,10 @@ namespace Uncreated.Warfare
             new ColorData("request_vehicle_given", "00fffff"),
             new ColorData("request_vehicle_given_vehicle_name", "c6d4b8"),
             new ColorData("kit_price_free", "f53b3b"),
-            new ColorData("kit_price_credits", "f53b3b"),
+            new ColorData("kit_level", "f53b3b"),
             new ColorData("kit_price_dollars", "f53b3b"),
             new ColorData("kit_price_owned", "f53b3b"),
+            new ColorData("kit_price_tickets", "f53b3b"),
 
             // Vehicle Sign
             new ColorData("vbs_background", "222222"),

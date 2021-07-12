@@ -17,9 +17,12 @@ using UnityEngine;
 
 namespace Uncreated.Warfare
 {
-    public class UCPlayer
+    public class UCPlayer : IRocketPlayer
     {
         public readonly ulong Steam64;
+        public string Id => Steam64.ToString();
+        public string DisplayName => Player.channel.owner.playerID.playerName;
+        public bool IsAdmin => Player.channel.owner.isAdmin;
         public Kit.EClass KitClass;
         public EBranch Branch;
         public string KitName;
@@ -43,7 +46,7 @@ namespace Uncreated.Warfare
             }
         }
         public bool IsOnline;
-        public int cachedXp;
+        public int cachedXp = -1;
 
         public static UCPlayer FromID(ulong steamID)
         {
@@ -82,19 +85,7 @@ namespace Uncreated.Warfare
             PlayerManager.Save();
         }
 
-        public SteamPlayer SteamPlayer()
-        {
-            using (List<SteamPlayer>.Enumerator enumerator = Provider.clients.GetEnumerator())
-            {
-                while (enumerator.MoveNext())
-                {
-                    SteamPlayer current = enumerator.Current;
-                    if (Steam64 == current.playerID.steamID.m_SteamID)
-                        return current;
-                }
-            }
-            return null;
-        }
+        public SteamPlayer SteamPlayer { get => Player.channel.owner; }
         public void Message(string text, params object[] formatting) => F.Message(Player, text, formatting);
         public ulong GetTeam() => Player.quests.groupID.m_SteamID;
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
@@ -116,7 +107,7 @@ namespace Uncreated.Warfare
             NickName = nickName;
             OfficerRank = null;
             IsOnline = true;
-            cachedXp = 0;
+            cachedXp = -1;
         }
         public string Icon
         {
@@ -162,6 +153,8 @@ namespace Uncreated.Warfare
                 }
             }
         }
+
+
         public bool IsSquadLeader()
         {
             if (Squad is null)
@@ -224,6 +217,8 @@ namespace Uncreated.Warfare
             }
             return false;
         }
+
+        public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
     }
 
     public class PlayerSave

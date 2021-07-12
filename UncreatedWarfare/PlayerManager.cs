@@ -23,14 +23,11 @@ namespace Uncreated.Warfare
         public static List<UCPlayer> Team1Players;
         public static List<UCPlayer> Team2Players;
 
-        private static List<PlayerSave> _onlineSaves;
-
         public PlayerManager() : base(Data.KitsStorage + "playersaves.json")
         {
             OnlinePlayers = new List<UCPlayer>();
             Team1Players = new List<UCPlayer>();
             Team2Players = new List<UCPlayer>();
-            _onlineSaves = new List<PlayerSave>();
         }
         protected override string LoadDefaults() => "[]";
         public static bool HasSave(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, true);
@@ -53,7 +50,7 @@ namespace Uncreated.Warfare
         public static void InvokePlayerDisconnected(UnturnedPlayer player) => OnPlayerDisconnected(player);
         private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
-            PlayerSave save = null;
+            PlayerSave save;
 
             if (!HasSave(rocketplayer.CSteamID.m_SteamID, out var existingSave))
             {

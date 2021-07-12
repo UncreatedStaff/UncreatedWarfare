@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Kits
                                 if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                                     branchChanged = true;
 
-                                KitManager.GiveKit(player, kit);
+                                await KitManager.GiveKit(player, kit);
                                 ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                                 if (branchChanged)
@@ -135,7 +135,7 @@ namespace Uncreated.Warfare.Kits
                         if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
-                        KitManager.GiveKit(player, kit);
+                        await KitManager.GiveKit(player, kit);
                         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)
@@ -260,7 +260,7 @@ namespace Uncreated.Warfare.Kits
                     //success
                     FPlayerName name = F.GetPlayerOriginalNames(target.Player);
                     player.Message("kit_accessgiven", name.CharacterName, kitName);
-                    KitManager.GiveAccess(target.Steam64, kit.Name);
+                    await KitManager.GiveAccess(target.Steam64, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
@@ -291,7 +291,7 @@ namespace Uncreated.Warfare.Kits
                     //success
                     FPlayerName name = F.GetPlayerOriginalNames(target.Player);
                     player.Message("kit_accessremoved", name.CharacterName, kitName);
-                    KitManager.RemoveAccess(target.Steam64, kit.Name);
+                    await KitManager.RemoveAccess(target.Steam64, kit.Name);
                     await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }

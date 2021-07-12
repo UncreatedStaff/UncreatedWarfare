@@ -363,7 +363,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             await Task.Yield();
         }
-        public override async Task OnPlayerLeft(SteamPlayer player)
+        public override async Task OnPlayerLeft(ulong player)
         {
             foreach (Flag flag in Rotation)
                 flag.RecalcCappers(true);

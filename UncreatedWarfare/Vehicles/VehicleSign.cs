@@ -117,6 +117,8 @@ namespace Uncreated.Warfare.Vehicles
         public VehicleSign(uint instance_id, uint bay_instance_id, SerializableTransform sign_transform, SerializableTransform bay_transform, string placeholder_text, EStructType bay_type)
         {
             this.instance_id = instance_id;
+            this.sign_transform = sign_transform;
+            this.bay_transform = bay_transform;
             this.bay_instance_id = bay_instance_id;
             this.placeholder_text = placeholder_text;
             this.bay_type = bay_type;
@@ -127,6 +129,8 @@ namespace Uncreated.Warfare.Vehicles
             this.bay_instance_id = 0;
             this.placeholder_text = string.Empty;
             this.bay_type = EStructType.BARRICADE;
+            this.sign_transform = SerializableTransform.Zero;
+            this.bay_transform = SerializableTransform.Zero;
         }
         public void InitVars()
         {
@@ -141,7 +145,7 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             save = structure;
                             this.instance_id = structure.instance_id;
-                            structure.SpawnCheck().GetAwaiter().GetResult();
+                            Task.Run( async () => await structure.SpawnCheck() );
                         }
                     }
                     else
@@ -166,6 +170,7 @@ namespace Uncreated.Warfare.Vehicles
                     if (VehicleSpawner.IsRegistered(data.instanceID, out bay, this.bay_type))
                     {
                         this.instance_id = data.instanceID;
+                        this.sign_transform = new SerializableTransform(drop.model.transform);
                     }
                     else
                     {

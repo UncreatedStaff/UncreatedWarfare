@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             await Task.Yield();
         }
-        public virtual async Task OnPlayerLeft(SteamPlayer player)
+        public virtual async Task OnPlayerLeft(ulong player)
         {
             await Task.Yield();
         }

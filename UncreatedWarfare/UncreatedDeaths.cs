@@ -650,7 +650,14 @@ namespace Uncreated.Warfare
                         if (cause == EDeathCause.GUN && c.lastShot != default)
                             item = c.lastShot;
                         else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
-                            item = c.thrown.Last().asset.id;
+                        {
+                            if (c.thrown[0] != null)
+                            {
+                                item = c.thrown[0].asset.id;
+                                F.Log("Cause was grenade and found id: " + item.ToString());
+                            }
+                            else item = killer.player.equipment.itemID;
+                        }
                         else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
                             item = c.lastProjected;
                         else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)
@@ -703,7 +710,7 @@ namespace Uncreated.Warfare
                         if (murderer == Provider.server)
                             key += "_SUICIDE";
                         else if (!murderer.m_SteamID.ToString(Data.Locale).StartsWith("765"))
-                            killerName = new FPlayerName() { CharacterName = "zombie", NickName = "zombie", PlayerName = "zombie", Steam64 = murderer == null || murderer == CSteamID.Nil ? 0 : murderer.m_SteamID };
+                            killerName = new FPlayerName() { CharacterName = "zombie", NickName = "zombie", PlayerName = "zombie", Steam64 = murderer == default || murderer == CSteamID.Nil ? 0 : murderer.m_SteamID };
                     }
                 }
                 if(foundKiller)

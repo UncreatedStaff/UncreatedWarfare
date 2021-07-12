@@ -121,6 +121,42 @@ namespace Uncreated.Warfare
                 await Networking.Client.SendPlayerList(playersOnline);
             }
         }
+
+        readonly Queue<System.Action> _actionQueue = new Queue<System.Action>();
+        public void QueueMainThreadAction(System.Action action)
+        {
+            if (action == null)
+            {
+                F.LogError("Tried to queue a null action: ");
+                F.LogError(System.Environment.StackTrace);
+                return;
+            }
+            //F.Log("Queued an action: " + action.Method.Name);
+            //F.Log(System.Environment.StackTrace);
+            if (ThreadUtil.IsGameThread(Thread.CurrentThread))
+                action.Invoke();
+            else
+                _actionQueue.Enqueue(action);
+        }
+        void Update()
+        {
+            while (_actionQueue.Count > 0)
+            {
+                try
+                {
+                    System.Action action = _actionQueue.Dequeue();
+                    if(action == null)
+                        F.LogError("Failed to run a task in the Action Queue, action was null.");
+                    else
+                        action.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    F.LogError("Failed to run a task in the Action Queue: ");
+                    F.LogError(ex);
+                }
+            }
+        }
         public static async Task ReplaceBarricadesAndStructures()
         {
             for (byte x = 0; x < Regions.WORLD_SIZE; x++)
@@ -195,12 +231,14 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
             UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
+            Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
             if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
             BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
             UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
             UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
+            UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
             Patches.InternalPatches.OnLandmineExplode -= EventFunctions.OnLandmineExploded;
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             Patches.BarricadeSpawnedHandler -= EventFunctions.OnBarricadePlaced;
@@ -254,6 +292,7 @@ namespace Uncreated.Warfare
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
             Data.Whitelister?.Dispose();
+            Data.SquadManager?.Dispose();
             Data.VehicleSpawner?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
@@ -265,15 +304,15 @@ namespace Uncreated.Warfare
         public static Color GetColor(string key)
         {
             if (Data.Colors == null) return Color.white;
-            if (Data.Colors.ContainsKey(key)) return Data.Colors[key];
-            else if (Data.Colors.ContainsKey("default")) return Data.Colors["default"];
+            if (Data.Colors.TryGetValue(key, out Color color)) return color;
+            else if (Data.Colors.TryGetValue("default", out color)) return color;
             else return Color.white;
         }
         public static string GetColorHex(string key)
         {
             if (Data.ColorsHex == null) return "ffffff";
-            if (Data.ColorsHex.ContainsKey(key)) return Data.ColorsHex[key];
-            else if (Data.ColorsHex.ContainsKey("default")) return Data.ColorsHex["default"];
+            if (Data.ColorsHex.TryGetValue(key, out string color)) return color;
+            else if (Data.ColorsHex.TryGetValue("default", out color)) return color;
             else return "ffffff";
         }
     }

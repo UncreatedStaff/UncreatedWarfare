@@ -28,6 +28,8 @@ namespace Uncreated.Warfare
     public static class F
     {
         public const float SPAWN_HEIGHT_ABOVE_GROUND = 0.5f;
+        public const char INFINITY_SYMBOL = '∞';
+        //public const char INFINITY_SYMBOL = '♾';
         public static readonly List<char> vowels = new List<char> { 'a', 'e', 'i', 'o', 'u' };
         /// <summary>
         /// Convert an HTMLColor string to a actual color.
@@ -278,7 +280,7 @@ namespace Uncreated.Warfare
         {
             string localizedString = Translate(text, player.m_SteamID, formatting);
             if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
-                ChatManager.say(player, localizedString, textColor, localizedString.Contains("</"));
+                UCWarfare.I.QueueMainThreadAction(() => ChatManager.say(player, localizedString, textColor, localizedString.Contains("</")));
             else
             {
                 LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
@@ -296,7 +298,7 @@ namespace Uncreated.Warfare
                     LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                 }
                 if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                    ChatManager.say(player, newMessage, textColor, newMessage.Contains("</"));
+                    UCWarfare.I.QueueMainThreadAction( () => ChatManager.say(player, newMessage, textColor, newMessage.Contains("</")));
                 else
                     LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                         + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -562,8 +564,8 @@ namespace Uncreated.Warfare
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_1")}>{team1count}</color>");
                 } else
                 {
-                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1CountIcon", $"");
-                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", $"");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1CountIcon", "");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", "");
                 }
                 if (team2count > 0 && UCWarfare.Config.FlagSettings.EnablePlayerCount)
                 {
@@ -571,8 +573,8 @@ namespace Uncreated.Warfare
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_2")}>{team2count}</color>");
                 } else
                 {
-                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2CountIcon", $"");
-                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", $"");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2CountIcon", "");
+                    EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", "");
                 }
             }
             if (sendChatOverride || (UCWarfare.Config.FlagSettings.UseChat && SendChatIfConfiged))
@@ -622,39 +624,42 @@ namespace Uncreated.Warfare
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
-                newtext = await TranslateSign(text, client.playerID.steamID.m_SteamID);
-            Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
+                newtext = await TranslateSign(text, client.playerID.steamID.m_SteamID, false);
+            Data.SendUpdateSign.Invoke(ENetReliability.Reliable, client.transportConnection, x, y, plant, index, newtext);
         }
         public static async Task InvokeSignUpdateForAll(byte x, byte y, ushort plant, ushort index, string text)
         {
             Dictionary<string, List<SteamPlayer>> playergroups = new Dictionary<string, List<SteamPlayer>>();
-            foreach (SteamPlayer client in Provider.clients)
+            IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
+            while (connections.MoveNext())
             {
+                SteamPlayer client = connections.Current;
                 if (Data.Languages.ContainsKey(client.playerID.steamID.m_SteamID))
                 {
-                    if (playergroups.ContainsKey(Data.Languages[client.playerID.steamID.m_SteamID]))
-                        playergroups[Data.Languages[client.playerID.steamID.m_SteamID]].Add(client);
+                    if (playergroups.TryGetValue(Data.Languages[client.playerID.steamID.m_SteamID], out List<SteamPlayer> players))
+                        players.Add(client);
                     else
                         playergroups.Add(Data.Languages[client.playerID.steamID.m_SteamID], new List<SteamPlayer> { client });
                 }
                 else
                 {
-                    if (playergroups.ContainsKey(JSONMethods.DefaultLanguage))
-                        playergroups[JSONMethods.DefaultLanguage].Add(client);
+                    if (playergroups.TryGetValue(JSONMethods.DefaultLanguage, out List<SteamPlayer> players))
+                        players.Add(client);
                     else
                         playergroups.Add(JSONMethods.DefaultLanguage, new List<SteamPlayer> { client });
                 }
             }
+            connections.Dispose();
             foreach (KeyValuePair<string, List<SteamPlayer>> languageGroup in playergroups)
             {
                 if (languageGroup.Value.Count > 0)
                 {
                     string newtext = text;
                     if (text.StartsWith("sign_"))
-                        newtext = await TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID);
-                    List<ITransportConnection> connections = new List<ITransportConnection>();
-                    languageGroup.Value.ForEach(l => connections.Add(l.transportConnection));
-                    Data.SendUpdateSign.Invoke(ENetReliability.Reliable, connections, x, y, plant, index, newtext);
+                        newtext = await TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID, false);
+                    List<ITransportConnection> toSendTo = new List<ITransportConnection>();
+                    languageGroup.Value.ForEach(l => toSendTo.Add(l.transportConnection));
+                    Data.SendUpdateSign.Invoke(ENetReliability.Reliable, toSendTo, x, y, plant, index, newtext);
                 }
             }
         }
@@ -662,12 +667,22 @@ namespace Uncreated.Warfare
         public static async Task InvokeSignUpdateForAllKits(byte x, byte y, ushort plant, ushort index, string text)
         {
             if (text == null) return;
-            foreach (SteamPlayer player in Provider.clients)
+            IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
+            while(connections.MoveNext())
             {
                 string newtext = text;
                 if (text.StartsWith("sign_"))
-                    newtext = await TranslateSign(text, player.playerID.steamID.m_SteamID);
-                Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, player.transportConnection, x, y, plant, index, newtext);
+                    newtext = await TranslateSign(text, connections.Current.playerID.steamID.m_SteamID, false);
+                Data.SendUpdateSign.Invoke(ENetReliability.Reliable, connections.Current.transportConnection, x, y, plant, index, newtext);
+            }
+            connections.Dispose();
+        }
+        public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
+        {
+            foreach (SteamPlayer client in Provider.clients)
+            {
+                if (client.player != null && Regions.checkArea(x, y, client.player.movement.region_x, client.player.movement.region_y, distance))
+                    yield return client;
             }
         }
         public static async Task InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
@@ -680,8 +695,8 @@ namespace Uncreated.Warfare
             }
             else newtext = text;
             if (newtext.StartsWith("sign_"))
-                newtext = await TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID);
-            Data.SendUpdateSign.Invoke(ENetReliability.Unreliable, client.transportConnection, x, y, plant, index, newtext);
+                newtext = await TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID, false);
+            Data.SendUpdateSign.Invoke(ENetReliability.Reliable, client.transportConnection, x, y, plant, index, newtext);
         }
         public static string GetSignText(ushort index, BarricadeRegion region)
         {
@@ -928,7 +943,7 @@ namespace Uncreated.Warfare
                 success = Data.PlaytimeComponents[player.m_SteamID] != null;
                 return Data.PlaytimeComponents[player.m_SteamID];
             }
-            else if (player == null || player == CSteamID.Nil)
+            else if (player == default || player == CSteamID.Nil)
             {
                 success = false;
                 return null;
@@ -991,6 +1006,7 @@ namespace Uncreated.Warfare
                 return playtimeObj.CurrentTimeSeconds;
             else return 0f;
         }
+        public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => GetPlayerOriginalNames(player.Player);
         public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
         public static FPlayerName GetPlayerOriginalNames(UnturnedPlayer player) => GetPlayerOriginalNames(player.Player);
         public static FPlayerName GetPlayerOriginalNames(Player player)
@@ -1031,7 +1047,7 @@ namespace Uncreated.Warfare
             else return false;
         }
         public static bool IsOnFlag(this Player player) => Data.Gamemode is FlagGamemode fg && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
-        public static async Task<string> TranslateSign(string key, ulong player, params object[] formatting)
+        public static async Task<string> TranslateSign(string key, ulong player, bool important, params object[] formatting)
         {
             string norm = Translate(key, player, formatting);
             if (!key.StartsWith("sign_") || norm != key) return norm;
@@ -1059,117 +1075,81 @@ namespace Uncreated.Warfare
                     }
                 }
                 else return norm;
-            } else if (KitManager.KitExists(kitname, out Kit kit))
+            } 
+            else if (KitManager.KitExists(kitname, out Kit kit))
             {
-                string pricestring;
-                string pricecolor;
+                ulong playerteam = GetTeamFromPlayerSteam64ID(player);
+                string line2string;
+                string line2color;
                 if(kit.IsPremium)
                 {
                     if (kit.PremiumCost != 0)
                     {
-                        pricecolor = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_price_credits"))
+                        line2color = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_level"))
                             : UCWarfare.GetColorHex("kit_price_dollars");
-                        pricestring = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? Translate("kit_owned", player) : Translate("kit_price_credits", player, kit.Cost))
+                        line2string = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? Translate("kit_owned", player) : Translate("kit_price_credits", player, kit.Cost))
                             : Translate("kit_price_dollars", player, kit.PremiumCost);
                     }
                     else if (kit.RequiredLevel == 0)
                     {
-                        pricestring = Translate("kit_available", player);
-                        pricecolor = UCWarfare.GetColorHex("kit_price_free");
+                        line2string = Translate("kit_available", player);
+                        line2color = UCWarfare.GetColorHex("kit_price_free");
                     }
                     else
                     {
                         Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
-                        Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, player.GetTeamFromPlayerSteam64ID(), false), out _, out _);
-                        pricestring = Translate("kit_required_level", player, kit.RequiredLevel, 
+                        Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, playerteam, important), out _, out _);
+                        line2string = Translate("kit_required_level", player, kit.RequiredLevel, 
                             player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
-                        pricecolor = UCWarfare.GetColorHex("kit_price_tickets");
+                        line2color = UCWarfare.GetColorHex("kit_price_tickets");
                     }
                 }
                 else if (kit.RequiredLevel == 0)
                 {
-                    pricestring = Translate("kit_available", player);
-                    pricecolor = UCWarfare.GetColorHex("kit_price_free");
+                    line2string = Translate("kit_available", player);
+                    line2color = UCWarfare.GetColorHex("kit_price_free");
                 }
                 else
                 {
                     Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
-                    Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, player.GetTeamFromPlayerSteam64ID(), false), out _, out _);
-                    pricestring = Translate("kit_required_level", player, kit.RequiredLevel,
+                    Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, playerteam, important), out _, out _);
+                    line2string = Translate("kit_required_level", player, kit.RequiredLevel,
                         player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
-                    pricecolor = UCWarfare.GetColorHex("kit_price_tickets");
+                    line2color = UCWarfare.GetColorHex("kit_level");
                 }
-                formatting = new object[3] { GetTeamNumberColorHex(kit.Team), pricestring, pricecolor };
-                if (player == 0)
-                {
-                    if (!kit.SignTexts.ContainsKey(JSONMethods.DefaultLanguage))
-                    {
-                        if (kit.SignTexts.Count > 0)
-                        {
-                            try
-                            {
-                                return string.Format(kit.SignTexts.ElementAt(0).Value, formatting);
-                            }
-                            catch (FormatException ex)
-                            {
-                                LogError(ex);
-                                return kit.SignTexts.ElementAt(0).Value + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                            }
-                        }
-                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                    }
-                    else
-                    {
-                        try
-                        {
-                            return string.Format(kit.SignTexts[JSONMethods.DefaultLanguage], formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            F.LogError(ex);
-                            return kit.SignTexts[JSONMethods.DefaultLanguage] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                        }
-                    }
-                } else
-                {
-                    string lang = JSONMethods.DefaultLanguage;
-                    if (Data.Languages.ContainsKey(player))
-                    {
-                        lang = Data.Languages[player];
-                        if (!kit.SignTexts.ContainsKey(lang))
-                            lang = JSONMethods.DefaultLanguage;
-                    }
-                    if (!kit.SignTexts.ContainsKey(lang))
-                    {
-                        if (kit.SignTexts.Count > 0)
-                        {
-                            try
-                            {
-                                return string.Format(kit.SignTexts.ElementAt(0).Value, formatting);
-                            }
-                            catch (FormatException ex)
-                            {
-                                LogError(ex);
-                                return kit.SignTexts.ElementAt(0).Value + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                            }
-                        }
-                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                    }
-                    else
-                    {
-                        try
-                        {
-                            return string.Format(kit.SignTexts[lang], formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            LogError(ex);
-                            return kit.SignTexts[lang] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
-                        }
-                    }
-                }
+                bool full = kit.IsLimited(out int current, out int max, playerteam, true);
+                string lang = DecideLanguage(player, kit.SignTexts);
+                return Translate("sign_kit_request", player, kit.SignTexts.TryGetValue(lang, out string val) ? val : kit.Name, GetTeamNumberColorHex(kit.Team), line2string, line2color, 
+                    current.ToString(Data.Locale), kit.IsPremium || kit.TeamLimit == 1f ? INFINITY_SYMBOL.ToString() : max.ToString(Data.Locale), full ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
             }
             else return key;
+        }
+        public static string DecideLanguage<TVal>(ulong player, Dictionary<string, TVal> searcher)
+        {
+            if (player == 0)
+            {
+                if (!searcher.ContainsKey(JSONMethods.DefaultLanguage))
+                {
+                    if (searcher.Count > 0)
+                    {
+                        return searcher.ElementAt(0).Key;
+                    }
+                    else return JSONMethods.DefaultLanguage;
+                }
+                else return JSONMethods.DefaultLanguage;
+            }
+            else
+            {
+                if (!Data.Languages.TryGetValue(player, out string lang) || !searcher.ContainsKey(lang))
+                {
+                    if (searcher.Count > 0)
+                    {
+                        return searcher.ElementAt(0).Key;
+                    }
+                    else return JSONMethods.DefaultLanguage;
+                }
+                return lang;
+            }
         }
         public static string TranslateLimb(ulong player, ELimb limb)
         {

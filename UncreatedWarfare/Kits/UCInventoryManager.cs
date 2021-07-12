@@ -1,4 +1,5 @@
-﻿using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Enumerations;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -47,7 +48,7 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
-        public static void ClearInventory(UCPlayer player) => ClearInventory(player.SteamPlayer());
+        public static void ClearInventory(UCPlayer player) => ClearInventory(player.SteamPlayer);
         public static void ClearInventory(UnturnedPlayer player) => ClearInventory(player.Player.channel.owner);
         public static void ClearInventory(SteamPlayer player)
         {
@@ -58,44 +59,42 @@ namespace Uncreated.Warfare.Kits
                 if (page == PlayerInventory.AREA)
                     continue;
 
-                var count = player.player.inventory.getItemCount(page);
+                byte count = player.player.inventory.getItemCount(page);
 
                 for (byte index = 0; index < count; index++)
                 {
                     player.player.inventory.removeItem(page, 0);
                 }
             }
+            
 
-            System.Action removeUnequipped = () => {
-                for (byte i = 0; i < player.player.inventory.getItemCount(2); i++)
-                {
-                    player.player.inventory.removeItem(2, 0);
-                }
-            };
+            byte[] blank = new byte[0];
+            player.player.clothing.askWearBackpack(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearBackpack(0, 0, new byte[0], true);
-            removeUnequipped();
+            player.player.clothing.askWearGlasses(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearGlasses(0, 0, new byte[0], true);
-            removeUnequipped();
+            player.player.clothing.askWearHat(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearHat(0, 0, new byte[0], true);
-            removeUnequipped();
+            player.player.clothing.askWearPants(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearPants(0, 0, new byte[0], true);
-            removeUnequipped();
+            player.player.clothing.askWearMask(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearMask(0, 0, new byte[0], true);
-            removeUnequipped();
+            player.player.clothing.askWearShirt(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearShirt(0, 0, new byte[0], true);
-            removeUnequipped();
+            player.player.clothing.askWearVest(0, 0, blank, true);
+            player.player.inventory.removeItem(2, 0);
 
-            player.player.clothing.askWearVest(0, 0, new byte[0], true);
-            removeUnequipped();
-
-            player.player.equipment.ReceiveSlot(0, 0, new byte[0]);
-            player.player.equipment.ReceiveSlot(1, 0, new byte[0]);
+            byte handcount = player.player.inventory.getItemCount(2);
+            for (byte i = 0; i < handcount; i++)
+            {
+                player.player.inventory.removeItem(2, 0);
+            }
         }
 
         public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
@@ -121,7 +120,7 @@ namespace Uncreated.Warfare.Kits
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
-                var pageCount = player.inventory.getItemCount(page);
+                byte pageCount = player.inventory.getItemCount(page);
 
                 for (byte index = 0; index < pageCount; index++)
                 {
@@ -139,7 +138,7 @@ namespace Uncreated.Warfare.Kits
         {
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
-                var pageCount = player.Player.inventory.getItemCount(page);
+                byte pageCount = player.Player.inventory.getItemCount(page);
 
                 for (byte index = 0; index < pageCount; index++)
                 {

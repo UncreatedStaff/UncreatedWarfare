@@ -97,7 +97,7 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public ulong group;
         [JsonIgnore]
-        public Transform barricadetransform = default;
+        public Transform barricadetransform;
         public uint instance_id;
         [JsonIgnore]
         public bool exists;
@@ -120,6 +120,7 @@ namespace Uncreated.Warfare.Kits
                 this.sign_id = region.barricades[index].barricade.id;
                 this.instance_id = region.drops[index].instanceID;
                 this.transform = new SerializableTransform(sign.transform);
+                this.barricadetransform = sign.transform;
                 this.SignText = sign.text;
                 this.group = sign.group.m_SteamID;
                 this.owner = sign.owner.m_SteamID;
@@ -133,6 +134,7 @@ namespace Uncreated.Warfare.Kits
             this.owner = 0;
             this.group = 0;
             this.instance_id = 0;
+            this.barricadetransform = default;
             this.exists = false;
         }
         public async Task InvokeUpdate(SteamPlayer player)
@@ -140,12 +142,36 @@ namespace Uncreated.Warfare.Kits
             if (barricadetransform != default)
                 if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
                     await F.InvokeSignUpdateFor(player, x, y, plant, index, SignText);
+                else F.LogError("Failed to find barricade!");
+            else
+            {
+                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                if (data != null && drop != null)
+                {
+                    if (BarricadeManager.tryGetInfo(drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                        await F.InvokeSignUpdateFor(player, x, y, plant, index, region, true, SignText);
+                    else F.LogError("Failed to find barricade! bot");
+                }
+                else F.LogError("Failed to find barricade! 2");
+            }
         }
         public async Task InvokeUpdate()
         {
             if (barricadetransform != default)
                 if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
                     await F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
+                else F.LogError("Failed to find barricade!");
+            else
+            {
+                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                if (data != null && drop != null)
+                {
+                    if (BarricadeManager.tryGetInfo(drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out _))
+                        await F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
+                    else F.LogError("Failed to find barricade! bot");
+                }
+                else F.LogError("Failed to find barricade! 2");
+            }
         }
         /// <summary>Spawns the sign if it is not already placed.</summary>
         public async Task SpawnCheck()
@@ -179,6 +205,9 @@ namespace Uncreated.Warfare.Kits
             else
             {
                 exists = true;
+                this.barricadetransform = drop.model.transform;
+                this.transform = new SerializableTransform(barricadetransform);
+                RequestSigns.Save();
                 await InvokeUpdate();
             }
         }

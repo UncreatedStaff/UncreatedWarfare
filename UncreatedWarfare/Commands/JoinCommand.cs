@@ -95,11 +95,8 @@ namespace Uncreated.Warfare.Commands
 
                     player.Message("join_s", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-                    foreach (var p in PlayerManager.OnlinePlayers)
-                    {
-                        if (p.Steam64 != player.Steam64)
-                            p.Message("join_announce", F.GetPlayerOriginalNames(player.Player.channel.owner).CharacterName, teamName);
-                    }
+                    Players.FPlayerName names = F.GetPlayerOriginalNames(player);
+                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "join_announce", "d1c5b0".Hex(), names.CharacterName, teamName);
 
                     if (player.Squad != null)
                     {

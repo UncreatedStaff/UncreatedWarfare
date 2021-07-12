@@ -47,7 +47,7 @@ namespace Uncreated.Warfare.XP
         {
             if (team == 0 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (important)
+            if (important || ucplayer.cachedXp == -1)
             {
                 int newxp = await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
                 if (ucplayer != null)
@@ -64,7 +64,7 @@ namespace Uncreated.Warfare.XP
         {
             if (team == 0 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromID(player);
-            if (important)
+            if (important || ucplayer.cachedXp == -1)
             {
                 int newxp = await Data.DatabaseManager.GetXP(player, team);
                 if (ucplayer != null)

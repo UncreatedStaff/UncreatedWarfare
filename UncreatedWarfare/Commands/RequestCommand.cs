@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Commands
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
                                 if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
-                                player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
+                                    player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
                                 await RequestSigns.RemoveRequestSign(requestsign);
                             }
                             else player.Message("request_not_looking");
@@ -103,7 +103,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     ucplayer.Message("request_kit_e_notallowed");
                 }
-                else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers))
+                else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
                 {
                     ucplayer.Message("request_kit_e_limited", currentPlayers, allowedPlayers);
                 }
@@ -121,9 +121,8 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
-                    int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true); 
+                    int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
                     Rank rank = XPManager.GetRank(xp, out _, out _);
-                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     if (rank == default || rank.level < kit.RequiredLevel)
                     {
                         ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel);
@@ -131,10 +130,10 @@ namespace Uncreated.Warfare.Commands
                     else
                     {
                         bool branchChanged = false;
-                        if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                        if (KitManager.HasKit(player.CSteamID, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
-                        KitManager.GiveKit(player, kit);
+                        await KitManager.GiveKit(player, kit);
                         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)
@@ -147,11 +146,10 @@ namespace Uncreated.Warfare.Commands
                         {
                             CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
                         }
-                        CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.data.RequestKitCooldown);
+                        CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.Data.RequestKitCooldown);
 
                         PlayerManager.Save();
                     }
-                    await rtn;
                 }
             }
             else if (vehicle != null)
