@@ -32,7 +32,10 @@ namespace Uncreated.Warfare
     public static class Data
     {
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-        public static readonly Type[] GAME_MODES = new Type[] { typeof(TeamCTF) };
+        public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type> 
+        { 
+            { "TeamCTF", typeof(TeamCTF) } 
+        };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
@@ -84,7 +87,7 @@ namespace Uncreated.Warfare
         public static readonly CultureInfo Locale = new CultureInfo("en-US");
         public static Dictionary<string, Color> Colors;
         public static Dictionary<string, string> ColorsHex;
-        public static Dictionary<string, Dictionary<string, string>> Localization;
+        public static Dictionary<string, Dictionary<string, TranslationData>> Localization;
         public static Dictionary<string, Dictionary<string, string>> DeathLocalization;
         public static Dictionary<string, Dictionary<ELimb, string>> LimbLocalization;
         public static Dictionary<EXPGainType, int> XPData;
@@ -174,10 +177,10 @@ namespace Uncreated.Warfare
                 return;
             }
 
-            Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+            Colors = JSONMethods.LoadColors(out ColorsHex);
             XPData = JSONMethods.LoadXP();
             CreditsData = JSONMethods.LoadCredits();
-            Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
+            Localization = JSONMethods.LoadTranslations(out DeathLocalization, out LimbLocalization);
             TableData = JSONMethods.LoadTables();
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
@@ -200,7 +203,7 @@ namespace Uncreated.Warfare
             if (Gamemode == null)
             { 
                 F.LogError("Unable to find gamemode by the name " + UCWarfare.Config.ActiveGamemode + ", defaulting to " + nameof(TeamCTF));
-                Gamemode = TeamCTF.Create();
+                Gamemode = new TeamCTF();
             }
             await Gamemode.Init();
             F.Log("Initialized gamemode.", ConsoleColor.Magenta);
@@ -329,6 +332,7 @@ namespace Uncreated.Warfare
                     new Permission("uc.join"),
                     new Permission("uc.kick"),
                     new Permission("uc.lang"),
+                    new Permission("uc.rally"),
                     new Permission("uc.reload"),
                     new Permission("uc.reload.all"),
                     new Permission("uc.reload.translations"),
@@ -364,6 +368,7 @@ namespace Uncreated.Warfare
                     new Permission("uc.join"),
                     new Permission("uc.kick"),
                     new Permission("uc.lang"),
+                    new Permission("uc.rally"),
                     new Permission("uc.request"),
                     new Permission("uc.structure"),
                     new Permission("uc.structure.pop"),
@@ -393,7 +398,8 @@ namespace Uncreated.Warfare
                     new Permission("uc.squad"),
                     new Permission("uc.rally"),
                     new Permission("uc.group"),
-                    new Permission("uc.group.current")
+                    new Permission("uc.group.current"),
+                    new Permission("uc.rally")
                 };
         }
     }

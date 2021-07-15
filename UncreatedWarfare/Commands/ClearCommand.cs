@@ -15,23 +15,18 @@ namespace Uncreated.Warfare.Commands
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "clear";
-        public string Help => "Either clears a player's inventory or wipes items, vehicles, or structures/barricades from the map.";
+        public string Help => "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
         public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.clear" };
         public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
-            bool isConsole = caller.DisplayName == "Console" || player == default;
-            Action<string, Color, object[]> Reply = isConsole ?
-                new Action<string, Color, object[]>((msg, color, formatting) =>
-                    F.Log(F.Translate(msg, 0, formatting)))
-            :
-                new Action<string, Color, object[]>((msg, color, formatting) =>
-                    player.SendChat(msg, color, formatting));
+            bool isConsole = caller.DisplayName == "Console";
             if (command.Length < 1)
             {
-                Reply.Invoke("clear_not_enough_args", UCWarfare.GetColor("clear_not_enough_args"), new object[0]);
+                if (isConsole) F.LogError(F.Translate("clear_not_enough_args", 0, out _)); 
+                else player.SendChat("clear_not_enough_args");
                 return;
             }
             string operation = command[0].ToLower();
@@ -41,13 +36,14 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole)
                     {
-                        Reply.Invoke("clear_inventory_console_identity", 
-                            UCWarfare.GetColor("clear_inventory_console_identity"), new object[0]);
+                        if (isConsole) F.LogError(F.Translate("clear_inventory_console_identity", 0, out _));
+                        else player.SendChat("clear_inventory_console_identity");
                         return;
                     } else
                     {
                         Kits.UCInventoryManager.ClearInventory(player);
-                        Reply.Invoke("clear_inventory_self", UCWarfare.GetColor("clear_inventory_self"), new object[0]);
+                        if (isConsole) F.LogError(F.Translate("clear_inventory_self", 0, out _));
+                        else player.SendChat("clear_inventory_self");
                     }
                 }
                 else 
@@ -59,21 +55,20 @@ namespace Uncreated.Warfare.Commands
                     if (PlayerTool.tryGetSteamPlayer(n, out SteamPlayer splayer))
                     {
                         Kits.UCInventoryManager.ClearInventory(splayer);
-                        Reply.Invoke("clear_inventory_others", UCWarfare.GetColor("clear_inventory_others"),
-                            new object[2] {
-                                isConsole ? F.GetPlayerOriginalNames(splayer).PlayerName : F.GetPlayerOriginalNames(splayer).CharacterName,
-                                UCWarfare.GetColorHex("clear_inventory_others_name")
-                            });
+                        n = isConsole ? F.GetPlayerOriginalNames(splayer).PlayerName : F.GetPlayerOriginalNames(splayer).CharacterName;
+                        if (isConsole) F.LogError(F.Translate("clear_inventory_others", 0, out _, n));
+                        else player.SendChat("clear_inventory_others", n);
                     } else
                     {
-                        Reply.Invoke("clear_inventory_player_not_found", UCWarfare.GetColor("clear_inventory_player_not_found"),
-                            new object[2] { n, UCWarfare.GetColorHex("clear_inventory_player_not_found_player") });
+                        if (isConsole) F.LogError(F.Translate("clear_inventory_player_not_found", 0, out _, n));
+                        else player.SendChat("clear_inventory_player_not_found", n);
                     }
                 }
             } else if (operation == "i" || operation == "items" || operation == "item")
             {
                 ItemManager.askClearAllItems();
-                Reply.Invoke("clear_items_cleared", UCWarfare.GetColor("clear_items_cleared"), new object[0]);
+                if (isConsole) F.LogError(F.Translate("clear_items_cleared", 0, out _));
+                else player.SendChat("clear_items_cleared");
             }
             else if (operation == "v" || operation == "vehicles" || operation == "vehicle")
             {
@@ -83,16 +78,19 @@ namespace Uncreated.Warfare.Commands
                 VehicleManager.askVehicleDestroyAll();
                 for (int i = 0; i < spawnsToReset.Count; i++)
                     spawnsToReset[i].SpawnVehicle();
-                Reply.Invoke("clear_vehicles_cleared", UCWarfare.GetColor("clear_vehicles_cleared"), new object[0]);
+                if (isConsole) F.LogError(F.Translate("clear_vehicles_cleared", 0, out _));
+                else player.SendChat("clear_vehicles_cleared");
             }
             else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" || 
                 operation == "struct" || operation == "barricades" || operation == "barricade")
             {
                 await UCWarfare.ReplaceBarricadesAndStructures();
-                Reply.Invoke("clear_structures_cleared", UCWarfare.GetColor("clear_structures_cleared"), new object[0]);
+                if (isConsole) F.LogError(F.Translate("clear_structures_cleared", 0, out _));
+                else player.SendChat("clear_structures_cleared");
             } else
             {
-                Reply.Invoke("correct_usage_c", UCWarfare.GetColor("correct_usage_c"), new object[1] { Syntax });
+                if (isConsole) F.LogError(F.Translate("correct_usage", 0, out _, Syntax));
+                else player.SendChat("correct_usage", Syntax);
                 return;
             }
         }

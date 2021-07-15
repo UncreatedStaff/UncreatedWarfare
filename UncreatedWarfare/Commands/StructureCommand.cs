@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Commands
                         if (barricade == default)
                         {
                             Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
-                            if(structure == default) player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                            if(structure == default) player.SendChat("structure_not_looking");
                             else
                             {
                                 if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
@@ -44,17 +44,15 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         if (StructureSaver.AddStructure(region.drops[index], region.structures[index], out Structure structureaded))
                                         {
-                                            player.Player.SendChat("structure_saved", UCWarfare.GetColor("structure_saved"), structureaded.Asset.itemName,
-                                                UCWarfare.GetColorHex("structure_saved_structure"));
+                                            player.SendChat("structure_saved", structureaded.Asset.itemName);
                                         } else
                                         {
-                                            player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                                            player.SendChat("structure_not_looking");
                                         }
                                     } else
                                     {
-                                        player.SendChat("structure_saved_already", UCWarfare.GetColor("structure_saved_already"),
-                                            structexists == default ? "unknown" : structexists.Asset.itemName,
-                                            UCWarfare.GetColorHex("structure_saved_already_structure"));
+                                        player.SendChat("structure_saved_already",
+                                            structexists == default ? "unknown" : structexists.Asset.itemName);
                                     }
                                 }
                             }
@@ -63,11 +61,11 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (barricade is InteractableVehicle)
                             {
-                                player.SendChat("structure_saved_not_vehicle", UCWarfare.GetColor("structure_saved_not_vehicle"));
+                                player.SendChat("structure_saved_not_vehicle");
                             }
                             else if (barricade is InteractableForage)
                             {
-                                player.SendChat("structure_saved_not_bush", UCWarfare.GetColor("structure_saved_not_bush"));
+                                player.SendChat("structure_saved_not_bush");
                             }
                             else if (BarricadeManager.tryGetInfo(barricade.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
                             {
@@ -75,24 +73,22 @@ namespace Uncreated.Warfare.Commands
                                 {
                                     if (StructureSaver.AddStructure(region.drops[index], region.barricades[index], out Structure structureaded))
                                     {
-                                        player.Player.SendChat("structure_saved", UCWarfare.GetColor("structure_saved"), structureaded.Asset.itemName,
-                                            UCWarfare.GetColorHex("structure_saved_structure"));
+                                        player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
                                     } else
                                     {
-                                        player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                                        player.SendChat("structure_not_looking");
                                     }
                                 } else
                                 {
-                                    player.SendChat("structure_saved_already", UCWarfare.GetColor("structure_saved_already"),
-                                        structureexists == default ? "unknown" : structureexists.Asset.itemName,
-                                        UCWarfare.GetColorHex("structure_saved_already_structure"));
+                                    player.SendChat("structure_saved_already",
+                                        structureexists == default ? "unknown" : structureexists.Asset.itemName);
                                 }
                             }
-                            else player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                            else player.SendChat("structure_not_looking");
                         }
                     }
                     else
-                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                        player.Player.SendChat("no_permissions");
                     return;
                 }
                 else if (action == "remove")
@@ -103,7 +99,7 @@ namespace Uncreated.Warfare.Commands
                         if (barricade == default)
                         {
                             Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
-                            if (structure == default) player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                            if (structure == default) player.SendChat("structure_not_looking");
                             else
                             {
                                 if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
@@ -111,8 +107,7 @@ namespace Uncreated.Warfare.Commands
                                     if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structureaded))
                                     {
                                         StructureSaver.RemoveStructure(structureaded);
-                                        player.Player.SendChat("structure_unsaved", UCWarfare.GetColor("structure_unsaved"), structureaded.Asset.itemName,
-                                            UCWarfare.GetColorHex("structure_unsaved_structure"));
+                                        player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
                                     }
                                     else
                                     {
@@ -138,9 +133,8 @@ namespace Uncreated.Warfare.Commands
                                             else itemname = bar.name;
                                         }
                                         else itemname = structure.name;
-                                        player.SendChat("structure_unsaved_already", UCWarfare.GetColor("structure_unsaved_already"),
-                                            structureaded == default ? "unknown" : itemname,
-                                            UCWarfare.GetColorHex("structure_unsaved_already_structure"));
+                                        player.SendChat("structure_unsaved_already",
+                                            structureaded == default ? "unknown" : itemname);
                                     }
                                 }
                             }
@@ -151,19 +145,18 @@ namespace Uncreated.Warfare.Commands
                             {
                                 if (barricade is InteractableVehicle)
                                 {
-                                    player.SendChat("structure_unsaved_not_vehicle", UCWarfare.GetColor("structure_unsaved_not_vehicle"));
+                                    player.SendChat("structure_unsaved_not_vehicle");
                                 }
                                 else if (barricade is InteractableForage)
                                 {
-                                    player.SendChat("structure_unsaved_not_bush", UCWarfare.GetColor("structure_unsaved_not_bush"));
+                                    player.SendChat("structure_unsaved_not_bush");
                                 }
                                 else
                                 {
                                     if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureaded))
                                     {
                                         StructureSaver.RemoveStructure(structureaded);
-                                        player.Player.SendChat("structure_unsaved", UCWarfare.GetColor("structure_unsaved"), structureaded.Asset.itemName,
-                                            UCWarfare.GetColorHex("structure_unsaved_structure"));
+                                        player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
                                     }
                                     else
                                     {
@@ -175,16 +168,15 @@ namespace Uncreated.Warfare.Commands
                                             else itemname = barricade.name;
                                         }
                                         else itemname = barricade.name;
-                                        player.SendChat("structure_unsaved_already", UCWarfare.GetColor("structure_unsaved_already"),
-                                            structureaded == default ? "unknown" : itemname,
-                                            UCWarfare.GetColorHex("structure_unsaved_already_structure"));
+                                        player.SendChat("structure_unsaved_already",
+                                            structureaded == default ? "unknown" : itemname);
                                     }
                                 }
                             }
                         }
                     }
                     else
-                        player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                        player.Player.SendChat("no_permissions");
                 } else if (action == "pop" || action == "destroy")
                 {
                     if (player.HasPermission("uc.structure.pop"))
@@ -202,7 +194,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                player.Player.SendChat("structure_pop_not_poppable", UCWarfare.GetColor("structure_pop_not_poppable"));
+                                player.Player.SendChat("structure_pop_not_poppable");
                             }
                         } else
                         {
@@ -219,13 +211,13 @@ namespace Uncreated.Warfare.Commands
                                 }
                                 else
                                 {
-                                    player.Player.SendChat("structure_pop_not_poppable", UCWarfare.GetColor("structure_pop_not_poppable"));
+                                    player.Player.SendChat("structure_pop_not_poppable");
                                 }
                             }
-                            else player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                            else player.SendChat("structure_not_looking");
                         }
                     }
-                    else player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                    else player.Player.SendChat("no_permissions");
                 } else if (action == "examine" || action == "wtf")
                 {
                     if (player.HasPermission("uc.structure.examine"))
@@ -247,7 +239,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                player.Player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                                player.Player.SendChat("structure_examine_not_examinable");
                             }
                         }
                         else
@@ -265,13 +257,13 @@ namespace Uncreated.Warfare.Commands
                                 }
                                 else
                                 {
-                                    player.Player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                                    player.Player.SendChat("structure_examine_not_examinable");
                                 }
                             }
-                            else player.SendChat("structure_not_looking", UCWarfare.GetColor("structure_not_looking"));
+                            else player.SendChat("structure_not_looking");
                         }
                     }
-                    else player.Player.SendChat("no_permissions", UCWarfare.GetColor("no_permissions"));
+                    else player.Player.SendChat("no_permissions");
                 }
             }
         }
@@ -280,14 +272,13 @@ namespace Uncreated.Warfare.Commands
             if (BarricadeManager.tryGetInfo(i.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
             {
                 BarricadeData data = region.barricades[index];
-                player.SendChat("structure_popped", UCWarfare.GetColor("structure_popped"),
-                    Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                    UCWarfare.GetColorHex("structure_popped_structure"));
+                player.SendChat("structure_popped",
+                    Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale));
                 BarricadeManager.destroyBarricade(region, x, y, plant, index);
             }
             else
             {
-                player.SendChat("structure_pop_not_poppable", UCWarfare.GetColor("structure_pop_not_poppable"));
+                player.SendChat("structure_pop_not_poppable");
             }
         }
         private void DestroyStructure(UnityEngine.MonoBehaviour i, Player player)
@@ -295,23 +286,21 @@ namespace Uncreated.Warfare.Commands
             if (StructureManager.tryGetInfo(i.transform, out byte x, out byte y, out ushort index, out StructureRegion region))
             {
                 StructureData data = region.structures[index];
-                player.SendChat("structure_popped", UCWarfare.GetColor("structure_popped"),
-                    Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
-                    UCWarfare.GetColorHex("structure_popped_structure"));
+                player.SendChat("structure_popped",
+                    Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale));
                 StructureManager.destroyStructure(region, x, y, index, i.transform.position);
             }
             else
             {
-                player.SendChat("structure_pop_not_poppable", UCWarfare.GetColor("structure_pop_not_poppable"));
+                player.SendChat("structure_pop_not_poppable");
             }
         }
         private void DestroyVehicle(InteractableVehicle vehicle, Player player)
         {
             vehicle.forceRemoveAllPlayers();
             VehicleManager.askVehicleDestroy(vehicle);
-            player.SendChat("structure_popped", UCWarfare.GetColor("structure_popped"),
-                Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
-                UCWarfare.GetColorHex("structure_popped_structure"));
+            player.SendChat("structure_popped",
+                Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale));
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
                 spawn.StartVehicleRespawnTimer();
         }
@@ -319,22 +308,22 @@ namespace Uncreated.Warfare.Commands
         {
             if(vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
             {
-                player.SendChat("structure_examine_not_locked", UCWarfare.GetColor("structure_examine_not_locked"));
+                player.SendChat("structure_examine_not_locked");
             } else
             {
                 ulong team = F.GetTeamFromPlayerSteam64ID(vehicle.lockedOwner.m_SteamID);
                 string teamname = TeamManager.TranslateName(team, player);
                 if(sendurl)
                 {
-                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player,
+                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, teamname), vehicle.lockedOwner.m_SteamID);
                 } else
                 {
                     string teamcolor = TeamManager.GetTeamHexColor(team);
-                    player.SendChat("structure_last_owner_chat", UCWarfare.GetColor("structure_last_owner_chat"),
+                    player.SendChat("structure_last_owner_chat",
                         Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
-                        UCWarfare.GetColor("structure_last_owner_chat_structure"), F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName,
+                        F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName,
                         vehicle.lockedOwner.m_SteamID.ToString(Data.Locale), teamcolor, teamname, teamcolor);
                 }
             }
@@ -346,28 +335,28 @@ namespace Uncreated.Warfare.Commands
                 BarricadeData data = region.barricades[index]; 
                 if(data.owner == default || data.owner == 0)
                 {
-                    player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                    player.SendChat("structure_examine_not_examinable");
                     return;
                 }
                 string teamname = TeamManager.TranslateName(data.group, player);
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player,
+                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                 }
                 else
                 {
-                    player.SendChat("structure_last_owner_chat", UCWarfare.GetColor("structure_last_owner_chat"),
+                    player.SendChat("structure_last_owner_chat",
                         Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                        UCWarfare.GetColor("structure_last_owner_chat_structure"), F.GetPlayerOriginalNames(data.owner).CharacterName,
+                        F.GetPlayerOriginalNames(data.owner).CharacterName,
                         data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)), 
                         teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                 }
             }
             else
             {
-                player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                player.SendChat("structure_examine_not_examinable");
             }
         }
         private void ExamineStructure(UnityEngine.MonoBehaviour i, Player player, bool sendurl)
@@ -377,28 +366,28 @@ namespace Uncreated.Warfare.Commands
                 StructureData data = region.structures[index];
                 if (data.owner == default || data.owner == 0)
                 {
-                    player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                    player.SendChat("structure_examine_not_examinable");
                     return;
                 }
                 string teamname = TeamManager.TranslateName(data.group, player);
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player,
+                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                 }
                 else
                 {
-                    player.SendChat("structure_last_owner_chat", UCWarfare.GetColor("structure_last_owner_chat"),
+                    player.SendChat("structure_last_owner_chat",
                         Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
-                        UCWarfare.GetColor("structure_last_owner_chat_structure"), F.GetPlayerOriginalNames(data.owner).CharacterName,
+                        F.GetPlayerOriginalNames(data.owner).CharacterName,
                         data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)),
                         teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                 }
             }
             else
             {
-                player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                player.SendChat("structure_examine_not_examinable");
             }
         }
         private void ExamineTrap(UnityEngine.Transform i, Player player, bool sendurl)
@@ -407,28 +396,29 @@ namespace Uncreated.Warfare.Commands
             {
                 if (data.ownerID == default || data.ownerID == 0)
                 {
-                    player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                    player.SendChat("structure_examine_not_examinable");
                     return;
                 }
                 string teamname = TeamManager.TranslateName(data.group, player);
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player,
+                    player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(data.ownerID).CharacterName, teamname), data.ownerID);
                 }
                 else
                 {
-                    player.SendChat("structure_last_owner_chat", UCWarfare.GetColor("structure_last_owner_chat"),
+                    player.SendChat("structure_last_owner_chat",
                         Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                        UCWarfare.GetColor("structure_last_owner_chat_structure"), F.GetPlayerOriginalNames(data.ownerID).CharacterName,
-                        data.ownerID.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.ownerID)),
+                        F.GetPlayerOriginalNames(data.ownerID).CharacterName,
+                        data.owner == null ? data.ownerID.ToString(Data.Locale) : F.GetPlayerOriginalNames(data.owner).PlayerName, 
+                        TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.ownerID)),
                         teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                 }
             }
             else
             {
-                player.SendChat("structure_examine_not_examinable", UCWarfare.GetColor("structure_examine_not_examinable"));
+                player.SendChat("structure_examine_not_examinable");
             }
         }
     }

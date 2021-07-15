@@ -21,6 +21,7 @@ using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
+#pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare
 {
     public static class EventFunctions
@@ -455,4 +456,5 @@ namespace Uncreated.Warfare
             }
         }
     }
+#pragma warning restore IDE0060 // Remove unused parameter
 }

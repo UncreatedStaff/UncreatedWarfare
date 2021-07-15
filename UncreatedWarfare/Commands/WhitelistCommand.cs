@@ -36,7 +36,7 @@ namespace Uncreated.Warfare.Commands
                     else
                         player.Message("whitelist_e_invalidid", arguments[1]);
                 }
-                if (arguments[0].ToLower() == "remove")
+                else if (arguments[0].ToLower() == "remove")
                 {
                     if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
                     {

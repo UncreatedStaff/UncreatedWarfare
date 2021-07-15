@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (!TeamManager.HasTeam(player))
             {
-                player.Message("build_error_noteam");
+                player.SendChat("build_error_noteam");
                 return;
             }
 
@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (foundation == null || !TeamManager.IsFriendly(player, foundation.group))
             {
-                player.Message("build_error_notfriendly");
+                player.SendChat("build_error_notfriendly");
                 return;
             }
 
@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.FOBs
                     BuildManager.TryBuildFortification(foundation, player, fortification);
                     return;
                 }
-                player.Message("build_error_notbuildable");
+                player.SendChat("build_error_notbuildable");
             }
         }
     }

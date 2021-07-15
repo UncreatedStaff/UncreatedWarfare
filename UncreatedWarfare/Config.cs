@@ -48,6 +48,8 @@ namespace Uncreated.Warfare
         public string ActiveGamemode;
         public string DiscordInviteCode;
         public float ReviveTimeSeconds;
+        public byte MaxPlayerCount;
+        public bool LowerSteamPlayerCount;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -78,6 +80,8 @@ namespace Uncreated.Warfare
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
             this.ReviveTimeSeconds = 5f;
+            this.MaxPlayerCount = 48;
+            this.LowerSteamPlayerCount = true;
         }
     }
     public class Modules

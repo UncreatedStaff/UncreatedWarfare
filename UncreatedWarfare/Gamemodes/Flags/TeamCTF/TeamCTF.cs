@@ -38,7 +38,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public event FlagCapturedHandler OnFlagCaptured;
         public event FlagNeutralizedHandler OnFlagNeutralized;
         public event Networking.EmptyTaskDelegate OnNewGameStarting;
-        public new static Gamemode Create() => new TeamCTF();
         public TeamCTF() : base(nameof(TeamCTF), 1f)
         {
             _config = new Config<TeamCTFData>(Data.FlagStorage, "config.json");
@@ -481,8 +480,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 float radius_tuning_resolution, 
                 int max_flags, 
                 int min_flags, 
-                int max_redos,
-                int end_delay
+                int max_redos
                 )
             {
                 this.main_search_radius = main_search_radius;

@@ -42,10 +42,10 @@ namespace Uncreated.Warfare.Kits
                         if (!VehicleBay.VehicleExists(vehicle.id, out _))
                         {
                             VehicleBay.AddRequestableVehicle(vehicle);
-                            player.Message("vehiclebay_added", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                            player.SendChat("vehiclebay_added", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                         }
                         else // error
-                            player.Message("vehiclebay_e_exist", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                            player.SendChat("vehiclebay_e_exist", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                     }
                     // remove vehicle from vehicle bay
                     else if (op == "remove" || op == "r")
@@ -53,10 +53,10 @@ namespace Uncreated.Warfare.Kits
                         if (VehicleBay.VehicleExists(vehicle.id, out _))
                         {
                             VehicleBay.RemoveRequestableVehicle(vehicle.id);
-                            player.Message("vehiclebay_removed", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                            player.SendChat("vehiclebay_removed", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                         }
                         else // error
-                            player.Message("vehiclebay_e_noexist");
+                            player.SendChat("vehiclebay_e_noexist");
                     }
                     else if (op == "savemeta")
                     {
@@ -64,13 +64,13 @@ namespace Uncreated.Warfare.Kits
                         {
                             data.SaveMetaData(vehicle);
                             VehicleBay.Save();
-                            player.Message("vehiclebay_savemeta", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                            player.SendChat("vehiclebay_savemeta", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                         }
                         else // error
-                            player.Message("vehiclebay_e_noexist");
+                            player.SendChat("vehiclebay_e_noexist");
                     }
                     else
-                        player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
+                        player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
                 }
                 // change vehicle property
                 else if (command.Length == 3)
@@ -84,27 +84,27 @@ namespace Uncreated.Warfare.Kits
                         VehicleBay.SetProperty(x => x.VehicleID == vehicle.id, property, newValue, out bool founditem, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
                         if (!founditem) // error - kit does not exist
                         {
-                            player.Message("vehiclebay_e_noexist");
+                            player.SendChat("vehiclebay_e_noexist");
                         }
                         else if (!foundproperty) // error - invalid property name
                         {
-                            player.Message("vehiclebay_e_invalidprop", property);
+                            player.SendChat("vehiclebay_e_invalidprop", property);
                         }
                         else if (!parsed) // error - invalid argument value
                         {
-                            player.Message("vehiclebay_e_invalidarg", newValue, property);
+                            player.SendChat("vehiclebay_e_invalidarg", newValue, property);
                         }
                         else if (!allowedToChange) // error - invalid argument value
                         {
-                            player.Message("vehiclebay_e_not_settable", property);
+                            player.SendChat("vehiclebay_e_not_settable", property);
                         }
                         else if (!set) // error - invalid argument value
                         {
-                            player.Message("vehiclebay_e_noexist");
+                            player.SendChat("vehiclebay_e_noexist");
                         }
                         else
                         {
-                            player.Message("vehiclebay_setprop", property.ToUpper(), vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName, newValue.ToUpper());
+                            player.SendChat("vehiclebay_setprop", property.ToUpper(), vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName, newValue.ToUpper());
 
                             if (VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
                             {
@@ -133,19 +133,19 @@ namespace Uncreated.Warfare.Kits
                                     {
                                         // success
                                         VehicleBay.AddCrewmanSeat(vehicle.id, index);
-                                        player.Message("vehiclebay_seatadded", seat);
+                                        player.SendChat("vehiclebay_seatadded", seat);
                                     }
                                     else
                                     {
-                                        player.Message("vehiclebay_seatexist", seat);
+                                        player.SendChat("vehiclebay_seatexist", seat);
                                     }
                                 }
                                 else
-                                    player.Message("vehiclebay_e_invalidseat", seat);
+                                    player.SendChat("vehiclebay_e_invalidseat", seat);
 
                             }
                             else
-                                player.Message("vehiclebay_e_noexist");
+                                player.SendChat("vehiclebay_e_noexist");
                         }
                         // remove crew seat
                         else if (property == "remove" || property == "r")
@@ -158,25 +158,25 @@ namespace Uncreated.Warfare.Kits
                                     {
                                         // success
                                         VehicleBay.RemoveCrewmanSeat(vehicle.id, index);
-                                        player.Message("vehiclebay_seatadded", seat);
+                                        player.SendChat("vehiclebay_seatadded", seat);
                                     }
                                     else
                                     {
-                                        player.Message("vehiclebay_seatnoexist", seat);
+                                        player.SendChat("vehiclebay_seatnoexist", seat);
                                     }
                                 }
                                 else
-                                    player.Message("vehiclebay_e_invalidseat", seat);
+                                    player.SendChat("vehiclebay_e_invalidseat", seat);
 
                             }
                             else
-                                player.Message("vehiclebay_e_noexist");
+                                player.SendChat("vehiclebay_e_noexist");
                         }
                         else
-                            player.Message("correct_usage", "/vehiclebay crewseats <add|remove|clear> <seat index>");
+                            player.SendChat("correct_usage", "/vehiclebay crewseats <add|remove|clear> <seat index>");
                     }
                     else
-                        player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
+                        player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
                 }
                 // set /ammo item lits
                 else if (command.Length == 2)
@@ -206,16 +206,16 @@ namespace Uncreated.Warfare.Kits
                             VehicleBay.SetItems(vehicle.id, items);
 
                             if (items.Count == 0)
-                                player.Message("vehiclebay_cleareditems", vehicle.asset.vehicleName, items.Count);
+                                player.SendChat("vehiclebay_cleareditems", vehicle.asset.vehicleName, items.Count.ToString(Data.Locale));
                             else
-                                player.Message("vehiclebay_setitems", vehicle.asset.vehicleName, items.Count);
+                                player.SendChat("vehiclebay_setitems", vehicle.asset.vehicleName, items.Count.ToString(Data.Locale));
                         }
                     }
                     else
-                        player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
+                        player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
                 }
                 else
-                    player.Message("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
+                    player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
                 return;
             }
             BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop barricadeDrop);
@@ -239,19 +239,19 @@ namespace Uncreated.Warfare.Kits
                                     if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                                     {
                                         VehicleSpawner.CreateSpawn(barricadeDrop, barricade, vehicleID);
-                                        player.Message("vehiclebay_spawn_registered", asset.vehicleName);
+                                        player.SendChat("vehiclebay_spawn_registered", asset.vehicleName);
                                     }
                                     else
-                                        player.Message("vehiclebay_e_spawnexist", vehicleID);
+                                        player.SendChat("vehiclebay_e_spawnexist", vehicleID.ToString(Data.Locale));
                                 }
                                 else
-                                    player.Message("vehiclebay_e_idnotfound", vehicleID);
+                                    player.SendChat("vehiclebay_e_idnotfound", vehicleID.ToString(Data.Locale));
                             }
                             else
-                                player.Message("vehiclebay_e_invalidid", ID);
+                                player.SendChat("vehiclebay_e_invalidid", ID);
                         }
                         else
-                            player.Message("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
+                            player.SendChat("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
                     }
                     else if (command.Length == 1)
                     {
@@ -263,11 +263,11 @@ namespace Uncreated.Warfare.Kits
                             {
                                 if (VehicleSpawner.IsRegistered(barricade.instanceID, out c.currentlylinking, EStructType.BARRICADE))
                                 {
-                                    player.Message("vehiclebay_link_started");
+                                    player.SendChat("vehiclebay_link_started");
                                 } else
                                 {
                                     F.Log("Couldn't get sign from " + barricade.barricade.id);
-                                    player.Message("vehiclebay_e_spawnnoexist");
+                                    player.SendChat("vehiclebay_e_spawnnoexist");
                                 }
                             }
                         } else
@@ -276,12 +276,12 @@ namespace Uncreated.Warfare.Kits
                             if (VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                             {
                                 VehicleSpawner.DeleteSpawn(barricade.instanceID, EStructType.BARRICADE);
-                                player.Message("vehiclebay_spawn_deregistered");
+                                player.SendChat("vehiclebay_spawn_deregistered");
                             }
                             else
-                                player.Message("vehiclebay_e_spawnnoexist");
+                                player.SendChat("vehiclebay_e_spawnnoexist");
                         }
-                        else if (op == "force")
+                        else if (op == "force" || op == "respawn")
                         {
                             if (VehicleSpawner.IsRegistered(barricadeDrop.instanceID, out VehicleSpawn spawn, EStructType.BARRICADE))
                             {
@@ -297,10 +297,10 @@ namespace Uncreated.Warfare.Kits
                                 }
                                 spawn.CancelVehicleRespawnTimer();
                                 spawn.SpawnVehicle();
-                                player.Message("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString(Data.Locale) : asset.vehicleName);
+                                player.SendChat("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString(Data.Locale) : asset.vehicleName);
                             }
                             else
-                                player.Message("vehiclebay_e_spawnnoexist");
+                                player.SendChat("vehiclebay_e_spawnnoexist");
                         }
                         else if (op == "check")
                         {
@@ -308,18 +308,18 @@ namespace Uncreated.Warfare.Kits
                             {
                                 VehicleAsset asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
                                 if (asset != null)
-                                    player.Message("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(Data.Locale), asset.vehicleName, spawn.VehicleID);
+                                    player.SendChat("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(Data.Locale), asset.vehicleName, spawn.VehicleID.ToString(Data.Locale));
                                 else
-                                    player.Message("vehiclebay_e_idnotfound", spawn.VehicleID);
+                                    player.SendChat("vehiclebay_e_idnotfound", spawn.VehicleID.ToString(Data.Locale));
                             }
                             else
-                                player.Message("vehiclebay_check_notregistered");
+                                player.SendChat("vehiclebay_check_notregistered");
                         }
                         else
-                            player.Message("correct_usage", "/vehiclebay <register|deregister|force|check> <vehicle ID>");
+                            player.SendChat("correct_usage", "/vehiclebay <register|deregister|force|check> <vehicle ID>");
                     }
                     else
-                        player.Message("correct_usage", "/vehiclebay <register|deregister|force|check> <vehicle ID>");
+                        player.SendChat("correct_usage", "/vehiclebay <register|deregister|force|check> <vehicle ID>");
                 }
                 else
                 {
@@ -336,16 +336,16 @@ namespace Uncreated.Warfare.Kits
                                         await VehicleSigns.UnlinkSign(sign);
                                     }
                                     await VehicleSigns.LinkSign(sign, c.currentlylinking);
-                                    player.Message("vehiclebay_link_finished");
+                                    player.SendChat("vehiclebay_link_finished");
                                     c.currentlylinking = null;
                                 }
-                                else player.Message("vehiclebay_link_not_started");
+                                else player.SendChat("vehiclebay_link_not_started");
                             }
-                            else player.Message("vehiclebay_e_novehicle");
+                            else player.SendChat("vehiclebay_e_novehicle");
                         }
-                        else player.Message("vehiclebay_e_novehicle");
+                        else player.SendChat("vehiclebay_e_novehicle");
                     }
-                    else player.Message("vehiclebay_e_novehicle");
+                    else player.SendChat("vehiclebay_e_novehicle");
                 }
             }
             else // check for structure
@@ -371,19 +371,19 @@ namespace Uncreated.Warfare.Kits
                                         if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                                         {
                                             VehicleSpawner.CreateSpawn(structureDrop, structure, vehicleID);
-                                            player.Message("vehiclebay_spawn_registered", asset.vehicleName);
+                                            player.SendChat("vehiclebay_spawn_registered", asset.vehicleName);
                                         }
                                         else
-                                            player.Message("vehiclebay_e_spawnexist", vehicleID);
+                                            player.SendChat("vehiclebay_e_spawnexist", vehicleID.ToString(Data.Locale));
                                     }
                                     else
-                                        player.Message("vehiclebay_e_idnotfound", vehicleID);
+                                        player.SendChat("vehiclebay_e_idnotfound", vehicleID.ToString(Data.Locale));
                                 }
                                 else
-                                    player.Message("vehiclebay_e_invalidid", ID);
+                                    player.SendChat("vehiclebay_e_invalidid", ID);
                             }
                             else
-                                player.Message("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
+                                player.SendChat("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
                         }
                         else if (command.Length == 1)
                         {
@@ -394,11 +394,11 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     if (VehicleSpawner.IsRegistered(structure.instanceID, out c.currentlylinking, EStructType.STRUCTURE))
                                     {
-                                        player.Message("vehiclebay_link_started");
+                                        player.SendChat("vehiclebay_link_started");
                                     }
                                     else
                                     {
-                                        player.Message("vehiclebay_e_spawnnoexist");
+                                        player.SendChat("vehiclebay_e_spawnnoexist");
                                     }
                                 }
                             }
@@ -407,10 +407,10 @@ namespace Uncreated.Warfare.Kits
                                 if (VehicleSpawner.IsRegistered(structureDrop.instanceID, out _, EStructType.STRUCTURE))
                                 {
                                     VehicleSpawner.DeleteSpawn(structureDrop.instanceID, EStructType.STRUCTURE);
-                                    player.Message("vehiclebay_spawn_remove");
+                                    player.SendChat("vehiclebay_spawn_remove");
                                 }
                                 else
-                                    player.Message("vehiclebay_e_spawnnoexist");
+                                    player.SendChat("vehiclebay_e_spawnnoexist");
                             }
                             else if (op == "force")
                             {
@@ -429,10 +429,10 @@ namespace Uncreated.Warfare.Kits
                                     }
                                     spawn.CancelVehicleRespawnTimer();
                                     spawn.SpawnVehicle();
-                                    player.Message("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString(Data.Locale) : asset.vehicleName);
+                                    player.SendChat("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString(Data.Locale) : asset.vehicleName);
                                 }
                                 else
-                                    player.Message("vehiclebay_e_spawnnoexist");
+                                    player.SendChat("vehiclebay_e_spawnnoexist");
                             }
                             else if (op == "check")
                             {
@@ -440,24 +440,24 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     VehicleAsset asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
                                     if (asset != null)
-                                        player.Message("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(), asset.vehicleName, spawn.VehicleID);
+                                        player.SendChat("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(), asset.vehicleName, spawn.VehicleID.ToString(Data.Locale));
                                     else
-                                        player.Message("vehiclebay_e_idnotfound", spawn.VehicleID);
+                                        player.SendChat("vehiclebay_e_idnotfound", spawn.VehicleID.ToString(Data.Locale));
                                 }
                                 else
-                                    player.Message("vehiclebay_check_notregistered");
+                                    player.SendChat("vehiclebay_check_notregistered");
                             }
                             else
-                                player.Message("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
+                                player.SendChat("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
                         }
                         else
-                            player.Message("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
+                            player.SendChat("correct_usage", "/vehiclebay <register|deregister> <vehicle ID>");
                     }
                     else
-                        player.Message("vehiclebay_e_novehicle");
+                        player.SendChat("vehiclebay_e_novehicle");
                 }
                 else
-                    player.Message("vehiclebay_e_novehicle");
+                    player.SendChat("vehiclebay_e_novehicle");
             }
         }
     }

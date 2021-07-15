@@ -105,7 +105,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
                 {
-                    ucplayer.Message("request_kit_e_limited", currentPlayers, allowedPlayers);
+                    ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
                 }
                 else if (kit.Class == Kit.EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
                 {
@@ -125,7 +125,7 @@ namespace Uncreated.Warfare.Commands
                     Rank rank = XPManager.GetRank(xp, out _, out _);
                     if (rank == default || rank.level < kit.RequiredLevel)
                     {
-                        ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel);
+                        ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel.ToString(Data.Locale));
                     }
                     else
                     {
@@ -200,7 +200,7 @@ namespace Uncreated.Warfare.Commands
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (rank == default || rank.level < data.RequiredLevel)
             {
-                ucplayer.Message("request_vehicle_e_wronglevel", data.RequiredLevel);
+                ucplayer.Message("request_vehicle_e_wronglevel", data.RequiredLevel.ToString(Data.Locale));
                 return;
             }
             else if (vehicle.asset != default && vehicle.asset.canBeLocked)
@@ -215,7 +215,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 
-                foreach (var item in data.Items)
+                foreach (ushort item in data.Items)
                 {
                     ItemManager.dropItem(new Item(item, true), ucplayer.Position, true, true, true);
                 }

@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (TotalFOBs.Count >= FOBManager.config.Data.FobLimit)
             {
-                player.Message("fob_error_limitreached");
+                player.SendChat("fob_error_limitreached");
                 return false;
             }
 
@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyFOBs.Count != 0)
             {
-                player.Message("fob_error_fobtooclose");
+                player.SendChat("fob_error_fobtooclose");
                 return false;
             }
 
@@ -71,13 +71,13 @@ namespace Uncreated.Warfare.FOBs
 
             if (logitrucks == null || logitrucks.Count == 0)
             {
-                player.Message("fob_error_nologi");
+                player.SendChat("fob_error_nologi");
                 return false;
             }
 
             if (NearbyBuild.Count < FOBManager.config.Data.FOBRequiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, FOBManager.config.Data.FOBRequiredBuild);
+                player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), FOBManager.config.Data.FOBRequiredBuild.ToString(Data.Locale));
                 return false;
             }
 
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.FOBs
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
-            player.Message("fob_built");
+            player.SendChat("fob_built");
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
@@ -155,12 +155,12 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyFOBs.Count == 0)
             {
-                player.Message("build_error_fobtoofar");
+                player.SendChat("build_error_fobtoofar");
                 return false;
             }
             if (NearbyAmmoCrates.Count != 0)
             {
-                player.Message("ammocrate_error_alreadyexists");
+                player.SendChat("ammocrate_error_alreadyexists");
                 return false;
             }
 
@@ -176,7 +176,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyBuild.Count < FOBManager.config.Data.AmmoCrateRequiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, FOBManager.config.Data.AmmoCrateRequiredBuild);
+                player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), FOBManager.config.Data.AmmoCrateRequiredBuild.ToString(Data.Locale));
                 return false;
             }
 
@@ -184,12 +184,12 @@ namespace Uncreated.Warfare.FOBs
 
             Barricade barricade = new Barricade(FOBManager.config.Data.AmmoCrateID);
 
-            UnityEngine.Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
+            Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
-            player.Message("ammocrate_built");
+            player.SendChat("ammocrate_built");
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
@@ -246,12 +246,12 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyFOBs.Count == 0)
             {
-                player.Message("build_error_fobtoofar");
+                player.SendChat("build_error_fobtoofar");
                 return false;
             }
             if (NearbyRepairStations.Count != 0)
             {
-                player.Message("repairstation_error_alreadyexists");
+                player.SendChat("repairstation_error_alreadyexists");
                 return false;
             }
 
@@ -267,7 +267,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyBuild.Count < FOBManager.config.Data.RepairStationRequiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, FOBManager.config.Data.RepairStationRequiredBuild);
+                player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), FOBManager.config.Data.RepairStationRequiredBuild.ToString(Data.Locale));
             }
 
             RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.RepairStationRequiredBuild, player.Position, 400, regions);
@@ -279,7 +279,7 @@ namespace Uncreated.Warfare.FOBs
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
-            player.Message("repairstation_built");
+            player.SendChat("repairstation_built");
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
             XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltRepairStationXP, "BUILT REPAIR STATION").GetAwaiter().GetResult();
@@ -327,7 +327,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyFOBs.Count == 0)
             {
-                player.Message("build_error_fobtoofar");
+                player.SendChat("build_error_fobtoofar");
                 return false;
             }
 
@@ -340,7 +340,7 @@ namespace Uncreated.Warfare.FOBs
                 allowed_vehicles = 1;
             if (similar_vehicles_count >= allowed_vehicles)
             {
-                player.Message("build_error_maxemplacements", allowed_vehicles, vehicles.FirstOrDefault().asset.vehicleName);
+                player.SendChat("build_error_maxemplacements", allowed_vehicles.ToString(Data.Locale), vehicles.FirstOrDefault().asset.vehicleName);
                 return false;
             }
 
@@ -356,7 +356,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyBuild.Count < emplacement.requiredBuild)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, emplacement.requiredBuild);
+                player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), emplacement.requiredBuild.ToString(Data.Locale));
                 return false;
             }
 
@@ -387,7 +387,7 @@ namespace Uncreated.Warfare.FOBs
                 VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, player.CSteamID, player.Player.quests.groupID, true);
             }
 
-            player.Message("emplacement_built", vehicle.asset.vehicleName);
+            player.SendChat("emplacement_built", vehicle.asset.vehicleName);
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
             XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltEmplacementXP, "BUILT EMPLACEMENT").GetAwaiter().GetResult();
@@ -429,7 +429,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyFOBs.Count == 0)
             {
-                player.Message("build_error_fobtoofar");
+                player.SendChat("build_error_fobtoofar");
                 return false;
             }
 
@@ -445,7 +445,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (NearbyBuild.Count < fortification.required_build)
             {
-                player.Message("build_error_notenoughbuild", NearbyBuild.Count, fortification.required_build);
+                player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), fortification.required_build.ToString(Data.Locale));
                 return false;
             }
 
@@ -458,7 +458,7 @@ namespace Uncreated.Warfare.FOBs
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
-            player.Message("fortification_built", barricade.asset.itemName);
+            player.SendChat("fortification_built", barricade.asset.itemName);
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
             XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltBarricadeXP, "BUILT FORTIFICATION").GetAwaiter().GetResult();

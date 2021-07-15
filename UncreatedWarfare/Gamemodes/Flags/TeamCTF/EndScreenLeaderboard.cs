@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label_shutting_down", player, ShuttingDownMessage));
             else
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(SecondsEndGameLength)));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format", player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(SecondsEndGameLength)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
             List<KeyValuePair<Player, string>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam);
             List<KeyValuePair<Player, int>> topkills = warstats.GetTop5MostKills();
@@ -135,8 +135,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     string color = topsquadplayers[i].Key.GetTeamColorHex();
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topsquadplayers[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_float_player_value", player,
-                        topsquadplayers[i].Value, color));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.ObjectTranslate("lb_player_value",
+                        player.playerID.steamID.m_SteamID, topsquadplayers[i].Value, color));
                 }
             }
             for (int i = 0; i < 6; i++)
@@ -156,8 +156,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     string color = F.GetTeamColorHex(topkills[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topkills[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value", player,
-                        topkills[i].Value, color));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[1] + (i + 1).ToString(Data.Locale) + 'V', F.ObjectTranslate("lb_player_value",
+                        player.playerID.steamID.m_SteamID, topkills[i].Value, color));
                 }
             }
             for (int i = 0; i < 6; i++)
@@ -177,8 +177,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     string color = F.GetTeamColorHex(toptimeonpoint[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(toptimeonpoint[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_time_player_value", player,
-                        toptimeonpoint[i].Value, color));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[2] + (i + 1).ToString(Data.Locale) + 'V', F.ObjectTranslate("lb_time_player_value",
+                        player.playerID.steamID.m_SteamID, toptimeonpoint[i].Value, color));
                 }
             }
             for (int i = 0; i < 6; i++)
@@ -198,8 +198,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     string color = F.GetTeamColorHex(topxpgain[i].Key);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topxpgain[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value", player,
-                        topxpgain[i].Value, color));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[3] + (i + 1).ToString(Data.Locale) + 'V', F.ObjectTranslate("lb_player_value", 
+                        player.playerID.steamID.m_SteamID, topxpgain[i].Value, color));
                 }
             }
             /*
@@ -221,18 +221,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 
             string defaultColor = UCWarfare.GetColorHex("default");
             // values
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsValue", F.Translate("stats_player_value", player, stats.kills, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DeathsValue", F.Translate("stats_player_value", player, stats.deaths, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KDRValue", F.Translate("stats_player_float_value", player, stats.KDR, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsOnPointValue", F.Translate("stats_player_value", player, stats.killsonpoint, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeDeployedValue", F.Translate("stats_player_time_value", player, stats.TimeDeployed, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "XPGainedValue", F.Translate("stats_player_value", player, stats.xpgained, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeOnPointValue", F.Translate("stats_player_time_value", player, stats.TimeOnPoint, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CapturesValue", F.Translate("stats_player_value", player, stats.captures, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.Translate("stats_player_time_value", player, stats.TimeDriving, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillsValue", F.Translate("stats_player_value", player, stats.teamkills, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "EnemyFOBsDestroyedValue", F.Translate("stats_player_value", player, stats.fobsdestroyed, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "OfficerPointsGainedValue", F.Translate("stats_player_value", player, stats.officerpointsgained, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.kills, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DeathsValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.deaths, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KDRValue", F.ObjectTranslate("stats_player_float_value", player.playerID.steamID.m_SteamID, stats.KDR, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "KillsOnPointValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.killsonpoint, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeDeployedValue", F.ObjectTranslate("stats_player_time_value", player.playerID.steamID.m_SteamID, stats.TimeDeployed, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "XPGainedValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.xpgained, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeOnPointValue", F.ObjectTranslate("stats_player_time_value", player.playerID.steamID.m_SteamID, stats.TimeOnPoint, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CapturesValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.captures, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.ObjectTranslate("stats_player_time_value", player.playerID.steamID.m_SteamID, stats.TimeDriving, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillsValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.teamkills, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "EnemyFOBsDestroyedValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.fobsdestroyed, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "OfficerPointsGainedValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.officerpointsgained, defaultColor));
 
             /*
              *  WAR
@@ -252,17 +252,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "lblTopRankingOfficer", F.Translate("lblTopRankingOfficer", player));
 
             // values
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DurationValue", F.Translate("stats_war_time_value", player, warstats.Duration, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT1", F.Translate("stats_war_value", player, warstats.casualtiesT1, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT2", F.Translate("stats_war_value", player, warstats.casualtiesT2, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FlagCapturesValue", F.Translate("stats_war_value", player, warstats.totalFlagOwnerChanges, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "AveragePlayerCountsT1Value", F.Translate("stats_war_float_value", player, warstats.averageArmySizeT1, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "AveragePlayerCountsT2Value", F.Translate("stats_war_float_value", player, warstats.averageArmySizeT2, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsPlacedT1Value", F.Translate("stats_war_value", player, warstats.fobsPlacedT1, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsPlacedT2Value", F.Translate("stats_war_value", player, warstats.fobsPlacedT2, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT1Value", F.Translate("stats_war_value", player, warstats.fobsDestroyedT1, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT2Value", F.Translate("stats_war_value", player, warstats.fobsDestroyedT2, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.Translate("stats_war_value", player, warstats.teamkills, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "DurationValue", F.ObjectTranslate("stats_war_time_value", player.playerID.steamID.m_SteamID, warstats.Duration, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT1", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.casualtiesT1, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CasualtiesValueT2", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.casualtiesT2, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FlagCapturesValue", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.totalFlagOwnerChanges, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "AveragePlayerCountsT1Value", F.ObjectTranslate("stats_war_float_value", player.playerID.steamID.m_SteamID, warstats.averageArmySizeT1, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "AveragePlayerCountsT2Value", F.ObjectTranslate("stats_war_float_value", player.playerID.steamID.m_SteamID, warstats.averageArmySizeT2, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsPlacedT1Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsPlacedT1, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsPlacedT2Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsPlacedT2, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT1Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT1, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT2Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT2, defaultColor));
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.teamkills, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", " TODO "); // do this after eating grilled cheese
         }
         public void SendEndScreen(ulong winner, string progresschars)
@@ -277,7 +277,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             foreach(SteamPlayer player in Provider.clients)
             {
-                EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameSeconds", F.Translate("next_game_starting_format", player, TimeSpan.FromSeconds(newTime)));
+                EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format", 
+                    player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(newTime)));
                 int time = Mathf.RoundToInt(SecondsEndGameLength);
                 EffectManager.sendUIEffectText(UiIdentifier, player.transportConnection, true, "NextGameCircleForeground",
                     progresschars[CTFUI.FromMax(Mathf.RoundToInt(time - newTime), time, progresschars)].ToString());

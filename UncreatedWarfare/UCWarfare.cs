@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
+using Steamworks;
 
 namespace Uncreated.Warfare
 {
@@ -45,6 +46,9 @@ namespace Uncreated.Warfare
             Data.LoadColoredConsole();
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
+
+            F.SetPrivatePlayerCount(Config.MaxPlayerCount);
+            F.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
 
             F.Log("Patching methods...", ConsoleColor.Magenta);
             Patches.InternalPatches.DoPatching();
@@ -138,7 +142,7 @@ namespace Uncreated.Warfare
             else
                 _actionQueue.Enqueue(action);
         }
-        void Update()
+        public void Update()
         {
             while (_actionQueue.Count > 0)
             {

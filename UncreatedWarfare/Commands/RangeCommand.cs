@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -24,9 +25,9 @@ namespace Uncreated.Warfare.Commands
             {
                 if (player.Player.quests.isMarkerPlaced)
                 {
-                    int distance = (int)Math.Round((player.Position - player.Player.quests.markerPosition).magnitude / 10) * 10;
+                    int distance = Mathf.RoundToInt((player.Position - player.Player.quests.markerPosition).magnitude / 10) * 10;
 
-                    player.Message("range", distance);
+                    player.Message("range", distance.ToString(Data.Locale));
                 }
                 else
                 {

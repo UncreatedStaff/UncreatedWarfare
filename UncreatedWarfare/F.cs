@@ -19,7 +19,6 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
 using System.Threading.Tasks;
-using SDG.NetPak;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags;
 
@@ -29,7 +28,6 @@ namespace Uncreated.Warfare
     {
         public const float SPAWN_HEIGHT_ABOVE_GROUND = 0.5f;
         public const char INFINITY_SYMBOL = '∞';
-        //public const char INFINITY_SYMBOL = '♾';
         public static readonly List<char> vowels = new List<char> { 'a', 'e', 'i', 'o', 'u' };
         /// <summary>
         /// Convert an HTMLColor string to a actual color.
@@ -44,8 +42,9 @@ namespace Uncreated.Warfare
                 code = htmlColorCode;
             if (ColorUtility.TryParseHtmlString(code, out Color color))
                 return color;
-            else ColorUtility.TryParseHtmlString(htmlColorCode, out color);
-            return color;
+            else if (ColorUtility.TryParseHtmlString(htmlColorCode, out color))
+                return color;
+            else return Color.white;
         }
         public static string MakeRemainder(this string[] array, int startIndex = 0, int length = -1, string deliminator = " ")
         {
@@ -131,152 +130,557 @@ namespace Uncreated.Warfare
             remainder = (uint)Math.Round((answer - Math.Floor(answer)) * dividend);
             return (uint)Math.Floor(answer);
         }
-        public static string Translate(string key, SteamPlayer player, params object[] formatting) => Translate(key, player.playerID.steamID.m_SteamID, formatting);
-        public static string Translate(string key, Player player, params object[] formatting) => Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
-        public static string Translate(string key, UnturnedPlayer player, params object[] formatting) => Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, formatting);
-        /// <summary>
-        /// Tramslate an unlocalized string to a localized string using the Rocket translations file.
-        /// </summary>
-        /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
-        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-        /// <returns>A localized string based on the player's language.</returns>
-        public static string Translate(string key, ulong player, params object[] formatting)
+        public static string ObjectTranslate(string key, ulong player, params object[] formatting)
         {
-            if(key == null)
+            if (key == null)
             {
                 string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
                 LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
                 return args;
             }
-            if (key.Length == 0) return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            if (key.Length == 0)
+            {
+                return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            }
             if (player == 0)
             {
-                if (!Data.Localization.ContainsKey(JSONMethods.DefaultLanguage))
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
                     {
-                        if (Data.Localization.ElementAt(0).Value.ContainsKey(key))
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
                         {
                             try
                             {
-                                return string.Format(Data.Localization.ElementAt(0).Value[key], formatting);
+                                return string.Format(translation.Original, formatting);
                             }
                             catch (FormatException ex)
                             {
                                 F.LogError(ex);
-                                return Data.Localization.ElementAt(0).Value[key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                             }
                         }
-                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        else
+                        {
+                            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
                     }
-                    else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
                 }
                 else
                 {
-                    if (Data.Localization[JSONMethods.DefaultLanguage].ContainsKey(key))
+                    if (data.TryGetValue(key, out TranslationData translation))
                     {
                         try
                         {
-                            return string.Format(Data.Localization[JSONMethods.DefaultLanguage][key], formatting);
+                            return string.Format(translation.Original, formatting);
                         }
                         catch (FormatException ex)
                         {
                             F.LogError(ex);
-                            return Data.Localization[JSONMethods.DefaultLanguage][key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                         }
                     }
-                    else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
                 }
             }
             else
             {
-                string lang = JSONMethods.DefaultLanguage;
-                if (Data.Languages.ContainsKey(player))
+                if (Data.Languages.TryGetValue(player, out string lang))
                 {
-                    lang = Data.Languages[player];
-                    if (!Data.Localization.ContainsKey(lang) || !Data.Localization[lang].ContainsKey(key))
+                    if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
                         lang = JSONMethods.DefaultLanguage;
                 }
-                if (!Data.Localization.ContainsKey(lang))
+                else lang = JSONMethods.DefaultLanguage;
+                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
                     {
-                        if (Data.Localization.ElementAt(0).Value.ContainsKey(key))
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
                         {
                             try
                             {
-                                return string.Format(Data.Localization.ElementAt(0).Value[key], formatting);
+                                return string.Format(translation.Original, formatting);
                             }
                             catch (FormatException ex)
                             {
                                 F.LogError(ex);
-                                return Data.Localization.ElementAt(0).Value[key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                             }
                         }
-                        else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        else
+                        {
+                            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
                     }
-                    else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
                 }
-                else if (Data.Localization[lang].ContainsKey(key))
+                else if (data.TryGetValue(key, out TranslationData translation))
                 {
                     try
                     {
-                        return string.Format(Data.Localization[lang][key], formatting);
+                        return string.Format(translation.Original, formatting);
                     }
                     catch (FormatException ex)
                     {
                         F.LogError(ex);
-                        return Data.Localization[lang][key] + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                     }
                 }
-                else return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                else
+                {
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+        }
+        public static string Translate(string key, UCPlayer player, params string[] formatting) => 
+            Translate(key, player.Steam64, formatting);
+        public static string Translate(string key, UCPlayer player, out Color color, params string[] formatting) => 
+            Translate(key, player.Steam64, out color, formatting);
+        public static string Translate(string key, SteamPlayer player, params string[] formatting) => 
+            Translate(key, player.playerID.steamID.m_SteamID, formatting);
+        public static string Translate(string key, SteamPlayer player, out Color color, params string[] formatting) => 
+            Translate(key, player.playerID.steamID.m_SteamID, out color, formatting);
+        public static string Translate(string key, Player player, params string[] formatting) => 
+            Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
+        public static string Translate(string key, Player player, out Color color, params string[] formatting) => 
+            Translate(key, player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
+        public static string Translate(string key, UnturnedPlayer player, params string[] formatting) => 
+            Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, formatting);
+        public static string Translate(string key, UnturnedPlayer player, out Color color, params string[] formatting) => 
+            Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
+        /// <summary>
+        /// Tramslate an unlocalized string to a localized translation structure using the translations file.
+        /// </summary>
+        /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage"/>.</param>
+        /// <returns>A translation structure.</returns>
+        public static TranslationData GetTranslation(string key, ulong player)
+        {
+            if (key == null)
+            {
+                LogError($"Message to be sent to {player} was null.");
+                return TranslationData.Nil;
+            }
+            if (key.Length == 0)
+            {
+                return TranslationData.Nil;
+            }
+            if (player == 0)
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
+                        {
+                            return translation;
+                        }
+                        else
+                        {
+                            return TranslationData.Nil;
+                        }
+                    }
+                    else
+                    {
+                        return TranslationData.Nil;
+                    }
+                }
+                else
+                {
+                    if (data.TryGetValue(key, out TranslationData translation))
+                    {
+                        return translation;
+                    }
+                    else
+                    {
+                        return TranslationData.Nil;
+                    }
+                }
+            }
+            else
+            {
+                if (Data.Languages.TryGetValue(player, out string lang))
+                {
+                    if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
+                        lang = JSONMethods.DefaultLanguage;
+                }
+                else lang = JSONMethods.DefaultLanguage;
+                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
+                        {
+                            return translation;
+                        }
+                        else
+                        {
+                            return TranslationData.Nil;
+                        }
+                    }
+                    else
+                    {
+                        return TranslationData.Nil;
+                    }
+                }
+                else if (data.TryGetValue(key, out TranslationData translation))
+                {
+                    return translation;
+                }
+                else
+                {
+                    return TranslationData.Nil;
+                }
             }
         }
         /// <summary>
-        /// Send a message in chat using the RocketMod translation file.
+        /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the Original message (non-color removed)
+        /// </summary>
+        /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <returns>A localized string based on the player's language.</returns>
+        public static string Translate(string key, ulong player, params string[] formatting)
+        {
+            if (key == null)
+            {
+                string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
+                LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
+                return args;
+            }
+            if (key.Length == 0)
+            {
+                return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            }
+            if (player == 0)
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
+                        {
+                            try
+                            {
+                                return string.Format(translation.Original, formatting);
+                            }
+                            catch (FormatException ex)
+                            {
+                                F.LogError(ex);
+                                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else
+                        {
+                            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    if (data.TryGetValue(key, out TranslationData translation))
+                    {
+                        try
+                        {
+                            return string.Format(translation.Original, formatting);
+                        }
+                        catch (FormatException ex)
+                        {
+                            F.LogError(ex);
+                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+            }
+            else
+            {
+                if (Data.Languages.TryGetValue(player, out string lang))
+                {
+                    if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
+                        lang = JSONMethods.DefaultLanguage;
+                }
+                else lang = JSONMethods.DefaultLanguage;
+                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
+                        {
+                            try
+                            {
+                                return string.Format(translation.Original, formatting);
+                            }
+                            catch (FormatException ex)
+                            {
+                                F.LogError(ex);
+                                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else
+                        {
+                            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else if (data.TryGetValue(key, out TranslationData translation))
+                {
+                    try
+                    {
+                        return string.Format(translation.Original, formatting);
+                    }
+                    catch (FormatException ex)
+                    {
+                        F.LogError(ex);
+                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+        }
+        /// <summary>
+        /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
+        /// </summary>
+        /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <returns>A localized string based on the player's language.</returns>
+        public static string Translate(string key, ulong player, out Color color, params string[] formatting)
+        {
+            if(key == null)
+            {
+                string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
+                LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
+                color = UCWarfare.GetColor("default");
+                return args;
+            }
+            if (key.Length == 0)
+            {
+                color = UCWarfare.GetColor("default");
+                return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            }
+            if (player == 0)
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
+                        {
+                            color = translation.Color;
+                            try
+                            {
+                                return string.Format(translation.Message, formatting);
+                            }
+                            catch (FormatException ex)
+                            {
+                                F.LogError(ex);
+                                return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else
+                        {
+                            color = UCWarfare.GetColor("default");
+                            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                    else
+                    {
+                        color = UCWarfare.GetColor("default");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    if (data.TryGetValue(key, out TranslationData translation))
+                    {
+                        color = translation.Color;
+                        try
+                        {
+                            return string.Format(translation.Message, formatting);
+                        }
+                        catch (FormatException ex)
+                        {
+                            F.LogError(ex);
+                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                    else
+                    {
+                        color = UCWarfare.GetColor("default");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+            }
+            else
+            {
+                if (Data.Languages.TryGetValue(player, out string lang))
+                {
+                    if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
+                        lang = JSONMethods.DefaultLanguage;
+                }
+                else lang = JSONMethods.DefaultLanguage;
+                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
+                        {
+                            color = translation.Color;
+                            try
+                            {
+                                return string.Format(translation.Message, formatting);
+                            }
+                            catch (FormatException ex)
+                            {
+                                F.LogError(ex);
+                                return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            }
+                        }
+                        else
+                        {
+                            color = UCWarfare.GetColor("default");
+                            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        }
+                    }
+                    else
+                    {
+                        color = UCWarfare.GetColor("default");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else if (data.TryGetValue(key, out TranslationData translation))
+                {
+                    color = translation.Color;
+                    try
+                    {
+                        return string.Format(translation.Message, formatting);
+                    }
+                    catch (FormatException ex)
+                    {
+                        F.LogError(ex);
+                        return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    color = UCWarfare.GetColor("default");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+        }
+        /// <summary>
+        /// Send a message in chat using the translation file.
         /// </summary>
         /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UnturnedPlayer player, string text, Color textColor, params object[] formatting) => SendChat(player.CSteamID, text, textColor, formatting);
+        public static void SendChat(this UnturnedPlayer player, string text, Color textColor, params string[] formatting) => 
+            SendChat(player.CSteamID, text, textColor, formatting);
         /// <summary>
-        /// Send a message in chat using the RocketMod translation file.
+        /// Send a message in chat using the translation file.
+        /// </summary>
+        /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void SendChat(this UnturnedPlayer player, string text, params string[] formatting) => 
+            SendChat(player.CSteamID, text, formatting);
+        /// <summary>
+        /// Send a message in chat using the translation file.
         /// </summary>
         /// <param name="player"><see cref="UCPlayer"/> to send the chat to.</param>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UCPlayer player, string text, Color textColor, params object[] formatting) => SendChat(player.Player.channel.owner.playerID.steamID, text, textColor, formatting);
+        public static void SendChat(this UCPlayer player, string text, Color textColor, params string[] formatting) => 
+            SendChat(player.Player.channel.owner.playerID.steamID, text, textColor, formatting);
         /// <summary>
-        /// Send a message in chat using the RocketMod translation file.
+        /// Send a message in chat using the translation file.
+        /// </summary>
+        /// <param name="player"><see cref="UCPlayer"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void SendChat(this UCPlayer player, string text, params string[] formatting) => 
+            SendChat(player.Player.channel.owner.playerID.steamID, text, formatting);
+        /// <summary>
+        /// Send a message in chat using the translation file.
         /// </summary>
         /// <param name="player"><see cref="Player"/> to send the chat to.</param>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this Player player, string text, Color textColor, params object[] formatting) => SendChat(player.channel.owner.playerID.steamID, text, textColor, formatting);
+        public static void SendChat(this Player player, string text, Color textColor, params string[] formatting) => 
+            SendChat(player.channel.owner.playerID.steamID, text, textColor, formatting);
         /// <summary>
-        /// Send a message in chat using the RocketMod translation file.
+        /// Send a message in chat using the translation file.
+        /// </summary>
+        /// <param name="player"><see cref="Player"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void SendChat(this Player player, string text, params string[] formatting) => 
+            SendChat(player.channel.owner.playerID.steamID, text, formatting);
+        /// <summary>
+        /// Send a message in chat using the translation file.
         /// </summary>
         /// <param name="player"><see cref="SteamPlayer"/> to send the chat to.</param>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this SteamPlayer player, string text, Color textColor, params object[] formatting) => SendChat(player.player.channel.owner.playerID.steamID, text, textColor, formatting);
+        public static void SendChat(this SteamPlayer player, string text, Color textColor, params string[] formatting) => 
+            SendChat(player.player.channel.owner.playerID.steamID, text, textColor, formatting);
+        /// <summary>
+        /// Send a message in chat using the translation file.
+        /// </summary>
+        /// <param name="player"><see cref="SteamPlayer"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void SendChat(this SteamPlayer player, string text, params string[] formatting) => 
+            SendChat(player.player.channel.owner.playerID.steamID, text, formatting);
         /// <summary>
         /// Max amount of bytes that can be sent in an Unturned Chat Message.
         /// </summary>
         const int MaxChatSizeAmount = 2047;
         /// <summary>
-        /// Send a message in chat using the RocketMod translation file.
+        /// Send a message in chat using the translation file.
         /// </summary>
         /// <param name="player"><see cref="CSteamID"/> to send the chat to.</param>
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this CSteamID player, string text, Color textColor, params object[] formatting)
+        public static void SendChat(this CSteamID player, string text, Color textColor, params string[] formatting)
         {
             string localizedString = Translate(text, player.m_SteamID, formatting);
             if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
@@ -305,22 +709,87 @@ namespace Uncreated.Warfare
             }
         }
         /// <summary>
+        /// Send a message in chat using the translation file, automatically extrapolates the color.
+        /// </summary>
+        /// <param name="player"><see cref="CSteamID"/> to send the chat to.</param>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void SendChat(this CSteamID player, string text, params string[] formatting)
+        {
+            string localizedString = Translate(text, player.m_SteamID, out Color textColor, formatting);
+            if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
+                UCWarfare.I.QueueMainThreadAction(() => ChatManager.say(player, localizedString, textColor, localizedString.Contains("</")));
+            else
+            {
+                LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                string defaultMessage = text;
+                string newMessage;
+                if (JSONMethods.DefaultTranslations.ContainsKey(text))
+                    defaultMessage = JSONMethods.DefaultTranslations[text];
+                try
+                {
+                    newMessage = string.Format(defaultMessage, formatting);
+                }
+                catch (FormatException)
+                {
+                    newMessage = defaultMessage + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                }
+                if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
+                    UCWarfare.I.QueueMainThreadAction(() => ChatManager.say(player, newMessage, textColor, newMessage.Contains("</")));
+                else
+                    LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                        + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+            }
+        }
+        /// <summary>
         /// Send a white message in chat using the RocketMod translation file.
         /// </summary>
         /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
         /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void Message(this UnturnedPlayer player, string message, params object[] formatting) => SendChat(player, message, Color.white, formatting);
-        public static void Message(this Player player, string message, params object[] formatting) => SendChat(player, message, Color.white, formatting);
+        public static void Message(this UnturnedPlayer player, string message, params string[] formatting) => 
+            SendChat(player.CSteamID, message, formatting);
+        /// <summary>
+        /// Send a message in chat using the translation file.
+        /// </summary>
+        /// <param name="player"><see cref="Player"/> to send the chat to.</param>
+        /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
+        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
+        public static void Message(this Player player, string message, params string[] formatting) => 
+            SendChat(player.channel.owner.playerID.steamID, message, formatting);
         /// <summary>
         /// Send a message in chat to everyone.
         /// </summary>
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
-        public static void Broadcast(string text, Color textColor, params object[] formatting)
+        public static void Broadcast(string text, Color textColor, params string[] formatting)
         {
             foreach (SteamPlayer player in Provider.clients)
+                SendChat(player.playerID.steamID, text, textColor, formatting);
+        }
+        /// <summary>
+        /// Send a message in chat to everyone.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para>
+        /// <para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void Broadcast(string text, params string[] formatting)
+        {
+            foreach (SteamPlayer player in Provider.clients)
+                SendChat(player.playerID.steamID, text, formatting);
+        }
+        /// <summary>
+        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, Color textColor, params string[] formatting)
+        {
+            foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
                 SendChat(player.playerID.steamID, text, textColor, formatting);
         }
         /// <summary>
@@ -329,10 +798,10 @@ namespace Uncreated.Warfare
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
-        public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, Color textColor, params object[] formatting)
+        public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, params string[] formatting)
         {
             foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
-                SendChat(player.playerID.steamID, text, textColor, formatting);
+                SendChat(player.playerID.steamID, text, formatting);
         }
         public static bool OnDuty(this UnturnedPlayer player) => player.Player.channel.owner.isAdmin || R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
         public static bool OffDuty(this UnturnedPlayer player) => !OnDuty(player);
@@ -442,12 +911,12 @@ namespace Uncreated.Warfare
                 p.sendChat, p.sendUI, p.absoluteCap, p.overrideChatConfig, p.formatting, p.team1count, p.team2count);
         public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, ulong team, EFlagStatus type, string translation_key, Color color, SteamPlayer player, int circleAmount,
             ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, bool sendChatOverride = false,
-            object[] formatting = null, int team1count = 0, int team2count = 0)
+            string[] formatting = null, int team1count = 0, int team2count = 0)
             => UIOrChat(charactericon, useui, uiid, pts, progresschars, team, type, translation_key, color, Provider.findTransportConnection(player.playerID.steamID), player, circleAmount, playerID,
                 SendChatIfConfiged, SendUIIfConfiged, absolute, sendChatOverride, formatting, team1count, team2count);
         public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, ulong team, EFlagStatus type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player,
             int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
-            bool absolute = true, bool sendChatOverride = false, object[] formatting = null, int team1count = 0, int team2count = 0)
+            bool absolute = true, bool sendChatOverride = false, string[] formatting = null, int team1count = 0, int team2count = 0)
         {
             if (type == EFlagStatus.DONT_DISPLAY)
             {
@@ -936,6 +1405,20 @@ namespace Uncreated.Warfare
                 return null;
             }
         }
+        public static void SetPrivatePlayerCount(byte amount)
+        {
+            if (Provider.maxPlayers == amount) return;
+            try
+            {
+                FieldInfo field = typeof(Provider).GetField("_maxPlayers", BindingFlags.NonPublic | BindingFlags.Static);
+                field.SetValue(null, amount);
+            }
+            catch (Exception ex)
+            {
+                LogError("Error setting player count:");
+                LogError(ex);
+            }
+        }
         public static PlaytimeComponent GetPlaytimeComponent(this CSteamID player, out bool success)
         {
             if (Data.PlaytimeComponents.ContainsKey(player.m_SteamID))
@@ -1047,7 +1530,7 @@ namespace Uncreated.Warfare
             else return false;
         }
         public static bool IsOnFlag(this Player player) => Data.Gamemode is FlagGamemode fg && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
-        public static async Task<string> TranslateSign(string key, ulong player, bool important, params object[] formatting)
+        public static async Task<string> TranslateSign(string key, ulong player, bool important, params string[] formatting)
         {
             string norm = Translate(key, player, formatting);
             if (!key.StartsWith("sign_") || norm != key) return norm;
@@ -1087,8 +1570,8 @@ namespace Uncreated.Warfare
                     {
                         line2color = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_level"))
                             : UCWarfare.GetColorHex("kit_price_dollars");
-                        line2string = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? Translate("kit_owned", player) : Translate("kit_price_credits", player, kit.Cost))
-                            : Translate("kit_price_dollars", player, kit.PremiumCost);
+                        line2string = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? Translate("kit_owned", player) : Translate("kit_price_credits", player, kit.Cost.ToString(Data.Locale)))
+                            : Translate("kit_price_dollars", player, kit.PremiumCost.ToString(Data.Locale));
                     }
                     else if (kit.RequiredLevel == 0)
                     {
@@ -1099,7 +1582,7 @@ namespace Uncreated.Warfare
                     {
                         Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
                         Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, playerteam, important), out _, out _);
-                        line2string = Translate("kit_required_level", player, kit.RequiredLevel, 
+                        line2string = Translate("kit_required_level", player, kit.RequiredLevel.ToString(Data.Locale), 
                             player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
                         line2color = UCWarfare.GetColorHex("kit_price_tickets");
                     }
@@ -1113,7 +1596,7 @@ namespace Uncreated.Warfare
                 {
                     Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
                     Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, playerteam, important), out _, out _);
-                    line2string = Translate("kit_required_level", player, kit.RequiredLevel,
+                    line2string = Translate("kit_required_level", player, kit.RequiredLevel.ToString(Data.Locale),
                         player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
                     line2color = UCWarfare.GetColorHex("kit_level");
                 }
@@ -1721,14 +2204,6 @@ namespace Uncreated.Warfare
             int low = number.CompareTo(lowBound);
             return (low == 1 || (inclusiveLow && low == 0)) && (high == -1 || (inclusiveHigh && high == 0));
         }
-        public static uint GetCredits(this Player player)
-        {
-            return 0;
-        }
-        public static void ChangeCredits(this Player player, int change)
-        {
-            return;
-        }
         public static string GetClosestNode(this Vector3 position)
         {
             if (!Level.isLoaded) return string.Empty;
@@ -1871,7 +2346,7 @@ namespace Uncreated.Warfare
             else if (player.IsTeam2())
                 branchName += "2_";
 
-            return F.Translate(branchName + branch.ToString().ToLower(), player.Steam64);
+            return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
         }
     }
 }

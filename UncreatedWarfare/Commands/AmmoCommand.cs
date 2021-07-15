@@ -24,35 +24,36 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            if (player is null)
-                F.Log("PLAYER WAS NULL", ConsoleColor.DarkYellow);
-
-            var barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
-            var storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
-            var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
+            InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
+            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
             if (barricade != null && FOBManager.config.Data.AmmoBagIDs.Contains(barricade.barricade.id))
             {
                 if (storage is null)
                 {
-                    player.Message("This is an ammo crate according to the server's config, but it has no storage. The admins may have messed something up."); return;
+                    player.SendChat("ammo_crate_has_no_storage"); 
+                    return;
                 }
-                if (!(player.IsTeam1() || player.IsTeam2()))
+                if (!player.IsTeam1() && !player.IsTeam2())
                 {
-                    player.Message("Please join a team first."); return;
+                    player.SendChat("ammo_not_in_team"); 
+                    return;
                 }
                 if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
                 {
-                    player.Message("This ammo crate has no ammo. Fill it up with AMMO BOXES in order to resupply."); return;
+                    player.SendChat("ammo_no_stock"); 
+                    return;
                 }
-                if (!KitManager.HasKit(player.Steam64, out var kit))
+                if (!KitManager.HasKit(player.Steam64, out Kit kit))
                 {
-                    player.Message("You don't have a kit."); return;
+                    player.SendChat("ammo_no_kit"); 
+                    return;
                 }
 
                 KitManager.ResupplyKit(player, kit);
 
-                player.Message("Your kit has been resupplied using <color=#d1c597>1x</color> <color=#d1c597>AMMO BOX</color>.");
+                player.SendChat("ammo_success");
 
                 if (player.IsTeam1())
                     UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
@@ -61,20 +62,22 @@ namespace Uncreated.Warfare.Commands
             }
             else if (vehicle != null)
             {
-                if (!VehicleBay.VehicleExists(vehicle.id, out var vehicleData) || vehicleData.Items?.Count == 0)
+                if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData) || vehicleData.Items?.Count == 0)
                 {
-                    player.Message("This vehicle cannot be rearmed."); return;
+                    player.SendChat("ammo_vehicle_cant_rearm"); 
+                    return;
                 }
                 if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades.Count > 0)
                 {
                     if (!player.Player.IsInMain())
                     {
-                        player.Message("This vehicle can only be rearmed in main."); return;
+                        player.SendChat("ammo_vehicle_out_of_main"); 
+                        return;
                     }
 
                     VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
 
-                    player.Message($"This vehicle has been restocked.");
+                    player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
                     return;
                 }
 
@@ -82,14 +85,15 @@ namespace Uncreated.Warfare.Commands
                 List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
                 List<BarricadeData> NearbyAmmoStations = barricadeDatas.Where(
-                    b => (b.point - vehicle.transform.position).sqrMagnitude <= Math.Pow(100, 2) &&
+                    b => (b.point - vehicle.transform.position).sqrMagnitude <= 10000 &&
                     b.barricade.id == FOBManager.config.Data.AmmoCrateID)
                     .OrderBy(b => (b.point - vehicle.transform.position).sqrMagnitude)
                     .ToList();
 
                 if (NearbyAmmoStations.Count == 0)
                 {
-                    player.Message($"Your vehicle must be next to an AMMO CRATE in order to rearm."); return;
+                    player.SendChat("ammo_vehicle_not_near_ammo_crate"); 
+                    return;
                 }
 
                 BarricadeData ammoStation = NearbyAmmoStations.FirstOrDefault();
@@ -99,7 +103,8 @@ namespace Uncreated.Warfare.Commands
 
                 if (storage == null)
                 {
-                    player.Message($"The nearest AMMO CRATE is not a barricade with storage. This is probably because the admins have messed something up."); return;
+                    player.SendChat("ammo_crate_has_no_storage"); 
+                    return;
                 }
 
                 int ammo_count = 0;
@@ -114,18 +119,20 @@ namespace Uncreated.Warfare.Commands
 
                 if (ammo_count < vehicleData.RearmCost)
                 {
-                    player.Message($"<color=#FAE69C>This Ammo Crate is missing AMMO BOXES. </color><color=#d1c597>{ammo_count}/{vehicleData.RearmCost}</color>"); return;
+                    player.SendChat("ammo_not_enough_stock", ammo_count.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
+                    return;
                 }
                 if (vehicleData.Items.Count == 0)
                 {
-                    player.Message($"This vehicle does not need to be refilled."); return;
+                    player.SendChat("ammo_vehicle_full_already"); 
+                    return;
                 }
 
-                player.Message($"Your vehicle has been resupplied using <color=#d1c597>{vehicleData.RearmCost}x</color> <color=#d1c597>AMMO BOXES</color>");
+                player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
 
-                EffectManager.sendEffect((ushort)30, EffectManager.SMALL, vehicle.transform.position);
+                EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
 
-                foreach (var item in vehicleData.Items)
+                foreach (ushort item in vehicleData.Items)
                 {
                     ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
                 }
@@ -138,27 +145,29 @@ namespace Uncreated.Warfare.Commands
             else
             {
                 int ammoBagsCount = 0;
-                foreach (var itemID in FOBManager.config.Data.AmmoBagIDs)
+                foreach (ushort itemID in FOBManager.config.Data.AmmoBagIDs)
                 {
                     ammoBagsCount += UCInventoryManager.CountItems(player.Player, itemID);
                 }
 
                 if (ammoBagsCount == 0)
                 {
-                    player.Message("Look at an Ammo Crate or vehicle to resupply. Or, place a rifleman's AMMO BAG in your inventory."); return;
+                    player.SendChat("ammo_error_nocrate"); 
+                    return;
                 }
                 if (!KitManager.HasKit(player.Steam64, out var kit))
                 {
-                    player.Message("You don't have a kit."); return;
+                    player.SendChat("ammo_no_kit"); 
+                    return;
                 }
 
                 KitManager.ResupplyKit(player, kit);
 
-                player.Message("Your kit has been resupplied using <color=#d1c597>1x</color> <color=#d1c597>AMMO BAG</color>.");
+                player.SendChat("ammo_success");
 
                 for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
                 {
-                    var pageCount = player.Player.inventory.getItemCount(page);
+                    byte pageCount = player.Player.inventory.getItemCount(page);
 
                     for (byte index = 0; index < pageCount; index++)
                     {

@@ -16,14 +16,13 @@ namespace Uncreated.Warfare.Gamemodes
         public readonly string Name;
         private int EventLoopSpeed;
         private bool useEventLoop;
-        private ConfiguredTaskAwaitable EventLoopTask;
+        public ConfiguredTaskAwaitable EventLoopTask;
         protected CancellationTokenSource Token { get; private set; }
         public event TeamWinDelegate OnTeamWin;
         public EState State;
         protected string shutdownMessage = string.Empty;
         protected bool shutdownAfterGame = false;
         protected ulong shutdownPlayer = 0;
-        public static Gamemode Create() => null;
         public Gamemode(string Name, float EventLoopSpeed)
         {
             this.Name = Name;
@@ -109,19 +108,17 @@ namespace Uncreated.Warfare.Gamemodes
                 EventLoopTask = EventLoop(Token.Token).ConfigureAwait(false);
             await Task.Yield();
         }
-        public static Gamemode FindGamemode(string name, Type[] modes)
+        public static Gamemode FindGamemode(string name, Dictionary<string, Type> modes)
         {
             try
             {
-                string srch = name.ToLower();
-                Type type = modes.FirstOrDefault(x => x.Name.ToLower().Contains(srch));
-                if (type == default) return null;
-                System.Reflection.MethodInfo m = type.GetMethod(nameof(Create), System.Reflection.BindingFlags.Static);
-                if (m == null) return null;
-                object rtn = m.Invoke(null, new object[0]);
-                if (rtn == null) return null;
-                else if (rtn is Gamemode gamemode)
+                if (modes.TryGetValue(name, out Type type))
+                {
+                    if (type == default) return null;
+                    if (!type.IsSubclassOf(typeof(Gamemode))) return null;
+                    Gamemode gamemode = (Gamemode)Activator.CreateInstance(type);
                     return gamemode;
+                }
                 else return null;
             }
             catch (Exception ex)

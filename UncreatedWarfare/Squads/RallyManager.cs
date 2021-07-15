@@ -142,7 +142,7 @@ namespace Uncreated.Warfare.Squads
 
                 rallypoints.Add(rallypoint);
 
-                foreach (var member in rallypoint.squad.Members)
+                foreach (UCPlayer member in rallypoint.squad.Members)
                     member.Message("rally_active");
 
                 rallypoint.UpdateUIForSquad();
@@ -201,22 +201,19 @@ namespace Uncreated.Warfare.Squads
             //List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
             //Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - rallypoint.structure.point).sqrMagnitude <= (n2.point - rallypoint.structure.point).sqrMagnitude ? n1 : n2);
 
-            string line = "";
-
-            if (timer >= 0)
-                line = $"<color=#5eff87>RALLY</color> {timer}:00";
-            else
-                line = $"<color=#5eff87>RALLY</color>";
-
+            TimeSpan seconds = TimeSpan.FromSeconds(timer);
             //line += $" ({((LocationNode)nearerstLocation).name})";
 
-            foreach (var member in squad.Members)
+            foreach (UCPlayer member in squad.Members)
+            {
+                string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? ' ' + F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : "");
                 EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
                 line);
+            }
         }
         public void ClearUIForSquad()
         {
-            foreach (var member in squad.Members)
+            foreach (UCPlayer member in squad.Members)
                 EffectManager.askEffectClearByID(SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection);
         }
         public void TeleportPlayer(UCPlayer player)
@@ -238,7 +235,7 @@ namespace Uncreated.Warfare.Squads
             parent = rallypoint;
             StartCoroutine(RallyPointLoop());
         }
-
+        const int ENEMY_DISTANCE_MIN = 70;
         private IEnumerator<WaitForSeconds> RallyPointLoop()
         {
             while (parent.IsActive)
@@ -248,7 +245,7 @@ namespace Uncreated.Warfare.Squads
                 {
                     // rally is now spawnable
 
-                    foreach (var player in parent.AwaitingPlayers)
+                    foreach (UCPlayer player in parent.AwaitingPlayers)
                     {
                         parent.TeleportPlayer(player);
                     }
@@ -266,9 +263,10 @@ namespace Uncreated.Warfare.Squads
                     else if (parent.squad.Team == TeamManager.Team2ID)
                         enemyTeam = TeamManager.Team1ID;
 
-                    var enemies = PlayerManager.OnlinePlayers.Where(p =>
+                    // check for enemies nearby rally points every 5 seconds
+                    List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                         p.GetTeam() == enemyTeam &&
-                        (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(70, 2)
+                        (p.Position - parent.structure.point).sqrMagnitude < ENEMY_DISTANCE_MIN * ENEMY_DISTANCE_MIN
                         ).ToList();
 
                     if (enemies.Count > 0)
@@ -278,7 +276,7 @@ namespace Uncreated.Warfare.Squads
 
                         RallyManager.TryDeleteRallyPoint(parent.structure.instanceID);
 
-                        foreach (var member in parent.squad.Members)
+                        foreach (UCPlayer member in parent.squad.Members)
                             member.Message("rally_cancelled");
 
                         yield break;

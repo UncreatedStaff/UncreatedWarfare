@@ -86,7 +86,7 @@ namespace Uncreated.Warfare
         }
 
         public SteamPlayer SteamPlayer { get => Player.channel.owner; }
-        public void Message(string text, params object[] formatting) => F.Message(Player, text, formatting);
+        public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
         public ulong GetTeam() => Player.quests.groupID.m_SteamID;
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;

@@ -22,7 +22,8 @@ namespace Uncreated.Warfare.Commands
         public async void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
-            if(command.Length == 0)
+            string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
+            if (command.Length == 0)
             {
                 StringBuilder sb = new StringBuilder();
                 for(int i = 0; i < Data.LanguageAliases.Keys.Count; i++)
@@ -38,10 +39,10 @@ namespace Uncreated.Warfare.Commands
                         aliases = Data.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
                     if (!aliases.Equals(default(LanguageAliasSet))) sb.Append(" : ").Append(aliases.display_name);
                 }
-                player.SendChat("language_list", UCWarfare.GetColor("language_list"), sb.ToString(), UCWarfare.GetColorHex("language_list_list"));
+                player.SendChat("language_list", sb.ToString());
             } else if (command.Length == 1)
             {
-                if(command[0].ToLower() == "current")
+                if(op == "current")
                 {
                     string OldLanguage = JSONMethods.DefaultLanguage;
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -52,8 +53,8 @@ namespace Uncreated.Warfare.Commands
                     else
                         oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
 
-                    player.SendChat("language_current", UCWarfare.GetColor("language_current"), $"{oldSet.display_name} : {oldSet.key}", UCWarfare.GetColorHex("language_current_language"));
-                } else if(command[0].ToLower() == "reset")
+                    player.SendChat("language_current", $"{oldSet.display_name} : {oldSet.key}");
+                } else if(op == "reset")
                 {
                     string fullname = JSONMethods.DefaultLanguage;
                     LanguageAliasSet alias;
@@ -72,16 +73,16 @@ namespace Uncreated.Warfare.Commands
                         else
                             oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
                         if (OldLanguage == JSONMethods.DefaultLanguage)
-                            player.SendChat("reset_language_not_needed", UCWarfare.GetColor("reset_language_not_needed"), fullname, UCWarfare.GetColorHex("reset_language_not_needed_language"));
+                            player.SendChat("reset_language_not_needed", fullname);
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DefaultLanguage);
                             if(OnPlayerChangedLanguage != null)
                                 await OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
-                            player.SendChat("reset_language", UCWarfare.GetColor("reset_language"), fullname, UCWarfare.GetColorHex("reset_language_language"));
+                            player.SendChat("reset_language", fullname);
                         }
                     } else
-                        player.SendChat("reset_language_not_needed", UCWarfare.GetColor("reset_language_not_needed"), fullname, UCWarfare.GetColorHex("reset_language_not_needed_language"));
+                        player.SendChat("reset_language_not_needed", fullname);
                 } else
                 {
                     string OldLanguage = JSONMethods.DefaultLanguage;
@@ -92,7 +93,7 @@ namespace Uncreated.Warfare.Commands
                         oldSet = Data.LanguageAliases[OldLanguage];
                     else
                         oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
-                    string langInput = command[0].ToLower().Trim();
+                    string langInput = op.Trim();
                     LanguageAliasSet aliases;
                     if (Data.LanguageAliases.ContainsKey(langInput))
                         aliases = Data.LanguageAliases[langInput];
@@ -101,23 +102,23 @@ namespace Uncreated.Warfare.Commands
                     if (!aliases.Equals(default))
                     {
                         if (OldLanguage == aliases.key)
-                            player.SendChat("change_language_not_needed", UCWarfare.GetColor("change_language_not_needed"), aliases.display_name, UCWarfare.GetColorHex("change_language_not_needed_language"));
+                            player.SendChat("change_language_not_needed", aliases.display_name);
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, aliases.key);
                             if (OnPlayerChangedLanguage != null)
                                 await OnPlayerChangedLanguage.Invoke(player, oldSet, aliases);
-                            player.SendChat("changed_language", UCWarfare.GetColor("changed_language"), aliases.display_name, UCWarfare.GetColorHex("changed_language_language"));
+                            player.SendChat("changed_language", aliases.display_name);
                         }
                     }
                     else
                     {
-                        player.SendChat("dont_have_language", UCWarfare.GetColor("dont_have_language"), langInput, UCWarfare.GetColorHex("dont_have_language_language"));
+                        player.SendChat("dont_have_language", langInput);
                     }
                 }
             } else
             {
-                player.SendChat("reset_language_how", UCWarfare.GetColor("reset_language_how"), UCWarfare.GetColorHex("reset_language_how_command"));
+                player.SendChat("reset_language_how");
             }
         }
     }

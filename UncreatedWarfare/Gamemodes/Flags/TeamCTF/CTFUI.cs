@@ -275,7 +275,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public bool sendUI;
         public bool absoluteCap;
         public bool overrideChatConfig;
-        public object[] formatting;
+        public string[] formatting;
         public int team1count;
         public int team2count;
         /// <summary>
@@ -296,12 +296,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.overrideChatConfig = false;
             this.team1count = 0;
             this.team2count = 0;
-            this.formatting = new object[0];
+            this.formatting = new string[0];
         }
         public static SendUIParameters GetDefault() => new SendUIParameters(F.EFlagStatus.DONT_DISPLAY);
         public SendUIParameters(ulong team, F.EFlagStatus status, string chatTranslation,
             Color chatColor, int points, bool sendChat, bool sendUI, bool absoluteCap,
-            bool overrideChatConfig, int team1count, int team2count, object[] formatting)
+            bool overrideChatConfig, int team1count, int team2count, string[] formatting)
         {
             this.team = team;
             this.status = status;
@@ -317,7 +317,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.formatting = formatting;
         }
         public SendUIParameters(ulong team, F.EFlagStatus status, string chatTranslation,
-            Color chatColor, int points, int team1count, int team2count, params object[] formatting)
+            Color chatColor, int points, int team1count, int team2count, params string[] formatting)
         {
             this.team = team;
             this.status = status;

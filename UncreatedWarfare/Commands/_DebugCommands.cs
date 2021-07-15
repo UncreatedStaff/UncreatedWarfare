@@ -106,7 +106,9 @@ namespace Uncreated.Warfare.Commands
                         Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
                         if (flag == default)
                         {
-                            player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, fg.Rotation.Count);
+                            player.SendChat("not_in_zone", UCWarfare.GetColor("default"), 
+                                player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                                player.transform.position.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
                             return;
                         }
                         ulong team = player.GetTeam();
@@ -251,14 +253,26 @@ namespace Uncreated.Warfare.Commands
                 Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default(Flag))
                 {
-                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, player.transform.rotation.eulerAngles.y, fg.Rotation.Count);
+                    player.SendChat("not_in_zone", 
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                        player.transform.position.z.ToString(Data.Locale), player.transform.rotation.eulerAngles.y.ToString(Data.Locale), 
+                        fg.Rotation.Count.ToString(Data.Locale));
                 }
                 else
                 {
-                    player.SendChat("current_zone", UCWarfare.GetColor("default"), flag.Name, player.transform.position.x, player.transform.position.y, player.transform.position.z);
+                    player.SendChat("current_zone", flag.Name, 
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                        player.transform.position.z.ToString(Data.Locale));
                 }
             }
-            else player.SendChat("A flag gamemode is not loaded.", UCWarfare.GetColor("default"));
+            else player.SendChat("A flag gamemode is not loaded.");
+        }
+        private void translate(string[] command, Player player)
+        {
+            F.Log(F.GetTranslation("translation_test_1", player.channel.owner.playerID.steamID.m_SteamID).ToString());
+            F.Log(F.GetTranslation("translation_test_2", player.channel.owner.playerID.steamID.m_SteamID).ToString());
+            F.Log(F.GetTranslation("translation_test_3", player.channel.owner.playerID.steamID.m_SteamID).ToString());
+            F.Log(F.GetTranslation("translation_test_4", player.channel.owner.playerID.steamID.m_SteamID).ToString());
         }
         private void sign(string[] command, Player player)
         {
@@ -298,7 +312,9 @@ namespace Uncreated.Warfare.Commands
                     Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                     if (extrazone == default)
                     {
-                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, fg.AllFlags.Count);
+                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale), 
+                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                            fg.AllFlags.Count.ToString(Data.Locale));
                         return;
                     }
                     else
@@ -324,7 +340,9 @@ namespace Uncreated.Warfare.Commands
                 Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                 if (extrazone == default)
                 {
-                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, zones.Count);
+                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale), 
+                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                        zones.Count.ToString(Data.Locale));
                     return;
                 }
                 else
@@ -613,7 +631,9 @@ namespace Uncreated.Warfare.Commands
                     zone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                     if (zone == default(Zone))
                     {
-                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, fg.Rotation.Count);
+                        player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale), 
+                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                            fg.Rotation.Count.ToString(Data.Locale));
                         return;
                     }
                     else
@@ -638,7 +658,9 @@ namespace Uncreated.Warfare.Commands
                 zone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                 if (zone == default(Zone))
                 {
-                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x, player.transform.position.y, player.transform.position.z, zones.Count);
+                    player.SendChat("not_in_zone", UCWarfare.GetColor("default"), 
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                        player.transform.position.z.ToString(Data.Locale), zones.Count.ToString(Data.Locale));
                     return;
                 }
                 else

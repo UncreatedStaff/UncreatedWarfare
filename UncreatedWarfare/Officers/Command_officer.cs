@@ -27,18 +27,18 @@ namespace Uncreated.Warfare.Commands
             {
                 if (command.Length < 3)
                 {
-                    player.Message("correct_usage", "/officer promote <player name> <level or rank> <branch>");
+                    player.SendChat("correct_usage", "/officer promote <player name> <level or rank> <branch>");
                     return;
                 }
 
-                var target = UCPlayer.FromName(command[1]);
+                UCPlayer target = UCPlayer.FromName(command[1]);
                 if (target != null)
                 {
                     Rank rank = OfficerManager.config.Data.OfficerRanks.Find(r => r.name.Replace(" ", "").ToLower().Contains(command[2].ToLower()));
 
                     if (rank is null)
                     {
-                        if (Int32.TryParse(command[2], out var level))
+                        if (int.TryParse(command[2], System.Globalization.NumberStyles.Any, Data.Locale, out var level))
                         {
                             rank = OfficerManager.config.Data.OfficerRanks.Find(r => r.level == level);
                         }
@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Commands
 
                     if (rank != null)
                     {
-                        if (Enum.TryParse<EBranch>(command[3], out var branch))
+                        if (Enum.TryParse<EBranch>(command[3], out EBranch branch))
                         {
                             OfficerManager.ChangeOfficerRank(target, rank, branch);
                             player.OfficerRank = rank;
@@ -54,23 +54,23 @@ namespace Uncreated.Warfare.Commands
                             XPManager.UpdateUI(target.Player, target.cachedXp);
                         }
                         else
-                            player.Message("officer_branchnotfound", command[2]);
+                            player.SendChat("officer_branchnotfound", command[2]);
                     }
                     else
-                        player.Message("officer_ranknotfound", command[2]);
+                        player.SendChat("officer_ranknotfound", command[2]);
                 }
                 else
-                    player.Message("officer_playernotfound", command[1]);
+                    player.SendChat("officer_playernotfound", command[1]);
             }
             else if (command.Length >= 1 && (command[0].ToLower() == "discharge" || command[0].ToLower() == "disc"))
             {
                 if (command.Length < 2)
                 {
-                    player.Message("correct_usage", "/officer discharge <player name>");
+                    player.SendChat("correct_usage", "/officer discharge <player name>");
                     return;
                 }
 
-                var target = UCPlayer.FromName(command[1]);
+                UCPlayer target = UCPlayer.FromName(command[1]);
                 if (target != null)
                 {
                     if (target.OfficerRank != null)
@@ -81,13 +81,13 @@ namespace Uncreated.Warfare.Commands
                         XPManager.UpdateUI(target.Player, target.cachedXp);
                     }
                     else
-                        player.Message("officer_notofficer", command[1]);
+                        player.SendChat("officer_notofficer", command[1]);
                 }
                 else
-                    player.Message("officer_playernotfound", command[1]);
+                    player.SendChat("officer_playernotfound", command[1]);
             }
             else
-                player.Message("correct_usage", "/officer <setrank|discharge <player name> <level or rank> <branch>");
+                player.SendChat("correct_usage", "/officer <setrank|discharge <player name> <level or rank> <branch>");
         }
     }
 }

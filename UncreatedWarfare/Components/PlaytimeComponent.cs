@@ -146,7 +146,7 @@ namespace Uncreated.Warfare.Components
             if(_currentTeleportRequest == default)
             {
                 if (shouldMessagePlayer)
-                    player.Message("deploy_standby", locationName, seconds);
+                    player.Message("deploy_standby", locationName, seconds.ToString(Data.Locale));
                 _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(position, angle, seconds, shouldCancelOnMove, shouldCancelOnDamage, shouldMessagePlayer, locationName, fob));
                 return true;
             }

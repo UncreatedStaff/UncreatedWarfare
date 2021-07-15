@@ -27,6 +27,51 @@ namespace Uncreated.Warfare
             this.color_hex = color_hex;
         }
     }
+    public struct TranslationData
+    {
+        public static TranslationData Nil => new TranslationData() { Color = Color.white, Message = "default", Original = "<color=#ffffff>default</color>", UseColor = true };
+        public string Message;
+        public string Original;
+        public Color Color;
+        public bool UseColor;
+        public TranslationData(string Original)
+        {
+            this.Original = Original;
+            this.Color = GetColorFromMessage(Original, out Message, out UseColor);
+        }
+        public static Color GetColorFromMessage(string Original, out string InnerText, out bool found)
+        {
+            if (Original.Length < 23)
+            {
+                InnerText = Original;
+                found = false;
+                return UCWarfare.GetColor("default");
+            }
+            if (Original.StartsWith("<color=#") && Original[8] != '{' && Original.EndsWith("</color>"))
+            {
+                IEnumerator<char> characters = Original.Skip(8).GetEnumerator();
+                int start = 8;
+                int length = 0;
+                while (characters.MoveNext())
+                {
+                    if (characters.Current == '>') break; // keep moving until the ending > is found.
+                    length++;
+                }
+                characters.Dispose();
+                int msgStart = start + length + 1;
+                InnerText = Original.Substring(msgStart, Original.Length - msgStart - 8);
+                found = true;
+                return Original.Substring(start, length).Hex();
+            } else
+            {
+                InnerText = Original;
+                found = false;
+                return UCWarfare.GetColor("default");
+            }
+        }
+        public override string ToString() => 
+            $"Original: {Original}, Inner text: {Message}, {(UseColor ? $"Color: {Color} ({ColorUtility.ToHtmlStringRGBA(Color)}." : "Unable to find color.")}";
+    }
     public struct TeamData
     {
         public ulong team_id;
@@ -314,8 +359,7 @@ namespace Uncreated.Warfare
             {
                 using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                 {
-                    JsonSerializer Serializer = new JsonSerializer();
-                    Serializer.Formatting = Formatting.Indented;
+                    JsonSerializer Serializer = new JsonSerializer { Formatting = Formatting.Indented };
                     Serializer.Serialize(JsonWriter, Flags);
                     JsonWriter.Close();
                     TextWriter.Close();
@@ -390,8 +434,7 @@ namespace Uncreated.Warfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                         Serializer.Serialize(JsonWriter, DefaultCreditData);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -434,8 +477,7 @@ namespace Uncreated.Warfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                         Serializer.Serialize(JsonWriter, DefaultXPData);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -469,11 +511,11 @@ namespace Uncreated.Warfare
             }
             return NewXPs;
         }
-        public static Dictionary<string, Dictionary<string, string>> LoadTranslations(
+        public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations(
             out Dictionary<string, Dictionary<string, string>> deathloc, out Dictionary<string, Dictionary<ELimb, string>> limbloc)
         {
             string[] langDirs = Directory.GetDirectories(Data.LangStorage, "*", SearchOption.TopDirectoryOnly);
-            Dictionary<string, Dictionary<string, string>> languages = new Dictionary<string, Dictionary<string, string>>();
+            Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
             deathloc = new Dictionary<string, Dictionary<string, string>>();
             limbloc = new Dictionary<string, Dictionary<ELimb, string>>();
             F.CheckDir(Data.LangStorage + DefaultLanguage, out bool madeDir);
@@ -550,7 +592,7 @@ namespace Uncreated.Warfare
                                 }
                             }
                             if (!languages.ContainsKey(directoryInfo.Name))
-                                languages.Add(directoryInfo.Name, translationDict);
+                                languages.Add(directoryInfo.Name, ConvertTranslations(translationDict));
                         }
                         else if (info.Name == "deathlocalization.dat")
                         {
@@ -607,12 +649,27 @@ namespace Uncreated.Warfare
             } else
             {
                 F.LogError("Failed to load translations, see above.");
-                languages.Add(DefaultLanguage, DefaultTranslations);
+                languages.Add(DefaultLanguage, ConvertTranslations(DefaultTranslations));
                 limbloc.Add(DefaultLanguage, DefaultLimbTranslations);
                 deathloc.Add(DefaultLanguage, DefaultDeathTranslations);
                 return languages;
             }
             return languages;
+        }
+        public static Dictionary<string, TranslationData> ConvertTranslations(Dictionary<string, string> input)
+        {
+            Dictionary<string, TranslationData> rtn = new Dictionary<string, TranslationData>(input.Count);
+            IEnumerator<KeyValuePair<string, string>> enumerator = input.GetEnumerator();
+            try
+            {
+                while (enumerator.MoveNext())
+                    rtn.Add(enumerator.Current.Key, new TranslationData(enumerator.Current.Value));
+            }
+            finally
+            {
+                enumerator.Dispose();
+            }
+            return rtn;
         }
         public static Dictionary<int, Zone> LoadExtraZones()
         {
@@ -625,8 +682,7 @@ namespace Uncreated.Warfare
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
-                            JsonSerializer Serializer = new JsonSerializer();
-                            Serializer.Formatting = Formatting.Indented;
+                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                             Serializer.Serialize(JsonWriter, DefaultExtraZones);
                             JsonWriter.Close();
                             TextWriter.Close();
@@ -676,8 +732,7 @@ namespace Uncreated.Warfare
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
-                            JsonSerializer Serializer = new JsonSerializer();
-                            Serializer.Formatting = Formatting.Indented;
+                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                             Serializer.Serialize(JsonWriter, DefaultExtraPoints);
                             JsonWriter.Close();
                             TextWriter.Close();
@@ -725,8 +780,7 @@ namespace Uncreated.Warfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                         Serializer.Serialize(JsonWriter, DefaultMySQLTableData);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -810,8 +864,7 @@ namespace Uncreated.Warfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                         Serializer.Serialize(JsonWriter, data);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -841,8 +894,7 @@ namespace Uncreated.Warfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer();
-                        Serializer.Formatting = Formatting.Indented;
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
                         Serializer.Serialize(JsonWriter, DefaultLanguageAliasSets);
                         JsonWriter.Close();
                         TextWriter.Close();

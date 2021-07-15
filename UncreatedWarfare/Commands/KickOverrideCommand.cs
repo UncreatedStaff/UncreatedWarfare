@@ -25,19 +25,19 @@ namespace Uncreated.Warfare.Commands
             if (caller.DisplayName == "Console")
             {
                 if (!Provider.isServer)
-                    F.LogError(F.Translate("NotRunningErrorText", 0));
+                    F.LogError(F.Translate("server_not_running", 0, out _));
                 else
                 {
                     if (command.Length < 1)
-                        F.LogError(F.Translate("InvalidParameterErrorText", 0));
+                        F.LogError(F.Translate("kick_syntax", 0, out _));
                     else
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer player))
-                            F.LogError(F.Translate("kick_NoPlayerErrorText_Console", 0, command[0]));
+                            F.LogError(F.Translate("kick_no_player_found_console", 0, out _, command[0]));
                         else
                         {
                             if (command.Length == 1)
-                                F.LogError(F.Translate("kick_ErrorNoReasonProvided_Console", 0));
+                                F.LogError(F.Translate("kick_no_reason_provided", 0, out _));
                             else if (command.Length > 1)
                             {
                                 string reason = command.MakeRemainder(1);
@@ -46,8 +46,9 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                     await Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
                                 SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-                                F.Log(F.Translate("kick_KickedPlayerFromConsole_Console", 0, names.PlayerName, player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-                                F.Broadcast("kick_KickedPlayerFromConsole_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.PlayerName);
+                                F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, 
+                                    player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
+                                F.Broadcast("kick_kicked_broadcast_operator", names.PlayerName);
                                 await rtn;
                             }
                         }
@@ -58,19 +59,19 @@ namespace Uncreated.Warfare.Commands
             {
                 UnturnedPlayer player = caller as UnturnedPlayer;
                 if (!Provider.isServer)
-                    F.SendChat(player, "NotRunningErrorText", UCWarfare.GetColor("defaulterror"));
+                    F.SendChat(player, "server_not_running");
                 else
                 {
                     if (command.Length < 1)
-                        F.SendChat(player, "InvalidParameterErrorText", UCWarfare.GetColor("defaulterror"));
+                        F.SendChat(player, "kick_syntax");
                     else
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
-                            F.SendChat(player, "kick_NoPlayerErrorText", UCWarfare.GetColor("defaulterror"), command[0]);
+                            F.SendChat(player, "kick_no_player_found", command[0]);
                         else
                         {
                             if (command.Length == 1)
-                                F.SendChat(player, "kick_ErrorNoReasonProvided", UCWarfare.GetColor("defaulterror"));
+                                F.SendChat(player, "kick_no_reason_provided");
                             else if (command.Length > 1)
                             {
                                 string reason = command.MakeRemainder(1);
@@ -79,10 +80,11 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                     await Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
-                                F.LogWarning(F.Translate("kick_KickedPlayer_Console", 0, 
-                                    names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-                                F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_KickedPlayer_Broadcast", UCWarfare.GetColor("kick_broadcast"), names.CharacterName, callerNames.CharacterName);
-                                F.SendChat(player.CSteamID, "kick_KickedPlayer", UCWarfare.GetColor("kick_feedback"), names.CharacterName);
+                                F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
+                                    names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                                    callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
+                                F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
+                                F.SendChat(player.CSteamID, "kick_kicked_feedback", names.CharacterName);
                             }
                         }
                     }

@@ -23,20 +23,24 @@ namespace Uncreated.Warfare.Commands
         public async void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
-
             // TODO
             if(command.Length == 1)
             {
-                if (command[0].ToLower() == TeamManager.Team1Code.ToLower() || command[0].ToLower() == TeamManager.Team1Name.ToLower() || command[0].ToLower() == TeamManager.Team2Code.ToLower() || command[0].ToLower() == TeamManager.Team2Name.ToLower())
+                string imput = command[0].ToLower();
+                string t1code = TeamManager.Team1Code.ToLower();
+                string t1name = TeamManager.Team1Name.ToLower();
+                string t2code = TeamManager.Team2Code.ToLower();
+                string t2name = TeamManager.Team2Name.ToLower();
+                if (imput == t1code || imput == t1name || imput == t2code || imput == t2name)
                 {
                     ulong newTeam = 0;
                     string restrictedNamePrefix = "";
-                    if (command[0].ToLower() == TeamManager.Team1Code.ToLower() || command[0].ToLower() == TeamManager.Team1Name.ToLower())
+                    if (imput == t1code || imput == t1name)
                     {
                         newTeam = TeamManager.Team1ID;
                         restrictedNamePrefix = TeamManager.Team2Code;
                     }
-                    else if (command[0].ToLower() == TeamManager.Team2Code.ToLower() || command[0].ToLower() == TeamManager.Team2Name.ToLower())
+                    else if (imput == t2code || imput == t2name)
                     {
                         newTeam = TeamManager.Team2ID;
                         restrictedNamePrefix = TeamManager.Team1Code;
@@ -46,12 +50,12 @@ namespace Uncreated.Warfare.Commands
 
                     if (!TeamManager.LobbyZone.IsInside(player.Position))
                     {
-                        player.Message("join_e_notinlobby");
+                        player.SendChat("join_e_notinlobby");
                         return;
                     }
                     if (player.GetTeam() == newTeam)
                     {
-                        player.Message("join_e_alreadyonteam");
+                        player.SendChat("join_e_alreadyonteam");
                         return;
                     }
 
@@ -60,56 +64,55 @@ namespace Uncreated.Warfare.Commands
                     GroupInfo group = GroupManager.getGroupInfo(new CSteamID(newTeam));
                     if (group == null)
                     {
-                        player.Message("join_e_groupnoexist", TeamManager.TranslateName(newTeam, player.CSteamID, true));
+                        player.SendChat("join_e_groupnoexist", TeamManager.TranslateName(newTeam, player.CSteamID, true));
                         return;
                     }
                     Kits.UCInventoryManager.ClearInventory(player);
                     if (!group.hasSpaceForMoreMembersInGroup)
                     {
-                        player.Message("join_e_teamfull", teamName);
+                        player.SendChat("join_e_teamfull", teamName);
                         return;
                     }
                     if (!TeamManager.CanJoinTeam(newTeam))
                     {
-                        player.Message("join_e_autobalance", teamName);
+                        player.SendChat("join_e_autobalance", teamName);
                         return;
                     }
                     if (player.CharacterName.StartsWith(restrictedNamePrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         player.Player.quests.leaveGroup(true);
                         PlayerManager.Save();
-                        player.Message("join_e_badname", restrictedNamePrefix);
+                        player.SendChat("join_e_badname", restrictedNamePrefix);
                         return;
                     }
-                    player.Message("joined_standby");
+                    player.SendChat("joined_standby");
                     await Task.Delay(3000);
 
                     ulong oldgroup = player.GetTeam();
                     player.Player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
                     GroupManager.save();
-                    await EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, player.GetTeam());
+                    await EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, newTeam);
 
-                    F.Log($"Player {player.CharacterName} switched to {teamName}", ConsoleColor.Cyan);
+                    Players.FPlayerName names = F.GetPlayerOriginalNames(player);
+                    F.Log(F.Translate("join_player_joined_console", 0, out _, 
+                        names.PlayerName, newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)), 
+                        ConsoleColor.Cyan);
 
                     player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());
 
-                    player.Message("join_s", TeamManager.TranslateName(newTeam, player.CSteamID, true));
+                    player.SendChat("join_s", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-                    Players.FPlayerName names = F.GetPlayerOriginalNames(player);
-                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "join_announce", "d1c5b0".Hex(), names.CharacterName, teamName);
+                    new List<CSteamID>(1) {player.CSteamID}.BroadcastToAllExcept("join_announce", names.CharacterName, teamName);
 
                     if (player.Squad != null)
-                    {
                         Squads.SquadManager.LeaveSquad(player, ref player.Squad);
-                    }
-
                     PlayerManager.Save();
                 }
                 else
-                    player.Message("join_correctusage");
+                    player.SendChat("join_correctusage");
             }
             else
-                player.Message("join_correctusage");
+                player.SendChat("join_correctusage");
         }
     }
 }

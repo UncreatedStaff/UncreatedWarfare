@@ -48,6 +48,7 @@ namespace Uncreated.Warfare
                 harmony.PatchAll();
             }
 #pragma warning disable IDE0051
+#pragma warning disable IDE0060 // Remove unused parameter
             // SDG.Unturned.PlayerInventory
             ///<summary>
             /// Prefix of <see cref="PlayerInventory.ReceiveDragItem(byte, byte, byte, byte, byte, byte, byte)"/> to disallow players leaving their group.
@@ -609,6 +610,7 @@ namespace Uncreated.Warfare
                 }
             }
 #pragma warning restore IDE0051
+#pragma warning restore IDE0060 // Remove unused parameter
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Commands
 
             List<Kit> kits = KitManager.GetAccessibleKits(player.Steam64).ToList();
 
-            if (kits.Count > 0) // create kit
+            if (kits.Count > 0)
             {
                 StringBuilder sb = new StringBuilder();
 
@@ -33,12 +33,12 @@ namespace Uncreated.Warfare.Commands
                     sb.Append(kits[i].Team == player.GetTeam() ? $"<color=#c2fff5>{kits[i].Name}</color>" : $"<color=#97adaa>{kits[i].Name}</color>");
                 }
 
-                player.Message("kits_heading");
-                player.Message(sb.ToString());
+                player.SendChat("kits_heading");
+                player.SendChat(sb.ToString());
             }
             else
             {
-                player.Message("kits_nokits");
+                player.SendChat("kits_nokits");
             }
         }
     }
