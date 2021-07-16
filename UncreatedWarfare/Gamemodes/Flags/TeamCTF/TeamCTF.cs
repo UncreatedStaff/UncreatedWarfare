@@ -208,8 +208,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             ulong team = player.GetTeam();
             F.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
+            SendUIParameters t1 = SendUIParameters.Nil;
+            SendUIParameters t2 = SendUIParameters.Nil;
+            if (flag.Team1TotalPlayers > 0)
+                t1 = CTFUI.RefreshStaticUI(1, flag);
+            if (flag.Team2TotalPlayers > 0)
+                t2 = CTFUI.RefreshStaticUI(2, flag);
             foreach (Player capper in flag.PlayersOnFlag)
-                CTFUI.RefreshStaticUI(capper.GetTeam(), flag).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+            {
+                ulong t = capper.GetTeam();
+                if(t == 1)
+                    t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                else if (t == 2)
+                    t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+            }
             await Task.Yield();
         }
         protected override async Task PlayerLeftFlagRadius(Flag flag, Player player)
@@ -220,8 +232,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             if (UCWarfare.Config.FlagSettings.UseUI)
                 EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, Channel);
+            SendUIParameters t1 = SendUIParameters.Nil;
+            SendUIParameters t2 = SendUIParameters.Nil;
+            if (flag.Team1TotalPlayers > 0)
+                t1 = CTFUI.RefreshStaticUI(1, flag);
+            if (flag.Team2TotalPlayers > 0)
+                t2 = CTFUI.RefreshStaticUI(2, flag);
             foreach (Player capper in flag.PlayersOnFlag)
-                CTFUI.RefreshStaticUI(capper.GetTeam(), flag).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+            {
+                ulong t = capper.GetTeam();
+                if (t == 1)
+                    t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                else if (t == 2)
+                    t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+            }
             await Task.Yield();
         }
         protected override async Task FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)

@@ -200,7 +200,7 @@ namespace Uncreated.Warfare
                     if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
                         await KitManager.GiveKit(player, previousKit);
                 });
-                F.Broadcast("player_connected", UCWarfare.GetColor("join_message_background"), player.Player.channel.owner.playerID.playerName, UCWarfare.GetColorHex("join_message_name"));
+                F.Broadcast("player_connected", names.PlayerName);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
                     UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
@@ -244,8 +244,8 @@ namespace Uncreated.Warfare
             if (!Whitelister.IsWhitelisted(jar.item.id, out _))
             {
                 allow = false;
-                player.SendChat("cant_store_this_item", UCWarfare.GetColor("cant_store_this_item"),
-                    !(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset) || asset.itemName == null ? jar.item.id.ToString(Data.Locale) : asset.itemName, UCWarfare.GetColorHex("cant_store_this_item_item"));
+                player.SendChat("cant_store_this_item",
+                    !(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset) || asset.itemName == null ? jar.item.id.ToString(Data.Locale) : asset.itemName);
             }
         }
         internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
@@ -310,7 +310,7 @@ namespace Uncreated.Warfare
             if (!UCWarfare.Config.AllowBatteryStealing)
             {
                 allow = false;
-                theif.SendChat("cant_steal_batteries", UCWarfare.GetColor("cant_steal_batteries"));
+                theif.SendChat("cant_steal_batteries");
             }
         }
         internal static void OnCalculateSpawnDuringRevive(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
@@ -341,7 +341,7 @@ namespace Uncreated.Warfare
                         await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner.playerID.steamID.m_SteamID);
                         await s;
                     });
-                F.Broadcast("player_disconnected", UCWarfare.GetColor("leave_message_background"), names.CharacterName, UCWarfare.GetColorHex("leave_message_name"));
+                F.Broadcast("player_disconnected", names.CharacterName);
                 if (UCWarfare.Config.RemoveLandminesOnDisconnect)
                 {
                     IEnumerator<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID

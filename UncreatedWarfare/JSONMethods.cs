@@ -72,41 +72,6 @@ namespace Uncreated.Warfare
         public override string ToString() => 
             $"Original: {Original}, Inner text: {Message}, {(UseColor ? $"Color: {Color} ({ColorUtility.ToHtmlStringRGBA(Color)}." : "Unable to find color.")}";
     }
-    public struct TeamData
-    {
-        public ulong team_id;
-        public string name;
-        public List<ulong> players;
-        public float spawnpoint_x;
-        public float spawnpoint_y;
-        public float spawnpoint_z;
-        [JsonConstructor]
-        public TeamData(ulong team_id, string name, List<ulong> players, float spawnpoint_x, float spawnpoint_y, float spawnpoint_z)
-        {
-            this.team_id = team_id;
-            this.name = name;
-            this.players = players;
-            this.spawnpoint_x = spawnpoint_x;
-            this.spawnpoint_y = spawnpoint_y;
-            this.spawnpoint_z = spawnpoint_z;
-        }
-    }
-    public struct XPData
-    {
-        public string key;
-        public int xp;
-        [JsonConstructor]
-        public XPData(string key, int xp)
-        {
-            this.key = key;
-            this.xp = xp;
-        }
-        public XPData(EXPGainType key, int xp)
-        {
-            this.key = key.ToString();
-            this.xp = xp;
-        }
-    }
     public struct Point3D
     {
         public string name;
@@ -241,22 +206,6 @@ namespace Uncreated.Warfare
             this.euler_angles = new SerializableVector3(rotation.eulerAngles);
         }
     }
-    public struct CreditsData
-    {
-        public string key;
-        public int credits;
-        [JsonConstructor]
-        public CreditsData(string key, int xp)
-        {
-            this.key = key;
-            this.credits = xp;
-        }
-        public CreditsData(ECreditsGainType key, int xp)
-        {
-            this.key = key.ToString();
-            this.credits = xp;
-        }
-    }
     public struct LangData
     {
         public ulong player;
@@ -279,17 +228,6 @@ namespace Uncreated.Warfare
             this.key = key;
             this.display_name = display_name;
             this.values = values;
-        }
-    }
-    public struct Translation
-    {
-        public string key;
-        public string value;
-        [JsonConstructor]
-        public Translation(string key, string value)
-        {
-            this.key = key;
-            this.value = value;
         }
     }
     public struct MySqlColumnData
@@ -426,91 +364,6 @@ namespace Uncreated.Warfare
             HexValues = NewColorsHex;
             return NewColors;
         }
-        public static Dictionary<ECreditsGainType, int> LoadCredits()
-        {
-            if (!File.Exists(Data.DataDirectory + "credit_values.json"))
-            {
-                using (StreamWriter TextWriter = File.CreateText(Data.DataDirectory + "credit_values.json"))
-                {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
-                    {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-                        Serializer.Serialize(JsonWriter, DefaultCreditData);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
-                    }
-                }
-                Dictionary<ECreditsGainType, int> NewDefaults = new Dictionary<ECreditsGainType, int>();
-                foreach (CreditsData data in DefaultCreditData)
-                {
-                    NewDefaults.Add((ECreditsGainType)Enum.Parse(typeof(ECreditsGainType), data.key), data.credits);
-                }
-                return NewDefaults;
-            }
-            List<CreditsData> Credits;
-            using (StreamReader Reader = File.OpenText(Data.DataDirectory + "credit_values.json"))
-            {
-                Credits = JsonConvert.DeserializeObject<List<CreditsData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
-            }
-            Dictionary<ECreditsGainType, int> NewCredits = new Dictionary<ECreditsGainType, int>();
-            foreach (CreditsData data in Credits ?? DefaultCreditData)
-            {
-                try
-                {
-                    NewCredits.Add((ECreditsGainType)Enum.Parse(typeof(ECreditsGainType), data.key), data.credits);
-                }
-                catch
-                {
-                    F.LogError(data.key + " is not a valid value for Credit type.");
-                }
-            }
-            return NewCredits;
-        }
-        public static Dictionary<EXPGainType, int> LoadXP()
-        {
-            if (!File.Exists(Data.DataDirectory + "xp_values.json"))
-            {
-                using (StreamWriter TextWriter = File.CreateText(Data.DataDirectory + "xp_values.json"))
-                {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
-                    {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-                        Serializer.Serialize(JsonWriter, DefaultXPData);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
-                    }
-                }
-                Dictionary<EXPGainType, int> NewDefaults = new Dictionary<EXPGainType, int>();
-                foreach (XPData data in DefaultXPData)
-                {
-                    NewDefaults.Add((EXPGainType)Enum.Parse(typeof(EXPGainType), data.key), data.xp);
-                }
-                return NewDefaults;
-            }
-            List<XPData> XPs;
-            using (StreamReader Reader = File.OpenText(Data.DataDirectory + "xp_values.json"))
-            {
-                XPs = JsonConvert.DeserializeObject<List<XPData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
-            }
-            Dictionary<EXPGainType, int> NewXPs = new Dictionary<EXPGainType, int>();
-            foreach (XPData data in XPs ?? DefaultXPData)
-            {
-                try
-                {
-                    NewXPs.Add((EXPGainType)Enum.Parse(typeof(EXPGainType), data.key), data.xp);
-                } catch
-                {
-                    F.LogError(data.key + " is not a valid value for XP type");
-                }
-            }
-            return NewXPs;
-        }
         public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations(
             out Dictionary<string, Dictionary<string, string>> deathloc, out Dictionary<string, Dictionary<ELimb, string>> limbloc)
         {
@@ -528,12 +381,7 @@ namespace Uncreated.Warfare
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
                             JsonSerializer Serializer = new JsonSerializer { Formatting = Formatting.Indented };
-                            List<Translation> t = new List<Translation>();
-                            foreach (KeyValuePair<string, string> translation in DefaultTranslations)
-                            {
-                                t.Add(new Translation(translation.Key, translation.Value));
-                            }
-                            Serializer.Serialize(JsonWriter, t);
+                            Serializer.Serialize(JsonWriter, DefaultTranslations);
                             JsonWriter.Close();
                             TextWriter.Close();
                             TextWriter.Dispose();
@@ -571,28 +419,28 @@ namespace Uncreated.Warfare
                         FileInfo info = new FileInfo(file);
                         if (info.Name == "localization.json")
                         {
-                            List<Translation> Translations;
+                            Dictionary<string, string> Translations = null;
+                            if (file == null) continue;
                             using (StreamReader Reader = File.OpenText(file))
-                            {
-                                Translations = JsonConvert.DeserializeObject<List<Translation>>(Reader.ReadToEnd());
-                                Reader.Close();
-                                Reader.Dispose();
-                            }
-                            if (Translations == null) continue;
-                            Dictionary<string, string> translationDict = new Dictionary<string, string>();
-                            foreach (Translation data in Translations)
                             {
                                 try
                                 {
-                                    translationDict.Add(data.key, data.value);
+                                    Translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(Reader.ReadToEnd());
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
-                                    F.LogWarning("\"" + data.key + "\" has a duplicate key in translation file: (" + info.Name + ")!");
+                                    F.LogError("Error reading localization file in " + directoryInfo.Name);
+                                    F.LogError(ex);
+                                }
+                                finally
+                                {
+                                    Reader.Close();
+                                    Reader.Dispose();
                                 }
                             }
+                            if (Translations == null) continue;
                             if (!languages.ContainsKey(directoryInfo.Name))
-                                languages.Add(directoryInfo.Name, ConvertTranslations(translationDict));
+                                languages.Add(directoryInfo.Name, ConvertTranslations(Translations));
                         }
                         else if (info.Name == "deathlocalization.dat")
                         {
@@ -931,21 +779,5 @@ namespace Uncreated.Warfare
             }
             return NewAliases;
         }
-    }
-    public enum EXPGainType : byte
-    {
-        CAP_INCREASE,
-        WIN,
-        KILL,
-        DEFENCE_KILL,
-        OFFENCE_KILL,
-        CAPTURE_KILL,
-        CAPTURE,
-        HOLDING_POINT
-    }
-    public enum ECreditsGainType : byte
-    {
-        CAPTURE,
-        WIN
     }
 }

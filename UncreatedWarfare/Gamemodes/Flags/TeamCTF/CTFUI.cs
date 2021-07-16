@@ -332,6 +332,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.team2count = team2count;
             this.formatting = formatting;
         }
-        public void SendToPlayer(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, SteamPlayer player, ITransportConnection connection) => F.UIOrChat(charactericon, useui, uiid, pts, progresschars, this, player, connection, player.playerID.steamID.m_SteamID);
+        public void SendToPlayer(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, SteamPlayer player, ITransportConnection connection) => 
+            F.UIOrChat(charactericon, useui, uiid, pts, progresschars, this, player, connection, player.playerID.steamID.m_SteamID);
     }
 }

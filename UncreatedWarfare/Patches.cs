@@ -73,7 +73,7 @@ namespace Uncreated.Warfare
             static bool CancelLeavingGroup(Player player)
             {
                 if (!UCWarfare.Config.Patches.requestGroupExit) return true;
-                player.SendChat("cant_leave_group", UCWarfare.GetColor("cant_leave_group"));
+                player.SendChat("cant_leave_group");
                 return false;
             }
             // SDG.Unturned.PlayerClothing

@@ -45,12 +45,10 @@ namespace Uncreated.Warfare
                 { "ui_secured", "SECURED" },
                 { "ui_nocap", "NOT OBJECTIVE" },
                 { "ui_notowned", "TAKEN" },
-                { "current_zone", "You are in flag zone: {0}, at position ({1}, {2}, {3})." },
                 { "team_win", "<color=#{1}>{0}</color> won the game!" },
                 { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
-                { "not_in_zone", "No flag zone found at position ({0}, {1}, {2}) - {3}°, out of {4} registered flags." },
-                { "player_connected", "<color=#{1}>{0}</color> joined the server!" },
-                { "player_disconnected", "<color=#{1}>{0}</color> left the server." },
+                { "player_connected", "<color=#e6e3d5><color=#ffff1a>{0}</color> joined the server!</color>" },
+                { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
 
                 // group
                 { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</color>" },
@@ -122,7 +120,7 @@ namespace Uncreated.Warfare
                 { "kit_e_cooldown", "<color=#c2b39b>You can request this kit again in: <color=#bafeff>{0}</color></color>" },
                 { "kit_e_cooldownglobal", "<color=#c2b39b>You can request another kit in: <color=#bafeff>{0}</color></color>" },
                 { "kits_heading", "<color=#b0a99d>You have access to the following <color=#ffd494>PREMIUM</color> kits:</color>" },
-                { "kits_nokits", "<color=#b0a99d>You have no premium kits.</color> Go and <b><color=#e6c6b3>request a regular kit at the <color=#99a38e>ARMORY</color></b></color>" },
+                { "kits_nokits", "<color=#b0a99d>You have no premium kits. Go and <b><color=#e6c6b3>request a regular kit at the <color=#99a38e>ARMORY</color></b></color></color>" },
                 { "kits_notonduty", "<color=#a6918a>You must be on duty to execute that command.</color>" },
 
                 // Range
@@ -295,7 +293,6 @@ namespace Uncreated.Warfare
                 { "kick_kicked_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by an operator.</color>" },
                 { "kick_kicked_console_operator", "{0} ({1}) was kicked by an operator because: {2}." },
                 { "kick_kicked_console", "{0} ({1}) was kicked by {2} ({3}) because: {4}." },
-                { "kick_no_reason_provided", "<color=#9cffb3>You must provide a reason.</color>" },
                 // ban
                 { "ban_syntax", "<color=#9cffb3>Syntax: <i>/ban <player> <duration minutes> <reason ...></i>.</color>" },
                 { "ban_permanent_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned.</color>" },
@@ -362,10 +359,10 @@ namespace Uncreated.Warfare
                 // tk system
                 { "tk_Teamkilled_Console", "{0} ({1}) teamkilled {2} ({3})!!" },
                 // restrictions
-                { "no_placement_on_vehicle", "You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!" },
-                { "cant_steal_batteries", "Stealing batteries is not allowed." },
-                { "cant_leave_group", "You are not allowed to manually change groups." },
-                { "cant_store_this_item", "You are not allowed to store <color=#{1}>{0}</color>." },
+                { "no_placement_on_vehicle", "<color=#f53b3b>You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!</color>" },
+                { "cant_steal_batteries", "<color=#f53b3b>Stealing batteries is not allowed.</color>" },
+                { "cant_leave_group", "<color=#f53b3b>You are not allowed to manually change groups.</color>" },
+                { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
                 // battleye
                 { "battleye_kick_console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kick_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>.</color>" },
@@ -541,6 +538,50 @@ namespace Uncreated.Warfare
                 { "reload_reloaded_lang", "<color=#e6e3d5>Reloaded all translations.</color>" },
                 { "reload_reloaded_flags", "<color=#e6e3d5>Re-read flags from file and begain to start a new game.</color>" },
                 { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
+
+                //test
+                { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
+                { "test_error_executing", "<color=#ff8c69>Ran into an error while executing: <color=#ff758f>{0} - {1}</color>.</color>" },
+                { "test_multiple_matches", "<color=#ff8c69>Multiple methods match <color=#ff758f>{0}</color>.</color>" },
+                { "test_no_players_console", "No player found." },
+                
+                { "test_zonearea_syntax", "<color=#ff8c69>Syntax: <i>/test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false></i>.</color>" },
+                { "test_zonearea_started", "<color=#e6e3d5>Picture has to generate, wait around a minute.</color>" },
+                
+                { "test_givexp_syntax", "<color=#ff8c69>Syntax: <i>/test givexp <name> <amount></i>.</color>" },
+                { "test_givexp_player_not_found", "<color=#ff8c69>Could not find player named <color=#ff758f>{0}</color></color>" },
+                { "test_givexp_success", "<color=#e6e3d5>Given {0} XP to {1}.</color>" },
+                { "test_givexp_invalid_amount", "<color=#ff8c69><color=#ff758f>{0}</color> is not a valid amount (Int32).</color>" },
+
+                { "test_giveof_syntax", "<color=#ff8c69>Syntax: <i>/test giveof <name> <amount></i>.</color>" },
+                { "test_giveof_player_not_found", "<color=#ff8c69>Could not find player named <color=#ff758f>{0}</color></color>" },
+                { "test_giveof_success", "<color=#e6e3d5>Given {0} Officer Point{1} to {2}.</color>" },
+                { "test_giveof_invalid_amount", "<color=#ff8c69><color=#ff758f>{0}</color> is not a valid amount (Int32).</color>" },
+
+                { "test_zone_not_in_zone", "<color=#e6e3d5>No flag zone found at position <color=#4785ff>({0}, {1}, {2})</color> - <color=#4785ff>{3}°</color>, out of <color=#4785ff>{4}</color> registered flags.</color>" },
+                { "test_zone_current_zone", "<color=#e6e3d5>You are in flag zone: <color=#4785ff>{0}</color>, at position <color=#4785ff>({1}, {2}, {3})</color>.</color>" },
+
+                { "test_visualize_syntax", "<color=#ff8c69>Syntax: <i>/test visualize [spacing] [perline]</i>. Specifying perline will disregard spacing.</color>" },
+                { "test_visualize_success", "<color=#e6e3d5>Spawned {0} particles around zone <color=#{2}>{1}</color>. They will despawn in 1 minute.</color>" },
+                
+                { "test_go_syntax", "<color=#ff8c69>Syntax: <i>/test go <flag name|zone name|flag id|zone id|obj1|obj2|t1main|t2main></i>. Specifying perline will disregard spacing.</color>" },
+                { "test_go_no_zone", "<color=#ff8c69>No zone or flag found from search terms: <color=#8ce4ff>{0}</color>.</color>" },
+                { "test_go_success_zone", "<color=#e6e3d5>Teleported to extra zone <color=#8ce4ff>{0}</color>.</color>" },
+                { "test_go_success_flag", "<color=#e6e3d5>Teleported to flag <color=#{1}>{0}</color>.</color>" },
+                
+                { "test_time_enabled", "<color=#e6e3d5><color=#8ce4ff>Enabled</color> coroutine timing.</color>" },
+                { "test_time_disabled", "<color=#e6e3d5><color=#8ce4ff>Disabled</color> coroutine timing.</color>" },
+                { "test_time_enabled_console", "Enabled coroutine timing." },
+                { "test_time_disabled_console", "Disabled coroutine timing." },
+                
+                { "test_down_success", "<color=#e6e3d5>Applied <color=#8ce4ff>{0}</color> damage to player.</color>" },
+                
+                { "test_sign_no_sign", "<color=#ff8c69>No sign found.</color>" },
+                { "test_sign_success", "<color=#e6e3d5>Sign text: <color=#8ce4ff>\"{0}\"</color>.</color>" },
+
+                { "gamemode_not_flag_gamemode", "<color=#ff8c69>Current gamemode <color=#ff758f>{0}</color> is not a <color=#ff758f>FLAG GAMEMODE</color>.</color>" },
+                { "gamemode_flag_not_on_cap_team", "<color=#ff8c69>You're not on a team that can capture flags.</color>" },
+                { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -572,11 +613,6 @@ namespace Uncreated.Warfare
             new ColorData("default", "ffffff"),
             new ColorData("defaulterror", "ff8c69"),
             new ColorData("uncreated", "9cb6a4"),
-            new ColorData("correct_usage_c", "ff8c69"),
-            new ColorData("join_message_background", "e6e3d5"),
-            new ColorData("join_message_name", "ffff1a"),
-            new ColorData("leave_message_background", "e6e3d5"),
-            new ColorData("leave_message_name", "ffff1a"),
             new ColorData("attack_icon_color", "ffca61"),
             new ColorData("defend_icon_color", "ba70cc"),
             new ColorData("undiscovered_flag", "696969"),
@@ -588,7 +624,7 @@ namespace Uncreated.Warfare
             // Team Colors
             new ColorData("team_1_color", "4785ff"),
             new ColorData("team_2_color", "f53b3b"),
-            new ColorData("team_3_color", "00ffff"),
+            new ColorData("team_3_color", "0099ff"),
             new ColorData("neutral_color", "c2c2c2"),
 
             // Team 1 Circle
@@ -691,29 +727,6 @@ namespace Uncreated.Warfare
             new ColorData("vbs_locked_vehicle_color", "800000"),
             new ColorData("vbs_rank_color", "e6e3d5"),
             new ColorData("vbs_ticket_cost", "e6e3d5"),
-
-            // Restrictions
-            new ColorData("cant_steal_batteries", "f53b3b"),
-            new ColorData("cant_place_structures_on_vehicles", "f53b3b"),
-            new ColorData("cant_leave_group", "f53b3b"),
-            new ColorData("cant_store_this_item", "f53b3b"),
-            new ColorData("cant_store_this_item_item", "e6e3d5"),
-        };
-        public static readonly List<XPData> DefaultXPData = new List<XPData>
-        {
-            new XPData(EXPGainType.OFFENCE_KILL, 30),
-            new XPData(EXPGainType.DEFENCE_KILL, 15),
-            new XPData(EXPGainType.CAPTURE, 500),
-            new XPData(EXPGainType.WIN, 800),
-            new XPData(EXPGainType.CAPTURE_KILL, 25),
-            new XPData(EXPGainType.KILL, 10),
-            new XPData(EXPGainType.CAP_INCREASE, 30),
-            new XPData(EXPGainType.HOLDING_POINT, 10)
-        };
-        public static readonly List<CreditsData> DefaultCreditData = new List<CreditsData>
-        {
-            new CreditsData(ECreditsGainType.CAPTURE, 250),
-            new CreditsData(ECreditsGainType.WIN, 600)
         };
         public static readonly List<MySqlTableData> DefaultMySQLTableData = new List<MySqlTableData>
         {

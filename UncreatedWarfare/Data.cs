@@ -90,8 +90,6 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Dictionary<string, TranslationData>> Localization;
         public static Dictionary<string, Dictionary<string, string>> DeathLocalization;
         public static Dictionary<string, Dictionary<ELimb, string>> LimbLocalization;
-        public static Dictionary<EXPGainType, int> XPData;
-        public static Dictionary<ECreditsGainType, int> CreditsData;
         public static Dictionary<int, Zone> ExtraZones;
         public static Dictionary<string, Vector3> ExtraPoints;
         public static Dictionary<string, MySqlTableLang> TableData;
@@ -178,8 +176,6 @@ namespace Uncreated.Warfare
             }
 
             Colors = JSONMethods.LoadColors(out ColorsHex);
-            XPData = JSONMethods.LoadXP();
-            CreditsData = JSONMethods.LoadCredits();
             Localization = JSONMethods.LoadTranslations(out DeathLocalization, out LimbLocalization);
             TableData = JSONMethods.LoadTables();
             Languages = JSONMethods.LoadLanguagePreferences();
