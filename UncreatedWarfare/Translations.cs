@@ -190,6 +190,7 @@ namespace Uncreated.Warfare
                 { "repairstation_built", "<color=#b0ffa8>Successfully built repair station. Your team may now repair damaged vehicles at this FOB.</color>" },
                 { "repairstation_error_alreadyexists", "<color=#ffa238>This FOB already has a repair station.</color>" },
                 { "emplacement_built", "<color=#b0ffa8>Successfully built {0}. Do /ammo on it to resupply.</color>" },
+                { "fob_ui", "<color=#54e3ff>{0}</color>{1}" },
 
                 // deployment
                 { "deploy_s", "<color=#fae69c>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
@@ -581,7 +582,7 @@ namespace Uncreated.Warfare
 
                 { "gamemode_not_flag_gamemode", "<color=#ff8c69>Current gamemode <color=#ff758f>{0}</color> is not a <color=#ff758f>FLAG GAMEMODE</color>.</color>" },
                 { "gamemode_flag_not_on_cap_team", "<color=#ff8c69>You're not on a team that can capture flags.</color>" },
-                { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
+                { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." }
             };
         }
         public static Dictionary<string, string> DefaultTranslations;

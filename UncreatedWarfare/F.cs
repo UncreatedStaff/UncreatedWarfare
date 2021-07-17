@@ -2348,5 +2348,17 @@ namespace Uncreated.Warfare
 
             return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
         }
+        public static void SpawnMarker(List<SteamPlayer> players)
+        {
+            foreach (SteamPlayer player in players)
+            {
+                EffectManager.sendEffectReliable(36100, player.transportConnection, Vector3.zero);
+            }
+        }
+        public static void SpawnMarker(SteamPlayer player)
+        {
+            EffectManager.sendEffectReliable(36100, player.transportConnection, player.player.transform.position);
+            player.player.quests.ReceiveSetMarkerRequest(true, player.player.transform.position);
+        }
     }
 }

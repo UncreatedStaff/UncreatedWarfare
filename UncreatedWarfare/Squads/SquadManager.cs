@@ -32,28 +32,28 @@ namespace Uncreated.Warfare.Squads
         public static void ClearUIsquad(Player player)
         {
             for (int i = 0; i < 6; i++)
-                EffectManager.askEffectClearByID((ushort)(30071 + i), player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID((ushort)(config.Data.squadSUI + i), player.channel.owner.transportConnection);
             for (int i = 0; i < 8; i++)
-                EffectManager.askEffectClearByID((ushort)(30081 + i), player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID((ushort)(config.Data.squadLTUI + i), player.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(config.Data.rallyUI, player.channel.owner.transportConnection);
         }
         public static void ClearUIList(Player player)
         {
             for (int i = 0; i < 8; i++)
-                EffectManager.askEffectClearByID((ushort)(30061 + i), player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), player.channel.owner.transportConnection);
         }
         public static void UpdateUISquad(Squad squad)
         {
             foreach (var member in squad.Members)
             {
                 for (int i = 0; i < 6; i++)
-                    EffectManager.askEffectClearByID((ushort)(30071 + i), member.Player.channel.owner.transportConnection);
+                    EffectManager.askEffectClearByID((ushort)(config.Data.squadSUI + i), member.Player.channel.owner.transportConnection);
 
                 for (int i = 0; i < squad.Members.Count; i++)
                 {
                     if (squad.Members[i] == squad.Leader)
                     {
-                        EffectManager.sendUIEffect(30071, 30071, member.Player.channel.owner.transportConnection, true,
+                        EffectManager.sendUIEffect(config.Data.squadSUI, unchecked((short)config.Data.squadSUI), member.Player.channel.owner.transportConnection, true,
                                  squad.Members[i].NickName,
                                  squad.Members[i].Icon,
                                  $"{squad.Name}  <color=#8c8c8c>{squad.Members.Count}/6</color>",
@@ -62,7 +62,7 @@ namespace Uncreated.Warfare.Squads
                     }
                     else
                     {
-                        EffectManager.sendUIEffect((ushort)(30071 + i), (short)(30071 + i), member.SteamPlayer.transportConnection, true,
+                        EffectManager.sendUIEffect((ushort)(config.Data.squadSUI + i), unchecked((short)(config.Data.squadSUI + i)), member.SteamPlayer.transportConnection, true,
                                squad.Members[i].NickName,
                                squad.Members[i].Icon
                            );
@@ -82,7 +82,7 @@ namespace Uncreated.Warfare.Squads
                     if (IsInAnySquad(steamplayer.playerID.steamID, out var currentSquad))
                     {
                         for (int i = 0; i < 8; i++)
-                            EffectManager.askEffectClearByID((ushort)(30081 + i), steamplayer.transportConnection);
+                            EffectManager.askEffectClearByID((ushort)(config.Data.squadLTUI + i), steamplayer.transportConnection);
 
                         var sortedSquads = friendlySquads.OrderBy(s => s.Name != currentSquad.Name).ToList();
 
@@ -96,8 +96,8 @@ namespace Uncreated.Warfare.Squads
                                     display = $"<color=#969696>{display}</color>";
                             }
 
-                            EffectManager.sendUIEffect((ushort)(30081 + i),
-                                (short)(30081 + i),
+                            EffectManager.sendUIEffect((ushort)(config.Data.squadLTUI + i),
+                                unchecked((short)(config.Data.squadLTUI + i)),
                                 steamplayer.transportConnection,
                                 true,
                                 display
@@ -107,12 +107,12 @@ namespace Uncreated.Warfare.Squads
                     else
                     {
                         for (int i = 0; i < 8; i++)
-                            EffectManager.askEffectClearByID((ushort)(30061 + i), steamplayer.transportConnection);
+                            EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), steamplayer.transportConnection);
 
                         for (int i = 0; i < friendlySquads.Count; i++)
                         {
-                            EffectManager.sendUIEffect((ushort)(30061 + i),
-                                (short)(30061 + i),
+                            EffectManager.sendUIEffect((ushort)(config.Data.squadLUI + i),
+                                unchecked((short)(config.Data.squadLUI + i)),
                                 steamplayer.transportConnection,
                                 true,
                                 Squads[i].Name,
@@ -139,8 +139,8 @@ namespace Uncreated.Warfare.Squads
                 {
                     if (Squads[i].Team == player.GetTeam())
                     {
-                        EffectManager.sendUIEffect((ushort)(30061 + i),
-                        (short)(30061 + i),
+                        EffectManager.sendUIEffect((ushort)(config.Data.squadLUI + i),
+                        unchecked((short)(config.Data.squadLUI + i)),
                         player.SteamPlayer.transportConnection,
                         true,
                         Squads[i].Name,
@@ -184,7 +184,6 @@ namespace Uncreated.Warfare.Squads
                 else
                     p.Message("squad_joined", squad.Name);
             }
-                
 
             squad.Members.Add(player);
 
@@ -372,6 +371,9 @@ namespace Uncreated.Warfare.Squads
         public ushort Team2RallyID;
         public ushort RallyTimer;
         public ushort rallyUI;
+        public ushort squadLUI;
+        public ushort squadSUI;
+        public ushort squadLTUI;
         public int SquadDisconnectTime;
         public char lockCharacter;
 
@@ -380,7 +382,10 @@ namespace Uncreated.Warfare.Squads
             Team1RallyID = 38381;
             Team1RallyID = 38382;
             RallyTimer = 60;
-            rallyUI = 32395;
+            rallyUI = 36060;
+            squadLUI = 36040;
+            squadSUI = 36060;
+            squadLTUI = 36050;
             SquadDisconnectTime = 120;
             lockCharacter = '²';
         }

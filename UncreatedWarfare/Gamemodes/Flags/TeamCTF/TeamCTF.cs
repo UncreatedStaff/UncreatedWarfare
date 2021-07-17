@@ -441,8 +441,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.MaxFlagsPerLevel = 2;
             this.UseUI = true;
             this.UseChat = false;
-            this.CaptureUI = 32366;
-            this.FlagUIIdFirst = 32351;
+            this.CaptureUI = 36000;
+            this.FlagUIIdFirst = 36010;
             this.FlagUICount = 10;
             this.EnablePlayerCount = true;
             this.ShowPointsOnUI = true;

@@ -39,9 +39,7 @@ namespace Uncreated.Warfare.XP
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             int xp = await GetXP(player.player, newGroup, true);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player.player, xp);
-            await rtn;
         }
         public static async Task<int> GetXP(Player player, ulong team, bool important)
         {
@@ -80,19 +78,22 @@ namespace Uncreated.Warfare.XP
         }
         public static async Task AddXP(Player player, ulong team, int amount, string message = "")
         {
-            int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
+
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+            int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
             if (ucplayer != null)
                 ucplayer.cachedXp = newBalance;
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             UpdateUI(player, newBalance);
 
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, amount >= 0 ? ("+" + amount + " XP") : amount + " XP", message, ToastMessageSeverity.MINIXP);
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
-                await VehicleSigns.ActiveObjects[i].InvokeUpdate(); // update the color of the ranks on all the signs in case the player unlocked a new rank.
-            await rtn;
+                await VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
+                // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
+            for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                await Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
+                // update the color of the ranks on all the request signs in case the player unlocked a new rank.
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
                 c.stats.AddXP(amount);
@@ -374,7 +375,7 @@ namespace Uncreated.Warfare.XP
 
             XPMultiplier = 1;
 
-            RankUI = 32365;
+            RankUI = 36031;
 
             Ranks = new List<Rank>()
             {

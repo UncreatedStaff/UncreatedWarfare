@@ -296,7 +296,7 @@ namespace Uncreated.Warfare.Officers
             PointsIncreasePerStar = 500;
             PointsMultiplier = 1;
 
-            StarsUI = 32364;
+            StarsUI = 36033;
 
             OfficerRanks = new List<Rank>();
             OfficerRanks.Add(new Rank(1, "Captain", "Cpt.", 30000));

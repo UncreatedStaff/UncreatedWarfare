@@ -37,6 +37,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     await ReloadTranslations();
                     ReloadConfig();
+                    await ReloadKits();
                     await ReloadFlags();
                     await ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload Command");
 
@@ -88,6 +89,17 @@ namespace Uncreated.Warfare.Commands
                         await ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload command.");
                         if (isConsole) F.Log(F.Translate("reload_reloaded_tcp", 0, out _));
                         else player.SendChat("reload_reloaded_tcp");
+                    }
+                    else
+                        player.Player.SendChat("no_permissions");
+                }
+                else if (cmd == "kits")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.kits") || player.HasPermission("uc.reload.all"))
+                    {
+                        await ReloadKits();
+                        if (isConsole) F.Log(F.Translate("reload_reloaded_kits", 0, out _));
+                        else player.SendChat("reload_reloaded_kits");
                     }
                     else
                         player.Player.SendChat("no_permissions");
@@ -167,6 +179,14 @@ namespace Uncreated.Warfare.Commands
             {
                 F.LogError("Execption when reloading TCP client.");
                 F.LogError(ex);
+            }
+        }
+        internal static async Task ReloadKits()
+        {
+            Kits.KitManager.Reload();
+            foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
+            {
+                await sign.InvokeUpdate();
             }
         }
     }

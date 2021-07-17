@@ -41,7 +41,8 @@ namespace Uncreated.Warfare.Commands
         public async void Execute(IRocketPlayer caller, string[] command)
         {
             Player player = caller.DisplayName == "Console" ? Provider.clients.FirstOrDefault()?.player : (caller as UnturnedPlayer).Player;
-            if(command.Length > 0)
+            bool isConsole = caller.DisplayName == "Console";
+            if (command.Length > 0)
             {
                 // awaitable commands go in here, others go in the group of methods below...
                 if (command[0] == "givexp")
@@ -59,7 +60,7 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_givexp_player_not_found", command[1]);
                             return;
                         }
-                        await XPManager.AddXP(target.Player, target.GetTeam(), amount);
+                        await XPManager.AddXP(target.Player, target.GetTeam(), amount, isConsole ? "From Operator" : "From " + F.GetPlayerOriginalNames(player).CharacterName);
                         player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
                     }
                     else
@@ -80,8 +81,8 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_giveof_player_not_found", command[1]);
                             return;
                         }
-                        await OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount);
-                        player.SendChat("test_giveof_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
+                        await OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount, isConsole ? "From Operator" : "From " + F.GetPlayerOriginalNames(player).CharacterName);
+                        player.SendChat("test_giveof_success", amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName);
                     }
                     else
                         player.SendChat("test_giveof_invalid_amount", command[2]);
@@ -531,6 +532,10 @@ namespace Uncreated.Warfare.Commands
             DamageTool.damagePlayer(p, out _);
             DamageTool.damagePlayer(p, out _);
             player.SendChat("test_down_success", 198.ToString(Data.Locale));
+        }
+        private void marker(string[] command, Player player)
+        {
+            F.SpawnMarker(player.channel.owner);
         }
     }
 #pragma warning restore IDE0051 // Remove unused private members

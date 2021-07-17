@@ -26,7 +26,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (data.barricade.id == config.Data.FOBID)
             {
-                TryDeleteFOB(instanceID, data.group);
+                TryDeleteFOB(instanceID, data.group.GetTeam());
             }
         }
 
@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.FOBs
                 Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(Data.Locale), Team2FOBs.Count + 1, Structure));
             }
 
-            UpdateUIForTeam(Structure.group);
+            UpdateUIForTeam(Structure.group.GetTeam());
         }
 
         public static void TryDeleteFOB(uint instanceID, ulong team)
@@ -194,31 +194,27 @@ namespace Uncreated.Warfare.FOBs
             else
                 return;
 
-            int UINumber = 0;
+            ushort UINumber = 0;
 
             for (int i = 0; i < 10; i++)
             {
-                EffectManager.askEffectClearByID((ushort)(32371 + i), player.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
             }
 
-            for (int i = 0; i < FOBList.Count; i++)
+            for (ushort i = 0; i < FOBList.Count; i++)
             {
-                if (i >= 10)
+                if (UINumber >= 10)
                     break;
-
-                string line = "";
-
+                
                 if (FOBList[i] == null || FOBList[i].Structure.barricade.isDead)
                     continue;
 
-                Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - FOBList[i].Structure.point).sqrMagnitude <= (n2.point - FOBList[i].Structure.point).sqrMagnitude ? n1 : n2);
-
-
-                line = "<color=#54e3ff>" + FOBList[i].Name + "</color>";
-
-                line += $" ({((LocationNode)nearerstLocation).name})";
-
-                EffectManager.sendUIEffect((ushort)(32371 + UINumber), (short)(32371 + UINumber), player.Player.channel.owner.transportConnection, true, line);
+                Node nearerstLocation = locations.Aggregate((n1, n2) => 
+                    (n1.point - FOBList[i].Structure.point).sqrMagnitude <= (n2.point - FOBList[i].Structure.point).sqrMagnitude ? n1 : n2);
+                
+                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)), 
+                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name,
+                    nearerstLocation is LocationNode node ? ' ' + node.name : string.Empty));
                 UINumber++;
             }
         }
@@ -295,6 +291,8 @@ namespace Uncreated.Warfare.FOBs
         public bool ShouldWipeAllFOBsOnRoundedEnded;
         public bool ShouldSendPlayersBackToMainOnRoundEnded;
         public bool ShouldKillMaincampers;
+
+        public ushort FirstFOBUiId;
 
         public override void SetDefaults()
         {
@@ -397,6 +395,8 @@ namespace Uncreated.Warfare.FOBs
             ShouldSendPlayersBackToMainOnRoundEnded = true;
             ShouldWipeAllFOBsOnRoundedEnded = true;
             ShouldKillMaincampers = true;
+
+            FirstFOBUiId = 36020;
         }
 
         public FOBConfig() { }
