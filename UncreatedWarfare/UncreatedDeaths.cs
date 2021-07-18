@@ -30,15 +30,18 @@ namespace Uncreated.Warfare
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
-                F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellTeamkill(parameters);
-                await Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                Task e = TicketManager.OnFriendlyKilled(parameters);
+                Task a = Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                {
                     pt.stats.AddTeamkill();
+                    pt.UCPlayerStats.warfare_stats.TellTeamkill(parameters, false);
+                    await pt.UCPlayerStats.SaveAsync();
+                }
+                await a;
+                await e;
             }
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnTeamkill?.Invoke(this, parameters);
-            await rtn;
-            await TicketManager.OnFriendlyKilled(parameters);
         }
         public class KillEventArgs : EventArgs
         {
@@ -81,13 +84,18 @@ namespace Uncreated.Warfare
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
-                F.GetPlayerStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellKill(parameters);
-                await Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                Task e = TicketManager.OnEnemyKilled(parameters);
+                Task a = Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                {
                     pt.stats.AddKill();
+                    pt.UCPlayerStats.warfare_stats.TellKill(parameters, false);
+                    await pt.UCPlayerStats.SaveAsync();
+                }
+                await a;
+                await e;
             }
             OnKill?.Invoke(this, parameters);
-            await TicketManager.OnEnemyKilled(parameters);
         }
         public class SuicideEventArgs : EventArgs
         {
@@ -118,7 +126,6 @@ namespace Uncreated.Warfare
         public async Task Suicide(SuicideEventArgs parameters)
         {
             F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnSuicide?.Invoke(this, parameters);
             OnPlayerDeathGlobal?.Invoke(
                     new DeathEventArgs
@@ -133,17 +140,20 @@ namespace Uncreated.Warfare
                         limb = parameters.limb
                     }
                 );
-            await rtn;
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
-                await TicketManager.OnPlayerSuicide(parameters);
+                Task s = TicketManager.OnPlayerSuicide(parameters);
+                Task a = Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                {
                     pt.stats.AddDeath();
-                await Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
-                F.GetPlayerStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID).warfare_stats.TellDeathSuicide(parameters);
+                    pt.UCPlayerStats.warfare_stats.TellDeathSuicide(parameters, false);
+                    await pt.UCPlayerStats.SaveAsync();
+                }
+                await a;
+                await s;
             }
-            await TicketManager.OnPlayerDeath(parameters.DeadArgs);
         }
         public class DeathEventArgs : EventArgs
         {
@@ -206,15 +216,20 @@ namespace Uncreated.Warfare
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
-                await Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                Task s = TicketManager.OnPlayerDeath(parameters);
+                Task a = Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                {
                     pt.stats.AddDeath();
+
+                    pt.UCPlayerStats.warfare_stats.TellDeathNonSuicide(parameters, false);
+                    await pt.UCPlayerStats.SaveAsync();
+                }
+                await a;
+                await s;
             }
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             OnDeathNotSuicide?.Invoke(this, parameters);
             OnPlayerDeathGlobal?.Invoke(parameters);
-            await rtn;
-            await TicketManager.OnPlayerDeath(parameters);
         }
         private async void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {

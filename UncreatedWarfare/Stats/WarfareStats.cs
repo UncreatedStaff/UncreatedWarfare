@@ -58,7 +58,7 @@ namespace Uncreated.Warfare.Stats
             offences.AddOffence(teamkill);
             Save();
         }
-        public void TellKill(UCWarfare.KillEventArgs parameters)
+        public void TellKill(UCWarfare.KillEventArgs parameters, bool save = true)
         {
             this.kills++;
             ulong killerteam = F.GetTeam(parameters.killer);
@@ -75,9 +75,9 @@ namespace Uncreated.Warfare.Stats
                     AddTeam(team);
                 }
             }
-            Save();
+            if (save) Save();
         }
-        public void TellTeamkill(UCWarfare.KillEventArgs parameters)
+        public void TellTeamkill(UCWarfare.KillEventArgs parameters, bool save = true)
         {
             this.teamkills++;
             ulong killerteam = F.GetTeam(parameters.killer);
@@ -95,9 +95,9 @@ namespace Uncreated.Warfare.Stats
                     AddTeam(team);
                 }
             }
-            Save();
+            if (save) Save();
         }
-        public void TellDeathNonSuicide(UCWarfare.DeathEventArgs parameters)
+        public void TellDeathNonSuicide(UCWarfare.DeathEventArgs parameters, bool save = true)
         {
             this.deaths++;
             ulong deadteam = F.GetTeam(parameters.dead);
@@ -115,9 +115,9 @@ namespace Uncreated.Warfare.Stats
                     AddTeam(team);
                 }
             }
-            Save();
+            if (save) Save();
         }
-        public void TellDeathSuicide(UCWarfare.SuicideEventArgs parameters)
+        public void TellDeathSuicide(UCWarfare.SuicideEventArgs parameters, bool save = true)
         {
             this.deaths++;
             ulong deadteam = F.GetTeam(parameters.dead);
@@ -135,7 +135,7 @@ namespace Uncreated.Warfare.Stats
                     AddTeam(team);
                 }
             }
-            Save();
+            if (save) Save();
         }
         [JsonConstructor]
         public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint officer_points, uint xp, int level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
@@ -224,6 +224,25 @@ namespace Uncreated.Warfare.Stats
                 }
             }
             Save();
+        }
+        public void Update(SteamPlayer player, bool save = true)
+        {
+            ulong teamid = player.GetTeam();
+            int teamindex = teams.FindIndex(x => x.id == teamid);
+            if (teamindex != -1)
+            {
+                teams[teamindex].Update(player, false);
+            }
+            else
+            {
+                if (teamid == 1 || teamid == 2)
+                {
+                    Team team = new Team(teamid, teamid == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(teamid, 0, false));
+                    team.Update(player, false);
+                    AddTeam(team);
+                }
+            }
+            if (save) Save();
         }
     }
     public class Offences : PlayerObject
@@ -436,9 +455,10 @@ namespace Uncreated.Warfare.Stats
             this.time_deployed = 0;
             this.playtime = 0;
         }
-        public void GiveKitAccess(string kitname)
+        public void GiveKitAccess(string kitname, bool save = true)
         {
             if (!owned_paid_kits.Contains(kitname)) owned_paid_kits.Add(kitname);
+            if (save) Save();
         }
         public void AddKill(bool save, UCWarfare.KillEventArgs parameters)
         {
@@ -450,7 +470,8 @@ namespace Uncreated.Warfare.Stats
                 AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 1, 0, 0));
             if (parameters.killer != null)
             {
-                string kitname = PlayerManager.GetKitName(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
+                UCPlayer player = UCPlayer.FromPlayer(parameters.killer);
+                string kitname = player.KitName;
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
@@ -475,7 +496,8 @@ namespace Uncreated.Warfare.Stats
                 AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 0, 0, 1));
             if (parameters.killer != null)
             {
-                string kitname = PlayerManager.GetKitName(parameters.killer.channel.owner.playerID.steamID.m_SteamID);
+                UCPlayer player = UCPlayer.FromPlayer(parameters.killer);
+                string kitname = player.KitName;
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
@@ -503,7 +525,8 @@ namespace Uncreated.Warfare.Stats
             }
             if (parameters.dead != default)
             {
-                string kitname = PlayerManager.GetKitName(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+                UCPlayer player = UCPlayer.FromPlayer(parameters.dead);
+                string kitname = player.KitName;
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
@@ -523,7 +546,8 @@ namespace Uncreated.Warfare.Stats
             deaths++;
             if (parameters.dead != default)
             {
-                string kitname = PlayerManager.GetKitName(parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+                UCPlayer player = UCPlayer.FromPlayer(parameters.dead);
+                string kitname = player.KitName;
                 int kitindex = kits.FindIndex(x => x.name == kitname);
                 Kit kit;
                 if (kitindex != -1)
@@ -539,21 +563,37 @@ namespace Uncreated.Warfare.Stats
             if (save) Save();
         }
 
-        public void AddOfficerPoints(int amount)
+        public void AddOfficerPoints(int amount, bool save = true)
         {
             if (amount > 0)
                 this.officer_points += unchecked((uint)amount);
             else if (amount < 0)
                 this.officer_points -= unchecked((uint)-amount);
-            Save();
+            if (save) Save();
         }
-        public void AddXP(int amount)
+        public void AddXP(int amount, bool save = true)
         {
             if (amount > 0)
                 this.xp += unchecked((uint)amount);
             else if (amount < 0)
                 this.xp -= unchecked((uint)-amount);
-            Save();
+            if (save) Save();
+        }
+        public void Update(SteamPlayer player, bool save = true)
+        {
+            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+            string kitname = ucplayer.KitName;
+            int kitindex = kits.FindIndex(x => x.name == kitname);
+            Kit kit;
+            if (kitindex != -1)
+                kit = kits[kitindex];
+            else
+            {
+                kit = new Kit(kitname, F.GetKitDisplayName(kitname));
+                AddKit(kit);
+            }
+            kit.Update(player, false);
+            if (save) Save();
         }
     }
     public class Kit : PlayerObject
@@ -643,7 +683,7 @@ namespace Uncreated.Warfare.Stats
                 if (squareindex != -1)
                     playstyle.locations[squareindex].kills++;
                 else
-                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 1, 0, 0, 0, 0));
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 1, 0, 0, 0, 0), false);
             }
             if (save) Save();
         }
@@ -686,7 +726,7 @@ namespace Uncreated.Warfare.Stats
                 if (squareindex != -1)
                     playstyle.locations[squareindex].deaths++;
                 else
-                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 1, 0, 0, 0));
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 1, 0, 0, 0), false);
             }
             if (save) Save();
         }
@@ -708,7 +748,7 @@ namespace Uncreated.Warfare.Stats
                 if (squareindex != -1)
                     playstyle.locations[squareindex].deaths++;
                 else
-                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 1, 0, 0, 0));
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 1, 0, 0, 0), false);
             }
             if (save) Save();
         }
@@ -751,6 +791,23 @@ namespace Uncreated.Warfare.Stats
             this.deaths = 0;
             this.teamkills = 0;
             this.points = new List<Point>();
+        }
+        public void Update(SteamPlayer player, bool save = true)
+        {
+            Vector2 gridSquare = F.RoundLocationToGrid(player.player.transform.position);
+            if (playstyle != default)
+            {
+                int squareindex = playstyle.locations.FindIndex(l => l.x == gridSquare.x && l.y == gridSquare.y);
+                if (squareindex != -1)
+                    playstyle.locations[squareindex].times++;
+                else
+                    playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 0, 1, 0, 0), false);
+            } else
+            {
+                playstyle = new Playstyle();
+                playstyle.AddLocation(new Location(gridSquare.x, gridSquare.y, 0, 0, 1, 0, 0), false);
+            }
+            if (save) Save();
         }
     }
     public class Point : PlayerObject
@@ -820,10 +877,11 @@ namespace Uncreated.Warfare.Stats
         /// <summary> Percentage of time the player spent on point out of time spent not on main. (deployed) </summary>
         public decimal pct_deploy_time_spent_on_point;
         public List<Location> locations;
-        public void AddLocation(Location location)
+        public void AddLocation(Location location, bool save = true)
         {
             location.OnNeedsSave += SaveEscalator;
             locations.Add(location);
+            if (save) Save();
         }
         [JsonConstructor]
         public Playstyle(

@@ -53,6 +53,7 @@ namespace Uncreated.Warfare
         public bool EnableMortarWarning;
         public ushort MortarWeapon;
         public float MortarWarningDistance;
+        public float StatsInterval;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -88,6 +89,7 @@ namespace Uncreated.Warfare
             this.EnableMortarWarning = true;
             this.MortarWeapon = 38328;
             this.MortarWarningDistance = 75f;
+            this.StatsInterval = 60f;
         }
     }
     public class Modules

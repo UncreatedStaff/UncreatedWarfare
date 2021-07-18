@@ -101,11 +101,11 @@ namespace Uncreated.Warfare.Components
             if (toastMessages.Count > 0)
                 SendToastMessage(toastMessages.Dequeue());
         }
-        public void StartTracking(Player player)
+        public async Task StartTracking(Player player)
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
-            UCPlayerStats = UncreatedPlayer.Load(player.channel.owner.playerID.steamID.m_SteamID);
+            UCPlayerStats = await UncreatedPlayer.LoadAsync(player.channel.owner.playerID.steamID.m_SteamID);
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwnerDataComponent>();
             toastMessageOpen = 0;

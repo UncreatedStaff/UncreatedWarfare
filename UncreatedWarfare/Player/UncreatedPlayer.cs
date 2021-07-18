@@ -34,7 +34,7 @@ namespace Uncreated.Players
             if (usernames == null && F.TryGetPlayerOriginalNamesFromS64(steam_id, out FPlayerName un))
                 this.usernames = new Usernames(un);
             else this.usernames = usernames;
-            this.sessions = sessions ?? new Sessions(new Dictionary<long, int>());
+            this.sessions = sessions ?? new Sessions(new List<Session>());
             this.addresses = addresses ?? new Addresses();
             this.globalization_data = globalization_data ?? new GlobalizationData();
             this.language = language ?? JSONMethods.DefaultLanguage;
@@ -54,7 +54,7 @@ namespace Uncreated.Players
             if (player == default) throw new ArgumentException("Player is null.", "player");
             this.steam_id = player.playerID.steamID.m_SteamID;
             this.usernames = new Usernames(F.GetPlayerOriginalNames(player));
-            this.sessions = new Sessions(new Dictionary<long, int>());
+            this.sessions = new Sessions(new List<Session>());
             this.addresses = new Addresses();
             if (player.getIPv4Address(out uint ip))
                 this.addresses.LogIn(Parser.getIPFromUInt32(ip));
@@ -80,7 +80,7 @@ namespace Uncreated.Players
                 string s64 = steam_id.ToString();
                 this.usernames = new Usernames(s64, s64, s64, new List<string>(), new List<string>(), new List<string>());
             }
-            this.sessions = new Sessions(new Dictionary<long, int>());
+            this.sessions = new Sessions(new List<Session>());
             this.addresses = new Addresses();
             this.globalization_data = new GlobalizationData();
             this.language = Data.Languages.ContainsKey(this.steam_id) ? Data.Languages[this.steam_id] : JSONMethods.DefaultLanguage;
@@ -139,7 +139,37 @@ namespace Uncreated.Players
             newplayer.SavePath(path);
             return newplayer;
         }
+        public static async Task<UncreatedPlayer> LoadAsync(ulong id)
+        {
+            string path = FileName(id);
+            if (id == default) throw new ArgumentException("SteamID was not a valid Steam64 ID", "steam_id");
+            if (File.Exists(path))
+            {
+                string json;
+                using (StreamReader reader = File.OpenText(path))
+                {
+                    json = await reader.ReadToEndAsync();
+                    reader.Close();
+                    reader.Dispose();
+                }
+                try
+                {
+                    UncreatedPlayer player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
+                    if (player != default) return player;
+                }
+                catch (Exception ex)
+                {
+                    File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
+                    F.LogError($"Error in UncreatedPlayer.Load with id {id}, saved a backup then rewrote the file:");
+                    F.LogError(ex);
+                }
+            }
+            UncreatedPlayer newplayer = new UncreatedPlayer(id);
+            newplayer.SavePath(path);
+            return newplayer;
+        }
         public override void Save() => SavePath(FileName(steam_id));
+        public async Task SaveAsync() => await SavePathAsync(FileName(steam_id));
         private void SavePath(string path)
         {
             F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
@@ -151,20 +181,38 @@ namespace Uncreated.Players
                 writer.Dispose();
             }
         }
+        static readonly JsonSerializerSettings Settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
+        private async Task SavePathAsync(string path)
+        {
+            F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
+            using (TextWriter writer = File.CreateText(path))
+            {
+                string data = JsonConvert.SerializeObject(this, Settings);
+                await writer.WriteAsync(data);
+                writer.Close();
+                writer.Dispose();
+            }
+        }
         protected override void SaveEscalator() => Save();
-        public void LogIn(SteamPlayer player) => LogIn(player, F.GetPlayerOriginalNames(player));
-        public void LogIn(SteamPlayer player, FPlayerName name)
+        public async Task LogIn(SteamPlayer player, string server) => await LogIn(player, F.GetPlayerOriginalNames(player), server);
+        public async Task LogIn(SteamPlayer player, FPlayerName name, string server)
         {
             if (player != default)
             {
                 if (player.getIPv4Address(out uint ip))
                 {
                     if (addresses == default) addresses = new Addresses();
-                    addresses.LogIn(Parser.getIPFromUInt32(ip));
+                    addresses.LogIn(Parser.getIPFromUInt32(ip), false);
                 }
                 usernames.PlayerNameObject = name;
             }
-            sessions.StartSession(DateTime.Now, 0);
+            sessions.StartSession(server, false);
+            await SaveAsync();
+        }
+        public async Task UpdateSession(string server, bool save = true)
+        {
+            sessions.ModifyCurrentSession(server, false);
+            if (save) await SaveAsync();
         }
     }
     public abstract class StatsCollection : PlayerObject
@@ -177,32 +225,47 @@ namespace Uncreated.Players
     }
     public class Sessions : PlayerObject
     {
-        public Dictionary<long, int> sessions;
+        public List<Session> sessions;
         /// <summary>
         /// Adds a session to <see cref="sessions"/> and auto-saves.
         /// </summary>
-        [JsonIgnore]
-        public long current_session;
-        public void StartSession(DateTime start, int duration_seconds)
+        public void StartSession(string server, bool save = true)
         {
-            current_session = start.Ticks;
-            sessions.Add(current_session, duration_seconds);
-            Save();
+            sessions.Add(new Session(DateTime.Now.Ticks, 0, server));
+            if(save) Save();
         }
-        public void ModifyCurrentSession(int duration_seconds)
+        public void ModifyCurrentSession(string server, bool save = true)
         {
-            if (current_session == default) return;
-            if (sessions.ContainsKey(current_session))
-                sessions[current_session] = duration_seconds;
-            else sessions.Add(current_session, duration_seconds);
-            Save();
+            if (sessions.Count == 0) sessions.Add(new Session(DateTime.Now.Ticks, 0, server));
+            else
+            {
+                Session last = sessions.Last(x => x.server == server);
+                if (last == null) sessions.Add(new Session(DateTime.Now.Ticks, 0, server));
+                else last.length = (int)Math.Round((DateTime.Now - new DateTime(last.start_ticks)).TotalSeconds);
+            }
+            if (save) Save();
         }
         [JsonConstructor]
-        public Sessions(Dictionary<long, int> sessions)
+        public Sessions(List<Session> sessions)
         {
-            this.sessions = sessions;
+            this.sessions = sessions ?? new List<Session>();
         }
     }
+    public class Session : PlayerObject
+    {
+        public long start_ticks;
+        public int length;
+        public string server;
+        [JsonConstructor]
+        public Session(long start_ticks, int length, string server)
+        {
+            this.start_ticks = start_ticks;
+            this.length = length;
+            this.server = server;
+        }
+        
+    }
+
     public class DiscordInfo : PlayerObject
     {
         public ulong id;
@@ -261,11 +324,11 @@ namespace Uncreated.Players
         /// <summary>
         /// Adds an ip to <see cref="ip_list"/> and auto-saves.
         /// </summary>
-        public void LogIn(string ip)
+        public void LogIn(string ip, bool save = true)
         {
             if (ip_list.ContainsKey(ip)) ip_list[ip] = DateTime.Now.Ticks;
             else ip_list.Add(ip, DateTime.Now.Ticks);
-            Save();
+            if (save) Save();
         }
         [JsonConstructor]
         public Addresses(Dictionary<string, long> ip_list)

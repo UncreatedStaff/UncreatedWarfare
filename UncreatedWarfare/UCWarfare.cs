@@ -24,6 +24,7 @@ namespace Uncreated.Warfare
     public partial class UCWarfare : RocketPlugin<Config>
     {
         public static UCWarfare Instance;
+        public Coroutine StatsRoutine;
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
         private MySqlData _sqlElsewhere;
@@ -52,6 +53,9 @@ namespace Uncreated.Warfare
 
             F.Log("Patching methods...", ConsoleColor.Magenta);
             Patches.InternalPatches.DoPatching();
+
+            StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
+
             if(LoadMySQLDataFromElsewhere)
             {
                 if (!File.Exists(Data.ElseWhereSQLPath))
@@ -290,6 +294,11 @@ namespace Uncreated.Warfare
         }
         protected override void Unload()
         {
+            if (StatsRoutine != null)
+            {
+                StopCoroutine(StatsRoutine);
+                StatsRoutine = null;
+            }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
             Data.CancelFlags.Cancel();

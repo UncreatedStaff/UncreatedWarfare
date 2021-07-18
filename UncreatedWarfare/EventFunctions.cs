@@ -189,8 +189,12 @@ namespace Uncreated.Warfare
             {
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+                PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 Task.Run(async () =>
                 {
+                    await pt.StartTracking(player.Player);
+                    Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
+                    await pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
                     await OfficerManager.OnPlayerJoined(ucplayer);
                     await XPManager.OnPlayerJoined(ucplayer);
                     await Client.SendPlayerJoined(names);
@@ -209,10 +213,6 @@ namespace Uncreated.Warfare
                     UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
                     Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 }
-                PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
-                pt.StartTracking(player.Player);
-                Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names);
                 if (!UCWarfare.Config.AllowCosmetics)
                 {
                     player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -361,12 +361,17 @@ namespace Uncreated.Warfare
                     else if (player.IsIntern())
                         Commands.DutyCommand.InternOnToOff(player, names);
                 }
+                PlaytimeComponent c = F.GetPlaytimeComponent(player.CSteamID, out bool gotptcomp);
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Task.Run(
                     async () =>
                     {
+                        Task r = null;
+                        if (gotptcomp)
+                            r = c.UCPlayerStats.UpdateSession(Stats.WarfareStats.WarfareName);
                         Task s = Client.SendPlayerLeft(names);
                         await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                        if (gotptcomp) await r;
                         await s;
                     });
                 F.Broadcast("player_disconnected", names.CharacterName);
@@ -388,7 +393,7 @@ namespace Uncreated.Warfare
                     }
                     ownedTraps.Dispose();
                 }
-                if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
+                if (gotptcomp)
                 {
                     UnityEngine.Object.Destroy(c);
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
