@@ -152,6 +152,17 @@ namespace Uncreated.Warfare
                 { "squad_player_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
                 { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from the squad.</color>" },
                 { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
+                { "squad_no_no_words", "<color=#ff8c69>You can't name a squad that.</color>" },
+                
+                { "squad_ui_name", "{0}" },
+                { "squad_ui_player_name", "{0}" },
+                { "squad_ui_header_name", "{0} <color=#8c8c8c>{1}/6</color>" },
+                { "squad_ui_player_count", "<color=#bd6b5b>{0}</color>{1}/6" },
+                { "squad_ui_player_count_small", "{0}/6" },
+                { "squad_ui_player_count_small_locked", "<color=#969696>{0}/6</color>" },
+                { "squad_ui_locked_symbol", "<color=#bd6b5b>{0}</color>" },
+                { "squad_ui_leader_name", "{0}" },
+                { "squad_ui_expanded", "..." },
 
                 // rally
                 { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
@@ -364,6 +375,10 @@ namespace Uncreated.Warfare
                 { "cant_steal_batteries", "<color=#f53b3b>Stealing batteries is not allowed.</color>" },
                 { "cant_leave_group", "<color=#f53b3b>You are not allowed to manually change groups.</color>" },
                 { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
+                { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
+                
+                // other
+                { "friendly_mortar_incoming", "FRIENDLY MORTAR INCOMING" },
                 // battleye
                 { "battleye_kick_console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kick_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>.</color>" },

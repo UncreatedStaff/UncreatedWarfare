@@ -130,8 +130,8 @@ namespace Uncreated.Warfare
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
-            PlaytimeComponent c = F.GetPlaytimeComponent(gun.player, out bool success);
-            if (success)
+            Patches.InternalPatches.lastProjected = projectile;
+            if (F.TryGetPlaytimeComponent(gun.player, out PlaytimeComponent c))
             {
                 c.lastProjected = gun.equippedGunAsset.id;
             }
@@ -237,6 +237,31 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
             }
             
+        }
+        internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
+        {
+            if (player == null) return;
+            if (gesture == EPlayerGesture.POINT)
+            {
+                UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+                if (ucplayer == null) return;
+                if (!Physics.Raycast(new Ray(player.look.aim.transform.position, player.look.aim.transform.forward), out RaycastHit hit, 8192f, RayMasks.BLOCK_COLLISION)) return;
+                ushort marker = ucplayer.MarkerID;
+                player.quests.ReceiveSetMarkerRequest(true, hit.point);
+                if (ucplayer.Squad == null)
+                {
+                    EffectManager.askEffectClearByID(ucplayer.MarkerID, player.channel.owner.transportConnection);
+                    EffectManager.sendEffectReliable(ucplayer.MarkerID, player.channel.owner.transportConnection, hit.point);
+                    player.SendChat("marker_not_in_squad");
+                    return;
+                }
+                if (marker == 0) return;
+                for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
+                {
+                    EffectManager.askEffectClearByID(ucplayer.MarkerID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
+                    EffectManager.sendEffectReliable(ucplayer.MarkerID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, hit.point);
+                }
+            }
         }
         internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
         {

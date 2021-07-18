@@ -2348,17 +2348,34 @@ namespace Uncreated.Warfare
 
             return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
         }
-        public static void SpawnMarker(List<SteamPlayer> players)
+        public static Vector3 TraceForceParabola(Vector3 direction, Vector3 start, int Raymask)
         {
-            foreach (SteamPlayer player in players)
+            Vector3 prev = start;
+            F.Log("START: " + prev.ToString() + ", DIRECTION: " + direction.ToString());
+            for (int i = 1; ; i++)
             {
-                EffectManager.sendEffectReliable(36100, player.transportConnection, Vector3.zero);
+                float t = Time.fixedDeltaTime * i * 10;
+                if (t > 60f) break;
+                Vector3 pos = start + direction * t + Physics.gravity * t * t * 0.5f;
+                F.Log(i.ToString(Data.Locale) + " (" + t.ToString(Data.Locale) + ").");
+                F.Log(pos.ToString());
+                if (Physics.Linecast(prev, pos, out RaycastHit hit, Raymask) && hit.transform != null && !hit.transform.gameObject.CompareTag("Border")) return hit.point;
+                if(Provider.clients.Count > 0)
+                    EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.EmptyMarker, Provider.clients[0].transportConnection, pos);
+                prev = pos;
             }
+            F.Log("FAILED");
+            return Vector3.zero;
         }
-        public static void SpawnMarker(SteamPlayer player)
+        public static string GetLayer(Vector3 direction, Vector3 origin, int Raymask)
         {
-            EffectManager.sendEffectReliable(36100, player.transportConnection, player.player.transform.position);
-            player.player.quests.ReceiveSetMarkerRequest(true, player.player.transform.position);
+            if (Physics.Raycast(origin, direction, out RaycastHit hit, 8192f, Raymask))
+            {
+                if (hit.transform != null)
+                    return hit.transform.gameObject.layer.ToString();
+                else return "nullHitNoTransform";
+            }
+            else return "nullNoHit";
         }
     }
 }

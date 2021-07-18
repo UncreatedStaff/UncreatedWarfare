@@ -56,7 +56,7 @@ namespace Uncreated.Warfare.Components
         public Vehicles.VehicleSpawn currentlylinking;
         public void QueueMessage(ToastMessage message)
         {
-            if (toastMessages.Count == 0)
+            if (toastMessages.Count == 0 && toastMessageOpen == 0)
                 SendToastMessage(message);
             else
                 toastMessages.Enqueue(message);

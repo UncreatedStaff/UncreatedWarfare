@@ -54,17 +54,17 @@ namespace Uncreated.Warfare.Squads
                     if (squad.Members[i] == squad.Leader)
                     {
                         EffectManager.sendUIEffect(config.Data.squadSUI, unchecked((short)config.Data.squadSUI), member.Player.channel.owner.transportConnection, true,
-                                 squad.Members[i].NickName,
-                                 squad.Members[i].Icon,
-                                 $"{squad.Name}  <color=#8c8c8c>{squad.Members.Count}/6</color>",
-                                 squad.IsLocked ? "<color=#bd6b5b>²</color>" : ""
+                                 F.Translate("squad_ui_player_name", member, F.GetPlayerOriginalNames(squad.Members[i]).NickName),
+                                 squad.Members[i].Icon.ToString(),
+                                 F.Translate($"squad_ui_header_name", member, squad.Name, squad.Members.Count.ToString(Data.Locale)),
+                                 squad.IsLocked ? F.Translate("squad_ui_locked_symbol", member, config.Data.lockCharacter.ToString()) : ""
                              );
                     }
                     else
                     {
                         EffectManager.sendUIEffect((ushort)(config.Data.squadSUI + i), unchecked((short)(config.Data.squadSUI + i)), member.SteamPlayer.transportConnection, true,
-                               squad.Members[i].NickName,
-                               squad.Members[i].Icon
+                               F.Translate("squad_ui_player_name", member, F.GetPlayerOriginalNames(squad.Members[i]).NickName),
+                               squad.Members[i].Icon.ToString()
                            );
                     }
                 }
@@ -88,19 +88,15 @@ namespace Uncreated.Warfare.Squads
 
                         for (int i = 0; i < sortedSquads.Count; i++)
                         {
-                            string display = "...";
-                            if (i != 0)
-                            {
-                                display = $"{sortedSquads[i].Members.Count}/6";
-                                if (sortedSquads[i].IsLocked)
-                                    display = $"<color=#969696>{display}</color>";
-                            }
-
                             EffectManager.sendUIEffect((ushort)(config.Data.squadLTUI + i),
                                 unchecked((short)(config.Data.squadLTUI + i)),
                                 steamplayer.transportConnection,
                                 true,
-                                display
+                                i == 0 ? 
+                                F.Translate("squad_ui_expanded", steamplayer) : 
+                                F.Translate(sortedSquads[i].IsLocked ?
+                                    "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", steamplayer, 
+                                    sortedSquads[i].Members.Count.ToString(Data.Locale))
                             );
                         }
                     }
@@ -115,9 +111,10 @@ namespace Uncreated.Warfare.Squads
                                 unchecked((short)(config.Data.squadLUI + i)),
                                 steamplayer.transportConnection,
                                 true,
-                                Squads[i].Name,
-                                !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.Data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
-                                Squads[i].Leader.NickName
+                                F.Translate("squad_ui_leader_name", steamplayer, Squads[i].Name),
+                                F.Translate("squad_ui_player_count", steamplayer, Squads[i].IsLocked ? 
+                                config.Data.lockCharacter + "  " : "", Squads[i].Members.Count.ToString(Data.Locale)),
+                                F.Translate("squad_ui_leader_name", steamplayer, F.GetPlayerOriginalNames(Squads[i].Leader).CharacterName)
                             );
                         }
                     }
@@ -143,9 +140,9 @@ namespace Uncreated.Warfare.Squads
                         unchecked((short)(config.Data.squadLUI + i)),
                         player.SteamPlayer.transportConnection,
                         true,
-                        Squads[i].Name,
-                        !Squads[i].IsLocked ? $"{Squads[i].Members.Count}/6" : $"<color=#bd6b5b>{config.Data.lockCharacter}</color>  {Squads[i].Members.Count}/6",
-                        Squads[i].Leader.NickName
+                        F.Translate("squad_ui_leader_name", player, Squads[i].Name),
+                        F.Translate("squad_ui_player_count", player, Squads[i].IsLocked ? $"{config.Data.lockCharacter}  " : "", Squads[i].Members.Count.ToString(Data.Locale)),
+                        F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(Squads[i].Leader).CharacterName)
                     );
                     }
                 }
@@ -376,6 +373,9 @@ namespace Uncreated.Warfare.Squads
         public ushort squadLTUI;
         public int SquadDisconnectTime;
         public char lockCharacter;
+        public Dictionary<Kit.EClass, ClassConfig> Classes;
+        public ushort EmptyMarker;
+        public ushort MortarMarker;
 
         public override void SetDefaults()
         {
@@ -386,10 +386,45 @@ namespace Uncreated.Warfare.Squads
             squadLUI = 36040;
             squadSUI = 36060;
             squadLTUI = 36050;
+            EmptyMarker = 36100;
+            MortarMarker = 36120;
             SquadDisconnectTime = 120;
             lockCharacter = '²';
+            Classes = new Dictionary<Kit.EClass, ClassConfig>
+            {
+                { Kit.EClass.NONE, new ClassConfig('±', 36101) },
+                { Kit.EClass.UNARMED, new ClassConfig('±', 36101) },
+                { Kit.EClass.SQUADLEADER, new ClassConfig('¦', 36102) },
+                { Kit.EClass.RIFLEMAN, new ClassConfig('¡', 36103) },
+                { Kit.EClass.MEDIC, new ClassConfig('¢', 36104) },
+                { Kit.EClass.BREACHER, new ClassConfig('¤', 36105) },
+                { Kit.EClass.AUTOMATIC_RIFLEMAN, new ClassConfig('¥', 36106) },
+                { Kit.EClass.GRENADIER, new ClassConfig('¬', 36107) },
+                { Kit.EClass.MACHINE_GUNNER, new ClassConfig('«', 36108) },
+                { Kit.EClass.LAT, new ClassConfig('®', 36109) },
+                { Kit.EClass.HAT, new ClassConfig('¯', 36110) },
+                { Kit.EClass.MARKSMAN, new ClassConfig('¨', 36111) },
+                { Kit.EClass.SNIPER, new ClassConfig('£', 36112) },
+                { Kit.EClass.AP_RIFLEMAN, new ClassConfig('©', 36113) },
+                { Kit.EClass.COMBAT_ENGINEER, new ClassConfig('ª', 36114) },
+                { Kit.EClass.CREWMAN, new ClassConfig('§', 36115) },
+                { Kit.EClass.PILOT, new ClassConfig('°', 36116) },
+                { Kit.EClass.SPEC_OPS, new ClassConfig('À', 36117) },
+            };
         }
 
         public SquadConfigData() { }
+    }
+
+    public class ClassConfig
+    {
+        public char Icon;
+        public ushort MarkerEffect;
+        [Newtonsoft.Json.JsonConstructor]
+        public ClassConfig(char Icon, ushort MarkerEffect)
+        {
+            this.Icon = Icon;
+            this.MarkerEffect = MarkerEffect;
+        }
     }
 }

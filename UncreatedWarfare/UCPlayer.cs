@@ -109,52 +109,29 @@ namespace Uncreated.Warfare
             IsOnline = true;
             cachedXp = -1;
         }
-        public string Icon
+        public char Icon
         {
             get
             {
-                switch (KitClass)
-                {
-                    default:
-                    case Kit.EClass.NONE:
-                        return "±";
-                    case Kit.EClass.UNARMED:
-                        return "±";
-                    case Kit.EClass.SQUADLEADER:
-                        return "¦";
-                    case Kit.EClass.RIFLEMAN:
-                        return "¡";
-                    case Kit.EClass.MEDIC:
-                        return "¢";
-                    case Kit.EClass.BREACHER:
-                        return "¤";
-                    case Kit.EClass.AUTOMATIC_RIFLEMAN:
-                        return "¥";
-                    case Kit.EClass.GRENADIER:
-                        return "¬";
-                    case Kit.EClass.MACHINE_GUNNER:
-                        return "«";
-                    case Kit.EClass.LAT:
-                        return "®";
-                    case Kit.EClass.HAT:
-                        return "¯";
-                    case Kit.EClass.MARKSMAN:
-                        return "¨";
-                    case Kit.EClass.SNIPER:
-                        return "£";
-                    case Kit.EClass.AP_RIFLEMAN:
-                        return "©";
-                    case Kit.EClass.COMBAT_ENGINEER:
-                        return "ª";
-                    case Kit.EClass.CREWMAN:
-                        return "§";
-                    case Kit.EClass.PILOT:
-                        return "°";
-                }
+                if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+                    return config.Icon;
+                else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
+                    return config.Icon;
+                else return '±';
             }
         }
 
-
+        public ushort MarkerID
+        {
+            get
+            {
+                if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+                    return config.MarkerEffect;
+                else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
+                    return config.MarkerEffect;
+                else return 0;
+            }
+        }
         public bool IsSquadLeader()
         {
             if (Squad is null)

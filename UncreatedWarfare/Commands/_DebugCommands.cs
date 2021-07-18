@@ -533,9 +533,14 @@ namespace Uncreated.Warfare.Commands
             DamageTool.damagePlayer(p, out _);
             player.SendChat("test_down_success", 198.ToString(Data.Locale));
         }
-        private void marker(string[] command, Player player)
+        private void layer(string[] command, Player player)
         {
-            F.SpawnMarker(player.channel.owner);
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            F.Log(F.GetLayer(player.look.aim.position, player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
         }
     }
 #pragma warning restore IDE0051 // Remove unused private members

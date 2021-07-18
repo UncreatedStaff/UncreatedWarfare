@@ -50,6 +50,9 @@ namespace Uncreated.Warfare
         public float ReviveTimeSeconds;
         public byte MaxPlayerCount;
         public bool LowerSteamPlayerCount;
+        public bool EnableMortarWarning;
+        public ushort MortarWeapon;
+        public float MortarWarningDistance;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -82,6 +85,9 @@ namespace Uncreated.Warfare
             this.ReviveTimeSeconds = 5f;
             this.MaxPlayerCount = 48;
             this.LowerSteamPlayerCount = true;
+            this.EnableMortarWarning = true;
+            this.MortarWeapon = 38328;
+            this.MortarWarningDistance = 75f;
         }
     }
     public class Modules
@@ -180,6 +186,8 @@ namespace Uncreated.Warfare
         public bool ReceiveStealVehicleBattery;
         public bool requestGroupExit;
         public bool ReceiveDragItem;
+        public bool ReceiveGestureRequest;
+        public bool project;
 
         public PatchToggles()
         {
@@ -200,8 +208,9 @@ namespace Uncreated.Warfare
             this.ReceiveStealVehicleBattery = true;
             this.requestGroupExit = true;
             this.ReceiveDragItem = true;
+            this.ReceiveGestureRequest = true;
+            this.project = true;
         }
-
     }
     public class AdminLoggerSettings
     {

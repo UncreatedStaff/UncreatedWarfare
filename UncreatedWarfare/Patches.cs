@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using UnityEngine;
 
@@ -17,6 +18,7 @@ namespace Uncreated.Warfare
 {
     public static class Patches
     {
+        public static string ToString2(this Vector3 v3) => $"({Math.Round(v3.x, 3)}, {Math.Round(v3.y, 3)}, {Math.Round(v3.z, 3)})";
         public delegate void BarricadeDroppedEventArgs(BarricadeRegion region, BarricadeData data, ref Transform location);
         public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort index, ushort plant);
         public delegate void StructureDestroyedEventArgs(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID);
@@ -25,6 +27,7 @@ namespace Uncreated.Warfare
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
         public delegate void PlayerTriedStoreItem(Player player, byte page, ItemJar jar, ref bool allow);
+        public delegate void PlayerGesture(Player player, EPlayerGesture gesture, ref bool allow);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
@@ -34,6 +37,7 @@ namespace Uncreated.Warfare
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
         public static event BatteryStealingDelegate OnBatterySteal_Global;
         public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
+        public static event PlayerGesture OnPlayerGesture_Global;
 
         /// <summary>
         /// Stores all <see cref="Harmony"/> patches.
@@ -49,6 +53,80 @@ namespace Uncreated.Warfare
             }
 #pragma warning disable IDE0051
 #pragma warning disable IDE0060 // Remove unused parameter
+            internal static GameObject lastProjected;
+            // SDG.Unturned.UseableGun
+            /// <summary>
+            /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
+            /// </summary>
+
+            [HarmonyPatch(typeof(UseableGun), "project")]
+            [HarmonyPostfix]
+            static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
+            {
+                if (!UCWarfare.Config.Patches.project) return;
+                if (lastProjected != null && lastProjected.activeInHierarchy)
+                {
+                    if (UCWarfare.Config.EnableMortarWarning && __instance.equippedGunAsset?.id == UCWarfare.Config.MortarWeapon)
+                    {
+                        //Vector3 force = direction * __instance.equippedGunAsset.ballisticForce * (magazineAsset == null ? 1 : magazineAsset.projectileLaunchForceMultiplier);
+                        //Starting point
+
+                        Vector3 yaw = new Vector3(direction.x, 0, direction.z).normalized;
+                        float dp = direction.x * yaw.x + direction.y * yaw.y + direction.z * yaw.z;
+                        float angle = Mathf.Acos(dp / (direction.magnitude * yaw.magnitude)) - (Mathf.PI / 4);
+                        float range = Mathf.Sin((2f * angle) - (Mathf.PI / 2f)) / (-(9.81f / (133.3f * 133.3f)));
+                        Vector3 dest = origin + yaw * range;
+                        dest.y = F.GetTerrainHeightAt2DPoint(new Vector2(dest.x, dest.z));
+                        Vector2 dest2d = new Vector2(dest.x, dest.z);
+                        if (dest != Vector3.zero)
+                        {
+                            ulong team = __instance.channel.owner.GetTeam();
+                            if (team == 1 || team == 2)
+                            {
+                                IEnumerator<WaitForSeconds> coroutine(GameObject obj)
+                                {
+                                    List<ulong> warned = new List<ulong>();
+                                    while (obj != null)
+                                    {
+                                        IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
+                                        while (players.MoveNext())
+                                        {
+                                            if (!warned.Contains(players.Current.playerID.steamID.m_SteamID) && players.Current.GetTeam() == team &&
+                                                (new Vector2(players.Current.player.transform.position.x, players.Current.player.transform.position.z) - dest2d).sqrMagnitude <
+                                                UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance)
+                                            {
+                                                ToastMessage.QueueMessage(players.Current, F.Translate("friendly_mortar_incoming", players.Current), ToastMessageSeverity.WARNING);
+                                                warned.Add(players.Current.playerID.steamID.m_SteamID);
+                                            }
+                                        }
+                                        players.Dispose();
+                                        yield return new WaitForSeconds(1f);
+                                    }
+                                }
+                                UCWarfare.I.StartCoroutine(coroutine(lastProjected));
+                            }
+                        }
+                    }
+                }
+                
+            }
+            // SDG.Unturned.PlayerAnimator
+            /// <summary>
+            /// Prefix of <see cref="PlayerAnimator.ReceiveGesture(EPlayerGesture)"/> to add an event.
+            /// </summary>
+            [HarmonyPatch(typeof(PlayerAnimator), "ReceiveGestureRequest")]
+            [HarmonyPrefix]
+            static bool OnGestureReceived(EPlayerGesture newGesture, PlayerAnimator __instance)
+            {
+                if (!UCWarfare.Config.Patches.ReceiveGestureRequest) return true;
+                if (OnPlayerGesture_Global != null)
+                {
+                    bool allow = true;
+                    OnPlayerGesture_Global.Invoke(__instance.player, newGesture, ref allow);
+                    return allow;
+                }
+                return true;
+            }
             // SDG.Unturned.PlayerInventory
             ///<summary>
             /// Prefix of <see cref="PlayerInventory.ReceiveDragItem(byte, byte, byte, byte, byte, byte, byte)"/> to disallow players leaving their group.

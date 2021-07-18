@@ -40,7 +40,12 @@ namespace Uncreated.Warfare.Squads
 
                 if (!SquadManager.IsInAnySquad(player.CSteamID, out _))
                 {
-                    if (!SquadManager.FindSquad(name, player.GetTeam(), out var squad))
+                    string newname = name;
+                    ProfanityFilter.filterOutCurseWords(ref newname, '*');
+                    if (name != newname)
+                    {
+                        player.SendChat("squad_no_no_words", name);
+                    } else if (!SquadManager.FindSquad(name, player.GetTeam(), out var squad))
                     {
                         SquadManager.CreateSquad(name, player, player.GetTeam(), player.Branch);
 

@@ -224,6 +224,7 @@ namespace Uncreated.Warfare
             Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
             Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
+            Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
@@ -251,7 +252,8 @@ namespace Uncreated.Warfare
             Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
-            Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
+            Patches.OnPlayerTriedStoreItem_Global -= EventFunctions.OnTryStoreItem;
+            Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;

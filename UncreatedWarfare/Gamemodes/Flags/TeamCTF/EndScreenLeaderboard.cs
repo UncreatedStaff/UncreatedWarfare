@@ -100,7 +100,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format", player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(SecondsEndGameLength)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
-            List<KeyValuePair<Player, string>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam);
+            List<KeyValuePair<Player, char>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam);
             List<KeyValuePair<Player, int>> topkills = warstats.GetTop5MostKills();
             List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = warstats.GetTop5OnPointTime();
             List<KeyValuePair<Player, int>> topxpgain = warstats.GetTop5XP();
@@ -135,8 +135,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     string color = topsquadplayers[i].Key.GetTeamColorHex();
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'N', F.Translate("lb_player_name", player,
                         F.GetPlayerOriginalNames(topsquadplayers[i].Key).CharacterName, color));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.ObjectTranslate("lb_player_value",
-                        player.playerID.steamID.m_SteamID, topsquadplayers[i].Value, color));
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, headerPrefixes[0] + (i + 1).ToString(Data.Locale) + 'V', F.Translate("lb_player_value",
+                        player.playerID.steamID.m_SteamID, topsquadplayers[i].Value.ToString(), color));
                 }
             }
             for (int i = 0; i < 6; i++)
@@ -443,14 +443,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 rtnList.Add(new KeyValuePair<Player, int>(stats[i].player, stats[i].kills));
             return rtnList;
         }
-        public List<KeyValuePair<Player, string>> GetTopSquad(out string squadname, out ulong squadteam)
+        public List<KeyValuePair<Player, char>> GetTopSquad(out string squadname, out ulong squadteam)
         {
             List<Squad> squads = SquadManager.Squads.ToList();
             if (squads.Count == 0)
             {
                 squadname = NO_PLAYER_NAME_PLACEHOLDER;
                 squadteam = 0;
-                return new List<KeyValuePair<Player, string>>();
+                return new List<KeyValuePair<Player, char>>();
             }
             squads.Sort((a, b) =>
             {
@@ -517,10 +517,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     return axp.CompareTo(bxp);
                 }
             });
-            List<KeyValuePair<Player, string>> rtn = new List<KeyValuePair<Player, string>>(players.Count > 6 ? 6 : players.Count);
+            List<KeyValuePair<Player, char>> rtn = new List<KeyValuePair<Player, char>>(players.Count > 6 ? 6 : players.Count);
             for (int i = 0; i < (players.Count > 6 ? 6 : players.Count); i++)
             {
-                rtn.Add(new KeyValuePair<Player, string>(players[i].Player, players[i].Icon));
+                rtn.Add(new KeyValuePair<Player, char>(players[i].Player, players[i].Icon));
             }
             return rtn;
         }
