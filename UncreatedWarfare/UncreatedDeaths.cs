@@ -27,6 +27,11 @@ namespace Uncreated.Warfare
         private async Task Teamkill(KillEventArgs parameters)
         {
             F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
+            F.Log(F.Translate("teamkilled_console_log", 0, 
+                F.GetPlayerOriginalNames(parameters.killer).PlayerName, 
+                parameters.killer.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                F.GetPlayerOriginalNames(parameters.dead).PlayerName, 
+                parameters.dead.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -127,19 +132,19 @@ namespace Uncreated.Warfare
         {
             F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             OnSuicide?.Invoke(this, parameters);
-            OnPlayerDeathGlobal?.Invoke(
-                    new DeathEventArgs
-                    {
-                        cause = parameters.cause,
-                        killerargs = null,
-                        dead = parameters.dead,
-                        distance = parameters.distance,
-                        item = parameters.item,
-                        itemName = parameters.itemName,
-                        key = parameters.key,
-                        limb = parameters.limb
-                    }
-                );
+            DeathEventArgs args = new DeathEventArgs
+            {
+                cause = parameters.cause,
+                killerargs = null,
+                dead = parameters.dead,
+                distance = parameters.distance,
+                item = parameters.item,
+                itemName = parameters.itemName,
+                key = parameters.key,
+                limb = parameters.limb
+            };
+            OnPlayerDeathGlobal?.Invoke(args);
+            Task d = Data.Gamemode?.OnPlayerDeath(args);
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -154,6 +159,7 @@ namespace Uncreated.Warfare
                 await a;
                 await s;
             }
+            await d;
         }
         public class DeathEventArgs : EventArgs
         {
@@ -214,6 +220,7 @@ namespace Uncreated.Warfare
         {
             F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.dead.GetTeamByte();
+            Task d = Data.Gamemode?.OnPlayerDeath(parameters);
             if (team == 1 || team == 2)
             {
                 Task s = TicketManager.OnPlayerDeath(parameters);
@@ -230,6 +237,7 @@ namespace Uncreated.Warfare
             }
             OnDeathNotSuicide?.Invoke(this, parameters);
             OnPlayerDeathGlobal?.Invoke(parameters);
+            await d;
         }
         private async void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
@@ -701,6 +709,7 @@ namespace Uncreated.Warfare
                 string key = cause.ToString();
                 if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
                 if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINCAMP")) key = "MAINCAMP";
+                else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINDEATH")) key = "MAINDEATH";
                 if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL) && foundKiller)
                 {
                     if (item != 0)

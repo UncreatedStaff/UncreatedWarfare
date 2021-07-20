@@ -42,16 +42,16 @@ namespace Uncreated.Warfare.Squads
         {
             if (barricade.id == SquadManager.config.Data.Team1RallyID || barricade.id == SquadManager.config.Data.Team2RallyID)
             {
-                var player = UCPlayer.FromID(owner);
+                UCPlayer player = UCPlayer.FromID(owner);
                 if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
                 {
                     if (player.Squad.Members.Count > 1)
                     {
                         int nearbyEnemiesCount = 0;
                         if (player.IsTeam1())
-                            nearbyEnemiesCount = PlayerManager.Team2Players.Where(p => (p.Position - player.Position).sqrMagnitude < Math.Pow(100, 2)).Count();
+                            nearbyEnemiesCount = PlayerManager.Team2Players.Count(p => (p.Position - player.Position).sqrMagnitude < 100 * 100);
                         if (player.IsTeam2())
-                            nearbyEnemiesCount = PlayerManager.Team1Players.Where(p => (p.Position - player.Position).sqrMagnitude < Math.Pow(100, 2)).Count();
+                            nearbyEnemiesCount = PlayerManager.Team1Players.Count(p => (p.Position - player.Position).sqrMagnitude < 100 * 100);
 
                         if (nearbyEnemiesCount > 0)
                         {
@@ -127,7 +127,7 @@ namespace Uncreated.Warfare.Squads
         {
             if (!rallypoints.Exists(r => r.structure.instanceID == data.instanceID))
             {
-                var existing = rallypoints.Find(r => r.squad.Name == squad.Name);
+                RallyPoint existing = rallypoints.Find(r => r.squad.Name == squad.Name);
                 if (existing != null)
                 {
                     existing.ClearUIForSquad();

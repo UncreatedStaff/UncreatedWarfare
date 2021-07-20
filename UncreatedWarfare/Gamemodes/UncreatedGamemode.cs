@@ -102,6 +102,10 @@ namespace Uncreated.Warfare.Gamemodes
         {
             await Task.Yield();
         }
+        public virtual async Task OnPlayerDeath(UCWarfare.DeathEventArgs args)
+        {
+            await Task.Yield();
+        }
         public virtual async Task OnLevelLoaded()
         {
             if (useEventLoop)

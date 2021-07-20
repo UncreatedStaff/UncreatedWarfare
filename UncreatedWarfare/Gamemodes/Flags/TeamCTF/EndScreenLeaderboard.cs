@@ -54,6 +54,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.player.movement.sendPluginSpeedMultiplier(1f);
                 player.player.movement.sendPluginJumpMultiplier(1f);
             }
+            oldFlags.Clear();
             if (ShuttingDown)
             {
                 await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
@@ -71,6 +72,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor, string progresschars)
         {
             oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
+            player.player.movement.forceRemoveFromVehicle();
             player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
             player.player.movement.sendPluginSpeedMultiplier(0f);
             player.player.life.serverModifyHealth(100);
@@ -79,7 +81,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             player.player.life.serverModifyVirus(100);
             player.player.life.serverModifyStamina(100);
             player.player.movement.sendPluginJumpMultiplier(0f);
-            player.player.teleportToLocation(F.GetBaseSpawn(player.player.channel.owner), winner == 1 ? 0f : (winner == 2 ? 85f : 0));
+            if (!player.player.life.isDead)
+                player.player.teleportToLocation(F.GetBaseSpawn(player, out ulong playerteam), F.GetBaseAngle(playerteam));
+            else 
+                player.player.life.ReceiveRespawnRequest(false);
             // error is here
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
             PlayerCurrentGameStats stats;

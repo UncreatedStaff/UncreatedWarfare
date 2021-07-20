@@ -1,19 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Net;
-using System.Net.Sockets;
 using System.IO;
-using Uncreated.Warfare.Stats;
+using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Networking.Invocations;
 using Uncreated.Players;
-using System.Runtime.CompilerServices;
 
 namespace Uncreated.Networking
 {
+
     public static class Client
     {
         public static SendTask Send { get => _send; }
@@ -227,27 +224,20 @@ namespace Uncreated.Networking
             try
             {
                 if (message.Length <= 0) return;
-                if (message.Length < sizeof(ushort) + 1)
+                if (message.Length < sizeof(ushort) + 3)
                 {
-                    Warfare.F.LogError("Received a message under the minimum size of 3");
+                    Warfare.F.LogError("Received a message under the minimum size of 5.");
                     BeginRead.Invoke();
                     return;
                 }
-                ECall call;
-                byte id;
-                if (ByteMath.ReadUInt16(out ushort callid, 0, message))
-                {
-                    call = (ECall)callid;
-                    id = message[2];
-                }
-                else
+                if (!ByteMath.DeCallify(message, out ECall call, out EReturnType type, out byte id, out byte valrtnid))
                 {
                     Warfare.F.LogError("Incorrect call enumerator given in response: " + message[0].ToString(Warfare.Data.Locale));
                     BeginRead.Invoke();
                     return;
                 }
-                byte[] data = new byte[message.Length - sizeof(ushort) - 1];
-                Array.Copy(message, sizeof(ushort) + 1, data, 0, data.Length);
+                byte[] data = new byte[message.Length - sizeof(ushort) - 3];
+                Array.Copy(message, sizeof(ushort) + 3, data, 0, data.Length);
                 bool success = false;
                 switch (call)
                 {
@@ -270,7 +260,8 @@ namespace Uncreated.Networking
                         {
                             await ReceiveInvokeBan(banned, admin, reason, duration, timestamp);
                             success = true;
-                        } else
+                        }
+                        else
                         {
                             Warfare.F.Log("FAILED TO READ BAN: " + string.Join(", ", data));
                         }
@@ -328,6 +319,7 @@ namespace Uncreated.Networking
             Client._send = Send;
             Client._beginRead = () => _ = I?.connection?.BeginRead(false);
             Client._beginReadCancellableAwaitable = (token) => I.connection.BeginRead(token, true);
+            NetworkCall.NullCheck = () => I == null || !I.IsConnected();
         }
         public async Task Connect(CancellationTokenSource token) => await connection?.Connect(token, true);
         public void Shutdown()
@@ -342,7 +334,7 @@ namespace Uncreated.Networking
             }
             catch (ObjectDisposedException) { }
         }
-        public bool IsConnected() => connection.connected;
+        public bool IsConnected() => connection != null && connection.socket != null && connection.socket.Connected && connection.connected;
         public async Task SendMessageAsync(byte[] message) => await connection?.SendMessage(message);
         public static async Task SendMessageAsyncStatic(byte[] message) => await I?.SendMessageAsync(message);
         internal async Task ReceiveData(byte[] data) => await OnReceivedData?.Invoke(data);
@@ -420,6 +412,7 @@ namespace Uncreated.Networking
                         if (stream == default)
                         {
                             Warfare.F.LogError("Disconnected from TCP host.");
+                            connected = false;
                             return false;
                         }
                         listening = true;
@@ -530,7 +523,9 @@ namespace Uncreated.Networking
         GIVE_HELPER = 29,
         REVOKE_ADMIN = 30,
         REVOKE_INTERN = 31,
-        REVOKE_HELPER = 32
+        REVOKE_HELPER = 32,
+        MEMBER_COUNT_TEST = 33,
+        GET_MAP_NAME = 34
     }
     public enum EStartupStep : byte
     {

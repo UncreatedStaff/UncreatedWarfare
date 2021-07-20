@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Kits
                         ItemJar jar = life.player.inventory.getItem(page, index);
 
                         var asset = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id);
-                        float percentage = (float)jar.item.amount / (float)asset.amount;
+                        float percentage = (float)jar.item.amount / asset.amount;
 
                         bool notInKit = !kit.HasItemOfID(jar.item.id);
                         if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))

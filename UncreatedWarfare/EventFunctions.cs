@@ -238,6 +238,43 @@ namespace Uncreated.Warfare
             }
             
         }
+        static Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
+        internal static void RemoveDamageMessageTicks(ulong player)
+        {
+            lastSentMessages.Remove(player);
+        }
+        internal static void OnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
+        {
+            if (parameters.killer != CSteamID.Nil && parameters.killer != Provider.server)
+            {
+                Player killer = PlayerTool.getPlayer(parameters.killer);
+                if (killer != null)
+                {
+                    ulong killerteam = killer.GetTeam();
+                    ulong deadteam = parameters.player.GetTeam();
+                    if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(parameters.player.transform.position)) ||
+                        (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(parameters.player.transform.position)))
+                    {
+                        shouldAllow = false;
+                        byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
+                        killer.life.askDamage(newdamage, parameters.direction * newdamage, EDeathCause.ARENA,
+                        parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
+                        if (!lastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
+                        {
+                            killer.SendChat("amc_reverse_damage");
+                            if (lasttime == default)
+                                lastSentMessages.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, DateTime.Now.Ticks);
+                            else 
+                                lastSentMessages[parameters.player.channel.owner.playerID.steamID.m_SteamID] = DateTime.Now.Ticks;
+                        }
+                    }
+                }
+            }
+
+            if(shouldAllow)
+                Data.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
+        }
+
         internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
         {
             if (player == null) return;
@@ -349,6 +386,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = ucplayer.KitName;
             try

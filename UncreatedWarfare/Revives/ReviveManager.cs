@@ -19,7 +19,6 @@ namespace Uncreated.Warfare.Revives
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
             DistancesFromInitialShot = new Dictionary<ulong, float>();
 
-            DamageTool.damagePlayerRequested += OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
             UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
@@ -82,7 +81,7 @@ namespace Uncreated.Warfare.Revives
                 await XPManager.AddXP(medic, medic.GetTeam(), XPManager.config.Data.FriendlyRevivedXP);
             }
         }
-        private void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
+        internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
             F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
@@ -166,7 +165,6 @@ namespace Uncreated.Warfare.Revives
                 player.player.equipment.onEquipRequested -= OnEquipRequested;
                 player.player.stance.onStanceUpdated = null;
             }
-            DamageTool.damagePlayerRequested -= OnPlayerDamagedRequested;
             UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
             PlayerLife.OnRevived_Global -= OnPlayerRespawned;
         }

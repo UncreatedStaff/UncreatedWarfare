@@ -95,7 +95,7 @@ namespace Uncreated.Warfare
                 { "reset_language_not_needed", "<color=#dd1111>You are already on the default language: <color=#e6e3d5>{0}</color>.</color>" },
                 
                 // Toasts
-                { "welcome_message", "Thank's for playing <color=#{0}>Uncreated Warfare</color>!\nWelcome back <color=#{2}>{1}</color>." },
+                { "welcome_message", "Thanks for playing <color=#{0}>Uncreated Warfare</color>!\nWelcome back <color=#{2}>{1}</color>." },
                 { "welcome_message_first_time", "Welcome to <color=#{0}>Uncreated Warfare</color>!\nTalk to the NPCs to get started." },
 
                 // Kits
@@ -216,16 +216,6 @@ namespace Uncreated.Warfare
                 { "deploy_e_incombat", "<color=#ffaa42>You are in combat, soldier! You can deploy in another: <color=#e3987f>{0}</color>.</color>" },
                 { "deploy_standby", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. You will arrive in <color=#eeeeee>{1} seconds</color>.</color>" },
                 { "deploy_standby_nomove", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. Stand still for <color=#eeeeee>{1} seconds</color>.</color>" },
-                { "mainbase_standby", "<color=#fae69c>Now deploying to <color=#bdbab1>{0}</color>. You will arrive in <color=#eeeeee>{1} seconds</color>.</color>" },
-                { "mainbase_standby_nomove", "<color=#fae69c>Now deploying to <color=#bdbab1>{0}</color>. Stand still for <color=#eeeeee>{1} seconds</color>.</color>" },
-                { "mainbase_teleported", "<color=#fae69c>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
-                { "mainbase_created", "<color=#dbcfb6>Successfully created the main base '<color=#ffac40>{0}</color>'.</color>" },
-                { "mainbase_removed", "<color=#dbcfb6>Successfully removed the main base <color=#ffac40>{0}</color></color>" },
-                { "mainbase_clear", "<color=#dbcfb6>Successfully removed all existing main bases.</color>" },
-                { "mainbase_error_noexist", "<color=#ffab87>There is no existing main bases by the name of '{0}'!</color>" },
-                { "mainbase_error_exists", "<color=#ffab87>A main base by the name of '{0}' already exists!</color>" },
-                { "mainbase_error_noexistteam", "<color=#ffab87>Your team does not have a main base!</color>" },
-                { "mainbase_error_nolobby", "<color=#ffab87>There is no lobby to deploy to!</color>" },
 
                 // /ammo
                 { "ammo_error_nocrate", "<color=#ffab87>Look at an Ammo Crate or Vehicle in order to resupply or place a rifleman's <color=#cedcde>AMMO BAG</color> in your inventory.</color>" },
@@ -335,8 +325,7 @@ namespace Uncreated.Warfare
                 { "warn_warned_console", "{0} ({1}) was warned by {2} ({3}) for: {4}" },
                 { "warn_warned_broadcast", "<color=#ffff00><color=#d8addb>{0}</color> was warned by <color=#00ffff>{1}</color>.</color>" },
                 // amc
-                { "amc_ReverseDamage", "Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you." },
-                { "amc_MainCampLogged", "Stop <b><color=#ff3300>main-camping</color></b>!" },
+                { "amc_reverse_damage", "<color=#f53b3b>Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.</color>" },
                 // unban
                 { "unban_syntax", "<color=#9cffb3>Syntax: <i>/unban <player id></i>.</color>" },
                 { "unban_no_player_found", "<color=#9cffb3>No player ID found from <color=#d8addb>{0}</color>.</color>" },
@@ -367,18 +356,19 @@ namespace Uncreated.Warfare
                 { "duty_on_broadcast", "<color=#c6d4b8><color=#d9e882>{0}</color> is now <color=#95ff4a>on duty</color>.</color>" },
                 { "duty_off_broadcast", "<color=#c6d4b8><color=#d9e882>{0}</color> is now <color=#ff8c4a>off duty</color>.</color>" },
                 { "duty_while_on_duty", "<color=#cdff42>{0}</color> killed someone while <color=#ff6d24>on duty</color>! Perhaps they are abusing?" },
-                { "duty_while_off_duty", "{0} ({1}) killed {2} ({3}) while on duty!!" },
+                { "duty_while_on_duty_console", "{0} ({1}) killed {2} ({3}) while on duty!!" },
                 // tk system
-                { "tk_Teamkilled_Console", "{0} ({1}) teamkilled {2} ({3})!!" },
+                { "teamkilled_console_log", "{0} ({1}) teamkilled {2} ({3})!!" },
                 // restrictions
                 { "no_placement_on_vehicle", "<color=#f53b3b>You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!</color>" },
                 { "cant_steal_batteries", "<color=#f53b3b>Stealing batteries is not allowed.</color>" },
                 { "cant_leave_group", "<color=#f53b3b>You are not allowed to manually change groups.</color>" },
                 { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
                 { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
+                { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!" },
                 
                 // other
-                { "friendly_mortar_incoming", "FRIENDLY MORTAR INCOMING" },
+                { "friendly_mortar_incoming", "FRIENDLY MORTAR STRIKE INCOMING" },
                 // battleye
                 { "battleye_kick_console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
                 { "battleye_kick_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>.</color>" },
@@ -538,11 +528,11 @@ namespace Uncreated.Warfare
                 // Kit Signs
                 { "kit_free", "FREE" },
                 { "kit_available", "Anyone" },
-                { "kit_price_credits", "C {0}" },
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0}" },
                 { "kit_required_level", "Level: <color=#{1}>{0}</color>" },
                 { "kit_owned", "OWNED" },
+                { "kit_not_owned", "NOT OWNED" },
 
                 // revives
                 { "heal_e_notmedic", "<color=#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.</color>" },
@@ -602,7 +592,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, string> DefaultTranslations;
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
-        {
+        { 
             new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68"), true, 4),
             new FlagData(2, "Hilltop", 258, 497, new ZoneData("rectangle", "66,72"), true, 3),
             new FlagData(3, "Papanov", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645"), true, 3),
@@ -979,11 +969,15 @@ namespace Uncreated.Warfare
             new LanguageAliasSet("fr-fr", "French", new List<string> { "french", "fr", "française", "français", "francaise", "francais", 
                 "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc", 
                 "frbe", "frca", "frch", "frlu", "frmc" }),
+            new LanguageAliasSet("pl-pl", "Polish", new List<string> { "polish", "plpl", "polskie", "pol", "pl" }),
             new LanguageAliasSet("zh-cn", "Chinese (Simplified)", new List<string> { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple", 
                 "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
                 "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
             new LanguageAliasSet("zh-tw", "Chinese (Traditional)", new List<string> { "traditional chinese", "chinese traditional",
-                "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" })
+                "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
+            new LanguageAliasSet("pt-pt", "Portuguese", new List<string> { "portuguese", "pt", "pt-pt", "pt-br", "ptbr", "ptpt", "português", "a língua portuguesa", "o português" }),
+            new LanguageAliasSet("fil", "Filipino", new List<string> { "pilipino", "fil", "pil", "tagalog", "filipino", "tl", "tl-ph", "fil-ph", "pil-ph" }),
+            new LanguageAliasSet("nb-no", "Norwegian", new List<string> { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
         };
         public static readonly Dictionary<string, string> DefaultDeathTranslations = new Dictionary<string, string> {
             { "ACID", "{0} was burned by an acid zombie." },
@@ -1048,11 +1042,10 @@ namespace Uncreated.Warfare
             { "VEHICLE_UNKNOWN_UNKNOWNKILLER", "{0} was blown up by a vehicle." },
             { "WATER", "{0} dehydrated." },
             { "ZOMBIE", "{0} was killed by {1}." },
-            { "MAINCAMP", "{0} tried to main-camp {1} from {2} away and died." },
+            { "MAINCAMP", "{0} tried to main-camp {1} from {4} away and died." },
+            { "MAINDEATH", "{0} tried to enter enemy territory." },
             { "38328", "{0} was blown up by a mortar by {1} from {4} away." },  // 81mm mortar turret item id
-            { "38328_SUICIDE", "{0} blew themselves up with a mortar." },       // 81mm mortar turret item id
-            { "v38310", "{0} was blown up by {1}'s bradley (brad is uncool)." },
-            { "v38310_SUICIDE", "{0} was blown up by their bradley (brad is uncool)." }
+            { "38328_SUICIDE", "{0} blew themselves up with a mortar." }        // 81mm mortar turret item id
         };
         public static readonly Dictionary<ELimb, string> DefaultLimbTranslations = new Dictionary<ELimb, string> {
             { ELimb.LEFT_ARM, "Left Arm" },

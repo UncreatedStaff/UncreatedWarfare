@@ -36,8 +36,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (Player player in newPlayers)
                     AddPlayerOnFlag(player, Rotation[i]);
             }
-            if(ttc)
+            if (ttc)
+            {
                 await EvaluatePoints();
+                await OnEvaluate();
+            }
+        }
+        public virtual async Task OnEvaluate()
+        {
+            await Task.Yield();
         }
         public void LoadAllFlags()
         {

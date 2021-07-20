@@ -12,6 +12,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
@@ -25,6 +26,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public TeamCTFData Config { get => _config.Data; }
         public int ObjectiveT1Index;
         public int ObjectiveT2Index;
+        public List<ulong> InAMC = new List<ulong>();
         public Flag ObjectiveTeam1 { get => Rotation[ObjectiveT1Index]; }
         public Flag ObjectiveTeam2 { get => Rotation[ObjectiveT2Index]; }
 
@@ -42,6 +44,46 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             _config = new Config<TeamCTFData>(Data.FlagStorage, "config.json");
             SetTiming(Config.PlayerCheckSpeedSeconds);
+        }
+        public override async Task OnEvaluate()
+        {
+            IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
+            while (players.MoveNext())
+            {
+                ulong team = players.Current.GetTeam();
+                if (!players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) || (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
+                {
+                    if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
+                    {
+                        InAMC.Add(players.Current.playerID.steamID.m_SteamID);
+                        int a = Mathf.RoundToInt(Config.NearOtherBaseKillTimer);
+                        Players.ToastMessage.QueueMessage(players.Current,
+                            F.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
+                            Players.ToastMessageSeverity.WARNING);
+                        UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
+                    }
+                } else
+                {
+                    InAMC.Remove(players.Current.playerID.steamID.m_SteamID);
+                }
+            }
+            players.Dispose();
+            await Task.Yield();
+        }
+        public IEnumerator<WaitForSeconds> KillPlayerInEnemyTerritory(SteamPlayer player)
+        {
+            yield return new WaitForSeconds(Config.NearOtherBaseKillTimer);
+            if (player != null && !player.player.life.isDead && InAMC.Contains(player.playerID.steamID.m_SteamID))
+            {
+                player.player.movement.forceRemoveFromVehicle();
+                player.player.life.askDamage(byte.MaxValue, Vector3.zero, EDeathCause.ACID, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
+            }
+        }
+        public override async Task OnPlayerDeath(UCWarfare.DeathEventArgs args)
+        {
+            InAMC.Remove(args.dead.channel.owner.playerID.steamID.m_SteamID);
+            EventFunctions.RemoveDamageMessageTicks(args.dead.channel.owner.playerID.steamID.m_SteamID);
+            await Task.Yield();
         }
         public override async Task Init()
         {
@@ -433,6 +475,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public bool ShowLeaderboard;
         public AutoObjectiveData PathingData;
         public int end_delay;
+        public float NearOtherBaseKillTimer;
         public TeamCTFData() => SetDefaults();
         public override void SetDefaults()
         {
@@ -458,6 +501,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.ShowLeaderboard = true;
             this.PathingData = new AutoObjectiveData();
             this.end_delay = 5;
+            this.NearOtherBaseKillTimer = 10f;
         }
         public class AutoObjectiveData
         {

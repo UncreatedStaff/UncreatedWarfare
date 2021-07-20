@@ -18,7 +18,6 @@ namespace Uncreated.Warfare
 {
     public static class Patches
     {
-        public static string ToString2(this Vector3 v3) => $"({Math.Round(v3.x, 3)}, {Math.Round(v3.y, 3)}, {Math.Round(v3.z, 3)})";
         public delegate void BarricadeDroppedEventArgs(BarricadeRegion region, BarricadeData data, ref Transform location);
         public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort index, ushort plant);
         public delegate void StructureDestroyedEventArgs(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID);
@@ -48,7 +47,7 @@ namespace Uncreated.Warfare
             /// <summary>Patch methods</summary>
             public static void DoPatching()
             {
-                Harmony harmony = new Harmony("com.company.project.product");
+                Harmony harmony = new Harmony("net.uncreated.warfare");
                 harmony.PatchAll();
             }
 #pragma warning disable IDE0051
@@ -63,20 +62,17 @@ namespace Uncreated.Warfare
             [HarmonyPostfix]
             static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
             {
-                if (!UCWarfare.Config.Patches.project) return;
+                if (!(UCWarfare.Config.Patches.project && UCWarfare.Config.EnableMortarWarning)) return;
                 if (lastProjected != null && lastProjected.activeInHierarchy)
                 {
-                    if (UCWarfare.Config.EnableMortarWarning && __instance.equippedGunAsset?.id == UCWarfare.Config.MortarWeapon)
+                    if (__instance.equippedGunAsset?.id == UCWarfare.Config.MortarWeapon)
                     {
-                        //Vector3 force = direction * __instance.equippedGunAsset.ballisticForce * (magazineAsset == null ? 1 : magazineAsset.projectileLaunchForceMultiplier);
-                        //Starting point
-
                         Vector3 yaw = new Vector3(direction.x, 0, direction.z).normalized;
                         float dp = direction.x * yaw.x + direction.y * yaw.y + direction.z * yaw.z;
                         float angle = Mathf.Acos(dp / (direction.magnitude * yaw.magnitude)) - (Mathf.PI / 4);
                         float range = Mathf.Sin((2f * angle) - (Mathf.PI / 2f)) / (-(9.81f / (133.3f * 133.3f)));
                         Vector3 dest = origin + yaw * range;
-                        dest.y = F.GetTerrainHeightAt2DPoint(new Vector2(dest.x, dest.z));
+                        // dest.y = F.GetTerrainHeightAt2DPoint(new Vector2(dest.x, dest.z)); (not needed)
                         Vector2 dest2d = new Vector2(dest.x, dest.z);
                         if (dest != Vector3.zero)
                         {
@@ -108,7 +104,6 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
-                
             }
             // SDG.Unturned.PlayerAnimator
             /// <summary>

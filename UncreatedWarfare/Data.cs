@@ -38,6 +38,7 @@ namespace Uncreated.Warfare
         };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
+        public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
         private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
         private static string _flagStorageTemp;
         public static string FlagStorage {

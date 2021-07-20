@@ -20,8 +20,6 @@ namespace Uncreated.Warfare
         public TeamSettings TeamSettings;
         [XmlElement("DiscordIntegration")]
         public DiscordSettings DiscordSettings;
-        [XmlElement("FOBs")]
-        public FOBSettings FobSettings;
         [XmlElement("DeathMessages")]
         public DeathMesssagesSettings DeathMessages;
         [XmlElement("Patches")]
@@ -54,6 +52,7 @@ namespace Uncreated.Warfare
         public ushort MortarWeapon;
         public float MortarWarningDistance;
         public float StatsInterval;
+        public float AMCDamageMultiplier;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -61,7 +60,6 @@ namespace Uncreated.Warfare
             this.AdminLoggerSettings = new AdminLoggerSettings();
             this.PlayerStatsSettings = new PlayerStatsSettings();
             this.TeamSettings = new TeamSettings();
-            this.FobSettings = new FOBSettings();
             this.DeathMessages = new DeathMesssagesSettings();
             this.Patches = new PatchToggles();
             this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
@@ -90,6 +88,7 @@ namespace Uncreated.Warfare
             this.MortarWeapon = 38328;
             this.MortarWarningDistance = 75f;
             this.StatsInterval = 60f;
+            this.AMCDamageMultiplier = 0.25f;
         }
     }
     public class Modules
@@ -299,16 +298,6 @@ namespace Uncreated.Warfare
         public DiscordSettings()
         {
             this.SendPlayerList = true;
-        }
-    }
-    public class FOBSettings
-    {
-        public ushort FOBID;
-        public ushort FOBID_Unbuilt;
-        public FOBSettings()
-        {
-            this.FOBID_Unbuilt = 38310;
-            this.FOBID = 38311;
         }
     }
     public class VehicleBaySettings

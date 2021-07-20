@@ -11,23 +11,57 @@ namespace Uncreated.Networking
     public static class ByteMath
     {
         public static byte ToByte(this bool source) => (byte)(source ? 1 : 0);
-        public static byte[] Callify(this byte[] source, ECall call, byte id = 0)
+        public static byte[] Callify(this byte[] source, ECall call, EReturnType expectrtn, byte id, byte valrtnid)
         {
-            byte[] n = new byte[source.Length + sizeof(ushort) + 1];
-            Array.Copy(source, 0, n, sizeof(ushort) + 1, source.Length);
+            byte[] n = new byte[source.Length + sizeof(ushort) + 3];
+            Array.Copy(source, 0, n, sizeof(ushort) + 3, source.Length);
             byte[] b = BitConverter.GetBytes((ushort)call);
             Array.Copy(b, 0, n, 0, b.Length);
             n[2] = id;
+            n[3] = (byte)expectrtn;
+            n[4] = valrtnid;
             return n;
         }
-        public static byte[] Callify(ECall call, byte id = 0)
+        public static byte[] Callify(ECall call, EReturnType expectrtn, byte id, byte valrtnid)
         {
-            byte[] n = new byte[sizeof(ushort) + 1];
+            byte[] n = new byte[sizeof(ushort) + 3];
             byte[] us = BitConverter.GetBytes((ushort)call);
             n[0] = us[0];
             n[1] = us[1];
             n[2] = id;
+            n[3] = (byte)expectrtn;
+            n[4] = valrtnid;
             return n;
+        }
+        public static bool DeCallify(this byte[] source, out ECall call, out EReturnType returnType, out byte id, out byte valrtnid)
+        {
+            if (source.Length >= sizeof(ushort) + 3)
+            {
+                if (ReadUInt16(out ushort call16, 0, source))
+                {
+                    call = (ECall)call16;
+                    id = source[sizeof(ushort)];
+                    returnType = (EReturnType)source[sizeof(ushort) + 1];
+                    valrtnid = source[sizeof(ushort) + 2];
+                    return true;
+                }
+                else
+                {
+                    call = ECall.TELL_FAILED_TO_READ;
+                    returnType = EReturnType.SEND_NO_RETURN_FAILED;
+                    id = 0;
+                    valrtnid = 0;
+                    return false;
+                }
+            }
+            else
+            {
+                call = ECall.TELL_FAILED_TO_READ;
+                returnType = EReturnType.SEND_NO_RETURN_FAILED;
+                id = 0;
+                valrtnid = 0;
+                return false;
+            }
         }
         public static bool ReadUInt16(out ushort output, int index, byte[] source)
         {

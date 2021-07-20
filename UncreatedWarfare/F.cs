@@ -1056,9 +1056,23 @@ namespace Uncreated.Warfare
         }
         public static string EncodeURIComponent(this string input) => Uri.EscapeUriString(input);
         public static Vector3 GetBaseSpawn(this SteamPlayer player) => player.player.GetBaseSpawn();
+        public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
             ulong team = player.GetTeam();
+            if (team == 1)
+            {
+                return TeamManager.Team1Main.Center3D;
+            }
+            else if (team == 2)
+            {
+                return TeamManager.Team2Main.Center3D;
+            }
+            else return TeamManager.LobbySpawn;
+        }
+        public static Vector3 GetBaseSpawn(this Player player, out ulong team)
+        {
+            team = player.GetTeam();
             if (team == 1)
             {
                 return TeamManager.Team1Main.Center3D;
