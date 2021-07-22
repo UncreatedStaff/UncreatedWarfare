@@ -84,8 +84,6 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public abstract Task DeclareWin(ulong winner);
         public abstract Task StartNextGame();
-        protected async Task AwardXP(Player player, ulong team, int amount) => await XP.XPManager.AddXP(player, team, amount);
-        protected async Task AwardOfficerPoints(Player player, ulong team, int amount) => await Officers.OfficerManager.AddOfficerPoints(player, team, amount);
         public virtual void Dispose()
         {
             Cancel();

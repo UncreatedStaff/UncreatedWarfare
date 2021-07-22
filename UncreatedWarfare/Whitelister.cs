@@ -47,24 +47,24 @@ namespace Uncreated.Warfare
                     if (!IsWhitelisted(itemData.item.id, out var whitelistedItem))
                     {
                         shouldAllow = false;
-                        player.Message($"whitelist_notallowed");
+                        player.Message("whitelist_notallowed");
                     }
                     else if (itemCount >= whitelistedItem.amount)
                     {
                         shouldAllow = false;
-                        player.Message($"whitelist_maxamount");
+                        player.Message("whitelist_maxamount");
                     }
                 }
                 else if (itemCount >= allowedItems)
                 {
                     shouldAllow = false;
-                    player.Message($"whitelist_kit_maxamount");
+                    player.Message("whitelist_kit_maxamount");
                 }
             }
             else
             {
                 shouldAllow = false;
-                player.Message($"whitelist_nokit");
+                player.Message("whitelist_nokit");
             }
         }
         private void OnBarricadeSalvageRequested(CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
@@ -76,7 +76,8 @@ namespace Uncreated.Warfare
             }
             if (BarricadeManager.tryGetRegion(x, y, plant, out var region))
             {
-                if (IsWhitelisted(region.barricades[index].barricade.id, out var whitelistedItem))
+                BarricadeData data = region.barricades[index];
+                if (data.owner == steamID.m_SteamID || IsWhitelisted(data.barricade.id, out var whitelistedItem))
                 {
                     return;
                 }
@@ -94,7 +95,8 @@ namespace Uncreated.Warfare
             }
             if (StructureManager.tryGetRegion(x, y, out var region))
             {
-                if (IsWhitelisted(region.structures[index].structure.id, out var whitelistedItem))
+                StructureData data = region.structures[index];
+                if (data.owner == steamID.m_SteamID || IsWhitelisted(data.structure.id, out var whitelistedItem))
                 {
                     return;
                 }
@@ -140,7 +142,7 @@ namespace Uncreated.Warfare
             }
 
             shouldAllow = false;
-            player.Message($"whitelist_noplace");
+            player.Message("whitelist_noplace");
         }
         private void OnStructurePlaceRequested(
             Structure structure,
@@ -169,7 +171,7 @@ namespace Uncreated.Warfare
             }
 
             shouldAllow = false;
-            player.Message($"whitelist_noplace");
+            player.Message("whitelist_noplace");
         }
         public static void AddItem(ushort ID) => AddObjectToSave(new WhitelistItem(ID, 255));
         public static void RemoveItem(ushort ID) => RemoveWhere(i => i.itemID == ID);

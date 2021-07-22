@@ -78,17 +78,20 @@ namespace Uncreated.Warfare.Revives
             if (target.TryGetComponent(out Reviver r))
             {
                 r.RevivePlayer();
-                await XPManager.AddXP(medic, medic.GetTeam(), XPManager.config.Data.FriendlyRevivedXP);
+                ulong team = medic.GetTeam();
+                if (team == target.GetTeam())
+                    await XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP, 
+                        F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
-            F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
+            //F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
                 if (parameters.damage > parameters.player.life.health && parameters.limb != ELimb.SKULL && parameters.player.life.health > 0 && !parameters.player.life.isDead && parameters.damage < 100)
                 {
-                    F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
+                    //F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
 
                     shouldAllow = false;
 
@@ -116,7 +119,7 @@ namespace Uncreated.Warfare.Revives
                     if(parameters.player.transform.TryGetComponent(out Reviver reviver))
                     {
                         reviver.TellProneDelayed();
-                        reviver.StartBleedout();
+                        //reviver.StartBleedout();
                     }
                 }
             }
@@ -127,7 +130,7 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
-            F.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
+            //F.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
             if(DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
             {
                 if (player.Player.transform.TryGetComponent(out Reviver reviver))
@@ -138,7 +141,7 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {
-            F.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
+            //F.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
             if (DownedPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
             {   
                 shouldAllow = false;
@@ -184,7 +187,7 @@ namespace Uncreated.Warfare.Revives
             {
                 yield return new WaitForSeconds(time);
                 TellStanceNoDelay(stance);
-                F.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
+                //F.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
                 this.stance = null;
             }
             public static void TellStandDelayed(Player player, float time = 0.5f)
@@ -201,7 +204,7 @@ namespace Uncreated.Warfare.Revives
             private IEnumerator<WaitForSeconds> WaitToKillPlayer()
             {
                 yield return new WaitForSeconds(10);
-                F.Log(Player.Player.channel.owner.playerID.playerName + " bled out or something.", ConsoleColor.DarkRed);
+                //F.Log(Player.Player.channel.owner.playerID.playerName + " bled out or something.", ConsoleColor.DarkRed);
                 bleedout = null;
                 /*
                 if (reviveManager.DownedPlayers.ContainsKey(Player.Player.channel.owner.playerID.steamID.m_SteamID))

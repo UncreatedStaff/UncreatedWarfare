@@ -437,7 +437,6 @@ namespace Uncreated.Warfare
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
                 }
                 Data.ReviveManager.OnPlayerDisconnected(player);
-                TicketManager.OnPlayerLeft(ucplayer);
             }
             catch (Exception ex)
             {

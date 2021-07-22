@@ -206,7 +206,7 @@ namespace Uncreated.Warfare.Squads
 
             foreach (UCPlayer member in squad.Members)
             {
-                string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? ' ' + F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : "");
+                string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty);
                 EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
                 line);
             }
@@ -222,7 +222,7 @@ namespace Uncreated.Warfare.Squads
 
             player.Message("rally_success");
 
-            OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.Data.SpawnOnRallyPoints).GetAwaiter().GetResult();
+            Task.Run(async () => await OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.Data.SpawnOnRallyPoints, F.Translate("ofp_rally_used", squad.Leader.Steam64)));
         }
     }
 

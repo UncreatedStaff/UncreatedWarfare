@@ -178,7 +178,21 @@ namespace Uncreated.Warfare
                 { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
                 { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
                 { "rally_ui", "<color=#5eff87>RALLY</color>{0}" },
-                { "rally_time_value", "{0:mm\\:ss}" },
+                { "rally_time_value", " {0:mm\\:ss}" },
+
+                { "time_second", "second" },
+                { "time_seconds", "seconds" },
+                { "time_minute", "minute" },
+                { "time_minutes", "minute" },
+                { "time_hour", "hour" },
+                { "time_hours", "hours" },
+                { "time_day", "day" },
+                { "time_days", "days" },
+                { "time_month", "month" },
+                { "time_months", "months" },
+                { "time_year", "month" },
+                { "time_years", "years" },
+                { "time_and", "and" },
 
                 // fobs
                 { "time_left", "<color=#ffaa42>Time left: <color=#ffe4b5>{0}</color>.</color>" },
@@ -299,7 +313,7 @@ namespace Uncreated.Warfare
                 { "ban_syntax", "<color=#9cffb3>Syntax: <i>/ban <player> <duration minutes> <reason ...></i>.</color>" },
                 { "ban_permanent_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned.</color>" },
                 { "ban_permanent_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned by <color=#00ffff>{1}</color>.</color>" },
-                { "ban_permanent_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned by an operator..</color>" },
+                { "ban_permanent_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned by an operator.</color>" },
                 { "ban_permanent_console_operator", "{0} ({1}) was permanently banned by an operator because: {2}." },
                 { "ban_permanent_console", "{0} ({1}) was permanently banned by {2} ({3}) because: {4}." },
                 { "ban_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was banned for <color=#9cffb3>{2}</color>.</color>" },
@@ -477,6 +491,8 @@ namespace Uncreated.Warfare
                 { "officer_announce_promoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#e3b552>PROMOTED</color> to <color=#e05353>{1}</color> of the <color=#baccca>{2}</color>!</color>" },
                 { "officer_announce_demoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
                 { "officer_announce_discharged", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#ab2e2e>DISCHARGED</color> from the rank of <color=#e05353>{1}s</color> for unacceptable behaviour.</color>" },
+                { "officer_ui_no_stars", "no stars" },
+                { "officer_ui_stars", "{0} star{1}" },
 
                 // Clear
                 { "clear_not_enough_args", "<color=#ff8c69>The clear command requires 1 argument.</color>" },
@@ -587,7 +603,70 @@ namespace Uncreated.Warfare
 
                 { "gamemode_not_flag_gamemode", "<color=#ff8c69>Current gamemode <color=#ff758f>{0}</color> is not a <color=#ff758f>FLAG GAMEMODE</color>.</color>" },
                 { "gamemode_flag_not_on_cap_team", "<color=#ff8c69>You're not on a team that can capture flags.</color>" },
-                { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." }
+                { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
+
+                // xp toast messages
+                { "xp_built_emplacement", "BUILT EMPLACEMENT" },
+                { "xp_built_fortification", "BUILT FORTIFICATION" },
+                { "xp_built_fob", "BUILT FOB" },
+                { "xp_built_ammo_crate", "BUILT AMMO CRATE" },
+                { "xp_built_repair_station", "BUILT REPAIR STATION" },
+                { "xp_from_operator", "FROM OPERATOR" },
+                { "xp_from_player", "FROM {0}" },
+                { "xp_healed_teammate", "HEALED {0}" },
+                { "xp_enemy_killed", "{0} KILLED" },
+                { "xp_friendly_killed", "{0} TEAMKILLED" },
+
+                { "xp_victory", "VICTORY" },
+                { "xp_flag_captured", "FLAG CAPTURED" },
+                { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
+
+                { "xp_humvee_destroyed", "HUMVEE DESTROYED" },
+                { "xp_transport_destroyed", "TRANSPORT DESTROYED" },
+                { "xp_logistics_destroyed", "LOGISTICS DESTROYED" },
+                { "xp_apc_destroyed", "APC DESTROYED" },
+                { "xp_ifv_destroyed", "IFV DESTROYED" },
+                { "xp_tank_destroyed", "TANK DESTROYED" },
+                { "xp_helicopter_destroyed", "HELICOPTER DESTROYED" },
+                { "xp_emplacement_destroyed", "EMPLACEMENT DESTROYED" },
+
+                { "xp_friendly_humvee_destroyed", "FRIENDLY HUMVEE DESTROYED" },
+                { "xp_friendly_transport_destroyed", "FRIENDLY TRANSPORT DESTROYED" },
+                { "xp_friendly_logistics_destroyed", "FRIENDLY LOGISTICS DESTROYED" },
+                { "xp_friendly_apc_destroyed", "FRIENDLY APC DESTROYED" },
+                { "xp_friendly_ifv_destroyed", "FRIENDLY IFV DESTROYED" },
+                { "xp_friendly_tank_destroyed", "FRIENDLY TANK DESTROYED" },
+                { "xp_friendly_helicopter_destroyed", "FRIENDLY HELICOPTER DESTROYED" },
+                { "xp_friendly_emplacement_destroyed", "FRIENDLY EMPLACEMENT DESTROYED" },
+
+                { "xp_transporting_players", "TRANSPORTING PLAYERS" },
+
+                { "gain_xp", "+{0} XP" },
+                { "loss_xp", "-{0} XP" },
+
+                { "ui_xp_level", "E{0}" },
+                { "ui_xp_next_level", "{0}  E{1}" },
+
+                // officer point toast messages
+                { "ofp_squad_built_emplacement", "SQUAD BUILT EMPLACEMENT" },
+                { "ofp_squad_built_fortification", "SQUAD BUILT FORTIFICATION" },
+                { "ofp_squad_built_fob", "SQUAD BUILT FOB" },
+                { "ofp_squad_built_ammo_crate", "SQUAD BUILT AMMO CRATE" },
+                { "ofp_squad_built_repair_station", "SQUAD BUILT REPAIR STATION" },
+                { "ofp_from_operator", "FROM OPERATOR" },
+                { "ofp_from_player", "FROM {0}" },
+                { "ofp_vehicle_eliminated", "VEHICLE ELIMINATED" },
+
+                { "ofp_squad_victory", "VICTORY" },
+                { "ofp_squad_flag_captured", "SQUAD CAPTURED FLAG" },
+                { "ofp_squad_flag_neutralized", "SQUAD NEUTRALIZED FLAG" },
+
+                { "ofp_transporting_players", "TRANSPORTING PLAYERS" },
+
+                { "ofp_rally_used", "RALLY USED" },
+
+                { "gain_ofp", "+{0} OF" },
+                { "loss_ofp", "-{0} OF" },
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -733,6 +812,10 @@ namespace Uncreated.Warfare
             new ColorData("vbs_locked_vehicle_color", "800000"),
             new ColorData("vbs_rank_color", "e6e3d5"),
             new ColorData("vbs_ticket_cost", "e6e3d5"),
+
+            // stars
+            new ColorData("no_stars", "737373"),
+            new ColorData("star_color", "ffd683"),
         };
         public static readonly List<MySqlTableData> DefaultMySQLTableData = new List<MySqlTableData>
         {
@@ -1031,8 +1114,8 @@ namespace Uncreated.Warfare
             { "SPIT", "{0} was killed by a spitter zombie." },
             { "SPLASH", "{0} died to splash damage by {1} with a {3}." },
             { "SPLASH_UNKNOWN", "{0} died to splash damage by {1}." },
-            { "SPLASH_SUICIDE_UNKNOWN", "{0} killed theirself with splash damage." },
-            { "SPLASH_SUICIDE", "{0} killed theirself with splash damage from a {3}." },
+            { "SPLASH_SUICIDE_UNKNOWN", "{0} killed themselves with splash damage." },
+            { "SPLASH_SUICIDE", "{0} killed themselves with splash damage from a {3}." },
             { "SUICIDE", "{0} committed suicide." },
             { "VEHICLE", "{0} was blown up by {1} with a {3}." },
             { "VEHICLE_SUICIDE", "{0} blew themselves up with a {3}." },

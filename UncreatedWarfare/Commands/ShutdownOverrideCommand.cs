@@ -81,8 +81,13 @@ namespace Uncreated.Warfare.Commands
                     }
                 } else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
-                    string time = F.GetTimeFromSeconds(seconds);
-                    F.Broadcast("shutdown_broadcast_after_time", time, reason);
+                    string time;
+                    foreach (SteamPlayer player in Provider.clients)
+                    {
+                        time = F.GetTimeFromSeconds(seconds, player.playerID.steamID.m_SteamID);
+                        player.SendChat("shutdown_broadcast_after_time", time, reason);
+                    }
+                    time = F.GetTimeFromSeconds(seconds, 0);
                     F.Log(F.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
                     await Networking.Client.SendShuttingDown(0, reason);
                     Provider.shutdown(unchecked((int)seconds), reason);
@@ -154,8 +159,13 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
-                    string time = F.GetTimeFromSeconds(seconds);
-                    F.Broadcast("shutdown_broadcast_after_time", time, reason);
+                    string time;
+                    foreach (SteamPlayer pl in Provider.clients)
+                    {
+                        time = F.GetTimeFromSeconds(seconds, pl.playerID.steamID.m_SteamID);
+                        pl.SendChat("shutdown_broadcast_after_time", time, reason);
+                    }
+                    time = F.GetTimeFromSeconds(seconds, 0);
                     F.Log(F.Translate("shutdown_broadcast_after_time_console_player", 0, out _, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
                     await Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
                     Provider.shutdown(unchecked((int)seconds), reason);

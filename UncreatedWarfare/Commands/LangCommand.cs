@@ -94,12 +94,25 @@ namespace Uncreated.Warfare.Commands
                     else
                         oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
                     string langInput = op.Trim();
-                    LanguageAliasSet aliases;
-                    if (Data.LanguageAliases.ContainsKey(langInput))
-                        aliases = Data.LanguageAliases[langInput];
-                    else
-                        aliases = Data.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
-                    if (!aliases.Equals(default))
+                    bool found = false;
+                    if (!Data.LanguageAliases.TryGetValue(langInput, out LanguageAliasSet aliases))
+                    {
+                        IEnumerator<LanguageAliasSet> sets = Data.LanguageAliases.Values.GetEnumerator();
+                        found = sets.MoveNext();
+                        while (found)
+                        {
+                            if (sets.Current.key == langInput || sets.Current.values.Contains(langInput))
+                            {
+                                aliases = sets.Current;
+                                break;
+                            }
+                            found = sets.MoveNext();
+                        }
+                        sets.Dispose();
+                    }
+                    else found = true;
+
+                    if (found && aliases.key != null && aliases.values != null && aliases.display_name != null)
                     {
                         if (OldLanguage == aliases.key)
                             player.SendChat("change_language_not_needed", aliases.display_name);

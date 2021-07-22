@@ -696,7 +696,7 @@ namespace Uncreated.Warfare
             if (Languages == null) return new Dictionary<ulong, string>();
             Dictionary<ulong, string> NewLanguages = new Dictionary<ulong, string>();
             foreach (LangData player in Languages)
-                NewLanguages.Add(player.player, player.language);
+                NewLanguages.Add(player.player, player.language ?? JSONMethods.DefaultLanguage);
             return NewLanguages;
         }
         public static void SaveLangs(Dictionary<ulong, string> Languages)

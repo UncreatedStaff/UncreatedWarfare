@@ -63,12 +63,14 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
-            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75), "ENEMY KILLED");
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75), 
+                F.Translate("xp_enemy_killed", parameters.killer.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(parameters.dead).CharacterName));
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
-            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.Data.FriendlyKilledXP, "FRIENDLY KILLED");
+            await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), XPManager.config.Data.FriendlyKilledXP,
+                F.Translate("xp_friendly_killed", parameters.killer.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(parameters.dead).CharacterName));
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         private static async void OnVehicleExploded(InteractableVehicle vehicle)
@@ -87,54 +89,54 @@ namespace Uncreated.Warfare.Tickets
                 {
                     if (XPManager.config.Data.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        var player = UCPlayer.FromCSteamID(vc.owner);
+                        UCPlayer player = UCPlayer.FromCSteamID(vc.owner);
 
                         bool vehicleWasEnemy = (player.IsTeam1() && TeamManager.IsTeam2(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam1(vehicle.lockedGroup));
                         bool vehicleWasFriendly = (player.IsTeam1() && TeamManager.IsTeam1(vehicle.lockedGroup)) || (player.IsTeam2() && TeamManager.IsTeam2(vehicle.lockedGroup));
 
                         int amount = XPManager.config.Data.VehicleDestroyedXP[data.Type];
-                        string message = "";
+                        string message = string.Empty;
 
                         switch (data.Type)
                         {
                             case EVehicleType.HUMVEE:
-                                message = "HUMVEE DESTROYED";
+                                message = "humvee_destroyed";
                                 break;
                             case EVehicleType.TRANSPORT:
-                                message = "TRANSPORT DESTROYED";
+                                message = "transport_destroyed";
                                 break;
                             case EVehicleType.LOGISTICS:
-                                message = "LOGISTICS DESTROYED";
+                                message = "logistics_destroyed";
                                 break;
                             case EVehicleType.APC:
-                                message = "APC DESTROYED";
+                                message = "apc_destroyed";
                                 break;
                             case EVehicleType.IFV:
-                                message = "IFV DESTROYED";
+                                message = "ifv_destroyed";
                                 break;
                             case EVehicleType.MBT:
-                                message = "TANK DESTROYED";
+                                message = "tank_destroyed";
                                 break;
                             case EVehicleType.HELI_TRANSPORT:
-                                message = "HELICOPTER DESTROYED";
+                                message = "helicopter_destroyed";
                                 break;
                             case EVehicleType.EMPLACEMENT:
-                                message = "EMPLACEMENT DESTROYED";
+                                message = "emplacement_destroyed";
                                 break;
                         }
 
                         if (vehicleWasEnemy)
                         {
-                            await XPManager.AddXP(player.Player, player.GetTeam(), player.NearbyMemberBonus(amount, 75), message);
+                            await XPManager.AddXP(player.Player, player.GetTeam(), player.NearbyMemberBonus(amount, 75), F.Translate("xp_" + message, player.Steam64));
                             if (player.IsNearSquadLeader(100))
                             {
-                                await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, player.GetTeam(), amount, "ELIMINATED VEHICLE");
+                                await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, player.GetTeam(), amount, F.Translate("ofp_vehicle_eliminated", player.Squad.Leader.Steam64));
                             }
                         }
                         else if (vehicleWasFriendly)
                         {
-                            if (message != "") message = "FRIENDLY " + message;
-                            await XPManager.AddXP(player.Player, player.GetTeam(), -amount, message);
+                            if (message != string.Empty) message = "xp_friendly_" + message;
+                            await XPManager.AddXP(player.Player, player.GetTeam(), -amount, F.Translate(message, player.Steam64));
                         }
                     }
                     
@@ -151,11 +153,11 @@ namespace Uncreated.Warfare.Tickets
 
                 if (F.TryGetPlaytimeComponent(player.CSteamID, out var component))
                 {
-                    await XPManager.AddXP(player.Player, team, (int)(component.stats.xpgained * 0.2F), "VICTORY");
+                    await XPManager.AddXP(player.Player, team, Mathf.RoundToInt(component.stats.xpgained * 0.2f), F.Translate("xp_victory", player.Steam64));
 
                     if (player.IsSquadLeader())
                     {
-                        await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, (int)(component.stats.xpgained * 0.2F), "VICTORY");
+                        await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, Mathf.RoundToInt(component.stats.xpgained * 0.2f), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
                     }
                 }
             }
@@ -177,7 +179,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagCapturedXP, 100), "FLAG CAPTURED");
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagCapturedXP, 100), F.Translate("xp_flag_captured", player.Steam64));
 
                 if (player.IsNearSquadLeader(100))
                 {
@@ -196,7 +198,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
                 {
-                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, "SQUAD CAPTURED FLAG");
+                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, F.Translate("ofp_squad_flag_captured", SquadManager.Squads[i].Leader.Steam64));
                 }
             }
         }
@@ -208,7 +210,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagNeutralizedXP, 100), "FLAG NEUTRALIZED");
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagNeutralizedXP, 100), F.Translate("xp_flag_neutralized", player.Steam64));
 
                 if (player.IsNearSquadLeader(100))
                 {
@@ -227,7 +229,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
                 {
-                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, "SQUAD NEUTRALIZED FLAG");
+                    await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, F.Translate("ofp_squad_flag_neutralized", SquadManager.Squads[i].Leader.Steam64));
                 }
             }
         }
@@ -250,18 +252,14 @@ namespace Uncreated.Warfare.Tickets
         {
             ulong team = player.GetTeam();
             GetTeamBleed(team, out int bleed, out var message);
-            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, message);
-        }
-        public static void OnPlayerLeft(UCPlayer player)
-        {
-            
+            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, F.Translate(message, player));
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             EffectManager.askEffectClearByID(config.Data.Team1TicketUIID, player.transportConnection);
             EffectManager.askEffectClearByID(config.Data.Team2TicketUIID, player.transportConnection);
             GetTeamBleed(newGroup, out int bleed, out var message);
-            UpdateUI(player.transportConnection, newGroup, bleed, message);
+            UpdateUI(player.transportConnection, newGroup, bleed, F.Translate(message, player));
         }
 
         public static void OnNewGameStarting()
@@ -321,7 +319,7 @@ namespace Uncreated.Warfare.Tickets
                 
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
-                bleed < 0 ? bleed.ToString(Data.Locale) : "",
+                bleed < 0 ? bleed.ToString(Data.Locale) : string.Empty,
                 message
                 );
         }
@@ -333,7 +331,7 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team1ID, bleed, message);
+                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team1ID, bleed, F.Translate(message, players[i]));
             }
         }
         public static void UpdateUITeam2()
@@ -344,7 +342,7 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, message);
+                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, F.Translate(message, players[i]));
             }
         }
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
@@ -364,32 +362,32 @@ namespace Uncreated.Warfare.Tickets
                 }
                 else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
                 {
-                    message = "The enemy is in control!";
+                    message = "enemy_controlling";
                     bleed = -1;
                 }
                 else if (0.8F < enemyRatio && enemyRatio < 1F)
                 {
-                    message = "The enemy is dominating!";
+                    message = "enemy_dominating";
                     bleed = -2;
                 }
                 else if (enemyRatio == 1)
                 {
-                    message = "You are defeated!";
+                    message = "defeated";
                     bleed = -3;
                 }
                 else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
                 {
-                    message = "Your team is in control!";
+                    message = "controlling";
                     bleed = 1;
                 }
                 else if (0.8F < friendlyRatio && friendlyRatio < 1F)
                 {
-                    message = "Your team is dominating!";
+                    message = "dominating";
                     bleed = 2;
                 }
                 else if (friendlyRatio == 1)
                 {
-                    message = "You are victorious!";
+                    message = "victorious";
                     bleed = 3;
                 }
                 else

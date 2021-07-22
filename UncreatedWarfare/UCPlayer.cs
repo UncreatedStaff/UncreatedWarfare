@@ -170,7 +170,7 @@ namespace Uncreated.Warfare
                 if (Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
                     count++;
             }
-            return (int)Math.Round(amount * (1 + 0.5 * ((float)count / 5)));
+            return (int)Math.Round(amount * (1 + ((float)count / 10)));
         }
 
         public bool IsNearFOB()

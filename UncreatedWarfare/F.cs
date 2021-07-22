@@ -53,63 +53,63 @@ namespace Uncreated.Warfare
                 temp += (i == startIndex ? "" : deliminator) + array[i];
             return temp;
         }
-        public static string GetTimeFromSeconds(this uint seconds)
+        public static string GetTimeFromSeconds(this uint seconds, ulong player)
         {
             if (seconds < 60) // < 1 minute
             {
-                return seconds.ToString(Data.Locale) + " second" + seconds.S();
+                return seconds.ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
             }
             else if (seconds < 3600) // < 1 hour
             {
                 int minutes = DivideRemainder(seconds, 60, out int secondOverflow);
-                return $"{minutes} minute{minutes.S()}{(secondOverflow == 0 ? "" : $" and {secondOverflow} second{secondOverflow.S()}")}";
+                return $"{minutes} {Translate("time_minute" + minutes.S(), player)}{(secondOverflow == 0 ? "" : $" {Translate("time_and", player)} {secondOverflow} {Translate("time_second" + secondOverflow.S(), player)}")}";
             }
             else if (seconds < 86400) // < 1 day 
             {
                 int hours = DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
-                return $"{hours} hour{hours.S()}{(minutesOverflow == 0 ? "" : $" and {minutesOverflow} minute{minutesOverflow.S()}")}";
+                return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
             }
             else if (seconds < 2628000) // < 1 month (30.4166667 days) (365/12)
             {
                 uint days = DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out uint hoursOverflow);
-                return $"{days} day{days.S()}{(hoursOverflow == 0 ? "" : $" and {hoursOverflow} hour{hoursOverflow.S()}")}";
+                return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
             }
             else if (seconds < 31536000) // < 1 year
             {
                 uint months = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.4166667m, out uint daysOverflow);
-                return $"{months} month{months.S()}{(daysOverflow == 0 ? "" : $" and {daysOverflow} day{daysOverflow.S()}")}";
+                return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
             }
             else // > 1 year
             {
                 uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.4166667m, out _), 12, out uint monthOverflow);
-                return $"{years} year{years.S()}{(monthOverflow == 0 ? "" : $" and {monthOverflow} month{monthOverflow.S()}")}";
+                return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
-        public static string GetTimeFromMinutes(this uint minutes)
+        public static string GetTimeFromMinutes(this uint minutes, ulong player)
         {
             if (minutes < 60) // < 1 hour
             {
-                return minutes.ToString(Data.Locale) + " minute" + (minutes == 1 ? "" : "s");
+                return minutes.ToString(Data.Locale) + Translate("time_minute" + minutes.S(), player);
             }
             else if (minutes < 1440) // < 1 day 
             {
                 uint hours = DivideRemainder(minutes, 60, out uint minutesOverflow);
-                return $"{hours} hour{hours.S()}{(minutesOverflow == 0 ? "" : $" and {minutesOverflow} minute{minutesOverflow.S()}")}";
+                return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
             }
             else if (minutes < 43800) // < 1 month (30.4166667 days)
             {
                 uint days = DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out uint hoursOverflow);
-                return $"{days} day{days.S()}{(hoursOverflow == 0 ? "" : $" and {hoursOverflow} hour{hoursOverflow.S()}")}";
+                return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
             }
             else if (minutes < 525600) // < 1 year
             {
                 uint months = DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out _), 30.4166667m, out uint daysOverflow);
-                return $"{months} month{months.S()}{(daysOverflow == 0 ? "" : $" and {daysOverflow} day{daysOverflow.S()}")}";
+                return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
             }
             else // > 1 year
             {
                 uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out _), 30.4166667m, out _), 12, out uint monthOverflow);
-                return $"{years} year{years.S()}{(monthOverflow == 0 ? "" : $" and {monthOverflow} month{monthOverflow.S()}")}";
+                return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
         public static int DivideRemainder(float divisor, float dividend, out int remainder)
@@ -2150,7 +2150,7 @@ namespace Uncreated.Warfare
         }
         public static string GetKitDisplayName(string kitname)
         {
-            IEnumerable<Kits.Kit> kits = Kits.KitManager.GetKitsWhere(x => x.Name == kitname);
+            IEnumerable<Kit> kits = KitManager.GetKitsWhere(x => x.Name == kitname);
             if (kits.Count() > 0) return kits.ElementAt(0).DisplayName;
             else return kitname;
         }

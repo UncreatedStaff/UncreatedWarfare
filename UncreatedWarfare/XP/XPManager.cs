@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.XP
             F.Log(player.CharacterName);
             if (player.IsTeam1() || player.IsTeam2())
             {
-                await AddXP(player.Player, player.GetTeam(), 0);
+                await GetXP(player.Player, player.GetTeam(), true);
             }
         }
         public static async Task OnPlayerLeft(UCPlayer player)
@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.XP
             UpdateUI(player, newBalance);
 
             if (message != "" && amount != 0)
-                ToastMessage.QueueMessage(player, amount >= 0 ? ("+" + amount + " XP") : amount + " XP", message, ToastMessageSeverity.MINIXP);
+                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
                 await VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
@@ -105,41 +105,43 @@ namespace Uncreated.Warfare.XP
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
 
             Rank rank = GetRank(balance, out int currentXP, out Rank nextRank);
+            short key = unchecked((short)config.Data.RankUI);
             if (player.OfficerRank != null)
             {
-                EffectManager.sendUIEffect(config.Data.RankUI, unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true);
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffect(config.Data.RankUI, key, player.Player.channel.owner.transportConnection, true);
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Rank", player.OfficerRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Level", "O" + player.OfficerRank.level
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Next", nextRank != null ? "E" + nextRank.level + " equivalent" : ""
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Progress", GetProgress(currentXP, rank.XP)
                 );
             }
             else
             {
                 EffectManager.sendUIEffect(config.Data.RankUI, unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true);
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Rank", rank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
-                    "Level", "E" + rank.level
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
+                    "Level", F.Translate("ui_xp_level", player, rank.level.ToString(Data.Locale))
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
-                    "Next", nextRank != null ? nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID) + "  E" + nextRank.level : ""
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
+                    "Next", nextRank != null ? 
+                    F.Translate("ui_xp_next_level", player, nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID), nextRank.level.ToString(Data.Locale)) : string.Empty
                 );
-                EffectManager.sendUIEffectText(unchecked((short)config.Data.RankUI), player.Player.channel.owner.transportConnection, true,
+                EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Progress", GetProgress(currentXP, rank.XP)
                 );
             }
@@ -153,7 +155,7 @@ namespace Uncreated.Warfare.XP
             StringBuilder bars = new StringBuilder();
             for (int i = 0; i < progress; i++)
             {
-                bars.Append('█');
+                bars.Append(OfficerManager.config.Data.FullBlock);
             }
             return bars.ToString();
         }

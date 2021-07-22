@@ -60,7 +60,8 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_givexp_player_not_found", command[1]);
                             return;
                         }
-                        await XPManager.AddXP(target.Player, target.GetTeam(), amount, isConsole ? "From Operator" : "From " + F.GetPlayerOriginalNames(player).CharacterName);
+                        await XPManager.AddXP(target.Player, target.GetTeam(), amount, isConsole ? F.Translate("xp_from_operator", target.Steam64) : 
+                            F.Translate("xp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                         player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
                     }
                     else
@@ -81,7 +82,8 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_giveof_player_not_found", command[1]);
                             return;
                         }
-                        await OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount, isConsole ? "From Operator" : "From " + F.GetPlayerOriginalNames(player).CharacterName);
+                        await OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount, isConsole ? F.Translate("ofp_from_operator", target.Steam64) :
+                            F.Translate("ofp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                         player.SendChat("test_giveof_success", amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName);
                     }
                     else

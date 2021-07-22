@@ -283,7 +283,7 @@ namespace Uncreated.Networking
         }
         private static async Task ReceiveInvokeBan(ulong banned, ulong admin, string reason, uint duration, DateTime timestamp)
         {
-            Warfare.F.Log($"Received ban request for {banned} from {admin} because {reason} for {Warfare.F.GetTimeFromMinutes(duration)} at {timestamp:G}");
+            Warfare.F.Log($"Received ban request for {banned} from {admin} because {reason} for {Warfare.F.GetTimeFromMinutes(duration, 0)} at {timestamp:G}");
             await Task.Yield(); // TODO
         }
     }

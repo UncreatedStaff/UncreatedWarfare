@@ -14,6 +14,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
+using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Officers
@@ -60,11 +61,11 @@ namespace Uncreated.Warfare.Officers
         public static async Task<int> GetOfficerPoints(ulong playerID, ulong team) => await Data.DatabaseManager.GetOfficerPoints(playerID, team);
         public static async Task AddOfficerPoints(Player player, ulong team, int amount, string message ="")
         {
-            int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(Math.Round(amount * config.Data.PointsMultiplier)));
+            int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
 
             if (message != "" && amount != 0)
-                ToastMessage.QueueMessage(player, amount >= 0 ? ("+" + amount + " OF") : amount + " OF", message, ToastMessageSeverity.MINIOFFICERPTS);
+                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance);
             await rtn;
@@ -158,13 +159,13 @@ namespace Uncreated.Warfare.Officers
 
             EffectManager.sendUIEffect(config.Data.StarsUI, (short)config.Data.StarsUI, player.channel.owner.transportConnection, true);
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Icon",
-                stars == 0 ? "<color=#737373>¼</color>" : "<color=#ffd683>¼</color>"
+                stars == 0 ? $"<color=#{UCWarfare.GetColorHex("officer_ui_no_stars")}>{config.Data.StarCharacter}</color>" : $"<color=#{UCWarfare.GetColorHex("star_color")}>{config.Data.StarCharacter}</color>"
             );
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Count",
-                stars < 2 ? "" : stars.ToString()
+                stars < 2 ? string.Empty : stars.ToString()
             );
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Info",
-                stars == 0 ? "<color=#737373>no stars</color>" : (stars.ToString() + " star" + (stars == 1 ? "" : "s"))
+                stars == 0 ? $"<color=#{UCWarfare.GetColorHex("officer_ui_no_stars")}>{F.Translate("officer_ui_no_stars", player)}</color>" : F.Translate("officer_ui_stars", player, stars.ToString(Data.Locale), stars.S())
             );
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Points",
                 currentPoints + "/" + requiredPoints
@@ -177,12 +178,12 @@ namespace Uncreated.Warfare.Officers
         {
             float ratio = currentPoints / (float)totalPoints;
 
-            int progress = (int)Math.Round(ratio * barLength);
+            int progress = Mathf.RoundToInt(ratio * barLength);
 
-            string bars = "";
+            string bars = string.Empty;
             for (int i = 0; i < progress; i++)
             {
-                bars += "█";
+                bars += config.Data.FullBlock;
             }
             return bars;
         }
@@ -191,25 +192,25 @@ namespace Uncreated.Warfare.Officers
             int a = config.Data.FirstStarPoints;
             int d = config.Data.PointsIncreasePerStar;
 
-            int stars = unchecked((int)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
+            int stars = Mathf.RoundToInt(Mathf.Floor(1f + ((0.5f * d) - a + Mathf.Sqrt(Mathf.Pow(a - 0.5f * d, 2) + (2f * d * totalPoints))) / d));
 
-            return unchecked((int)(stars / 2.0 * ((2 * a) + ((stars - 1) * d)) - (stars - 1) / 2.0 * ((2 * a) + ((stars - 2) * d))));
+            return Mathf.RoundToInt(stars / 2.0f * ((2f * a) + ((stars - 1f) * d)) - (stars - 1f) / 2.0f * ((2f * a) + ((stars - 2f) * d)));
         }
         public static int GetCurrentLevelPoints(int totalPoints)
         {
             int a = config.Data.FirstStarPoints;
             int d = config.Data.PointsIncreasePerStar;
 
-            int stars = unchecked((int)Math.Floor(1 + ((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
+            int stars = Mathf.RoundToInt(Mathf.Floor(1f + ((0.5f * d) - a + Mathf.Sqrt(Mathf.Pow(a - 0.5f * d, 2f) + (2f * d * totalPoints))) / d));
 
-            return unchecked((int)(GetRequiredLevelPoints(totalPoints) - ((stars / 2.0 * ((2 * a) + ((stars - 1) * d))) - totalPoints)));
+            return Mathf.RoundToInt(GetRequiredLevelPoints(totalPoints) - ((stars / 2.0f * ((2f * a) + ((stars - 1f) * d))) - totalPoints));
         }
         public static int GetStars(int totalPoints)
         {
             int a = config.Data.FirstStarPoints;
             int d = config.Data.PointsIncreasePerStar;
 
-            return unchecked((int)Math.Floor(((0.5 * d) - a + Math.Sqrt(Math.Pow(a - 0.5 * d, 2) + (2 * d * totalPoints))) / d));
+            return Mathf.RoundToInt(Mathf.Floor(((0.5f * d) - a + Mathf.Sqrt(Mathf.Pow(a - 0.5f * d, 2f) + (2f * d * totalPoints))) / d));
         }
 
         protected override string LoadDefaults() => "[]";
@@ -262,6 +263,9 @@ namespace Uncreated.Warfare.Officers
         public ushort StarsUI;
         public List<Rank> OfficerRanks;
 
+        public char FullBlock;
+        public char StarCharacter;
+
         public override void SetDefaults()
         {
             FriendlyKilledPoints = -1;
@@ -298,12 +302,17 @@ namespace Uncreated.Warfare.Officers
 
             StarsUI = 36033;
 
-            OfficerRanks = new List<Rank>();
-            OfficerRanks.Add(new Rank(1, "Captain", "Cpt.", 30000));
-            OfficerRanks.Add(new Rank(2, "Major", "Maj.", 40000));
-            OfficerRanks.Add(new Rank(3, "Lieutenant", "Lt.", 50000));
-            OfficerRanks.Add(new Rank(4, "Colonel", "Col.", 60000));
-            OfficerRanks.Add(new Rank(5, "General", "Gen.", 100000));
+            OfficerRanks = new List<Rank>
+            {
+                new Rank(1, "Captain", "Cpt.", 30000),
+                new Rank(2, "Major", "Maj.", 40000),
+                new Rank(3, "Lieutenant", "Lt.", 50000),
+                new Rank(4, "Colonel", "Col.", 60000),
+                new Rank(5, "General", "Gen.", 100000)
+            };
+
+            FullBlock = '█';
+            StarCharacter = '¼';
         }
 
         public OfficerConfigData() { }

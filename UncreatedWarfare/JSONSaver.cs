@@ -408,6 +408,7 @@ namespace Uncreated
                     break;
                 }
             }
+            attributes.Dispose();
             if (!settable)
             {
                 F.LogError(Type.Name + " saver tried to save to a non json-savable property.");
@@ -520,6 +521,7 @@ namespace Uncreated
             IEnumerator<T> results = ActiveObjects.Where(selector).GetEnumerator();
             while(results.MoveNext())
                 operation.Invoke(results.Current);
+            results.Dispose();
             if (save) Save();
         }
         public static void WriteSingleObject(T item)

@@ -59,9 +59,13 @@ namespace Uncreated.Warfare.Commands
                                         if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                             await Client.LogPlayerBanned(result, Provider.server.m_SteamID, reason, duration, DateTime.Now);
                                         FPlayerName names = await Data.DatabaseManager.GetUsernames(result);
-                                        string time = F.GetTimeFromMinutes(duration);
+                                        string time = F.GetTimeFromMinutes(duration, 0);
                                         F.Log(F.Translate("ban_console_operator", 0, out _, names.PlayerName, result.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
-                                        F.Broadcast("ban_broadcast_operator", names.PlayerName, time);
+                                        foreach (SteamPlayer player in Provider.clients)
+                                        {
+                                            time = F.GetTimeFromMinutes(duration, player.playerID.steamID.m_SteamID);
+                                            player.SendChat("ban_broadcast_operator", names.PlayerName, time);
+                                        }
                                     }
                                 }
                             }
@@ -93,12 +97,16 @@ namespace Uncreated.Warfare.Commands
                                 {
                                     string reason = command.MakeRemainder(2);
                                     Provider.requestBanPlayer(Provider.server, steamplayer.playerID.steamID, ipv4AddressOrZero, reason, result * 60u);
-                                    string time = F.GetTimeFromMinutes(result);
+                                    string time = F.GetTimeFromMinutes(result, 0);
                                     string name = F.GetPlayerOriginalNames(steamplayer).PlayerName;
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                         await Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, result, DateTime.Now);
                                     F.Log(F.Translate("ban_console_operator", 0, out _, name, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
-                                    F.Broadcast("ban_broadcast_operator", steamplayer.playerID.playerName, time);
+                                    foreach (SteamPlayer player in Provider.clients)
+                                    {
+                                        time = F.GetTimeFromMinutes(result, player.playerID.steamID.m_SteamID);
+                                        player.SendChat("ban_broadcast_operator", steamplayer.playerID.playerName, time);
+                                    }
                                 }
                             }
                         }
@@ -149,12 +157,18 @@ namespace Uncreated.Warfare.Commands
                                             if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                                 await Client.LogPlayerBanned(result, player.CSteamID.m_SteamID, reason, duration, DateTime.Now);
                                             FPlayerName names = await Data.DatabaseManager.GetUsernames(result);
-                                            string timeLocalized = F.GetTimeFromMinutes(duration);
+                                            string timeLocalized = F.GetTimeFromMinutes(duration, 0);
                                             F.Log(F.Translate("ban_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                             player.SendChat("ban_feedback", names.CharacterName, timeLocalized);
-                                            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_broadcast", 
-                                                names.CharacterName, callerName.CharacterName, timeLocalized);
+                                            foreach (SteamPlayer pl in Provider.clients)
+                                            {
+                                                if (pl.playerID.steamID.m_SteamID != player.CSteamID.m_SteamID)
+                                                {
+                                                    timeLocalized = F.GetTimeFromMinutes(duration, pl.playerID.steamID.m_SteamID);
+                                                    player.SendChat("ban_broadcast", names.CharacterName, callerName.CharacterName, timeLocalized);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -197,12 +211,18 @@ namespace Uncreated.Warfare.Commands
                                     Provider.requestBanPlayer(player.CSteamID, steamplayer.playerID.steamID, ipv4AddressOrZero, reason, result * 60);
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                         await Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, result, DateTime.Now);
-                                    string timeLocalized = F.GetTimeFromMinutes(result);
+                                    string timeLocalized = F.GetTimeFromMinutes(result, 0);
                                     F.Log(F.Translate("ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                     player.SendChat("ban_feedback", names.CharacterName, callerName.CharacterName, timeLocalized);
-                                    F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_broadcast", names.CharacterName, 
-                                        callerName.CharacterName, timeLocalized);
+                                    foreach (SteamPlayer pl in Provider.clients)
+                                    {
+                                        if (pl.playerID.steamID.m_SteamID != player.CSteamID.m_SteamID)
+                                        {
+                                            timeLocalized = F.GetTimeFromMinutes(result, pl.playerID.steamID.m_SteamID);
+                                            player.SendChat("ban_broadcast", names.CharacterName, callerName.CharacterName, timeLocalized);
+                                        }
+                                    }
                                 }
                             }
                         }
