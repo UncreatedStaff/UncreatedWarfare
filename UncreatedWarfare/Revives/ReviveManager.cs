@@ -5,6 +5,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 
@@ -113,6 +114,8 @@ namespace Uncreated.Warfare.Revives
                                 DistancesFromInitialShot[parameters.player.channel.owner.playerID.steamID.m_SteamID] = Vector3.Distance(killer.transform.position, parameters.player.transform.position);
                             else
                                 DistancesFromInitialShot.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, Vector3.Distance(killer.transform.position, parameters.player.transform.position));
+
+                            ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
                         }
                     }
 
