@@ -26,10 +26,8 @@ namespace Uncreated.Warfare.Stats
                         if (stats != null)
                         {
                             stats.warfare_stats.Update(player, false);
-                            Task.Run( async () => {
-                                await stats.UpdateSession(WarfareStats.WarfareName, false);
-                                await stats.SaveAsync();
-                            });
+                            stats.UpdateSession(WarfareStats.WarfareName, false);
+                            stats.SaveAsync();
                         }
                     }
                 }

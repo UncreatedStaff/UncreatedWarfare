@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
     public class TeamCTFGame
     {
-        Guid guid;
+        public Guid guid;
         
     }
 }

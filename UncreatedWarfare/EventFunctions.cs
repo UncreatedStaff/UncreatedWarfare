@@ -192,7 +192,6 @@ namespace Uncreated.Warfare
                 {
                     await pt.StartTracking(player.Player);
                     Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                    await pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
                     await OfficerManager.OnPlayerJoined(ucplayer);
                     await XPManager.OnPlayerJoined(ucplayer);
                     await Client.SendPlayerJoined(names);
@@ -205,6 +204,7 @@ namespace Uncreated.Warfare
                     if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
                         await KitManager.GiveKit(player, previousKit);
                 });
+                pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
                 F.Broadcast("player_connected", names.PlayerName);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
@@ -402,12 +402,10 @@ namespace Uncreated.Warfare
                 Task.Run(
                     async () =>
                     {
-                        Task r = null;
                         if (gotptcomp)
-                            r = c.UCPlayerStats.UpdateSession(Stats.WarfareStats.WarfareName);
+                            c.UCPlayerStats.UpdateSession(Stats.WarfareStats.WarfareName);
                         Task s = Client.SendPlayerLeft(names);
                         await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                        if (gotptcomp) await r;
                         await s;
                     });
                 F.Broadcast("player_disconnected", names.CharacterName);

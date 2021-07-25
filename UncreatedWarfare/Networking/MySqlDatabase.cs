@@ -13,7 +13,7 @@ namespace Uncreated.SQL
         public MySqlConnection SQL;
         public bool DebugLogging = false;
         protected MySqlData _login;
-        protected bool _readerOpen = false;
+        protected DbDataReader CurrentReader;
         public MySqlDatabase(MySqlData data)
         {
             _login = data;
@@ -113,6 +113,11 @@ namespace Uncreated.SQL
         {
             try
             {
+                while (CurrentReader != null && !CurrentReader.IsClosed)
+                {
+                    System.Threading.Thread.Sleep(1);
+                    Log("reader open");
+                }
                 SQL.Close();
                 if (DebugLogging) Log(nameof(CloseSync) + ": Closed Connection.");
                 return true;
@@ -128,6 +133,11 @@ namespace Uncreated.SQL
         {
             try
             {
+                while (CurrentReader != null && !CurrentReader.IsClosed)
+                {
+                    await Task.Delay(1);
+                    Log("reader open");
+                }
                 await SQL.CloseAsync();
                 if (DebugLogging) Log(nameof(CloseAsync) + ": Closed Connection.");
                 return true;
@@ -144,24 +154,34 @@ namespace Uncreated.SQL
             if(query == null) throw new ArgumentNullException(nameof(query));
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
-
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(Query) + ": " + Q.CommandText);
-                while (_readerOpen) await Task.Delay(10);
-                using (DbDataReader DbR = await Q.ExecuteReaderAsync())
+                while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
-                    _readerOpen = true;
-                    if (DbR is MySqlDataReader R)
+                    await Task.Delay(1);
+                    Log("reader open");
+                }
+                try
+                {
+                    using (CurrentReader = await Q.ExecuteReaderAsync())
                     {
-                        while (await R.ReadAsync())
+                        if (CurrentReader is MySqlDataReader R)
                         {
-                            ReadLoopAction.Invoke(R);
+                            while (await R.ReadAsync())
+                            {
+                                ReadLoopAction.Invoke(R);
+                            }
                         }
+                        CurrentReader.Close();
+                        CurrentReader.Dispose();
+                        CurrentReader = null;
+                        Q.Dispose();
                     }
-                    DbR.Close();
-                    _readerOpen = false;
-                    DbR.Dispose();
-                    Q.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Log($"{query}: {string.Join(",", parameters)}");
+                    LogError(ex);
                 }
             }
         }
@@ -173,7 +193,11 @@ namespace Uncreated.SQL
 
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(Scalar) + ": " + Q.CommandText);
-                while (_readerOpen) await Task.Delay(10);
+                while (CurrentReader != null && !CurrentReader.IsClosed)
+                {
+                    await Task.Delay(1);
+                    Log("reader open");
+                }
                 object res = await Q.ExecuteScalarAsync();
                 Q.Dispose();
                 if (res == null) return default;
@@ -187,6 +211,11 @@ namespace Uncreated.SQL
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText);
+                while (CurrentReader != null && !CurrentReader.IsClosed)
+                {
+                    await Task.Delay(1);
+                    Log("reader open");
+                }
                 try
                 {
                     await Q.ExecuteNonQueryAsync();
@@ -205,17 +234,19 @@ namespace Uncreated.SQL
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(QuerySync) + ": " + Q.CommandText);
-                while (_readerOpen) System.Threading.Thread.Sleep(10);
-                using (MySqlDataReader R = Q.ExecuteReader())
+                while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
-                    _readerOpen = true;
-                    while (R.Read())
+                    System.Threading.Thread.Sleep(1);
+                    Log("reader open");
+                }
+                using (CurrentReader = Q.ExecuteReader())
+                {
+                    while (CurrentReader.Read())
                     {
-                        ReadLoopAction.Invoke(R);
+                        ReadLoopAction.Invoke(CurrentReader as MySqlDataReader);
                     }
-                    R.Close();
-                    _readerOpen = false;
-                    R.Dispose();
+                    CurrentReader.Close();
+                    CurrentReader.Dispose();
                     Q.Dispose();
                 }
             }
@@ -228,7 +259,11 @@ namespace Uncreated.SQL
 
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(ScalarSync) + ": " + Q.CommandText);
-                while (_readerOpen) System.Threading.Thread.Sleep(10);
+                while (CurrentReader != null && !CurrentReader.IsClosed)
+                {
+                    System.Threading.Thread.Sleep(1);
+                    Log("reader open");
+                }
                 object res = Q.ExecuteScalar();
                 if (res is T a)
                 {
@@ -245,6 +280,11 @@ namespace Uncreated.SQL
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(NonQuerySync) + ": " + Q.CommandText);
+                while (CurrentReader != null && !CurrentReader.IsClosed)
+                {
+                    System.Threading.Thread.Sleep(1);
+                    Log("reader open");
+                }
                 try
                 {
                     Q.ExecuteNonQuery();
