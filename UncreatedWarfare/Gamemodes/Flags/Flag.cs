@@ -20,6 +20,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public int index = -1;
         public const int MaxPoints = 64;
         public Zone ZoneData { get; private set; }
+        public Dictionary<int, float> Adjacencies;
         public FlagGamemode Manager { get; private set; }
         public int Level { get => _level; }
         private readonly int _level;
@@ -228,20 +229,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this._owner = 0;
             PlayersOnFlag = new List<Player>();
             this.ZoneData = ComplexifyZone(data);
+            this.Adjacencies = data.adjacencies;
         }
         public static Zone ComplexifyZone(FlagData data)
         {
             switch (data.zone.type)
             {
                 case "rectangle":
-                    return new RectZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
+                    return new RectZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
                 case "circle":
-                    return new CircleZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
+                    return new CircleZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
                 case "polygon":
-                    return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name);
+                    return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
                 default:
                     F.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString(Data.Locale) + ", name: " + data.name);
-                    return new RectZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name);
+                    return new CircleZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
             }
         }
         public bool IsFriendly(UnturnedPlayer player) => IsFriendly(player.Player.quests.groupID.m_SteamID);

@@ -493,7 +493,7 @@ namespace Uncreated.Warfare
                     }
 
                 }
-                F.Log($"Loaded {languages.Count} languages, default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
+                F.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
             } else
             {
                 F.LogError("Failed to load translations, see above.");

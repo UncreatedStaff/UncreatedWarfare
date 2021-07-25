@@ -146,6 +146,7 @@ namespace Uncreated.Warfare
             static bool CancelLeavingGroup(Player player)
             {
                 if (!UCWarfare.Config.Patches.requestGroupExit) return true;
+                if (UCPlayer.FromPlayer(player).OnDutyOrAdmin()) return true;
                 player.SendChat("cant_leave_group");
                 return false;
             }
@@ -354,13 +355,16 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
             {
+                F.Log("Collided with: " + other == null ? "null" : other.transform.name);
                 if (!UCWarfare.Config.Patches.BumperOnTriggerEnter) return true;
                 if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
                     return false;
                 if (other.transform.CompareTag("Player"))
                 {
+                    F.Log("Was player.");
                     if (___vehicle.isDriven)
                     {
+                        F.Log("Was driven.");
                         Player hit = DamageTool.getPlayer(other.transform);
                         Player driver = ___vehicle.passengers[0].player.player;
                         if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;

@@ -60,7 +60,7 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_givexp_player_not_found", command[1]);
                             return;
                         }
-                        await XPManager.AddXP(target.Player, target.GetTeam(), amount, isConsole ? F.Translate("xp_from_operator", target.Steam64) : 
+                        await XPManager.AddXP(target.Player, target.GetTeam(), amount, isConsole ? F.Translate("xp_from_operator", target.Steam64) :
                             F.Translate("xp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                         player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
                     }
@@ -96,8 +96,8 @@ namespace Uncreated.Warfare.Commands
                         Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
                         if (flag == default)
                         {
-                            player.SendChat("test_zone_not_in_zone", 
-                                player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                            player.SendChat("test_zone_not_in_zone",
+                                player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
                                 player.transform.position.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
                             return;
                         }
@@ -170,13 +170,34 @@ namespace Uncreated.Warfare.Commands
                         if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
                             times = 1U;
                         List<Zone> zones = new List<Zone>();
-                        fg.Rotation.ForEach(x => { zones.Add(x.ZoneData); });
+                        if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
+                            Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
                         for (int i = 0; i < times; i++)
                         {
+                            zones.Clear();
                             await ReloadCommand.ReloadFlags();
-                            if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
-                                Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
-                            ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
+                            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+                            ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, true, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
+                            F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                        }
+                    }
+                    else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+                }
+                else if (command[0] == "savemanygraphs")
+                {
+                    if (Data.Gamemode is FlagGamemode fg)
+                    {
+                        if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
+                            times = 1U;
+                        List<Zone> zones = new List<Zone>();
+                        if (!Directory.Exists(Data.FlagStorage + "GraphExport\\"))
+                            Directory.CreateDirectory(Data.FlagStorage + "GraphExport\\");
+                        for (int i = 0; i < times; i++)
+                        {
+                            zones.Clear();
+                            await ReloadCommand.ReloadFlags();
+                            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+                            ZoneDrawing.DrawZoneMap(fg, Data.FlagStorage + @"GraphExport\zonegraph_" + i.ToString(Data.Locale));
                             F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
                         }
                     }
@@ -344,7 +365,7 @@ namespace Uncreated.Warfare.Commands
             CSteamID channel = player.channel.owner.playerID.steamID;
             foreach (Vector2 Point in points)
             {   // Border
-                float y = F.GetTerrainHeightAt2DPoint(Point.x, Point.y);
+                float y = Mathf.Max(F.GetTerrainHeightAt2DPoint(Point.x, Point.y), zone.MinHeight);
                 if (y == 0) y = player.transform.position.y;
                 Vector3 pos = new Vector3(Point.x, y + 0.5f, Point.y);
                 F.TriggerEffectReliable(117, channel, pos);
@@ -352,14 +373,14 @@ namespace Uncreated.Warfare.Commands
             }
             foreach (Vector2 Point in corners)
             {   // Corners
-                float y = F.GetTerrainHeightAt2DPoint(Point.x, Point.y);
+                float y = Mathf.Max(F.GetTerrainHeightAt2DPoint(Point.x, Point.y), zone.MinHeight);
                 if (y == 0) y = player.transform.position.y;
                 Vector3 pos = new Vector3(Point.x, y + 0.5f, Point.y);
                 F.TriggerEffectReliable(115, channel, pos);
                 F.TriggerEffectReliable(120, channel, pos);
             }
             {   // Center
-                float y = F.GetTerrainHeightAt2DPoint(center.x, center.y);
+                float y = Mathf.Max(F.GetTerrainHeightAt2DPoint(center.x, center.y), zone.MinHeight);
                 if (y == 0) y = player.transform.position.y;
                 Vector3 pos = new Vector3(center.x, y + 0.5f, center.y);
                 F.TriggerEffectReliable(113, channel, pos);
@@ -461,7 +482,8 @@ namespace Uncreated.Warfare.Commands
                 bool path = true;
                 bool range = false;
                 bool drawIn = false;
-                if (command.Length > 4)
+                bool drawAngles = false;
+                if (command.Length > 6)
                 {
                     if (command[1] == "all") all = true;
                     else if (command[1] != "active") player.SendChat("test_zonearea_syntax");
@@ -473,6 +495,8 @@ namespace Uncreated.Warfare.Commands
                     else if (command[4] != "false") player.SendChat("test_zonearea_syntax");
                     if (command[5] == "true") drawIn = true;
                     else if (command[5] != "false") player.SendChat("test_zonearea_syntax");
+                    if (command[6] == "true") drawAngles = true;
+                    else if (command[6] != "false") player.SendChat("test_zonearea_syntax");
                 }
                 else if (command.Length != 1)
                 {
@@ -495,8 +519,47 @@ namespace Uncreated.Warfare.Commands
                 if (player != default)
                     player.SendChat("test_zonearea_started");
                 else F.Log(F.Translate("test_zonearea_started", 0, out _));
-                ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, path, range, drawIn);
+                ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, path, range, drawIn, drawAngles, true);
             }
+            else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        }
+        private void drawzone(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            Zone zone;
+            string zoneName;
+            string zoneColor;
+            if (Data.Gamemode is FlagGamemode fg)
+            {
+                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                if (flag == default)
+                {
+                    player.SendChat("test_zone_test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
+                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
+                        fg.AllFlags.Count.ToString(Data.Locale));
+                    return;
+                }
+                else
+                {
+                    zone = flag.ZoneData;
+                    zoneName = flag.Name;
+                    zoneColor = flag.TeamSpecificHexColor;
+                }
+                List<Zone> zones = new List<Zone>(1) { zone };
+                ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, false, true, false, true, true, Data.FlagStorage + "zonerange_" + zoneName);
+            }
+        }
+        private void drawgraph(string[] command, Player player)
+        {
+            if (Data.Gamemode is FlagGamemode fg)
+            {
+                ZoneDrawing.DrawZoneMap(fg, null);
+            }
+            else if (player == null) F.LogError(F.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
             else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
         private void rotation(string[] command, Player player)
@@ -511,28 +574,8 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(F.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            DamagePlayerParameters p = new DamagePlayerParameters()
-            {
-                applyGlobalArmorMultiplier = false,
-                respectArmor = false,
-                bleedingModifier = 0,
-                bonesModifier = 0,
-                cause = EDeathCause.KILL,
-                damage = 99,
-                direction = Vector3.down,
-                killer = player.channel.owner.playerID.steamID,
-                foodModifier = 0,
-                hallucinationModifier = 0,
-                limb = ELimb.SKULL,
-                player = player,
-                ragdollEffect = ERagdollEffect.GOLD,
-                times = 1.0f,
-                trackKill = false,
-                virusModifier = 0,
-                waterModifier = 0
-            };
-            DamageTool.damagePlayer(p, out _);
-            DamageTool.damagePlayer(p, out _);
+            player.life.askDamage(99, Vector3.down, EDeathCause.KILL, ELimb.SKULL, player.channel.owner.playerID.steamID, out _, false, ERagdollEffect.GOLD, false, true);
+            player.life.askDamage(99, Vector3.down, EDeathCause.KILL, ELimb.SKULL, player.channel.owner.playerID.steamID, out _, false, ERagdollEffect.GOLD, false, true);
             player.SendChat("test_down_success", 198.ToString(Data.Locale));
         }
         private void layer(string[] command, Player player)
@@ -543,6 +586,73 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
             F.Log(F.GetLayer(player.look.aim.position, player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
+        }
+        private void dumpzone(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            Zone zone;
+            string zoneName;
+            string zoneColor;
+            if (Data.Gamemode is FlagGamemode fg)
+            {
+                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                if (flag == default)
+                {
+                    List<Zone> zones = Data.ExtraZones.Values.ToList();
+                    zones.Sort(delegate (Zone a, Zone b)
+                    {
+                        return a.BoundsArea.CompareTo(b.BoundsArea);
+                    });
+                    Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
+                    if (extrazone == default)
+                    {
+                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale),
+                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
+                            fg.AllFlags.Count.ToString(Data.Locale));
+                        return;
+                    }
+                    else
+                    {
+                        zone = extrazone;
+                        zoneName = extrazone.Name;
+                        zoneColor = UCWarfare.GetColorHex("default");
+                    }
+                }
+                else
+                {
+                    zone = flag.ZoneData;
+                    zoneName = flag.Name;
+                    zoneColor = flag.TeamSpecificHexColor;
+                }
+            }
+            else
+            {
+                List<Zone> zones = Data.ExtraZones.Values.ToList();
+                zones.Sort(delegate (Zone a, Zone b)
+                {
+                    return a.BoundsArea.CompareTo(b.BoundsArea);
+                });
+                Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
+                if (extrazone == default)
+                {
+                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
+                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
+                        zones.Count.ToString(Data.Locale));
+                    return;
+                }
+                else
+                {
+                    zone = extrazone;
+                    zoneName = extrazone.Name;
+                    zoneColor = UCWarfare.GetColorHex("default");
+                }
+            }
+            F.Log(zone.Dump(), ConsoleColor.Green);
+            player.SendChat("test_check_console");
         }
     }
 #pragma warning restore IDE0051 // Remove unused private members

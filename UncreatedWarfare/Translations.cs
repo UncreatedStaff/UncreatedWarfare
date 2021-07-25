@@ -190,7 +190,7 @@ namespace Uncreated.Warfare
                 { "time_days", "days" },
                 { "time_month", "month" },
                 { "time_months", "months" },
-                { "time_year", "month" },
+                { "time_year", "year" },
                 { "time_years", "years" },
                 { "time_and", "and" },
 
@@ -566,6 +566,7 @@ namespace Uncreated.Warfare
                 { "test_error_executing", "<color=#ff8c69>Ran into an error while executing: <color=#ff758f>{0} - {1}</color>.</color>" },
                 { "test_multiple_matches", "<color=#ff8c69>Multiple methods match <color=#ff758f>{0}</color>.</color>" },
                 { "test_no_players_console", "No player found." },
+                { "test_check_console", "<color=#e6e3d5>Check the console log.</color>" },
                 
                 { "test_zonearea_syntax", "<color=#ff8c69>Syntax: <i>/test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false></i>.</color>" },
                 { "test_zonearea_started", "<color=#e6e3d5>Picture has to generate, wait around a minute.</color>" },
@@ -672,22 +673,22 @@ namespace Uncreated.Warfare
         public static Dictionary<string, string> DefaultTranslations;
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
         { 
-            new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68"), true, 4),
-            new FlagData(2, "Hilltop", 258, 497, new ZoneData("rectangle", "66,72"), true, 3),
-            new FlagData(3, "Papanov", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645"), true, 3),
-            new FlagData(4, "Verto", 624, 469, new ZoneData("polygon", "500,446,514,527,710,492,748,466,710,411"), true, 2),
-            new FlagData(5, "Hill123", 631, 139, new ZoneData("rectangle", "44,86"), true, 0),
-            new FlagData(6, "Hill13", 338, -15, new ZoneData("circle", "35"), true, 1),
-            new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true, 0),
-            new FlagData(8, "Fortress", -648.5f, 102.5f, new ZoneData("rectangle", "79,47"), true, 0)
+            new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68"), true, 4, -1, -1),
+            new FlagData(2, "Hilltop", 258, 497, new ZoneData("rectangle", "66,72"), true, 3, -1, -1),
+            new FlagData(3, "Papanov", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645"), true, 3, -1, -1),
+            new FlagData(4, "Verto", 624, 469, new ZoneData("polygon", "500,446,514,527,710,492,748,466,710,411"), true, 2, -1, -1),
+            new FlagData(5, "Hill123", 631, 139, new ZoneData("rectangle", "44,86"), true, 0, -1, -1),
+            new FlagData(6, "Hill13", 338, -15, new ZoneData("circle", "35"), true, 1, -1, -1),
+            new FlagData(7, "Mining", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true, 0, -1, -1),
+            new FlagData(8, "Fortress", -648.5f, 102.5f, new ZoneData("rectangle", "79,47"), true, 0, -1, -1)
         };
         public static List<FlagData> DefaultExtraZones = new List<FlagData>
         {
-            new FlagData(-69, "lobby", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false, 0),
-            new FlagData(1, "T1Main", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, 0),
-            new FlagData(101, "T1AMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, 0),
-            new FlagData(2, "T2Main", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, 0),
-            new FlagData(102, "T2AMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, 0),
+            new FlagData(-69, "lobby", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false, 0, -1, -1),
+            new FlagData(1, "T1Main", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, 0, -1, -1),
+            new FlagData(101, "T1AMC", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, 0, -1, -1),
+            new FlagData(2, "T2Main", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, 0, -1, -1),
+            new FlagData(102, "T2AMC", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, 0, -1, -1),
         };
         public static List<Point3D> DefaultExtraPoints = new List<Point3D>
         {

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
@@ -138,6 +139,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             isScreenUp = false;
             await StartNextGame();
         }
+        public void ReloadConfig()
+        {
+            _config.Reload();
+        }
         public override async Task StartNextGame()
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
@@ -154,10 +159,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (AllFlags == null) return;
             await ResetFlags();
             OnFlag.Clear();
-            if (Config.UseAutomaticLevelSensing)
+            if (Config.PathingMode == ObjectivePathing.EPathingMode.AUTODISTANCE)
+            {
                 Config.PathingData.Set();
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread(); // switch to game thread to use UnityEngine.Random
-            Rotation = Config.UseAutomaticLevelSensing ? ObjectivePathing.CreatePath(AllFlags) : ObjectivePathing.CreatePathUsingLevels(AllFlags, Config.MaxFlagsPerLevel);
+                Rotation = ObjectivePathing.CreateAutoPath(AllFlags);
+            } 
+            else if (Config.PathingMode == ObjectivePathing.EPathingMode.LEVELS)
+            {
+                Rotation = ObjectivePathing.CreatePathUsingLevels(AllFlags, Config.MaxFlagsPerLevel);
+            } 
+            else if (Config.PathingMode == ObjectivePathing.EPathingMode.ADJACENCIES)
+            {
+                Rotation = ObjectivePathing.PathWithAdjacents(AllFlags, Config.team1adjacencies, Config.team2adjacencies);
+            } else
+            {
+                F.LogWarning("Invalid pathing value, no flags will be loaded. Expect errors.");
+            }
             ObjectiveT1Index = 0;
             ObjectiveT2Index = Rotation.Count - 1;
             if (Config.DiscoveryForesight < 1)
@@ -187,7 +204,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
             PrintFlagRotation();
-            await rtn;
         }
         public override void PrintFlagRotation()
         {
@@ -455,8 +471,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public float PlayerCheckSpeedSeconds;
         public bool UseUI;
         public bool UseChat;
-        /// <summary>Alternative is level system.</summary>
-        public bool UseAutomaticLevelSensing;
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ObjectivePathing.EPathingMode PathingMode;
         public int MaxFlagsPerLevel;
         public ushort CaptureUI;
         public ushort FlagUIIdFirst;
@@ -476,11 +492,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public AutoObjectiveData PathingData;
         public int end_delay;
         public float NearOtherBaseKillTimer;
+        // 0-360
+        public float team1spawnangle;
+        public float team2spawnangle;
+        public float lobbyspawnangle;
+        public Dictionary<int, float> team1adjacencies;
+        public Dictionary<int, float> team2adjacencies;
         public TeamCTFData() => SetDefaults();
         public override void SetDefaults()
         {
             this.PlayerCheckSpeedSeconds = 0.25f;
-            this.UseAutomaticLevelSensing = true;
+            this.PathingMode = ObjectivePathing.EPathingMode.ADJACENCIES;
             this.MaxFlagsPerLevel = 2;
             this.UseUI = true;
             this.UseChat = false;
@@ -502,6 +524,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.PathingData = new AutoObjectiveData();
             this.end_delay = 5;
             this.NearOtherBaseKillTimer = 10f;
+            this.team1spawnangle = 0f;
+            this.team2spawnangle = 0f;
+            this.lobbyspawnangle = 0f;
+            this.team1adjacencies = new Dictionary<int, float>();
+            this.team2adjacencies = new Dictionary<int, float>();
         }
         public class AutoObjectiveData
         {
@@ -511,7 +538,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             public float flag_search_radius;
             public float forward_bias;
             public float back_bias;
-            public float side_bias;
+            public float left_bias;
+            public float right_bias;
             public float distance_falloff;
             public float average_distance_buffer;
             public float radius_tuning_resolution;
@@ -526,7 +554,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 flag_search_radius = 1200f;
                 forward_bias = 0.65f;
                 back_bias = 0.05f;
-                side_bias = 0.3f;
+                left_bias = 0.15f;
+                right_bias = 0.15f;
                 distance_falloff = 0.1f;
                 average_distance_buffer = 2400f;
                 radius_tuning_resolution = 40f;
@@ -542,7 +571,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 float flag_search_radius, 
                 float forward_bias, 
                 float back_bias, 
-                float side_bias, 
+                float left_bias, 
+                float right_bias, 
                 float distance_falloff, 
                 float average_distance_buffer, 
                 float radius_tuning_resolution, 
@@ -557,7 +587,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 this.flag_search_radius = flag_search_radius;
                 this.forward_bias = forward_bias;
                 this.back_bias = back_bias;
-                this.side_bias = side_bias;
+                this.right_bias = right_bias;
+                this.left_bias = left_bias;
                 this.distance_falloff = distance_falloff;
                 this.average_distance_buffer = average_distance_buffer;
                 this.radius_tuning_resolution = radius_tuning_resolution;
@@ -574,7 +605,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     flag_search_radius, 
                     forward_bias, 
                     back_bias, 
-                    side_bias, 
+                    left_bias,
+                    right_bias, 
                     distance_falloff, 
                     average_distance_buffer, 
                     radius_tuning_resolution, 

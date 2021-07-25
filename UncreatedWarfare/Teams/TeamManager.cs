@@ -27,9 +27,9 @@ namespace Uncreated.Warfare.Teams
             _data = new Config<TeamConfig>(Data.TeamStorage, "teams.json");
             if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _)) 
                 F.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if(!KitManager.KitExists(_data.Data.team2unarmedkit, out _)) 
+            if (!KitManager.KitExists(_data.Data.team2unarmedkit, out _)) 
                 F.LogError("Team 2's unarmed kit, \"" + _data.Data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if(!KitManager.KitExists(_data.Data.defaultkit, out _)) 
+            if (!KitManager.KitExists(_data.Data.defaultkit, out _)) 
                 F.LogError("The default kit, \"" + _data.Data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             
         }
@@ -52,9 +52,9 @@ namespace Uncreated.Warfare.Teams
         public static string NeutralColorHex { get => _data.Data.AdminColorHex; }
         public static string Team1UnarmedKit { get => _data.Data.team1unarmedkit; }
         public static string Team2UnarmedKit { get => _data.Data.team2unarmedkit; }
-        public static float Team1SpawnAngle { get => _data.Data.team1spawnangle; }
-        public static float Team2SpawnAngle { get => _data.Data.team2spawnangle; }
-        public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
+        public static float Team1SpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.team1spawnangle : 0f; }
+        public static float Team2SpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.team2spawnangle : 0f; }
+        public static float LobbySpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.lobbyspawnangle : 0f; }
         public static string DefaultKit { get => _data.Data.defaultkit; }
         public static Zone Team1Main { get {
                 if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(1))
@@ -249,10 +249,6 @@ namespace Uncreated.Warfare.Teams
         public string team1unarmedkit;
         public string team2unarmedkit;
         public string defaultkit;
-        // 0-360
-        public float team1spawnangle;
-        public float team2spawnangle;
-        public float lobbyspawnangle;
         [JsonIgnore]
         public Color Team1Color
         {
@@ -364,9 +360,6 @@ namespace Uncreated.Warfare.Teams
             this.team1unarmedkit = team1unarmedkit ?? "usunarmed";
             this.team2unarmedkit = team2unarmedkit ?? "ruunarmed";
             this.defaultkit = defaultkit ?? "default";
-            this.team1spawnangle = team1spawnangle;
-            this.team2spawnangle = team2spawnangle;
-            this.lobbyspawnangle = lobbyspawnangle;
         }
         public override void SetDefaults()
         {
@@ -382,9 +375,6 @@ namespace Uncreated.Warfare.Teams
             team1unarmedkit = "usunarmed";
             team2unarmedkit = "ruunarmed";
             defaultkit = "default";
-            team1spawnangle = 0f;
-            team2spawnangle = 0f;
-            lobbyspawnangle = 0f;
         }
     }
 }

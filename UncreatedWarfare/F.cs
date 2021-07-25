@@ -21,6 +21,7 @@ using Uncreated.Warfare.XP;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Rocket.API;
 
 namespace Uncreated.Warfare
 {
@@ -803,10 +804,12 @@ namespace Uncreated.Warfare
             foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
                 SendChat(player.playerID.steamID, text, formatting);
         }
-        public static bool OnDuty(this UnturnedPlayer player) => player.Player.channel.owner.isAdmin || R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
-        public static bool OffDuty(this UnturnedPlayer player) => !OnDuty(player);
-        public static bool IsIntern(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
-        public static bool IsAdmin(this UnturnedPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup);
+        public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
+        public static bool OnDuty(this IRocketPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
+        public static bool OffDutyAndNotAdmin(this IRocketPlayer player) => !OnDutyOrAdmin(player);
+        public static bool OffDuty(this IRocketPlayer player) => !OnDuty(player);
+        public static bool IsIntern(this IRocketPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
+        public static bool IsAdmin(this IRocketPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup);
         /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
         /// <param name="duration">Duration of ban IN SECONDS</param>
         public static void OfflineBan(ulong BannedID, uint IPAddress, CSteamID BannerID, string reason, uint duration)
@@ -1652,13 +1655,14 @@ namespace Uncreated.Warfare
         {
             if (player == 0)
             {
-                if (!Data.LimbLocalization.ContainsKey(JSONMethods.DefaultLanguage))
+                if (!Data.LimbLocalization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<ELimb, string> loc))
                 {
                     if (Data.LimbLocalization.Count > 0)
                     {
-                        if (Data.LimbLocalization.ElementAt(0).Value.ContainsKey(limb))
+                        loc = Data.LimbLocalization.ElementAt(0).Value;
+                        if (loc.TryGetValue(limb, out string v))
                         {
-                            return Data.LimbLocalization.ElementAt(0).Value[limb];
+                            return v;
                         }
                         else return limb.ToString();
                     }
@@ -1666,37 +1670,35 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    if (Data.LimbLocalization[JSONMethods.DefaultLanguage].ContainsKey(limb))
+                    if (loc.TryGetValue(limb, out string v))
                     {
-                        return Data.LimbLocalization[JSONMethods.DefaultLanguage][limb];
+                        return v;
                     }
                     else return limb.ToString();
                 }
             }
             else
             {
-                string lang = JSONMethods.DefaultLanguage;
-                if (Data.Languages.ContainsKey(player))
+                if (!Data.Languages.TryGetValue(player, out string lang) || !Data.LimbLocalization.TryGetValue(lang, out Dictionary<ELimb, string> loc) || !loc.ContainsKey(limb))
                 {
-                    lang = Data.Languages[player];
-                    if (!Data.LimbLocalization.ContainsKey(lang) || !Data.LimbLocalization[lang].ContainsKey(limb))
-                        lang = JSONMethods.DefaultLanguage;
+                    lang = JSONMethods.DefaultLanguage;
                 }
-                if (!Data.LimbLocalization.ContainsKey(lang))
+                if (!Data.LimbLocalization.TryGetValue(lang, out loc))
                 {
                     if (Data.LimbLocalization.Count > 0)
                     {
-                        if (Data.LimbLocalization.ElementAt(0).Value.ContainsKey(limb))
+                        loc = Data.LimbLocalization.ElementAt(0).Value;
+                        if (loc.TryGetValue(limb, out string v))
                         {
-                            return Data.LimbLocalization.ElementAt(0).Value[limb];
+                            return v;
                         }
                         else return limb.ToString();
                     }
                     else return limb.ToString();
                 }
-                else if (Data.LimbLocalization[lang].ContainsKey(limb))
+                else if (loc.TryGetValue(limb, out string v))
                 {
-                    return Data.LimbLocalization[lang][limb];
+                    return v;
                 }
                 else return limb.ToString();
             }
@@ -1711,11 +1713,12 @@ namespace Uncreated.Warfare
             string dis = Math.Round(distance).ToString(Data.Locale) + 'm';
             if (player == 0)
             {
-                if (!Data.DeathLocalization.ContainsKey(JSONMethods.DefaultLanguage))
+                if (!Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, string> loc))
                 {
                     if (Data.DeathLocalization.Count > 0)
                     {
-                        if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(key))
+                        loc = Data.DeathLocalization.ElementAt(0).Value;
+                        if (loc.TryGetValue(key, out string v))
                         {
                             try
                             {
@@ -1727,11 +1730,11 @@ namespace Uncreated.Warfare
                                 return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             }
                         }
-                        else if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(backupcause.ToString()))
+                        else if (loc.TryGetValue(backupcause.ToString(), out v))
                         {
                             try
                             {
-                                return string.Format(Data.DeathLocalization.ElementAt(0).Value[backupcause.ToString()], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                             }
                             catch (FormatException ex)
                             {
@@ -1745,11 +1748,11 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(key))
+                    if (loc.TryGetValue(key, out string v))
                     {
                         try
                         {
-                            return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                            return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                         }
                         catch (FormatException ex)
                         {
@@ -1757,11 +1760,11 @@ namespace Uncreated.Warfare
                             return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                         }
                     }
-                    else if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(backupcause.ToString()))
+                    else if (loc.TryGetValue(backupcause.ToString(), out v))
                     {
                         try
                         {
-                            return string.Format(Data.DeathLocalization[JSONMethods.DefaultLanguage][backupcause.ToString()], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                            return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                         }
                         catch (FormatException ex)
                         {
@@ -1774,22 +1777,20 @@ namespace Uncreated.Warfare
             }
             else
             {
-                string lang = JSONMethods.DefaultLanguage;
-                if (Data.Languages.ContainsKey(player))
+                if (!Data.Languages.TryGetValue(player, out string lang) || !Data.DeathLocalization.TryGetValue(lang, out Dictionary<string, string> loc) || (!loc.ContainsKey(key) && !loc.ContainsKey(backupcause.ToString())))
                 {
-                    lang = Data.Languages[player];
-                    if (!Data.DeathLocalization.ContainsKey(lang) || !Data.DeathLocalization[lang].ContainsKey(key))
-                        lang = JSONMethods.DefaultLanguage;
+                    lang = JSONMethods.DefaultLanguage;
                 }
-                if (!Data.DeathLocalization.ContainsKey(lang))
+                if (!Data.DeathLocalization.TryGetValue(lang, out loc))
                 {
                     if (Data.DeathLocalization.Count > 0)
                     {
-                        if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(key))
+                        loc = Data.DeathLocalization.ElementAt(0).Value;
+                        if (loc.TryGetValue(key, out string v))
                         {
                             try
                             {
-                                return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                             }
                             catch (FormatException ex)
                             {
@@ -1797,11 +1798,11 @@ namespace Uncreated.Warfare
                                 return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                             }
                         }
-                        else if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(backupcause.ToString()))
+                        else if (loc.TryGetValue(backupcause.ToString(), out v))
                         {
                             try
                             {
-                                return string.Format(Data.DeathLocalization.ElementAt(0).Value[backupcause.ToString()], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                             }
                             catch (FormatException ex)
                             {
@@ -1813,11 +1814,11 @@ namespace Uncreated.Warfare
                     }
                     else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                 }
-                else if (Data.DeathLocalization[lang].ContainsKey(key))
+                else if (loc.TryGetValue(key, out string v))
                 {
                     try
                     {
-                        return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                        return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                     }
                     catch (FormatException ex)
                     {
@@ -1825,11 +1826,11 @@ namespace Uncreated.Warfare
                         return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                     }
                 }
-                else if (Data.DeathLocalization[lang].ContainsKey(backupcause.ToString()))
+                else if (loc.TryGetValue(backupcause.ToString(), out v))
                 {
                     try
                     {
-                        return string.Format(Data.DeathLocalization[lang][backupcause.ToString()], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                        return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                     }
                     catch (FormatException ex)
                     {
@@ -1954,12 +1955,9 @@ namespace Uncreated.Warfare
                     else
                     {
                         LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {key}.");
-                        string defaultMessage = key;
                         string newMessage;
-                        if (JSONMethods.DefaultDeathTranslations.ContainsKey(key))
-                            defaultMessage = JSONMethods.DefaultDeathTranslations[key];
-                        else if (JSONMethods.DefaultDeathTranslations.ContainsKey(backupcause.ToString()))
-                            defaultMessage = JSONMethods.DefaultDeathTranslations[backupcause.ToString()];
+                        if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out string defaultMessage) && !JSONMethods.DefaultDeathTranslations.TryGetValue(backupcause.ToString(), out defaultMessage))
+                            defaultMessage = key;
                         try
                         {
                             newMessage = string.Format(defaultMessage, ColorizeName(dead.CharacterName, deadTeam), ColorizeName(killer, killerTeam),

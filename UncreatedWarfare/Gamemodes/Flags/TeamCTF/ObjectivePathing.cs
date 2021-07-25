@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,10 +18,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public static float FLAG_RADIUS_SEARCH = 1200f; // can double if no flags are found
         public static float FORWARD_BIAS = 0.65f;
         public static float BACK_BIAS = 0.05f;
-        public static float SIDE_BIAS = 0.3f;
+        public static float LEFT_BIAS = 0.15f;
+        public static float RIGHT_BIAS = 0.15f;
         public static float DISTANCE_EFFECT = 0.1f;
         public static float AVERAGE_DISTANCE_BUFFER = 2400f; // idea for tomorrow, get average distance from each main and check with buffer.
         public static float RADIUS_TUNING_RESOLUTION = 40f;
+        public static float MAIN_BASE_ANGLE_OFFSET = 0;
+        public static float SIDE_ANGLE_LEFT_START_DEFAULT = 5 * Mathf.PI / 12; // 75
+        public static float SIDE_ANGLE_LEFT_END_DEFAULT = 7 * Mathf.PI / 12; // 105
+        public static float SIDE_ANGLE_RIGHT_START_DEFAULT = 17 * Mathf.PI / 12; // 255
+        public static float SIDE_ANGLE_RIGHT_END_DEFAULT = 19 * Mathf.PI / 12; // 285
+        public static float SIDE_ANGLE_LEFT_START = 0;
+        public static float SIDE_ANGLE_LEFT_END = 0;
+        public static float SIDE_ANGLE_RIGHT_START = 0;
+        public static float SIDE_ANGLE_RIGHT_END = 0;
         public static int MAX_FLAGS = 8;
         public static int MIN_FLAGS = 5;
         public static int MAX_REDOS = 20;
@@ -31,7 +42,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             float FLAG_RADIUS_SEARCH,
             float FORWARD_BIAS,
             float BACK_BIAS,
-            float SIDE_BIAS,
+            float LEFT_BIAS,
+            float RIGHT_BIAS,
             float DISTANCE_EFFECT,
             float AVERAGE_DISTANCE_BUFFER,
             float RADIUS_TUNING_RESOLUTION,
@@ -45,15 +57,40 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             ObjectivePathing.FLAG_RADIUS_SEARCH = FLAG_RADIUS_SEARCH;
             ObjectivePathing.FORWARD_BIAS = FORWARD_BIAS;
             ObjectivePathing.BACK_BIAS = BACK_BIAS;
-            ObjectivePathing.SIDE_BIAS = SIDE_BIAS;
+            ObjectivePathing.LEFT_BIAS = LEFT_BIAS;
+            ObjectivePathing.RIGHT_BIAS = RIGHT_BIAS;
             ObjectivePathing.DISTANCE_EFFECT = DISTANCE_EFFECT;
             ObjectivePathing.AVERAGE_DISTANCE_BUFFER = AVERAGE_DISTANCE_BUFFER;
             ObjectivePathing.RADIUS_TUNING_RESOLUTION = RADIUS_TUNING_RESOLUTION;
             ObjectivePathing.MAX_FLAGS = MAX_FLAGS;
             ObjectivePathing.MIN_FLAGS = MIN_FLAGS;
             ObjectivePathing.MAX_REDOS = MAX_REDOS;
+            ObjectivePathing.MAIN_BASE_ANGLE_OFFSET = GetObjectiveAngleDifferenceRad();
+            F.Log(MAIN_BASE_ANGLE_OFFSET.ToString(Data.Locale));
+            ObjectivePathing.SIDE_ANGLE_LEFT_END = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_LEFT_END_DEFAULT);
+            ObjectivePathing.SIDE_ANGLE_LEFT_START = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_LEFT_START_DEFAULT);
+            ObjectivePathing.SIDE_ANGLE_RIGHT_END = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_RIGHT_END_DEFAULT);
+            ObjectivePathing.SIDE_ANGLE_RIGHT_START = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_RIGHT_START_DEFAULT);
+
+            F.Log($"angle offset: {MAIN_BASE_ANGLE_OFFSET * 180 / Mathf.PI}: \n" +
+                $"side left end: {SIDE_ANGLE_LEFT_END * 180 / Mathf.PI}, \n" +
+                $"side left start: {SIDE_ANGLE_LEFT_START * 180 / Mathf.PI}, \n" +
+                $"side right end: {SIDE_ANGLE_RIGHT_END * 180 / Mathf.PI}, \n" +
+                $"side right start {SIDE_ANGLE_RIGHT_START * 180 / Mathf.PI}");
         }
-        public static List<Flag> CreatePath(List<Flag> rotation)
+        private static float GetObjectiveAngleDifferenceRad() =>
+            Mathf.Atan(((TeamManager.Team1Main.Center.y - TeamManager.Team2Main.Center.y) / (TeamManager.Team1Main.Center.x - TeamManager.Team2Main.Center.x)));
+        private static float RotateAngleFromOriginal(float original) => ClampRadians(original + MAIN_BASE_ANGLE_OFFSET);
+        private static float ClampRadians(float unclamped)
+        {
+            float n = unclamped;
+            while (n > Mathf.PI * 2)
+                n -= Mathf.PI * 2;
+            while (n < 0)
+                n += Mathf.PI * 2;
+            return n;
+        }
+        public static List<Flag> CreateAutoPath(List<Flag> rotation)
         {
             List<Flag> path = new List<Flag>();
             StartLoop(ref path, rotation);
@@ -155,10 +192,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         private static float GetAngleBiasFromOrigin(Vector2 origin, Vector2 position, out float distance)
         {
             float angle = GetAngleFromCenter(origin, position, out distance);
-            if (angle.Between(Mathf.PI / 6f /* 30° */, 0f, true, false) || angle.Between(4f * Mathf.PI / 3f  /* 240° */, 2f * Mathf.PI /* 360° */, true, true)) return BACK_BIAS;
-            else if (angle.Between(Mathf.PI / 3 /* 60° */, Mathf.PI / 6f /* 30° */, true, false)) return SIDE_BIAS / 2;
-            else if (angle.Between(4f * Mathf.PI / 3f  /* 240° */, 7f * Mathf.PI / 6f  /* 210° */, false, true)) return SIDE_BIAS / 2;
-            else return FORWARD_BIAS;
+            if (angle.Between(SIDE_ANGLE_LEFT_START, 0f, false, true) || angle.Between(0f, SIDE_ANGLE_RIGHT_END, true, false))
+                return FORWARD_BIAS;
+            else if (angle.Between(SIDE_ANGLE_LEFT_START, SIDE_ANGLE_LEFT_END, true, true)) return LEFT_BIAS;
+            else if (angle.Between(SIDE_ANGLE_RIGHT_START, SIDE_ANGLE_RIGHT_END, true, true)) return RIGHT_BIAS;
+            else return BACK_BIAS;
         }
         public static List<Flag> GetFlagsInRadius(Vector2 center, float radius, List<Flag> Rotation) => Rotation.Where(flag => (flag.Position2D - center).sqrMagnitude <= radius * radius).ToList();
         public static List<Flag> GetFlagsInRadiusExclude(Vector2 center, float radius, List<Flag> Rotation, int excluded_flag_id, List<Flag> history) => 
@@ -207,6 +245,133 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
             return Rotation;
+        }
+
+        public static List<Flag> PathWithAdjacents(List<Flag> Selection, Dictionary<int, float> T1Adjacents, Dictionary<int, float> T2Adjacents)
+        {
+            List<Flag> path = new List<Flag>();
+            StartAdjacentsLoop(path, Selection, T1Adjacents, T2Adjacents);
+            return path;
+        }
+        private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, Dictionary<int, float> t1adjacents, Dictionary<int, float> t2adjacents)
+        {
+            flags.Add(PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null)));
+            AdjacentsFlagLoop(flags, selection, t2adjacents);
+        }
+        private static void AdjacentsFlagLoop(List<Flag> flags, List<Flag> selection, Dictionary<int, float> t2adjacents)
+        {
+            Flag lastFlag = flags.Last();
+            if (lastFlag == null)
+            {
+                F.LogError("Last flag was null, breaking loop.");
+                return;
+            }
+            Dictionary<Flag, float> initBiases = InstantiateFlags(lastFlag.Adjacencies, selection, flags, lastFlag);
+            if (!t2adjacents.TryGetValue(lastFlag.ID, out float mainBias))
+            {
+                Flag pick = PickRandomFlagWithSpecifiedBias(initBiases);
+                if (pick != null)
+                    flags.Add(pick);
+                else
+                {
+                    F.LogError("Pick was null after " + lastFlag.Name);
+                    return;
+                }
+                AdjacentsFlagLoop(flags, selection, t2adjacents);
+            } else
+            {
+                if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag newFlag))
+                {
+                    flags.Add(newFlag);
+                    AdjacentsFlagLoop(flags, selection, t2adjacents);
+                }
+            }
+        }
+        public static Dictionary<Flag, float> InstantiateFlags(Dictionary<int, float> flags, List<Flag> selection, List<Flag> toNotRemove, Flag current)
+        {
+            Dictionary<Flag, float> rtn = new Dictionary<Flag, float>();
+            foreach (KeyValuePair<int, float> flag in flags)
+            {
+                Flag f = selection.FirstOrDefault(x => x.ID == flag.Key);
+                if (f != default) 
+                {
+                    if(toNotRemove == null || !toNotRemove.Exists(x => x.ID == flag.Key))
+                        rtn.Add(f, flag.Value);
+                }
+                else if (current != null) F.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
+                else F.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
+            }
+            return rtn;
+        }
+
+        private static Flag PickRandomFlagWithSpecifiedBias(Dictionary<Flag, float> biases)
+        {
+            if (biases.Count < 1)
+            {
+                F.Log("Biases was empty.");
+                return default;
+            }
+            float total = 0;
+            foreach (KeyValuePair<Flag, float> flag in biases)
+            {
+                total += flag.Value;
+            }
+            float pick = UnityEngine.Random.Range(0, total);
+            float counter = 0;
+            foreach (KeyValuePair<Flag, float> flag in biases)
+            {
+                counter += flag.Value;
+                if (pick <= counter) return flag.Key;
+            }
+            return biases.ElementAt(0).Key;
+        }
+        private static bool PickRandomFlagOrMainWithSpecifiedBias(Dictionary<Flag, float> biases, float mainBias, out Flag output)
+        {
+            if (biases.Count < 1)
+            {
+                output = default;
+                return true;
+            }
+            List<FlagMainTuple> tuples = new List<FlagMainTuple>();
+            tuples.Add(new FlagMainTuple(null, true, mainBias));
+            float total = mainBias;
+            foreach (KeyValuePair<Flag, float> flag in biases)
+            {
+                total += flag.Value;
+                tuples.Add(new FlagMainTuple(flag.Key, false, flag.Value));
+            }
+            float pick = UnityEngine.Random.Range(0, total);
+            float counter = 0;
+            foreach (FlagMainTuple tuple in tuples)
+            {
+                counter += tuple.bias;
+                if (pick <= counter)
+                {
+                    output = tuple.flag;
+                    return tuple.isMain;
+                }
+            }
+            output = null;
+            return true;
+        }
+        private struct FlagMainTuple
+        {
+            public Flag flag;
+            public bool isMain;
+            public float bias;
+            public FlagMainTuple(Flag flag, bool isMain, float bias)
+            {
+                this.flag = flag;
+                this.isMain = isMain;
+                this.bias = bias;
+            }
+        }
+
+        public enum EPathingMode : byte
+        {
+            LEVELS,
+            AUTODISTANCE,
+            ADJACENCIES
         }
     }
 }

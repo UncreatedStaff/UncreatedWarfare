@@ -152,18 +152,16 @@ namespace Uncreated.Warfare
         internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x,
             ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
         {
-            F.Log((hit != null).ToString());
-            if (hit != null && hit.TryGetComponent(out InteractableVehicle veh))
+            if (hit != null && hit.TryGetComponent<InteractableVehicle>(out _))
             {
-                F.Log(veh.asset.vehicleName);
                 if (!UCWarfare.Config.AdminLoggerSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
                 {
-                    F.Log(asset.id.ToString());
-                    UnturnedPlayer player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
-                    shouldAllow = false;
+                    UCPlayer player = UCPlayer.FromID(owner);
                     if (player != null && player.OffDuty())
                     {
+                        shouldAllow = false;
                         player.SendChat("no_placement_on_vehicle", asset.itemName, asset.itemName.An());
+                        return;
                     }
                 }
             }

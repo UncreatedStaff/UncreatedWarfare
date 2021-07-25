@@ -147,9 +147,13 @@ namespace Uncreated.Warfare.Commands
             {
                 if (Data.Gamemode is Gamemodes.Flags.FlagGamemode flaggm)
                 {
+                    if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF tctf)
+                        tctf.ReloadConfig();
                     flaggm.LoadAllFlags();
                     await flaggm.StartNextGame();
                 }
+                Data.ExtraZones = JSONMethods.LoadExtraZones();
+                Data.ExtraPoints = JSONMethods.LoadExtraPoints();
                 if(OnFlagsReloaded != null)
                     await OnFlagsReloaded.Invoke();
             }

@@ -13,12 +13,14 @@ namespace Uncreated.Warfare
     {
         private static readonly float EffectiveImageScalingSize = Level.size - (Level.border * 2);
         private static readonly float FullImageSize = Level.size;
+        public float MaxHeight;
+        public float MinHeight;
         protected float _multiplier;
         public float CoordinateMultiplier { get => _multiplier; }
         public Vector2 Center;
         public Vector3 Center3D
         {
-            get => new Vector3(Center.x, F.GetTerrainHeightAt2DPoint(Center), Center.y);
+            get => new Vector3(Center.x, Mathf.Max(F.GetTerrainHeightAt2DPoint(Center), MinHeight), Center.y);
             set
             {
                 Center.x = value.x;
@@ -27,7 +29,7 @@ namespace Uncreated.Warfare
         }
         public Vector3 Center3DAbove
         {
-            get => new Vector3(Center.x, F.GetTerrainHeightAt2DPoint(Center, above: F.SPAWN_HEIGHT_ABOVE_GROUND), Center.y);
+            get => new Vector3(Center.x, Mathf.Max(F.GetTerrainHeightAt2DPoint(Center, above: F.SPAWN_HEIGHT_ABOVE_GROUND), MinHeight + F.SPAWN_HEIGHT_ABOVE_GROUND), Center.y);
         }
         public Zone InverseZone;
         protected bool SucessfullyParsed = false;
@@ -41,14 +43,18 @@ namespace Uncreated.Warfare
         public float BoundsArea;
         public abstract bool IsInside(Vector2 location);
         public abstract bool IsInside(Vector3 location);
+        public virtual string Dump() => $"{Name}: {data.type}, {data.data}. ({Center}).{(MaxHeight != -1 ? $" Max Height: {MaxHeight}." : string.Empty)}{(MinHeight != -1 ? $" Min Height: {MinHeight}." : string.Empty)}";
+        public override string ToString() => Dump();
         public abstract Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1);
         public abstract void Init();
-        public Zone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false)
+        public Zone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false)
         {
             this.Name = Name;
             this._multiplier = useMapSizeMultiplier ? EffectiveImageScalingSize / FullImageSize : 1.0f;
             this.Center = new Vector2(Center.x * _multiplier, Center.y * _multiplier);
             this.data = data;
+            this.MaxHeight = maxHeight;
+            this.MinHeight = minHeight;
             Init();
         }
     }
@@ -58,10 +64,11 @@ namespace Uncreated.Warfare
         public Line[] lines;
         public Vector2[] Corners;
         public RectZone RectInverseZone { get => (RectZone)InverseZone; }
-        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false) : base(Center, data, useMapSizeMultiplier, Name, isInverse)
+        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) : 
+            base(Center, data, useMapSizeMultiplier, Name, maxHeight, minHeight, isInverse)
         {
             if(!isInverse)
-                this.InverseZone = new RectZone(Center, data, !useMapSizeMultiplier, Name, true);
+                this.InverseZone = new RectZone(Center, data, !useMapSizeMultiplier, Name, maxHeight, minHeight, true);
         }
         /// <param name="corners">Corners to spawn different points at.</param>
         /// <param name="spacing">Set to -1 to to use perline. Can not be &lt;0.1</param>
@@ -132,16 +139,19 @@ namespace Uncreated.Warfare
         }
 
         public override bool IsInside(Vector2 location) => location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.y > Center.y - Size.y / 2 && location.y < Center.y + Size.y / 2;
-        public override bool IsInside(Vector3 location) => location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.z > Center.y - Size.y / 2 && location.z < Center.y + Size.y / 2;
+        public override bool IsInside(Vector3 location) => (MinHeight == -1 || location.y >= MinHeight) && (MaxHeight == -1 || location.y <= MaxHeight) &&
+            location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.z > Center.y - Size.y / 2 && location.z < Center.y + Size.y / 2;
+        public override string Dump() => $"{base.Dump()}. Size: {Size.x}x{Size.y}";
     }
     public class CircleZone : Zone
     {
         public float Radius;
         public CircleZone CircleInverseZone { get => (CircleZone)InverseZone; }
-        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false) : base(Center, data, useMapSizeMultiplier, Name, isInverse)
+        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) : 
+            base(Center, data, useMapSizeMultiplier, Name, maxHeight, minHeight, isInverse)
         {
             if(!isInverse)
-                this.InverseZone = new CircleZone(Center, data, !useMapSizeMultiplier, Name, true);
+                this.InverseZone = new CircleZone(Center, data, !useMapSizeMultiplier, Name, maxHeight, minHeight, true);
         }
 
         public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1)
@@ -211,11 +221,13 @@ namespace Uncreated.Warfare
         }
         public override bool IsInside(Vector3 location)
         {
+            if ((MinHeight != -1 && location.y < MinHeight) || (MaxHeight != -1 && location.y > MaxHeight)) return false;
             float difX = location.x - Center.x;
             float difY = location.z - Center.y;
             float sqrDistance = (difX * difX) + (difY * difY);
             return sqrDistance <= Radius * Radius;
         }
+        public override string Dump() => $"{base.Dump()}. Radius: {Radius}";
     }
     public class Line
     {
@@ -308,10 +320,11 @@ namespace Uncreated.Warfare
             }
             else throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
         }
-        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, bool isInverse = false) : base(Center, data, useMapSizeMultiplier, Name, isInverse)
+        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) : 
+            base(Center, data, useMapSizeMultiplier, Name, maxHeight, minHeight, isInverse)
         {
             if(!isInverse)
-                this.InverseZone = new PolygonZone(Center, data, !useMapSizeMultiplier, Name, true);
+                this.InverseZone = new PolygonZone(Center, data, !useMapSizeMultiplier, Name, maxHeight, minHeight, true);
         }
 
         /// <param name="corners">Corners to spawn different points at.</param>
@@ -396,7 +409,8 @@ namespace Uncreated.Warfare
         }
         public override bool IsInside(Vector3 location)
         {
-            if(!this.SucessfullyParsed)
+            if ((MinHeight != -1 && location.y < MinHeight) || (MaxHeight != -1 && location.y > MaxHeight)) return false;
+            if (!this.SucessfullyParsed)
             {
                 F.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
@@ -408,6 +422,15 @@ namespace Uncreated.Warfare
             }
             if (intersects % 2 == 1) return true; // is odd
             else return false;
+        }
+        public override string Dump()
+        {
+            StringBuilder sb = new StringBuilder($"{base.Dump()}\n");
+            for (int i = 0; i < Lines.Length; i++)
+            {
+                sb.Append($"Line {i + 1}: ({Lines[i].pt1.x}, {Lines[i].pt1.y}) to ({Lines[i].pt2.x}, {Lines[i].pt2.y}).\n");
+            }
+            return sb.ToString();
         }
     }
     public struct ZoneData
