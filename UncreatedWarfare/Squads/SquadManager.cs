@@ -380,7 +380,7 @@ namespace Uncreated.Warfare.Squads
         public override void SetDefaults()
         {
             Team1RallyID = 38381;
-            Team1RallyID = 38382;
+            Team2RallyID = 38382;
             RallyTimer = 60;
             rallyUI = 36060;
             squadLUI = 36040;

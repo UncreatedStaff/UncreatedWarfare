@@ -654,6 +654,10 @@ namespace Uncreated.Warfare.Commands
             F.Log(zone.Dump(), ConsoleColor.Green);
             player.SendChat("test_check_console");
         }
+        private void clearui(string[] command, Player player)
+        {
+            EffectManager.askEffectClearAll();
+        }
     }
 #pragma warning restore IDE0051 // Remove unused private members
 #pragma warning restore IDE0060 // Remove unused parameter

@@ -365,12 +365,20 @@ namespace Uncreated.Warfare
                     if (___vehicle.isDriven)
                     {
                         F.Log("Was driven.");
-                        Player hit = DamageTool.getPlayer(other.transform);
-                        Player driver = ___vehicle.passengers[0].player.player;
-                        if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
-                        if(F.TryGetPlaytimeComponent(driver, out PlaytimeComponent c))
+                        if (___vehicle.asset.engine != EEngine.HELICOPTER && ___vehicle.asset.engine != EEngine.PLANE)
                         {
-                            c.lastRoadkilled = ___vehicle.asset.id;
+                            F.Log("Not Helicopter");
+                            Player hit = DamageTool.getPlayer(other.transform);
+                            Player driver = ___vehicle.passengers[0].player.player;
+                            if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
+                            if (F.TryGetPlaytimeComponent(driver, out PlaytimeComponent c))
+                            {
+                                c.lastRoadkilled = ___vehicle.asset.id;
+                            }
+                        } else if (___vehicle.speed <= 10.0)
+                        {
+                            F.Log("Helicopter, blocking");
+                            return false;
                         }
                     }
                 }

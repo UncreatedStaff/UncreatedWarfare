@@ -13,6 +13,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using Uncreated;
+using System.Reflection;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -30,12 +31,13 @@ namespace Uncreated.Warfare.Commands
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == "Console";
-            string cmd = command[0].ToLower();
-            if (command.Length == 0)
+            string cmd = command.Length == 0 ? string.Empty : command[0].ToLower();
+            if (command.Length == 0 || (command.Length == 1 && cmd == "all"))
             {
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
                     await ReloadTranslations();
+                    ReloadAllConfigFiles();
                     ReloadConfig();
                     await ReloadKits();
                     await ReloadFlags();
@@ -43,11 +45,11 @@ namespace Uncreated.Warfare.Commands
 
                     SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
 
-                    player.SendChat("reload_reloaded_all");
+                    player?.SendChat("reload_reloaded_all");
                     await rtn;
                 }
                 else
-                    player.Player.SendChat("no_permissions");
+                    player?.Player.SendChat("no_permissions");
             }
             else
             {
@@ -191,6 +193,41 @@ namespace Uncreated.Warfare.Commands
             foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
             {
                 await sign.InvokeUpdate();
+            }
+        }
+        internal static void ReloadAllConfigFiles()
+        {
+            try
+            {
+                IEnumerable<FieldInfo> objects = typeof(Data).GetFields(BindingFlags.Static | BindingFlags.Public).Where(x => x.FieldType.IsClass);
+                foreach (FieldInfo obj in objects)
+                {
+                    try
+                    {
+                        object o = obj.GetValue(null);
+                        IEnumerable<FieldInfo> configfields = o.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static).
+                            Where(x => x.FieldType.GetInterfaces().Contains(typeof(IConfiguration)));
+                        foreach (FieldInfo config in configfields)
+                        {
+                            IConfiguration c;
+                            if (config.IsStatic)
+                            {
+                                c = (IConfiguration)config.GetValue(null);
+                            }
+                            else
+                            {
+                                c = (IConfiguration)config.GetValue(o);
+                            }
+                            c.Reload();
+                        }
+                    }
+                    catch (Exception) { }
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Failed to find all objects in type " + typeof(Data).Name);
+                F.LogError(ex);
             }
         }
     }

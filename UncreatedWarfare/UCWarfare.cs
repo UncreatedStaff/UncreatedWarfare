@@ -18,6 +18,8 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
 using Steamworks;
+using Rocket.Core.Steam;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare
 {
@@ -292,7 +294,10 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            
+            if (Data.Gamemode is TeamCTF ctf)
+            {
+                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation, ctf.Config.FlagUICount, ctf.Config.AttackIcon, ctf.Config.DefendIcon);
+            }
         }
         protected override void Unload()
         {

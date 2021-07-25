@@ -8,25 +8,25 @@ using System.Threading.Tasks;
 
 namespace Uncreated
 {
-    public class Config<TData> where TData : ConfigData, new()
+    public class Config<TData> : IConfiguration where TData : ConfigData, new() 
     {
-        public readonly string directory;
+        readonly string _dir;
         public TData Data { get; private set; }
-
+        public string directory => _dir;
         public Config(string directory, string filename)
         {
             if(!Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
-            this.directory = directory + filename;
+            this._dir = directory + filename;
 
-            if (!File.Exists(this.directory))
+            if (!File.Exists(this._dir))
                 LoadDefaults();
             else
                 Reload();
         }
         public void Save()
         {
-            StreamWriter file = File.CreateText(directory);
+            StreamWriter file = File.CreateText(_dir);
             JsonWriter writer = new JsonTextWriter(file);
             JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
             try
@@ -46,7 +46,7 @@ namespace Uncreated
         }
         public void Reload()
         {
-            StreamReader r = File.OpenText(directory);
+            StreamReader r = File.OpenText(_dir);
             try
             {
                 string json = r.ReadToEnd();
@@ -62,12 +62,12 @@ namespace Uncreated
                     r.Close();
                     r.Dispose();
                 }
-                throw new JSONSaver<TData>.JSONReadException(r, directory, ex);
+                throw new JSONSaver<TData>.JSONReadException(r, _dir, ex);
             }
         }
         public void LoadDefaults()
         {
-            StreamWriter file = File.CreateText(directory);
+            StreamWriter file = File.CreateText(_dir);
             JsonWriter writer = new JsonTextWriter(file);
             JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
             try
@@ -94,5 +94,12 @@ namespace Uncreated
     {
         public ConfigData() => SetDefaults();
         public abstract void SetDefaults();
+    }
+    public interface IConfiguration
+    {
+        string directory { get; }
+        void LoadDefaults();
+        void Reload();
+        void Save();
     }
 }

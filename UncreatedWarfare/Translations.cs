@@ -1062,6 +1062,7 @@ namespace Uncreated.Warfare
             new LanguageAliasSet("pt-pt", "Portuguese", new List<string> { "portuguese", "pt", "pt-pt", "pt-br", "ptbr", "ptpt", "português", "a língua portuguesa", "o português" }),
             new LanguageAliasSet("fil", "Filipino", new List<string> { "pilipino", "fil", "pil", "tagalog", "filipino", "tl", "tl-ph", "fil-ph", "pil-ph" }),
             new LanguageAliasSet("nb-no", "Norwegian", new List<string> { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
+            new LanguageAliasSet("ro-ro", "Romanian", new List<string> { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
         };
         public static readonly Dictionary<string, string> DefaultDeathTranslations = new Dictionary<string, string> {
             { "ACID", "{0} was burned by an acid zombie." },

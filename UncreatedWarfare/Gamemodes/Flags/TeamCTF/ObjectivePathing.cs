@@ -256,6 +256,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, Dictionary<int, float> t1adjacents, Dictionary<int, float> t2adjacents)
         {
             flags.Add(PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null)));
+            flags[0].index = 0;
             AdjacentsFlagLoop(flags, selection, t2adjacents);
         }
         private static void AdjacentsFlagLoop(List<Flag> flags, List<Flag> selection, Dictionary<int, float> t2adjacents)
@@ -271,7 +272,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 Flag pick = PickRandomFlagWithSpecifiedBias(initBiases);
                 if (pick != null)
+                {
+                    pick.index = flags.Count;
                     flags.Add(pick);
+                }
                 else
                 {
                     F.LogError("Pick was null after " + lastFlag.Name);
@@ -282,6 +286,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag newFlag))
                 {
+                    newFlag.index = flags.Count;
                     flags.Add(newFlag);
                     AdjacentsFlagLoop(flags, selection, t2adjacents);
                 }

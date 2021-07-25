@@ -49,9 +49,9 @@ namespace Uncreated.Warfare.Squads
                     {
                         int nearbyEnemiesCount = 0;
                         if (player.IsTeam1())
-                            nearbyEnemiesCount = PlayerManager.Team2Players.Count(p => (p.Position - player.Position).sqrMagnitude < 100 * 100);
+                            nearbyEnemiesCount = PlayerManager.Team2Players.Count(p => (p.Position - player.Position).sqrMagnitude < RallyComponent.ENEMY_DISTANCE_MIN * RallyComponent.ENEMY_DISTANCE_MIN);
                         if (player.IsTeam2())
-                            nearbyEnemiesCount = PlayerManager.Team1Players.Count(p => (p.Position - player.Position).sqrMagnitude < 100 * 100);
+                            nearbyEnemiesCount = PlayerManager.Team1Players.Count(p => (p.Position - player.Position).sqrMagnitude < RallyComponent.ENEMY_DISTANCE_MIN * RallyComponent.ENEMY_DISTANCE_MIN);
 
                         if (nearbyEnemiesCount > 0)
                         {
@@ -235,7 +235,7 @@ namespace Uncreated.Warfare.Squads
             parent = rallypoint;
             StartCoroutine(RallyPointLoop());
         }
-        const int ENEMY_DISTANCE_MIN = 70;
+        public const int ENEMY_DISTANCE_MIN = 70;
         private IEnumerator<WaitForSeconds> RallyPointLoop()
         {
             while (parent.IsActive)
@@ -249,6 +249,7 @@ namespace Uncreated.Warfare.Squads
                     {
                         parent.TeleportPlayer(player);
                     }
+                    parent.AwaitingPlayers.Clear();
                 }
                 if (parent.timer <= -10)
                     parent.timer = 60;

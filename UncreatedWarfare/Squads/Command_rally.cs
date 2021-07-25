@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                player.Message("really_e_alreadywaiting");
+                                player.Message("rally_e_alreadywaiting");
                             }
                         }
                     }
