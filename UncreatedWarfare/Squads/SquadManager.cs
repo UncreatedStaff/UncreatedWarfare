@@ -26,8 +26,15 @@ namespace Uncreated.Warfare.Squads
         }
         private static void OnKitChanged(UnturnedPlayer player, Kit kit, string oldkit)
         {
-            if (IsInAnySquad(player.CSteamID, out Squad squad))
+            if (IsInAnySquad(player.CSteamID, out Squad squad, out _))
                 UpdateUISquad(squad); 
+        }
+        public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
+        {
+            if (IsInAnySquad(steamplayer.playerID.steamID, out var squad, out var player))
+            {
+                LeaveSquad(player, ref squad);
+            }
         }
         public static void ClearUIsquad(Player player)
         {
@@ -79,7 +86,7 @@ namespace Uncreated.Warfare.Squads
             {
                 if (TeamManager.IsFriendly(steamplayer, team))
                 {
-                    if (IsInAnySquad(steamplayer.playerID.steamID, out var currentSquad))
+                    if (IsInAnySquad(steamplayer.playerID.steamID, out var currentSquad, out _))
                     {
                         for (int i = 0; i < 8; i++)
                             EffectManager.askEffectClearByID((ushort)(config.Data.squadLTUI + i), steamplayer.transportConnection);
@@ -150,7 +157,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void InvokePlayerLeft(UCPlayer player)
         {
-            if (IsInAnySquad(player.CSteamID, out var squad))
+            if (IsInAnySquad(player.CSteamID, out var squad, out _))
                 LeaveSquad(player, ref squad);
         }
 
@@ -166,9 +173,10 @@ namespace Uncreated.Warfare.Squads
             UpdateUIMemberCount(squad.Team);
         }
 
-        public static bool IsInAnySquad(CSteamID playerID, out Squad squad)
+        public static bool IsInAnySquad(CSteamID playerID, out Squad squad, out UCPlayer player)
         {
             squad = Squads.Find(s => s.Members.Exists(p => p.Steam64 == playerID.m_SteamID));
+            player = squad.Members.Find(p => p.CSteamID == playerID);
             return squad != null;
         }
         public static bool IsInSquad(CSteamID playerID, Squad targetSquad) => targetSquad.Members.Exists(p => p.Steam64 == playerID.m_SteamID);
@@ -321,7 +329,7 @@ namespace Uncreated.Warfare.Squads
             squad = friendlySquads.Find(
                 s =>
                 name.Equals(s.Name, StringComparison.OrdinalIgnoreCase) ||
-                s.Name.Replace(" ", "").Replace("'", "").ToLower().Contains(name)
+                s.Name.Replace(" ", "").Replace("'", "").ToLower().Contains(name.ToLower())
                 );
 
             return squad != null;
