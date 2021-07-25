@@ -615,8 +615,9 @@ namespace Uncreated.Warfare
                 { "xp_from_operator", "FROM OPERATOR" },
                 { "xp_from_player", "FROM {0}" },
                 { "xp_healed_teammate", "HEALED {0}" },
-                { "xp_enemy_killed", "{0} KILLED" },
-                { "xp_friendly_killed", "{0} TEAMKILLED" },
+                { "xp_enemy_downed", "DOWNED ENEMY" },
+                { "xp_enemy_killed", "KILLED ENEMY" },
+                { "xp_friendly_killed", "TEAMKILLED {0}" },
 
                 { "xp_victory", "VICTORY" },
                 { "xp_flag_captured", "FLAG CAPTURED" },
