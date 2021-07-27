@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
@@ -36,36 +37,67 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (Player.transform is null)
+                try
+                {
+                    if (Player.transform is null)
+                    {
+                        F.LogWarning("DEPLOY ERROR: Player transform was null");
+                        return new Vector3(0, 0, 0);
+                    }
+                    return Player.transform.position;
+                }
+                catch (NullReferenceException)
                 {
                     F.LogWarning("DEPLOY ERROR: Player transform was null");
                     return new Vector3(0, 0, 0);
                 }
-
-                return Player.transform.position;
             }
         }
         public bool IsOnline;
-        public int cachedXp = -1;
-
+        private int _cachedOfp = -1;
+        public int cachedOfp
+        {
+            get => _cachedOfp;
+            set
+            {
+                _cachedOfp = value;
+                if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
+                    c.UCPlayerStats.warfare_stats.TellOfficerPts(_cachedXp, Player.GetTeam());
+                else F.LogWarning("Unable to set cached xp because something was null.");
+            }
+        }
+        private int _cachedXp = -1;
+        public int cachedXp 
+        { 
+            get => _cachedXp; 
+            set {
+                _cachedXp = value;
+                if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
+                    c.UCPlayerStats.warfare_stats.TellXP(_cachedXp, Player.GetTeam());
+                else F.LogWarning("Unable to set cached xp because something was null.");
+            } 
+        }
         public static UCPlayer FromID(ulong steamID)
         {
-            return PlayerManager.OnlinePlayers.Find(p => p.Steam64 == steamID);
+            return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
         }
-        public static UCPlayer FromCSteamID(CSteamID steamID) => FromID(steamID.m_SteamID);
+        public static UCPlayer FromCSteamID(CSteamID steamID) => 
+            steamID == default ? null : FromID(steamID.m_SteamID);
         public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
-        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => FromID(player.CSteamID.m_SteamID);
+        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => 
+            player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
         public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID);
         public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
         {
-            if (caller.DisplayName == "Console")
+            if (caller == null || caller.DisplayName == "Console")
                 return null;
             else return FromUnturnedPlayer(caller as UnturnedPlayer);
         }
 
         public static UCPlayer FromName(string name)
         {
-            var player = PlayerManager.OnlinePlayers.Find(
+            if (name == null) return null;
+            UCPlayer player = PlayerManager.OnlinePlayers.Find(
                 s =>
                 s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
                 s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
@@ -107,7 +139,8 @@ namespace Uncreated.Warfare
             NickName = nickName;
             OfficerRank = null;
             IsOnline = true;
-            cachedXp = -1;
+            _cachedXp = -1;
+            _cachedOfp = -1;
         }
         public char Icon
         {
@@ -141,23 +174,23 @@ namespace Uncreated.Warfare
         }
         public bool IsNearSquadLeader(float distance)
         {
-            if (Squad is null)
+            if (distance == 0 || Squad is null || Squad.Leader is null || Squad.Leader.Player is null || Squad.Leader.Player.transform is null)
                 return false;
 
             if (Squad.Leader.Steam64 == Steam64)
                 return false;
 
-            return (Position - Squad.Leader.Position).sqrMagnitude < Math.Pow(distance, 2);
+            return (Position - Squad.Leader.Position).sqrMagnitude < distance * distance;
         }
         public bool IsOrIsNearLeader(float distance)
         {
-            if (Squad is null)
+            if (distance == 0 || Squad is null || Squad.Leader is null || Squad.Leader.Player is null || Squad.Leader.Player.transform is null)
                 return false;
 
             if (Squad.Leader.Steam64 == Steam64)
                 return true;
 
-            return (Position - Squad.Leader.Position).sqrMagnitude < Math.Pow(distance, 2);
+            return (Position - Squad.Leader.Position).sqrMagnitude < distance * distance;
         }
         public int NearbyMemberBonus(int amount, float distance)
         {

@@ -287,7 +287,7 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
                     // error - player already has access
-                    if (KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
+                    if (KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
                     {
                         player.SendChat("kit_e_alreadyaccess", targetPlayer, kitName);
                         return;
@@ -318,7 +318,7 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
                     // error - player already has no access
-                    if (!KitManager.HasAccess(player.CSteamID.m_SteamID, kit.Name))
+                    if (!KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
                     {
                         player.SendChat("kit_e_noaccess", target.CharacterName, kitName);
                         return; 

@@ -196,7 +196,7 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < SquadManager.Squads.Count; i++)
             {
-                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out var amount))
+                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out int amount))
                 {
                     await OfficerManager.AddOfficerPoints(SquadManager.Squads[i].Leader.Player, capturedTeam, amount, F.Translate("ofp_squad_flag_captured", SquadManager.Squads[i].Leader.Steam64));
                 }

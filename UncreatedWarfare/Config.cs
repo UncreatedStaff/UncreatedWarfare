@@ -53,6 +53,7 @@ namespace Uncreated.Warfare
         public float MortarWarningDistance;
         public float StatsInterval;
         public float AMCDamageMultiplier;
+        public bool ReplaceEmptyNamesWithID;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -89,6 +90,7 @@ namespace Uncreated.Warfare
             this.MortarWarningDistance = 75f;
             this.StatsInterval = 60f;
             this.AMCDamageMultiplier = 0.25f;
+            this.ReplaceEmptyNamesWithID = true;
         }
     }
     public class Modules

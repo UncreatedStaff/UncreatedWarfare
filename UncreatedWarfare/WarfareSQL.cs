@@ -227,9 +227,6 @@ namespace Uncreated.Warfare
             string op = table.GetColumnName("OfficerPoints");
             int oldBalance = await GetOfficerPoints(Steam64, Team);
 
-            F.Log("old balance: " + oldBalance.ToString());
-            F.Log("amount: " + amount.ToString());
-
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
@@ -240,7 +237,7 @@ namespace Uncreated.Warfare
                     $"ON DUPLICATE KEY UPDATE " +
                     $"`{op}` = `{op}` + VALUES(`{op}`);",
                     new object[] { Steam64, Team, amount });
-                return unchecked((int)(oldBalance + amount));
+                return oldBalance + amount;
             }
             else
             {
@@ -262,7 +259,7 @@ namespace Uncreated.Warfare
                         $"`{op}` = `{op}` - @2 " +
                         $"WHERE `{s64}` = @0 AND `{team}` = @1;",
                         new object[] { Steam64, Team, Math.Abs(amount) });
-                    return unchecked((int)(oldBalance - amount));
+                    return oldBalance - amount;
                 }
             }
         }
@@ -435,5 +432,13 @@ namespace Uncreated.Warfare
                 $"`{ip}` = VALUES(`{ip}`), `{lastentry}` = VALUES(`{lastentry}`);",
                 new object[3] { player.channel.owner.playerID.steamID.m_SteamID, ipaddress, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         }
+        public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
+            => F.Log(message, color);
+        public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
+            => F.LogWarning(message, color);
+        public override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
+            => F.LogError(message, color);
+        public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
+            => F.LogError(ex, color);
     }
 }

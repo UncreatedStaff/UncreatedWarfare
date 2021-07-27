@@ -42,17 +42,17 @@ namespace Uncreated.Warfare.Squads
                 {
                     string newname = name;
                     ProfanityFilter.filterOutCurseWords(ref newname, '*');
-                    if (name != newname)
+                    if (name != newname || name.Length > SquadManager.config.Data.MaxSquadNameLength)
                     {
                         player.SendChat("squad_no_no_words", name);
-                    } else if (!SquadManager.FindSquad(name, player.GetTeam(), out var squad))
+                    } else if (!SquadManager.FindSquad(name, player.GetTeam(), out Squad squad))
                     {
-                        SquadManager.CreateSquad(name, player, player.GetTeam(), player.Branch);
+                        squad = SquadManager.CreateSquad(name, player, player.GetTeam(), player.Branch);
 
-                        player.SendChat("squad_created", name);
+                        player.SendChat("squad_created", squad.Name);
                     }
                     else
-                        player.SendChat("squad_e_exist", name);
+                        player.SendChat("squad_e_exist", squad.Name);
                 }
                 else
                     player.SendChat("squad_e_insquad");
@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Squads
                     return;
                 }
 
-                if (SquadManager.FindSquad(name, player.GetTeam(), out var squad))
+                if (SquadManager.FindSquad(name, player.GetTeam(), out Squad squad))
                 {
                     if (!SquadManager.IsInAnySquad(player.CSteamID, out _, out _))
                     {

@@ -414,10 +414,12 @@ namespace Uncreated.Players
     }
     public struct FPlayerName
     {
+        public static readonly FPlayerName Nil = new FPlayerName() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
         public ulong Steam64;
         public string PlayerName;
         public string CharacterName;
         public string NickName;
+
         public FPlayerName(SteamPlayerID player)
         {
             this.PlayerName = player.playerName;

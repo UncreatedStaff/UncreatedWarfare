@@ -355,19 +355,15 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
             {
-                F.Log("Collided with: " + other == null ? "null" : other.transform.name);
                 if (!UCWarfare.Config.Patches.BumperOnTriggerEnter) return true;
                 if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
                     return false;
                 if (other.transform.CompareTag("Player"))
                 {
-                    F.Log("Was player.");
                     if (___vehicle.isDriven)
                     {
-                        F.Log("Was driven.");
                         if (___vehicle.asset.engine != EEngine.HELICOPTER && ___vehicle.asset.engine != EEngine.PLANE)
                         {
-                            F.Log("Not Helicopter");
                             Player hit = DamageTool.getPlayer(other.transform);
                             Player driver = ___vehicle.passengers[0].player.player;
                             if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
@@ -377,7 +373,6 @@ namespace Uncreated.Warfare
                             }
                         } else if (___vehicle.speed <= 10.0)
                         {
-                            F.Log("Helicopter, blocking");
                             return false;
                         }
                     }

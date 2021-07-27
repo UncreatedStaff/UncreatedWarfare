@@ -41,6 +41,7 @@ namespace Uncreated.Warfare
 
             SquadManager.ClearUIsquad(player.player);
             SquadManager.UpdateUIMemberCount(newGroup);
+            SquadManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
             FOBManager.UpdateUI(UCPlayer.FromSteamPlayer(player));
 
@@ -187,6 +188,11 @@ namespace Uncreated.Warfare
             {
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+                if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                {
+                    UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
+                    Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                }
                 PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 Task.Run(async () =>
                 {
@@ -199,18 +205,17 @@ namespace Uncreated.Warfare
                     bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     await Data.DatabaseManager.RegisterLogin(player.Player);
                     await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
+                    ulong team = player.GetTeam();
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam())), ToastMessageSeverity.INFO);
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
                     if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
                         await KitManager.GiveKit(player, previousKit);
+                    else if (team > 0 && team < 3 && KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out previousKit)) await KitManager.GiveKit(player, previousKit);
+                    else if (KitManager.KitExists(TeamManager.DefaultKit, out previousKit)) await KitManager.GiveKit(player, previousKit);
+                    else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                    pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
                 });
-                pt.UCPlayerStats?.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
                 F.Broadcast("player_connected", names.PlayerName);
-                if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                {
-                    UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
-                    Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                }
                 if (!UCWarfare.Config.AllowCosmetics)
                 {
                     player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -355,7 +360,12 @@ namespace Uncreated.Warfare
             {
                 if (drop.model.TryGetComponent(out InteractableSign sign))
                 {
-                    if (Vehicles.VehicleSigns.SignExists(sign, out Vehicles.VehicleSign vbsign))
+                    if (RequestSigns.SignExists(sign, out RequestSign rsign))
+                    {
+                        rsign.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                        RequestSigns.Save();
+                    } 
+                    else if (Vehicles.VehicleSigns.SignExists(sign, out Vehicles.VehicleSign vbsign))
                     {
                         vbsign.sign_transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                         Vehicles.VehicleSigns.Save();
@@ -486,39 +496,31 @@ namespace Uncreated.Warfare
             else if (TeamManager.IsTeam2(team)) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
 
             int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
-            int stars = 0;
-
+            //int stars = 0;
+                                                                        // was not being used so i commented it
             Rank rank = null;
-
+            /*
             if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
             {
                 rank = OfficerManager.GetOfficerRank(officer.officerLevel);
-                var officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team).GetAwaiter().GetResult();
+                int officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
                 stars = OfficerManager.GetStars(officerPoints);
             }
             else
-            {
+            {*/
                 rank = XPManager.GetRank(xp, out _, out _);
-            }
+            //}
 
             if (TeamManager.IsTeam1(team) || TeamManager.IsTeam2(team))
             {
                 globalPrefix += rank.abbreviation;
                 teamPrefix += rank.abbreviation;
 
-                //if (stars >= 3)
-                //{
-                //    globalPrefix.Replace('.', ' ');
-                //    globalPrefix += stars.ToString() + ".";
-                //    teamPrefix.Replace('.', ' ');
-                //    teamPrefix += stars.ToString() + ".";
-                //}
-
                 globalPrefix += " ";
                 teamPrefix += " ";
 
-                player.playerID.characterName = globalPrefix + player.playerID.characterName;
-                player.playerID.nickName = teamPrefix + player.playerID.nickName;
+                player.playerID.characterName = globalPrefix + (player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName);
+                player.playerID.nickName = teamPrefix + (player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName);
             }
         }
     }

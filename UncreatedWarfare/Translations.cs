@@ -45,6 +45,7 @@ namespace Uncreated.Warfare
                 { "ui_secured", "SECURED" },
                 { "ui_nocap", "NOT OBJECTIVE" },
                 { "ui_notowned", "TAKEN" },
+                { "ui_in_vehicle", "IN VEHICLE" },
                 { "team_win", "<color=#{1}>{0}</color> won the game!" },
                 { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
                 { "player_connected", "<color=#e6e3d5><color=#ffff1a>{0}</color> joined the server!</color>" },
@@ -126,7 +127,7 @@ namespace Uncreated.Warfare
                 // Range
                 { "range", "<color=#9e9c99>The range to your marker is: <color=#8aff9f>{0}m</color></color>" },
                 { "range_nomarker", "<color=#9e9c99>Place a marker first.</color>" },
-                { "range_notsquadleader", "<color=#9e9c99>You must be a SQUAD LEADER.</color>" },
+                { "range_notsquadleader", "<color=#9e9c99>You must be a <color=#cedcde>SQUAD LEADER</color>.</color>" },
 
                 // Squads
                 { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
@@ -156,6 +157,7 @@ namespace Uncreated.Warfare
                 
                 { "squad_ui_name", "{0}" },
                 { "squad_ui_player_name", "{0}" },
+                { "squad_ui_squad_name", "{0}" },
                 { "squad_ui_header_name", "{0} <color=#8c8c8c>{1}/6</color>" },
                 { "squad_ui_player_count", "<color=#bd6b5b>{0}</color>{1}/6" },
                 { "squad_ui_player_count_small", "{0}/6" },
@@ -379,7 +381,12 @@ namespace Uncreated.Warfare
                 { "cant_leave_group", "<color=#f53b3b>You are not allowed to manually change groups.</color>" },
                 { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
                 { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
-                { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!" },
+                { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!     " },
+
+                { "vehicle_owner_not_in_vehicle", "Wait for the owner, {0}, to get in before swapping seats." },
+                { "vehicle_no_kit", "You can not get in a vehicle without a kit." },
+                { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to man this vehicle." },
+                { "vehicle_need_another_person_with_kit", "You must have another <color=#cedcde>{0}</color> in this vehicle before you can enter the gunner's seat." },
                 
                 // other
                 { "friendly_mortar_incoming", "FRIENDLY MORTAR STRIKE INCOMING" },
@@ -399,10 +406,10 @@ namespace Uncreated.Warfare
                 { "request_kit_e_limited", "<color=#a8918a>Your team already has a max of {0} players using this kit. Try again later.</color>" },
                 { "request_kit_e_wronglevel", "<color=#a8918a>You must be <color=#ffc29c>Level {0}</color> to request this kit.</color>" },
                 { "request_kit_e_wrongbranch", "<color=#a8918a>You must be a different branch.</color>" },
-                { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a SQUAD LEADER in order to get this kit.</color>" },
+                { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to get this kit.</color>" },
                 { "request_vehicle_e_notrequestable", "<color=#a8918a>This vehicle cannot be reqested.</color>" },
                 { "request_vehicle_e_cooldown", "<color=#b3ab9f>This vehicle can be requested in: <color=#ffe2ab>{0}</color>.</color>" },
-                { "request_vehicle_e_notsquadleader", "<color=#b3ab9f>You must be a SQUAD LEADER in order to request this vehicle.</color>" },
+                { "request_vehicle_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to request this vehicle.</color>" },
                 { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
                 { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
                 { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
@@ -722,6 +729,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1", "00ff00"),
             new ColorData("nocap_team_1", "ff8c69"),
             new ColorData("notowned_team_1", "ff8c69"),
+            new ColorData("in_vehicle_team_1", "ff8c69"),
 
             // Team 1 Background Circle
             new ColorData("capturing_team_1_bkgr", "002266"),
@@ -731,6 +739,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1_bkgr", "006600"),
             new ColorData("nocap_team_1_bkgr", "660000"),
             new ColorData("notowned_team_1_bkgr", "660000"),
+            new ColorData("in_vehicle_team_1_bkgr", "660000"),
 
             // Team 1 Words
             new ColorData("capturing_team_1_words", "4785ff"),
@@ -740,6 +749,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1_words", "00ff00"),
             new ColorData("nocap_team_1_words", "ff8c69"),
             new ColorData("notowned_team_1_words", "ff8c69"),
+            new ColorData("in_vehicle_team_1_words", "ff8c69"),
 
             // Team 2 Circle
             new ColorData("capturing_team_2", "f53b3b"),
@@ -749,6 +759,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2", "00ff00"),
             new ColorData("nocap_team_2", "ff8c69"),
             new ColorData("notowned_team_2", "ff8c69"),
+            new ColorData("in_vehicle_team_2", "ff8c69"),
 
             // Team 2 Background Circle
             new ColorData("capturing_team_2_bkgr", "610505"),
@@ -758,6 +769,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2_bkgr", "006600"),
             new ColorData("nocap_team_2_bkgr", "660000"),
             new ColorData("notowned_team_2_bkgr", "660000"),
+            new ColorData("in_vehicle_team_2_bkgr", "660000"),
 
             // Team 2 Words
             new ColorData("capturing_team_2_words", "f53b3b"),
@@ -767,6 +779,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2_words", "00ff00"),
             new ColorData("nocap_team_2_words", "ff8c69"),
             new ColorData("notowned_team_2_words", "ff8c69"),
+            new ColorData("in_vehicle_team_2_words", "ff8c69"),
 
             // Flag Chats
             new ColorData("entered_cap_radius_team_1", "e6e3d5"),
@@ -782,6 +795,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1_chat", "e6e3d5"),
             new ColorData("nocap_team_1_chat", "e6e3d5"),
             new ColorData("notowned_team_1_chat", "e6e3d5"),
+            new ColorData("in_vehicle_team_1_chat", "e6e3d5"),
 
             // Team 2 Chat
             new ColorData("capturing_team_2_chat", "e6e3d5"),
@@ -791,6 +805,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2_chat", "e6e3d5"),
             new ColorData("nocap_team_2_chat", "e6e3d5"),
             new ColorData("notowned_team_2_chat", "e6e3d5"),
+            new ColorData("in_vehicle_team_2_chat", "e6e3d5"),
 
             // Other Flag Chats
             new ColorData("flag_neutralized", "e6e3d5"),

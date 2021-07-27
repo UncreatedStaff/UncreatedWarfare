@@ -18,10 +18,11 @@ namespace Uncreated.Warfare.Kits
         {
             foreach(RequestSign sign in ActiveObjects)
             {
-                await sign.SpawnCheck();
+                await sign.SpawnCheck(false);
                 if (!sign.exists)
                     F.LogError("Failed to spawn sign " + sign.kit_name);
             }
+            Save();
         }
         public static bool AddRequestSign(InteractableSign sign, out RequestSign signadded)
         {
@@ -174,7 +175,7 @@ namespace Uncreated.Warfare.Kits
             }
         }
         /// <summary>Spawns the sign if it is not already placed.</summary>
-        public async Task SpawnCheck()
+        public async Task SpawnCheck(bool save)
         {
             BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (data == default)
@@ -185,12 +186,13 @@ namespace Uncreated.Warfare.Kits
                     );
                 if (BarricadeManager.tryGetInfo(this.barricadetransform, out _, out _, out _, out ushort index, out BarricadeRegion region))
                 {
+                    F.Log("Replaced lost request sign for " + kit_name);
                     if (region != default)
                     {
                         instance_id = region.drops[index].instanceID;
                         exists = true;
                         await InvokeUpdate();
-                        RequestSigns.Save();
+                        if (save) RequestSigns.Save();
                     }
                     else
                     {
@@ -207,7 +209,7 @@ namespace Uncreated.Warfare.Kits
                 exists = true;
                 this.barricadetransform = drop.model.transform;
                 this.transform = new SerializableTransform(barricadetransform);
-                RequestSigns.Save();
+                if (save) RequestSigns.Save();
                 await InvokeUpdate();
             }
         }

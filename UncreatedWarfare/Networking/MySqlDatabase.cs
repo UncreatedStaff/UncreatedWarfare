@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -62,7 +63,7 @@ namespace Uncreated.SQL
             try
             {
                 SQL.Open();
-                if (DebugLogging) Log(nameof(OpenSync) + ": Opened Connection.");
+                if (DebugLogging) Log(nameof(OpenSync) + ": Opened Connection.", ConsoleColor.DarkGray);
                 return true;
             }
             catch (MySqlException ex)
@@ -88,7 +89,7 @@ namespace Uncreated.SQL
             try
             {
                 await SQL.OpenAsync();
-                if (DebugLogging) Log(nameof(OpenAsync) + ": Opened Connection.");
+                if (DebugLogging) Log(nameof(OpenAsync) + ": Opened Connection.", ConsoleColor.DarkGray);
                 return true;
             }
             catch (DbException ex)
@@ -116,15 +117,14 @@ namespace Uncreated.SQL
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     System.Threading.Thread.Sleep(1);
-                    Log("reader open");
                 }
                 SQL.Close();
-                if (DebugLogging) Log(nameof(CloseSync) + ": Closed Connection.");
+                if (DebugLogging) Log(nameof(CloseSync) + ": Closed Connection.", ConsoleColor.DarkGray);
                 return true;
             }
             catch (MySqlException ex)
             {
-                LogError("ERROR CLOSING MYSQL CONNECTION: ");
+                LogError("Failed to close MySql Connection synchronously: ");
                 LogError(ex);
                 return false;
             }
@@ -136,15 +136,14 @@ namespace Uncreated.SQL
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     await Task.Delay(1);
-                    Log("reader open");
                 }
                 await SQL.CloseAsync();
-                if (DebugLogging) Log(nameof(CloseAsync) + ": Closed Connection.");
+                if (DebugLogging) Log(nameof(CloseAsync) + ": Closed Connection.", ConsoleColor.DarkGray);
                 return true;
             }
             catch (MySqlException ex)
             {
-                LogError("ERROR CLOSING MYSQL CONNECTION: ");
+                LogError("Failed to close MySqlConnection asynchronously: ");
                 LogError(ex);
                 return false;
             }
@@ -155,11 +154,10 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
-                if (DebugLogging) Log(nameof(Query) + ": " + Q.CommandText);
+                if (DebugLogging) Log(nameof(Query) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     await Task.Delay(1);
-                    Log("reader open");
                 }
                 try
                 {
@@ -180,7 +178,7 @@ namespace Uncreated.SQL
                 }
                 catch (Exception ex)
                 {
-                    Log($"{query}: {string.Join(",", parameters)}");
+                    LogError($"Failed to execute command: {query}: {string.Join(",", parameters)}");
                     LogError(ex);
                 }
             }
@@ -192,11 +190,10 @@ namespace Uncreated.SQL
             {
 
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
-                if (DebugLogging) Log(nameof(Scalar) + ": " + Q.CommandText);
+                if (DebugLogging) Log(nameof(Scalar) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     await Task.Delay(1);
-                    Log("reader open");
                 }
                 object res = await Q.ExecuteScalarAsync();
                 Q.Dispose();
@@ -210,19 +207,18 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
-                if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText);
+                if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     await Task.Delay(1);
-                    Log("reader open");
                 }
                 try
                 {
                     await Q.ExecuteNonQueryAsync();
                 }
                 catch (Exception ex)
-                {
-                    LogError($"FAILURE TO EXECUTE COMMAND:\n{command}");
+{
+                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
                 }
             }
@@ -233,11 +229,10 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
-                if (DebugLogging) Log(nameof(QuerySync) + ": " + Q.CommandText);
+                if (DebugLogging) Log(nameof(QuerySync) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     System.Threading.Thread.Sleep(1);
-                    Log("reader open");
                 }
                 using (CurrentReader = Q.ExecuteReader())
                 {
@@ -258,11 +253,10 @@ namespace Uncreated.SQL
             {
 
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
-                if (DebugLogging) Log(nameof(ScalarSync) + ": " + Q.CommandText);
+                if (DebugLogging) Log(nameof(ScalarSync) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     System.Threading.Thread.Sleep(1);
-                    Log("reader open");
                 }
                 object res = Q.ExecuteScalar();
                 if (res is T a)
@@ -279,11 +273,10 @@ namespace Uncreated.SQL
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
-                if (DebugLogging) Log(nameof(NonQuerySync) + ": " + Q.CommandText);
+                if (DebugLogging) Log(nameof(NonQuerySync) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 while (CurrentReader != null && !CurrentReader.IsClosed)
                 {
                     System.Threading.Thread.Sleep(1);
-                    Log("reader open");
                 }
                 try
                 {
@@ -291,7 +284,7 @@ namespace Uncreated.SQL
                 }
                 catch (Exception ex)
                 {
-                    LogError("FAILURE TO EXECUTE COMMAND:\n" + command);
+                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
                 }
             }

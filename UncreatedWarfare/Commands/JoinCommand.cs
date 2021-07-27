@@ -95,7 +95,7 @@ namespace Uncreated.Warfare.Commands
 
                     Players.FPlayerName names = F.GetPlayerOriginalNames(player);
                     F.Log(F.Translate("join_player_joined_console", 0, out _, 
-                        names.PlayerName, newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)), 
+                        names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)), 
                         ConsoleColor.Cyan);
 
                     player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());

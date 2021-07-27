@@ -35,6 +35,7 @@ namespace Uncreated.Warfare.Squads
             {
                 LeaveSquad(player, ref squad);
             }
+            UpdateSquadList(UCPlayer.FromSteamPlayer(steamplayer), newGroup.GetTeam(), true);
         }
         public static void ClearUIsquad(Player player)
         {
@@ -51,14 +52,14 @@ namespace Uncreated.Warfare.Squads
         }
         public static void UpdateUISquad(Squad squad)
         {
-            foreach (var member in squad.Members)
+            foreach (UCPlayer member in squad.Members)
             {
                 for (int i = 0; i < 6; i++)
                     EffectManager.askEffectClearByID((ushort)(config.Data.squadSUI + i), member.Player.channel.owner.transportConnection);
 
                 for (int i = 0; i < squad.Members.Count; i++)
                 {
-                    if (squad.Members[i] == squad.Leader)
+                    if (i == 0) // first one, includes header (squad leader)
                     {
                         EffectManager.sendUIEffect(config.Data.squadSUI, unchecked((short)config.Data.squadSUI), member.Player.channel.owner.transportConnection, true,
                                  F.Translate("squad_ui_player_name", member, F.GetPlayerOriginalNames(squad.Members[i]).NickName),
@@ -67,7 +68,7 @@ namespace Uncreated.Warfare.Squads
                                  squad.IsLocked ? F.Translate("squad_ui_locked_symbol", member, config.Data.lockCharacter.ToString()) : ""
                              );
                     }
-                    else
+                    else // all other members
                     {
                         EffectManager.sendUIEffect((ushort)(config.Data.squadSUI + i), unchecked((short)(config.Data.squadSUI + i)), member.SteamPlayer.transportConnection, true,
                                F.Translate("squad_ui_player_name", member, F.GetPlayerOriginalNames(squad.Members[i]).NickName),
@@ -80,48 +81,52 @@ namespace Uncreated.Warfare.Squads
 
         public static void UpdateUIMemberCount(ulong team)
         {
-            var friendlySquads = Squads.Where(s => s.Team == team).ToList();
+            List<Squad> friendlySquads = Squads.Where(s => s.Team == team).ToList();
 
-            foreach (var steamplayer in Provider.clients)
+            foreach (SteamPlayer player in Provider.clients)
             {
-                if (TeamManager.IsFriendly(steamplayer, team))
+                if (player.GetTeam() == team)
                 {
-                    if (IsInAnySquad(steamplayer.playerID.steamID, out var currentSquad, out _))
+                    if (IsInAnySquad(player.playerID.steamID, out Squad currentSquad, out _))
                     {
+                        // clear all tiny lists
                         for (int i = 0; i < 8; i++)
-                            EffectManager.askEffectClearByID((ushort)(config.Data.squadLTUI + i), steamplayer.transportConnection);
+                            EffectManager.askEffectClearByID((ushort)(config.Data.squadLTUI + i), player.transportConnection);
 
-                        var sortedSquads = friendlySquads.OrderBy(s => s.Name != currentSquad.Name).ToList();
+                        List<Squad> sortedSquads = friendlySquads.OrderBy(s => s.Name != currentSquad.Name).ToList();
 
+                        // send a list of all squads
                         for (int i = 0; i < sortedSquads.Count; i++)
                         {
                             EffectManager.sendUIEffect((ushort)(config.Data.squadLTUI + i),
                                 unchecked((short)(config.Data.squadLTUI + i)),
-                                steamplayer.transportConnection,
+                                player.transportConnection,
                                 true,
                                 i == 0 ? 
-                                F.Translate("squad_ui_expanded", steamplayer) : 
+                                F.Translate("squad_ui_expanded", player) : 
                                 F.Translate(sortedSquads[i].IsLocked ?
-                                    "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", steamplayer, 
+                                    "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, 
                                     sortedSquads[i].Members.Count.ToString(Data.Locale))
                             );
                         }
                     }
                     else
                     {
+                        // clear all labels (out of squad)
                         for (int i = 0; i < 8; i++)
-                            EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), steamplayer.transportConnection);
-
+                            EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), player.transportConnection);
+                            
+                        // send labels for squad showing leader name, player count, islocked
                         for (int i = 0; i < friendlySquads.Count; i++)
                         {
                             EffectManager.sendUIEffect((ushort)(config.Data.squadLUI + i),
                                 unchecked((short)(config.Data.squadLUI + i)),
-                                steamplayer.transportConnection,
+                                player.transportConnection,
                                 true,
-                                F.Translate("squad_ui_leader_name", steamplayer, Squads[i].Name),
-                                F.Translate("squad_ui_player_count", steamplayer, Squads[i].IsLocked ? 
-                                config.Data.lockCharacter + "  " : "", Squads[i].Members.Count.ToString(Data.Locale)),
-                                F.Translate("squad_ui_leader_name", steamplayer, F.GetPlayerOriginalNames(Squads[i].Leader).CharacterName)
+                                F.Translate("squad_ui_squad_name", player, friendlySquads[i].Name),
+                                F.Translate("squad_ui_player_count", player, friendlySquads[i].IsLocked ? 
+                                config.Data.lockCharacter + "  " : "", friendlySquads[i].Members.Count.ToString(Data.Locale)),
+                                F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(friendlySquads[i].Leader).CharacterName)
                             );
                         }
                     }
@@ -131,7 +136,7 @@ namespace Uncreated.Warfare.Squads
 
         public static void InvokePlayerJoined(UCPlayer player, string squadName)
         {
-            var squad = Squads.Find(s => s.Name == squadName);
+            var squad = Squads.Find(s => s.Name == squadName && s.Team == player.GetTeam());
 
             if (squad != null && !squad.IsFull())
             {
@@ -139,21 +144,31 @@ namespace Uncreated.Warfare.Squads
             }
             else
             {
-                for (int i = 0; i < Squads.Count; i++)
+                UpdateSquadList(player, false); // no need to clear since player just joined
+            }
+        }
+        public static void UpdateSquadList(UCPlayer player, bool clear = true) => UpdateSquadList(player, player.GetTeam(), clear);
+        public static void UpdateSquadList(UCPlayer player, ulong team, bool clear = true)
+        {
+            // send squad list to player for every squad on that team
+            int i = 0;
+            for (; i < Squads.Count; i++)
+            {
+                if (Squads[i].Team == team)
                 {
-                    if (Squads[i].Team == player.GetTeam())
-                    {
-                        EffectManager.sendUIEffect((ushort)(config.Data.squadLUI + i),
-                        unchecked((short)(config.Data.squadLUI + i)),
-                        player.SteamPlayer.transportConnection,
-                        true,
-                        F.Translate("squad_ui_leader_name", player, Squads[i].Name),
-                        F.Translate("squad_ui_player_count", player, Squads[i].IsLocked ? $"{config.Data.lockCharacter}  " : "", Squads[i].Members.Count.ToString(Data.Locale)),
-                        F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(Squads[i].Leader).CharacterName)
-                    );
-                    }
+                    EffectManager.sendUIEffect((ushort)(config.Data.squadLUI + i),
+                    unchecked((short)(config.Data.squadLUI + i)),
+                    player.SteamPlayer.transportConnection,
+                    true,
+                    F.Translate("squad_ui_leader_name", player, Squads[i].Name),
+                    F.Translate("squad_ui_player_count", player, Squads[i].IsLocked ? $"{config.Data.lockCharacter}  " : "", Squads[i].Members.Count.ToString(Data.Locale)),
+                    F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(Squads[i].Leader).CharacterName)
+                );
                 }
             }
+            if (clear)
+                for (; i < 8; i++) // clear the rest of the ui.
+                    EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), player.SteamPlayer.transportConnection);
         }
         public static void InvokePlayerLeft(UCPlayer player)
         {
@@ -161,9 +176,10 @@ namespace Uncreated.Warfare.Squads
                 LeaveSquad(player, ref squad);
         }
 
-        public static void CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
+        public static Squad CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
         {
-            var squad = new Squad(name.ToUpper(), leader, team, branch);
+            Squad squad = new Squad(name.ToUpper(), leader, team, branch);
+            SortMembers(squad);
             Squads.Add(squad);
 
             leader.Squad = squad;
@@ -171,12 +187,13 @@ namespace Uncreated.Warfare.Squads
             ClearUIList(leader.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
+            return squad;
         }
 
         public static bool IsInAnySquad(CSteamID playerID, out Squad squad, out UCPlayer player)
         {
             squad = Squads.Find(s => s.Members.Exists(p => p.Steam64 == playerID.m_SteamID));
-            player = squad.Members.Find(p => p.CSteamID == playerID);
+            player = squad?.Members.Find(p => p.CSteamID == playerID);
             return squad != null;
         }
         public static bool IsInSquad(CSteamID playerID, Squad targetSquad) => targetSquad.Members.Exists(p => p.Steam64 == playerID.m_SteamID);
@@ -191,6 +208,7 @@ namespace Uncreated.Warfare.Squads
             }
 
             squad.Members.Add(player);
+            SortMembers(squad);
 
             player.Squad = squad;
 
@@ -203,12 +221,25 @@ namespace Uncreated.Warfare.Squads
 
             PlayerManager.Save();
         }
+        public static void SortMembers(Squad squad)
+        {
+            squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
+            {
+                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1;
+                else
+                {
+                    int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
+                    return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
+                }
+            });
+        }
         public static void LeaveSquad(UCPlayer player, ref Squad squad)
         {
             player.Message("squad_left");
 
             squad.Members.RemoveAll(p => p.CSteamID == player.CSteamID);
-
+            bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID == player.CSteamID;
+            if (!willNeedNewLeader) SortMembers(squad);
             player.Squad = null;
 
             foreach (var p in squad.Members)
@@ -222,9 +253,10 @@ namespace Uncreated.Warfare.Squads
             if (squad.Members.Count == 0)
             {
                 string name = squad.Name;
-                Squads.RemoveAll(s => s.Name == name);
+                ulong team = squad.Team;
+                Squads.RemoveAll(s => s.Name == name && s.Team == team);
 
-                squad.Leader.Message("squad_disbanded");
+                squad.Leader?.Message("squad_disbanded");
                 ClearUIsquad(squad.Leader.Player);
 
                 UpdateUIMemberCount(squad.Team);
@@ -234,11 +266,10 @@ namespace Uncreated.Warfare.Squads
                 return;
             }
 
-            if (squad.Leader.CSteamID == player.CSteamID)
+            if (willNeedNewLeader)
             {
-                squad.Leader = squad.Members[0];
-                CSteamID leaderID = squad.Leader.CSteamID;
-                squad.Members = squad.Members.OrderBy(p => p.CSteamID != leaderID).ToList();
+                squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp=
+                SortMembers(squad);
                 squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
 
@@ -277,15 +308,14 @@ namespace Uncreated.Warfare.Squads
             if (squad.Members.Count <= 1)
                 return;
 
-            squad.Members.RemoveAll(p => p.CSteamID == player.CSteamID);
-
-            foreach (var p in squad.Members)
+            if(squad.Members.RemoveAll(p => p.CSteamID.m_SteamID == player.CSteamID.m_SteamID) > 0)
+                player?.Message("squad_kicked");
+            SortMembers(squad);
+            foreach (UCPlayer p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
                     p.Message("squad_player_kicked", player.Player.channel.owner.playerID.nickName);
-                else
-                    p.Message("squad_kicked");
-
+                    
             }
 
             player.Squad = null;
@@ -308,17 +338,16 @@ namespace Uncreated.Warfare.Squads
                     p.Message("squad_promoted");
             }
 
-            var leaderID = squad.Leader.CSteamID;
-            squad.Members = squad.Members.OrderBy(p => p.CSteamID != leaderID).ToList();
+            SortMembers(squad);
 
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
-        public static bool FindSquad(string name, ulong teamID, out Squad squad)
+        public static bool FindSquad(string input, ulong teamID, out Squad squad)
         {
-            var friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
-
-            if (name.ToLower().StartsWith("squad") && name.Length < 10 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var squadNumber))
+            List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
+            string name = input.ToLower();
+            if (name.StartsWith("squad") && name.Length < 7 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out int squadNumber))
             {
                 if (squadNumber < friendlySquads.Count)
                 {
@@ -328,7 +357,7 @@ namespace Uncreated.Warfare.Squads
             }
             squad = friendlySquads.Find(
                 s =>
-                name.Equals(s.Name, StringComparison.OrdinalIgnoreCase) ||
+                name == s.Name.ToLower() ||
                 s.Name.Replace(" ", "").Replace("'", "").ToLower().Contains(name.ToLower())
                 );
 
@@ -362,8 +391,7 @@ namespace Uncreated.Warfare.Squads
             Branch = branch;
             Leader = leader;
             IsLocked = false;
-            Members = new List<UCPlayer>();
-            Members.Add(leader);
+            Members = new List<UCPlayer> { leader };
         }
 
         public bool IsFull() => Members.Count < 6;
@@ -384,6 +412,7 @@ namespace Uncreated.Warfare.Squads
         public Dictionary<Kit.EClass, ClassConfig> Classes;
         public ushort EmptyMarker;
         public ushort MortarMarker;
+        public int MaxSquadNameLength;
 
         public override void SetDefaults()
         {
@@ -397,6 +426,7 @@ namespace Uncreated.Warfare.Squads
             EmptyMarker = 36100;
             MortarMarker = 36120;
             SquadDisconnectTime = 120;
+            MaxSquadNameLength = 16;
             lockCharacter = '²';
             Classes = new Dictionary<Kit.EClass, ClassConfig>
             {
