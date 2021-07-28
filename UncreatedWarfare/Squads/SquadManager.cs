@@ -29,11 +29,11 @@ namespace Uncreated.Warfare.Squads
             if (IsInAnySquad(player.CSteamID, out Squad squad, out _))
                 UpdateUISquad(squad);
         }
-        public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
+        public static async void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
         {
             if (IsInAnySquad(steamplayer.playerID.steamID, out var squad, out var player))
             {
-                LeaveSquad(player, squad);
+                await LeaveSquad(player, squad);
             }
             UpdateSquadList(UCPlayer.FromSteamPlayer(steamplayer), newGroup.GetTeam(), true);
         }
@@ -177,7 +177,7 @@ namespace Uncreated.Warfare.Squads
         public static void InvokePlayerLeft(UCPlayer player)
         {
             if (IsInAnySquad(player.CSteamID, out var squad, out _))
-                LeaveSquad(player, squad);
+                LeaveSquad(player, squad).GetAwaiter().GetResult();
         }
 
         public static Squad CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
@@ -237,7 +237,7 @@ namespace Uncreated.Warfare.Squads
                 }
             });
         }
-        public static void LeaveSquad(UCPlayer player, ref Squad squad)
+        public static async Task LeaveSquad(UCPlayer player, Squad squad)
         {
             player.Message("squad_left");
 
@@ -360,22 +360,6 @@ namespace Uncreated.Warfare.Squads
         {
             List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
             string name = input.ToLower();
-            if (name.ToLower().StartsWith("squad") && name.Length < 10 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var squadNumber))
-            {
-                if (squadNumber < friendlySquads.Count)
-                {
-                    squad = friendlySquads[squadNumber];
-                    return true;
-                }
-            }
-            if (name.ToLower().StartsWith("squad") && name.Length < 10 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var squadNumber))
-            {
-                if (squadNumber < friendlySquads.Count)
-                {
-                    squad = friendlySquads[squadNumber];
-                    return true;
-                }
-            }
             squad = friendlySquads.Find(
                 s =>
                 name == s.Name.ToLower() ||

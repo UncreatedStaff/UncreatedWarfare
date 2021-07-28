@@ -212,9 +212,9 @@ namespace Uncreated.Warfare
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
                     if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
-                        await KitManager.GiveKit(player, previousKit);
-                    else if (team > 0 && team < 3 && KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out previousKit)) await KitManager.GiveKit(player, previousKit);
-                    else if (KitManager.KitExists(TeamManager.DefaultKit, out previousKit)) await KitManager.GiveKit(player, previousKit);
+                        await KitManager.GiveKit(ucplayer, previousKit);
+                    else if (team > 0 && team < 3 && KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out previousKit)) await KitManager.GiveKit(ucplayer, previousKit);
+                    else if (KitManager.KitExists(TeamManager.DefaultKit, out previousKit)) await KitManager.GiveKit(ucplayer, previousKit);
                     else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
                     pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
                 });

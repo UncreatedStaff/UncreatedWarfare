@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.Squads
                 {
                     if (SquadManager.IsInAnySquad(player.CSteamID, out var squad, out _))
                     {
-                        SquadManager.LeaveSquad(player, squad);
+                        await SquadManager.LeaveSquad(player, squad);
                     }
                     else
                         player.SendChat("squad_e_notinsquad");

@@ -105,7 +105,7 @@ namespace Uncreated.Warfare.Commands
                     new List<CSteamID>(1) {player.CSteamID}.BroadcastToAllExcept("join_announce", names.CharacterName, teamName);
 
                     if (player.Squad != null)
-                        Squads.SquadManager.LeaveSquad(player, player.Squad);
+                        await Squads.SquadManager.LeaveSquad(player, player.Squad);
                     PlayerManager.Save();
                 }
                 else
