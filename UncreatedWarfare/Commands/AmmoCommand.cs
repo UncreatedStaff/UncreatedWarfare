@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Commands
             InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
-            if (barricade != null && FOBManager.config.Data.AmmoBagIDs.Contains(barricade.barricade.id))
+            if (barricade != null && barricade.barricade.id == FOBManager.config.Data.AmmoCrateID)
             {
                 if (storage is null)
                 {
@@ -52,6 +52,8 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 KitManager.ResupplyKit(player, kit);
+
+                EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 
                 player.SendChat("ammo_success");
 
@@ -162,6 +164,8 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 KitManager.ResupplyKit(player, kit);
+
+                EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 
                 player.SendChat("ammo_success");
 

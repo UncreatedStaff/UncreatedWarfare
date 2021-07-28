@@ -333,6 +333,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
                 else
                 {
+
                     SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     ObjectiveT2Index = flag.index - 1;
                     await InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);

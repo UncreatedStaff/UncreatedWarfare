@@ -164,10 +164,17 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            if (TeamManager.IsTeam1(capturedTeam))
+            if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
+            {
                 Team1Tickets += config.Data.TicketsFlagCaptured;
-            if (TeamManager.IsTeam2(capturedTeam))
-                Team2Tickets += config.Data.TicketsFlagCaptured;
+                flag.HasBeenCapturedT1 = true;
+            }
+            else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
+            {
+                Team1Tickets += config.Data.TicketsFlagCaptured;
+                flag.HasBeenCapturedT2 = true;
+            }
+
             if (TeamManager.IsTeam1(lostTeam))
                 Team1Tickets += config.Data.TicketsFlagLost;
             if (TeamManager.IsTeam2(lostTeam))
@@ -459,8 +466,8 @@ namespace Uncreated.Warfare.Tickets
         {
             StartingTickets = 350;
             FOBCost = 20;
-            TicketsFlagCaptured = 50;
-            TicketsFlagLost = -10;
+            TicketsFlagCaptured = 20;
+            TicketsFlagLost = -20;
             Team1TicketUIID = 36035;
             Team2TicketUIID = 36034;
         }

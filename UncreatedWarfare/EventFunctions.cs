@@ -203,7 +203,7 @@ namespace Uncreated.Warfare
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam())), ToastMessageSeverity.INFO);
                     if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
-                        await KitManager.GiveKit(player, previousKit);
+                        await KitManager.GiveKit(ucplayer, previousKit);
                 });
                 F.Broadcast("player_connected", names.PlayerName);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))

@@ -83,6 +83,10 @@ namespace Uncreated.Warfare.Squads
         public static void WipeAllRallies()
         {
             rallypoints.Clear();
+            foreach (var player in Provider.clients)
+            {
+                EffectManager.askEffectClearByID(SquadManager.config.Data.rallyUI, player.transportConnection);
+            }
 
             var barricades = GetRallyPointBarricades();
 
@@ -90,23 +94,6 @@ namespace Uncreated.Warfare.Squads
             {
                 if (BarricadeManager.tryGetInfo(UCBarricadeManager.GetDropFromBarricadeData(barricade).model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
                     BarricadeManager.destroyBarricade(region, x, y, plant, index);
-            }
-        }
-
-        public static void LoadRallyPoints()
-        {
-            rallypoints.Clear();
-            var barricades = GetRallyPointBarricades();
-
-            foreach (var barricade in barricades)
-            {
-                var player = UCPlayer.FromID(barricade.owner);
-                if (player != null && player.Squad != null)
-                {
-                    var rallypoint = new RallyPoint(barricade, UCBarricadeManager.GetDropFromBarricadeData(barricade), player.Squad);
-                    rallypoints.Add(rallypoint);
-                    rallypoint.UpdateUIForSquad();
-                }
             }
         }
         public static void TryDeleteRallyPoint(uint instanceID)
@@ -190,7 +177,7 @@ namespace Uncreated.Warfare.Squads
             this.squad = squad;
             AwaitingPlayers = new List<UCPlayer>();
             IsActive = true;
-            timer = 0;
+            timer = 60;
         }
 
         public void UpdateUIForSquad()
@@ -206,9 +193,12 @@ namespace Uncreated.Warfare.Squads
 
             foreach (UCPlayer member in squad.Members)
             {
-                string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty);
-                EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
-                line);
+                if (AwaitingPlayers.Contains(member))
+                {
+                    string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty);
+                    EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
+                    line);
+                }
             }
         }
         public void ClearUIForSquad()
@@ -218,6 +208,9 @@ namespace Uncreated.Warfare.Squads
         }
         public void TeleportPlayer(UCPlayer player)
         {
+            if (player.Player.life.isDead || player.Player.movement.getVehicle() != null)
+                return;
+
             player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + 2, structure.point.z), structure.angle_y);
 
             player.Message("rally_success");
@@ -248,11 +241,14 @@ namespace Uncreated.Warfare.Squads
                     foreach (UCPlayer player in parent.AwaitingPlayers)
                     {
                         parent.TeleportPlayer(player);
+                        EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, player.Player.channel.owner.transportConnection, true,
+                        F.Translate("rally_ui", player.Steam64, string.Empty
+                        ));
                     }
                     parent.AwaitingPlayers.Clear();
-                }
-                if (parent.timer <= -10)
+
                     parent.timer = 60;
+                }
 
                 parent.UpdateUIForSquad();
 

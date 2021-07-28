@@ -327,6 +327,7 @@ namespace Uncreated.Warfare.XP
         public int FriendlyKilledXP;
         public int FriendlyRevivedXP;
         public int FOBKilledXP;
+        public int FOBDeployedXP;
         public int FlagCapturedXP;
         public int FlagCapIncreasedXP;
         public int FlagNeutralizedXP;
@@ -352,6 +353,7 @@ namespace Uncreated.Warfare.XP
             FriendlyKilledXP = -50;
             FriendlyRevivedXP = 10;
             FOBKilledXP = 100;
+            FOBDeployedXP = 10;
             FlagCapturedXP = 200;
             FlagCapIncreasedXP = 1;
             FlagNeutralizedXP = 50;

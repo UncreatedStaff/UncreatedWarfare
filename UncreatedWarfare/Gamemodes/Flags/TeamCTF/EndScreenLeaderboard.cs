@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -71,6 +72,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void SendScreenToPlayer(SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner), progresschars);
         public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor, string progresschars)
         {
+            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+
             oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
             player.player.movement.forceRemoveFromVehicle();
             player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
@@ -81,10 +84,28 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             player.player.life.serverModifyVirus(100);
             player.player.life.serverModifyStamina(100);
             player.player.movement.sendPluginJumpMultiplier(0f);
+
             if (!player.player.life.isDead)
+            {
                 player.player.teleportToLocation(F.GetBaseSpawn(player, out ulong playerteam), F.GetBaseAngle(playerteam));
-            else 
+
+                if (ucplayer.KitName != "")
+                {
+                    if (KitManager.KitExists(ucplayer.KitName, out var kit))
+                        KitManager.ResupplyKit(ucplayer, kit);
+                }
+            }
+            else
+            {
                 player.player.life.ReceiveRespawnRequest(false);
+
+                if (ucplayer.KitName != "")
+                {
+                    if (KitManager.KitExists(ucplayer.KitName, out var kit))
+                        KitManager.ResupplyKit(ucplayer, kit);
+                }
+            }
+                
             // error is here
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
             PlayerCurrentGameStats stats;

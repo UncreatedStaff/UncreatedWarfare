@@ -24,17 +24,21 @@ namespace Uncreated.Warfare.Squads
             Squads = new List<Squad>();
             KitManager.OnKitChanged += OnKitChanged;
         }
-        private static void OnKitChanged(UnturnedPlayer player, Kit kit, string oldkit)
+        private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
         {
             if (IsInAnySquad(player.CSteamID, out Squad squad, out _))
-                UpdateUISquad(squad); 
+                UpdateUISquad(squad);
         }
         public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
         {
             if (IsInAnySquad(steamplayer.playerID.steamID, out var squad, out var player))
             {
-                LeaveSquad(player, ref squad);
+                LeaveSquad(player, squad);
             }
+        }
+        public static void OnRoundEnd()
+        {
+
         }
         public static void ClearUIsquad(Player player)
         {
@@ -158,7 +162,7 @@ namespace Uncreated.Warfare.Squads
         public static void InvokePlayerLeft(UCPlayer player)
         {
             if (IsInAnySquad(player.CSteamID, out var squad, out _))
-                LeaveSquad(player, ref squad);
+                LeaveSquad(player, squad);
         }
 
         public static void CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
@@ -176,7 +180,7 @@ namespace Uncreated.Warfare.Squads
         public static bool IsInAnySquad(CSteamID playerID, out Squad squad, out UCPlayer player)
         {
             squad = Squads.Find(s => s.Members.Exists(p => p.Steam64 == playerID.m_SteamID));
-            player = squad.Members.Find(p => p.CSteamID == playerID);
+            player = squad == null ? null : squad.Members.Find(p => p.CSteamID == playerID);
             return squad != null;
         }
         public static bool IsInSquad(CSteamID playerID, Squad targetSquad) => targetSquad.Members.Exists(p => p.Steam64 == playerID.m_SteamID);
@@ -203,7 +207,7 @@ namespace Uncreated.Warfare.Squads
 
             PlayerManager.Save();
         }
-        public static void LeaveSquad(UCPlayer player, ref Squad squad)
+        public static async void LeaveSquad(UCPlayer player, Squad squad)
         {
             player.Message("squad_left");
 
@@ -228,6 +232,12 @@ namespace Uncreated.Warfare.Squads
                 ClearUIsquad(squad.Leader.Player);
 
                 UpdateUIMemberCount(squad.Team);
+
+                if (Provider.clients.Exists(sp => sp.playerID.steamID == player.CSteamID))
+                {
+                    if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
+                        await KitManager.TryGiveUnarmedKit(squad.Leader);
+                }
 
                 PlayerManager.Save();
 
@@ -296,8 +306,11 @@ namespace Uncreated.Warfare.Squads
 
             PlayerManager.Save();
         }
-        public static void PromoteToLeader(ref Squad squad, UCPlayer newLeader)
+        public async static Task PromoteToLeader(Squad squad, UCPlayer newLeader)
         {
+            if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
+                await KitManager.TryGiveUnarmedKit(squad.Leader);
+
             squad.Leader = newLeader;
 
             foreach (var p in squad.Members)
@@ -318,14 +331,6 @@ namespace Uncreated.Warfare.Squads
         {
             var friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
 
-            if (name.ToLower().StartsWith("squad") && name.Length < 10 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out var squadNumber))
-            {
-                if (squadNumber < friendlySquads.Count)
-                {
-                    squad = friendlySquads[squadNumber];
-                    return true;
-                }
-            }
             squad = friendlySquads.Find(
                 s =>
                 name.Equals(s.Name, StringComparison.OrdinalIgnoreCase) ||

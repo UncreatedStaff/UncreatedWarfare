@@ -151,23 +151,29 @@ namespace Uncreated.Warfare
         }
         public bool IsOrIsNearLeader(float distance)
         {
-            if (Squad is null)
+            if (Squad is null || Player.transform is null || Squad.Leader.Player.transform is null)
                 return false;
 
             if (Squad.Leader.Steam64 == Steam64)
                 return true;
 
+            if (Player.life.isDead || Squad.Leader.Player.life.isDead)
+                return false;
+
             return (Position - Squad.Leader.Position).sqrMagnitude < Math.Pow(distance, 2);
         }
         public int NearbyMemberBonus(int amount, float distance)
         {
+            if (Player.life.isDead || Player.transform is null)
+                return amount;
+
             if (Squad is null)
                 return amount;
 
             int count = 0;
             for (int i = 0; i < Squad.Members.Count; i++)
             {
-                if (Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
+                if (Squad.Members[i].Player.transform != null && Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
                     count++;
             }
             return (int)Math.Round(amount * (1 + ((float)count / 10)));
@@ -175,6 +181,9 @@ namespace Uncreated.Warfare
 
         public bool IsNearFOB()
         {
+            if (Player.life.isDead || Player.transform is null)
+                return false;
+
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
