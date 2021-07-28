@@ -77,6 +77,71 @@ namespace Uncreated.Warfare.Stats
             }
             if (save) Save();
         }
+        
+        public void TellOfficerPts(int ofp, ulong team, bool save = true)
+        {
+            int teamindex = teams.FindIndex(x => x.id == team);
+            if (teamindex != -1)
+            {
+                teams[teamindex].officer_points = unchecked((uint)ofp);
+            }
+            else
+            {
+                if (team == 1 || team == 2)
+                {
+                    Team t = new Team(team, team == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(team, 0, false));
+                    t.officer_points = unchecked((uint)ofp);
+                    AddTeam(t);
+                }
+            }
+            teamindex = teams.FindIndex(x => x.id == team);
+            if (teamindex != -1)
+            {
+                if (team == 1)
+                {
+                    int teamindex2 = teams.FindIndex(x => x.id == 2);
+                    this.officer_points = teamindex2 == -1 ? teams[teamindex].officer_points : teams[teamindex].officer_points + teams[teamindex2].officer_points;
+                }
+                else if (team == 2)
+                {
+                    int teamindex1 = teams.FindIndex(x => x.id == 1);
+                    this.officer_points = teamindex1 == -1 ? teams[teamindex].officer_points : teams[teamindex].officer_points + teams[teamindex1].officer_points;
+                }
+            }
+            if (save) Save();
+        }
+        public void TellXP(int xp, ulong team, bool save = true)
+        {
+            int teamindex = teams.FindIndex(x => x.id == team);
+            if (teamindex != -1)
+            {
+                teams[teamindex].xp = unchecked((uint)xp);
+            }
+            else
+            {
+                if (team == 1 || team == 2)
+                {
+                    Team t = new Team(team, team == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(team, 0, false));
+                    t.xp = unchecked((uint)xp);
+                    AddTeam(t);
+                }
+            }
+            teamindex = teams.FindIndex(x => x.id == team);
+            if (teamindex != -1)
+            {
+                if (team == 1)
+                {
+                    int teamindex2 = teams.FindIndex(x => x.id == 2);
+                    this.xp = teamindex2 == -1 ? teams[teamindex].xp : teams[teamindex].xp + teams[teamindex2].xp;
+                } else if (team == 2)
+                {
+                    int teamindex1 = teams.FindIndex(x => x.id == 1);
+                    this.xp = teamindex1 == -1 ? teams[teamindex].xp : teams[teamindex].xp + teams[teamindex1].xp;
+                }
+            }
+            if (save) Save();
+        }
+
         public void TellTeamkill(UCWarfare.KillEventArgs parameters, bool save = true)
         {
             this.teamkills++;
@@ -582,6 +647,11 @@ namespace Uncreated.Warfare.Stats
         public void Update(SteamPlayer player, bool save = true)
         {
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+            if (ucplayer == null)
+            {
+                F.LogWarning("In WarfareStats.Team.Update(), ucplayer was null");
+                return;
+            }
             string kitname = ucplayer.KitName;
             int kitindex = kits.FindIndex(x => x.name == kitname);
             Kit kit;

@@ -46,6 +46,11 @@ namespace Uncreated
         }
         public void Reload()
         {
+            if (!File.Exists(this._dir))
+            {
+                LoadDefaults();
+                return;
+            }
             StreamReader r = File.OpenText(_dir);
             try
             {

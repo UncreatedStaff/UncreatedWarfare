@@ -41,7 +41,7 @@ namespace Uncreated.Warfare
                 {
                     pt.stats.AddTeamkill();
                     pt.UCPlayerStats.warfare_stats.TellTeamkill(parameters, false);
-                    await pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.SaveAsync();
                 }
                 await a;
                 await e;
@@ -95,7 +95,7 @@ namespace Uncreated.Warfare
                 {
                     pt.stats.AddKill();
                     pt.UCPlayerStats.warfare_stats.TellKill(parameters, false);
-                    await pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.SaveAsync();
                 }
                 await a;
                 await e;
@@ -154,7 +154,7 @@ namespace Uncreated.Warfare
                 {
                     pt.stats.AddDeath();
                     pt.UCPlayerStats.warfare_stats.TellDeathSuicide(parameters, false);
-                    await pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.SaveAsync();
                 }
                 await a;
                 await s;
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare
                     pt.stats.AddDeath();
 
                     pt.UCPlayerStats.warfare_stats.TellDeathNonSuicide(parameters, false);
-                    await pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.SaveAsync();
                 }
                 await a;
                 await s;

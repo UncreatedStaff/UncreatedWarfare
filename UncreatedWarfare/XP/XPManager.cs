@@ -29,7 +29,8 @@ namespace Uncreated.Warfare.XP
             F.Log(player.CharacterName);
             if (player.IsTeam1() || player.IsTeam2())
             {
-                await GetXP(player.Player, player.GetTeam(), true);
+                int amt = await GetXP(player.Player, player.GetTeam(), true);
+                UpdateUI(player.Player, amt);
             }
         }
         public static async Task OnPlayerLeft(UCPlayer player)
@@ -43,42 +44,32 @@ namespace Uncreated.Warfare.XP
         }
         public static async Task<int> GetXP(Player player, ulong team, bool important)
         {
-            if (team == 0 || team > 2) return 0;
+            if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (important || ucplayer.cachedXp == -1)
+            if (ucplayer == default || important || ucplayer.cachedXp == -1)
             {
                 int newxp = await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
                 if (ucplayer != null)
                     ucplayer.cachedXp = newxp;
                 return newxp;
-            } else
-            {
-                if (ucplayer == null)
-                    return await GetXP(player, team, true);
-                else return ucplayer.cachedXp;
-            }
+            } else return ucplayer.cachedXp;
         }
         public static async Task<int> GetXP(ulong player, ulong team, bool important)
         {
-            if (team == 0 || team > 2) return 0;
+            if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromID(player);
-            if (important || ucplayer.cachedXp == -1)
+            if (ucplayer == default || important || ucplayer.cachedXp == -1)
             {
                 int newxp = await Data.DatabaseManager.GetXP(player, team);
-                if (ucplayer != null)
+                if (ucplayer != default)
                     ucplayer.cachedXp = newxp;
                 return newxp;
             }
-            else
-            {
-                if (ucplayer == null)
-                    return await GetXP(player, team, true);
-                else return ucplayer.cachedXp;
-            }
+            else return ucplayer.cachedXp;
         }
         public static async Task AddXP(Player player, ulong team, int amount, string message = "")
         {
-
+            if (team < 1 || team > 2) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
             if (ucplayer != null)
@@ -89,7 +80,7 @@ namespace Uncreated.Warfare.XP
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
-                await VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
+                await VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
                 // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
             for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
                 await Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
@@ -332,6 +323,7 @@ namespace Uncreated.Warfare.XP
         public int FlagCapIncreasedXP;
         public int FlagNeutralizedXP;
         public int TransportPlayerXP;
+        public float TimeBetweenXpAndOfpAwardForTransport;
         public int BuiltFOBXP;
         public int BuiltAmmoCrateXP;
         public int BuiltRepairStationXP;
@@ -358,6 +350,7 @@ namespace Uncreated.Warfare.XP
             FlagCapIncreasedXP = 1;
             FlagNeutralizedXP = 50;
             TransportPlayerXP = 1;
+            TimeBetweenXpAndOfpAwardForTransport = 10f;
             BuiltFOBXP = 50;
             BuiltAmmoCrateXP = 10;
             BuiltRepairStationXP = 25;
@@ -395,6 +388,6 @@ namespace Uncreated.Warfare.XP
                 new Rank(10, "Chief Warrant Officer", "C.W.O.", 25000)
             };
         }
-        public XPData() { }
+        public XPData() => SetDefaults();
     }
 }

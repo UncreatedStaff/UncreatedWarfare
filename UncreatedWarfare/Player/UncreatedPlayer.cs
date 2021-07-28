@@ -16,6 +16,7 @@ namespace Uncreated.Players
 {
     public class UncreatedPlayer : PlayerObject
     {
+        public static bool isSaving = false;
         public const int DATA_VERSION = 1;
         public ulong steam_id;
         public Usernames usernames;
@@ -136,7 +137,7 @@ namespace Uncreated.Players
                 }
             }
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
-            newplayer.SavePath(path);
+            newplayer.SavePathAsync(path);
             return newplayer;
         }
         public static async Task<UncreatedPlayer> LoadAsync(ulong id)
@@ -165,37 +166,40 @@ namespace Uncreated.Players
                 }
             }
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
-            newplayer.SavePath(path);
+            newplayer.SavePathAsync(path);
             return newplayer;
         }
-        public override void Save() => SavePath(FileName(steam_id));
-        public async Task SaveAsync() => await SavePathAsync(FileName(steam_id));
-        private void SavePath(string path)
-        {
-            F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
-            using (TextWriter writer = File.CreateText(path))
-            {
-                JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-                serializer.Serialize(writer, this);
-                writer.Close();
-                writer.Dispose();
-            }
-        }
+        public override void Save() => SavePathAsync(FileName(steam_id));
+        public void SaveAsync() => SavePathAsync(FileName(steam_id));
         static readonly JsonSerializerSettings Settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
-        private async Task SavePathAsync(string path)
+        private void SavePathAsync(string path)
         {
-            F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
-            using (TextWriter writer = File.CreateText(path))
+            _ = Task.Run(async () =>
             {
-                string data = JsonConvert.SerializeObject(this, Settings);
-                await writer.WriteAsync(data);
-                writer.Close();
-                writer.Dispose();
-            }
+                F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
+                while (isSaving) await Task.Delay(1);
+                isSaving = true;
+                try
+                {
+                    using (TextWriter writer = File.CreateText(path))
+                    {
+                        string data = JsonConvert.SerializeObject(this, Settings);
+                        await writer.WriteAsync(data);
+                        writer.Close();
+                        writer.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    F.LogError("Error saving player " + usernames.player_name);
+                    F.LogError(ex);
+                }
+                isSaving = false;
+            }).ConfigureAwait(false);
         }
         protected override void SaveEscalator() => Save();
-        public async Task LogIn(SteamPlayer player, string server) => await LogIn(player, F.GetPlayerOriginalNames(player), server);
-        public async Task LogIn(SteamPlayer player, FPlayerName name, string server)
+        public void LogIn(SteamPlayer player, string server) => LogIn(player, F.GetPlayerOriginalNames(player), server);
+        public void LogIn(SteamPlayer player, FPlayerName name, string server)
         {
             if (player != default)
             {
@@ -207,12 +211,12 @@ namespace Uncreated.Players
                 usernames.PlayerNameObject = name;
             }
             sessions.StartSession(server, false);
-            await SaveAsync();
+            SaveAsync();
         }
-        public async Task UpdateSession(string server, bool save = true)
+        public void UpdateSession(string server, bool save = true)
         {
             sessions.ModifyCurrentSession(server, false);
-            if (save) await SaveAsync();
+            if (save) SaveAsync();
         }
     }
     public abstract class StatsCollection : PlayerObject
@@ -410,10 +414,12 @@ namespace Uncreated.Players
     }
     public struct FPlayerName
     {
+        public static readonly FPlayerName Nil = new FPlayerName() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
         public ulong Steam64;
         public string PlayerName;
         public string CharacterName;
         public string NickName;
+
         public FPlayerName(SteamPlayerID player)
         {
             this.PlayerName = player.playerName;

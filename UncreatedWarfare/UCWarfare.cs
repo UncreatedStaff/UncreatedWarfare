@@ -27,6 +27,7 @@ namespace Uncreated.Warfare
     {
         public static UCWarfare Instance;
         public Coroutine StatsRoutine;
+        public Components.UCAnnouncer Announcer;
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
         private MySqlData _sqlElsewhere;
@@ -110,6 +111,7 @@ namespace Uncreated.Warfare
                 Data.VehicleBay = new VehicleBay();
                 Data.VehicleSigns = new VehicleSigns();
             }
+            Announcer = gameObject.AddComponent<Components.UCAnnouncer>();
             Data.RequestSignManager = new RequestSigns();
             Data.StructureManager = new StructureSaver();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
@@ -231,6 +233,7 @@ namespace Uncreated.Warfare
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
             Patches.OnPlayerTriedStoreItem_Global += EventFunctions.OnTryStoreItem;
             Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
+            Patches.OnPlayerMarker_Global += EventFunctions.OnPlayerMarkedPosOnMap;
             DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
@@ -261,6 +264,7 @@ namespace Uncreated.Warfare
             Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
             Patches.OnPlayerTriedStoreItem_Global -= EventFunctions.OnTryStoreItem;
             Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
+            Patches.OnPlayerMarker_Global -= EventFunctions.OnPlayerMarkedPosOnMap;
             DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
@@ -308,6 +312,8 @@ namespace Uncreated.Warfare
             }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
+            if (Announcer != null)
+                Destroy(Announcer);
             Data.CancelFlags.Cancel();
             Data.CancelTcp.Cancel();
             Data.Gamemode?.Dispose();

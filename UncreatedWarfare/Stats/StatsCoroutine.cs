@@ -16,24 +16,30 @@ namespace Uncreated.Warfare.Stats
         {
             while (true)
             {
-                IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
-                while (players.MoveNext())
+                try
                 {
-                    SteamPlayer player = players.Current;
-                    if (F.TryGetPlaytimeComponent(player.player, out PlaytimeComponent c))
+                    IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
+                    while (players.MoveNext())
                     {
-                        UncreatedPlayer stats = c.UCPlayerStats;
-                        if (stats != null)
+                        SteamPlayer player = players.Current;
+                        if (F.TryGetPlaytimeComponent(player.player, out PlaytimeComponent c))
                         {
-                            stats.warfare_stats.Update(player, false);
-                            Task.Run( async () => {
-                                await stats.UpdateSession(WarfareStats.WarfareName, false);
-                                await stats.SaveAsync();
-                            });
+                            UncreatedPlayer stats = c.UCPlayerStats;
+                            if (stats != null)
+                            {
+                                stats.warfare_stats.Update(player, false);
+                                stats.UpdateSession(WarfareStats.WarfareName, false);
+                                stats.SaveAsync();
+                            }
                         }
                     }
+                    players.Dispose();
                 }
-                players.Dispose();
+                catch (Exception ex)
+                {
+                    F.LogError("Error in Stats Coroutine:");
+                    F.LogError(ex);
+                }
                 yield return new WaitForSeconds(UCWarfare.Config.StatsInterval);
             }
         }

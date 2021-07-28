@@ -5,7 +5,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
@@ -52,7 +51,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             while (players.MoveNext())
             {
                 ulong team = players.Current.GetTeam();
-                if (!players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) || (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
+                UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
+                if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) || 
+                    (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
                 {
                     if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
                     {
@@ -108,8 +109,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
             foreach (SteamPlayer client in Provider.clients)
+            {
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
+                client.player.movement.forceRemoveFromVehicle();
+            }
             this.State = EState.FINISHED;
+            await UCWarfare.ReplaceBarricadesAndStructures();
+            Commands.ClearCommand.WipeVehiclesAndRespawn();
             await TicketManager.OnRoundWin(winner);
             await Task.Delay(Config.end_delay * 1000);
             await InvokeOnTeamWin(winner);
@@ -122,10 +128,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EndScreen.ShuttingDown = shutdownAfterGame;
                 EndScreen.ShuttingDownMessage = shutdownMessage;
                 EndScreen.ShuttingDownPlayer = shutdownPlayer;
-                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 foreach (SteamPlayer player in Provider.clients)
                     CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
-                await rtn;
                 isScreenUp = true;
                 await EndScreen.EndGame(Config.ProgressChars);
             }
@@ -148,10 +152,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             F.Log("Loading new game.", ConsoleColor.Cyan);
             await LoadRotation();
             State = EState.ACTIVE;
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
-            await rtn;
             await InvokeOnNewGameStarting();
         }
         public override async Task LoadRotation()
@@ -264,21 +266,37 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         protected override async Task PlayerEnteredFlagRadius(Flag flag, Player player)
         {
             ulong team = player.GetTeam();
-            F.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
+            //F.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
-            if (flag.Team1TotalPlayers > 0)
-                t1 = CTFUI.RefreshStaticUI(1, flag);
-            if (flag.Team2TotalPlayers > 0)
-                t2 = CTFUI.RefreshStaticUI(2, flag);
+            SendUIParameters t1v = SendUIParameters.Nil;
+            SendUIParameters t2v = SendUIParameters.Nil;
+            if (flag.Team1TotalCappers > 0)
+                t1 = CTFUI.RefreshStaticUI(1, flag, false);
+            if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
+                t1v = CTFUI.RefreshStaticUI(1, flag, true);
+            if (flag.Team2TotalCappers > 0)
+                t2 = CTFUI.RefreshStaticUI(2, flag, false);
+            if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
+                t2v = CTFUI.RefreshStaticUI(2, flag, true);
             foreach (Player capper in flag.PlayersOnFlag)
             {
                 ulong t = capper.GetTeam();
-                if(t == 1)
-                    t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                if (t == 1)
+                {
+                    if (capper.movement.getVehicle() == null)
+                        t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                    else
+                        t1v.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                }
                 else if (t == 2)
-                    t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                {
+                    if (capper.movement.getVehicle() == null)
+                        t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                    else
+                        t2v.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                }
             }
             await Task.Yield();
         }
@@ -292,17 +310,33 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.askEffectClearByID(UCWarfare.Config.FlagSettings.UIID, Channel);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
-            if (flag.Team1TotalPlayers > 0)
-                t1 = CTFUI.RefreshStaticUI(1, flag);
-            if (flag.Team2TotalPlayers > 0)
-                t2 = CTFUI.RefreshStaticUI(2, flag);
+            SendUIParameters t1v = SendUIParameters.Nil;
+            SendUIParameters t2v = SendUIParameters.Nil;
+            if (flag.Team1TotalCappers > 0)
+                t1 = CTFUI.RefreshStaticUI(1, flag, false);
+            if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
+                t1v = CTFUI.RefreshStaticUI(1, flag, true);
+            if (flag.Team2TotalCappers > 0)
+                t2 = CTFUI.RefreshStaticUI(2, flag, false);
+            if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
+                t2v = CTFUI.RefreshStaticUI(2, flag, true);
             foreach (Player capper in flag.PlayersOnFlag)
             {
                 ulong t = capper.GetTeam();
                 if (t == 1)
-                    t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                {
+                    if (capper.movement.getVehicle() == null)
+                        t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                    else
+                        t1v.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                }
                 else if (t == 2)
-                    t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                {
+                    if (capper.movement.getVehicle() == null)
+                        t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                    else
+                        t2v.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
+                }
             }
             await Task.Yield();
         }
@@ -365,20 +399,24 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     await rtn;
                 }
             }
-            SendUIParameters t1;
+            SendUIParameters t1 = SendUIParameters.Nil;
+            SendUIParameters t2 = SendUIParameters.Nil;
+            SendUIParameters t1v = SendUIParameters.Nil;
+            SendUIParameters t2v = SendUIParameters.Nil;
+            if (flag.Team1TotalCappers > 0)
+                t1 = CTFUI.RefreshStaticUI(1, flag, false);
+            if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
+                t1v = CTFUI.RefreshStaticUI(1, flag, true);
+            if (flag.Team2TotalCappers > 0)
+                t2 = CTFUI.RefreshStaticUI(2, flag, false);
+            if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
+                t2v = CTFUI.RefreshStaticUI(2, flag, true);
             if (flag.Team1TotalPlayers > 0)
-                t1 = CTFUI.RefreshStaticUI(1, flag);
-            else t1 = default;
-            SendUIParameters t2;
-            if (flag.Team2TotalPlayers > 0)
-                t2 = CTFUI.RefreshStaticUI(2, flag);
-            else t2 = default;
-            if (!t1.Equals(default))
                 foreach (Player player in flag.PlayersOnFlagTeam1)
-                    t1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
-            if (!t2.Equals(default))
+                    (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
+            if (flag.Team2TotalPlayers > 0)
                 foreach (Player player in flag.PlayersOnFlagTeam2)
-                    t2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
+                    (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
             if (NewOwner == 0)
             {
                 foreach (SteamPlayer client in Provider.clients)
@@ -407,19 +445,25 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (NewPoints == 0)
                 await flag.SetOwner(0);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            SendUIParameters sendT1;
-            if (flag.Team1TotalPlayers > 0)
-                sendT1 = CTFUI.ComputeUI(1, flag);
-            else sendT1 = default;
-            SendUIParameters sendT2;
-            if (flag.Team2TotalPlayers > 0)
-                sendT2 = CTFUI.ComputeUI(2, flag);
-            else sendT2 = default;
+            SendUIParameters t1 = SendUIParameters.Nil;
+            SendUIParameters t2 = SendUIParameters.Nil;
+            SendUIParameters t1v = SendUIParameters.Nil;
+            SendUIParameters t2v = SendUIParameters.Nil;
+            if (flag.Team1TotalCappers > 0)
+                t1 = CTFUI.RefreshStaticUI(1, flag, false);
+            if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
+                t1v = CTFUI.RefreshStaticUI(1, flag, true);
+            if (flag.Team2TotalCappers > 0)
+                t2 = CTFUI.RefreshStaticUI(2, flag, false);
+            if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
+                t2v = CTFUI.RefreshStaticUI(2, flag, true);
             foreach (Player player in flag.PlayersOnFlag)
             {
                 byte team = player.GetTeamByte();
-                if (team == 1 && !sendT1.Equals(default)) sendT1.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
-                else if (team == 2 && !sendT2.Equals(default)) sendT2.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
+                if (team == 1) 
+                    (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
+                else if (team == 2) 
+                    (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
             }
             await rtn;
         }
@@ -429,7 +473,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
             if (OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
                 CTFUI.RefreshStaticUI(newteam, Rotation.FirstOrDefault(x => x.ID == OnFlag[player.playerID.steamID.m_SteamID])
-                    ?? Rotation[0]).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
+                    ?? Rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
             CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             await rtn;
         }

@@ -106,6 +106,17 @@ namespace Uncreated.Warfare.Commands
                     else
                         player.Player.SendChat("no_permissions");
                 }
+                else if (cmd == "config")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.kits") || player.HasPermission("uc.reload.all"))
+                    {
+                        ReloadAllConfigFiles();
+                        if (isConsole) F.Log(F.Translate("reload_reloaded_config", 0, out _));
+                        else player.SendChat("reload_reloaded_config");
+                    }
+                    else
+                        player.Player.SendChat("no_permissions");
+                }
             }
         }
         internal static void ReloadConfig()
@@ -199,6 +210,7 @@ namespace Uncreated.Warfare.Commands
         {
             try
             {
+                UCWarfare.I.Announcer.Reload();
                 IEnumerable<FieldInfo> objects = typeof(Data).GetFields(BindingFlags.Static | BindingFlags.Public).Where(x => x.FieldType.IsClass);
                 foreach (FieldInfo obj in objects)
                 {

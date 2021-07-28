@@ -75,8 +75,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
 
             oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
-            player.player.movement.forceRemoveFromVehicle();
-            player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
             player.player.movement.sendPluginSpeedMultiplier(0f);
             player.player.life.serverModifyHealth(100);
             player.player.life.serverModifyFood(100);
@@ -107,6 +105,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
                 
             // error is here
+            player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
             PlayerCurrentGameStats stats;
             if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
@@ -126,7 +125,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format", player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(SecondsEndGameLength)));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
-            List<KeyValuePair<Player, char>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam);
+            List<KeyValuePair<Player, char>> topsquadplayers = warstats.GetTopSquad(out string squadname, out ulong squadteam, winner);
             List<KeyValuePair<Player, int>> topkills = warstats.GetTop5MostKills();
             List<KeyValuePair<Player, TimeSpan>> toptimeonpoint = warstats.GetTop5OnPointTime();
             List<KeyValuePair<Player, int>> topxpgain = warstats.GetTop5XP();
@@ -431,8 +430,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             // checks for how many players are outside of main
             DateTime dt = DateTime.Now;
-            CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && !TeamManager.Team1Main.IsInside(x.player.transform.position)));
-            CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && !TeamManager.Team2Main.IsInside(x.player.transform.position)));
+            CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && x.player.transform != null && !TeamManager.Team1Main.IsInside(x.player.transform.position)));
+            CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && x.player.transform != null && !TeamManager.Team2Main.IsInside(x.player.transform.position)));
             yield return new WaitForSeconds(10f);
             StartCoroutine(CompileAverages());
         }
@@ -462,16 +461,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     if (player == default || player.player == default) return -1;
                     else a.player = player.player;
                 }
-                return a.kills.CompareTo(b.kills);
+                return b.kills.CompareTo(a.kills);
             });
+            stats.RemoveAll(x => x.player == null);
             List<KeyValuePair<Player, int>> rtnList = new List<KeyValuePair<Player, int>>();
             for(int i = 0; i < Math.Min(stats.Count, 6); i++)
                 rtnList.Add(new KeyValuePair<Player, int>(stats[i].player, stats[i].kills));
             return rtnList;
         }
-        public List<KeyValuePair<Player, char>> GetTopSquad(out string squadname, out ulong squadteam)
+        public List<KeyValuePair<Player, char>> GetTopSquad(out string squadname, out ulong squadteam, ulong winner)
         {
-            List<Squad> squads = SquadManager.Squads.ToList();
+            List<Squad> squads = SquadManager.Squads.Where(x => x.Team == winner).ToList();
             if (squads.Count == 0)
             {
                 squadname = NO_PLAYER_NAME_PLACEHOLDER;
@@ -561,8 +561,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     if (player == default || player.player == default) return -1;
                     else a.player = player.player;
                 }
-                return a.KDR.CompareTo(b.KDR);
+                return b.TimeOnPoint.CompareTo(a.TimeOnPoint);
             });
+            stats.RemoveAll(x => x.player == null);
             List<KeyValuePair<Player, TimeSpan>> rtnList = new List<KeyValuePair<Player, TimeSpan>>();
             for (int i = 0; i < Math.Min(stats.Count, 6); i++)
                 rtnList.Add(new KeyValuePair<Player, TimeSpan>(stats[i].player, stats[i].TimeOnPoint));
@@ -579,8 +580,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     if (player == default || player.player == default) return -1;
                     else a.player = player.player;
                 }
-                return a.xpgained.CompareTo(b.xpgained);
+                return b.xpgained.CompareTo(a.xpgained);
             });
+            stats.RemoveAll(x => x.player == null);
             List<KeyValuePair<Player, int>> rtnList = new List<KeyValuePair<Player, int>>();
             for (int i = 0; i < Math.Min(stats.Count, 6); i++)
                 rtnList.Add(new KeyValuePair<Player, int>(stats[i].player, stats[i].xpgained));

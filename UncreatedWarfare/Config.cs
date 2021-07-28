@@ -53,6 +53,7 @@ namespace Uncreated.Warfare
         public float MortarWarningDistance;
         public float StatsInterval;
         public float AMCDamageMultiplier;
+        public bool ReplaceEmptyNamesWithID;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -89,6 +90,7 @@ namespace Uncreated.Warfare
             this.MortarWarningDistance = 75f;
             this.StatsInterval = 60f;
             this.AMCDamageMultiplier = 0.25f;
+            this.ReplaceEmptyNamesWithID = true;
         }
     }
     public class Modules
@@ -189,6 +191,7 @@ namespace Uncreated.Warfare
         public bool ReceiveDragItem;
         public bool ReceiveGestureRequest;
         public bool project;
+        public bool replicateSetMarker;
 
         public PatchToggles()
         {
@@ -211,6 +214,7 @@ namespace Uncreated.Warfare
             this.ReceiveDragItem = true;
             this.ReceiveGestureRequest = true;
             this.project = true;
+            this.replicateSetMarker = true;
         }
     }
     public class AdminLoggerSettings

@@ -33,6 +33,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 else return 0;
             } 
         }
+        public int ObjectivePlayerCountCappers
+        { 
+            get
+            {
+                if (T1Obj) return Team1TotalCappers;
+                else if (T2Obj) return Team2TotalCappers;
+                else return 0;
+            } 
+        }
         public Vector3 Position
         {
             get => _position;
@@ -160,9 +169,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         private float _sizeX;
         private float _sizeZ;
         public List<Player> PlayersOnFlagTeam1;
+        public List<Player> PlayersOnVehicleTeam1;
         public int Team1TotalPlayers;
+        public int Team1TotalCappers;
         public List<Player> PlayersOnFlagTeam2;
         public int Team2TotalPlayers;
+        public int Team2TotalCappers;
         public void RecalcCappers(bool RecalcOnFlag = false) => RecalcCappers(Provider.clients, RecalcOnFlag);
         public void RecalcCappers(List<SteamPlayer> OnlinePlayers, bool RecalcOnFlag = true)
         {
@@ -172,10 +184,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
                     PlayersOnFlag.Add(player.player);
             }
-            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team1ID && !player.life.isDead && player.movement.getVehicle() == null).ToList();
+            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team1ID && !player.life.isDead).ToList();
             Team1TotalPlayers = PlayersOnFlagTeam1.Count;
-            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team2ID && !player.life.isDead && player.movement.getVehicle() == null).ToList();
+            Team1TotalCappers = PlayersOnFlagTeam1.Count(x => x.movement.getVehicle() == null);
+            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team2ID && !player.life.isDead).ToList();
             Team2TotalPlayers = PlayersOnFlagTeam2.Count;
+            Team2TotalCappers = PlayersOnFlagTeam2.Count(x => x.movement.getVehicle() == null);
         }
         /// <param name="NewPlayers">Players that have entered the flag since last check.</param>
         /// <returns>Players that have left the flag since last check.</returns>
@@ -380,26 +394,26 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             if ((T1Obj && T2Obj) || (T1Obj && Owner == 2) || (T2Obj && Owner == 1)) // must be objective for both teams
             {
-                if (Team1TotalPlayers == 0 && Team2TotalPlayers == 0)
+                if (Team1TotalCappers == 0 && Team2TotalCappers == 0)
                 {
                     winner = 0;
                     return false;
                 }
-                else if (Team1TotalPlayers == Team2TotalPlayers)
+                else if (Team1TotalCappers == Team2TotalCappers)
                 {
                     winner = 0;
                 }
-                else if (Team1TotalPlayers == 0 && Team2TotalPlayers > 0)
+                else if (Team1TotalCappers == 0 && Team2TotalCappers > 0)
                 {
                     winner = 2;
                 }
-                else if (Team2TotalPlayers == 0 && Team1TotalPlayers > 0)
+                else if (Team2TotalCappers == 0 && Team1TotalCappers > 0)
                 {
                     winner = 1;
                 }
-                else if (Team1TotalPlayers > Team2TotalPlayers)
+                else if (Team1TotalCappers > Team2TotalCappers)
                 {
-                    if (Team1TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalPlayers)
+                    if (Team1TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalCappers)
                     {
                         winner = 1;
                     }
@@ -410,7 +424,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
                 else
                 {
-                    if (Team2TotalPlayers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalPlayers)
+                    if (Team2TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalCappers)
                     {
                         winner = 2;
                     }
@@ -423,7 +437,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             else
             {
-                if (ObjectivePlayerCount == 0) winner = 0;
+                if (ObjectivePlayerCountCappers == 0) winner = 0;
                 else winner = WhosObj();
                 if (!IsObj(winner)) winner = 0;
                 return false;

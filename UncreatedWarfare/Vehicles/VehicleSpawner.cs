@@ -458,32 +458,30 @@ namespace Uncreated.Warfare.Vehicles
 
             while (!Owner.isDead)
             {
-                F.Log("VEHICLE: looking to give transport xp...");
-
                 int count = 0;
-                for (int i = 0; i < Owner.passengers.Length; i++)
+                //       not count driver
+                for (int i = 1; i < Owner.passengers.Length; i++)
                 {
-                    if (Owner.passengers[i] != null)
+                    if (!data.CrewSeats.Exists(x => x == i) && Owner.passengers[i] != null && Owner.passengers[i].player != null) count++;
+                }
+                if (Owner.passengers.Length > 0)
+                {
+                    if (Owner.passengers[0] != null && Owner.passengers[0].player != null && count > 2 && Owner.speed > 0)
                     {
-                        var passenger = Owner.passengers[i];
-                        count++;
+                        UCPlayer player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
+                        if (player != null)
+                        {
+                            Task.Run(async () =>
+                            {
+                                if (player.Squad != null)
+                                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
+                                else
+                                    await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 2), F.Translate("xp_transporting_players", player.Steam64));
+                            });
+                        }
                     }
                 }
-
-                if (Owner.passengers[0] != null && count > 2 && Owner.speed > 0)
-                {
-                    var player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
-                    Task.Run(async () =>
-                    {
-                        if (player.Squad != null)
-                            await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
-                        else
-                            await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 2), F.Translate("xp_transporting_players", player.Steam64));
-                    });
-                    F.Log("VEHICLE: successfully given transport XP");
-                }
-
-                yield return new WaitForSeconds(5);
+                yield return new WaitForSeconds(XPManager.config.Data.TimeBetweenXpAndOfpAwardForTransport);
             }
         }
     }

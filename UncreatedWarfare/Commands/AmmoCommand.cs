@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Commands
             InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
-            if (barricade != null && barricade.barricade.id == FOBManager.config.Data.AmmoCrateID)
+            if (barricade != null && barricade.barricade != null && FOBManager.config.Data.AmmoCrateID == barricade.barricade.id)
             {
                 if (storage is null)
                 {

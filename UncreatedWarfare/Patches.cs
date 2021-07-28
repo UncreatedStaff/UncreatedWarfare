@@ -27,6 +27,7 @@ namespace Uncreated.Warfare
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
         public delegate void PlayerTriedStoreItem(Player player, byte page, ItemJar jar, ref bool allow);
         public delegate void PlayerGesture(Player player, EPlayerGesture gesture, ref bool allow);
+        public delegate void PlayerMarker(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed);
 
         public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
@@ -37,6 +38,7 @@ namespace Uncreated.Warfare
         public static event BatteryStealingDelegate OnBatterySteal_Global;
         public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
         public static event PlayerGesture OnPlayerGesture_Global;
+        public static event PlayerMarker OnPlayerMarker_Global;
 
         /// <summary>
         /// Stores all <see cref="Harmony"/> patches.
@@ -121,6 +123,19 @@ namespace Uncreated.Warfare
                     return allow;
                 }
                 return true;
+            }
+            // SDG.Unturned.PlayerQuests
+            /// <summary>
+            /// Prefix of <see cref="PlayerQuests.replicateSetMarker(bool, Vector3, string)"/> to add an event.
+            /// </summary>
+            [HarmonyPatch(typeof(PlayerQuests), "replicateSetMarker")]
+            [HarmonyPrefix]
+            static bool OnPlayerMarked(ref bool newIsMarkerPlaced, ref Vector3 newMarkerPosition, ref string newMarkerTextOverride, PlayerQuests __instance)
+            {
+                if (!UCWarfare.Config.Patches.replicateSetMarker) return true;
+                bool isAllowed = true;
+                OnPlayerMarker_Global.Invoke(__instance.player, ref newMarkerPosition, ref newMarkerTextOverride, ref newIsMarkerPlaced, ref isAllowed);
+                return isAllowed;
             }
             // SDG.Unturned.PlayerInventory
             ///<summary>
@@ -355,19 +370,15 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
             {
-                F.Log("Collided with: " + other == null ? "null" : other.transform.name);
                 if (!UCWarfare.Config.Patches.BumperOnTriggerEnter) return true;
                 if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
                     return false;
                 if (other.transform.CompareTag("Player"))
                 {
-                    F.Log("Was player.");
                     if (___vehicle.isDriven)
                     {
-                        F.Log("Was driven.");
                         if (___vehicle.asset.engine != EEngine.HELICOPTER && ___vehicle.asset.engine != EEngine.PLANE)
                         {
-                            F.Log("Not Helicopter");
                             Player hit = DamageTool.getPlayer(other.transform);
                             Player driver = ___vehicle.passengers[0].player.player;
                             if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
@@ -377,7 +388,6 @@ namespace Uncreated.Warfare
                             }
                         } else if (___vehicle.speed <= 10.0)
                         {
-                            F.Log("Helicopter, blocking");
                             return false;
                         }
                     }

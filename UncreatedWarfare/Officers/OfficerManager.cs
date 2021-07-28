@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,10 +35,8 @@ namespace Uncreated.Warfare.Officers
         {
             if (player.IsTeam1() || player.IsTeam2())
             {
-                int points = await GetOfficerPoints(player.Player, player.GetTeam());
+                int points = await GetOfficerPoints(player.Player, player.GetTeam(), true);
 
-                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-                await rtn;
                 if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
                 {
                     player.OfficerRank = GetOfficerRank(officer.officerLevel);
@@ -51,28 +50,52 @@ namespace Uncreated.Warfare.Officers
         }
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            int op = await GetOfficerPoints(player.player, newGroup);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+            int op = await GetOfficerPoints(player.player, newGroup, true);
             UpdateUI(player.player, op);
-            await rtn;
         }
 
-        public static async Task<int> GetOfficerPoints(Player player, ulong team) => await Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
-        public static async Task<int> GetOfficerPoints(ulong playerID, ulong team) => await Data.DatabaseManager.GetOfficerPoints(playerID, team);
+        public static async Task<int> GetOfficerPoints(Player player, ulong team, bool important)
+        {
+            if (team < 1 || team > 2) return 0;
+            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+            if (ucplayer == default || important || ucplayer.cachedOfp == -1)
+            {
+                int newofp = await Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
+                if (ucplayer != null)
+                    ucplayer.cachedOfp = newofp;
+                return newofp;
+            }
+            else return ucplayer.cachedOfp;
+            
+        }
+        public static async Task<int> GetOfficerPoints(ulong player, ulong team, bool important)
+        {
+            if (team < 1 || team > 2) return 0;
+            UCPlayer ucplayer = UCPlayer.FromID(player);
+            if (ucplayer == default || important || ucplayer.cachedOfp == -1)
+            {
+                int newofp = await Data.DatabaseManager.GetOfficerPoints(player, team);
+                if (ucplayer != default)
+                    ucplayer.cachedOfp = newofp;
+                return newofp;
+            }
+            else return ucplayer.cachedOfp;
+        }
         public static async Task AddOfficerPoints(Player player, ulong team, int amount, string message ="")
         {
+            if (team < 1 || team > 2) return;
+            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-
+            if (ucplayer != null)
+                ucplayer.cachedOfp = newBalance;
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance);
-            await rtn;
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
-                c.stats.AddXP(amount);
-                c.UCPlayerStats.warfare_stats.AddXP(amount);
+                c.stats.AddOfficerPoints(amount);
+                c.UCPlayerStats.warfare_stats.AddOfficerPoints(amount);
             }
         }
         public static Rank GetOfficerRank(int officerRankLevel)
