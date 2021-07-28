@@ -319,7 +319,7 @@ namespace Uncreated.Warfare.FOBs
             MortarShellID = 38330;
 
             LogiTruckIDs = new List<ushort>() { 38305, 38306 };
-            AmmoBagIDs = new List<ushort>() { 38380 };
+            AmmoBagIDs = new List<ushort>() { 38398 };
 
             Fortifications = new List<Fortification>() {
                 new Fortification

@@ -43,14 +43,14 @@ namespace Uncreated.Warfare.Commands
                         player.Message("deploy_e_incombat", combatlog.ToString());
                         return;
                     }
-                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
-                    {
-                        player.Message("deploy_e_cooldown", cooldown.ToString());
-                        return;
-                    }
                     if (!player.IsNearFOB())
                     {
                         player.Message("deploy_e_notnearfob");
+                        return;
+                    }
+                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
+                    {
+                        player.Message("deploy_e_cooldown", cooldown.ToString());
                         return;
                     }
                 }
@@ -64,6 +64,11 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
+                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
+                    {
+                        player.Message("deploy_e_cooldown", cooldown.ToString());
+                        return;
+                    }
                     if (FOBManager.FindFOBByName(command[0], player.GetTeam(), out var FOB))
                     {
                         c.TeleportDelayed(FOB.Structure.point, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);

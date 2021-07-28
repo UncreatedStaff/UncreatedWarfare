@@ -53,6 +53,8 @@ namespace Uncreated.Warfare.Commands
 
                 KitManager.ResupplyKit(player, kit);
 
+                EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
+
                 player.SendChat("ammo_success");
 
                 if (player.IsTeam1())
@@ -162,6 +164,8 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 KitManager.ResupplyKit(player, kit);
+
+                EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 
                 player.SendChat("ammo_success");
 

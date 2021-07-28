@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Kits
                                 if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                                     branchChanged = true;
 
-                                await KitManager.GiveKit(player, kit);
+                                await KitManager.GiveKit(ucplayer, kit);
                                 ucplayer.SendChat("request_kit_given", kit.DisplayName.ToUpper());
 
                                 if (branchChanged)
@@ -170,7 +170,7 @@ namespace Uncreated.Warfare.Kits
                         if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
-                        await KitManager.GiveKit(player, kit);
+                        await KitManager.GiveKit(ucplayer, kit);
                         ucplayer.SendChat("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)

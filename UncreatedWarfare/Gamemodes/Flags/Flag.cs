@@ -132,6 +132,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             await SetOwner(0, false);
             _points = 0;
+            HasBeenCapturedT1 = false;
+            HasBeenCapturedT2 = false;
             Hide(1);
             Hide(2);
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
@@ -322,6 +324,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else return false;
         }
         public bool IsAnObj { get => T1Obj || T2Obj; }
+        public bool HasBeenCapturedT1;
+        public bool HasBeenCapturedT2;
         public bool DiscoveredT1 {
             get => _discovered1;
             protected set

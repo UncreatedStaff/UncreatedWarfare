@@ -133,7 +133,7 @@ namespace Uncreated.Warfare.Commands
                         if (KitManager.HasKit(player.CSteamID, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
-                        await KitManager.GiveKit(player, kit);
+                        await KitManager.GiveKit(ucplayer, kit);
                         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)

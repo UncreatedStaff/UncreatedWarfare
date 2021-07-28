@@ -1,6 +1,7 @@
 ﻿
 using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,6 +51,9 @@ namespace Uncreated.Warfare.Commands
                         if (rallypoint.AwaitingPlayers.Exists(p => p.Steam64 == player.Steam64))
                         {
                             rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == player.Steam64);
+                            EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, player.Player.channel.owner.transportConnection, true,
+                                F.Translate("rally_ui", player.Steam64, string.Empty
+                                ));
                             player.Message("rally_aborted");
                         }
                         else

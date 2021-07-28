@@ -13,7 +13,7 @@ using static Uncreated.Warfare.UCWarfare;
 namespace Uncreated.Warfare.Kits
 {
 
-    public delegate void KitChangedHandler(UnturnedPlayer player, Kit kit, string oldKit);
+    public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 
     public class KitManager : JSONSaver<Kit>, IDisposable
     {
@@ -23,7 +23,6 @@ namespace Uncreated.Warfare.Kits
         {
             PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
         }
-
         private void PlayerLife_OnPreDeath(PlayerLife life)
         {
             if (HasKit(life.player.channel.owner.playerID.steamID, out var kit))
@@ -119,7 +118,7 @@ namespace Uncreated.Warfare.Kits
 
             return clothes;
         }
-        public static async Task GiveKit(UnturnedPlayer player, Kit kit)
+        public static async Task GiveKit(UCPlayer player, Kit kit)
         {
             if (kit == null)
                 return;
@@ -151,20 +150,18 @@ namespace Uncreated.Warfare.Kits
                 Item item = new Item(k.ID, k.amount, k.quality) 
                 { metadata = Convert.FromBase64String(k.metadata) };
 
-                if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                    if (player.Inventory.tryAddItem(item, true))
+                if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                    if (player.Player.inventory.tryAddItem(item, true))
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
+            string oldkit = player.KitName;
 
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            string oldkit = ucplayer.KitName;
-
-            ucplayer.KitName = kit.Name;
-            ucplayer.KitClass = kit.Class;
+            player.KitName = kit.Name;
+            player.KitClass = kit.Class;
 
             if (kit.IsPremium && kit.Cooldown > 0)
             {
-                CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
+                CooldownManager.StartCooldown(player, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
             }
 
             OnKitChanged?.Invoke(player, kit, oldkit);
@@ -209,8 +206,21 @@ namespace Uncreated.Warfare.Kits
             {
                 player.Player.inventory.tryAddItem(jar.item, true);
             }
+        }
+        public static async Task<bool> TryGiveUnarmedKit(UCPlayer player)
+        {
+            string unarmedKit = "";
+            if (player.IsTeam1())
+                unarmedKit = TeamManager.Team1UnarmedKit;
+            if (player.IsTeam2())
+                unarmedKit = TeamManager.Team2UnarmedKit;
 
-            EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
+            if (KitManager.KitExists(unarmedKit, out var kit))
+            {
+                await KitManager.GiveKit(player, kit);
+                return true;
+            }
+            return false;
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {

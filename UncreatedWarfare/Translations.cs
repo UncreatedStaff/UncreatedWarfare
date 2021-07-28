@@ -625,6 +625,8 @@ namespace Uncreated.Warfare
                 { "xp_enemy_downed", "DOWNED ENEMY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_friendly_killed", "TEAMKILLED {0}" },
+                { "xp_fob_killed", "TEAMKILLED {0}" },
+                { "xp_deployed_fob", "TEAMMATE DEPLOYED" },
 
                 { "xp_victory", "VICTORY" },
                 { "xp_flag_captured", "FLAG CAPTURED" },

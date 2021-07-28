@@ -24,18 +24,22 @@ namespace Uncreated.Warfare.Squads
             Squads = new List<Squad>();
             KitManager.OnKitChanged += OnKitChanged;
         }
-        private static void OnKitChanged(UnturnedPlayer player, Kit kit, string oldkit)
+        private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
         {
             if (IsInAnySquad(player.CSteamID, out Squad squad, out _))
-                UpdateUISquad(squad); 
+                UpdateUISquad(squad);
         }
-        public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
+        public static async void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
         {
             if (IsInAnySquad(steamplayer.playerID.steamID, out var squad, out var player))
             {
-                LeaveSquad(player, ref squad);
+                await LeaveSquad(player, squad);
             }
             UpdateSquadList(UCPlayer.FromSteamPlayer(steamplayer), newGroup.GetTeam(), true);
+        }
+        public static void OnRoundEnd()
+        {
+
         }
         public static void ClearUIsquad(Player player)
         {
@@ -173,7 +177,7 @@ namespace Uncreated.Warfare.Squads
         public static void InvokePlayerLeft(UCPlayer player)
         {
             if (IsInAnySquad(player.CSteamID, out var squad, out _))
-                LeaveSquad(player, ref squad);
+                LeaveSquad(player, squad).GetAwaiter().GetResult();
         }
 
         public static Squad CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
@@ -233,7 +237,7 @@ namespace Uncreated.Warfare.Squads
                 }
             });
         }
-        public static void LeaveSquad(UCPlayer player, ref Squad squad)
+        public static async Task LeaveSquad(UCPlayer player, Squad squad)
         {
             player.Message("squad_left");
 
@@ -260,6 +264,12 @@ namespace Uncreated.Warfare.Squads
                 ClearUIsquad(squad.Leader.Player);
 
                 UpdateUIMemberCount(squad.Team);
+
+                if (Provider.clients.Exists(sp => sp.playerID.steamID == player.CSteamID))
+                {
+                    if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
+                        await KitManager.TryGiveUnarmedKit(squad.Leader);
+                }
 
                 PlayerManager.Save();
 
@@ -326,8 +336,11 @@ namespace Uncreated.Warfare.Squads
 
             PlayerManager.Save();
         }
-        public static void PromoteToLeader(ref Squad squad, UCPlayer newLeader)
+        public async static Task PromoteToLeader(Squad squad, UCPlayer newLeader)
         {
+            if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
+                await KitManager.TryGiveUnarmedKit(squad.Leader);
+
             squad.Leader = newLeader;
 
             foreach (var p in squad.Members)
