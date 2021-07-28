@@ -610,7 +610,7 @@ namespace Uncreated.Warfare.Commands
                     Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                     if (extrazone == default)
                     {
-                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale),
+                        player.SendChat("test_zone_test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
                             player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
                             fg.AllFlags.Count.ToString(Data.Locale));
                         return;
@@ -656,7 +656,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void clearui(string[] command, Player player)
         {
-            EffectManager.askEffectClearAll();
+            Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.channel.owner.transportConnection });
         }
     }
 #pragma warning restore IDE0051 // Remove unused private members

@@ -347,14 +347,6 @@ namespace Uncreated.Warfare.Squads
         {
             List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
             string name = input.ToLower();
-            if (name.StartsWith("squad") && name.Length < 7 && Int32.TryParse(name[5].ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out int squadNumber))
-            {
-                if (squadNumber < friendlySquads.Count)
-                {
-                    squad = friendlySquads[squadNumber];
-                    return true;
-                }
-            }
             squad = friendlySquads.Find(
                 s =>
                 name == s.Name.ToLower() ||
@@ -411,6 +403,7 @@ namespace Uncreated.Warfare.Squads
         public char lockCharacter;
         public Dictionary<Kit.EClass, ClassConfig> Classes;
         public ushort EmptyMarker;
+        public ushort SquadLeaderEmptyMarker;
         public ushort MortarMarker;
         public int MaxSquadNameLength;
 
@@ -424,30 +417,31 @@ namespace Uncreated.Warfare.Squads
             squadSUI = 36060;
             squadLTUI = 36050;
             EmptyMarker = 36100;
+            SquadLeaderEmptyMarker = 36130;
             MortarMarker = 36120;
             SquadDisconnectTime = 120;
             MaxSquadNameLength = 16;
             lockCharacter = '²';
             Classes = new Dictionary<Kit.EClass, ClassConfig>
             {
-                { Kit.EClass.NONE, new ClassConfig('±', 36101) },
-                { Kit.EClass.UNARMED, new ClassConfig('±', 36101) },
-                { Kit.EClass.SQUADLEADER, new ClassConfig('¦', 36102) },
-                { Kit.EClass.RIFLEMAN, new ClassConfig('¡', 36103) },
-                { Kit.EClass.MEDIC, new ClassConfig('¢', 36104) },
-                { Kit.EClass.BREACHER, new ClassConfig('¤', 36105) },
-                { Kit.EClass.AUTOMATIC_RIFLEMAN, new ClassConfig('¥', 36106) },
-                { Kit.EClass.GRENADIER, new ClassConfig('¬', 36107) },
-                { Kit.EClass.MACHINE_GUNNER, new ClassConfig('«', 36108) },
-                { Kit.EClass.LAT, new ClassConfig('®', 36109) },
-                { Kit.EClass.HAT, new ClassConfig('¯', 36110) },
-                { Kit.EClass.MARKSMAN, new ClassConfig('¨', 36111) },
-                { Kit.EClass.SNIPER, new ClassConfig('£', 36112) },
-                { Kit.EClass.AP_RIFLEMAN, new ClassConfig('©', 36113) },
-                { Kit.EClass.COMBAT_ENGINEER, new ClassConfig('ª', 36114) },
-                { Kit.EClass.CREWMAN, new ClassConfig('§', 36115) },
-                { Kit.EClass.PILOT, new ClassConfig('°', 36116) },
-                { Kit.EClass.SPEC_OPS, new ClassConfig('À', 36117) },
+                { Kit.EClass.NONE, new ClassConfig('±', 36101, 36131) },
+                { Kit.EClass.UNARMED, new ClassConfig('±', 36101, 36131) },
+                { Kit.EClass.SQUADLEADER, new ClassConfig('¦', 36102, 36132) },
+                { Kit.EClass.RIFLEMAN, new ClassConfig('¡', 36103, 36133) },
+                { Kit.EClass.MEDIC, new ClassConfig('¢', 36104, 36134) },
+                { Kit.EClass.BREACHER, new ClassConfig('¤', 36105, 36135) },
+                { Kit.EClass.AUTOMATIC_RIFLEMAN, new ClassConfig('¥', 36106, 36136) },
+                { Kit.EClass.GRENADIER, new ClassConfig('¬', 36107, 36137) },
+                { Kit.EClass.MACHINE_GUNNER, new ClassConfig('«', 36108, 36138) },
+                { Kit.EClass.LAT, new ClassConfig('®', 36109, 36139) },
+                { Kit.EClass.HAT, new ClassConfig('¯', 36110, 36140) },
+                { Kit.EClass.MARKSMAN, new ClassConfig('¨', 36111, 36141) },
+                { Kit.EClass.SNIPER, new ClassConfig('£', 36112, 36142) },
+                { Kit.EClass.AP_RIFLEMAN, new ClassConfig('©', 36113, 36143) },
+                { Kit.EClass.COMBAT_ENGINEER, new ClassConfig('ª', 36114, 36144) },
+                { Kit.EClass.CREWMAN, new ClassConfig('§', 36115, 36145) },
+                { Kit.EClass.PILOT, new ClassConfig('°', 36116, 36146) },
+                { Kit.EClass.SPEC_OPS, new ClassConfig('À', 36117, 36147) },
             };
         }
 
@@ -458,11 +452,13 @@ namespace Uncreated.Warfare.Squads
     {
         public char Icon;
         public ushort MarkerEffect;
+        public ushort SquadLeaderMarkerEffect;
         [Newtonsoft.Json.JsonConstructor]
-        public ClassConfig(char Icon, ushort MarkerEffect)
+        public ClassConfig(char Icon, ushort MarkerEffect, ushort SquadLeaderMarkerEffect)
         {
             this.Icon = Icon;
             this.MarkerEffect = MarkerEffect;
+            this.SquadLeaderMarkerEffect = SquadLeaderMarkerEffect;
         }
     }
 }

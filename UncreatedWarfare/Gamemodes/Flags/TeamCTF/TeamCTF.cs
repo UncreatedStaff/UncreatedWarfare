@@ -5,7 +5,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
@@ -53,7 +52,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 ulong team = players.Current.GetTeam();
                 UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
-                if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) || (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
+                if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) || 
+                    (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
                 {
                     if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
                     {
@@ -109,8 +109,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
             foreach (SteamPlayer client in Provider.clients)
+            {
                 client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
+                client.player.movement.forceRemoveFromVehicle();
+            }
             this.State = EState.FINISHED;
+            await UCWarfare.ReplaceBarricadesAndStructures();
+            Commands.ClearCommand.WipeVehiclesAndRespawn();
             await TicketManager.OnRoundWin(winner);
             await Task.Delay(Config.end_delay * 1000);
             await InvokeOnTeamWin(winner);
@@ -123,10 +128,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EndScreen.ShuttingDown = shutdownAfterGame;
                 EndScreen.ShuttingDownMessage = shutdownMessage;
                 EndScreen.ShuttingDownPlayer = shutdownPlayer;
-                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 foreach (SteamPlayer player in Provider.clients)
                     CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
-                await rtn;
                 isScreenUp = true;
                 await EndScreen.EndGame(Config.ProgressChars);
             }
@@ -149,10 +152,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             F.Log("Loading new game.", ConsoleColor.Cyan);
             await LoadRotation();
             State = EState.ACTIVE;
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
-            await rtn;
             await InvokeOnNewGameStarting();
         }
         public override async Task LoadRotation()

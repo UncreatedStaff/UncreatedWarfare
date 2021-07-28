@@ -72,8 +72,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor, string progresschars)
         {
             oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
-            player.player.movement.forceRemoveFromVehicle();
-            player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
             player.player.movement.sendPluginSpeedMultiplier(0f);
             player.player.life.serverModifyHealth(100);
             player.player.life.serverModifyFood(100);
@@ -85,7 +83,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.player.teleportToLocation(F.GetBaseSpawn(player, out ulong playerteam), F.GetBaseAngle(playerteam));
             else 
                 player.player.life.ReceiveRespawnRequest(false);
-            // error is here
+            player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
             PlayerCurrentGameStats stats;
             if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))

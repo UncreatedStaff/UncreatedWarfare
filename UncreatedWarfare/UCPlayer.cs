@@ -67,24 +67,24 @@ namespace Uncreated.Warfare
             }
         }
         private int _cachedXp = -1;
-        public int cachedXp 
-        { 
-            get => _cachedXp; 
+        public int cachedXp
+        {
+            get => _cachedXp;
             set {
                 _cachedXp = value;
                 if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
                     c.UCPlayerStats.warfare_stats.TellXP(_cachedXp, Player.GetTeam());
                 else F.LogWarning("Unable to set cached xp because something was null.");
-            } 
+            }
         }
         public static UCPlayer FromID(ulong steamID)
         {
             return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
         }
-        public static UCPlayer FromCSteamID(CSteamID steamID) => 
+        public static UCPlayer FromCSteamID(CSteamID steamID) =>
             steamID == default ? null : FromID(steamID.m_SteamID);
         public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
-        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) => 
+        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) =>
             player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
         public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID);
         public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
@@ -116,7 +116,7 @@ namespace Uncreated.Warfare
             KitClass = kit.Class;
             PlayerManager.Save();
         }
-
+        public ushort LastPingID { get; internal set; }
         public SteamPlayer SteamPlayer { get => Player.channel.owner; }
         public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
         public ulong GetTeam() => Player.quests.groupID.m_SteamID;
@@ -158,6 +158,7 @@ namespace Uncreated.Warfare
         {
             get
             {
+                F.Log("getting kit");
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.MarkerEffect;
                 else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
@@ -165,6 +166,19 @@ namespace Uncreated.Warfare
                 else return 0;
             }
         }
+        public ushort SquadLeaderMarkerID
+        {
+            get
+            {
+                F.Log("getting sql kit");
+                if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+                    return config.SquadLeaderMarkerEffect;
+                else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
+                    return config.SquadLeaderMarkerEffect;
+                else return 0;
+            }
+        }
+        public ushort GetMarkerID() => Squad == null || Squad.Leader == null || Squad.Leader.Steam64 != Steam64 ? MarkerID : SquadLeaderMarkerID;
         public bool IsSquadLeader()
         {
             if (Squad is null)

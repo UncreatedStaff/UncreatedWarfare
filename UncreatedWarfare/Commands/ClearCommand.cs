@@ -72,12 +72,7 @@ namespace Uncreated.Warfare.Commands
             }
             else if (operation == "v" || operation == "vehicles" || operation == "vehicle")
             {
-                List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
-                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                    if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out _)) spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
-                VehicleManager.askVehicleDestroyAll();
-                for (int i = 0; i < spawnsToReset.Count; i++)
-                    spawnsToReset[i].SpawnVehicle();
+                WipeVehiclesAndRespawn();
                 if (isConsole) F.LogError(F.Translate("clear_vehicles_cleared", 0, out _));
                 else player.SendChat("clear_vehicles_cleared");
             }
@@ -93,6 +88,15 @@ namespace Uncreated.Warfare.Commands
                 else player.SendChat("correct_usage", Syntax);
                 return;
             }
+        }
+        public static void WipeVehiclesAndRespawn()
+        {
+            List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
+            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out _)) spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
+            VehicleManager.askVehicleDestroyAll();
+            for (int i = 0; i < spawnsToReset.Count; i++)
+                spawnsToReset[i].SpawnVehicle();
         }
     }
 }

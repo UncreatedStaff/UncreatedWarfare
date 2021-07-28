@@ -144,7 +144,7 @@ namespace Uncreated.Warfare.Vehicles
             float OwnerDistanceFromVehicle = 0;
 
             if (!isOwnerOnline)
-                return;
+                goto Allowed;
 
             foreach (Passenger passenger in vehicle.passengers)
             {
@@ -164,21 +164,19 @@ namespace Uncreated.Warfare.Vehicles
             if (isOwnerOnline && vehicle.isLocked && !(vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil) && !isOwnerInVehicle && OwnerDistanceFromVehicle <= 150)
             {
                 // "Wait for the owner of this vehicle to get in before swapping seats."
-                shouldAllow = false;
-                return;
+                goto NotAllowed;
             }
 
             if (!VehicleExists(vehicle.id, out var vehicleData))
-                return;
+                goto Allowed;
 
             if (vehicleData.RequiredClass == Kit.EClass.NONE)
-                return;
+                goto Allowed;
             
             if (!KitManager.HasKit(player, out var kit))
             {
                 // "You must get a kit before you can enter vehicles."
-                shouldAllow = false;
-                return;
+                goto NotAllowed;
             }
 
             bool HasCrewman = true;
@@ -192,9 +190,17 @@ namespace Uncreated.Warfare.Vehicles
             if (vehicleData.RequiredClass != kit.Class && !HasCrewman)
             {
                 // "You need a {kitname} kit in order to man this vehicle. Wait for its crew to get in first if you just want to ride as passenger.";
-                shouldAllow = false;
-                return;
+                goto NotAllowed;
             }
+
+        NotAllowed:
+            shouldAllow = false;
+            return;
+
+        Allowed:
+            EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+            return;
+            
         }
         private void OnVehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {

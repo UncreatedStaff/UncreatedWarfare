@@ -26,6 +26,7 @@ using Uncreated.Warfare.XP;
 using System.Globalization;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes;
+using Steamworks;
 
 namespace Uncreated.Warfare
 {
@@ -129,6 +130,8 @@ namespace Uncreated.Warfare
         }
         internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
+        internal static ClientStaticMethod SendEffectClearAll { get; private set; }
+        internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
         internal static MethodInfo AppendConsoleMethod;
         internal static ConsoleInputOutputBase defaultIOHandler;
         internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
@@ -228,6 +231,8 @@ namespace Uncreated.Warfare
             Type barricadeManager = typeof(BarricadeManager);
             FieldInfo updateSignInfo;
             FieldInfo sendRegionInfo;
+            FieldInfo sendChatInfo;
+            FieldInfo clearAllUiInfo;
             try
             {
                 updateSignInfo = barricadeManager.GetField("SendUpdateSign", BindingFlags.NonPublic | BindingFlags.Static);
@@ -249,6 +254,24 @@ namespace Uncreated.Warfare
                 F.LogError("Couldn't get SendMultipleBarricades from BarricadeManager:");
                 F.LogError(ex);
                 F.LogError("The sign translation system will likely not work!");
+            }
+            try
+            {
+                sendChatInfo = typeof(ChatManager).GetField("SendChatEntry", BindingFlags.NonPublic | BindingFlags.Static);
+                SendChatIndividual = (ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>)sendChatInfo.GetValue(null);
+            }
+            catch (Exception ex)
+            {
+                F.LogWarning("Couldn't get SendChatEntry from ChatManager, the chat message will default to the vanilla implementation. (" + ex.Message + ").");
+            }
+            try
+            {
+                clearAllUiInfo = typeof(EffectManager).GetField("SendEffectClearAll", BindingFlags.NonPublic | BindingFlags.Static);
+                SendEffectClearAll = (ClientStaticMethod)clearAllUiInfo.GetValue(null);
+            }
+            catch (Exception ex)
+            {
+                F.LogWarning("Couldn't get SendEffectClearAll from EffectManager, failed to get send effect clear all. (" + ex.Message + ").");
             }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)

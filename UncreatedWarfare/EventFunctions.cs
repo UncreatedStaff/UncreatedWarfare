@@ -12,14 +12,17 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Kit = Uncreated.Warfare.Kits.Kit;
 
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare
@@ -241,6 +244,16 @@ namespace Uncreated.Warfare
             }
             
         }
+        internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
+        {
+            if (Data.Gamemode is TeamCTF ctf && player.IsOnFlag(out Flag flag))
+            {
+                CTFUI.RefreshStaticUI(player.GetTeam(), flag, true).SendToPlayer(ctf.Config.PlayerIcon, ctf.Config.UseUI, 
+                    ctf.Config.CaptureUI, ctf.Config.ShowPointsOnUI, ctf.Config.ProgressChars, player.channel.owner, 
+                    player.channel.owner.transportConnection);
+            }
+        }
+
         static Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
         internal static void RemoveDamageMessageTicks(ulong player)
         {
@@ -248,7 +261,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
-            if (parameters.killer != CSteamID.Nil && parameters.killer != Provider.server)
+            if (parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
             {
                 Player killer = PlayerTool.getPlayer(parameters.killer);
                 if (killer != null)
@@ -277,7 +290,20 @@ namespace Uncreated.Warfare
             if(shouldAllow)
                 Data.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         }
-
+        internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
+        {
+            if (player == null) return;
+            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+            if (!isBeingPlaced)
+            {
+                ClearPlayerMarkerForSquad(ucplayer);
+                return;
+            }
+            if (ucplayer.KitClass != Kit.EClass.NONE)
+                overrideText = F.GetPlayerOriginalNames(player).NickName;
+            Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
+            PlaceMarker(ucplayer, effectposition, false, false);
+        }
         internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
         {
             if (player == null) return;
@@ -286,27 +312,55 @@ namespace Uncreated.Warfare
                 UCPlayer ucplayer = UCPlayer.FromPlayer(player);
                 if (ucplayer == null) return;
                 if (!Physics.Raycast(new Ray(player.look.aim.transform.position, player.look.aim.transform.forward), out RaycastHit hit, 8192f, RayMasks.BLOCK_COLLISION)) return;
-                ushort marker = ucplayer.MarkerID;
-                player.quests.ReceiveSetMarkerRequest(true, hit.point);
-                if (ucplayer.Squad == null)
-                {
-                    EffectManager.askEffectClearByID(ucplayer.MarkerID, player.channel.owner.transportConnection);
-                    EffectManager.sendEffectReliable(ucplayer.MarkerID, player.channel.owner.transportConnection, hit.point);
-                    player.SendChat("marker_not_in_squad");
-                    return;
-                }
-                if (marker == 0) return;
-                for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
-                {
-                    EffectManager.askEffectClearByID(ucplayer.MarkerID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
-                    EffectManager.sendEffectReliable(ucplayer.MarkerID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, hit.point);
-                }
+                PlaceMarker(ucplayer, hit.point, true, true);
+            }
+        }
+        private static void PlaceMarker(UCPlayer ucplayer, Vector3 Point, bool sendNoSquadChat, bool placeMarkerOnMap)
+        {
+            ThreadUtil.assertIsGameThread();
+            if (placeMarkerOnMap)
+                ucplayer.Player.quests.ReceiveSetMarkerRequest(true, Point);
+            ushort markerid = ucplayer.GetMarkerID();
+            ushort lastping = ucplayer.LastPingID == 0 ? markerid : ucplayer.LastPingID;
+            if (ucplayer.Squad == null)
+            {
+                if(sendNoSquadChat)
+                    ucplayer.SendChat("marker_not_in_squad");
+                if (markerid == 0) return;
+                EffectManager.askEffectClearByID(lastping, ucplayer.Player.channel.owner.transportConnection);
+                EffectManager.sendEffectReliable(markerid, ucplayer.Player.channel.owner.transportConnection, Point);
+                ucplayer.LastPingID = markerid;
+                return;
+            }
+            if (markerid == 0) return;
+            for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
+            {
+                EffectManager.askEffectClearByID(lastping, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
+                EffectManager.sendEffectReliable(markerid, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, Point);
+                ucplayer.LastPingID = markerid;
+            }
+        }
+        public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer) => ClearPlayerMarkerForSquad(ucplayer, ucplayer.LastPingID == 0 ? ucplayer.GetMarkerID() : ucplayer.LastPingID);
+        public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer, ushort markerid)
+        {
+            ThreadUtil.assertIsGameThread();
+            if (markerid == 0) return;
+            if (ucplayer.Squad == null)
+            {
+                EffectManager.askEffectClearByID(markerid, ucplayer.Player.channel.owner.transportConnection);
+                ucplayer.LastPingID = 0;
+                return;
+            }
+            for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
+            {
+                EffectManager.askEffectClearByID(markerid, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
+                ucplayer.LastPingID = 0;
             }
         }
         internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
         {
-            if (!player.inventory.isStoring) return;
-            UnturnedPlayer utplayer = UnturnedPlayer.FromPlayer(player);
+            if (!player.inventory.isStoring || player == null || jar == null || jar.item == null || allow == false) return;
+            UCPlayer utplayer = UCPlayer.FromPlayer(player);
             if (utplayer.OnDuty())
                 return;
             if (!Whitelister.IsWhitelisted(jar.item.id, out _))
