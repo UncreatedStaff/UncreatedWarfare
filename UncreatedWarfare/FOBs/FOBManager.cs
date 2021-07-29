@@ -52,6 +52,17 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void RegisterNewFOB(BarricadeData Structure)
         {
+            ulong team = Structure.group.GetTeam();
+            if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
+            {
+                if (team == 1)
+                {
+                    ctf.GameStats.fobsPlacedT1++;
+                } else if (team == 2)
+                {
+                    ctf.GameStats.fobsPlacedT2++;
+                }
+            }
             if (TeamManager.IsTeam1(Structure.group))
             {
                 for (int i = 0; i < Team1FOBs.Count; i++)
@@ -88,7 +99,18 @@ namespace Uncreated.Warfare.FOBs
                 Team1FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
             else if (TeamManager.IsTeam2(team))
                 Team2FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
-
+            if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null && ctf.State == Gamemodes.EState.ACTIVE) 
+                // doesnt count destroying fobs after game ends
+            {
+                if (team == 1)
+                {
+                    ctf.GameStats.fobsDestroyedT2++;
+                }
+                else if (team == 2)
+                {
+                    ctf.GameStats.fobsDestroyedT1++;
+                }
+            }
             UpdateUIForTeam(team);
         }
 

@@ -5,6 +5,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -50,6 +51,17 @@ namespace Uncreated.Warfare.Tickets
                 await AddTeam2Tickets(-1);
             }
         }
+        public static async Task OnPlayerDeathOffline(ulong deadteam)
+        {
+            if (deadteam == 1)
+            {
+                await AddTeam1Tickets(-1);
+            }
+            else if (deadteam == 2)
+            {
+                await AddTeam2Tickets(-1);
+            }
+        }
         public static async Task OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
         {
             if (TeamManager.IsTeam1(eventArgs.dead))
@@ -65,6 +77,12 @@ namespace Uncreated.Warfare.Tickets
         {
             await XPManager.AddXP(parameters.killer, parameters.killer.GetTeam(), UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75), 
                 F.Translate("xp_enemy_killed", parameters.killer.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(parameters.dead).CharacterName));
+            //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
+        }
+        public static async Task OnEnemyKilled(Players.FPlayerName deadnames, Player killer, ulong killerteam)
+        {
+            await XPManager.AddXP(killer, killerteam, UCPlayer.FromPlayer(killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75),
+                F.Translate("xp_enemy_killed", killer.channel.owner.playerID.steamID.m_SteamID, deadnames.CharacterName));
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
         public static async Task OnFriendlyKilled(UCWarfare.KillEventArgs parameters)

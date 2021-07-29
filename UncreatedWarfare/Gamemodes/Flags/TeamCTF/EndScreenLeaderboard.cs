@@ -84,27 +84,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             player.player.movement.sendPluginJumpMultiplier(0f);
 
             if (!player.player.life.isDead)
-            {
                 player.player.teleportToLocation(F.GetBaseSpawn(player, out ulong playerteam), F.GetBaseAngle(playerteam));
-
-                if (ucplayer.KitName != "")
-                {
-                    if (KitManager.KitExists(ucplayer.KitName, out var kit))
-                        KitManager.ResupplyKit(ucplayer, kit);
-                }
-            }
             else
-            {
                 player.player.life.ReceiveRespawnRequest(false);
 
-                if (ucplayer.KitName != "")
-                {
-                    if (KitManager.KitExists(ucplayer.KitName, out var kit))
-                        KitManager.ResupplyKit(ucplayer, kit);
-                }
+            // resupply the kit.
+            if (ucplayer.KitName != "")
+            {
+                if (KitManager.KitExists(ucplayer.KitName, out var kit))
+                    KitManager.ResupplyKit(ucplayer, kit);
             }
-                
-            // error is here
             player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
             KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
             PlayerCurrentGameStats stats;
@@ -227,6 +216,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         player.playerID.steamID.m_SteamID, topxpgain[i].Value, color));
                 }
             }
+            UCPlayer topOfficer = PlayerManager.OnlinePlayers.OrderByDescending(x => x.cachedOfp).FirstOrDefault();
+            if (topOfficer.cachedOfp == 0) topOfficer = default;
             /*
              *  STATS
              */
@@ -288,7 +279,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT1Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT1, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT2Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT2, defaultColor));
             EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.teamkills, defaultColor));
-            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", " TODO "); // do this after eating grilled cheese
+            EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", topOfficer == default ? WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER : F.ColorizeName(F.GetPlayerOriginalNames(topOfficer).CharacterName, topOfficer.GetTeam()));
         }
         public void SendEndScreen(ulong winner, string progresschars)
         {
@@ -366,19 +357,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     {
         public TimeSpan Duration { get => TimeSpan.FromSeconds(durationCounter); }
         public Dictionary<ulong, PlayerCurrentGameStats> playerstats;
-        private float durationCounter = 0;
-        public int casualtiesT1;
-        public int casualtiesT2;
-        public int totalFlagOwnerChanges;
-        public float averageArmySizeT1;
-        public float averageArmySizeT2;
+        private float durationCounter = 0; // works
+        public int casualtiesT1; // works
+        public int casualtiesT2; // works
+        public int totalFlagOwnerChanges; // works
+        public float averageArmySizeT1; // works
+        public float averageArmySizeT2; // works
         private int averageArmySizeT1counter = 0;
         private int averageArmySizeT2counter = 0;
-        public int fobsPlacedT1;
-        public int fobsPlacedT2;
-        public int fobsDestroyedT1;
-        public int fobsDestroyedT2;
-        public int teamkills;
+        public int fobsPlacedT1; // works
+        public int fobsPlacedT2; // works
+        public int fobsDestroyedT1; // works
+        public int fobsDestroyedT2; // works
+        public int teamkills; // works
         public void Update()
         {
             durationCounter += Time.deltaTime;
@@ -387,6 +378,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if(!playerstats.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
                 playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, new PlayerCurrentGameStats(player));
+            F.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");
         }
         public void Start() => Reset();
         public void Reset()

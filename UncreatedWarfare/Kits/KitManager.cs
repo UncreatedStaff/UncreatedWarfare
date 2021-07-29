@@ -156,8 +156,18 @@ namespace Uncreated.Warfare.Kits
             }
             string oldkit = player.KitName;
 
+            if (player.KitClass == Kit.EClass.MEDIC && kit.Class != Kit.EClass.MEDIC)
+            {
+                Data.ReviveManager.DeregisterMedic(player);
+            }
+            else if (kit.Class == Kit.EClass.MEDIC)
+            {
+                Data.ReviveManager.RegisterMedic(player);
+            }
             player.KitName = kit.Name;
             player.KitClass = kit.Class;
+            
+            PlayerManager.UpdateObjectsWhere(x => x.Steam64 == player.Steam64, x => { x.KitName = kit.Name; });
 
             if (kit.IsPremium && kit.Cooldown > 0)
             {
@@ -244,6 +254,7 @@ namespace Uncreated.Warfare.Kits
         public static bool HasKit(CSteamID player, out Kit kit) => HasKit(player.m_SteamID, out kit);
         public static bool HasAccess(ulong playerID, string kitName)
         {
+            if (UCWarfare.Config.OverrideKitRequirements) return true;
             if (KitExists(kitName, out Kit kit))
                 return kit.AllowedUsers.Contains(playerID);
             else return false;

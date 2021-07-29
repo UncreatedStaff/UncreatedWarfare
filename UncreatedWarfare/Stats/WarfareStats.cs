@@ -77,7 +77,6 @@ namespace Uncreated.Warfare.Stats
             }
             if (save) Save();
         }
-        
         public void TellOfficerPts(int ofp, ulong team, bool save = true)
         {
             int teamindex = teams.FindIndex(x => x.id == team);
@@ -586,7 +585,7 @@ namespace Uncreated.Warfare.Stats
                 if (kill_countsindex != -1)
                     kill_counts[kill_countsindex].deaths_from++;
                 else
-                    AddKillCount(new KillTrack(parameters.dead.channel.owner.playerID.steamID.m_SteamID, 0, 1, 0));
+                    AddKillCount(new KillTrack(parameters.killerargs.killer.channel.owner.playerID.steamID.m_SteamID, 0, 1, 0));
             }
             if (parameters.dead != default)
             {

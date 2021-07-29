@@ -567,6 +567,7 @@ namespace Uncreated.Warfare.Commands
             if(Data.Gamemode is FlagGamemode fg)
                 fg.PrintFlagRotation();
         }
+        private const byte DOWN_DAMAGE = 99;
         private void down(string[] command, Player player)
         {
             if (player == default)
@@ -574,9 +575,9 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(F.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            player.life.askDamage(99, Vector3.down, EDeathCause.KILL, ELimb.SKULL, player.channel.owner.playerID.steamID, out _, false, ERagdollEffect.GOLD, false, true);
-            player.life.askDamage(99, Vector3.down, EDeathCause.KILL, ELimb.SKULL, player.channel.owner.playerID.steamID, out _, false, ERagdollEffect.GOLD, false, true);
-            player.SendChat("test_down_success", 198.ToString(Data.Locale));
+            player.life.askDamage(DOWN_DAMAGE, Vector3.down, EDeathCause.KILL, ELimb.SPINE, player.channel.owner.playerID.steamID, out _, false, ERagdollEffect.NONE, false, true);
+            player.life.askDamage(DOWN_DAMAGE, Vector3.down, EDeathCause.KILL, ELimb.SPINE, player.channel.owner.playerID.steamID, out _, false, ERagdollEffect.NONE, false, true);
+            player.SendChat("test_down_success", (DOWN_DAMAGE * 2).ToString(Data.Locale));
         }
         private void layer(string[] command, Player player)
         {

@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     ucplayer.Message("request_kit_e_alreadyhaskit");
                 }
-                else if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64))
+                else if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64) && !UCWarfare.Config.OverrideKitRequirements)
                 {
                     ucplayer.Message("request_kit_e_notallowed");
                 }
@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
                     Rank rank = XPManager.GetRank(xp, out _, out _);
-                    if (rank == default || rank.level < kit.RequiredLevel)
+                    if ((rank == default || rank.level < kit.RequiredLevel) && !UCWarfare.Config.OverrideKitRequirements)
                     {
                         ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel.ToString(Data.Locale));
                     }

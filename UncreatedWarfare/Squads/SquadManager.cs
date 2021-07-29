@@ -37,10 +37,6 @@ namespace Uncreated.Warfare.Squads
             }
             UpdateSquadList(UCPlayer.FromSteamPlayer(steamplayer), newGroup.GetTeam(), true);
         }
-        public static void OnRoundEnd()
-        {
-
-        }
         public static void ClearUIsquad(Player player)
         {
             for (int i = 0; i < 6; i++)
@@ -441,6 +437,7 @@ namespace Uncreated.Warfare.Squads
         public ushort EmptyMarker;
         public ushort SquadLeaderEmptyMarker;
         public ushort MortarMarker;
+        public ushort InjuredMarker;
         public int MaxSquadNameLength;
 
         public override void SetDefaults()
@@ -455,6 +452,7 @@ namespace Uncreated.Warfare.Squads
             EmptyMarker = 36100;
             SquadLeaderEmptyMarker = 36130;
             MortarMarker = 36120;
+            InjuredMarker = 36121;
             SquadDisconnectTime = 120;
             MaxSquadNameLength = 16;
             lockCharacter = '²';

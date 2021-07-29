@@ -45,7 +45,7 @@ namespace Uncreated.Warfare
         public bool RemoveLandminesOnDisconnect;
         public string ActiveGamemode;
         public string DiscordInviteCode;
-        public float ReviveTimeSeconds;
+        public float InjuredLifeTimeSeconds;
         public byte MaxPlayerCount;
         public bool LowerSteamPlayerCount;
         public bool EnableMortarWarning;
@@ -54,6 +54,8 @@ namespace Uncreated.Warfare
         public float StatsInterval;
         public float AMCDamageMultiplier;
         public bool ReplaceEmptyNamesWithID;
+        public bool OverrideKitRequirements;
+        public float InjuredDamageMultiplier;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -82,7 +84,8 @@ namespace Uncreated.Warfare
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
-            this.ReviveTimeSeconds = 5f;
+            this.InjuredLifeTimeSeconds = 10f;
+            this.InjuredDamageMultiplier = 0.1f;
             this.MaxPlayerCount = 48;
             this.LowerSteamPlayerCount = true;
             this.EnableMortarWarning = true;
@@ -91,6 +94,7 @@ namespace Uncreated.Warfare
             this.StatsInterval = 60f;
             this.AMCDamageMultiplier = 0.25f;
             this.ReplaceEmptyNamesWithID = true;
+            this.OverrideKitRequirements = true;
         }
     }
     public class Modules
