@@ -199,21 +199,31 @@ namespace Uncreated.Warfare.Components
             }
             player.teleportToLocationUnsafe(position, angle);
 
+            _currentTeleportRequest = default;
+
             if (shouldMessagePlayer)
                 player.Message("deploy_s", locationName);
             CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
 
             if (fob != null)
             {
-                var FOBowner = Provider.clients.Find(sp => sp.playerID.steamID == player.channel.owner.playerID.steamID);
+                var FOBowner = UCPlayer.FromID(fob.Structure.owner);
 
-                if (FOBowner != null)
-                    XP.XPManager.AddXP(FOBowner.player, FOBowner.player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP, F.Translate("xp_deployed_fob", FOBowner)).GetAwaiter().GetResult();
-                else
-                    Data.DatabaseManager.AddXP(FOBowner.playerID.steamID.m_SteamID, FOBowner.player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP).GetAwaiter().GetResult();
+                if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
+                {
+                    if (FOBowner != null)
+                    {
+                        XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP, F.Translate("xp_deployed_fob", FOBowner)).GetAwaiter().GetResult();
+
+                        if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
+                        {
+                            Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner)).GetAwaiter().GetResult();
+                        }
+                    }
+                    else
+                        Data.DatabaseManager.AddXP(fob.Structure.owner, fob.Structure.group, XP.XPManager.config.Data.FOBDeployedXP).GetAwaiter().GetResult();
+                }
             }
-
-            _currentTeleportRequest = default;
 
             yield break;
         }

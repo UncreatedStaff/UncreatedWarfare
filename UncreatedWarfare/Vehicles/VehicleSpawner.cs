@@ -148,7 +148,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
             {
-                c.StartCoroutines();
+                c.StartIdleRespawnTimer();
             }
                 
         }
@@ -415,31 +415,36 @@ namespace Uncreated.Warfare.Vehicles
             if (VehicleBay.VehicleExists(vehicle.id, out var data))
             {
                 this.data = data;
+                StartXPLoop();
             }
         }
-        public void StartCoroutines()
+        public void StartIdleRespawnTimer()
         {
             if (Owner == null) return;
             if (data != null)
             {
-                CancelCoroutines();
+                StopIdleRespawnTimer();
                 timer = StartCoroutine(IdleRespawnVehicle(data));
-                xploop = StartCoroutine(XPLoop());
             }
         }
-        public void CancelCoroutines()
+        public void StopIdleRespawnTimer()
         {
             if (timer != null)
             {
                 try
                 {
                     StopCoroutine(timer);
-                    if (Owner.isEmpty)
-                    {
-                        StopCoroutine(xploop);
-                    }
+                    //StopCoroutine(xploop);
                 }
                 catch { }
+            }
+        }
+        public void StartXPLoop()
+        {
+            if (Owner == null) return;
+            if (data != null)
+            {
+                timer = StartCoroutine(XPLoop());
             }
         }
         private IEnumerator<WaitForSeconds> IdleRespawnVehicle(VehicleData data)
@@ -447,7 +452,16 @@ namespace Uncreated.Warfare.Vehicles
             yield return new WaitForSeconds(data.RespawnTime);
             if (!Owner.anySeatsOccupied)
             {
-                VehicleManager.askVehicleDestroy(Owner);
+                while (PlayerManager.IsPlayerNearby(Owner.lockedOwner.m_SteamID, 150, Owner.transform.position))
+                {
+                    yield return new WaitForSeconds(60);
+                    if (Owner.anySeatsOccupied)
+                    {
+                        yield break;
+                    }
+                }
+
+                VehicleBay.DeleteVehicle(Owner);
                 if (VehicleSpawner.HasLinkedSpawn(Owner.instanceID, out var spawn))
                     spawn.SpawnVehicle();
             }
@@ -473,10 +487,10 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             Task.Run(async () =>
                             {
-                                if (player.Squad != null)
-                                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
-                                else
-                                    await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 2), F.Translate("xp_transporting_players", player.Steam64));
+                                //if (player.Squad != null)
+                                //    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
+                                //else
+                                await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 2), F.Translate("xp_transporting_players", player.Steam64));
                             });
                         }
                     }

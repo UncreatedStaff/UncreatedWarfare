@@ -220,8 +220,8 @@ namespace Uncreated.Warfare.Squads
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
 
-            if (RallyManager.HasRally(player, out var rally))
-                rally.UpdateUIForSquad();
+            if (RallyManager.HasRally(squad, out var rally))
+                rally.ShowUIForSquad();
 
             PlayerManager.Save();
         }
@@ -229,12 +229,13 @@ namespace Uncreated.Warfare.Squads
         {
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
-                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1;
-                else
-                {
-                    int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
-                    return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
-                }
+                int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
+                return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
+            });
+            squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
+            {
+                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1; // then sort players by leader
+                else return 0;
             });
         }
         public static async Task LeaveSquad(UCPlayer player, Squad squad)
@@ -265,6 +266,14 @@ namespace Uncreated.Warfare.Squads
 
                 UpdateUIMemberCount(squad.Team);
 
+                if (RallyManager.HasRally(squad, out var rally1))
+                {
+                    if (BarricadeManager.tryGetInfo(rally1.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                        BarricadeManager.destroyBarricade(region, x, y, plant, index);
+
+                    RallyManager.TryDeleteRallyPoint(rally1.structure.instanceID);
+                }
+
                 if (Provider.clients.Exists(sp => sp.playerID.steamID == player.CSteamID))
                 {
                     if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
@@ -287,6 +296,9 @@ namespace Uncreated.Warfare.Squads
             ClearUIsquad(player.Player);
             UpdateUIMemberCount(squad.Team);
 
+            if (RallyManager.HasRally(squad, out var rally2))
+                rally2.ClearUIForPlayer(player);
+
             PlayerManager.Save();
         }
         public static void DisbandSquad(Squad squad)
@@ -301,6 +313,14 @@ namespace Uncreated.Warfare.Squads
                 ClearUIsquad(member.Player);
             }
             UpdateUIMemberCount(squad.Team);
+
+            if (RallyManager.HasRally(squad, out var rally))
+            {
+                if (BarricadeManager.tryGetInfo(rally.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                    BarricadeManager.destroyBarricade(region, x, y, plant, index);
+
+                RallyManager.TryDeleteRallyPoint(rally.structure.instanceID);
+            }
 
             PlayerManager.Save();
         }
@@ -333,6 +353,9 @@ namespace Uncreated.Warfare.Squads
             ClearUIsquad(player.Player);
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
+
+            if (RallyManager.HasRally(squad, out var rally))
+                rally.ClearUIForPlayer(player);
 
             PlayerManager.Save();
         }
@@ -425,7 +448,7 @@ namespace Uncreated.Warfare.Squads
             Team1RallyID = 38381;
             Team2RallyID = 38382;
             RallyTimer = 60;
-            rallyUI = 36060;
+            rallyUI = 36030;
             squadLUI = 36040;
             squadSUI = 36060;
             squadLTUI = 36050;

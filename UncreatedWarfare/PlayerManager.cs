@@ -95,7 +95,8 @@ namespace Uncreated.Warfare
 
             SquadManager.InvokePlayerLeft(player);
         }
-        public static string GetKitName(ulong playerID) => ObjectExists(p => p.Steam64 == playerID, out var data)? data.KitName : "";
+        public static List<UCPlayer> GetNearbyPlayers(float range, Vector3 point) => OnlinePlayers.Where(p => !p.Player.life.isDead && (p.Position - point).sqrMagnitude < Math.Pow(range, 2)).ToList();
+        public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point) => OnlinePlayers.Find(p => p.Steam64 == playerID && !p.Player.life.isDead && (p.Position - point).sqrMagnitude < Math.Pow(range, 2)) != null;
 
         public static void VerifyTeam(Player nelsonplayer)
         {

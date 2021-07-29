@@ -90,7 +90,12 @@ namespace Uncreated.Warfare.Revives
             //F.Log(parameters.player.channel.owner.playerID.playerName + " took " + parameters.damage.ToString(Data.Locale) + " damage.", ConsoleColor.DarkRed);
             if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
             {
-                if (parameters.damage > parameters.player.life.health && parameters.limb != ELimb.SKULL && parameters.player.life.health > 0 && !parameters.player.life.isDead && parameters.damage < 100)
+                if (parameters.player.life.health > 0 &&
+                    !parameters.player.life.isDead &&
+                    parameters.damage > parameters.player.life.health &&
+                    ((parameters.damage < 40 * parameters.player.life.health && !(parameters.limb == ELimb.SKULL)) ||
+                    (parameters.damage < 70 * parameters.player.life.health && !(parameters.limb == ELimb.SPINE)))
+                    )
                 {
                     //F.Log(parameters.player.channel.owner.playerID.characterName + " was downed.", ConsoleColor.DarkRed);
 

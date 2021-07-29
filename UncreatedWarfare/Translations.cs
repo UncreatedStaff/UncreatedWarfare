@@ -383,7 +383,8 @@ namespace Uncreated.Warfare
                 { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
                 { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!     " },
 
-                { "vehicle_owner_not_in_vehicle", "Wait for the owner, {0}, to get in before swapping seats." },
+                { "vehicle_owner_not_in_vehicle", "Wait for the owner {0} to get in." },
+                { "vehicle_owner_not_in_vehicle_squad", "Wait for the owner {0} to get in, or join the squad {1}." },
                 { "vehicle_no_kit", "You can not get in a vehicle without a kit." },
                 { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to man this vehicle." },
                 { "vehicle_need_another_person_with_kit", "You must have another <color=#cedcde>{0}</color> in this vehicle before you can enter the gunner's seat." },
@@ -667,6 +668,7 @@ namespace Uncreated.Warfare
                 { "ofp_from_operator", "FROM OPERATOR" },
                 { "ofp_from_player", "FROM {0}" },
                 { "ofp_vehicle_eliminated", "VEHICLE ELIMINATED" },
+                { "ofp_deployed_fob", "SQUAD DEPLOYED" },
 
                 { "ofp_squad_victory", "VICTORY" },
                 { "ofp_squad_flag_captured", "SQUAD CAPTURED FLAG" },
