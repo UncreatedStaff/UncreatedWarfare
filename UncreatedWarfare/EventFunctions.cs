@@ -525,7 +525,6 @@ namespace Uncreated.Warfare
         }
         internal static async Task LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
             => await UCWarfare.I.UpdateLangs(player.Player.channel.owner);
-
         internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
         {
             SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);

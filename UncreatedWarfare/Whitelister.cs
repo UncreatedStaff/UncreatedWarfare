@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -23,6 +24,7 @@ namespace Uncreated.Warfare
             StructureManager.onSalvageStructureRequested += OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested += OnEditSignRequest;
+            BarricadeManager.onDeployBarricadeRequested += OnBarricadePlaceRequested;
             Reload();
         }
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
@@ -157,6 +159,12 @@ namespace Uncreated.Warfare
             )
         {
             var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
+            if (TeamManager.IsInAnyMain(player) && !player.OnDutyOrAdmin())
+            {
+                shouldAllow = false;
+                player.Message("whitelist_noplace");
+                return;
+            }
             if (player == null || player.Player == null || F.OnDuty(player)) return;
             if (KitManager.HasKit(player.CSteamID, out var kit))
             {
@@ -184,6 +192,7 @@ namespace Uncreated.Warfare
             StructureManager.onSalvageStructureRequested -= OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested -= OnEditSignRequest;
+            BarricadeManager.onDeployBarricadeRequested -= OnBarricadePlaceRequested;
         }
     }
     public class WhitelistItem

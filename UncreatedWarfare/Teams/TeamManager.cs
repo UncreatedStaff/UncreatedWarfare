@@ -114,6 +114,25 @@ namespace Uncreated.Warfare.Teams
         public static bool IsTeam1(Player player) => player.quests.groupID.m_SteamID == Team1ID;
         public static bool IsTeam2(ulong ID) => ID == Team2ID;
         public static bool IsTeam2(CSteamID steamID) => steamID.m_SteamID == Team2ID;
+
+        public static bool IsInMain(UnturnedPlayer player)
+        {
+            ulong team = player.GetTeam();
+            if (team == 1)
+            {
+                return Team1Main.IsInside(player.Position);
+            }
+            if (team == 2)
+            {
+                return Team2Main.IsInside(player.Position);
+            }
+            return false;
+        }
+
+        public static bool IsInAnyMain(UnturnedPlayer player)
+        {
+            return Team1Main.IsInside(player.Position) || Team2Main.IsInside(player.Position);
+        }
         public static bool IsTeam2(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team2ID;
         public static bool IsTeam2(Player player) => player.quests.groupID.m_SteamID == Team2ID;
 

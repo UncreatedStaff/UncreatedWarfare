@@ -140,7 +140,7 @@ namespace Uncreated.Players
             newplayer.SavePathAsync(path);
             return newplayer;
         }
-        public static async Task<UncreatedPlayer> LoadAsync(ulong id)
+        public static async Task<UncreatedPlayer> LoadAsync(ulong id, bool create = true)
         {
             string path = FileName(id);
             if (id == default) throw new ArgumentException("SteamID was not a valid Steam64 ID", "steam_id");
@@ -157,14 +157,17 @@ namespace Uncreated.Players
                 {
                     UncreatedPlayer player = JsonConvert.DeserializeObject<UncreatedPlayer>(json);
                     if (player != default) return player;
+                    else if (!create) return null;
                 }
                 catch (Exception ex)
                 {
                     File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
                     F.LogError($"Error in UncreatedPlayer.Load with id {id}, saved a backup then rewrote the file:");
                     F.LogError(ex);
+                    if (!create) return null;
                 }
             }
+            if (!create) return null;
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
             newplayer.SavePathAsync(path);
             return newplayer;

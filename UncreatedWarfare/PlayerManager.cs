@@ -39,8 +39,6 @@ namespace Uncreated.Warfare
                 UpdateObjectsWhere(p => p.Steam64 == OnlinePlayers[i].Steam64, p =>
                 {
                     p.Team = OnlinePlayers[i].GetTeam();
-                    p.KitClass = OnlinePlayers[i].KitClass;
-                    p.Branch = OnlinePlayers[i].Branch;
                     p.KitName = OnlinePlayers[i].KitName;
                     p.SquadName = OnlinePlayers[i].Squad != null ? OnlinePlayers[i].Squad.Name : "";
                 });
@@ -62,10 +60,8 @@ namespace Uncreated.Warfare
                 save = existingSave;
             }
 
-            var player = new UCPlayer(
+            UCPlayer player = new UCPlayer(
                     rocketplayer.CSteamID,
-                    save.KitClass,
-                    save.Branch,
                     save.KitName,
                     rocketplayer.Player,
                     rocketplayer.Player.channel.owner.playerID.characterName,
@@ -96,7 +92,6 @@ namespace Uncreated.Warfare
             SquadManager.InvokePlayerLeft(player);
         }
         public static string GetKitName(ulong playerID) => ObjectExists(p => p.Steam64 == playerID, out var data)? data.KitName : "";
-
         public static void VerifyTeam(Player nelsonplayer)
         {
             if (nelsonplayer == default) return;

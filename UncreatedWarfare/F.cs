@@ -1663,11 +1663,11 @@ namespace Uncreated.Warfare
                 {
                     if (kit.PremiumCost != 0)
                     {
-                        line2color = kit.AllowedUsers.Contains(player) ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_level"))
+                        line2color = kit.AllowedUsers.Contains(player) || UCWarfare.Config.OverrideKitRequirements ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_level"))
                             : UCWarfare.GetColorHex("kit_price_dollars");
-                        line2string = kit.AllowedUsers.Contains(player) ? Translate("kit_owned", player) : Translate("kit_price_dollars", player, kit.PremiumCost.ToString(Data.Locale));
+                        line2string = kit.AllowedUsers.Contains(player) || UCWarfare.Config.OverrideKitRequirements ? Translate("kit_owned", player) : Translate("kit_price_dollars", player, kit.PremiumCost.ToString(Data.Locale));
                     }
-                    else if (kit.RequiredLevel == 0)
+                    else if (kit.RequiredLevel == 0 || UCWarfare.Config.OverrideKitRequirements)
                     {
                         line2string = Translate("kit_available", player);
                         line2color = UCWarfare.GetColorHex("kit_price_free");
@@ -1681,7 +1681,7 @@ namespace Uncreated.Warfare
                         line2color = UCWarfare.GetColorHex("kit_price_tickets");
                     }
                 }
-                else if (kit.RequiredLevel == 0)
+                else if (kit.RequiredLevel == 0 || UCWarfare.Config.OverrideKitRequirements)
                 {
                     line2string = Translate("kit_available", player);
                     line2color = UCWarfare.GetColorHex("kit_price_free");

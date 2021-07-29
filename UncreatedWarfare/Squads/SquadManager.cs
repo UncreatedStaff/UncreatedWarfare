@@ -37,10 +37,6 @@ namespace Uncreated.Warfare.Squads
             }
             UpdateSquadList(UCPlayer.FromSteamPlayer(steamplayer), newGroup.GetTeam(), true);
         }
-        public static void OnRoundEnd()
-        {
-
-        }
         public static void ClearUIsquad(Player player)
         {
             for (int i = 0; i < 6; i++)
@@ -229,12 +225,13 @@ namespace Uncreated.Warfare.Squads
         {
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
-                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1;
-                else
-                {
-                    int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
-                    return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
-                }
+                int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
+                return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
+            });
+            squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
+            {
+                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1; // then sort players by leader
+                else return 0;
             });
         }
         public static async Task LeaveSquad(UCPlayer player, Squad squad)
@@ -418,6 +415,7 @@ namespace Uncreated.Warfare.Squads
         public ushort EmptyMarker;
         public ushort SquadLeaderEmptyMarker;
         public ushort MortarMarker;
+        public ushort InjuredMarker;
         public int MaxSquadNameLength;
 
         public override void SetDefaults()
@@ -425,13 +423,14 @@ namespace Uncreated.Warfare.Squads
             Team1RallyID = 38381;
             Team2RallyID = 38382;
             RallyTimer = 60;
-            rallyUI = 36060;
+            rallyUI = 36030;
             squadLUI = 36040;
             squadSUI = 36060;
             squadLTUI = 36050;
             EmptyMarker = 36100;
             SquadLeaderEmptyMarker = 36130;
             MortarMarker = 36120;
+            InjuredMarker = 36121;
             SquadDisconnectTime = 120;
             MaxSquadNameLength = 16;
             lockCharacter = '²';

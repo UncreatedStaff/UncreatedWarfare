@@ -126,11 +126,18 @@ namespace Uncreated.Warfare
         {
             cachedXp = await Data.DatabaseManager?.GetXP(Steam64, Player.GetTeam());
         }
-        public UCPlayer(CSteamID steamID, Kit.EClass kitClass, EBranch branch, string kitName, Player player, string characterName, string nickName)
+        public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName)
         {
             Steam64 = steamID.m_SteamID;
-            KitClass = kitClass;
-            Branch = branch;
+            if (KitManager.KitExists(kitName, out Kit kit))
+            {
+                KitClass = kit.Class;
+                Branch = kit.Branch;
+            } else
+            {
+                KitClass = Kit.EClass.NONE;
+                Branch = EBranch.DEFAULT;
+            }
             KitName = kitName;
             Squad = null;
             Player = player;
@@ -261,10 +268,6 @@ namespace Uncreated.Warfare
         [JsonSettable]
         public ulong Team;
         [JsonSettable]
-        public Kit.EClass KitClass;
-        [JsonSettable]
-        public EBranch Branch;
-        [JsonSettable]
         public string KitName;
         [JsonSettable]
         public string SquadName;
@@ -273,8 +276,6 @@ namespace Uncreated.Warfare
         {
             this.Steam64 = Steam64;
             Team = 0;
-            KitClass = Kit.EClass.NONE;
-            Branch = EBranch.DEFAULT;
             KitName = string.Empty;
             SquadName = string.Empty;
         }
@@ -282,10 +283,16 @@ namespace Uncreated.Warfare
         {
             this.Steam64 = 0;
             Team = 0;
-            KitClass = Kit.EClass.NONE;
-            Branch = EBranch.DEFAULT;
             KitName = string.Empty;
             SquadName = string.Empty;
+        }
+        [JsonConstructor]
+        public PlayerSave(ulong steam64, ulong team, string kitName, string squadName, bool ShouldKillOnNextJoin)
+        {
+            this.Steam64 = steam64;
+            Team = team;
+            KitName = kitName;
+            SquadName = squadName;
         }
     }
 }

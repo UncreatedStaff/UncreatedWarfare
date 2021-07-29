@@ -42,45 +42,58 @@ namespace Uncreated.Warfare.Vehicles
         /// <summary>Level must be loaded.</summary>
         public static InteractableVehicle SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
-            instanceID = 0;
-            if (VehicleBay.VehicleExists(vehicleID, out VehicleData vehicleData))
-            { 
-                InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
-                instanceID = vehicle.instanceID;
-
-                if (vehicleData.Metadata != null)
-                {
-                    foreach (VBarricade vb in vehicleData.Metadata.Barricades)
-                    {
-                        Barricade barricade;
-                        if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
-                        {
-                            barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
-                        }
-                        else
-                        {
-                            barricade = new Barricade(vb.BarricadeID)
-                            { state = Convert.FromBase64String(vb.State) };
-                        }
-                        Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-                        BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
-                    }
-                }
-
-                if (vehicle.asset.canBeLocked)
-                {
-                    vehicle.tellLocked(CSteamID.Nil, CSteamID.Nil, true);
-
-                    VehicleManager.ServerSetVehicleLock(vehicle, CSteamID.Nil, CSteamID.Nil, true);
-
-                    vehicle.updateVehicle();
-                    vehicle.updatePhysics();
-                }
-                return vehicle;
-            }
-            else
+            try
             {
-                F.Log($"VEHICLE SPAWN ERROR: {UCAssetManager.FindVehicleAsset(vehicleID).vehicleName} has not been registered in the VehicleBay.");
+                instanceID = 0;
+                if (VehicleBay.VehicleExists(vehicleID, out VehicleData vehicleData))
+                {
+                    InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
+                    if (vehicle == null) return null;
+                    instanceID = vehicle.instanceID;
+
+                    if (vehicleData.Metadata != null)
+                    {
+                        foreach (VBarricade vb in vehicleData.Metadata.Barricades)
+                        {
+                            Barricade barricade;
+                            if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
+                            {
+                                barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
+                            }
+                            else
+                            {
+                                barricade = new Barricade(vb.BarricadeID)
+                                { state = Convert.FromBase64String(vb.State) };
+                            }
+                            F.Log("found barricade " + barricade.id);
+                            Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
+                            BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
+                            F.Log("dropped barricade " + barricade.id);
+                        }
+                    }
+
+                    if (vehicle.asset.canBeLocked)
+                    {
+                        vehicle.tellLocked(CSteamID.Nil, CSteamID.Nil, true);
+
+                        VehicleManager.ServerSetVehicleLock(vehicle, CSteamID.Nil, CSteamID.Nil, true);
+
+                        vehicle.updateVehicle();
+                        vehicle.updatePhysics();
+                    }
+                    return vehicle;
+                }
+                else
+                {
+                    F.Log($"VEHICLE SPAWN ERROR: {UCAssetManager.FindVehicleAsset(vehicleID).vehicleName} has not been registered in the VehicleBay.");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error spawning vehicle: ");
+                F.LogError(ex);
+                instanceID = 0;
                 return null;
             }
         }
@@ -139,12 +152,17 @@ namespace Uncreated.Warfare.Vehicles
 
             // TODO: if vehicle is an emplacement, return
 
-            bool isOwnerOnline = Provider.clients.Exists(sp => sp.playerID.steamID == vehicle.lockedOwner);
+            SteamPlayer owner = Provider.clients.FirstOrDefault(sp => sp.playerID.steamID == vehicle.lockedOwner);
+            bool isOwnerOnline = owner != default;
+            Players.FPlayerName ownernames = isOwnerOnline ? F.GetPlayerOriginalNames(owner) : Players.FPlayerName.Nil;
             bool isOwnerInVehicle = false;
             float OwnerDistanceFromVehicle = 0;
 
             if (!isOwnerOnline)
-                goto Allowed;
+            {
+                EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+                return;
+            }
 
             foreach (Passenger passenger in vehicle.passengers)
             {
@@ -163,20 +181,28 @@ namespace Uncreated.Warfare.Vehicles
 
             if (isOwnerOnline && vehicle.isLocked && !(vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil) && !isOwnerInVehicle && OwnerDistanceFromVehicle <= 150)
             {
-                // "Wait for the owner of this vehicle to get in before swapping seats."
-                goto NotAllowed;
+                player.SendChat("vehicle_owner_not_in_vehicle", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()));
+                shouldAllow = false;
+                return;
             }
 
             if (!VehicleExists(vehicle.id, out var vehicleData))
-                goto Allowed;
+            {
+                EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+                return;
+            }
 
             if (vehicleData.RequiredClass == Kit.EClass.NONE)
-                goto Allowed;
-            
+            {
+                EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+                return;
+            }
+
             if (!KitManager.HasKit(player, out var kit))
             {
-                // "You must get a kit before you can enter vehicles."
-                goto NotAllowed;
+                player.SendChat("vehicle_no_kit");
+                shouldAllow = false;
+                return;
             }
 
             bool HasCrewman = true;
@@ -189,18 +215,10 @@ namespace Uncreated.Warfare.Vehicles
 
             if (vehicleData.RequiredClass != kit.Class && !HasCrewman)
             {
-                // "You need a {kitname} kit in order to man this vehicle. Wait for its crew to get in first if you just want to ride as passenger.";
-                goto NotAllowed;
+                player.SendChat("vehicle_need_another_person_with_kit", kit.Class.ToString().ToUpper());
+                shouldAllow = false;
+                return;
             }
-
-        NotAllowed:
-            shouldAllow = false;
-            return;
-
-        Allowed:
-            EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
-            return;
-            
         }
         private void OnVehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {

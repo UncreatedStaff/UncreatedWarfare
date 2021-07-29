@@ -516,7 +516,7 @@ namespace Uncreated
                 return obj;
             }
         }
-        protected static void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation, bool save = true)
+        public static void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation, bool save = true)
         {
             IEnumerator<T> results = ActiveObjects.Where(selector).GetEnumerator();
             while(results.MoveNext())

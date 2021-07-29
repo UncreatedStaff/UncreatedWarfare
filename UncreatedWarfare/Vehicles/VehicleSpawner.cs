@@ -282,33 +282,52 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void SpawnVehicle()
         {
-            if (!initialized)
+            try
             {
-                F.LogError($"VEHICLE SPAWNER ERROR: Tried to spawn vehicle without Initializing. {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} spawn.");
-                return;
+                if (!initialized)
+                {
+                    F.LogError($"VEHICLE SPAWNER ERROR: Tried to spawn vehicle without Initializing. {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} spawn.");
+                    return;
+                }
+                if (type == EStructType.BARRICADE)
+                {
+                    if (BarricadeData == default)
+                        F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point} was unable to find BarricadeData.");
+                    Quaternion rotation = new Quaternion
+                    { eulerAngles = new Vector3((BarricadeData.angle_x * 2) + 90, BarricadeData.angle_y * 2, BarricadeData.angle_z * 2) };
+                    InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(BarricadeData.point.x, BarricadeData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, BarricadeData.point.z), rotation, out uint instanceID);
+                    if (veh == null)
+                    {
+                        F.LogWarning(VehicleID.ToString(Data.Locale) + " returned null.");
+                        return;
+                    }
+                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
+                    LinkNewVehicle(instanceID);
+                    if (UCWarfare.Config.Debug)
+                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
+                }
+                else if (type == EStructType.STRUCTURE)
+                {
+                    if (StructureData == default)
+                        F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point} was unable to find StructureData.");
+                    Quaternion rotation = new Quaternion
+                    { eulerAngles = new Vector3((StructureData.angle_x * 2) + 90, StructureData.angle_y * 2, StructureData.angle_z * 2) };
+                    InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(StructureData.point.x, StructureData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, StructureData.point.z), rotation, out uint instanceID);
+                    if (veh == null)
+                    {
+                        F.LogWarning(VehicleID.ToString(Data.Locale) + " returned null.");
+                        return;
+                    }
+                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
+                    LinkNewVehicle(instanceID);
+                    if (UCWarfare.Config.Debug)
+                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
+                }
             }
-            if (type == EStructType.BARRICADE)
+            catch (Exception ex)
             {
-                if (BarricadeData == default)
-                    F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point} was unable to find BarricadeData.");
-                Quaternion rotation = new Quaternion
-                { eulerAngles = new Vector3((BarricadeData.angle_x * 2) + 90, BarricadeData.angle_y * 2, BarricadeData.angle_z * 2) };
-                InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(BarricadeData.point.x, BarricadeData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, BarricadeData.point.z), rotation, out uint instanceID);
-                veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
-                LinkNewVehicle(instanceID);
-                if(UCWarfare.Config.Debug)
-                    F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
-            } else if (type == EStructType.STRUCTURE)
-            {
-                if(StructureData == default)
-                    F.LogError($"VEHICLE SPAWNER ERROR: {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point} was unable to find StructureData.");
-                Quaternion rotation = new Quaternion
-                { eulerAngles = new Vector3((StructureData.angle_x * 2) + 90, StructureData.angle_y * 2, StructureData.angle_z * 2) };
-                InteractableVehicle veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(StructureData.point.x, StructureData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, StructureData.point.z), rotation, out uint instanceID);
-                veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
-                LinkNewVehicle(instanceID);
-                if (UCWarfare.Config.Debug)
-                    F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
+                F.LogError($"Error spawning vehicle {this.VehicleID} on vehicle bay: ");
+                F.LogError(ex);
             }
         }
         public bool HasLinkedVehicle(out InteractableVehicle vehicle)
