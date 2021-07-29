@@ -148,7 +148,7 @@ namespace Uncreated.Warfare.Tickets
                             await XPManager.AddXP(player.Player, player.GetTeam(), player.NearbyMemberBonus(amount, 75), F.Translate("xp_" + message, player.Steam64));
                             if (player.IsNearSquadLeader(100))
                             {
-                                await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, player.GetTeam(), amount, F.Translate("ofp_vehicle_eliminated", player.Squad.Leader.Steam64));
+                                await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, player.GetTeam(), (int) Math.Round(amount * 0.25F), F.Translate("ofp_vehicle_eliminated", player.Squad.Leader.Steam64));
                             }
                         }
                         else if (vehicleWasFriendly)

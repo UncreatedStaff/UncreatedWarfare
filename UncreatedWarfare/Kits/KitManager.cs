@@ -234,7 +234,6 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
-            kit = null;
             var player = UCPlayer.FromID(steamID);
 
             if (player is null)
@@ -247,6 +246,11 @@ namespace Uncreated.Warfare.Kits
                 kit = GetObject(k => k.Name == player.KitName);
                 return kit != null;
             }
+        }
+        public static bool HasKit(UCPlayer player, out Kit kit)
+        {
+            kit = GetObject(k => k.Name == player.KitName);
+            return kit != null;
         }
         public static bool HasKit(UnturnedPlayer player, out Kit kit) => HasKit(player.Player.channel.owner.playerID.steamID.m_SteamID, out kit);
         public static bool HasKit(SteamPlayer player, out Kit kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
