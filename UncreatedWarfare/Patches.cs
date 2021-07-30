@@ -510,7 +510,7 @@ namespace Uncreated.Warfare
                         {
                             if (simulation - ___lastBleed > Provider.modeConfigData.Players.Bleed_Damage_Ticks)
                             {
-                                if (Data.ReviveManager != null && Data.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID) && __instance.health <= 10)
+                                if (Data.ReviveManager != null && Data.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
                                 {
                                     ____isBleeding = false;
                                 }
@@ -542,7 +542,6 @@ namespace Uncreated.Warfare
                                     ___lastBleed = simulation;
                                     ____isBleeding = true;
                                     DamagePlayerParameters p = Data.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID];
-                                    p.damage = 1;
                                     __instance.askDamage(1, p.direction, p.cause, p.limb, p.killer, out EPlayerKill _, canCauseBleeding: false, bypassSafezone: true);
                                 }
                             }
@@ -623,7 +622,7 @@ namespace Uncreated.Warfare
                     if (passenger != null && passenger.player != null && passenger.player.player != null && !passenger.player.player.life.isDead)
                     {
                         F.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}");
-                        passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SPINE, instigator, out _);
+                        passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SKULL, instigator, out _);
                     }
                 }
                 if (__instance.asset.dropsTableId > 0)

@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Commands
         public string Name => "deploy";
         public string Help => "deploys you to a nearby FOB";
         public string Syntax => "/deploy";
-        public List<string> Aliases => new List<string>() { "/dep" };
+        public List<string> Aliases => new List<string>() { "dep" };
         public List<string> Permissions => new List<string>() { "uc.deploy" };
         public void Execute(IRocketPlayer caller, string[] command)
         {

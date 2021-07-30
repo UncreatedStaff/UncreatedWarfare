@@ -84,7 +84,7 @@ namespace Uncreated.Warfare
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
-            this.InjuredLifeTimeSeconds = 10f;
+            this.InjuredLifeTimeSeconds = 30f;
             this.InjuredDamageMultiplier = 0.1f;
             this.MaxPlayerCount = 48;
             this.LowerSteamPlayerCount = true;

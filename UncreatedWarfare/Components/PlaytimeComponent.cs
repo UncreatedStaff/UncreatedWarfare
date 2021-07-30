@@ -116,13 +116,17 @@ namespace Uncreated.Warfare.Components
         {
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
-            if (stats == null && Data.Gamemode is TeamCTF ctf)
+            if (stats == null)
             {
-                if (!ctf.GameStats.TryGetPlayer(player.channel.owner.playerID.steamID.m_SteamID, out stats))
+                if (Data.Gamemode is TeamCTF ctf)
                 {
-                    stats = new PlayerCurrentGameStats(player);
-                    ctf.GameStats.playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, stats);
+                    if (!ctf.GameStats.TryGetPlayer(player.channel.owner.playerID.steamID.m_SteamID, out stats))
+                    {
+                        stats = new PlayerCurrentGameStats(player);
+                        ctf.GameStats.playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, stats);
+                    }
                 }
+                else return;
             }
             if (player.IsOnFlag())
             {

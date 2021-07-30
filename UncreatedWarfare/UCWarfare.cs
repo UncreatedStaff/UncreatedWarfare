@@ -193,6 +193,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
+            /*
             for (ushort vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
             {
                 for (ushort i = 0; i < BarricadeManager.vehicleRegions[vr].barricades.Count; i++)
@@ -206,6 +207,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
+            */
             await RequestSigns.DropAllSigns();
             await StructureSaver.DropAllStructures();
         }

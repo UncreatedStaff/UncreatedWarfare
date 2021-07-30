@@ -236,6 +236,7 @@ namespace Uncreated.Warfare
                 // /ammo
                 { "ammo_error_nocrate", "<color=#ffab87>Look at an Ammo Crate or Vehicle in order to resupply or place a rifleman's <color=#cedcde>AMMO BAG</color> in your inventory.</color>" },
                 { "ammo_success", "<color=#ffab87>Your kit has been resupplied. <color=#d1c597>-1x AMMO BOX</color>.</color>" },
+                { "ammo_success_bag", "<color=#ffab87>Your kit has been resupplied. <color=#d1c597>-1x AMMO BAG</color>.</color>" },
                 { "ammo_success_vehicle", "<color=#ffab87>Your vehicle has been resupplied. <color=#d1c597>-{0}x AMMO BOX{1}</color>.</color>" },
                 { "ammo_vehicle_cant_rearm", "<color=#9cffb3>This vehicle can't be refilled.</color>" },
                 { "ammo_vehicle_out_of_main", "<color=#9cffb3>This vehicle can only be refilled at main base.</color>" },

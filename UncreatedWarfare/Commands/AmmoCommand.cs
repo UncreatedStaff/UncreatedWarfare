@@ -167,7 +167,7 @@ namespace Uncreated.Warfare.Commands
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 
-                player.SendChat("ammo_success");
+                player.SendChat("ammo_success_bag");
 
                 for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
                 {

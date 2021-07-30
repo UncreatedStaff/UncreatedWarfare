@@ -174,6 +174,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {
+            Data.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
             Task.Run(async() => await Data.ReviveManager.OnPlayerHealedAsync(instigator, target));
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
@@ -211,12 +212,12 @@ namespace Uncreated.Warfare
                     ulong team = player.GetTeam();
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
-                    if (ucplayer.KitName != null && ucplayer.KitName != string.Empty && KitManager.KitExists(ucplayer.KitName, out Kit previousKit))
-                        await KitManager.GiveKit(ucplayer, previousKit);
-                    else if (team > 0 && team < 3 && KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out previousKit)) await KitManager.GiveKit(ucplayer, previousKit);
-                    else if (KitManager.KitExists(TeamManager.DefaultKit, out previousKit)) await KitManager.GiveKit(ucplayer, previousKit);
+                    if ((ucplayer.KitName == null || ucplayer.KitName == string.Empty) && team > 0 && team < 3 && 
+                    KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed)) 
+                        await KitManager.GiveKit(ucplayer, unarmed);
+                    else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) await KitManager.GiveKit(ucplayer, unarmed);
                     else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
-                    pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, Stats.WarfareStats.WarfareName);
+                    pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStats.WarfareName);
                 });
                 F.Broadcast("player_connected", names.PlayerName);
                 if (!UCWarfare.Config.AllowCosmetics)

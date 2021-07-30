@@ -231,7 +231,7 @@ namespace Uncreated.Warfare.Squads
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
                 if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1; // then sort players by leader
-                else return 0;
+                else return -1;
             });
         }
         public static async Task LeaveSquad(UCPlayer player, Squad squad)

@@ -20,6 +20,7 @@ namespace Uncreated.Warfare.Revives
         public readonly Dictionary<ulong, float> DistancesFromInitialShot;
         public readonly List<UCPlayer> Medics = new List<UCPlayer>();
         private Coroutine Updater;
+        const float SIM_TIME = 0.16f;
         public ReviveManager()
         {
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
@@ -52,6 +53,14 @@ namespace Uncreated.Warfare.Revives
         {
             UCPlayer medic = UCPlayer.FromPlayer(healer);
 
+            if (medic.GetTeam() != downed.GetTeam())
+            {
+                medic.Message("heal_e_enemy");
+                shouldAllow = false;
+                return;
+            }
+            if (!DownedPlayers.ContainsKey(healer.channel.owner.playerID.steamID.m_SteamID)) // if not injured
+                return;
             if (medic.KitClass != Kit.EClass.MEDIC)
             {
                 medic.Message("heal_e_notmedic");
@@ -59,12 +68,6 @@ namespace Uncreated.Warfare.Revives
                 return;
             }
 
-            if (medic.GetTeam() != downed.quests.groupID.m_SteamID)
-            {
-                medic.Message("heal_e_enemy");
-                shouldAllow = false;
-                return;
-            }
         }
 
         private void OnPlayerRespawned(PlayerLife obj)
@@ -105,7 +108,7 @@ namespace Uncreated.Warfare.Revives
         }
         internal async Task OnPlayerHealedAsync(Player medic, Player target)
         {
-            if (target.TryGetComponent(out Reviver r))
+            if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
                 r.RevivePlayer();
                 ulong team = medic.GetTeam();
@@ -130,7 +133,7 @@ namespace Uncreated.Warfare.Revives
             }
             else
             {
-                float bleedsPerSecond = Provider.modeConfigData.Players.Bleed_Damage_Ticks / (Time.timeScale / Time.fixedDeltaTime);
+                float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                 parameters.damage *= (UCWarfare.Config.InjuredDamageMultiplier / 10) * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
             }
         }
@@ -140,8 +143,8 @@ namespace Uncreated.Warfare.Revives
 
             parameters.player.equipment.dequip();
 
-            // times per second FixedUpdate() is ran times bleed damage ticks = how many seconds it will take to 
-            float bleedsPerSecond = Provider.modeConfigData.Players.Bleed_Damage_Ticks / (Time.timeScale / Time.fixedDeltaTime);
+            // times per second FixedUpdate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
+            float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
             F.Log(bleedsPerSecond + " bleed times per second");
             parameters.player.life.serverModifyHealth(UCWarfare.Config.InjuredLifeTimeSeconds * bleedsPerSecond - parameters.player.life.health);
             parameters.player.life.serverSetBleeding(true);
@@ -160,7 +163,8 @@ namespace Uncreated.Warfare.Revives
                     else
                         DistancesFromInitialShot.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, Vector3.Distance(killer.transform.position, parameters.player.transform.position));
 
-                    ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
+                    if (killer.channel.owner.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
+                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
                 }
             }
             if (parameters.player.transform.TryGetComponent(out Reviver reviver))
@@ -168,6 +172,8 @@ namespace Uncreated.Warfare.Revives
                 reviver.TellProneDelayed();
                 //reviver.StartBleedout();
             }
+
+            
         }
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
@@ -183,6 +189,7 @@ namespace Uncreated.Warfare.Revives
                     DistancesFromInitialShot.Remove(player.CSteamID.m_SteamID);
                 }
             }
+            ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {
@@ -278,9 +285,26 @@ namespace Uncreated.Warfare.Revives
         }
         public void UpdateInjuredMarkers()
         {
-            IEnumerator<ITransportConnection> medics = Medics.Select(x => x.Player.channel.owner.transportConnection).GetEnumerator();
-            Vector3[] newpositions = DownedPlayers.Keys.Select(x => UCPlayer.FromID(x).Position).ToArray();
-            SpawnInjuredMarkers(medics, newpositions, true, true);
+            IEnumerator<ITransportConnection> medics = Medics.Where(x => x.GetTeam() == 1).Select(x => x.Player.channel.owner.transportConnection).GetEnumerator();
+            List<Vector3> newpositions = new List<Vector3>();
+            foreach (ulong player in DownedPlayers.Keys)
+            {
+                UCPlayer pl = UCPlayer.FromID(player);
+                if (pl == null) continue;
+                if (pl.GetTeam() == 1)
+                    newpositions.Add(pl.Position);
+            }
+            SpawnInjuredMarkers(medics, newpositions.ToArray(), true, true);
+            medics = Medics.Where(x => x.GetTeam() == 2).Select(x => x.Player.channel.owner.transportConnection).GetEnumerator();
+            newpositions.Clear();
+            foreach (ulong player in DownedPlayers.Keys)
+            {
+                UCPlayer pl = UCPlayer.FromID(player);
+                if (pl == null) continue;
+                if (pl.GetTeam() == 2)
+                    newpositions.Add(pl.Position);
+            }
+            SpawnInjuredMarkers(medics, newpositions.ToArray(), true, true);
         }
         private class Reviver : UnturnedPlayerComponent
         {
