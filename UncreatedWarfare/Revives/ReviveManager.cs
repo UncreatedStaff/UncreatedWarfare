@@ -50,20 +50,23 @@ namespace Uncreated.Warfare.Revives
         }
         private void UseableConsumeable_onPerformingAid(Player healer, Player downed, ItemConsumeableAsset asset, ref bool shouldAllow)
         {
-            UCPlayer medic = UCPlayer.FromPlayer(healer);
-
-            if (medic.KitClass != Kit.EClass.MEDIC)
+            if (DownedPlayers.ContainsKey(healer.channel.owner.playerID.steamID.m_SteamID))
             {
-                medic.Message("heal_e_notmedic");
-                shouldAllow = false;
-                return;
-            }
+                UCPlayer medic = UCPlayer.FromPlayer(healer);
 
-            if (medic.GetTeam() != downed.quests.groupID.m_SteamID)
-            {
-                medic.Message("heal_e_enemy");
-                shouldAllow = false;
-                return;
+                if (medic.KitClass != Kit.EClass.MEDIC)
+                {
+                    medic.Message("heal_e_notmedic");
+                    shouldAllow = false;
+                    return;
+                }
+
+                if (medic.GetTeam() != downed.quests.groupID.m_SteamID)
+                {
+                    medic.Message("heal_e_enemy");
+                    shouldAllow = false;
+                    return;
+                }
             }
         }
 
@@ -105,7 +108,7 @@ namespace Uncreated.Warfare.Revives
         }
         internal async Task OnPlayerHealedAsync(Player medic, Player target)
         {
-            if (target.TryGetComponent(out Reviver r))
+            if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
                 r.RevivePlayer();
                 ulong team = medic.GetTeam();

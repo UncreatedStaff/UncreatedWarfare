@@ -499,7 +499,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 if (Owner.passengers.Length > 0)
                 {
-                    if (Owner.passengers[0] != null && Owner.passengers[0].player != null && count > 2 && Owner.speed > 0)
+                    if (Owner.passengers[0] != null && Owner.passengers[0].player != null && count > 1 && Owner.speed > 0)
                     {
                         UCPlayer player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
                         if (player != null)
@@ -509,7 +509,7 @@ namespace Uncreated.Warfare.Vehicles
                                 //if (player.Squad != null)
                                 //    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
                                 //else
-                                await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 2), F.Translate("xp_transporting_players", player.Steam64));
+                                await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 1), F.Translate("xp_transporting_players", player.Steam64));
                             });
                         }
                     }

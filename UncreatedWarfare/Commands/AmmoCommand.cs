@@ -79,6 +79,9 @@ namespace Uncreated.Warfare.Commands
 
                     VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
 
+                    foreach (ushort item in vehicleData.Items)
+                        ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
+
                     player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
                     return;
                 }
@@ -135,9 +138,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
 
                 foreach (ushort item in vehicleData.Items)
-                {
                     ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
-                }
 
                 if (player.IsTeam1())
                     UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
