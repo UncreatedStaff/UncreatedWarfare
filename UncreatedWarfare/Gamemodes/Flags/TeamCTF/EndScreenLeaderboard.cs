@@ -456,6 +456,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && x.player.transform != null && !TeamManager.Team2Main.IsInside(x.player.transform.position)));
                 foreach (PlayerCurrentGameStats s in playerstats.Values)
                     s.CheckGame();
+                gamepercentagecounter++;
                 yield return new WaitForSeconds(10f);
             }
         }
