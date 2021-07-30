@@ -171,11 +171,13 @@ namespace Uncreated.Warfare.Tickets
 
                 if (F.TryGetPlaytimeComponent(player.CSteamID, out var component))
                 {
-                    await XPManager.AddXP(player.Player, team, Mathf.RoundToInt(component.stats.xpgained * 0.2f), F.Translate("xp_victory", player.Steam64));
+                    if (component.stats.xpgained > 0)
+                        await XPManager.AddXP(player.Player, team, Mathf.RoundToInt(component.stats.xpgained * 0.2f), F.Translate("xp_victory", player.Steam64));
 
                     if (player.IsSquadLeader())
                     {
-                        await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, Mathf.RoundToInt(component.stats.xpgained * 0.2f), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
+                        if (component.stats.officerpointsgained > 0)
+                            await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, Mathf.RoundToInt(component.stats.officerpointsgained * 0.2f), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
                     }
                 }
             }

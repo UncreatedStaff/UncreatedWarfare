@@ -21,11 +21,11 @@ namespace Uncreated.Warfare
             if (HasCooldown(player, type, out var existing))
                 existing.timeAdded = DateTime.Now;
             else
-                cooldowns.Add(new Cooldown(player, ECooldownType.DEPLOY, seconds, data));
+                cooldowns.Add(new Cooldown(player, type, seconds, data));
         }
         public static bool HasCooldown(UCPlayer player, ECooldownType type, out Cooldown cooldown, params object[] data)
         {
-            cooldowns.RemoveAll(c => c.Timeleft.TotalSeconds == 0);
+            cooldowns.RemoveAll(c => c.Timeleft.TotalSeconds <= 0);
             cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
             return cooldown != null;
         }
