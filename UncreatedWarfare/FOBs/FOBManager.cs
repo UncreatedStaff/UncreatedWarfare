@@ -156,16 +156,16 @@ namespace Uncreated.Warfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
-            TeamManager.HasTeam(b.group) &&
+            (TeamManager.HasTeam(b.group) && 
             (b.barricade.id == config.Data.FOBID ||
             b.barricade.id == config.Data.FOBBaseID ||
             b.barricade.id == config.Data.AmmoCrateID ||
             b.barricade.id == config.Data.AmmoCrateBaseID ||
             b.barricade.id == config.Data.RepairStationID ||
-            b.barricade.id == config.Data.RepairStationBaseID) ||
+            b.barricade.id == config.Data.RepairStationBaseID)) || (
             config.Data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
             config.Data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
-            config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
+            config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id))
             ).ToList();
 
             foreach (BarricadeData data in FOBComponents)

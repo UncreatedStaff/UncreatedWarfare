@@ -147,14 +147,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             _config.Reload();
         }
-        public override async Task StartNextGame()
+        public override async Task StartNextGame(bool onLoad = false)
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
             await LoadRotation();
             State = EState.ACTIVE;
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
-            await InvokeOnNewGameStarting();
+            await InvokeOnNewGameStarting(onLoad);
         }
         public override async Task LoadRotation()
         {
@@ -254,13 +254,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 await OnFlagNeutralized.Invoke(flag, capturedTeam, lostTeam);
             await TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
-        private async Task InvokeOnNewGameStarting()
+        private async Task InvokeOnNewGameStarting(bool onLoad)
         {
             if (OnNewGameStarting != null)
                 await OnNewGameStarting.Invoke();
             TicketManager.OnNewGameStarting();
-            VehicleSpawner.RespawnAllVehicles();
-            FOBManager.WipeAllFOBRelatedBarricades();
+            if (!onLoad)
+            {
+                VehicleSpawner.RespawnAllVehicles();
+                //FOBManager.WipeAllFOBRelatedBarricades(); (ran already kinda)
+            }
+            FOBManager.UpdateUIAll();
             RallyManager.WipeAllRallies();
         }
         protected override async Task PlayerEnteredFlagRadius(Flag flag, Player player)

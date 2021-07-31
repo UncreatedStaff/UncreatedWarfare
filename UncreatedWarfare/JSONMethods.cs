@@ -440,7 +440,7 @@ namespace Uncreated.Warfare
                             }
                             if (Translations == null) continue;
                             if (!languages.ContainsKey(directoryInfo.Name))
-                                languages.Add(directoryInfo.Name, ConvertTranslations(Translations));
+                                languages.Add(directoryInfo.Name, ConvertTranslations(Translations, directoryInfo.Name));
                         }
                         else if (info.Name == "deathlocalization.dat")
                         {
@@ -497,21 +497,30 @@ namespace Uncreated.Warfare
             } else
             {
                 F.LogError("Failed to load translations, see above.");
-                languages.Add(DefaultLanguage, ConvertTranslations(DefaultTranslations));
+                languages.Add(DefaultLanguage, ConvertTranslations(DefaultTranslations, DefaultLanguage));
                 limbloc.Add(DefaultLanguage, DefaultLimbTranslations);
                 deathloc.Add(DefaultLanguage, DefaultDeathTranslations);
                 return languages;
             }
             return languages;
         }
-        public static Dictionary<string, TranslationData> ConvertTranslations(Dictionary<string, string> input)
+        public static Dictionary<string, TranslationData> ConvertTranslations(Dictionary<string, string> input, string language = null)
         {
             Dictionary<string, TranslationData> rtn = new Dictionary<string, TranslationData>(input.Count);
             IEnumerator<KeyValuePair<string, string>> enumerator = input.GetEnumerator();
+            string current = string.Empty;
             try
             {
                 while (enumerator.MoveNext())
-                    rtn.Add(enumerator.Current.Key, new TranslationData(enumerator.Current.Value));
+                {
+                    current = enumerator.Current.Key;
+                    rtn.Add(current, new TranslationData(enumerator.Current.Value));
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError($"Error converting translation {current} for language {language ?? "unknown"}: ");
+                F.LogError(ex);
             }
             finally
             {

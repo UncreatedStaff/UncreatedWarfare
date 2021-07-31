@@ -20,6 +20,7 @@ using Uncreated.Warfare.Squads;
 using Steamworks;
 using Rocket.Core.Steam;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using System.Linq;
 
 namespace Uncreated.Warfare
 {
@@ -128,8 +129,7 @@ namespace Uncreated.Warfare
             await rtn;
             if (Provider.clients.Count > 0)
             {
-                List<Players.FPlayerName> playersOnline = new List<Players.FPlayerName>();
-                Provider.clients.ForEach(x => playersOnline.Add(F.GetPlayerOriginalNames(x)));
+                List<Players.FPlayerName> playersOnline = Provider.clients.Select(x => F.GetPlayerOriginalNames(x)).ToList();
                 await Networking.Client.SendPlayerList(playersOnline);
             }
         }
@@ -194,6 +194,9 @@ namespace Uncreated.Warfare
                 }
             }
             /*
+            
+             * ( vehicle regions )
+
             for (ushort vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
             {
                 for (ushort i = 0; i < BarricadeManager.vehicleRegions[vr].barricades.Count; i++)
@@ -302,7 +305,21 @@ namespace Uncreated.Warfare
             }
             if (Data.Gamemode is TeamCTF ctf)
             {
-                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation, ctf.Config.FlagUICount, ctf.Config.AttackIcon, ctf.Config.DefendIcon);
+                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation, 
+                    ctf.Config.FlagUICount, ctf.Config.AttackIcon, ctf.Config.DefendIcon);
+                ulong team = player.GetTeam();
+                UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+                if (ucplayer.Squad == null)
+                    SquadManager.UpdateSquadList(ucplayer);
+                else
+                {
+                    SquadManager.UpdateUISquad(ucplayer.Squad);
+                    SquadManager.UpdateUIMemberCount(team);
+                    if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
+                        p.ShowUIForPlayer(ucplayer);
+                }
+                XP.XPManager.UpdateUI(player.player, await XP.XPManager.GetXP(player.player, team, false));
+                Officers.OfficerManager.UpdateUI(player.player, await Officers.OfficerManager.GetOfficerPoints(player.player, team, false));
             }
         }
         protected override void Unload()

@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public override async Task OnLevelLoaded()
         {
             LoadAllFlags();
-            await StartNextGame();
+            await StartNextGame(true);
             await base.OnLevelLoaded();
         }
         public override void Dispose()

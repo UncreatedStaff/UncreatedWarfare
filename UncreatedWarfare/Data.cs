@@ -309,30 +309,26 @@ namespace Uncreated.Warfare
         {
             get =>
                 new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup,
-                "Admin", "default", new List<string>(), AdminPerms, "00ffff", 100)
-                { Prefix = "[Admin] " };
+                "Admin", "default", new List<string>(), AdminPerms, "00ffff", 100);
         }
         private static RocketPermissionsGroup AdminOffDutyGroup
         {
             get =>
                 new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup,
-                "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100)
-                { Prefix = "[Admin] " };
+                "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100);
         }
         
         private static RocketPermissionsGroup InternOnDutyGroup
         {
             get =>
                 new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup,
-                "Intern", "default", new List<string>(), TrialAdminPerms, "66ffff", 50)
-                { Prefix = "[Intern] " };
+                "Intern", "default", new List<string>(), TrialAdminPerms, "66ffff", 50);
         }
         private static RocketPermissionsGroup InternOffDutyGroup
         {
             get =>
                 new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup,
-                "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50)
-                { Prefix = "[Intern] " };
+                "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50);
         }
 
         private static List<Permission> AdminPerms 

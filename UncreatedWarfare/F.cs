@@ -1625,6 +1625,7 @@ namespace Uncreated.Warfare
             flag = null;
             return false;
         }
+        public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
         public static async Task<string> TranslateSign(string key, ulong player, bool important, params string[] formatting)
         {
             string norm = Translate(key, player, formatting);
@@ -1656,48 +1657,68 @@ namespace Uncreated.Warfare
             } 
             else if (KitManager.KitExists(kitname, out Kit kit))
             {
-                ulong playerteam = GetTeamFromPlayerSteam64ID(player);
-                string line2string;
-                string line2color;
-                if(kit.IsPremium)
+                UCPlayer ucplayer = UCPlayer.FromID(player);
+                ulong playerteam = 0;
+                Rank playerrank = null;
+                if (ucplayer != null)
                 {
-                    if (kit.PremiumCost != 0)
-                    {
-                        line2color = kit.AllowedUsers.Contains(player) || UCWarfare.Config.OverrideKitRequirements ? (kit.Cost == 0 ? UCWarfare.GetColorHex("kit_price_owned") : UCWarfare.GetColorHex("kit_level"))
-                            : UCWarfare.GetColorHex("kit_price_dollars");
-                        line2string = kit.AllowedUsers.Contains(player) || UCWarfare.Config.OverrideKitRequirements ? Translate("kit_owned", player) : Translate("kit_price_dollars", player, kit.PremiumCost.ToString(Data.Locale));
-                    }
-                    else if (kit.RequiredLevel == 0 || UCWarfare.Config.OverrideKitRequirements)
-                    {
-                        line2string = Translate("kit_available", player);
-                        line2color = UCWarfare.GetColorHex("kit_price_free");
-                    }
-                    else
-                    {
-                        Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
-                        Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, playerteam, important), out _, out _);
-                        line2string = Translate("kit_required_level", player, kit.RequiredLevel.ToString(Data.Locale), 
-                            player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
-                        line2color = UCWarfare.GetColorHex("kit_price_tickets");
-                    }
+                    playerteam = ucplayer.GetTeam();
+                    playerrank = await ucplayer.XPRank();
                 }
-                else if (kit.RequiredLevel == 0 || UCWarfare.Config.OverrideKitRequirements)
-                {
-                    line2string = Translate("kit_available", player);
-                    line2color = UCWarfare.GetColorHex("kit_price_free");
-                }
-                else
-                {
-                    Rank rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
-                    Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, playerteam, important), out _, out _);
-                    line2string = Translate("kit_required_level", player, kit.RequiredLevel.ToString(Data.Locale),
-                        player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
-                    line2color = UCWarfare.GetColorHex("kit_level");
-                }
-                bool full = kit.IsLimited(out int current, out int max, playerteam, true);
                 string lang = DecideLanguage(player, kit.SignTexts);
-                return Translate("sign_kit_request", player, kit.SignTexts.TryGetValue(lang, out string val) ? val : kit.Name, GetTeamNumberColorHex(kit.Team), line2string, line2color, 
-                    current.ToString(Data.Locale), kit.IsPremium || kit.TeamLimit == 1f ? INFINITY_SYMBOL.ToString() : max.ToString(Data.Locale), full ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"));
+                string name;
+                if (!kit.SignTexts.TryGetValue(lang, out name))
+                    name = kit.DisplayName ?? kit.Name;
+                bool keepline = false;
+                foreach (char @char in name)
+                {
+                    if (@char == '\n')
+                    {
+                        keepline = true;
+                        break;
+                    }
+                }
+                name = Translate("kit_name", player, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
+                string weapons = kit.Weapons ?? string.Empty;
+                if (weapons != string.Empty)
+                    weapons = Translate("kit_weapons", player, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
+                string cost;
+                string playercount;
+                if (kit.IsPremium && kit.PremiumCost > 0)
+                {
+                    if (kit.AllowedUsers.Contains(player))
+                        cost = ObjectTranslate("kit_owned", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                    else
+                        cost = ObjectTranslate("kit_price_dollars", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                } else if (kit.RequiredLevel > 0)
+                {
+                    if (playerrank == null || playerrank.level < kit.RequiredRank.level)
+                    {
+                        cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"), 
+                            kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                    } else
+                    {
+                        cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
+                            kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                    }
+                } else
+                {
+                    cost = string.Empty;
+                }
+                if (!keepline) cost = "\n" + cost;
+                if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+                {
+                    playercount = Translate("kit_unlimited", player).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                } else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
+                {
+                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+                } else
+                {
+                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+                }
+                return Translate("sign_kit_request", player, name, cost, weapons, playercount);
             }
             else return key;
         }

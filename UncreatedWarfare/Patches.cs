@@ -323,9 +323,10 @@ namespace Uncreated.Warfare
                                         }
                                         byte[] state = region.barricades[index].barricade.state;
                                         byte[] bytes = Encoding.UTF8.GetBytes(newtext);
-                                        if (bytes.Length + 17 > byte.MaxValue)
+
+                                        if (bytes.Length > byte.MaxValue)
                                         {
-                                            F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 17} UTF8 bytes!");
+                                            F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue} UTF8 bytes (was {bytes.Length} bytes)!");
                                             bytes = Encoding.UTF8.GetBytes(sign.text);
                                         }
                                         byte[] numArray1 = new byte[17 + bytes.Length];

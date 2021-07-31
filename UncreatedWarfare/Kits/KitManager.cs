@@ -7,8 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.XP;
 using static Uncreated.Warfare.UCWarfare;
+using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -312,7 +315,6 @@ namespace Uncreated.Warfare.Kits
 
     public class Kit
     {
-        public string Name;
         public string DisplayName
         {
             get
@@ -356,6 +358,7 @@ namespace Uncreated.Warfare.Kits
                 return Name;
             }
         }
+        public string Name;
         [JsonSettable]
         public EClass Class;
         [JsonSettable]
@@ -383,10 +386,20 @@ namespace Uncreated.Warfare.Kits
         public List<KitItem> Items;
         public List<KitClothing> Clothes;
         public List<ulong> AllowedUsers { get; protected set; }
-        /// <summary>
-        /// {0} = Kit name color (team color), {1} = price, {2} = price color
-        /// </summary>
         public Dictionary<string, string> SignTexts;
+        [JsonSettable]
+        public string Weapons;
+        [JsonIgnore]
+        public Rank RequiredRank { 
+            get
+            {
+                if (_rank == null || _rank.level != RequiredLevel)
+                    _rank = XPManager.GetRankFromLevel(RequiredLevel);
+                return _rank;
+            }
+        }
+        [JsonIgnore]
+        private Rank _rank;
         public Kit(string name, List<KitItem> items, List<KitClothing> clothes)
         {
             Name = name;
@@ -405,7 +418,16 @@ namespace Uncreated.Warfare.Kits
             SignName = DisplayName;
             ShouldClearInventory = true;
             AllowedUsers = new List<ulong>();
-            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
+            SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, SignName } };
+            if (Items == null || items.Count == 0)
+                Weapons = string.Empty;
+            else
+            {
+                KitItem i = items.OrderByDescending(x => x.metadata == null ? 0 : x.metadata.Length).First();
+                if (i == null) Weapons = string.Empty;
+                else if (!(Assets.find(EAssetType.ITEM, i.ID) is ItemAsset asset)) Weapons = string.Empty;
+                else Weapons = asset.itemName;
+            }
         }
         public Kit()
         {
@@ -426,7 +448,61 @@ namespace Uncreated.Warfare.Kits
             ShouldClearInventory = true;
             AllowedUsers = new List<ulong>();
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
+            Weapons = string.Empty;
         }
+        [JsonConstructor]
+        public Kit(string Name, 
+            EClass Class, 
+            string SignName, 
+            EBranch Branch, 
+            ulong Team, 
+            ushort Cost, 
+            ushort RequiredLevel, 
+            ushort TicketCost, 
+            bool IsPremium, 
+            float PremiumCost, 
+            float TeamLimit, 
+            float Cooldown, 
+            bool ShouldClearInventory, 
+            List<KitItem> Items, 
+            List<KitClothing> Clothes, 
+            List<ulong> AllowedUsers, 
+            Dictionary<string, string> 
+            SignTexts, 
+            string Weapons)
+        {
+            this.Name = Name;
+            this.Class = Class;
+            this.SignName = SignName;
+            this.Branch = Branch;
+            this.Team = Team;
+            this.Cost = Cost;
+            this.RequiredLevel = RequiredLevel;
+            this.TicketCost = TicketCost;
+            this.IsPremium = IsPremium;
+            this.PremiumCost = PremiumCost;
+            this.TeamLimit = TeamLimit;
+            this.Cooldown = Cooldown;
+            this.ShouldClearInventory = ShouldClearInventory;
+            this.Items = Items;
+            this.Clothes = Clothes;
+            this.AllowedUsers = AllowedUsers;
+            this.SignTexts = SignTexts ?? new Dictionary<string, string>();
+            if (Weapons == null || Weapons == string.Empty)
+            {
+                if (Items == null || Items.Count == 0)
+                    this.Weapons = string.Empty;
+                else
+                {
+                    KitItem i = Items.OrderByDescending(x => x.metadata == null ? 0 : x.metadata.Length).First();
+                    if (i == null) this.Weapons = string.Empty;
+                    else if (!(Assets.find(EAssetType.ITEM, i.ID) is ItemAsset asset)) this.Weapons = string.Empty;
+                    else this.Weapons = asset.itemName;
+                }
+            } else
+                this.Weapons = Weapons;
+        }
+
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public bool IsLimited(out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {

@@ -228,11 +228,8 @@ namespace Uncreated.Warfare.Squads
                 int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
                 return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
             });
-            squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
-            {
-                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1; // then sort players by leader
-                else return -1;
-            });
+            squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
+            squad.Members.Insert(0, squad.Leader);
         }
         public static async Task LeaveSquad(UCPlayer player, Squad squad)
         {

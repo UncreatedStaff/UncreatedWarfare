@@ -34,7 +34,6 @@ namespace Uncreated.Warfare
         internal static async Task OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => await OnGroupChanged?.Invoke(player, oldGroup, newGroup);
         internal static async Task GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             ulong oldteam = oldGroup.GetTeam();
             ulong newteam = newGroup.GetTeam();
 
@@ -48,7 +47,8 @@ namespace Uncreated.Warfare
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
             FOBManager.UpdateUI(UCPlayer.FromSteamPlayer(player));
 
-            await rtn;
+            await RequestSigns.InvokeLangUpdateForAllSigns(player);
+
             await XPManager.OnGroupChanged(player, oldGroup, newGroup);
             await OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
         }
@@ -540,8 +540,6 @@ namespace Uncreated.Warfare
             {
                 team = save.Team;
             }
-            F.Log("PLAYER TEAM: " + team);
-
             string globalPrefix = "";
             string teamPrefix = "";
 

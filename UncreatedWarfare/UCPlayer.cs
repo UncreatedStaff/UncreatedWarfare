@@ -33,6 +33,19 @@ namespace Uncreated.Warfare
         public string CharacterName;
         public string NickName;
         public Rank OfficerRank;
+        /// <summary>[Unreliable]</summary>
+        public async Task<Rank> XPRank()
+        {
+            if (cachedXp == -1)
+                await RedownloadCachedXP();
+            if (_rank == null || isXpDirty)
+            {
+                _rank = XPManager.GetRank(cachedXp, out _, out _);
+                isXpDirty = _rank == null;
+            }
+            return _rank;
+        }
+        private Rank _rank;
         public Vector3 Position
         {
             get
@@ -63,10 +76,11 @@ namespace Uncreated.Warfare
                 _cachedOfp = value;
                 if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
                     c.UCPlayerStats.warfare_stats.TellOfficerPts(_cachedXp, Player.GetTeam());
-                else F.LogWarning("Unable to set cached xp because something was null.");
+                else F.LogWarning("Unable to set cached ofp because something was null.");
             }
         }
         private int _cachedXp = -1;
+        private bool isXpDirty = false;
         public int cachedXp
         {
             get => _cachedXp;
@@ -75,6 +89,7 @@ namespace Uncreated.Warfare
                 if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
                     c.UCPlayerStats.warfare_stats.TellXP(_cachedXp, Player.GetTeam());
                 else F.LogWarning("Unable to set cached xp because something was null.");
+                isXpDirty = true;
             }
         }
         public static UCPlayer FromID(ulong steamID)

@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Gamemodes
             shutdownPlayer = 0;
         }
         public abstract Task DeclareWin(ulong winner);
-        public abstract Task StartNextGame();
+        public abstract Task StartNextGame(bool onLoad = false);
         public virtual void Dispose()
         {
             Cancel();
