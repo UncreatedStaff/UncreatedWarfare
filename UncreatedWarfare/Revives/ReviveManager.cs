@@ -153,12 +153,12 @@ namespace Uncreated.Warfare.Revives
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
 
                 target.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                EffectManager.askEffectClearByID(30600, target.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
-            if (!DownedPlayers.ContainsKey(parameters.player.channel.owner.playerID.steamID.m_SteamID))
+            if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
             {
                 if (parameters.player.life.health > 0 &&
                     !parameters.player.life.isDead &&
@@ -173,6 +173,7 @@ namespace Uncreated.Warfare.Revives
             else
             {
                 float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
+                parameters = p;
                 parameters.damage *= (UCWarfare.Config.InjuredDamageMultiplier / 10) * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
             }
         }
@@ -183,7 +184,7 @@ namespace Uncreated.Warfare.Revives
 
             // times per second FixedUpdate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
             float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-            F.Log(bleedsPerSecond + " bleed times per second");
+            //F.Log(bleedsPerSecond + " bleed times per second");
             parameters.player.life.serverModifyHealth(UCWarfare.Config.InjuredLifeTimeSeconds * bleedsPerSecond - parameters.player.life.health);
             parameters.player.life.serverSetBleeding(true);
 
@@ -191,7 +192,7 @@ namespace Uncreated.Warfare.Revives
             parameters.player.movement.sendPluginJumpMultiplier(0);
 
             parameters.player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-            EffectManager.sendUIEffect(30600, 30600, true);
+            EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI), true);
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             if (parameters.killer != default && parameters.killer != CSteamID.Nil)
@@ -235,7 +236,7 @@ namespace Uncreated.Warfare.Revives
                 }
 
                 player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                EffectManager.askEffectClearByID(30600, player.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, player.Player.channel.owner.transportConnection);
             }
             ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
         }

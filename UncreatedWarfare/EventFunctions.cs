@@ -195,8 +195,15 @@ namespace Uncreated.Warfare
                 {
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
-                        player.Player.life.ReceiveRespawnRequest(false);
-                        F.Log("sent respawn request", ConsoleColor.DarkGray);
+                        if (player.Player.life.isDead)
+                            player.Player.life.ReceiveRespawnRequest(false);
+                        else
+                        {
+                            player.Player.life.sendRevive();
+                            player.Player.teleportToLocation(player.Player.GetBaseSpawn(out ulong t), t.GetBaseAngle());
+                        }
+                        save.ShouldRespawnOnJoin = false;
+                        PlayerManager.Save();
                     }
                 }
                 Data.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
