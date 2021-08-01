@@ -1,7 +1,9 @@
 ﻿using Rocket.Unturned.Player;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -228,11 +230,8 @@ namespace Uncreated.Warfare.Squads
                 int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
                 return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
             });
-            squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
-            {
-                if (squad.Leader != null && squad.Leader.Steam64 == a.Steam64) return -1; // then sort players by leader
-                else return -1;
-            });
+            squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
+            squad.Members.Insert(0, squad.Leader);
         }
         public static async Task LeaveSquad(UCPlayer player, Squad squad)
         {
@@ -400,7 +399,7 @@ namespace Uncreated.Warfare.Squads
         }
     }
 
-    public class Squad
+    public class Squad : IEnumerable<UCPlayer>
     {
         public string Name;
         public ulong Team;
@@ -418,8 +417,19 @@ namespace Uncreated.Warfare.Squads
             Members = new List<UCPlayer> { leader };
         }
 
+        public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
+
         public bool IsFull() => Members.Count < 6;
         public bool IsNotSolo() => Members.Count > 1;
+
+        IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
+        public IEnumerator<ITransportConnection> EnumerateMembers()
+        {
+            IEnumerator<UCPlayer> players = Members.GetEnumerator();
+            while (players.MoveNext())
+                yield return players.Current.Player.channel.owner.transportConnection;
+            players.Dispose();
+        }
     }
 
     public class SquadConfigData : ConfigData

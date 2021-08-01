@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -62,8 +64,38 @@ namespace Uncreated.Warfare.Kits
                 await s[i].InvokeUpdate();
             }
         }
+        public static async Task InvokeLangUpdateForAllSigns(SteamPlayer player)
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                await ActiveObjects[i].InvokeUpdate(player);
+            }
+        }
+        public static async Task InvokeLangUpdateForAllSigns()
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                await ActiveObjects[i].InvokeUpdate();
+            }
+        }
         public static void SetOwner(RequestSign sign, ulong newOwner) => SetProperty(sign, nameof(sign.owner), newOwner, out _, out _, out _);
         public static void SetGroupOwner(RequestSign sign, ulong group) => SetProperty(sign, nameof(sign.group), group, out _, out _, out _);
+        public static void SetSignTextSneaky(InteractableSign sign, string text)
+        {
+            if (!BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                return;
+            byte[] bytes = Encoding.UTF8.GetBytes(text);
+            byte[] state = region.barricades[index].barricade.state;
+            if (bytes.Length > byte.MaxValue)
+                return;
+            byte[] numArray1 = new byte[17 + bytes.Length];
+            byte[] numArray2 = numArray1;
+            Buffer.BlockCopy(state, 0, numArray2, 0, 16);
+            numArray1[16] = (byte)bytes.Length;
+            if (bytes.Length != 0)
+                Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
+            region.barricades[index].barricade.state = numArray1;
+        }
     }
     public class RequestSign
     {
@@ -211,6 +243,14 @@ namespace Uncreated.Warfare.Kits
                 this.transform = new SerializableTransform(barricadetransform);
                 if (save) RequestSigns.Save();
                 await InvokeUpdate();
+            }
+            if (exists && barricadetransform.TryGetComponent(out InteractableSign sign))
+            {
+                if (sign.text != SignText)
+                {
+                    RequestSigns.SetSignTextSneaky(sign, SignText);
+                    sign.updateText(SignText);
+                }
             }
         }
     }

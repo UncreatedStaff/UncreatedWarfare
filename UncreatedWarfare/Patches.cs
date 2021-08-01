@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using JetBrains.Annotations;
+using Rocket.API;
 using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -106,6 +107,128 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
+            }
+            // SDG.Unturned.Provider
+            /// <summary>
+            /// Postfix of <see cref="Provider.verifyNextPlayerInQueue()"/> to check if the new player in the queue is an admin, then pass them.
+            /// </summary>
+            [HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
+            [HarmonyPostfix]
+            static void OnPlayerEnteredQueue()
+            {
+                if (!UCWarfare.Config.Patches.EnableQueueSkip) return;
+                if (Provider.pending.Count > 0)
+                {
+                    SteamPending pending = Provider.pending[Provider.pending.Count - 1];
+                    if (pending.hasSentVerifyPacket)
+                        return;
+                    RocketPlayer pl = new RocketPlayer(pending.playerID.steamID.m_SteamID.ToString(Data.Locale), pending.playerID.playerName, false);
+                    if (pl.IsIntern() || pl.IsAdmin() ||   // checks for admin or intern status, then for 'HasQueueSkip' in the player's player save.
+                       (PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip))
+                        pending.sendVerifyPacket();
+                }
+            }
+            // SDG.Unturned.ChatManager
+            /// <summary>
+            /// Postfix of <see cref="ChatManager.ReceiveChatRequest(in ServerInvocationContext, byte, string)"/> to reroute local chats to squad.
+            /// </summary>
+            [HarmonyPatch(typeof(ChatManager), "ReceiveChatRequest")]
+            [HarmonyPrefix]
+            static bool OnChatRequested(in ServerInvocationContext context, byte flags, string text)
+            {
+                if (!UCWarfare.Config.Patches.ReceiveChatRequest) return true;
+                SteamPlayer callingPlayer = context.GetCallingPlayer();
+                if (callingPlayer == null || callingPlayer.player == null || Time.realtimeSinceStartup - callingPlayer.lastChat < ChatManager.chatrate)
+                    return false;
+                callingPlayer.lastChat = Time.realtimeSinceStartup;
+                EChatMode mode = (EChatMode)(flags & sbyte.MaxValue);
+                bool fromUnityEvent = (flags & 128) > 0;
+                if (text.Length < 2 || Dedicator.isDedicated & fromUnityEvent && !Provider.configData.UnityEvents.Allow_Client_Messages)
+                    return false;
+                text = text.Trim();
+                if (text.Length < 2)
+                    return false;
+                if (text.Length > ChatManager.MAX_MESSAGE_LENGTH)
+                    text = text.Substring(0, ChatManager.MAX_MESSAGE_LENGTH);
+                if (CommandWindow.shouldLogChat)
+                {
+                    switch (mode)
+                    {
+                        case EChatMode.GLOBAL:
+                            CommandWindow.Log(Provider.localization.format("Global", callingPlayer.playerID.characterName, callingPlayer.playerID.playerName, text));
+                            break;
+                        case EChatMode.LOCAL:
+                            CommandWindow.Log(Provider.localization.format("Local", callingPlayer.playerID.characterName, callingPlayer.playerID.playerName, text));
+                            break;
+                        case EChatMode.GROUP:
+                            CommandWindow.Log(Provider.localization.format("Group", callingPlayer.playerID.characterName, callingPlayer.playerID.playerName, text));
+                            break;
+                        default:
+                            return false;
+                    }
+                }
+                else if (mode != EChatMode.GLOBAL || mode != EChatMode.LOCAL || mode != EChatMode.GROUP) return false;
+                if (fromUnityEvent)
+                    UnturnedLog.info("UnityEventMsg {0}: '{1}'", callingPlayer.playerID.steamID, text);
+                Color chatted = Color.white;
+                ulong team = callingPlayer.GetTeam();
+                chatted = Teams.TeamManager.GetTeamColor(team);
+                if (callingPlayer.isAdmin && !Provider.hideAdmins)
+                    chatted = Palette.ADMIN;
+                bool isRich = false;
+                bool isVisible = true;
+                if (ChatManager.onChatted != null)
+                    ChatManager.onChatted(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
+                if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) & isVisible))
+                    return false;
+                if (ChatManager.onServerFormattingMessage != null)
+                {
+                    ChatManager.onServerFormattingMessage(callingPlayer, mode, ref text);
+                }
+                else
+                {
+                    text = "%SPEAKER%: " + text;
+                    if (mode != EChatMode.LOCAL)
+                    {
+                        if (mode == EChatMode.GROUP)
+                            text = "[T] " + text;
+                    }
+                }
+                if (mode == EChatMode.GLOBAL)
+                    ChatManager.serverSendMessage(text, chatted, callingPlayer, mode: EChatMode.GLOBAL, useRichTextFormatting: isRich);
+                else if (mode == EChatMode.LOCAL)
+                {
+                    float num = 16384f;
+                    UCPlayer player = UCPlayer.FromSteamPlayer(callingPlayer);
+                    if (player == null || player.Squad == null || player.Squad.Members == null)
+                    {
+                        foreach (SteamPlayer client in Provider.clients)
+                        {
+                            if (client.player != null && (double)(client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
+                                ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                        }
+                    } else
+                    {
+                        foreach (SteamPlayer client in Provider.clients)
+                        {
+                            if (player.Squad.Members.Exists(x => x.Steam64 == callingPlayer.playerID.steamID.m_SteamID))
+                                ChatManager.serverSendMessage("[S] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                            else if ((client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)) 
+                                ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                        }
+                    }
+                }
+                else
+                {
+                    if (mode != EChatMode.GROUP || !(callingPlayer.player.quests.groupID != CSteamID.Nil))
+                        return false;
+                    foreach (SteamPlayer client in Provider.clients)
+                    {
+                        if (!(client.player == null) && client.player.quests.isMemberOfSameGroupAs(callingPlayer.player))
+                            ChatManager.serverSendMessage(text, chatted, callingPlayer, client, EChatMode.GROUP, useRichTextFormatting: isRich);
+                    }
+                }
+                return false;
             }
             // SDG.Unturned.PlayerAnimator
             /// <summary>
@@ -323,9 +446,10 @@ namespace Uncreated.Warfare
                                         }
                                         byte[] state = region.barricades[index].barricade.state;
                                         byte[] bytes = Encoding.UTF8.GetBytes(newtext);
-                                        if (bytes.Length + 17 > byte.MaxValue)
+
+                                        if (bytes.Length > byte.MaxValue)
                                         {
-                                            F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 17} UTF8 bytes!");
+                                            F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue} UTF8 bytes (was {bytes.Length} bytes)!");
                                             bytes = Encoding.UTF8.GetBytes(sign.text);
                                         }
                                         byte[] numArray1 = new byte[17 + bytes.Length];
@@ -401,11 +525,11 @@ namespace Uncreated.Warfare
             /// </summary>
             [HarmonyPatch(typeof(InteractableTrap), "OnTriggerEnter")]
             [HarmonyPrefix]
-            static bool LandmineExplodeOverride(Collider other, InteractableTrap __instance, float ___lastActive,
+            static bool LandmineExplodeOverride(Collider other, InteractableTrap __instance, float ___lastActive, float ___setupDelay,
                 bool ___isExplosive, ushort ___explosion2, float ___playerDamage, float ___zombieDamage,
                 float ___animalDamage, float ___barricadeDamage, float ___structureDamage,
                 float ___vehicleDamage, float ___resourceDamage, float ___objectDamage,
-                float ___range2, bool ___isBroken)
+                float ___range2, bool ___isBroken, ref float ___lastTriggered)
             {
                 if (!UCWarfare.Config.Patches.UseableTrapOnTriggerEnter) return true;
                 CSteamID owner = CSteamID.Nil;
@@ -421,8 +545,9 @@ namespace Uncreated.Warfare
                         Data.OwnerComponents.RemoveAt(c);
                     }
                 }
-                if (other.isTrigger || Time.realtimeSinceStartup - ___lastActive < 0.25 || __instance.transform.parent != null && other.transform == __instance.transform.parent || !Provider.isServer)
+                if (other.isTrigger || Time.realtimeSinceStartup - ___lastActive < ___setupDelay || __instance.transform.parent != null && other.transform == __instance.transform.parent || !Provider.isServer)
                     return false;
+                ___lastTriggered = Time.realtimeSinceStartup;
                 OnLandmineExplode?.Invoke(__instance, other, OwnerComponent);
                 if (___isExplosive) // if hurts all in range, makes explosion
                 {
@@ -499,7 +624,7 @@ namespace Uncreated.Warfare
             /// </summary>
             [HarmonyPatch(typeof(PlayerLife), "simulate")]
             [HarmonyPrefix]
-            static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding)
+            static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding, ref uint ___lastRegenerate)
             {
                 if (!UCWarfare.Config.Patches.simulatePlayerLife) return true;
                 if (Provider.isServer)
@@ -513,6 +638,7 @@ namespace Uncreated.Warfare
                                 if (Data.ReviveManager != null && Data.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
                                 {
                                     ____isBleeding = false;
+                                    ___lastRegenerate = simulation; // reset last regeneration to stop it from regenerating hp since it thinks the player isnt bleeding.
                                 }
                             }
                         }

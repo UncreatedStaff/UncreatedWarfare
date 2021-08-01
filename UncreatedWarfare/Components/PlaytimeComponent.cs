@@ -118,15 +118,8 @@ namespace Uncreated.Warfare.Components
             CurrentTimeSeconds += dt;
             if (stats == null)
             {
-                if (Data.Gamemode is TeamCTF ctf)
-                {
-                    if (!ctf.GameStats.TryGetPlayer(player.channel.owner.playerID.steamID.m_SteamID, out stats))
-                    {
-                        stats = new PlayerCurrentGameStats(player);
-                        ctf.GameStats.playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, stats);
-                    }
-                }
-                else return;
+                F.LogWarning("stats is null " + player.name);
+                return;
             }
             if (player.IsOnFlag())
             {

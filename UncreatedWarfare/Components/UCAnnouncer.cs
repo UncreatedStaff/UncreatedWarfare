@@ -185,6 +185,7 @@ namespace Uncreated.Warfare.Components
                                 { "announce_fobs", "<color=#9da6a6>Building <color=#54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!</color>" },
                                 { "announce_squads", "<color=#c2b7a5>Join a squad with <color=#ffffff>/squad join</color> or create one with <color=#ffffff>/squad create</color> to gain officer points.</color>" },
                                 { "announce_ping", "<color=#c2b7a5>Ping locations for your squad by using the <color=#cedcde>POINT</color> gesture in the gestures menu.</color>" },
+                                { "announce_squad_chat", "<color=#a2a7ba>Use area chat while in a squad to communicate with your <color=#54e3ff>squad</color>, and group chat to communicate with your <color=#54e3ff>team</color>.</color>" }
                             }
                         }
                     };

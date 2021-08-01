@@ -65,10 +65,8 @@ namespace Uncreated.Warfare.Vehicles
                                 barricade = new Barricade(vb.BarricadeID)
                                 { state = Convert.FromBase64String(vb.State) };
                             }
-                            F.Log("found barricade " + barricade.id);
                             Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
                             BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
-                            F.Log("dropped barricade " + barricade.id);
                         }
                     }
 
@@ -148,12 +146,13 @@ namespace Uncreated.Warfare.Vehicles
 
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
+            if (vehicle == null) return;
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
             UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
 
             bool isOwnerOnline = owner != null;
             Players.FPlayerName ownernames = isOwnerOnline ? F.GetPlayerOriginalNames(owner.SteamPlayer) : Players.FPlayerName.Nil;
-            bool IsInOwnerSquad = owner.Squad != null && owner.Squad.Members.Contains(player);
+            bool IsInOwnerSquad = isOwnerOnline && owner.Squad != null && owner.Squad.Members.Contains(player);
             bool isOwnerInVehicle = false;
             float OwnerDistanceFromVehicle = 0;
 
@@ -247,7 +246,7 @@ namespace Uncreated.Warfare.Vehicles
                     OwnerDistanceFromVehicle = (UnturnedPlayer.FromCSteamID(vehicle.lockedOwner).Position - vehicle.transform.position).sqrMagnitude;
                 }
             }
-
+                
             if (isOwnerOnline && !IsInOwnerSquad && vehicle.isLocked && !(vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil) && !isOwnerInVehicle && OwnerDistanceFromVehicle <= 150 * 150)
             {
                 player.SendChat("vehicle_owner_not_in_vehicle", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()));

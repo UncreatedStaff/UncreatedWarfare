@@ -33,6 +33,19 @@ namespace Uncreated.Warfare
         public string CharacterName;
         public string NickName;
         public Rank OfficerRank;
+        /// <summary>[Unreliable]</summary>
+        public async Task<Rank> XPRank()
+        {
+            if (cachedXp == -1)
+                await RedownloadCachedXP();
+            if (_rank == null || isXpDirty)
+            {
+                _rank = XPManager.GetRank(cachedXp, out _, out _);
+                isXpDirty = _rank == null;
+            }
+            return _rank;
+        }
+        private Rank _rank;
         public Vector3 Position
         {
             get
@@ -63,10 +76,11 @@ namespace Uncreated.Warfare
                 _cachedOfp = value;
                 if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
                     c.UCPlayerStats.warfare_stats.TellOfficerPts(_cachedXp, Player.GetTeam());
-                else F.LogWarning("Unable to set cached xp because something was null.");
+                else F.LogWarning("Unable to set cached ofp because something was null.");
             }
         }
         private int _cachedXp = -1;
+        private bool isXpDirty = false;
         public int cachedXp
         {
             get => _cachedXp;
@@ -75,6 +89,7 @@ namespace Uncreated.Warfare
                 if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
                     c.UCPlayerStats.warfare_stats.TellXP(_cachedXp, Player.GetTeam());
                 else F.LogWarning("Unable to set cached xp because something was null.");
+                isXpDirty = true;
             }
         }
         public static UCPlayer FromID(ulong steamID)
@@ -165,7 +180,6 @@ namespace Uncreated.Warfare
         {
             get
             {
-                F.Log("getting kit");
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.MarkerEffect;
                 else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
@@ -177,7 +191,6 @@ namespace Uncreated.Warfare
         {
             get
             {
-                F.Log("getting sql kit");
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.SquadLeaderMarkerEffect;
                 else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
@@ -279,13 +292,21 @@ namespace Uncreated.Warfare
         public string KitName;
         [JsonSettable]
         public string SquadName;
-
+        [JsonSettable]
+        public bool HasQueueSkip;
+        [JsonSettable]
+        public long LastGame;
+        [JsonSettable]
+        public bool ShouldRespawnOnJoin;
         public PlayerSave(ulong Steam64)
         {
             this.Steam64 = Steam64;
             Team = 0;
             KitName = string.Empty;
             SquadName = string.Empty;
+            HasQueueSkip = false;
+            LastGame = 0;
+            ShouldRespawnOnJoin = false;
         }
         public PlayerSave()
         {
@@ -293,14 +314,20 @@ namespace Uncreated.Warfare
             Team = 0;
             KitName = string.Empty;
             SquadName = string.Empty;
+            HasQueueSkip = false;
+            LastGame = 0;
+            ShouldRespawnOnJoin = false;
         }
         [JsonConstructor]
-        public PlayerSave(ulong steam64, ulong team, string kitName, string squadName, bool ShouldKillOnNextJoin)
+        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin)
         {
-            this.Steam64 = steam64;
-            Team = team;
-            KitName = kitName;
-            SquadName = squadName;
+            this.Steam64 = Steam64;
+            this.Team = Team;
+            this.KitName = KitName;
+            this.SquadName = SquadName;
+            this.HasQueueSkip = HasQueueSkip;
+            this.LastGame = LastGame;
+            this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
         }
     }
 }

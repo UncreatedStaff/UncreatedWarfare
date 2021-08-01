@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.FOBs
@@ -26,7 +27,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (data.barricade.id == config.Data.FOBID)
             {
-                TryDeleteFOB(instanceID, data.group.GetTeam());
+                TryDeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeOwnerDataComponent o) ? o.lastDamaged : 0);
             }
         }
 
@@ -55,6 +56,8 @@ namespace Uncreated.Warfare.FOBs
             ulong team = Structure.group.GetTeam();
             if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
             {
+                if (F.TryGetPlaytimeComponent(Structure.owner, out PlaytimeComponent c) && c.stats != null)
+                    c.stats.fobsplaced++;
                 if (team == 1)
                 {
                     ctf.GameStats.fobsPlacedT1++;
@@ -93,15 +96,27 @@ namespace Uncreated.Warfare.FOBs
             UpdateUIForTeam(Structure.group.GetTeam());
         }
 
-        public static void TryDeleteFOB(uint instanceID, ulong team)
+        public static void TryDeleteFOB(uint instanceID, ulong team, ulong player)
         {
-            if (TeamManager.IsTeam1(team))
-                Team1FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
-            else if (TeamManager.IsTeam2(team))
-                Team2FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
-            if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null && ctf.State == Gamemodes.EState.ACTIVE) 
-                // doesnt count destroying fobs after game ends
+            FOB removed;
+            if (team == 1)
             {
+                removed = Team1FOBs.FirstOrDefault(x => x.Structure.instanceID == instanceID);
+                Team1FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
+            }
+            else if (team == 2)
+            {
+                removed = Team2FOBs.FirstOrDefault(x => x.Structure.instanceID == instanceID);
+                Team2FOBs.RemoveAll(f => f.Structure.instanceID == instanceID);
+            }
+            else removed = null;
+
+
+            if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null && ctf.State == Gamemodes.EState.ACTIVE)
+            // doesnt count destroying fobs after game ends
+            {
+                if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c) && c.stats != null)
+                    c.stats.fobsdestroyed++;
                 if (team == 1)
                 {
                     ctf.GameStats.fobsDestroyedT2++;
@@ -110,6 +125,9 @@ namespace Uncreated.Warfare.FOBs
                 {
                     ctf.GameStats.fobsDestroyedT1++;
                 }
+                UCPlayer ucplayer = UCPlayer.FromID(player);
+                if (ucplayer != null)
+                    Task.Run(async () => await XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player)));
             }
             UpdateUIForTeam(team);
         }
@@ -156,16 +174,16 @@ namespace Uncreated.Warfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
-            TeamManager.HasTeam(b.group) &&
+            (TeamManager.HasTeam(b.group) && 
             (b.barricade.id == config.Data.FOBID ||
             b.barricade.id == config.Data.FOBBaseID ||
             b.barricade.id == config.Data.AmmoCrateID ||
             b.barricade.id == config.Data.AmmoCrateBaseID ||
             b.barricade.id == config.Data.RepairStationID ||
-            b.barricade.id == config.Data.RepairStationBaseID) ||
+            b.barricade.id == config.Data.RepairStationBaseID)) || (
             config.Data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
             config.Data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
-            config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id)
+            config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id))
             ).ToList();
 
             foreach (BarricadeData data in FOBComponents)
@@ -340,7 +358,7 @@ namespace Uncreated.Warfare.FOBs
             MortarRequiredBuild = 10;
             MortarShellID = 38330;
 
-            LogiTruckIDs = new List<ushort>() { 38305, 38306 };
+            LogiTruckIDs = new List<ushort>() { 38305, 38306, 38311, 38312 };
             AmmoBagIDs = new List<ushort>() { 38398 };
 
             Fortifications = new List<Fortification>() {
@@ -360,6 +378,12 @@ namespace Uncreated.Warfare.FOBs
                 {
                     base_id = 38354,
                     barricade_id = 38355,
+                    required_build = 1
+                },
+                new Fortification
+                {
+                    base_id = 38358,
+                    barricade_id = 38359,
                     required_build = 1
                 }
             };

@@ -266,7 +266,7 @@ namespace Uncreated.Warfare
                 { "stats_war_time_value", "<color=#{1}>{0:hh\\:mm\\:ss}</color>" },
                 { "stats_player_float_value", "<color=#{1}>{0:0.00}</color>" },
                 { "stats_war_float_value", "<color=#{1}>{0:0.00}</color>" },
-                { "player_name_header", "<color=#{1}>{0}</color>" },
+                { "player_name_header", "<color=#{1}>{0}</color> - {2:n0}% presence." },
                 { "war_name_header", "<color=#{1}>{0}</color> vs <color=#{3}>{2}</color>" },
                 { "lblKills", "Kills: " },
                 { "lblDeaths", "Deaths: " },
@@ -298,7 +298,6 @@ namespace Uncreated.Warfare
 
                 // SIGNS - must prefix with "sign_" for them to work
                 { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
-                { "sign_kit_request", "<color=#{1}>{0}</color>\n<color=#{3}>{2}</color>\n<color=#{6}>{4}/{5}</color>" },
 
                 // Admin Commands
                 { "server_not_running", "<color=#9cffb3>This is not a server.</color>" },
@@ -551,13 +550,17 @@ namespace Uncreated.Warfare
                 { "team2_specops", "Spetsnaz" },
 
                 // Kit Signs
-                { "kit_free", "FREE" },
-                { "kit_available", "Anyone" },
+                { "kit_name", "<b>{0}</b>" },
+                { "kit_weapons", "<b>{0}</b>" },
                 { "kit_price_tickets", "{0} Tickets" },
-                { "kit_price_dollars", "$ {0}" },
-                { "kit_required_level", "Level: <color=#{1}>{0}</color>" },
+                { "kit_price_dollars", "$ {0:N2}" },
+                { "kit_required_level", "<color=#{1}>L {0}</color> <color=#{3}>- {2}</color>" }, // {0} = level number
                 { "kit_owned", "OWNED" },
+                { "kit_unlimited", "unlimited" },
                 { "kit_not_owned", "NOT OWNED" },
+                { "kit_player_count", "{0}/{1}" },
+                { "sign_kit_request", "{0}\n{1}\n{2}\n{3}" },  
+                // {0} = name, {1} = Lvl __ or '\n' if lvl == 0 or if premium cost, {2} = weapon list, {3} player count on team
 
                 // revives
                 { "heal_e_notmedic", "<color=#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.</color>" },
@@ -569,6 +572,7 @@ namespace Uncreated.Warfare
                 { "reload_reloaded_lang", "<color=#e6e3d5>Reloaded all translations.</color>" },
                 { "reload_reloaded_flags", "<color=#e6e3d5>Re-read flags from file and begain to start a new game.</color>" },
                 { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
+                { "reload_reloaded_kits", "<color=#e6e3d5>Reloaded all kits and request signs.</color>" },
 
                 //test
                 { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
@@ -628,7 +632,7 @@ namespace Uncreated.Warfare
                 { "xp_friendly_downed", "DOWNED FRIENDLY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_friendly_killed", "TEAMKILLED {0}" },
-                { "xp_fob_killed", "TEAMKILLED {0}" },
+                { "xp_fob_killed", "DESTROYED FOB" },
                 { "xp_deployed_fob", "TEAMMATE DEPLOYED" },
 
                 { "xp_victory", "VICTORY" },
@@ -825,11 +829,17 @@ namespace Uncreated.Warfare
             new ColorData("death_zombie_name_color", "788c5a"),
 
             // Request
-            new ColorData("kit_price_free", "f53b3b"),
-            new ColorData("kit_level", "f53b3b"),
-            new ColorData("kit_price_dollars", "f53b3b"),
-            new ColorData("kit_price_owned", "f53b3b"),
-            new ColorData("kit_price_tickets", "f53b3b"),
+            new ColorData("kit_public_header", "ffffff"),
+            new ColorData("kit_level_available", "ffffff"),
+            new ColorData("kit_level_available_abbr", "999999"),
+            new ColorData("kit_level_unavailable", "800000"),
+            new ColorData("kit_level_unavailable_abbr", "500000"),
+            new ColorData("kit_level_dollars", "7878ff"),
+            new ColorData("kit_level_dollars_owned", "769fb5"),
+            new ColorData("kit_weapon_list", "343434"),
+            new ColorData("kit_unlimited_players", "111111"),
+            new ColorData("kit_player_counts_available", "96ffb2"),
+            new ColorData("kit_player_counts_unavailable", "c2603e"),
 
             // Vehicle Sign
             new ColorData("vbs_background", "222222"),

@@ -163,7 +163,7 @@ namespace Uncreated.Warfare.Commands
                     if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF tctf)
                         tctf.ReloadConfig();
                     flaggm.LoadAllFlags();
-                    await flaggm.StartNextGame();
+                    await flaggm.StartNextGame(false);
                 }
                 Data.ExtraZones = JSONMethods.LoadExtraZones();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();

@@ -34,7 +34,6 @@ namespace Uncreated.Warfare
         internal static async Task OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => await OnGroupChanged?.Invoke(player, oldGroup, newGroup);
         internal static async Task GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             ulong oldteam = oldGroup.GetTeam();
             ulong newteam = newGroup.GetTeam();
 
@@ -48,7 +47,8 @@ namespace Uncreated.Warfare
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
             FOBManager.UpdateUI(UCPlayer.FromSteamPlayer(player));
 
-            await rtn;
+            await RequestSigns.InvokeLangUpdateForAllSigns(player);
+
             await XPManager.OnGroupChanged(player, oldGroup, newGroup);
             await OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
         }
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
         {
-            F.Log("Placed barricade: " + data.barricade.asset.itemName + ", " + location.position.ToString());
+            F.Log("Placed barricade: " + data.barricade.asset.itemName + ", " + location.position.ToString(), ConsoleColor.DarkGray);
             BarricadeOwnerDataComponent c = location.gameObject.AddComponent<BarricadeOwnerDataComponent>();
             c.SetData(data, region, location);
             Data.OwnerComponents.Add(c);
@@ -190,6 +190,15 @@ namespace Uncreated.Warfare
             }
             try
             {
+                // reset the player to spawn if they have joined in a different game as they last played in.
+                if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
+                {
+                    if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
+                    {
+                        player.Player.life.ReceiveRespawnRequest(false);
+                    }
+                }
+                Data.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -212,11 +221,13 @@ namespace Uncreated.Warfare
                     ulong team = player.GetTeam();
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
-                    if ((ucplayer.KitName == null || ucplayer.KitName == string.Empty) && team > 0 && team < 3 && 
-                    KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed)) 
-                        await KitManager.GiveKit(ucplayer, unarmed);
-                    else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) await KitManager.GiveKit(ucplayer, unarmed);
-                    else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                    if ((ucplayer.KitName == null || ucplayer.KitName == string.Empty) && team > 0 && team < 3)
+                    {
+                        if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+                            await KitManager.GiveKit(ucplayer, unarmed);
+                        else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) await KitManager.GiveKit(ucplayer, unarmed);
+                        else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                    }
                     pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStats.WarfareName);
                 });
                 F.Broadcast("player_connected", names.PlayerName);
@@ -232,6 +243,7 @@ namespace Uncreated.Warfare
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 4);
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
                 }
                 Data.ReviveManager.OnPlayerConnected(player);
 
@@ -245,6 +257,15 @@ namespace Uncreated.Warfare
             }
             
         }
+
+        internal static void onBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        {
+            if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeOwnerDataComponent t))
+            {
+                t.lastDamaged = instigatorSteamID.m_SteamID;
+            }
+        }
+
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
         {
             if (Data.Gamemode is TeamCTF ctf && player.IsOnFlag(out Flag flag))
@@ -449,6 +470,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            Data.ReviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = ucplayer.KitName;
@@ -497,7 +519,7 @@ namespace Uncreated.Warfare
                     UnityEngine.Object.Destroy(c);
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
                 }
-                Data.ReviveManager.OnPlayerDisconnected(player);
+                //Data.ReviveManager.OnPlayerDisconnected(player); (now called from Provider event)
             }
             catch (Exception ex)
             {
@@ -540,8 +562,6 @@ namespace Uncreated.Warfare
             {
                 team = save.Team;
             }
-            F.Log("PLAYER TEAM: " + team);
-
             string globalPrefix = "";
             string teamPrefix = "";
 
