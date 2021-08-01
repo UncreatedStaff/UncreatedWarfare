@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.Revives
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
 
                 target.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                EffectManager.askEffectClearByID(30600, target.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(36009, target.channel.owner.transportConnection);
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
@@ -181,7 +181,7 @@ namespace Uncreated.Warfare.Revives
             parameters.player.movement.sendPluginJumpMultiplier(0);
 
             parameters.player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-            EffectManager.sendUIEffect(30600, 30600, true);
+            EffectManager.sendUIEffect(36009, unchecked((short)36009), parameters.player.channel.owner.transportConnection, true, "YOU ARE INJURED.", "GIVE UP", "CALL FOR MEDIC");
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             if (parameters.killer != default && parameters.killer != CSteamID.Nil)
@@ -224,7 +224,7 @@ namespace Uncreated.Warfare.Revives
                 }
 
                 player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-                EffectManager.askEffectClearByID(30600, player.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(36009, player.Player.channel.owner.transportConnection);
             }
             ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
         }
