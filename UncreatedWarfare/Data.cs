@@ -133,6 +133,8 @@ namespace Uncreated.Warfare
         internal static ClientStaticMethod SendEffectClearAll { get; private set; }
         internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
         internal static MethodInfo AppendConsoleMethod;
+        internal static MethodInfo ReplicateStance;
+        internal static FieldInfo PrivateStance;
         internal static ConsoleInputOutputBase defaultIOHandler;
         internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
         internal static CancellationTokenSource CancelTcp = new CancellationTokenSource();
@@ -272,6 +274,22 @@ namespace Uncreated.Warfare
             catch (Exception ex)
             {
                 F.LogWarning("Couldn't get SendEffectClearAll from EffectManager, failed to get send effect clear all. (" + ex.Message + ").");
+            }
+            try
+            {
+                ReplicateStance = typeof(PlayerStance).GetMethod("replicateStance", BindingFlags.Instance | BindingFlags.NonPublic);
+            }
+            catch (Exception ex)
+            {
+                F.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
+            }
+            try
+            {
+                PrivateStance = typeof(PlayerStance).GetField("_stance", BindingFlags.Instance | BindingFlags.NonPublic);
+            }
+            catch (Exception ex)
+            {
+                F.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
             }
             SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)

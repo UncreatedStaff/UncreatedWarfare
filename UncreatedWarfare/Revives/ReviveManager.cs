@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Revives
         public readonly Dictionary<ulong, float> DistancesFromInitialShot;
         public readonly List<UCPlayer> Medics = new List<UCPlayer>();
         private Coroutine Updater;
-        const float SIM_TIME = 0.16f;
+        const float SIM_TIME = 0.08f;
         public ReviveManager()
         {
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
@@ -76,8 +76,8 @@ namespace Uncreated.Warfare.Revives
 
         private void OnPlayerRespawned(PlayerLife obj)
         {
-            if(obj.player.transform.TryGetComponent(out Reviver r))
-                r.TellStanceNoDelay(EPlayerStance.STAND);
+            if (obj.player.TryGetComponent(out Reviver r))
+                r.TellStandDelayed(0.75f);
         }
 
         internal void OnPlayerConnected(UnturnedPlayer player)
@@ -117,6 +117,16 @@ namespace Uncreated.Warfare.Revives
                 
                 // player will be removed from list in OnDeath
             }
+        }
+        internal void SetStanceBetter(Player player, EPlayerStance stance)
+        {
+            if (Data.PrivateStance == null || Data.ReplicateStance == null)
+            {
+                player.stance.checkStance(stance);
+                F.LogWarning("Unable to set stance properly, fell back to checkStance.");
+            }
+            Data.PrivateStance.SetValue(player.stance, stance);
+            Data.ReplicateStance.Invoke(player.stance, new object[] { false });
         }
         internal async Task OnPlayerHealedAsync(Player medic, Player target)
         {
@@ -187,7 +197,8 @@ namespace Uncreated.Warfare.Revives
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
             //F.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
-            if(DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
+            SetStanceBetter(player.Player, EPlayerStance.STAND);
+            if (DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
             {
                 if (player.Player.transform.TryGetComponent(out Reviver reviver))
                 {
@@ -340,6 +351,10 @@ namespace Uncreated.Warfare.Revives
                 {
                     r.stance = player.StartCoroutine(r.WaitToChangeStance(EPlayerStance.STAND, time));
                 }
+            }
+            public void TellStandDelayed(float time = 0.5f)
+            {
+                stance = StartCoroutine(WaitToChangeStance(EPlayerStance.STAND, time));
             }
             public void CancelStance()
             {
