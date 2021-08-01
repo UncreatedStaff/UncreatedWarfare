@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
@@ -245,11 +246,18 @@ namespace Uncreated.Warfare
             }
         }
         public event EventHandler<DeathEventArgs> OnDeathNotSuicide;
-        public async Task DeathNotSuicide(DeathEventArgs parameters)
+        public async Task DeathNotSuicide(DeathEventArgs parameters, bool sync)
         {
             F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.dead.GetTeamByte();
-            Task d = Data.Gamemode?.OnPlayerDeath(parameters);
+            Task d = null;
+            if (sync)
+                if (Data.Gamemode is TeamCTF ctf)
+                    ctf.OnPlayerDeathSync(parameters);
+                else
+                    Data.Gamemode?.OnPlayerDeath(parameters).GetAwaiter().GetResult();
+            else
+                d = Data.Gamemode?.OnPlayerDeath(parameters);
             if (team == 1 || team == 2)
             {
                 Task s = TicketManager.OnPlayerDeath(parameters);
@@ -261,7 +269,7 @@ namespace Uncreated.Warfare
                     pt.UCPlayerStats.warfare_stats.TellDeathNonSuicide(parameters, false);
                     pt.UCPlayerStats.SaveAsync();
                 }
-                if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf)
+                if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)
                     {
@@ -272,14 +280,44 @@ namespace Uncreated.Warfare
                         ctf.GameStats.casualtiesT2++;
                     }
                 }
-                await a;
-                await s;
+                if (sync)
+                    a.GetAwaiter().GetResult();
+                else
+                    await a;
+                if (sync)
+                    s.GetAwaiter().GetResult();
+                else
+                    await s;
             }
             OnDeathNotSuicide?.Invoke(this, parameters);
             OnPlayerDeathGlobal?.Invoke(parameters);
-            await d;
+            if (!sync)
+                await d;
         }
-        private async void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
+        internal bool shouldwait = false;
+        private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
+        {
+            try
+            {
+                if (shouldwait)
+                {
+                    F.Log("starting sync death message");
+                    OnPlayerDeathAsync(dead, cause, limb, murderer, true).GetAwaiter().GetResult();
+                    F.Log("ending sync death message");
+                    shouldwait = false;
+                }
+                else
+                {
+                    OnPlayerDeathAsync(dead, cause, limb, murderer, false).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error in Uncreated Deaths: ");
+                F.LogError(ex);
+            }
+        }
+        private async Task OnPlayerDeathAsync(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer, bool sync = false)
         {
             if (cause == EDeathCause.LANDMINE)
             {
@@ -393,17 +431,33 @@ namespace Uncreated.Warfare
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
-                        if (Config.DeathMessages.PenalizeSuicides)
-                            await Suicide(new SuicideEventArgs()
-                            {
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = 0,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key,
-                                limb = limb
-                            });
+                        if (sync)
+                        {
+                            if (Config.DeathMessages.PenalizeSuicides)
+                                Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key,
+                                    limb = limb
+                                }).GetAwaiter().GetResult();
+                        } else
+                        {
+                            if (Config.DeathMessages.PenalizeSuicides)
+                                await Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key,
+                                    limb = limb
+                                });
+                        }
                     }
                     else if (placerTeam == triggererTeam)
                     {
@@ -422,19 +476,38 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = true
                             };
-                            await Teamkill(a);
-                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
-                                await DeathNotSuicide(new DeathEventArgs()
-                                {
-                                    killerargs = a,
-                                    cause = cause,
-                                    dead = dead.Player,
-                                    distance = 0,
-                                    limb = limb,
-                                    item = landmineID,
-                                    itemName = landmineName,
-                                    key = key
-                                });
+                            if (sync)
+                            {
+                                Task k = Teamkill(a);
+                                if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                    DeathNotSuicide(new DeathEventArgs()
+                                    {
+                                        killerargs = a,
+                                        cause = cause,
+                                        dead = dead.Player,
+                                        distance = 0,
+                                        limb = limb,
+                                        item = landmineID,
+                                        itemName = landmineName,
+                                        key = key
+                                    }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Teamkill(a);
+                                if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                    await DeathNotSuicide(new DeathEventArgs()
+                                    {
+                                        killerargs = a,
+                                        cause = cause,
+                                        dead = dead.Player,
+                                        distance = 0,
+                                        limb = limb,
+                                        item = landmineID,
+                                        itemName = landmineName,
+                                        key = key
+                                    }, sync);
+                            }
                         }
                         else
                         {
@@ -451,18 +524,36 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = false
                             };
-                            await Kill(a);
-                            await DeathNotSuicide(new DeathEventArgs()
+                            if (sync)
                             {
-                                killerargs = a,
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = 0,
-                                limb = limb,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key
-                            });
+                                Task k = Kill(a);
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Kill(a);
+                                await DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync);
+                            }
                         }
                     }
                     else
@@ -482,18 +573,36 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = false
                             };
-                            await Kill(a);
-                            await DeathNotSuicide(new DeathEventArgs()
+                            if (sync)
                             {
-                                killerargs = a,
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = 0,
-                                limb = limb,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key
-                            });
+                                Task k = Kill(a);
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Kill(a);
+                                await DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync);
+                            }
                         }
                         else // dead team == triggerer team
                         {
@@ -510,18 +619,36 @@ namespace Uncreated.Warfare
                                 distance = 0,
                                 teamkill = false
                             };
-                            await Kill(a);
-                            await DeathNotSuicide(new DeathEventArgs()
+                            if (sync)
                             {
-                                killerargs = a,
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = 0,
-                                limb = limb,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key
-                            });
+                                Task k = Kill(a);
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Kill(a);
+                                await DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    limb = limb,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync);
+                            }
                         }
                     }
                 }
@@ -529,17 +656,33 @@ namespace Uncreated.Warfare
                 {
                     if (dead.Player.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
-                        if (Config.DeathMessages.PenalizeSuicides)
-                            await Suicide(new SuicideEventArgs()
-                            {
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = 0,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key,
-                                limb = limb
-                            });
+                        if (sync)
+                        {
+                            if (Config.DeathMessages.PenalizeSuicides)
+                                Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key,
+                                    limb = limb
+                                }).GetAwaiter().GetResult();
+                        } else
+                        {
+                            if (Config.DeathMessages.PenalizeSuicides)
+                                await Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key,
+                                    limb = limb
+                                });
+                        }
                     }
                     else if (deadTeam == placerTeam)
                     {
@@ -556,19 +699,38 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = true
                         };
-                        await Teamkill(a);
-                        if (Config.DeathMessages.PenalizeTeamkilledPlayers)
-                            await DeathNotSuicide(new DeathEventArgs()
-                            {
-                                killerargs = a,
-                                cause = cause,
-                                limb = limb,
-                                dead = dead.Player,
-                                distance = 0,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key
-                            });
+                        if (sync)
+                        {
+                            Task k = Teamkill(a);
+                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    limb = limb,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync).GetAwaiter().GetResult();
+                            k.GetAwaiter().GetResult();
+                        } else
+                        {
+                            await Teamkill(a);
+                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                await DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    limb = limb,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync);
+                        }
                     }
                     else
                     {
@@ -585,35 +747,70 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = false
                         };
-                        await Kill(a);
-                        await DeathNotSuicide(new DeathEventArgs()
+                        if (sync)
                         {
-                            killerargs = a,
-                            cause = cause,
-                            limb = limb,
-                            dead = dead.Player,
-                            distance = 0,
-                            item = landmineID,
-                            itemName = landmineName,
-                            key = key
-                        });
+                            Task k = Kill(a);
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                limb = limb,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            }, sync).GetAwaiter().GetResult();
+                            k.GetAwaiter().GetResult();
+                        }
+                        else
+                        {
+                            await Kill(a);
+                            await DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                limb = limb,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            }, sync);
+                        }
                     }
                 }
                 else if (foundTriggerer)
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
-                        if (Config.DeathMessages.PenalizeSuicides)
-                            await Suicide(new SuicideEventArgs()
-                            {
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = 0,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key,
-                                limb = limb
-                            });
+                        if (sync)
+                        {
+                            if (Config.DeathMessages.PenalizeSuicides)
+                                Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key,
+                                    limb = limb
+                                }).GetAwaiter().GetResult();
+                        } else
+                        {
+                            if (Config.DeathMessages.PenalizeSuicides)
+                                await Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key,
+                                    limb = limb
+                                });
+                        }
                     }
                     else if (deadTeam == triggererTeam)
                     {
@@ -630,19 +827,38 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = true
                         };
-                        await Teamkill(a);
-                        if (Config.DeathMessages.PenalizeTeamkilledPlayers)
-                            await DeathNotSuicide(new DeathEventArgs()
-                            {
-                                killerargs = a,
-                                cause = cause,
-                                limb = limb,
-                                dead = dead.Player,
-                                distance = 0,
-                                item = landmineID,
-                                itemName = landmineName,
-                                key = key
-                            });
+                        if (sync)
+                        {
+                            Task k = Teamkill(a);
+                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    limb = limb,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                        } else
+                        {
+                            await Teamkill(a);
+                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                await DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    killerargs = a,
+                                    cause = cause,
+                                    limb = limb,
+                                    dead = dead.Player,
+                                    distance = 0,
+                                    item = landmineID,
+                                    itemName = landmineName,
+                                    key = key
+                                }, sync);
+                        }
                     }
                     else
                     {
@@ -659,23 +875,39 @@ namespace Uncreated.Warfare
                             distance = 0,
                             teamkill = false
                         };
-                        await Kill(a);
-                        await DeathNotSuicide(new DeathEventArgs()
+                        if (sync)
                         {
-                            killerargs = a,
-                            cause = cause,
-                            limb = limb,
-                            dead = dead.Player,
-                            distance = 0,
-                            item = landmineID,
-                            itemName = landmineName,
-                            key = key
-                        });
+                            Task k = Kill(a);
+                            DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                limb = limb,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            }, sync).GetAwaiter().GetResult();
+                            k.GetAwaiter().GetResult();
+                        } else
+                        {
+                            await Kill(a);
+                            await DeathNotSuicide(new DeathEventArgs()
+                            {
+                                killerargs = a,
+                                cause = cause,
+                                limb = limb,
+                                dead = dead.Player,
+                                distance = 0,
+                                item = landmineID,
+                                itemName = landmineName,
+                                key = key
+                            }, sync);
+                        }
                     }
                 }
-                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 LogLandmineMessage(key, dead.Player, placerName, placerTeam, limb, landmineName, triggererName, triggererTeam);
-                await rtn;
             }
             else
             {
@@ -794,16 +1026,31 @@ namespace Uncreated.Warfare
                     if (killer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
-                            await Suicide(new SuicideEventArgs()
+                            if (sync)
                             {
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = distance,
-                                item = item,
-                                itemName = itemName,
-                                key = key,
-                                limb = limb
-                            });
+                                Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = distance,
+                                    item = item,
+                                    itemName = itemName,
+                                    key = key,
+                                    limb = limb
+                                }).GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Suicide(new SuicideEventArgs()
+                                {
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = distance,
+                                    item = item,
+                                    itemName = itemName,
+                                    key = key,
+                                    limb = limb
+                                });
+                            }
                     }
                     else
                     {
@@ -822,18 +1069,36 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 teamkill = false
                             };
-                            await Kill(a);
-                            await DeathNotSuicide(new DeathEventArgs()
+                            if (sync)
                             {
-                                limb = limb,
-                                cause = cause,
-                                dead = dead.Player,
-                                distance = distance,
-                                item = item,
-                                itemName = itemName,
-                                key = key,
-                                killerargs = a
-                            });
+                                 Task k = Kill(a);
+                                DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    limb = limb,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = distance,
+                                    item = item,
+                                    itemName = itemName,
+                                    key = key,
+                                    killerargs = a
+                                }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Kill(a);
+                                await DeathNotSuicide(new DeathEventArgs()
+                                {
+                                    limb = limb,
+                                    cause = cause,
+                                    dead = dead.Player,
+                                    distance = distance,
+                                    item = item,
+                                    itemName = itemName,
+                                    key = key,
+                                    killerargs = a
+                                }, sync);
+                            }
                         }
                         else
                         {
@@ -850,53 +1115,79 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 teamkill = true
                             };
-                            await Teamkill(a);
-                            if (Config.DeathMessages.PenalizeTeamkilledPlayers)
-                                await DeathNotSuicide(new DeathEventArgs()
-                                {
-                                    limb = limb,
-                                    cause = cause,
-                                    dead = dead.Player,
-                                    distance = distance,
-                                    item = item,
-                                    itemName = itemName,
-                                    key = key,
-                                    killerargs = a
-                                });
+                            if (sync)
+                            {
+                                Task k = Teamkill(a);
+                                if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                    DeathNotSuicide(new DeathEventArgs()
+                                    {
+                                        limb = limb,
+                                        cause = cause,
+                                        dead = dead.Player,
+                                        distance = distance,
+                                        item = item,
+                                        itemName = itemName,
+                                        key = key,
+                                        killerargs = a
+                                    }, sync).GetAwaiter().GetResult();
+                                k.GetAwaiter().GetResult();
+                            } else
+                            {
+                                await Teamkill(a);
+                                if (Config.DeathMessages.PenalizeTeamkilledPlayers)
+                                    await DeathNotSuicide(new DeathEventArgs()
+                                    {
+                                        limb = limb,
+                                        cause = cause,
+                                        dead = dead.Player,
+                                        distance = distance,
+                                        item = item,
+                                        itemName = itemName,
+                                        key = key,
+                                        killerargs = a
+                                    }, sync);
+                            }
                         }
                     }
                 }
                 else
                 {
-                    await DeathNotSuicide(new DeathEventArgs()
+                    if (sync)
                     {
-                        limb = limb,
-                        cause = cause,
-                        dead = dead.Player,
-                        distance = distance,
-                        item = item,
-                        itemName = itemName,
-                        key = key,
-                        killerargs = default
-                    });
+                        DeathNotSuicide(new DeathEventArgs()
+                        {
+                            limb = limb,
+                            cause = cause,
+                            dead = dead.Player,
+                            distance = distance,
+                            item = item,
+                            itemName = itemName,
+                            key = key,
+                            killerargs = default
+                        }, sync).GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        await DeathNotSuicide(new DeathEventArgs()
+                        {
+                            limb = limb,
+                            cause = cause,
+                            dead = dead.Player,
+                            distance = distance,
+                            item = item,
+                            itemName = itemName,
+                            key = key,
+                            killerargs = default
+                        }, sync);
+                    }
                 }
-                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                 LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
-                await rtn;
             }
-            SynchronizationContext oldthread = await ThreadTool.SwitchToGameThread();
             OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
-            await oldthread;
         }
         private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
         {
             F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
-            F.Log(message, ConsoleColor.Cyan);
-        }
-        private async Task LogOfflineDeathMessage(string key, EDeathCause backupcause, ulong dead, ulong deadteam, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
-        {
-            FPlayerName deadnames = await Data.DatabaseManager.GetUsernames(dead);
-            F.BroadcastDeath(key, backupcause, deadnames, deadteam, killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
         private void LogLandmineMessage(string key, Player dead, FPlayerName killerName, ulong killerGroup, ELimb limb, string landmineName, FPlayerName triggererName, ulong triggererTeam)

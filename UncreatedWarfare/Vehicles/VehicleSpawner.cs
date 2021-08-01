@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.Vehicles
                 if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
                 {
                     if (UCWarfare.Config.Debug)
-                        F.Log("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.");
+                        F.Log("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.", ConsoleColor.DarkGray);
                     DeleteSpawn(data.instanceID, EStructType.BARRICADE);
                 }
             }
@@ -60,7 +60,7 @@ namespace Uncreated.Warfare.Vehicles
                 if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
                 {
                     if (UCWarfare.Config.Debug)
-                        F.Log("Vehicle spawn was deregistered because the structure was salvaged or destroyed.");
+                        F.Log("Vehicle spawn was deregistered because the structure was salvaged or destroyed.", ConsoleColor.DarkGray);
                     DeleteSpawn(data.instanceID, EStructType.STRUCTURE);
                 }
             }
@@ -304,7 +304,7 @@ namespace Uncreated.Warfare.Vehicles
                     veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
                     LinkNewVehicle(instanceID);
                     if (UCWarfare.Config.Debug)
-                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}");
+                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {BarricadeData.point}", ConsoleColor.DarkGray);
                 }
                 else if (type == EStructType.STRUCTURE)
                 {
@@ -321,7 +321,7 @@ namespace Uncreated.Warfare.Vehicles
                     veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
                     LinkNewVehicle(instanceID);
                     if (UCWarfare.Config.Debug)
-                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}");
+                        F.Log($"VEHICLE SPAWNER: spawned {UCAssetManager.FindVehicleAsset(VehicleID).vehicleName} - {VehicleID} at spawn {StructureData.point}", ConsoleColor.DarkGray);
                 }
             }
             catch (Exception ex)

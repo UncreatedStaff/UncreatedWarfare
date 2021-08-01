@@ -35,6 +35,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public bool isScreenUp = false;
         public WarStatsTracker GameStats;
 
+
         // events
         public event ObjectiveChangedDelegate OnObjectiveChanged;
         public event FlagCapturedHandler OnFlagCaptured;
@@ -83,9 +84,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override async Task OnPlayerDeath(UCWarfare.DeathEventArgs args)
         {
+            OnPlayerDeathSync(args);
+            await Task.Yield();
+        }
+        public void OnPlayerDeathSync(UCWarfare.DeathEventArgs args)
+        {
             InAMC.Remove(args.dead.channel.owner.playerID.steamID.m_SteamID);
             EventFunctions.RemoveDamageMessageTicks(args.dead.channel.owner.playerID.steamID.m_SteamID);
-            await Task.Yield();
         }
         public override async Task Init()
         {
@@ -128,8 +133,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EndScreen.ShuttingDown = shutdownAfterGame;
                 EndScreen.ShuttingDownMessage = shutdownMessage;
                 EndScreen.ShuttingDownPlayer = shutdownPlayer;
-                foreach (SteamPlayer player in Provider.clients)
-                    CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
                 isScreenUp = true;
                 await EndScreen.EndGame(Config.ProgressChars);
             }
@@ -150,6 +153,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public override async Task StartNextGame(bool onLoad = false)
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
+            await base.StartNextGame(onLoad); // set game id
             await LoadRotation();
             State = EState.ACTIVE;
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
@@ -355,11 +359,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
                 else
                 {
-                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     ObjectiveT1Index = flag.index + 1;
                     await InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
                     await InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
-                    await rtn;
+                    for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
+                    {
+                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats != null)
+                            c.stats.captures++;
+                    }
                 }
             }
             else if (NewOwner == 2)
@@ -372,11 +379,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 else
                 {
 
-                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     ObjectiveT2Index = flag.index - 1;
                     await InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
                     await InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
-                    await rtn;
+                    for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
+                    {
+                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats != null)
+                            c.stats.captures++;
+                    }
                 }
             }
             if (OldOwner == 1)
@@ -385,10 +395,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 ObjectiveT1Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     await InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
                     await InvokeOnFlagNeutralized(flag, 2, 1);
-                    await rtn;
                 }
             }
             else if (OldOwner == 2)
@@ -397,10 +405,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 ObjectiveT2Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                     await InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
                     await InvokeOnFlagNeutralized(flag, 1, 2);
-                    await rtn;
                 }
             }
             SendUIParameters t1 = SendUIParameters.Nil;

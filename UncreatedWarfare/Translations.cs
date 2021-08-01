@@ -266,7 +266,7 @@ namespace Uncreated.Warfare
                 { "stats_war_time_value", "<color=#{1}>{0:hh\\:mm\\:ss}</color>" },
                 { "stats_player_float_value", "<color=#{1}>{0:0.00}</color>" },
                 { "stats_war_float_value", "<color=#{1}>{0:0.00}</color>" },
-                { "player_name_header", "<color=#{1}>{0}</color>" },
+                { "player_name_header", "<color=#{1}>{0}</color> - {2:n0}% presence." },
                 { "war_name_header", "<color=#{1}>{0}</color> vs <color=#{3}>{2}</color>" },
                 { "lblKills", "Kills: " },
                 { "lblDeaths", "Deaths: " },
@@ -631,7 +631,7 @@ namespace Uncreated.Warfare
                 { "xp_enemy_downed", "DOWNED ENEMY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_friendly_killed", "TEAMKILLED {0}" },
-                { "xp_fob_killed", "TEAMKILLED {0}" },
+                { "xp_fob_killed", "DESTROYED FOB" },
                 { "xp_deployed_fob", "TEAMMATE DEPLOYED" },
 
                 { "xp_victory", "VICTORY" },

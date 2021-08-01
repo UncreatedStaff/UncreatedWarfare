@@ -164,20 +164,28 @@ namespace Uncreated.Warfare.Stats
         public void TellDeathNonSuicide(UCWarfare.DeathEventArgs parameters, bool save = true)
         {
             this.deaths++;
-            ulong deadteam = F.GetTeam(parameters.dead);
-            int teamindex = teams.FindIndex(x => x.id == deadteam);
-            if (teamindex != -1)
+            try
             {
-                teams[teamindex].AddDeathNonSuicide(false, parameters);
-            }
-            else
-            {
-                if (deadteam == 1 || deadteam == 2)
+                ulong deadteam = F.GetTeam(parameters.dead);
+                int teamindex = teams.FindIndex(x => x.id == deadteam);
+                if (teamindex != -1)
                 {
-                    Team team = new Team(deadteam, deadteam == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(deadteam, 0, false));
-                    team.AddDeathNonSuicide(false, parameters);
-                    AddTeam(team);
+                    teams[teamindex].AddDeathNonSuicide(false, parameters);
                 }
+                else
+                {
+                    if (deadteam == 1 || deadteam == 2)
+                    {
+                        Team team = new Team(deadteam, deadteam == 1 ? Teams.TeamManager.Team1Code : Teams.TeamManager.Team2Code, Teams.TeamManager.TranslateName(deadteam, 0, false));
+                        team.AddDeathNonSuicide(false, parameters);
+                        AddTeam(team);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error saving death non suicide: ");
+                F.LogError(ex);
             }
             if (save) Save();
         }

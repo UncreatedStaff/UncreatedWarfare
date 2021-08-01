@@ -19,6 +19,7 @@ namespace Uncreated.Warfare.Components
         public BarricadeData data;
         public BarricadeRegion region;
         public Transform barricadeTransform;
+        public ulong lastDamaged;
         public void SetData(BarricadeData data, BarricadeRegion region, Transform transform)
         {
             owner = PlayerTool.getSteamPlayer(data.owner);

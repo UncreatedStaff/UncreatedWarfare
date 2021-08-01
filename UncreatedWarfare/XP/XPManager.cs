@@ -227,9 +227,8 @@ namespace Uncreated.Warfare.XP
             }
             else
             {
-                if (Data.Languages.ContainsKey(player))
+                if (Data.Languages.TryGetValue(player, out string lang))
                 {
-                    string lang = Data.Languages[player];
                     if (!name_translations.TryGetValue(lang, out string newname))
                     {
                         if (name_translations.TryGetValue(JSONMethods.DefaultLanguage, out newname))
@@ -276,9 +275,8 @@ namespace Uncreated.Warfare.XP
             }
             else
             {
-                if (Data.Languages.ContainsKey(player))
+                if (Data.Languages.TryGetValue(player, out string lang))
                 {
-                    string lang = Data.Languages[player];
                     if (!abbreviation_translations.TryGetValue(lang, out string newname))
                     {
                         if (abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out newname))

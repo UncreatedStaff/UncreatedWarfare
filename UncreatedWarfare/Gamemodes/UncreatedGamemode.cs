@@ -23,6 +23,8 @@ namespace Uncreated.Warfare.Gamemodes
         protected string shutdownMessage = string.Empty;
         protected bool shutdownAfterGame = false;
         protected ulong shutdownPlayer = 0;
+
+        public long GameID;
         public Gamemode(string Name, float EventLoopSpeed)
         {
             this.Name = Name;
@@ -83,7 +85,14 @@ namespace Uncreated.Warfare.Gamemodes
             shutdownPlayer = 0;
         }
         public abstract Task DeclareWin(ulong winner);
-        public abstract Task StartNextGame(bool onLoad = false);
+        public async virtual Task StartNextGame(bool onLoad = false)
+        {
+            GameID = DateTime.Now.Ticks;
+            for (int i = 0; i < Provider.clients.Count; i++)
+                if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = GameID;
+            PlayerManager.Save();
+            await Task.Yield();
+        }
         public virtual void Dispose()
         {
             Cancel();

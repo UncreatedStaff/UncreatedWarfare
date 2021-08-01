@@ -30,6 +30,7 @@ namespace Uncreated.Warfare.Revives
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
             UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
+            //Provider.onEnemyDisconnected += OnPlayerDisconnected;
             foreach(SteamPlayer player in Provider.clients)
             {
                 player.player.stance.onStanceUpdated += delegate
@@ -52,14 +53,18 @@ namespace Uncreated.Warfare.Revives
         private void UseableConsumeable_onPerformingAid(Player healer, Player downed, ItemConsumeableAsset asset, ref bool shouldAllow)
         {
             UCPlayer medic = UCPlayer.FromPlayer(healer);
-
+            if (medic == null)
+            {
+                shouldAllow = false;
+                return;
+            }
             if (medic.GetTeam() != downed.GetTeam())
             {
                 medic.Message("heal_e_enemy");
                 shouldAllow = false;
                 return;
             }
-            if (!DownedPlayers.ContainsKey(healer.channel.owner.playerID.steamID.m_SteamID)) // if not injured
+            if (!DownedPlayers.ContainsKey(downed.channel.owner.playerID.steamID.m_SteamID)) // if not injured
                 return;
             if (medic.KitClass != Kit.EClass.MEDIC)
             {
@@ -67,7 +72,6 @@ namespace Uncreated.Warfare.Revives
                 shouldAllow = false;
                 return;
             }
-
         }
 
         private void OnPlayerRespawned(PlayerLife obj)
@@ -89,19 +93,27 @@ namespace Uncreated.Warfare.Revives
             DownedPlayers.Remove(player.CSteamID.m_SteamID);
             DistancesFromInitialShot.Remove(player.CSteamID.m_SteamID);
         }
-        internal void OnPlayerDisconnected(UnturnedPlayer player)
+        /// <summary>Pre-destroy</summary>
+        internal void OnPlayerDisconnected(SteamPlayer player)
         {
-            player.Player.equipment.onEquipRequested -= OnEquipRequested;
-            player.Player.stance.onStanceUpdated -= delegate
+            player.player.equipment.onEquipRequested -= OnEquipRequested;
+            player.player.stance.onStanceUpdated -= delegate
             {
-                StanceUpdatedLocal(player.Player.channel.owner);
+                StanceUpdatedLocal(player);
             };
-            Medics.RemoveAll(x => x == null || x.Steam64 == player.CSteamID.m_SteamID);
-            if (DownedPlayers.TryGetValue(player.CSteamID.m_SteamID, out DamagePlayerParameters p))
+            Medics.RemoveAll(x => x == null || x.Steam64 == player.playerID.steamID.m_SteamID);
+            if (DownedPlayers.TryGetValue(player.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
             {
+                if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
+                {
+                    save.ShouldRespawnOnJoin = true;
+                    PlayerManager.Save();
+                }
                 p.damage = 255f;
                 p.times = 1;
-                DamageTool.damagePlayer(p, out _); // kill the player if they're down and try to leave.
+                UCWarfare.I.shouldwait = true; // make death message synchronous and not run and forget.
+                player.player.life.askDamage(byte.MaxValue, Vector3.up, p.cause, p.limb, p.killer, out _, p.trackKill, p.ragdollEffect, false, true);
+                //DamageTool.damagePlayer(p, out _); // kill the player if they're down and try to leave.
                 
                 // player will be removed from list in OnDeath
             }
@@ -140,7 +152,6 @@ namespace Uncreated.Warfare.Revives
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters)
         {
             shouldAllow = false;
-
             parameters.player.equipment.dequip();
 
             // times per second FixedUpdate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
@@ -172,8 +183,6 @@ namespace Uncreated.Warfare.Revives
                 reviver.TellProneDelayed();
                 //reviver.StartBleedout();
             }
-
-            
         }
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
@@ -233,6 +242,7 @@ namespace Uncreated.Warfare.Revives
             }
             UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
             PlayerLife.OnRevived_Global -= OnPlayerRespawned;
+            //Provider.onEnemyDisconnected -= OnPlayerDisconnected;
             if (Updater != null)
                 UCWarfare.I.StopCoroutine(Updater);
             Updater = null;

@@ -180,7 +180,6 @@ namespace Uncreated.Warfare
         {
             get
             {
-                F.Log("getting kit");
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.MarkerEffect;
                 else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
@@ -192,7 +191,6 @@ namespace Uncreated.Warfare
         {
             get
             {
-                F.Log("getting sql kit");
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.SquadLeaderMarkerEffect;
                 else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
@@ -286,13 +284,21 @@ namespace Uncreated.Warfare
         public string KitName;
         [JsonSettable]
         public string SquadName;
-
+        [JsonSettable]
+        public bool HasQueueSkip;
+        [JsonSettable]
+        public long LastGame;
+        [JsonSettable]
+        public bool ShouldRespawnOnJoin;
         public PlayerSave(ulong Steam64)
         {
             this.Steam64 = Steam64;
             Team = 0;
             KitName = string.Empty;
             SquadName = string.Empty;
+            HasQueueSkip = false;
+            LastGame = 0;
+            ShouldRespawnOnJoin = false;
         }
         public PlayerSave()
         {
@@ -300,14 +306,20 @@ namespace Uncreated.Warfare
             Team = 0;
             KitName = string.Empty;
             SquadName = string.Empty;
+            HasQueueSkip = false;
+            LastGame = 0;
+            ShouldRespawnOnJoin = false;
         }
         [JsonConstructor]
-        public PlayerSave(ulong steam64, ulong team, string kitName, string squadName, bool ShouldKillOnNextJoin)
+        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin)
         {
-            this.Steam64 = steam64;
-            Team = team;
-            KitName = kitName;
-            SquadName = squadName;
+            this.Steam64 = Steam64;
+            this.Team = Team;
+            this.KitName = KitName;
+            this.SquadName = SquadName;
+            this.HasQueueSkip = HasQueueSkip;
+            this.LastGame = LastGame;
+            this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
         }
     }
 }

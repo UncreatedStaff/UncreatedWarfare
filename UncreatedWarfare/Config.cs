@@ -196,6 +196,8 @@ namespace Uncreated.Warfare
         public bool ReceiveGestureRequest;
         public bool project;
         public bool replicateSetMarker;
+        public bool ReceiveChatRequest;
+        public bool EnableQueueSkip;
 
         public PatchToggles()
         {
@@ -219,7 +221,10 @@ namespace Uncreated.Warfare
             this.ReceiveGestureRequest = true;
             this.project = true;
             this.replicateSetMarker = true;
+            this.ReceiveChatRequest = true;
+            this.EnableQueueSkip = true;
         }
+
     }
     public class AdminLoggerSettings
     {

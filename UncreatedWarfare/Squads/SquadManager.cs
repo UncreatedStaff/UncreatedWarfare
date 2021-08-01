@@ -1,7 +1,9 @@
 ﻿using Rocket.Unturned.Player;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -397,7 +399,7 @@ namespace Uncreated.Warfare.Squads
         }
     }
 
-    public class Squad
+    public class Squad : IEnumerable<UCPlayer>
     {
         public string Name;
         public ulong Team;
@@ -415,8 +417,19 @@ namespace Uncreated.Warfare.Squads
             Members = new List<UCPlayer> { leader };
         }
 
+        public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
+
         public bool IsFull() => Members.Count < 6;
         public bool IsNotSolo() => Members.Count > 1;
+
+        IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
+        public IEnumerator<ITransportConnection> EnumerateMembers()
+        {
+            IEnumerator<UCPlayer> players = Members.GetEnumerator();
+            while (players.MoveNext())
+                yield return players.Current.Player.channel.owner.transportConnection;
+            players.Dispose();
+        }
     }
 
     public class SquadConfigData : ConfigData

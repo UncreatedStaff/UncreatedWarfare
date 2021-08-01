@@ -242,6 +242,7 @@ namespace Uncreated.Warfare
             DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
+            BarricadeManager.onDamageBarricadeRequested += EventFunctions.onBarricadeDamaged;
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
         }
@@ -273,6 +274,7 @@ namespace Uncreated.Warfare
             DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
+            BarricadeManager.onDamageBarricadeRequested -= EventFunctions.onBarricadeDamaged;
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
             if (!InitialLoadEventSubscription)

@@ -50,7 +50,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 await Task.Delay(Mathf.RoundToInt(updateTimeFrequency * 1000));
                 UpdateLeaderboard(secondsLeft, progresschars);
             }
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
             foreach (SteamPlayer player in Provider.clients)
             {
@@ -65,15 +64,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (ShuttingDown)
             {
                 await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
-                rtn = await ThreadTool.SwitchToGameThread();
                 Provider.shutdown(0, ShuttingDownMessage);
-                await rtn;
             }
             else if (OnLeaderboardExpired != null)
             {
                 await OnLeaderboardExpired.Invoke();
             }
-            await rtn;
         }
         public void GetValues()
         {
@@ -89,6 +85,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
 
+                CTFUI.ClearListUI(player.transportConnection, (Data.Gamemode as TeamCTF).Config.FlagUICount);
                 oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
                 player.player.movement.sendPluginSpeedMultiplier(0f);
                 player.player.life.serverModifyHealth(100);
@@ -115,6 +112,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
                     stats = new PlayerCurrentGameStats(player.player);
                 else stats = statsvalue.Value;
+                F.Log(stats.ToString());
                 Players.FPlayerName originalNames = F.GetPlayerOriginalNames(player);
                 ITransportConnection channel = player.transportConnection;
                 EffectManager.sendUIEffect(UCWarfare.Config.EndScreenUI, UiIdentifier, channel, true);
@@ -137,7 +135,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[0], F.Translate("lb_header_1_no_squad", player)); // squad header
                 }
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.Translate("player_name_header", player, originalNames.CharacterName, F.GetTeamColorHex(player)));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.ObjectTranslate("player_name_header", player.playerID.steamID.m_SteamID, originalNames.CharacterName, F.GetTeamColorHex(player), (stats.onlineCount / warstats.gamepercentagecounter) * 100));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
                     TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
                     TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
@@ -320,7 +318,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public class PlayerCurrentGameStats
     {
         public Player player;
-        public ulong id;
+        public readonly ulong id;
         public int kills;
         public int deaths;
         public float KDR { get => deaths == 0 ? kills : kills / deaths; }
@@ -334,6 +332,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public int captures;
         public int teamkills;
         public int fobsdestroyed;
+        public int fobsplaced;
         public TimeSpan TimeDriving { get => TimeSpan.FromSeconds(timeDrivingCounter); }
         private float timeDrivingCounter;
         public int onlineCount;
@@ -353,9 +352,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.captures = 0;
             this.teamkills = 0;
             this.fobsdestroyed = 0;
+            this.fobsplaced = 0;
             this.timeDrivingCounter = 0;
             this.xpgained = 0;
             this.officerpointsgained = 0;
+            this.onlineCount = 0;
         }
         public void AddKill()
         {
@@ -374,6 +375,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (player != null)
                 onlineCount++;
         }
+        public override string ToString()
+            =>
+            $"Player: {id} ({(player == null ? "offline" : player.channel.owner.playerID.playerName)})\n" +
+            $"Kills: {kills}\nDeaths: {deaths}\nKills on point: {killsonpoint}\nTime Deployed: {TimeDeployed:g}\n" +
+            $"Time On Point: {TimeOnPoint:g}\nCaptures: {captures}\nTeamkills: {teamkills}\nFobs Destroyed: {fobsdestroyed}\n" +
+            $"Fobs Placed: {fobsplaced}\nTime Driving: {TimeDriving:g}\nXP Gained: {xpgained}\nOfficer Pts Gained: {officerpointsgained}\n" +
+            $"OnlineTime:{(float)onlineCount / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%.";
     }
     public class WarStatsTracker : MonoBehaviour
     {
@@ -401,8 +409,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void AddPlayer(Player player)
         {
             if (!playerstats.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out PlayerCurrentGameStats s))
-                playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, new PlayerCurrentGameStats(player));
-            else s.player = player;
+            {
+                s = new PlayerCurrentGameStats(player);
+                playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
+                if (F.TryGetPlaytimeComponent(player, out Components.PlaytimeComponent c))
+                    c.stats = s;
+            }
+            else
+            {
+                s.player = player;
+                if (F.TryGetPlaytimeComponent(player, out Components.PlaytimeComponent c))
+                    c.stats = s;
+            }
             F.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");
         }
         public void Start() => Reset(true);
@@ -414,6 +432,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 playerstats = new Dictionary<ulong, PlayerCurrentGameStats>();
             else
                 playerstats.Clear();
+            for (int i = 0; i < Provider.clients.Count; i++)
+                playerstats.Add(Provider.clients[i].playerID.steamID.m_SteamID, new PlayerCurrentGameStats(Provider.clients[i].player));
             durationCounter = 0;
             casualtiesT1 = 0;
             casualtiesT2 = 0;

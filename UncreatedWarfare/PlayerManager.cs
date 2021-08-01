@@ -121,12 +121,6 @@ namespace Uncreated.Warfare
                     Team2Players.Add(player);
                 }
             }
-
-            if (UCWarfare.Config.Debug)
-            {
-                F.Log("Team 1 Count: " + Team1Players.Count);
-                F.Log("Team 2 Count: " + Team2Players.Count);
-            }
         }
     }
 }
