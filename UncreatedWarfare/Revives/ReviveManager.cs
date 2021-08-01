@@ -192,7 +192,7 @@ namespace Uncreated.Warfare.Revives
             parameters.player.movement.sendPluginJumpMultiplier(0);
 
             parameters.player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-            EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI), true);
+            EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI), parameters.player.channel.owner.transportConnection, true, "YOU ARE INJURED.", "GIVE UP", "CALL FOR MEDIC");
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             if (parameters.killer != default && parameters.killer != CSteamID.Nil)
