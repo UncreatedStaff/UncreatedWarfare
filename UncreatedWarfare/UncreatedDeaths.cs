@@ -144,7 +144,7 @@ namespace Uncreated.Warfare
             }
         }
         public event EventHandler<SuicideEventArgs> OnSuicide;
-        public async Task Suicide(SuicideEventArgs parameters)
+        public async Task Suicide(SuicideEventArgs parameters, bool sync)
         {
             F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             OnSuicide?.Invoke(this, parameters);
@@ -160,7 +160,17 @@ namespace Uncreated.Warfare
                 limb = parameters.limb
             };
             OnPlayerDeathGlobal?.Invoke(args);
-            Task d = Data.Gamemode?.OnPlayerDeath(args);
+            Task d = null;
+            if (sync)
+            {
+                if (Data.Gamemode is TeamCTF ctf)
+                    ctf.OnPlayerDeathSync(args);
+                else
+                    Data.Gamemode?.OnPlayerDeath(args).GetAwaiter().GetResult();
+            }
+            else
+                d = Data.Gamemode?.OnPlayerDeath(args);
+
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -183,10 +193,17 @@ namespace Uncreated.Warfare
                         ctf.GameStats.casualtiesT2++;
                     }
                 }
-                await a;
-                await s;
+                if (sync)
+                    a.GetAwaiter().GetResult();
+                else
+                    await a;
+                if (sync)
+                    s.GetAwaiter().GetResult();
+                else
+                    await s;
             }
-            await d;
+            if (!sync)
+                await d;
         }
         public class DeathEventArgs : EventArgs
         {
@@ -443,7 +460,7 @@ namespace Uncreated.Warfare
                                     itemName = landmineName,
                                     key = key,
                                     limb = limb
-                                }).GetAwaiter().GetResult();
+                                }, sync).GetAwaiter().GetResult();
                         } else
                         {
                             if (Config.DeathMessages.PenalizeSuicides)
@@ -456,7 +473,7 @@ namespace Uncreated.Warfare
                                     itemName = landmineName,
                                     key = key,
                                     limb = limb
-                                });
+                                }, sync);
                         }
                     }
                     else if (placerTeam == triggererTeam)
@@ -668,7 +685,7 @@ namespace Uncreated.Warfare
                                     itemName = landmineName,
                                     key = key,
                                     limb = limb
-                                }).GetAwaiter().GetResult();
+                                }, sync).GetAwaiter().GetResult();
                         } else
                         {
                             if (Config.DeathMessages.PenalizeSuicides)
@@ -681,7 +698,7 @@ namespace Uncreated.Warfare
                                     itemName = landmineName,
                                     key = key,
                                     limb = limb
-                                });
+                                }, sync);
                         }
                     }
                     else if (deadTeam == placerTeam)
@@ -796,7 +813,7 @@ namespace Uncreated.Warfare
                                     itemName = landmineName,
                                     key = key,
                                     limb = limb
-                                }).GetAwaiter().GetResult();
+                                }, sync).GetAwaiter().GetResult();
                         } else
                         {
                             if (Config.DeathMessages.PenalizeSuicides)
@@ -809,7 +826,7 @@ namespace Uncreated.Warfare
                                     itemName = landmineName,
                                     key = key,
                                     limb = limb
-                                });
+                                }, sync);
                         }
                     }
                     else if (deadTeam == triggererTeam)
@@ -1037,7 +1054,7 @@ namespace Uncreated.Warfare
                                     itemName = itemName,
                                     key = key,
                                     limb = limb
-                                }).GetAwaiter().GetResult();
+                                }, sync).GetAwaiter().GetResult();
                             } else
                             {
                                 await Suicide(new SuicideEventArgs()
@@ -1049,7 +1066,7 @@ namespace Uncreated.Warfare
                                     itemName = itemName,
                                     key = key,
                                     limb = limb
-                                });
+                                }, sync);
                             }
                     }
                     else

@@ -196,6 +196,7 @@ namespace Uncreated.Warfare
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
                         player.Player.life.ReceiveRespawnRequest(false);
+                        F.Log("sent respawn request", ConsoleColor.DarkGray);
                     }
                 }
                 Data.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
