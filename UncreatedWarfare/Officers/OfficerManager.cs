@@ -182,7 +182,7 @@ namespace Uncreated.Warfare.Officers
 
             EffectManager.sendUIEffect(config.Data.StarsUI, (short)config.Data.StarsUI, player.channel.owner.transportConnection, true);
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Icon",
-                stars == 0 ? $"<color=#{UCWarfare.GetColorHex("officer_ui_no_stars")}>{config.Data.StarCharacter}</color>" : $"<color=#{UCWarfare.GetColorHex("star_color")}>{config.Data.StarCharacter}</color>"
+                stars == 0 ? $"<color=#797979>{config.Data.StarCharacter}</color>" : $"<color=#{UCWarfare.GetColorHex("star_color")}>{config.Data.StarCharacter}</color>"
             );
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Count",
                 stars < 2 ? string.Empty : stars.ToString()

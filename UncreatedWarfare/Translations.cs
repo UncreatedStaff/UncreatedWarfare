@@ -629,6 +629,7 @@ namespace Uncreated.Warfare
                 { "xp_from_player", "FROM {0}" },
                 { "xp_healed_teammate", "HEALED {0}" },
                 { "xp_enemy_downed", "DOWNED ENEMY" },
+                { "xp_friendly_downed", "DOWNED FRIENDLY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_friendly_killed", "TEAMKILLED {0}" },
                 { "xp_fob_killed", "DESTROYED FOB" },
@@ -637,6 +638,8 @@ namespace Uncreated.Warfare
                 { "xp_victory", "VICTORY" },
                 { "xp_flag_captured", "FLAG CAPTURED" },
                 { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
+
+                { "xp_squad_bonus", "SQUAD BONUS" },
 
                 { "xp_humvee_destroyed", "HUMVEE DESTROYED" },
                 { "xp_transport_destroyed", "TRANSPORT DESTROYED" },

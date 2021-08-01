@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Revives
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
             UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
-            //Provider.onEnemyDisconnected += OnPlayerDisconnected;
+            EffectManager.onEffectButtonClicked += OnEffectButtonClicked;
             foreach(SteamPlayer player in Provider.clients)
             {
                 player.player.stance.onStanceUpdated += delegate
@@ -40,6 +40,20 @@ namespace Uncreated.Warfare.Revives
                 player.player.equipment.onEquipRequested += OnEquipRequested;
             }
             Updater = UCWarfare.I.StartCoroutine(UpdatePositions());
+        }
+        private void OnEffectButtonClicked(Player player, string buttonName)
+        {
+            if (buttonName == "GiveUp")
+            {
+                if (DownedPlayers.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
+                {
+                    p.damage = 255f;
+                    p.times = 1;
+                    DamageTool.damagePlayer(p, out _); // kill the player because they pressed 'Give Up'
+
+                    // player and Revive UI will be removed from list in OnDeath
+                }
+            }
         }
         private IEnumerator<WaitForSeconds> UpdatePositions()
         {
@@ -137,6 +151,9 @@ namespace Uncreated.Warfare.Revives
                 if (team == target.GetTeam())
                     await XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP, 
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+
+                target.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+                EffectManager.askEffectClearByID(30600, target.channel.owner.transportConnection);
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
@@ -146,8 +163,8 @@ namespace Uncreated.Warfare.Revives
                 if (parameters.player.life.health > 0 &&
                     !parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    ((parameters.damage < 40 * parameters.player.life.health && !(parameters.limb == ELimb.SKULL)) ||
-                    (parameters.damage < 70 * parameters.player.life.health && !(parameters.limb == ELimb.SPINE)))
+                    ((parameters.damage < 80 * parameters.player.life.health && !(parameters.limb == ELimb.SKULL)) ||
+                    (parameters.damage < 160 * parameters.player.life.health && !(parameters.limb == ELimb.SPINE)))
                     )
                 {
                     InjurePlayer(ref shouldAllow, ref parameters);
@@ -173,6 +190,9 @@ namespace Uncreated.Warfare.Revives
             parameters.player.movement.sendPluginSpeedMultiplier(0.1F);
             parameters.player.movement.sendPluginJumpMultiplier(0);
 
+            parameters.player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+            EffectManager.sendUIEffect(30600, 30600, true);
+
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             if (parameters.killer != default && parameters.killer != CSteamID.Nil)
             {
@@ -185,7 +205,12 @@ namespace Uncreated.Warfare.Revives
                         DistancesFromInitialShot.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, Vector3.Distance(killer.transform.position, parameters.player.transform.position));
 
                     if (killer.channel.owner.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
-                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
+                    {
+                        if (killer.GetTeam() != parameters.player.GetTeam())
+                            ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
+                        else
+                            ToastMessage.QueueMessage(killer, "", F.Translate("xp_friendly_downed", killer), ToastMessageSeverity.MINIXP);
+                    }
                 }
             }
             if (parameters.player.transform.TryGetComponent(out Reviver reviver))
@@ -208,6 +233,9 @@ namespace Uncreated.Warfare.Revives
                     DownedPlayers.Remove(player.CSteamID.m_SteamID);
                     DistancesFromInitialShot.Remove(player.CSteamID.m_SteamID);
                 }
+
+                player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+                EffectManager.askEffectClearByID(30600, player.Player.channel.owner.transportConnection);
             }
             ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
         }

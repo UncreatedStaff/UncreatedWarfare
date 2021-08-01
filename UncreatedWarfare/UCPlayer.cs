@@ -271,6 +271,14 @@ namespace Uncreated.Warfare
             return false;
         }
 
+        public bool IsNearOtherPlayer(UCPlayer player, float distance)
+        {
+            if (Player.life.isDead || Player.transform is null || player.Player.life.isDead || player.Player.transform is null)
+                return false;
+
+            return (Position - player.Position).sqrMagnitude < Math.Pow(distance, 2);
+        }
+
         public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
     }
 

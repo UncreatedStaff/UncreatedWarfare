@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using static Uncreated.Warfare.FOBs.FOBConfig;
@@ -93,14 +94,18 @@ namespace Uncreated.Warfare.FOBs
             player.SendChat("fob_built");
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
-
             Task.Run(async () =>
             {
-                await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltFOBXP, F.Translate("xp_built_fob", ucplayer.Steam64));
-                if (ucplayer.IsOrIsNearLeader(50))
-                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.Data.BuiltFOBPoints, F.Translate("ofp_squad_built_fob", ucplayer.Steam64));
+                await TicketManager.AwardSquadXP(ucplayer,
+                    60,
+                    XPManager.config.Data.BuiltFOBXP,
+                    OfficerManager.config.Data.BuiltFOBPoints,
+                    "xp_built_fob",
+                    "ofp_squad_built_fob",
+                    0.4F
+                    );
             });
-            
+
 
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
@@ -193,12 +198,16 @@ namespace Uncreated.Warfare.FOBs
             player.SendChat("ammocrate_built");
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
-
             Task.Run(async () =>
             {
-                await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltAmmoCrateXP, F.Translate("xp_built_ammo_crate", ucplayer.Steam64));
-                if (ucplayer.IsOrIsNearLeader(50))
-                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.Data.BuiltAmmoCratePoints, F.Translate("ofp_squad_built_ammo_crate", ucplayer.Steam64));
+                await TicketManager.AwardSquadXP(ucplayer,
+                    60,
+                    XPManager.config.Data.BuiltAmmoCrateXP,
+                    OfficerManager.config.Data.BuiltAmmoCratePoints,
+                    "xp_built_ammo_crate",
+                    "ofp_squad_built_ammo_crate",
+                    0.4F
+                    );
             });
 
             regions = new List<RegionCoordinate>();
@@ -286,9 +295,14 @@ namespace Uncreated.Warfare.FOBs
 
             Task.Run(async () =>
             {
-                await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltRepairStationXP, F.Translate("xp_built_repair_station", ucplayer.Steam64));
-                if (ucplayer.IsOrIsNearLeader(50))
-                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.Data.BuiltRepairStationPoints, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                await TicketManager.AwardSquadXP(ucplayer,
+                    60,
+                    XPManager.config.Data.BuiltRepairStationXP,
+                    OfficerManager.config.Data.BuiltRepairStationPoints,
+                    "xp_built_repair_station",
+                    "ofp_squad_built_repair_station",
+                    0.4F
+                    );
             });
 
             regions = new List<RegionCoordinate>();
@@ -393,12 +407,16 @@ namespace Uncreated.Warfare.FOBs
             player.SendChat("emplacement_built", vehicle.asset.vehicleName);
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run( 
-            async () => 
+            Task.Run(async () =>
             {
-                await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltEmplacementXP, F.Translate("xp_built_enplacement", ucplayer.Steam64));
-                if (ucplayer.IsOrIsNearLeader(50))
-                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.Data.BuiltEmplacementPoints, F.Translate("ofp_squad_built_emplacement", ucplayer.Player));
+                await TicketManager.AwardSquadXP(ucplayer,
+                    60,
+                    XPManager.config.Data.BuiltEmplacementXP,
+                    OfficerManager.config.Data.BuiltEmplacementPoints,
+                    "xp_built_emplacement",
+                    "ofp_squad_built_emplacement",
+                    0.4F
+                    );
             });
 
             vehicle.updateVehicle();
@@ -466,13 +484,18 @@ namespace Uncreated.Warfare.FOBs
             player.SendChat("fortification_built", barricade.asset.itemName);
 
             var ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run(
-            async () =>
+            Task.Run(async () =>
             {
-                await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XPManager.config.Data.BuiltBarricadeXP, F.Translate("xp_built_fortification", ucplayer.Steam64));
-                if (ucplayer.IsOrIsNearLeader(50))
-                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), OfficerManager.config.Data.BuiltBarricadePoints, F.Translate("ofp_squad_built_fortification", ucplayer.Player));
+                await TicketManager.AwardSquadXP(ucplayer,
+                    60,
+                    XPManager.config.Data.BuiltBarricadeXP,
+                    OfficerManager.config.Data.BuiltBarricadePoints,
+                    "xp_built_fortification",
+                    "ofp_squad_built_fortification",
+                    0.4F
+                    );
             });
+
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
             barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();

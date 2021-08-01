@@ -1,17 +1,11 @@
-﻿using Rocket.Unturned;
-using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -145,11 +139,7 @@ namespace Uncreated.Warfare.Tickets
 
                         if (vehicleWasEnemy)
                         {
-                            await XPManager.AddXP(player.Player, player.GetTeam(), player.NearbyMemberBonus(amount, 75), F.Translate("xp_" + message, player.Steam64));
-                            if (player.IsNearSquadLeader(100))
-                            {
-                                await OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, player.GetTeam(), (int) Math.Round(amount * 0.25F), F.Translate("ofp_vehicle_eliminated", player.Squad.Leader.Steam64));
-                            }
+                            await AwardSquadXP(player, amount, 100, (int)Math.Round(amount * 0.25F), "xp_" + message, "ofp_vehicle_eliminated", 0.25F);
                         }
                         else if (vehicleWasFriendly)
                         {
@@ -157,7 +147,6 @@ namespace Uncreated.Warfare.Tickets
                             await XPManager.AddXP(player.Player, player.GetTeam(), -amount, F.Translate(message, player.Steam64));
                         }
                     }
-                    
                 }
             }
         }
@@ -206,7 +195,10 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagCapturedXP, 100), F.Translate("xp_flag_captured", player.Steam64));
+                int xp = XPManager.config.Data.FlagCapturedXP;
+
+                await XPManager.AddXP(player.Player, capturedTeam, xp, F.Translate("xp_flag_neutralized", player.Steam64));
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(xp, 150) - xp, F.Translate("xp_squad_bonus", player.Steam64));
 
                 if (player.IsNearSquadLeader(100))
                 {
@@ -237,9 +229,12 @@ namespace Uncreated.Warfare.Tickets
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
-                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(XPManager.config.Data.FlagNeutralizedXP, 100), F.Translate("xp_flag_neutralized", player.Steam64));
+                int xp = XPManager.config.Data.FlagNeutralizedXP;
 
-                if (player.IsNearSquadLeader(100))
+                await XPManager.AddXP(player.Player, capturedTeam, xp, F.Translate("xp_flag_neutralized", player.Steam64));
+                await XPManager.AddXP(player.Player, capturedTeam, player.NearbyMemberBonus(xp, 150) - xp, F.Translate("xp_squad_bonus", player.Steam64));
+
+                if (player.IsNearSquadLeader(150))
                 {
                     if (alreadyUpdated.TryGetValue(player.Squad.Name, out var amount))
                     {
@@ -427,6 +422,34 @@ namespace Uncreated.Warfare.Tickets
             {
                 bleed = 0;
                 message = "";
+            }
+        }
+
+        public static async Task AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
+        {
+            await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), xp, F.Translate(KeyplayerTranslationKey, ucplayer.Steam64));
+
+            if (ucplayer.Squad != null && ucplayer.Squad?.Members.Count > 1)
+            {
+                if (ucplayer == ucplayer.Squad.Leader)
+                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), ofp, F.Translate(squadTranslationKey, ucplayer.Steam64));
+
+                int squadxp = (int)Math.Round(xp * squadMultiplier);
+                int squadofp = (int)Math.Round(ofp * squadMultiplier);
+
+                if (squadxp > 0)
+                {
+                    for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
+                    {
+                        var member = ucplayer.Squad.Members[i];
+                        if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
+                        {
+                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                            if (member.IsSquadLeader())
+                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                        }
+                    }
+                }
             }
         }
 
