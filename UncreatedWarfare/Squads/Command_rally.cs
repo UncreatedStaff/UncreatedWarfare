@@ -38,6 +38,7 @@ namespace Uncreated.Warfare.Commands
                             if (!rallypoint.AwaitingPlayers.Exists(p => p.Steam64 == player.Steam64))
                             {
                                 rallypoint.AwaitingPlayers.Add(player);
+                                rallypoint.UpdateUIForAwaitingPlayers();
                                 player.Message("rally_wait", rallypoint.timer.ToString(Data.Locale));
                             }
                             else

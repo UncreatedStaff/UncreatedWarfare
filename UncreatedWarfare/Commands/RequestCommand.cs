@@ -173,9 +173,9 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_alreadyrequested");
                 return;
             }
-            else if (data.RequiresSL && !ucplayer.IsSquadLeader())
+            else if (data.RequiresSL && ucplayer.Squad == null)
             {
-                ucplayer.Message("request_vehicle_e_notsquadleader");
+                ucplayer.Message("request_vehicle_e_notinsquad");
                 return;
             }
             else if (!KitManager.HasKit(ucplayer.CSteamID, out var kit))

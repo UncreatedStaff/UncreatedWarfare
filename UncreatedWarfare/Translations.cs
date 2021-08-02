@@ -413,7 +413,7 @@ namespace Uncreated.Warfare
                 { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to get this kit.</color>" },
                 { "request_vehicle_e_notrequestable", "<color=#a8918a>This vehicle cannot be reqested.</color>" },
                 { "request_vehicle_e_cooldown", "<color=#b3ab9f>This vehicle can be requested in: <color=#ffe2ab>{0}</color>.</color>" },
-                { "request_vehicle_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to request this vehicle.</color>" },
+                { "request_vehicle_e_notinsquad", "<color=#b3ab9f>You must be <color=#cedcde>IN A SQUAD</color> in order to request this vehicle.</color>" },
                 { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
                 { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
                 { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
@@ -641,6 +641,8 @@ namespace Uncreated.Warfare
                 { "xp_victory", "VICTORY" },
                 { "xp_flag_captured", "FLAG CAPTURED" },
                 { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
+                { "xp_flag_attack", "ATTACK" },
+                { "xp_flag_defend", "DEFENCE" },
 
                 { "xp_squad_bonus", "SQUAD BONUS" },
 

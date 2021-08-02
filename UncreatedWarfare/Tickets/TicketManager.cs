@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -254,7 +255,46 @@ namespace Uncreated.Warfare.Tickets
         }
         public static async Task OnFlagTick()
         {
-            
+            if (Data.Gamemode is TeamCTF gamemode)
+            {
+                for (int i = 0; i < gamemode.Rotation.Count; i++)
+                {
+                    var flag = gamemode.Rotation[i];
+
+                    if (flag.LastDeltaPoints == 1 && flag.Owner != 1)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam1[j],
+                                TeamManager.Team1ID,
+                                XPManager.config.Data.FlagAttackXP,
+                                F.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
+                    }
+                    else if (flag.LastDeltaPoints == -1 && flag.Owner != 2)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam2[j],
+                                TeamManager.Team2ID,
+                                XPManager.config.Data.FlagAttackXP,
+                                F.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
+                    }
+                    else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam1[j],
+                                TeamManager.Team1ID,
+                                XPManager.config.Data.FlagDefendXP,
+                                F.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
+                    }
+                    else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam2[j],
+                                TeamManager.Team2ID,
+                                XPManager.config.Data.FlagDefendXP,
+                                F.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
+                    }
+                }
+            }
         }
 
         public static void OnPlayerJoined(UCPlayer player)

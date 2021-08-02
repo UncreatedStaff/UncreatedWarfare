@@ -150,12 +150,11 @@ namespace Uncreated.Warfare.Revives
                 }
                 if (UCWarfare.Config.Debug)
                     F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.");
-                if (parameters.player.life.health > 0 &&
-                    !parameters.player.life.isDead &&
-                    (parameters.damage < 100 || parameters.cause == EDeathCause.GUN) &&
+
+                if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    ((parameters.damage < 80 * parameters.player.life.health && !(parameters.limb == ELimb.SKULL)) ||
-                    (parameters.damage < 160 * parameters.player.life.health && !(parameters.limb == ELimb.SPINE)))
+                    !(parameters.player.life.health < 30 && parameters.damage > 150)
+                    // && !(parameters.cause == EDeathCause.GRENADE || parameters.cause == EDeathCause.CHARGE || parameters.cause == EDeathCause.LANDMINE || parameters.cause == EDeathCause.MISSILE)
                     )
                 {
                     InjurePlayer(ref shouldAllow, ref parameters, killer);
@@ -230,7 +229,8 @@ namespace Uncreated.Warfare.Revives
                 if (player.Player.transform.TryGetComponent(out Reviver reviver))
                 {
                     reviver.FinishKillingPlayer(this, true);
-                } else
+                }
+                else
                 {
                     DownedPlayers.Remove(player.CSteamID.m_SteamID);
                     DeathInfo.Remove(player.CSteamID.m_SteamID);
