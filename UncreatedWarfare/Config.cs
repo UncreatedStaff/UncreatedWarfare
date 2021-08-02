@@ -56,6 +56,7 @@ namespace Uncreated.Warfare
         public bool ReplaceEmptyNamesWithID;
         public bool OverrideKitRequirements;
         public float InjuredDamageMultiplier;
+        public ushort GiveUpUI;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -84,7 +85,7 @@ namespace Uncreated.Warfare
             this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
-            this.InjuredLifeTimeSeconds = 30f;
+            this.InjuredLifeTimeSeconds = 90f;
             this.InjuredDamageMultiplier = 0.1f;
             this.MaxPlayerCount = 48;
             this.LowerSteamPlayerCount = true;
@@ -95,6 +96,7 @@ namespace Uncreated.Warfare
             this.AMCDamageMultiplier = 0.25f;
             this.ReplaceEmptyNamesWithID = true;
             this.OverrideKitRequirements = true;
+            this.GiveUpUI = 36009;
         }
     }
     public class Modules

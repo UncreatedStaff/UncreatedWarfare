@@ -1820,7 +1820,7 @@ namespace Uncreated.Warfare
                         {
                             try
                             {
-                                return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), itemName, dis);
+                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
                             }
                             catch (FormatException ex)
                             {
@@ -1876,9 +1876,7 @@ namespace Uncreated.Warfare
             else
             {
                 if (!Data.Languages.TryGetValue(player, out string lang) || !Data.DeathLocalization.TryGetValue(lang, out Dictionary<string, string> loc) || (!loc.ContainsKey(key) && !loc.ContainsKey(backupcause.ToString())))
-                {
                     lang = JSONMethods.DefaultLanguage;
-                }
                 if (!Data.DeathLocalization.TryGetValue(lang, out loc))
                 {
                     if (Data.DeathLocalization.Count > 0)
@@ -1949,15 +1947,16 @@ namespace Uncreated.Warfare
             if (colorize) triggerername = ColorizeName(triggerername, triggererTeam);
             if (player == 0)
             {
-                if (!Data.DeathLocalization.ContainsKey(JSONMethods.DefaultLanguage))
+                if (!Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, string> loc))
                 {
                     if (Data.DeathLocalization.Count > 0)
                     {
-                        if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(key))
+                        loc = Data.DeathLocalization.ElementAt(0).Value;
+                        if (loc.TryGetValue(key, out string t))
                         {
                             try
                             {
-                                return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
+                                return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
                             }
                             catch (FormatException ex)
                             {
@@ -1971,11 +1970,11 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(key))
+                    if (loc.TryGetValue(key, out string t))
                     {
                         try
                         {
-                            return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
+                            return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
                         }
                         catch (FormatException ex)
                         {
@@ -1988,21 +1987,18 @@ namespace Uncreated.Warfare
             }
             else
             {
-                string lang = JSONMethods.DefaultLanguage;
-                if (Data.Languages.ContainsKey(player))
-                {
-                    if (Data.DeathLocalization.ContainsKey(lang) && Data.DeathLocalization[lang].ContainsKey(key))
-                        lang = Data.Languages[player];
-                }
-                if (!Data.DeathLocalization.ContainsKey(lang))
+                if (!Data.Languages.TryGetValue(player, out string lang) || !Data.DeathLocalization.TryGetValue(lang, out Dictionary<string, string> loc) || (!loc.ContainsKey(key) && !loc.ContainsKey("LANDMINE")))
+                    lang = Data.Languages[player];
+                if (!Data.DeathLocalization.TryGetValue(lang, out loc))
                 {
                     if (Data.DeathLocalization.Count > 0)
                     {
-                        if (Data.DeathLocalization.ElementAt(0).Value.ContainsKey(key))
+                        loc = Data.DeathLocalization.ElementAt(0).Value;
+                        if (loc.TryGetValue(key, out string t))
                         {
                             try
                             {
-                                return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
+                                return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
                             }
                             catch (FormatException ex)
                             {
@@ -2014,11 +2010,11 @@ namespace Uncreated.Warfare
                     }
                     else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
                 }
-                else if (Data.DeathLocalization[lang].ContainsKey(key))
+                else if (loc.TryGetValue(key, out string t))
                 {
                     try
                     {
-                        return string.Format(Data.DeathLocalization.ElementAt(0).Value[key], deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
+                        return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
                     }
                     catch (FormatException ex)
                     {
@@ -2090,10 +2086,9 @@ namespace Uncreated.Warfare
                     else
                     {
                         LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {key}.");
-                        string defaultMessage = key;
                         string newMessage;
-                        if (JSONMethods.DefaultDeathTranslations.ContainsKey(key))
-                            defaultMessage = JSONMethods.DefaultDeathTranslations[key];
+                        if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out string defaultMessage))
+                            defaultMessage = key;
                         try
                         {
                             newMessage = string.Format(defaultMessage, ColorizeName(dead.CharacterName, deadTeam), ColorizeName(killerName.CharacterName, killerTeam),
@@ -2109,7 +2104,7 @@ namespace Uncreated.Warfare
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
                                 + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
-                    }
+                    } 
                 }
             }
             message = TranslateLandmineDeath(0, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);

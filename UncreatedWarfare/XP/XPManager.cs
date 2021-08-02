@@ -104,13 +104,13 @@ namespace Uncreated.Warfare.XP
                     "Rank", player.OfficerRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Level", "O" + player.OfficerRank.level
+                    "Level", F.Translate("ui_ofp_level", player, player.OfficerRank.level.ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
+                    "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString(Data.Locale)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Next", nextRank != null ? "E" + nextRank.level + " equivalent" : ""
+                    "Next", nextRank != null ? F.Translate("ui_ofp_equivalent", player, nextRank.level.ToString(Data.Locale)) : ""
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Progress", GetProgress(currentXP, rank.XP)

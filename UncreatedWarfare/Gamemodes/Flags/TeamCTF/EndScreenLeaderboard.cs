@@ -25,7 +25,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public string ShuttingDownMessage = string.Empty;
         public ulong ShuttingDownPlayer = 0;
         const float updateTimeFrequency = 1f;
-        private readonly Dictionary<ulong, EPluginWidgetFlags> oldFlags = new Dictionary<ulong, EPluginWidgetFlags>();
         public WarStatsTracker warstats;
         public ulong winner;
         public CancellationTokenSource CancelToken = new CancellationTokenSource();
@@ -53,14 +52,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
             foreach (SteamPlayer player in Provider.clients)
             {
-                if (oldFlags.ContainsKey(player.playerID.steamID.m_SteamID))
-                {
-                    player.player.setAllPluginWidgetFlags(oldFlags[player.playerID.steamID.m_SteamID]);
-                }
+                player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.Default);
                 player.player.movement.sendPluginSpeedMultiplier(1f);
                 player.player.movement.sendPluginJumpMultiplier(1f);
             }
-            oldFlags.Clear();
             if (ShuttingDown)
             {
                 await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
@@ -86,7 +81,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
 
                 CTFUI.ClearListUI(player.transportConnection, (Data.Gamemode as TeamCTF).Config.FlagUICount);
-                oldFlags.Add(player.playerID.steamID.m_SteamID, player.player.pluginWidgetFlags);
                 player.player.movement.sendPluginSpeedMultiplier(0f);
                 player.player.life.serverModifyHealth(100);
                 player.player.life.serverModifyFood(100);

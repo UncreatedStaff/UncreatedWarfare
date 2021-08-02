@@ -205,6 +205,7 @@ namespace Uncreated.Warfare.Kits
                                 sb.Append(command[i]);
                             }
                             string text = sb.ToString();
+                            text.Replace("\\n", "\n");
                             F.Log(text);
                             if (await KitManager.UpdateText(command[2], text, command[3]))
                                 player.SendChat("kit_setprop", "sign text", command[2], command[3] + " : " + text);
