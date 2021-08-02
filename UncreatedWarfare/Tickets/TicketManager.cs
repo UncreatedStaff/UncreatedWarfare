@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -191,7 +192,7 @@ namespace Uncreated.Warfare.Tickets
 
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
-            foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
@@ -225,7 +226,7 @@ namespace Uncreated.Warfare.Tickets
         {
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
-            foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
@@ -255,17 +256,46 @@ namespace Uncreated.Warfare.Tickets
                 }
             }
         }
-        public static async Task OnFlagTick(Player nelsonplayer)
+        public static async Task OnFlagTick()
         {
-            var player = UCPlayer.FromPlayer(nelsonplayer);
-
-            await XPManager.AddXP(player.Player, nelsonplayer.GetTeam(), XPManager.config.Data.FlagNeutralizedXP);
-
-            if (player.Squad?.Members.Count > 1 && player.Steam64 != player.Squad.Leader.Steam64)
+            if (Data.Gamemode is TeamCTF gamemode)
             {
-                if (player.IsNearSquadLeader(100))
+                for (int i = 0; i < gamemode.Rotation.Count; i++)
                 {
-                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.MemberFlagTickPoints);
+                    var flag = gamemode.Rotation[i];
+
+                    if (flag.LastDeltaPoints == 1 && flag.Owner != 1)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam1[j],
+                                TeamManager.Team1ID,
+                                XPManager.config.Data.FlagAttackXP,
+                                F.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
+                    }
+                    else if (flag.LastDeltaPoints == -1 && flag.Owner != 2)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam2[j],
+                                TeamManager.Team2ID,
+                                XPManager.config.Data.FlagAttackXP,
+                                F.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
+                    }
+                    else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam1[j],
+                                TeamManager.Team1ID,
+                                XPManager.config.Data.FlagDefendXP,
+                                F.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
+                    }
+                    else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
+                    {
+                        for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
+                            await XPManager.AddXP(flag.PlayersOnFlagTeam2[j],
+                                TeamManager.Team2ID,
+                                XPManager.config.Data.FlagDefendXP,
+                                F.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
+                    }
                 }
             }
         }

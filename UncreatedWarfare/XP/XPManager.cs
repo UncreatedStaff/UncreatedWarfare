@@ -318,7 +318,8 @@ namespace Uncreated.Warfare.XP
         public int FOBKilledXP;
         public int FOBDeployedXP;
         public int FlagCapturedXP;
-        public int FlagCapIncreasedXP;
+        public int FlagAttackXP;
+        public int FlagDefendXP;
         public int FlagNeutralizedXP;
         public int TransportPlayerXP;
         public float TimeBetweenXpAndOfpAwardForTransport;
@@ -345,9 +346,10 @@ namespace Uncreated.Warfare.XP
             FOBKilledXP = 100;
             FOBDeployedXP = 10;
             FlagCapturedXP = 200;
-            FlagCapIncreasedXP = 1;
+            FlagAttackXP = 5;
+            FlagDefendXP = 5;
             FlagNeutralizedXP = 50;
-            TransportPlayerXP = 1;
+            TransportPlayerXP = 2;
             TimeBetweenXpAndOfpAwardForTransport = 10f;
             BuiltFOBXP = 50;
             BuiltAmmoCrateXP = 10;
