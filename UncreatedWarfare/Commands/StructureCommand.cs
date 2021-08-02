@@ -34,27 +34,56 @@ namespace Uncreated.Warfare.Commands
                         Interactable barricade = UCBarricadeManager.GetInteractableFromLook<Interactable>(player.Player.look, RayMasks.BARRICADE | RayMasks.VEHICLE);
                         if (barricade == default)
                         {
-                            Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
-                            if(structure == default) player.SendChat("structure_not_looking");
+                            Interactable2 barricade2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.BARRICADE);
+                            if (barricade2 == default)
+                            {
+                                Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
+                                if (structure == default) player.SendChat("structure_not_looking");
+                                else
+                                {
+                                    if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
+                                    {
+                                        if (!StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structexists))
+                                        {
+                                            if (StructureSaver.AddStructure(region.drops[index], region.structures[index], out Structure structureaded))
+                                            {
+                                                player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                            }
+                                            else
+                                            {
+                                                player.SendChat("structure_not_looking");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            player.SendChat("structure_saved_already",
+                                                structexists == default ? "unknown" : structexists.Asset.itemName);
+                                        }
+                                    }
+                                }
+                            }
                             else
                             {
-                                if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
+                                if (BarricadeManager.tryGetInfo(barricade2.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
                                 {
-                                    if (!StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structexists))
+                                    if (!StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureexists))
                                     {
-                                        if (StructureSaver.AddStructure(region.drops[index], region.structures[index], out Structure structureaded))
+                                        if (StructureSaver.AddStructure(region.drops[index], region.barricades[index], out Structure structureaded))
                                         {
-                                            player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                        } else
+                                            player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                        }
+                                        else
                                         {
                                             player.SendChat("structure_not_looking");
                                         }
-                                    } else
+                                    }
+                                    else
                                     {
                                         player.SendChat("structure_saved_already",
-                                            structexists == default ? "unknown" : structexists.Asset.itemName);
+                                            structureexists == default ? "unknown" : structureexists.Asset.itemName);
                                     }
                                 }
+                                else player.SendChat("structure_not_looking");
                             }
                         }
                         else
@@ -98,13 +127,55 @@ namespace Uncreated.Warfare.Commands
                         Interactable barricade = UCBarricadeManager.GetInteractableFromLook<Interactable>(player.Player.look, RayMasks.BARRICADE | RayMasks.VEHICLE);
                         if (barricade == default)
                         {
-                            Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
-                            if (structure == default) player.SendChat("structure_not_looking");
+                            Interactable2 barricade2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.BARRICADE);
+                            if (barricade2 == default)
+                            {
+                                Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
+                                if (structure == default) player.SendChat("structure_not_looking");
+                                else
+                                {
+                                    if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
+                                    {
+                                        if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structureaded))
+                                        {
+                                            StructureSaver.RemoveStructure(structureaded);
+                                            player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
+                                        }
+                                        else
+                                        {
+                                            string itemname;
+                                            if (structure is Interactable2SalvageStructure str)
+                                            {
+                                                if (StructureManager.tryGetInfo(str.transform, out _, out _, out ushort index2, out StructureRegion region2))
+                                                {
+                                                    StructureData data = region2.structures[index2];
+                                                    if (data != default) itemname = Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset iasset ? iasset.itemName : data.structure.id.ToString(Data.Locale);
+                                                    else itemname = str.name;
+                                                }
+                                                else itemname = str.name;
+                                            }
+                                            else if (structure is Interactable2SalvageBarricade bar)
+                                            {
+                                                if (BarricadeManager.tryGetInfo(bar.transform, out _, out _, out _, out ushort index2, out BarricadeRegion region2))
+                                                {
+                                                    BarricadeData data = region2.barricades[index2];
+                                                    if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
+                                                    else itemname = bar.name;
+                                                }
+                                                else itemname = bar.name;
+                                            }
+                                            else itemname = structure.name;
+                                            player.SendChat("structure_unsaved_already",
+                                                structureaded == default ? "unknown" : itemname);
+                                        }
+                                    }
+                                }
+                            }
                             else
                             {
-                                if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
+                                if (BarricadeManager.tryGetInfo(barricade2.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
                                 {
-                                    if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structureaded))
+                                    if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureaded))
                                     {
                                         StructureSaver.RemoveStructure(structureaded);
                                         player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
@@ -112,27 +183,13 @@ namespace Uncreated.Warfare.Commands
                                     else
                                     {
                                         string itemname;
-                                        if (structure is Interactable2SalvageStructure str)
+                                        if (BarricadeManager.tryGetInfo(barricade2.transform, out _, out _, out _, out ushort index2, out BarricadeRegion region2))
                                         {
-                                            if (StructureManager.tryGetInfo(str.transform, out _, out _, out ushort index2, out StructureRegion region2))
-                                            {
-                                                StructureData data = region2.structures[index2];
-                                                if (data != default) itemname = Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset iasset ? iasset.itemName : data.structure.id.ToString(Data.Locale);
-                                                else itemname = str.name;
-                                            }
-                                            else itemname = str.name;
+                                            BarricadeData data = region2.barricades[index2];
+                                            if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
+                                            else itemname = barricade2.name;
                                         }
-                                        else if (structure is Interactable2SalvageBarricade bar)
-                                        {
-                                            if (BarricadeManager.tryGetInfo(bar.transform, out _, out _, out _, out ushort index2, out BarricadeRegion region2))
-                                            {
-                                                BarricadeData data = region2.barricades[index2];
-                                                if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
-                                                else itemname = bar.name;
-                                            }
-                                            else itemname = bar.name;
-                                        }
-                                        else itemname = structure.name;
+                                        else itemname = barricade2.name;
                                         player.SendChat("structure_unsaved_already",
                                             structureaded == default ? "unknown" : itemname);
                                     }
@@ -198,7 +255,7 @@ namespace Uncreated.Warfare.Commands
                             }
                         } else
                         {
-                            Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
+                            Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE | RayMasks.BARRICADE);
                             if(i2 != default)
                             {
                                 if (i2 is Interactable2SalvageBarricade)
@@ -244,7 +301,7 @@ namespace Uncreated.Warfare.Commands
                         }
                         else
                         {
-                            Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
+                            Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE | RayMasks.STRUCTURE);
                             if (i2 != default)
                             {
                                 if (i2 is Interactable2SalvageBarricade)

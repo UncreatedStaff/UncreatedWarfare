@@ -238,7 +238,7 @@ namespace Uncreated.Warfare
                     }
                     pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStats.WarfareName);
                 });
-                F.Broadcast("player_connected", names.PlayerName);
+                F.Broadcast("player_connected", names.CharacterName);
                 if (!UCWarfare.Config.AllowCosmetics)
                 {
                     player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -266,12 +266,18 @@ namespace Uncreated.Warfare
             
         }
 
-        internal static void onBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
             if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeOwnerDataComponent t))
             {
                 t.lastDamaged = instigatorSteamID.m_SteamID;
             }
+        }
+
+        internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
+        {
+            if (state == false || key != 2 || player == null) return;
+            Data.ReviveManager.GiveUp(player);
         }
 
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)

@@ -664,8 +664,10 @@ namespace Uncreated.Warfare
                 { "gain_xp", "+{0} XP" },
                 { "loss_xp", "-{0} XP" },
 
-                { "ui_xp_level", "E{0}" },
-                { "ui_xp_next_level", "{0}  E{1}" },
+                { "ui_xp_level", "L {0}" },
+                { "ui_ofp_level", "O {0}" },
+                { "ui_ofp_equivalent", "L {0} equivalent" },
+                { "ui_xp_next_level", "{0}  L {1}" },
 
                 // officer point toast messages
                 { "ofp_squad_built_emplacement", "SQUAD BUILT EMPLACEMENT" },
@@ -688,6 +690,10 @@ namespace Uncreated.Warfare
 
                 { "gain_ofp", "+{0} OF" },
                 { "loss_ofp", "-{0} OF" },
+
+                { "injured_ui_header", "You are injured" },
+                { "injured_ui_give_up", "Press <b>Code Hotkey #3</b> to give up.\n<b>Slash</b> by default." },
+                { "injured_chat", "You were injured, press <color=#cedcde><plugin_2/></color> to give up." }
             };
         }
         public static Dictionary<string, string> DefaultTranslations;

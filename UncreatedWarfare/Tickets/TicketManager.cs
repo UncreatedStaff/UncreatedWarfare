@@ -191,7 +191,7 @@ namespace Uncreated.Warfare.Tickets
 
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
-            foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 
@@ -225,7 +225,7 @@ namespace Uncreated.Warfare.Tickets
         {
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
-            foreach (Player nelsonplayer in flag.PlayersOnFlagTeam1.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
+            foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
                 var player = UCPlayer.FromPlayer(nelsonplayer);
 

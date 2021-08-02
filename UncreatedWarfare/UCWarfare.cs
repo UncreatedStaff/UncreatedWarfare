@@ -240,9 +240,10 @@ namespace Uncreated.Warfare
             Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
             Patches.OnPlayerMarker_Global += EventFunctions.OnPlayerMarkedPosOnMap;
             DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
+            PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
-            BarricadeManager.onDamageBarricadeRequested += EventFunctions.onBarricadeDamaged;
+            BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
         }
@@ -272,9 +273,10 @@ namespace Uncreated.Warfare
             Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
             Patches.OnPlayerMarker_Global -= EventFunctions.OnPlayerMarkedPosOnMap;
             DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
+            PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
-            BarricadeManager.onDamageBarricadeRequested -= EventFunctions.onBarricadeDamaged;
+            BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
             if (!InitialLoadEventSubscription)

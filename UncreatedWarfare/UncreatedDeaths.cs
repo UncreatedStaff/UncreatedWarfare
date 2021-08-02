@@ -939,21 +939,44 @@ namespace Uncreated.Warfare
                 bool itemIsVehicle = cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL;
                 if (killer == null)
                 {
-                    killer = dead.Player.channel.owner;
-                    if (cause == EDeathCause.ZOMBIE)
+                    if (cause != EDeathCause.ZOMBIE && Data.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
                     {
-                        killerName = new FPlayerName() { CharacterName = "zombie", PlayerName = "zombie", NickName = "zombie", Steam64 = 0 };
-                        killerTeam = TeamManager.ZombieTeamID;
-                        translateName = true;
-                    }
-                    else
+                        item = info.item;
+                        distance = info.distance;
+                        killerName = info.killerName;
+                        killer = null;
+                        killerTeam = info.killerTeam;
+                        foundKiller = false;
+                        if (itemIsVehicle)
+                        {
+                            VehicleAsset asset = (VehicleAsset)Assets.find(EAssetType.VEHICLE, item);
+                            if (asset != null) itemName = asset.vehicleName;
+                            else itemName = item.ToString(Data.Locale);
+                        }
+                        else
+                        {
+                            ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, item);
+                            if (asset != null) itemName = asset.itemName;
+                            else itemName = item.ToString(Data.Locale);
+                        }
+                    } else
                     {
-                        killerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
-                        killerTeam = 0;
+                        killer = dead.Player.channel.owner;
+                        if (cause == EDeathCause.ZOMBIE)
+                        {
+                            killerName = new FPlayerName() { CharacterName = "zombie", PlayerName = "zombie", NickName = "zombie", Steam64 = 0 };
+                            killerTeam = TeamManager.ZombieTeamID;
+                            translateName = true;
+                        }
+                        else
+                        {
+                            killerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
+                            killerTeam = 0;
+                        }
+                        foundKiller = false;
+                        item = 0;
+                        itemName = "Unknown";
                     }
-                    foundKiller = false;
-                    item = 0;
-                    itemName = "Unknown";
                 }
                 else
                 {
@@ -962,34 +985,15 @@ namespace Uncreated.Warfare
                     foundKiller = true;
                     try
                     {
-                        if (Data.ReviveManager.DistancesFromInitialShot.ContainsKey(dead.CSteamID.m_SteamID))
-                            distance = Data.ReviveManager.DistancesFromInitialShot[dead.CSteamID.m_SteamID];
+                        if (!Data.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
+                            GetKillerInfo(out item, out distance, out _, out _, cause, killer, dead.Player);
                         else
-                            distance = Vector3.Distance(killer.player.transform.position, dead.Position);
-                    }
-                    catch { }
-                    if (killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
-                    {
-                        if (cause == EDeathCause.GUN && c.lastShot != default)
-                            item = c.lastShot;
-                        else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
                         {
-                            if (c.thrown[0] != null)
-                            {
-                                item = c.thrown[0].asset.id;
-                                F.Log("Cause was grenade and found id: " + item.ToString());
-                            }
-                            else item = killer.player.equipment.itemID;
+                            item = info.item;
+                            distance = info.distance;
                         }
-                        else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
-                            item = c.lastProjected;
-                        else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)
-                            item = c.lastExplodedVehicle;
-                        else if (cause == EDeathCause.ROADKILL && c.lastRoadkilled != default)
-                            item = c.lastRoadkilled;
-                        else item = killer.player.equipment.itemID;
                     }
-                    else item = killer.player.equipment.itemID;
+                    catch { item = 0; }
                     if (item != 0)
                     {
                         if (itemIsVehicle)
@@ -1011,7 +1015,8 @@ namespace Uncreated.Warfare
                 if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
                 if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINCAMP")) key = "MAINCAMP";
                 else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINDEATH")) key = "MAINDEATH";
-                if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL) && foundKiller)
+                if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH 
+                    || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL || cause == EDeathCause.BLEEDING) && foundKiller)
                 {
                     if (item != 0)
                     {
@@ -1212,5 +1217,49 @@ namespace Uncreated.Warfare
             F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
+        internal void GetKillerInfo(out ushort item, out float distance, out FPlayerName killernames, out ulong KillerTeam, EDeathCause cause, SteamPlayer killer, Player dead)
+        {
+            if (killer == null || dead == null)
+            {
+                killernames = dead == null ? FPlayerName.Nil : F.GetPlayerOriginalNames(dead);
+                distance = 0;
+                KillerTeam = dead == null ? 0 : dead.GetTeam();
+            }
+            else
+            {
+                killernames = F.GetPlayerOriginalNames(killer);
+                distance = Vector3.Distance(killer.player.transform.position, dead.transform.position);
+                KillerTeam = killer.GetTeam();
+            }
+            if (killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+            {
+                if (cause == EDeathCause.GUN && c.lastShot != default)
+                    item = c.lastShot;
+                else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
+                {
+                    if (c.thrown[0] != null)
+                    {
+                        item = c.thrown[0].asset.id;
+                        F.Log("Cause was grenade and found id: " + item.ToString());
+                    }
+                    else item = killer.player.equipment.itemID;
+                }
+                else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
+                    item = c.lastProjected;
+                else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)
+                    item = c.lastExplodedVehicle;
+                else if (cause == EDeathCause.ROADKILL && c.lastRoadkilled != default)
+                    item = c.lastRoadkilled;
+                else item = killer.player.equipment.itemID;
+            }
+            else item = killer.player.equipment.itemID;
+        }
+    }
+    public class DeathInfo
+    {
+        public float distance;
+        public ushort item;
+        public FPlayerName killerName;
+        public ulong killerTeam;
     }
 }
