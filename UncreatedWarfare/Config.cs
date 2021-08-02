@@ -52,6 +52,7 @@ namespace Uncreated.Warfare
         public ushort MortarWeapon;
         public float MortarWarningDistance;
         public float StatsInterval;
+        public float AfkCheckInterval;
         public float AMCDamageMultiplier;
         public bool ReplaceEmptyNamesWithID;
         public bool OverrideKitRequirements;
@@ -93,6 +94,7 @@ namespace Uncreated.Warfare
             this.MortarWeapon = 38328;
             this.MortarWarningDistance = 75f;
             this.StatsInterval = 60f;
+            this.AfkCheckInterval = 180f;
             this.AMCDamageMultiplier = 0.25f;
             this.ReplaceEmptyNamesWithID = true;
             this.OverrideKitRequirements = true;

@@ -98,6 +98,7 @@ namespace Uncreated.Warfare
         REQUEST_VEHICLE,
         COMMAND_BOOST,
         COMMAND_WARN,
-        WARNINGS
+        WARNINGS,
+        AMMO_VEHICLE
     }
 }

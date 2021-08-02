@@ -22,9 +22,6 @@ namespace Uncreated.Warfare.Tickets
 
         public static int Team1Tickets;
         public static int Team2Tickets;
-
-        private static Coroutine ticketloop;
-
         public TicketManager()
         {
             config = new Config<TicketData>(Data.TicketStorage, "config.json");
@@ -255,19 +252,9 @@ namespace Uncreated.Warfare.Tickets
                 }
             }
         }
-        public static async Task OnFlagTick(Player nelsonplayer)
+        public static async Task OnFlagTick()
         {
-            var player = UCPlayer.FromPlayer(nelsonplayer);
-
-            await XPManager.AddXP(player.Player, nelsonplayer.GetTeam(), XPManager.config.Data.FlagNeutralizedXP);
-
-            if (player.Squad?.Members.Count > 1 && player.Steam64 != player.Squad.Leader.Steam64)
-            {
-                if (player.IsNearSquadLeader(100))
-                {
-                    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.MemberFlagTickPoints);
-                }
-            }
+            
         }
 
         public static void OnPlayerJoined(UCPlayer player)
@@ -290,16 +277,6 @@ namespace Uncreated.Warfare.Tickets
             Team2Tickets = config.Data.StartingTickets;
             UpdateUITeam1();
             UpdateUITeam2();
-
-            if (ticketloop != null)
-            {
-                try
-                {
-                    UCWarfare.I.StopCoroutine(ticketloop);
-                }
-                catch { }
-            }
-            ticketloop = UCWarfare.I.StartCoroutine(TicketLoop());
         }
 
         public static async Task AddTeam1Tickets(int number)
@@ -452,45 +429,6 @@ namespace Uncreated.Warfare.Tickets
                 }
             }
         }
-
-        private static IEnumerator<WaitForSeconds> TicketLoop()
-        {
-            int count = 0;
-
-            while (UCWarfare.I.State == Rocket.API.PluginState.Loaded)
-            {
-                GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
-                GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
-
-                if (count % 12 == 0) // every 1 minute
-                {
-                    if (Team1Bleed == -1)
-                        Team1Tickets--;
-                    if (Team2Bleed == -1)
-                        Team2Tickets--;
-                }
-                if (count % 6 == 0) // every 30 seconds
-                {
-                    if (Team1Bleed == -2)
-                        Team1Tickets--;
-                    if (Team2Bleed == -2)
-                        Team2Tickets--;
-                }
-                if (count % 2 == 0) // every 10 seconds
-                {
-                    if (Team1Bleed == -3)
-                        Team1Tickets--;
-                    if (Team2Bleed == -3)
-                        Team2Tickets--;
-                }
-
-                count++;
-                if (count >= 12)
-                    count = 0;
-                yield return new WaitForSeconds(5);
-            }
-        }
-
         public void Dispose()
         {
             VehicleManager.OnVehicleExploded -= OnVehicleExploded;

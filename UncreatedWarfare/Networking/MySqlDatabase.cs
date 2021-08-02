@@ -159,28 +159,45 @@ namespace Uncreated.SQL
                 {
                     await Task.Delay(1);
                 }
-                try
+                if (!await InternalQuery(Q, ReadLoopAction, true))
                 {
-                    using (CurrentReader = await Q.ExecuteReaderAsync())
+                    await Task.Delay(10);
+                    int counter = 0;
+                    while (counter < 10 && !await InternalQuery(Q, ReadLoopAction, counter != 9))
                     {
-                        if (CurrentReader is MySqlDataReader R)
-                        {
-                            while (await R.ReadAsync())
-                            {
-                                ReadLoopAction.Invoke(R);
-                            }
-                        }
-                        CurrentReader.Close();
-                        CurrentReader.Dispose();
-                        CurrentReader = null;
-                        Q.Dispose();
+                        counter++;
                     }
                 }
-                catch (Exception ex)
+                Q.Dispose();
+            }
+        }
+        private async Task<bool> InternalQuery(MySqlCommand Q, Action<MySqlDataReader> ReadLoopAction, bool @catch)
+        {
+            try
+            {
+                using (CurrentReader = await Q.ExecuteReaderAsync())
                 {
-                    LogError($"Failed to execute command: {query}: {string.Join(",", parameters)}");
+                    if (CurrentReader is MySqlDataReader R)
+                    {
+                        while (await R.ReadAsync())
+                        {
+                            ReadLoopAction.Invoke(R);
+                        }
+                    }
+                    CurrentReader.Close();
+                    CurrentReader.Dispose();
+                    CurrentReader = null;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (!@catch)
+                {
+                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", Q.Parameters)}");
                     LogError(ex);
                 }
+                return false;
             }
         }
         public async Task<T> Scalar<T>(string query, object[] parameters, Func<object, T> converter)
@@ -195,10 +212,50 @@ namespace Uncreated.SQL
                 {
                     await Task.Delay(1);
                 }
-                object res = await Q.ExecuteScalarAsync();
+                ScalarResponse<T> response = await InternalScalar(Q, converter, true);
+                if (!response.success)
+                {
+                    int counter = 0;
+                    while (counter < 10)
+                    {
+                        await Task.Delay(10);
+                        response = await InternalScalar(Q, converter, counter != 9);
+                        if (response.success)
+                            break;
+                        counter++;
+                    }
+                }
                 Q.Dispose();
-                if (res == null) return default;
-                else return converter.Invoke(res);
+                if (!response.success) return default;
+                else return response.v;
+            }
+        }
+        private async Task<ScalarResponse<T>> InternalScalar<T>(MySqlCommand Q, Func<object, T> converter, bool @catch)
+        {
+            try
+            {
+                object res = await Q.ExecuteScalarAsync();
+                if (res == null) return new ScalarResponse<T>(default, false);
+                else return new ScalarResponse<T>(converter.Invoke(res), true);
+            }
+            catch (Exception ex)
+            {
+                if (!@catch)
+                {
+                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", Q.Parameters)}");
+                    LogError(ex);
+                }
+                return new ScalarResponse<T>(default, false);
+            }
+        }
+        private struct ScalarResponse<T>
+        {
+            public T v;
+            public bool success;
+            public ScalarResponse(T v, bool success)
+            {
+                this.v = v;
+                this.success = success;
             }
         }
         public async Task NonQuery(string command, object[] parameters)
@@ -212,15 +269,32 @@ namespace Uncreated.SQL
                 {
                     await Task.Delay(1);
                 }
-                try
+                if (!await InternalNonQuery(Q, false))
                 {
-                    await Q.ExecuteNonQueryAsync();
+                    int counter = 0;
+                    while (counter < 10 && !await InternalNonQuery(Q, counter != 9))
+                    {
+                        await Task.Delay(10);
+                        counter++;
+                    }
                 }
-                catch (Exception ex)
-{
-                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
+            }
+        }
+        private async Task<bool> InternalNonQuery(MySqlCommand Q, bool @catch)
+        {
+            try
+            {
+                await Q.ExecuteNonQueryAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (!@catch)
+                {
+                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", Q.Parameters)}");
                     LogError(ex);
                 }
+                return false;
             }
         }
         public void QuerySync(string query, object[] parameters, Action<MySqlDataReader> ReadLoopAction)

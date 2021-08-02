@@ -92,37 +92,39 @@ namespace Uncreated.Warfare
         }
         internal static async void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner)
         {
-            if (owner == default || owner.owner == default)
+            try
             {
-                if (owner == default || owner.ownerID == 0) return;
-                FPlayerName usernames = await Data.DatabaseManager.GetUsernames(owner.ownerID);
-                F.Log(usernames.PlayerName + "'s landmine exploded");
-                return;
+                if (owner == default || owner.owner == default)
+                {
+                    if (owner == default || owner.ownerID == 0) return;
+                    FPlayerName usernames = await Data.DatabaseManager.GetUsernames(owner.ownerID);
+                    if (UCWarfare.Config.Debug)
+                        F.Log(usernames.PlayerName + "'s landmine exploded", ConsoleColor.DarkGray);
+                }
+                else
+                {
+                    if (F.TryGetPlaytimeComponent(owner.owner.player, out PlaytimeComponent c))
+                        c.LastLandmineExploded = new LandmineDataForPostAccess(trap, owner);
+                    if (UCWarfare.Config.Debug)
+                        F.Log(F.GetPlayerOriginalNames(owner.owner).PlayerName + "'s landmine exploded", ConsoleColor.DarkGray);
+                }
             }
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-            if (F.TryGetPlaytimeComponent(owner.owner.player, out PlaytimeComponent c))
-                c.LastLandmineExploded = new LandmineDataForPostAccess(trap, owner);
-            F.Log(F.GetPlayerOriginalNames(owner.owner).PlayerName + "'s landmine exploded");
-            await rtn;
+            catch (Exception ex)
+            {
+                F.LogError("Exception in LandmineExploded:");
+                F.LogError(ex);
+            }
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
             try
             {
-                if (useable == null)
-                    F.Log("useable null");
-                if (throwable == null)
-                    F.Log("throwable null");
-                if (useable.player == null)
-                    F.Log("useable.player null");
-                if (useable.equippedThrowableAsset == null)
-                    F.Log("useable.asset null");
-                if (useable.name == null)
-                    F.Log("useable.name null");
                 ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
                 PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
                 t.Set(useable, throwable, c);
-                F.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ? useable.equippedThrowableAsset.itemName : useable.name));
+                if (UCWarfare.Config.Debug)
+                    F.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ? 
+                        useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
                 if (success)
                     c.thrown.Add(t);
             }
@@ -490,6 +492,7 @@ namespace Uncreated.Warfare
             string kit = ucplayer.KitName;
             try
             {
+                StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
                 if (player.OnDuty())
                 {
@@ -500,13 +503,14 @@ namespace Uncreated.Warfare
                 }
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.CSteamID, out bool gotptcomp);
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
                 Task.Run(
                     async () =>
                     {
                         if (gotptcomp)
-                            c.UCPlayerStats.UpdateSession(Stats.WarfareStats.WarfareName);
+                            c.UCPlayerStats.UpdateSession(WarfareStats.WarfareName);
                         Task s = Client.SendPlayerLeft(names);
-                        await Data.Gamemode?.OnPlayerLeft(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                        await Data.Gamemode?.OnPlayerLeft(id);
                         await s;
                     });
                 F.Broadcast("player_disconnected", names.CharacterName);

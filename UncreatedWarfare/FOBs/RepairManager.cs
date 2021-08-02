@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management.Instrumentation;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
@@ -17,9 +18,18 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
         {
+            BarricadeDrop drop = null;
             if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
-                RegisterNewRepairStation(data);
+                for (int i = 0; i < region.barricades.Count; i++)
+                {
+                    if (data.instanceID == region.drops[i].instanceID)
+                    {
+                        drop = region.drops[i];
+                    }
+                }
+                if (drop != null)
+                    RegisterNewRepairStation(data, drop);
             }
         }
         public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
@@ -33,12 +43,13 @@ namespace Uncreated.Warfare.FOBs
         public static void LoadRepairStations()
         {
             stations.Clear();
-            var barricades = GetRepairStationBarricades();
+            List<Barricade> barricades = GetRepairStationBarricades();
 
-            foreach (var barricade in barricades)
+            foreach (Barricade barricade in barricades)
             {
-                var station = new RepairStation(barricade, UCBarricadeManager.GetDropFromBarricadeData(barricade));
+                RepairStation station = new RepairStation(barricade.data, UCBarricadeManager.GetDropFromBarricadeData(barricade.data));
                 stations.Add(station);
+                barricade.drop.model.gameObject.AddComponent<RepairStationComponent>().Initialize(station);
             }
         }
         public static void TryDeleteRepairStation(uint instanceID)
@@ -54,30 +65,55 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
-        public static void RegisterNewRepairStation(BarricadeData data)
+        public static void RegisterNewRepairStation(BarricadeData data, BarricadeDrop drop)
         {
             if (!stations.Exists(r => r.structure.instanceID == data.instanceID))
             {
-                var station = new RepairStation(data, UCBarricadeManager.GetDropFromBarricadeData(data));
+                RepairStation station = new RepairStation(data, drop);
                 station.drop.model.transform.gameObject.AddComponent<RepairStationComponent>().Initialize(station);
 
                 stations.Add(station);
-
-                foreach (var s in stations)
+                if (UCWarfare.Config.Debug)
                 {
-                    F.Log("Repair station: " + s.structure.instanceID);
-                    F.Log("Repair station: " + s.drop.instanceID);
-                    F.Log("Repair station: " + s.IsActive);
+                    foreach (var s in stations)
+                    {
+                        F.Log("Repair station: " + s.structure.instanceID, ConsoleColor.DarkGray);
+                        F.Log("Repair station: " + s.drop.instanceID, ConsoleColor.DarkGray);
+                        F.Log("Repair station: " + s.IsActive, ConsoleColor.DarkGray);
+                    }
                 }
             }
         }
 
-        public static List<BarricadeData> GetRepairStationBarricades()
+        public static List<Barricade> GetRepairStationBarricades()
         {
-            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
-
-            return barricadeDatas.Where(b => b.barricade.id == FOBManager.config.Data.RepairStationID).ToList();
+            List<Barricade> barricades = new List<Barricade>();
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.barricades.Count; i++)
+{
+                        if (region.barricades[i].barricade.id == FOBManager.config.Data.RepairStationID)
+                        {
+                            barricades.Add(new Barricade(region.barricades[i], region.drops[i]));
+                        }
+                    }
+                }
+            }
+            return barricades;
+        }
+        public struct Barricade
+        {
+            public BarricadeData data;
+            public BarricadeDrop drop;
+            public Barricade(BarricadeData data, BarricadeDrop drop)
+            {
+                this.data = data;
+                this.drop = drop;
+            }
         }
     }
 

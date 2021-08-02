@@ -129,11 +129,13 @@ namespace Uncreated.Warfare.Revives
             {
                 r.RevivePlayer();
                 ulong team = medic.GetTeam();
-                if (team == target.GetTeam())
+                ulong tteam = target.GetTeam();
+                if (team == tteam)
                     await XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP, 
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
 
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
+                ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)

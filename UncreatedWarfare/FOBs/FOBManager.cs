@@ -300,6 +300,7 @@ namespace Uncreated.Warfare.FOBs
         public ushort FOBRequiredBuild;
         public byte FobLimit;
 
+        public float AmmoCommandCooldown;
         public ushort AmmoCrateBaseID;
         public ushort AmmoCrateID;
         public ushort AmmoCrateRequiredBuild;
@@ -348,6 +349,7 @@ namespace Uncreated.Warfare.FOBs
             AmmoCrateBaseID = 38316;
             AmmoCrateID = 38317;
             AmmoCrateRequiredBuild = 3;
+            AmmoCommandCooldown = 5f;
 
             RepairStationBaseID = 38318;
             RepairStationID = 38319;

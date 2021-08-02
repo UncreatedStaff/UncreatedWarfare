@@ -154,7 +154,7 @@ namespace Uncreated.Warfare
                 { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from the squad.</color>" },
                 { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
                 { "squad_no_no_words", "<color=#ff8c69>You can't name a squad that.</color>" },
-                
+
                 { "squad_ui_name", "{0}" },
                 { "squad_ui_player_name", "{0}" },
                 { "squad_ui_squad_name", "{0}" },
@@ -247,6 +247,8 @@ namespace Uncreated.Warfare
                 { "ammo_not_enough_stock", "<color=#9cffb3>This Ammo Crate is missing <color=#cedcde>AMMO BOXES</color>. <color=#d1c597>{0}/{1}</color>.</color>" },
                 { "ammo_no_kit", "<color=#9cffb3>You don't have a kit yet. Go and request one at main.</color>" },
                 { "ammo_crate_has_no_storage", "<color=#9cffb3>This is an ammo crate according to the server's config, but it has no storage. The admins may have messed something up.</color>" },
+                { "ammo_cooldown", "<color=#9cffb3>You can not refill your kit for another {0} seconds.</color>" },
+                { "ammo_vehicle_cooldown", "<color=#9cffb3>You can not refill your vehicle for another {0} seconds.</color>" },
 
                 // End UI
                 { "game_over", "Game Over!" },
@@ -268,6 +270,7 @@ namespace Uncreated.Warfare
                 { "stats_war_float_value", "<color=#{1}>{0:0.00}</color>" },
                 { "player_name_header", "<color=#{1}>{0}</color> - {2:n0}% presence." },
                 { "war_name_header", "<color=#{1}>{0}</color> vs <color=#{3}>{2}</color>" },
+                { "longest_shot_format", "{0}m\n{1}" },
                 { "lblKills", "Kills: " },
                 { "lblDeaths", "Deaths: " },
                 { "lblKDR", "K/D Ratio: " },
@@ -291,7 +294,7 @@ namespace Uncreated.Warfare
                 { "lblFOBsDestroyedT1", "US FOBs Destroyed: " },
                 { "lblFOBsDestroyedT2", "RU FOBs Destroyed: " },
                 { "lblTeamkillingCasualties", "Teamkill Casualties: " },
-                { "lblTopRankingOfficer", "Highest Ranker: " },
+                { "lblTopRankingOfficer", "Longest Shot: " },
                 { "next_game_start_label", "Next Game Starting In" },
                 { "next_game_start_label_shutting_down", "<color=#00ffff>Shutting Down Because: \"{0}\"</color>" },
                 { "next_game_starting_format", "{0:mm\\:ss}" },

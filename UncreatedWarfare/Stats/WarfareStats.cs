@@ -750,11 +750,19 @@ namespace Uncreated.Warfare.Stats
                 }
             }
 
-            decimal DistanceFromObjective = Convert.ToDecimal(Math.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Gamemodes.Flags.Flag closestObjective, false)));
+            float DistanceFromObjective = Mathf.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Gamemodes.Flags.Flag closestObjective, false));
+            if (parameters.cause == EDeathCause.GUN && parameters.killer != null && Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != default)
+            {
+                if (ctf.GameStats.LongestShot.Equals(default(KeyValuePair<ulong, float>))
+                    || ctf.GameStats.LongestShot.Value < DistanceFromObjective)
+                {
+                    ctf.GameStats.LongestShot = new KeyValuePair<ulong, float>(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.distance);
+                }
+            }
             if (playstyle != default)
             {
                 playstyle.avg_distance_from_objective_on_kill = ((playstyle.avg_distance_from_objective_on_kill * (kills - 1)) + DistanceFromObjective) / kills;
-                playstyle.avg_kill_distance = ((playstyle.avg_kill_distance * (playstyle.avg_kill_distance_counter++)) + Convert.ToDecimal(parameters.distance)) / playstyle.avg_kill_distance_counter;
+                playstyle.avg_kill_distance = ((playstyle.avg_kill_distance * (playstyle.avg_kill_distance_counter++)) + parameters.distance) / playstyle.avg_kill_distance_counter;
                 Vector2 gridSquare = F.RoundLocationToGrid(parameters.killer.transform.position);
                 int squareindex = playstyle.locations.FindIndex(l => l.x == gridSquare.x && l.y == gridSquare.y);
                 if (squareindex != -1)
@@ -937,8 +945,8 @@ namespace Uncreated.Warfare.Stats
     {
         public const uint GRID_SIZE = 10;
         /// <summary> The average distance away from the closest objective a player is when they get a kill. </summary>
-        public decimal avg_distance_from_objective_on_kill;
-        public decimal avg_kill_distance;
+        public float avg_distance_from_objective_on_kill;
+        public float avg_kill_distance;
         public uint avg_kill_distance_counter;
         public decimal pct_kills_from_within_gunner_seat;
         /// <summary> Kills per second by a gunner while player is the driver </summary>
@@ -962,8 +970,8 @@ namespace Uncreated.Warfare.Stats
         }
         [JsonConstructor]
         public Playstyle(
-            decimal avg_distance_from_objective_on_kill, 
-            decimal avg_kill_distance,
+            float avg_distance_from_objective_on_kill,
+            float avg_kill_distance,
             uint avg_kill_distance_counter, 
             decimal pct_kills_from_within_gunner_seat, 
             decimal kills_per_second_while_gunner_gunning, 

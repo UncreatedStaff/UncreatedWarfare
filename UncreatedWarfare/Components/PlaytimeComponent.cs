@@ -167,62 +167,81 @@ namespace Uncreated.Warfare.Components
             int counter = 0;
             while (counter < seconds * 2)
             {
-                if (player.life.isDead)
+                try
                 {
-                    if (shouldMessagePlayer)
-                        player.Message("deploy_c_dead");
-                    yield break;
+                    if (player.life.isDead)
+                    {
+                        if (shouldMessagePlayer)
+                            player.Message("deploy_c_dead");
+                        yield break;
+                    }
+                    if (shouldCancelOnMove && player.transform.position != originalPosition)
+                    {
+                        if (shouldMessagePlayer)
+                            player.Message("deploy_c_moved");
+                        yield break;
+                    }
+                    if (shouldCancelOnDamage && player.life.health != originalhealth)
+                    {
+                        if (shouldMessagePlayer)
+                            player.Message("deploy_c_damaged");
+                        yield break;
+                    }
+                    if (fob != null && fob.Structure.barricade.isDead)
+                    {
+                        if (shouldMessagePlayer)
+                            player.Message("deploy_c_fobdead");
+                        yield break;
+                    }
                 }
-                if (shouldCancelOnMove && player.transform.position != originalPosition)
+                catch (Exception ex)
                 {
-                    if (shouldMessagePlayer)
-                        player.Message("deploy_c_moved");
-                    yield break;
-                }
-                if (shouldCancelOnDamage && player.life.health != originalhealth)
-                {
-                    if (shouldMessagePlayer)
-                        player.Message("deploy_c_damaged");
-                    yield break;
-                }
-                if (fob != null && fob.Structure.barricade.isDead)
-                {
-                    if (shouldMessagePlayer)
-                        player.Message("deploy_c_fobdead");
-                    yield break;
+                    F.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
+                    F.LogError(ex);
                 }
                 counter++;
                 yield return new WaitForSeconds(0.5F);
             }
-            player.teleportToLocationUnsafe(position, angle);
-
-            _currentTeleportRequest = default;
-
-            if (shouldMessagePlayer)
-                player.Message("deploy_s", locationName);
-            CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
-
-            if (fob != null)
+            try
             {
-                var FOBowner = UCPlayer.FromID(fob.Structure.owner);
+                player.teleportToLocationUnsafe(position, angle);
 
-                if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
+                _currentTeleportRequest = default;
+
+                if (shouldMessagePlayer)
+                    player.Message("deploy_s", locationName);
+                CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
+
+                if (fob != null)
                 {
-                    if (FOBowner != null)
+                    UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.owner);
+                    Task.Run(async () =>
                     {
-                        XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP, F.Translate("xp_deployed_fob", FOBowner)).GetAwaiter().GetResult();
-
-                        if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
+                        if (FOBowner != null)
                         {
-                            Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner)).GetAwaiter().GetResult();
-                        }
-                    }
-                    else
-                        Data.DatabaseManager.AddXP(fob.Structure.owner, fob.Structure.group, XP.XPManager.config.Data.FOBDeployedXP).GetAwaiter().GetResult();
-                }
-            }
+                            if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
+                            {
+                                await XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP,
+                                    F.Translate("xp_deployed_fob", FOBowner));
 
-            yield break;
+                                if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
+                                {
+                                    await Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), 
+                                        XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
+                                }
+                            }
+                        }
+                        else
+                            await Data.DatabaseManager.AddXP(fob.Structure.owner, fob.Structure.group, XP.XPManager.config.Data.FOBDeployedXP);
+                    });
+                }
+                yield break;
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
+                F.LogError(ex);
+            }
         }
     }
 }
