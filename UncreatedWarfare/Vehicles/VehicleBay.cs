@@ -143,6 +143,13 @@ namespace Uncreated.Warfare.Vehicles
 
             VehicleManager.askVehicleDestroy(vehicle);
         }
+        public static void DeleteAllVehiclesFromWorld()
+        {
+            for (int i = 0; i < VehicleManager.vehicles.Count; i++)
+            {
+                DeleteVehicle(VehicleManager.vehicles[i]);
+            }
+        }
 
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
@@ -279,6 +286,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (passenger == null || passenger.player == null || passenger.player.playerID.steamID == player.CSteamID)
                     continue;
+
                 if (KitManager.HasKit(passenger.player.playerID.steamID, out var pKit) && pKit.Class == vehicleData.RequiredClass)
                 {
                     isThereAnotherCrewman = true;
@@ -286,7 +294,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
 
-            if (vehicleData.RequiredClass != kit.Class && !isThereAnotherCrewman)
+            if (!isThereAnotherCrewman)
             {
                 player.SendChat("vehicle_need_another_person_with_kit", vehicleData.RequiredClass.ToString().ToUpper());
                 shouldAllow = false;

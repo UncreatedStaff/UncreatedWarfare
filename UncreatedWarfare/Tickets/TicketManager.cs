@@ -190,6 +190,9 @@ namespace Uncreated.Warfare.Tickets
             if (lostTeam == 2)
                 Team2Tickets += config.Data.TicketsFlagLost;
 
+                UpdateUITeam1();
+                UpdateUITeam2();
+
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
@@ -262,6 +265,8 @@ namespace Uncreated.Warfare.Tickets
             {
                 for (int i = 0; i < gamemode.Rotation.Count; i++)
                 {
+                    F.Log("ticking flags...");
+
                     var flag = gamemode.Rotation[i];
 
                     if (flag.LastDeltaPoints == 1 && flag.Owner != 1)
@@ -474,9 +479,9 @@ namespace Uncreated.Warfare.Tickets
                         var member = ucplayer.Squad.Members[i];
                         if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
                         {
-                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, squadTranslationKey);
                             if (member.IsSquadLeader())
-                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, squadTranslationKey);
                         }
                     }
                 }

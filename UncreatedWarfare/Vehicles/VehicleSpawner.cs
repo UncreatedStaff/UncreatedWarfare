@@ -70,10 +70,20 @@ namespace Uncreated.Warfare.Vehicles
             F.Log("Respawning vehicles...", ConsoleColor.Magenta);
             foreach (InteractableVehicle v in VehicleManager.vehicles.ToList())
             {
+                if (HasLinkedSpawn(v.instanceID, out _))
+                {
+                    if (v.TryGetComponent<SpawnedVehicleComponent>(out var component))
+                    {
+                        component.StopIdleRespawnTimer();
+                    }
+                }
+
                 VehicleBay.DeleteVehicle(v);
             }
             foreach (VehicleSpawn spawn in ActiveObjects)
             {
+                spawn.CancelVehicleRespawnTimer();
+
                 spawn.SpawnVehicle();
             }
         }
@@ -150,7 +160,6 @@ namespace Uncreated.Warfare.Vehicles
             {
                 c.StartIdleRespawnTimer();
             }
-                
         }
     }
     public class VehicleSpawn
@@ -422,7 +431,8 @@ namespace Uncreated.Warfare.Vehicles
     }
     public class SpawnedVehicleComponent : MonoBehaviour
     {
-        Coroutine timer;
+        private Coroutine timer;
+        private Coroutine xploop;
         private InteractableVehicle Owner;
         private VehicleData data;
 
@@ -452,7 +462,6 @@ namespace Uncreated.Warfare.Vehicles
                 try
                 {
                     StopCoroutine(timer);
-                    //StopCoroutine(xploop);
                 }
                 catch { }
             }
@@ -462,7 +471,7 @@ namespace Uncreated.Warfare.Vehicles
             if (Owner == null) return;
             if (data != null)
             {
-                timer = StartCoroutine(XPLoop());
+                xploop = StartCoroutine(XPLoop());
             }
         }
         private IEnumerator<WaitForSeconds> IdleRespawnVehicle(VehicleData data)
