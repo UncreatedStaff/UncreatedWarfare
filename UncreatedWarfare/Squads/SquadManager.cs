@@ -376,7 +376,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static bool FindSquad(string input, ulong teamID, out Squad squad)
         {
-            List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
+            List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).OrderBy(x => x.Name.Length).ToList();
             string name = input.ToLower();
             squad = friendlySquads.Find(
                 s =>
@@ -392,7 +392,6 @@ namespace Uncreated.Warfare.Squads
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
         }
-
         public void Dispose()
         {
             KitManager.OnKitChanged -= OnKitChanged;

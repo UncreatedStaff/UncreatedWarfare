@@ -41,6 +41,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 await EvaluatePoints();
                 await OnEvaluate();
             }
+            await EvaluateTickets();
+        }
+        protected uint TicketCounter = 0;
+        public virtual async Task EvaluateTickets()
+        {
+            TicketCounter++;
+            await Task.Yield();
         }
         public virtual async Task OnEvaluate()
         {

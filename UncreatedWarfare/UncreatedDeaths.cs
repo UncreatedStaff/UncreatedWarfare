@@ -1237,10 +1237,17 @@ namespace Uncreated.Warfare
                     item = c.lastShot;
                 else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
                 {
-                    if (c.thrown[0] != null)
+                    ThrowableOwnerDataComponent g = c.thrown.FirstOrDefault(x => x.asset.isExplosive);
+                    if (g != default)
+                    {
+                        item = g.asset.id;
+                        if (Config.Debug)
+                            F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
+                    } else if (c.thrown[0] != null)
                     {
                         item = c.thrown[0].asset.id;
-                        F.Log("Cause was grenade and found id: " + item.ToString());
+                        if (Config.Debug)
+                            F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }
                     else item = killer.player.equipment.itemID;
                 }

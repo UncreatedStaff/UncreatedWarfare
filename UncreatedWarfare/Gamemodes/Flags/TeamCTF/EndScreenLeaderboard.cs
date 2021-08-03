@@ -32,10 +32,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         List<KeyValuePair<Player, int>> topkills;
         List<KeyValuePair<Player, TimeSpan>> toptimeonpoint;
         List<KeyValuePair<Player, int>> topxpgain;
+        Players.FPlayerName longestShotTaker;
+        ulong longestShotTakerTeam;
+        float longestShot;
+        bool longestShotTaken;
         string squadname;
         ulong squadteam;
         public async Task EndGame(string progresschars)
         {
+            await GetValues();
             SendEndScreen(winner, progresschars);
             secondsLeft = SecondsEndGameLength;
             _ = StartUpdatingTimer(CancelToken.Token, progresschars).ConfigureAwait(false);
@@ -66,12 +71,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 await OnLeaderboardExpired.Invoke();
             }
         }
-        public void GetValues()
+        public async Task GetValues()
         {
             topsquadplayers = warstats.GetTopSquad(out squadname, out squadteam, winner);
             topkills = warstats.GetTop5MostKills();
             toptimeonpoint = warstats.GetTop5OnPointTime();
             topxpgain = warstats.GetTop5XP();
+
+            longestShotTaken = !warstats.LongestShot.Equals(default(KeyValuePair<ulong, float>));
+            if (longestShotTaken)
+            {
+                SteamPlayer longestshottaker = PlayerTool.getSteamPlayer(warstats.LongestShot.Key);
+                if (longestshottaker == null)
+                {
+                    longestShotTaker = await Data.DatabaseManager.GetUsernames(warstats.LongestShot.Key);
+                    if (PlayerManager.HasSave(warstats.LongestShot.Key, out PlayerSave save))
+                        longestShotTakerTeam = save.Team;
+                    else longestShotTakerTeam = 0;
+                }
+                else
+                {
+                    longestShotTaker = F.GetPlayerOriginalNames(longestshottaker);
+                    longestShotTakerTeam = longestshottaker.GetTeam();
+                }
+                longestShot = warstats.LongestShot.Value;
+            } else
+            {
+                longestShot = 0;
+                longestShotTaker = Players.FPlayerName.Nil;
+                longestShotTakerTeam = 0;
+            }
         }
         public void SendScreenToPlayer(SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner), progresschars);
         public void SendScreenToPlayer(ulong winner, SteamPlayer player, string teamcolor, string progresschars)
@@ -280,7 +309,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT1Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT1, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT2Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT2, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.teamkills, defaultColor));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", topOfficer == default ? WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER : F.ColorizeName(F.GetPlayerOriginalNames(topOfficer).CharacterName, topOfficer.GetTeam()));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", longestShotTaken ? 
+                    F.Translate("longest_shot_format", player.playerID.steamID.m_SteamID, longestShot.ToString("N1"), 
+                    F.ColorizeName(longestShotTaker.CharacterName, longestShotTakerTeam)) : WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
             }
             catch (Exception ex)
             {
@@ -291,7 +322,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void SendEndScreen(ulong winner, string progresschars)
         {
             string teamcolor = TeamManager.GetTeamHexColor(winner);
-            GetValues();
             for (int players = 0; players < Provider.clients.Count; players++)
             {
                 SendScreenToPlayer(winner, Provider.clients[players], teamcolor, progresschars);
@@ -315,7 +345,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public readonly ulong id;
         public int kills;
         public int deaths;
-        public float KDR { get => deaths == 0 ? kills : kills / deaths; }
+        public float KDR { get => deaths == 0 ? kills : (float)kills / deaths; }
         public int killsonpoint;
         public int xpgained;
         public int officerpointsgained;
@@ -396,6 +426,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public int teamkills; // works
         internal int gamepercentagecounter;
         public Coroutine update;
+        public KeyValuePair<ulong, float> LongestShot;
         public void Update()
         {
             durationCounter += Time.deltaTime;
@@ -442,6 +473,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             fobsDestroyedT2 = 0;
             teamkills = 0;
             update = StartCoroutine(CompileAverages());
+            LongestShot = default;
         }
         public void StopCounting()
         {

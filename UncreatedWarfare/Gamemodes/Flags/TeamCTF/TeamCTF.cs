@@ -110,6 +110,42 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 return false;
             }
         }
+        public override async Task EvaluateTickets()
+        {
+            TicketCounter++;
+            TicketManager.GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
+            TicketManager.GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
+
+            if (TicketCounter % 60 == 0)
+            {
+                if (Team1Bleed == -1)
+                    TicketManager.Team1Tickets--;
+                if (Team2Bleed == -1)
+                    TicketManager.Team2Tickets--;
+            }
+            if (TicketCounter % 30 == 0)
+            {
+                if (Team1Bleed == -2)
+                    TicketManager.Team1Tickets--;
+                if (Team2Bleed == -2)
+                    TicketManager.Team2Tickets--;
+            }
+            if (TicketCounter % 10 == 0)
+            {
+                if (Team1Bleed == -3)
+                    TicketManager.Team1Tickets--;
+                if (Team2Bleed == -3)
+                    TicketManager.Team2Tickets--;
+            }
+            if (TicketCounter % Config.xpSecondInterval == 0)
+            {
+                await TicketManager.OnFlagTick();
+            }
+
+            TicketCounter++;
+            if (TicketCounter >= 60)
+                TicketCounter = 0;
+        }
         public override async Task DeclareWin(ulong winner)
         {
             F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
@@ -547,6 +583,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public AutoObjectiveData PathingData;
         public int end_delay;
         public float NearOtherBaseKillTimer;
+        public int xpSecondInterval;
         // 0-360
         public float team1spawnangle;
         public float team2spawnangle;
@@ -584,6 +621,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.lobbyspawnangle = 0f;
             this.team1adjacencies = new Dictionary<int, float>();
             this.team2adjacencies = new Dictionary<int, float>();
+            this.xpSecondInterval = 10;
         }
         public class AutoObjectiveData
         {

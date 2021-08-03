@@ -50,13 +50,19 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_no_kit"); 
                     return;
                 }
+                if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
+                {
+                    player.SendChat("ammo_cooldown", FOBManager.config.Data.AmmoCommandCooldown.ToString("N0"));
+                    return;
+                }
 
                 KitManager.ResupplyKit(player, kit);
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 
                 player.SendChat("ammo_success");
-
+                if (FOBManager.config.Data.AmmoCommandCooldown > 0)
+                    CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
                 if (player.IsTeam1())
                     UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
                 else if (player.IsTeam2())
@@ -69,6 +75,11 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_vehicle_cant_rearm"); 
                     return;
                 }
+                if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
+                {
+                    player.SendChat("ammo_vehicle_cooldown", FOBManager.config.Data.AmmoCommandCooldown.ToString("N0"));
+                    return;
+                }
                 if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades.Count > 0)
                 {
                     if (!player.Player.IsInMain())
@@ -79,6 +90,8 @@ namespace Uncreated.Warfare.Commands
 
                     VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
 
+                    if (FOBManager.config.Data.AmmoCommandCooldown > 0)
+                        CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.Data.AmmoCommandCooldown);
                     foreach (ushort item in vehicleData.Items)
                         ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
 
@@ -136,6 +149,9 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
+
+                if (FOBManager.config.Data.AmmoCommandCooldown > 0)
+                    CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.Data.AmmoCommandCooldown);
 
                 foreach (ushort item in vehicleData.Items)
                     ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
