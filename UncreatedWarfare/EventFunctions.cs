@@ -267,6 +267,24 @@ namespace Uncreated.Warfare
             }
             
         }
+        internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
+        {
+            if (storage == null || !shouldAllow || UCWarfare.Config.LimitedStorages == null || UCWarfare.Config.LimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
+            SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
+            if (player == null || !BarricadeManager.tryGetInfo(storage.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) || 
+                region == null || !UCWarfare.Config.LimitedStorages.Contains(region.barricades[index].barricade.id)) return;
+            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+            if (ucplayer == null) return;
+            if (ucplayer.StorageCoroutine != null)
+                player.player.StopCoroutine(ucplayer.StorageCoroutine);
+            ucplayer.StorageCoroutine = player.player.StartCoroutine(WaitToCloseStorage(ucplayer));
+        }
+        private static IEnumerator<WaitForSeconds> WaitToCloseStorage(UCPlayer player)
+        {
+            yield return new WaitForSeconds(UCWarfare.Config.MaxTimeInStorages);
+            player.Player.inventory.closeStorageAndNotifyClient();
+            player.StorageCoroutine = null;
+        }
 
         internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {

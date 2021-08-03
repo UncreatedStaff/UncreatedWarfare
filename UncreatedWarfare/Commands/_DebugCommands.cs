@@ -679,7 +679,7 @@ namespace Uncreated.Warfare.Commands
                 if (i != 0) sb.Append(", ");
                 sb.Append(vehs[i].asset.vehicleName).Append(" - ").Append((vehs[i].transform.position - player.transform.position).magnitude).Append("m");
             }
-            player.SendChat(sb.ToString());
+            player.SendChat("Vehicles: " + sb.ToString());
         }
     }
 #pragma warning restore IDE0051 // Remove unused private members

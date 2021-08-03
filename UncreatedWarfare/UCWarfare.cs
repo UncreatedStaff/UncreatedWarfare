@@ -56,7 +56,15 @@ namespace Uncreated.Warfare
             F.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
 
             F.Log("Patching methods...", ConsoleColor.Magenta);
-            Patches.InternalPatches.DoPatching();
+            try
+            {
+                Patches.InternalPatches.DoPatching();
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Patching Error, perhaps Nelson changed something:");
+                F.LogError(ex);
+            }
 
             StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
 
@@ -175,7 +183,7 @@ namespace Uncreated.Warfare
             {
                 for (byte y = 0; y < Regions.WORLD_SIZE; y++)
                 {
-                    for (int i = BarricadeManager.regions[x, y].barricades.Count; i >= 0; i--)
+                    for (int i = BarricadeManager.regions[x, y].barricades.Count - 1; i >= 0; i--)
                     {
                         uint instid = BarricadeManager.regions[x, y].barricades[i].instanceID;
                         if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
@@ -185,7 +193,7 @@ namespace Uncreated.Warfare
                             BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y], x, y, ushort.MaxValue, (ushort)i);
                         }
                     }
-                    for (int i = StructureManager.regions[x, y].structures.Count; i >= 0; i--)
+                    for (int i = StructureManager.regions[x, y].structures.Count - 1; i >= 0; i--)
                     {
                         uint instid = StructureManager.regions[x, y].structures[i].instanceID;
                         if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
@@ -193,24 +201,6 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            /*
-            
-             * ( vehicle regions )
-
-            for (ushort vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
-            {
-                for (ushort i = 0; i < BarricadeManager.vehicleRegions[vr].barricades.Count; i++)
-                {
-                    uint instid = BarricadeManager.vehicleRegions[vr].barricades[i].instanceID;
-                    if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
-                    {
-                        if (BarricadeManager.vehicleRegions[vr].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
-                            storage.despawnWhenDestroyed = true;
-                        BarricadeManager.destroyBarricade(BarricadeManager.vehicleRegions[vr], 0, 0, vr, i);
-                    }
-                }
-            }
-            */
             await RequestSigns.DropAllSigns();
             await StructureSaver.DropAllStructures();
         }
@@ -245,6 +235,7 @@ namespace Uncreated.Warfare
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
             BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
+            BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
         }
         private void UnsubscribeFromEvents()
@@ -278,6 +269,7 @@ namespace Uncreated.Warfare
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
             BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
+            BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
             if (!InitialLoadEventSubscription)
             {

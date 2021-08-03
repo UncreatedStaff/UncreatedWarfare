@@ -136,7 +136,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
                     stats = new PlayerCurrentGameStats(player.player);
                 else stats = statsvalue.Value;
-                F.Log(stats.ToString());
                 Players.FPlayerName originalNames = F.GetPlayerOriginalNames(player);
                 ITransportConnection channel = player.transportConnection;
                 EffectManager.sendUIEffect(UCWarfare.Config.EndScreenUI, UiIdentifier, channel, true);

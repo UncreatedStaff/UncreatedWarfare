@@ -56,27 +56,38 @@ namespace Uncreated.Warfare
 #pragma warning disable IDE0051
 #pragma warning disable IDE0060 // Remove unused parameter
             internal static GameObject lastProjected;
-            // SDG.Unturned.UseableGun
+            // SDG.Unturned.VehicleManager
             /// <summary>
             /// Prefix of <see cref="VehicleManager.getVehiclesInRadius(Vector3, float, List{InteractableVehicle})"/> to make it based off of a sphere collider instead of getting the center of vehicles.
             /// </summary>
             [HarmonyPatch(typeof(VehicleManager), "getVehiclesInRadius")]
             [HarmonyPrefix]
-            static bool OnPostProjected(Vector3 center, float sqrRadius, List<InteractableVehicle> result)
+            static bool GetVehiclesInRadius(Vector3 center, float sqrRadius, List<InteractableVehicle> result)
             {
                 Collider[] hits = Physics.OverlapSphere(center, Mathf.Sqrt(sqrRadius), RayMasks.VEHICLE);
                 if (hits.Length == 0) return true;
                 foreach (Collider hit in hits)
                 {
-                    if (hit.gameObject.TryGetComponent(out InteractableVehicle vehicle))
-                    {
-                        if (!vehicle.isDead && !result.Exists(x => x.instanceID == vehicle.instanceID))
-                            result.Add(vehicle);
-                        F.Log("Hit: " + vehicle.asset.vehicleName);
-                    }
+                    InteractableVehicle[] vehicle = hit.gameObject.GetComponentsInParent<InteractableVehicle>();
+                    result.AddRange(vehicle);
                 }
                 if (result.Count == 0) return true;
                 return false;
+            }
+            // SDG.Unturned.PlayerInventory
+            /// <summary>
+            /// Postfix of <see cref="PlayerInventory.closeStorage()"/> to stop the coroutine that auto-closes storages.
+            /// </summary>
+            [HarmonyPatch(typeof(PlayerInventory), "closeStorage")]
+            [HarmonyPostfix]
+            static void OnStopStoring(PlayerInventory __instance)
+            {
+                if (!UCWarfare.Config.Patches.closeStorage) return;
+                UCPlayer player = UCPlayer.FromPlayer(__instance.player);
+                if (player == null) return;
+                if (player.StorageCoroutine != null)
+                    player.Player.StopCoroutine(player.StorageCoroutine);
+                return;
             }
             // SDG.Unturned.UseableGun
             /// <summary>

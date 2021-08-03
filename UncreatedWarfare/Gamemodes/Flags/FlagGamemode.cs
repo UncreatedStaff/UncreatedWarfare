@@ -14,7 +14,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public List<Flag> AllFlags = new List<Flag>();
         public Dictionary<ulong, int> OnFlag = new Dictionary<ulong, int>();
         protected int _counter;
+        protected int _counter2;
         protected abstract bool TimeToCheck();
+        protected abstract bool TimeToTicket();
         public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
         {
 
@@ -41,12 +43,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 await EvaluatePoints();
                 await OnEvaluate();
             }
-            await EvaluateTickets();
+            if (TimeToTicket())
+                await EvaluateTickets();
         }
         protected uint TicketCounter = 0;
         public virtual async Task EvaluateTickets()
         {
-            TicketCounter++;
             await Task.Yield();
         }
         public virtual async Task OnEvaluate()

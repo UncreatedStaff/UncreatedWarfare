@@ -58,6 +58,8 @@ namespace Uncreated.Warfare
         public bool OverrideKitRequirements;
         public float InjuredDamageMultiplier;
         public ushort GiveUpUI;
+        public float MaxTimeInStorages;
+        public ushort[] LimitedStorages;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -99,6 +101,8 @@ namespace Uncreated.Warfare
             this.ReplaceEmptyNamesWithID = true;
             this.OverrideKitRequirements = true;
             this.GiveUpUI = 36009;
+            this.MaxTimeInStorages = 15f;
+            this.LimitedStorages = new ushort[] { 38317, 38319, 38343, 38344 };
         }
     }
     public class Modules
@@ -202,6 +206,7 @@ namespace Uncreated.Warfare
         public bool replicateSetMarker;
         public bool ReceiveChatRequest;
         public bool EnableQueueSkip;
+        public bool closeStorage;
 
         public PatchToggles()
         {
@@ -227,6 +232,7 @@ namespace Uncreated.Warfare
             this.replicateSetMarker = true;
             this.ReceiveChatRequest = true;
             this.EnableQueueSkip = true;
+            this.closeStorage = true;
         }
 
     }

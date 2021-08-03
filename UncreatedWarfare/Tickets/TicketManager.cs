@@ -260,14 +260,10 @@ namespace Uncreated.Warfare.Tickets
         {
             if (Data.Gamemode is TeamCTF gamemode)
             {
-                F.Log("running", ConsoleColor.DarkGray);
                 for (int i = 0; i < gamemode.Rotation.Count; i++)
                 {
-                    F.Log("ticking flags...");
-
-                    var flag = gamemode.Rotation[i];
-
-                    if (flag.LastDeltaPoints == 1 && flag.Owner != 1)
+                    Flag flag = gamemode.Rotation[i];
+                    if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
                     {
                         for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                             await XPManager.AddXP(flag.PlayersOnFlagTeam1[j],
@@ -275,7 +271,7 @@ namespace Uncreated.Warfare.Tickets
                                 XPManager.config.Data.FlagAttackXP,
                                 F.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
                     }
-                    else if (flag.LastDeltaPoints == -1 && flag.Owner != 2)
+                    else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                     {
                         for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                             await XPManager.AddXP(flag.PlayersOnFlagTeam2[j],

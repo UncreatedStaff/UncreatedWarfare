@@ -282,7 +282,7 @@ namespace Uncreated.Warfare
                     List<FlagData> Flags;
                     using (StreamReader Reader = File.OpenText(Data.FlagStorage + "flags.json"))
                     {
-                        Flags = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd());
+                        Flags = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd(), new JsonSerializerSettings() { Culture = Data.Locale });
                         Reader.Close();
                         Reader.Dispose();
                     }
@@ -330,7 +330,7 @@ namespace Uncreated.Warfare
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
+                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
                         Serializer.Serialize(JsonWriter, DefaultColors);
                         JsonWriter.Close();
                         TextWriter.Close();
@@ -380,7 +380,7 @@ namespace Uncreated.Warfare
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
-                            JsonSerializer Serializer = new JsonSerializer { Formatting = Formatting.Indented };
+                            JsonSerializer Serializer = new JsonSerializer { Formatting = Formatting.Indented, Culture = Data.Locale };
                             Serializer.Serialize(JsonWriter, DefaultTranslations);
                             JsonWriter.Close();
                             TextWriter.Close();
@@ -425,7 +425,7 @@ namespace Uncreated.Warfare
                             {
                                 try
                                 {
-                                    Translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(Reader.ReadToEnd());
+                                    Translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(Reader.ReadToEnd(), new JsonSerializerSettings() { Culture = Data.Locale });
                                 }
                                 catch (Exception ex)
                                 {
@@ -539,7 +539,7 @@ namespace Uncreated.Warfare
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
-                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
+                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
                             Serializer.Serialize(JsonWriter, DefaultExtraZones);
                             JsonWriter.Close();
                             TextWriter.Close();
@@ -589,7 +589,7 @@ namespace Uncreated.Warfare
                     {
                         using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                         {
-                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
+                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
                             Serializer.Serialize(JsonWriter, DefaultExtraPoints);
                             JsonWriter.Close();
                             TextWriter.Close();
@@ -705,7 +705,7 @@ namespace Uncreated.Warfare
             if (Languages == null) return new Dictionary<ulong, string>();
             Dictionary<ulong, string> NewLanguages = new Dictionary<ulong, string>();
             foreach (LangData player in Languages)
-                NewLanguages.Add(player.player, player.language ?? JSONMethods.DefaultLanguage);
+                NewLanguages.Add(player.player, player.language ?? DefaultLanguage);
             return NewLanguages;
         }
         public static void SaveLangs(Dictionary<ulong, string> Languages)
