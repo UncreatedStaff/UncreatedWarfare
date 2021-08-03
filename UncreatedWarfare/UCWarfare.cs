@@ -175,21 +175,21 @@ namespace Uncreated.Warfare
             {
                 for (byte y = 0; y < Regions.WORLD_SIZE; y++)
                 {
-                    for (ushort i = 0; i < BarricadeManager.regions[x, y].barricades.Count; i++)
+                    for (int i = BarricadeManager.regions[x, y].barricades.Count; i >= 0; i--)
                     {
                         uint instid = BarricadeManager.regions[x, y].barricades[i].instanceID;
                         if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
                         {
                             if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
                                 storage.despawnWhenDestroyed = true;
-                            BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y], x, y, ushort.MaxValue, i);
+                            BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y], x, y, ushort.MaxValue, (ushort)i);
                         }
                     }
-                    for (ushort i = 0; i < StructureManager.regions[x, y].structures.Count; i++)
+                    for (int i = StructureManager.regions[x, y].structures.Count; i >= 0; i--)
                     {
                         uint instid = StructureManager.regions[x, y].structures[i].instanceID;
                         if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
-                            StructureManager.destroyStructure(StructureManager.regions[x, y], x, y, i, Vector3.zero);
+                            StructureManager.destroyStructure(StructureManager.regions[x, y], x, y, (ushort)i, Vector3.zero);
                     }
                 }
             }

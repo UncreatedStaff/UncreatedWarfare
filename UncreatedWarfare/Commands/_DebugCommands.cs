@@ -659,6 +659,28 @@ namespace Uncreated.Warfare.Commands
         {
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.channel.owner.transportConnection });
         }
+        private void getveh(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            if (command.Length < 1 || float.TryParse(command[0], System.Globalization.NumberStyles.Any, Data.Locale, out float radius))
+            {
+                player.SendChat("Invalid syntax for getveh: /getveh <radius>");
+                return;
+            }
+            List<InteractableVehicle> vehs = new List<InteractableVehicle>();
+            VehicleManager.getVehiclesInRadius(player.transform.position, radius * radius, vehs);
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < vehs.Count; i++)
+            {
+                if (i != 0) sb.Append(", ");
+                sb.Append(vehs[i].asset.vehicleName).Append(" - ").Append((vehs[i].transform.position - player.transform.position).magnitude).Append("m");
+            }
+            player.SendChat(sb.ToString());
+        }
     }
 #pragma warning restore IDE0051 // Remove unused private members
 #pragma warning restore IDE0060 // Remove unused parameter

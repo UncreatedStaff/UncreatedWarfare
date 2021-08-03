@@ -140,7 +140,6 @@ namespace Uncreated.Warfare.Vehicles
                         store.despawnWhenDestroyed = true;
                 }
             }
-
             VehicleManager.askVehicleDestroy(vehicle);
         }
 
@@ -148,6 +147,12 @@ namespace Uncreated.Warfare.Vehicles
         {
             if (vehicle == null) return;
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+            if (Data.ReviveManager.DownedPlayers.ContainsKey(nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
+            {
+                shouldAllow = false;
+                return;
+            }
+
             UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
 
             bool isOwnerOnline = owner != null;

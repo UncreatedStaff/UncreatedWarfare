@@ -58,9 +58,30 @@ namespace Uncreated.Warfare
             internal static GameObject lastProjected;
             // SDG.Unturned.UseableGun
             /// <summary>
+            /// Prefix of <see cref="VehicleManager.getVehiclesInRadius(Vector3, float, List{InteractableVehicle})"/> to make it based off of a sphere collider instead of getting the center of vehicles.
+            /// </summary>
+            [HarmonyPatch(typeof(VehicleManager), "getVehiclesInRadius")]
+            [HarmonyPrefix]
+            static bool OnPostProjected(Vector3 center, float sqrRadius, List<InteractableVehicle> result)
+            {
+                Collider[] hits = Physics.OverlapSphere(center, Mathf.Sqrt(sqrRadius), RayMasks.VEHICLE);
+                if (hits.Length == 0) return true;
+                foreach (Collider hit in hits)
+                {
+                    if (hit.gameObject.TryGetComponent(out InteractableVehicle vehicle))
+                    {
+                        if (!vehicle.isDead && !result.Exists(x => x.instanceID == vehicle.instanceID))
+                            result.Add(vehicle);
+                        F.Log("Hit: " + vehicle.asset.vehicleName);
+                    }
+                }
+                if (result.Count == 0) return true;
+                return false;
+            }
+            // SDG.Unturned.UseableGun
+            /// <summary>
             /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
             /// </summary>
-
             [HarmonyPatch(typeof(UseableGun), "project")]
             [HarmonyPostfix]
             static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
@@ -211,7 +232,7 @@ namespace Uncreated.Warfare
                     {
                         foreach (SteamPlayer client in Provider.clients)
                         {
-                            if (player.Squad.Members.Exists(x => x.Steam64 == callingPlayer.playerID.steamID.m_SteamID))
+                            if (player.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
                                 ChatManager.serverSendMessage("[S] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                             else if ((client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)) 
                                 ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
@@ -698,7 +719,30 @@ namespace Uncreated.Warfare
                         }
                         else
                         {
-                            vehicle.gameObject.AddComponent<VehicleDamageOwnerComponent>().owner = instigatorSteamID;
+                            vc = vehicle.gameObject.AddComponent<VehicleDamageOwnerComponent>();
+                            vc.owner = instigatorSteamID;
+                            if (damageOrigin == EDamageOrigin.Grenade_Explosion)
+                            {
+                                if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
+                                {
+                                    ThrowableOwnerDataComponent a = c.thrown.FirstOrDefault(x => x.asset.isExplosive);
+                                    if (a != null)
+                                        vc.item = a.asset.id;
+                                }
+                            } else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                            {
+                                if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
+                                {
+                                    vc.item = c.lastProjected;
+                                }
+                            } else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
+                            {
+                                if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
+                                {
+                                    vc.item = c.lastExplodedVehicle;
+                                    
+                                }
+                            }
                         }
                     }
                     else

@@ -697,8 +697,8 @@ namespace Uncreated.Warfare
                 { "loss_ofp", "-{0} OF" },
 
                 { "injured_ui_header", "You are injured" },
-                { "injured_ui_give_up", "Press <b>Code Hotkey #3</b> to give up.\n<b>Slash</b> by default." },
-                { "injured_chat", "You were injured, press <color=#cedcde><plugin_2/></color> to give up." }
+                { "injured_ui_give_up", "Press <b>'/'</b> to give up.\n " },
+                { "injured_chat", "<color=#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.</color>" }
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -1165,11 +1165,16 @@ namespace Uncreated.Warfare
             { "SPLASH_SUICIDE", "{0} killed themselves with splash damage from a {3}." },
             { "SUICIDE", "{0} committed suicide." },
             { "VEHICLE", "{0} was blown up by {1} with a {3}." },
-            { "VEHICLE_SUICIDE", "{0} blew themselves up with a {3}." },
+            { "VEHICLE_WEAPON", "{0} was blown up by a {3} using {1}'s {5}." },
+            { "VEHICLE_SUICIDE_WEAPON", "{0} blew themselves up with a {3} using a {5}." },
             { "VEHICLE_SUICIDE_UNKNOWN", "{0} blew themselves up with a vehicle." },
+            { "VEHICLE_SUICIDE_UNKNOWN_WEAPON", "{0} blew themselves up with a vehicle using a {5}." },
             { "VEHICLE_UNKNOWN", "{0} was blown up by {1} with a vehicle." },
+            { "VEHICLE_UNKNOWN_WEAPON", "{0} was blown up by a vehicle using {1}'s {5}." },
             { "VEHICLE_UNKNOWNKILLER", "{0} blown up by a {3}." },
+            { "VEHICLE_UNKNOWNKILLER_WEAPON", "{0} blown up by a {3} using a {5}." },
             { "VEHICLE_UNKNOWN_UNKNOWNKILLER", "{0} was blown up by a vehicle." },
+            { "VEHICLE_UNKNOWN_UNKNOWNKILLER_WEAPON", "{0} was blown up by a vehicle using a {5}." },
             { "WATER", "{0} dehydrated." },
             { "ZOMBIE", "{0} was killed by {1}." },
             { "MAINCAMP", "{0} tried to main-camp {1} from {4} away and died." },

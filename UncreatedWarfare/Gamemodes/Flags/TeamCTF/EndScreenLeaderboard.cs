@@ -117,6 +117,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.player.life.serverModifyVirus(100);
                 player.player.life.serverModifyStamina(100);
                 player.player.movement.sendPluginJumpMultiplier(0f);
+                Data.ReviveManager.RevivePlayer(player.player);
 
                 if (!player.player.life.isDead)
                     player.player.teleportToLocation(F.GetBaseSpawn(player, out ulong playerteam), F.GetBaseAngle(playerteam));
@@ -246,8 +247,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                             player.playerID.steamID.m_SteamID, topxpgain[i].Value, color));
                     }
                 }
-                UCPlayer topOfficer = PlayerManager.OnlinePlayers.OrderByDescending(x => x.cachedOfp).FirstOrDefault();
-                if (topOfficer.cachedOfp == 0) topOfficer = default;
+                //UCPlayer topOfficer = PlayerManager.OnlinePlayers.OrderByDescending(x => x.cachedOfp).FirstOrDefault();
+                //if (topOfficer.cachedOfp == 0) topOfficer = default;
                 /*
                  *  STATS
                  */
@@ -455,10 +456,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 StopCounting();
             if (playerstats == null)
                 playerstats = new Dictionary<ulong, PlayerCurrentGameStats>();
-            else
-                playerstats.Clear();
             for (int i = 0; i < Provider.clients.Count; i++)
-                playerstats.Add(Provider.clients[i].playerID.steamID.m_SteamID, new PlayerCurrentGameStats(Provider.clients[i].player));
+            {
+                if (playerstats.TryGetValue(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerCurrentGameStats p))
+                    p.Reset();
+                else
+                {
+                    PlayerCurrentGameStats s = new PlayerCurrentGameStats(Provider.clients[i].player);
+                    playerstats.Add(Provider.clients[i].playerID.steamID.m_SteamID, s);
+                    if (Provider.clients[i].player.TryGetPlaytimeComponent(out Components.PlaytimeComponent pt))
+                        pt.stats = s;
+                }
+            }
             durationCounter = 0;
             casualtiesT1 = 0;
             casualtiesT2 = 0;

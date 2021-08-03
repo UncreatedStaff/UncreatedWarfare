@@ -187,6 +187,9 @@ namespace Uncreated.Warfare.Tickets
             if (lostTeam == 2)
                 Team2Tickets += config.Data.TicketsFlagLost;
 
+            UpdateUITeam1();
+            UpdateUITeam2();
+
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
@@ -257,6 +260,7 @@ namespace Uncreated.Warfare.Tickets
         {
             if (Data.Gamemode is TeamCTF gamemode)
             {
+                F.Log("running", ConsoleColor.DarkGray);
                 for (int i = 0; i < gamemode.Rotation.Count; i++)
                 {
                     var flag = gamemode.Rotation[i];

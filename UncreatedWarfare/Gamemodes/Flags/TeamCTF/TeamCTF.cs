@@ -142,6 +142,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 await TicketManager.OnFlagTick();
             }
 
+            if (Team1Bleed < 0)
+                TicketManager.UpdateUITeam1();
+            if (Team2Bleed < 0)
+                TicketManager.UpdateUITeam2();
+
             TicketCounter++;
             if (TicketCounter >= 60)
                 TicketCounter = 0;
