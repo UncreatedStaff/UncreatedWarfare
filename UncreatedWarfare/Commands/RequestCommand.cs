@@ -215,6 +215,12 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 
+                if (!FOBManager.config.Data.Emplacements.Exists(e => e.vehicleID == vehicle.id))
+                {
+                    ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true);
+                    ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true);
+                }
+                
                 foreach (ushort item in data.Items)
                 {
                     ItemManager.dropItem(new Item(item, true), ucplayer.Position, true, true, true);

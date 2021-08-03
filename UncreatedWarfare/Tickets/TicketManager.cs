@@ -263,6 +263,8 @@ namespace Uncreated.Warfare.Tickets
                 F.Log("running", ConsoleColor.DarkGray);
                 for (int i = 0; i < gamemode.Rotation.Count; i++)
                 {
+                    F.Log("ticking flags...");
+
                     var flag = gamemode.Rotation[i];
 
                     if (flag.LastDeltaPoints == 1 && flag.Owner != 1)
@@ -465,9 +467,9 @@ namespace Uncreated.Warfare.Tickets
                         var member = ucplayer.Squad.Members[i];
                         if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
                         {
-                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, squadTranslationKey);
                             if (member.IsSquadLeader())
-                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, F.Translate("ofp_squad_built_repair_station", ucplayer.Steam64));
+                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, squadTranslationKey);
                         }
                     }
                 }
