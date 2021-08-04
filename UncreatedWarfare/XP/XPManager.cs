@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.XP
             if (player.IsTeam1() || player.IsTeam2())
             {
                 int amt = await GetXP(player.Player, player.GetTeam(), true);
-                UpdateUI(player.Player, amt);
+                UpdateUI(player.Player, amt, out _);
             }
         }
         public static async Task OnPlayerLeft(UCPlayer player)
@@ -40,7 +40,7 @@ namespace Uncreated.Warfare.XP
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             int xp = await GetXP(player.player, newGroup, true);
-            UpdateUI(player.player, xp);
+            UpdateUI(player.player, xp, out _);
         }
         public static async Task<int> GetXP(Player player, ulong team, bool important)
         {
@@ -71,13 +71,33 @@ namespace Uncreated.Warfare.XP
         {
             if (team < 1 || team > 2) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
+
+            Rank oldRank = null;
             if (ucplayer != null)
+            {
+                oldRank = await ucplayer.XPRank();
+            }
+
+            int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
+
+            if (ucplayer != null)
+            {
                 ucplayer.cachedXp = newBalance;
-            UpdateUI(player, newBalance);
+            }
 
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
+
+            UpdateUI(player, newBalance, out var rank);
+
+            if (rank.level > oldRank?.level)
+            {
+                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID), ToastMessageSeverity.BIG);
+            }
+            else if (rank.level < oldRank?.level)
+            {
+                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID), ToastMessageSeverity.BIG);
+            }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
                 await VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
@@ -91,11 +111,11 @@ namespace Uncreated.Warfare.XP
                 c.UCPlayerStats.warfare_stats.AddXP(amount);
             }
         }
-        public static void UpdateUI(Player nelsonplayer, int balance)
+        public static void UpdateUI(Player nelsonplayer, int balance, out Rank rank)
         {
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
 
-            Rank rank = GetRank(balance, out int currentXP, out Rank nextRank);
+            rank = GetRank(balance, out int currentXP, out Rank nextRank);
             short key = unchecked((short)config.Data.RankUI);
             if (player.OfficerRank != null)
             {
@@ -104,7 +124,7 @@ namespace Uncreated.Warfare.XP
                     "Rank", player.OfficerRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Level", F.Translate("ui_ofp_level", player, player.OfficerRank.level.ToString(Data.Locale))
+                    "Level", rank.level == 0 ? "" : F.Translate("ui_ofp_level", player, player.OfficerRank.level.ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString(Data.Locale)
@@ -330,8 +350,6 @@ namespace Uncreated.Warfare.XP
         public int BuiltBarricadeXP;
         public Dictionary<EVehicleType, int> VehicleDestroyedXP;
 
-
-
         public float XPMultiplier;
 
         public ushort RankUI;
@@ -376,16 +394,17 @@ namespace Uncreated.Warfare.XP
 
             Ranks = new List<Rank>()
             {
-                new Rank(1, "Private", "Pvt.", 1000),
-                new Rank(2, "Private 1st Class", "Pfc.", 2000),
-                new Rank(3, "Corporal", "Cpl.", 2500),
-                new Rank(4, "Specialist", "Spec.", 3000),
-                new Rank(5, "Sergeant", "Sgt.", 5000),
-                new Rank(6, "Staff Sergeant", "Ssg.", 7000),
-                new Rank(7, "Sergeant 1st Class", "Sfc.", 9000),
-                new Rank(8, "Sergeant Major", "S.M.", 12000),
-                new Rank(9, "Warrant Officer", "W.O.", 16000),
-                new Rank(10, "Chief Warrant Officer", "C.W.O.", 25000)
+                new Rank(0, "Recruit", "Rec.", 1000),
+                new Rank(1, "Private", "Pvt.", 2000),
+                new Rank(2, "Private 1st Class", "Pfc.", 2500),
+                new Rank(3, "Corporal", "Cpl.", 3000),
+                new Rank(4, "Specialist", "Spec.", 5000),
+                new Rank(5, "Sergeant", "Sgt.", 7000),
+                new Rank(6, "Staff Sergeant", "Ssg.", 9000),
+                new Rank(7, "Sergeant 1st Class", "Sfc.", 12000),
+                new Rank(8, "Sergeant Major", "S.M.", 16000),
+                new Rank(9, "Warrant Officer", "W.O.", 25000),
+                new Rank(10, "Chief Warrant Officer", "C.W.O.", 35000)
             };
         }
         public XPData() => SetDefaults();

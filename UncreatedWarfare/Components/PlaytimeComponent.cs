@@ -81,7 +81,7 @@ namespace Uncreated.Warfare.Components
                     toastMessageOpen = UCWarfare.Config.MiniToastXP;
                     break;
                 case ToastMessageSeverity.MINIOFFICERPTS: 
-                    toastMessageOpen = UCWarfare.Config.MiniToastOfficerPoints;
+                    toastMessageOpen = UCWarfare.Config.BigToast;
                     break;
             }
             if (message.Message != null)

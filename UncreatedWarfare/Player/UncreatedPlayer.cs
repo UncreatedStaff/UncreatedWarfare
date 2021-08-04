@@ -519,6 +519,7 @@ namespace Uncreated.Players
         public float delay;
         public const float FULL_TOAST_TIME = 12f;
         public const float MINI_TOAST_TIME = 4f;
+        public const float BIG_TOAST_TIME = 6f;
         public ToastMessage(string message, ToastMessageSeverity severity)
         {
             this.Message = message;
@@ -535,6 +536,9 @@ namespace Uncreated.Players
                 case ToastMessageSeverity.MINIXP:
                 case ToastMessageSeverity.MINIOFFICERPTS:
                     this.delay = MINI_TOAST_TIME;
+                    break;
+                case ToastMessageSeverity.BIG:
+                    this.delay = BIG_TOAST_TIME;
                     break;
             }
         }
@@ -554,6 +558,9 @@ namespace Uncreated.Players
                 case ToastMessageSeverity.MINIXP:
                 case ToastMessageSeverity.MINIOFFICERPTS:
                     this.delay = MINI_TOAST_TIME;
+                    break;
+                case ToastMessageSeverity.BIG:
+                    this.delay = BIG_TOAST_TIME;
                     break;
             }
         }
@@ -580,7 +587,8 @@ namespace Uncreated.Players
         WARNING = 1,
         SEVERE = 2,
         MINIXP = 3,
-        MINIOFFICERPTS = 4
+        MINIOFFICERPTS = 4,
+        BIG = 5
     }
 
     public struct BasicSQLStats

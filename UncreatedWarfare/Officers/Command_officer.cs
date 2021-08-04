@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Commands
                             OfficerManager.ChangeOfficerRank(target, rank, branch);
                             player.OfficerRank = rank;
                             PlayerManager.Save();
-                            XPManager.UpdateUI(target.Player, target.cachedXp);
+                            XPManager.UpdateUI(target.Player, target.cachedXp, out _);
                         }
                         else
                             player.SendChat("officer_branchnotfound", command[2]);
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Commands
                         OfficerManager.DischargeOfficer(target, target.OfficerRank);
                         player.OfficerRank = null;
                         PlayerManager.Save();
-                        XPManager.UpdateUI(target.Player, target.cachedXp);
+                        XPManager.UpdateUI(target.Player, target.cachedXp, out _);
                     }
                     else
                         player.SendChat("officer_notofficer", command[1]);

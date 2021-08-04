@@ -135,12 +135,21 @@ namespace Uncreated.Warfare.Tickets
                                 break;
                         }
 
+                        UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+
                         if (vehicleWasEnemy)
                         {
+                            if (owner is null)
+                                F.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
+                            else
+                                F.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), F.ColorizeName(F.GetPlayerOriginalNames(owner).CharacterName, owner.GetTeam()), vehicle.asset.vehicleName);
+
                             await AwardSquadXP(player, amount, 100, (int)Math.Round(amount * 0.25F), "xp_" + message, "ofp_vehicle_eliminated", 0.25F);
                         }
                         else if (vehicleWasFriendly)
                         {
+                            F.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
+
                             if (message != string.Empty) message = "xp_friendly_" + message;
                             await XPManager.AddXP(player.Player, player.GetTeam(), -amount, F.Translate(message, player.Steam64));
                         }
