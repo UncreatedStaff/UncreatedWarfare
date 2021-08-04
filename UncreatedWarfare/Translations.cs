@@ -185,7 +185,7 @@ namespace Uncreated.Warfare
                 { "time_second", "second" },
                 { "time_seconds", "seconds" },
                 { "time_minute", "minute" },
-                { "time_minutes", "minute" },
+                { "time_minutes", "minutes" },
                 { "time_hour", "hour" },
                 { "time_hours", "hours" },
                 { "time_day", "day" },
@@ -399,7 +399,7 @@ namespace Uncreated.Warfare
                 { "friendly_mortar_incoming", "FRIENDLY MORTAR STRIKE INCOMING" },
                 // battleye
                 { "battleye_kick_console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
-                { "battleye_kick_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by <color=#feed00>BattlEye</color>.</color>" },
+                { "battleye_kick_broadcast", "<color=#00ffff>{0} was kicked by <color=#feed00>BattlEye</color>.</color>" },
                 // request
                 { "request_saved_sign", "<color=#a4baa9>Saved kit: <color=#ffebbd>{0}</color>.</color>" },
                 { "request_removed_sign", "<color=#a4baa9>Removed kit sign: <color=#ffebbd>{0}</color>.</color>" },

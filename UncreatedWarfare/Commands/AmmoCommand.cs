@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
                 {
-                    player.SendChat("ammo_cooldown", FOBManager.config.Data.AmmoCommandCooldown.ToString("N0"));
+                    player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
                     return;
                 }
 
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
                 {
-                    player.SendChat("ammo_vehicle_cooldown", FOBManager.config.Data.AmmoCommandCooldown.ToString("N0"));
+                    player.SendChat("ammo_vehicle_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
                     return;
                 }
                 if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades.Count > 0)

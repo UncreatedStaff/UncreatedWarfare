@@ -129,9 +129,9 @@ namespace Uncreated.Warfare.Teams
             return false;
         }
 
-        public static bool IsInAnyMain(UnturnedPlayer player)
+        public static bool IsInAnyMain(Vector3 player)
         {
-            return Team1Main.IsInside(player.Position) || Team2Main.IsInside(player.Position);
+            return Team1Main.IsInside(player) || Team2Main.IsInside(player);
         }
         public static bool IsTeam2(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team2ID;
         public static bool IsTeam2(Player player) => player.quests.groupID.m_SteamID == Team2ID;

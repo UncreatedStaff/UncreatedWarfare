@@ -87,9 +87,11 @@ namespace Uncreated.Warfare.Components
             if (message.Message != null)
             {
                 if (message.SecondaryMessage != null)
-                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage));
+                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                        player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage));
                 else
-                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), player.channel.owner.transportConnection, true, message.Message));
+                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                        player.channel.owner.transportConnection, true, message.Message));
             }
             StartCoroutine(ToastDelay(message.delay));
         }

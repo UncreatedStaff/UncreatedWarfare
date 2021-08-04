@@ -2219,7 +2219,7 @@ namespace Uncreated.Warfare
         }
         public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
         {
-            string message = $"EXCEPTION \n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
+            string message = $"EXCEPTION - {ex.GetType().Name}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
             try
             {
                 if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.AppendConsoleMethod == default)

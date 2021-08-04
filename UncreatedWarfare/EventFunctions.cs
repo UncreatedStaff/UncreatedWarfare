@@ -267,6 +267,24 @@ namespace Uncreated.Warfare
             }
             
         }
+        internal static void OnBattleyeKicked(SteamPlayer client, string reason)
+        {
+            FPlayerName names = F.GetPlayerOriginalNames(client.player);
+            ulong team = client.GetTeam();
+            F.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
+            F.Log(F.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
+            if (UCWarfare.Config.AdminLoggerSettings.LogBattleyeKick && 
+                UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions != null && 
+                !UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions.Contains(reason))
+            {
+                ulong id = client.playerID.steamID.m_SteamID;
+                Task.Run(async () =>
+                {
+                    await Data.DatabaseManager.AddBattleyeKick(id, reason);
+                    await Client.LogPlayerBattleyeKicked(id, reason, DateTime.Now);
+                });
+            }
+        }
         internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
         {
             if (storage == null || !shouldAllow || UCWarfare.Config.LimitedStorages == null || UCWarfare.Config.LimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
@@ -285,7 +303,6 @@ namespace Uncreated.Warfare
             player.Player.inventory.closeStorageAndNotifyClient();
             player.StorageCoroutine = null;
         }
-
         internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
             if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeOwnerDataComponent t))
@@ -293,13 +310,11 @@ namespace Uncreated.Warfare
                 t.lastDamaged = instigatorSteamID.m_SteamID;
             }
         }
-
         internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
         {
             if (state == false || key != 2 || player == null) return;
             Data.ReviveManager.GiveUp(player);
         }
-
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
         {
             if (Data.Gamemode is TeamCTF ctf && player.IsOnFlag(out Flag flag))
@@ -309,7 +324,6 @@ namespace Uncreated.Warfare
                     player.channel.owner.transportConnection);
             }
         }
-
         static Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
         internal static void RemoveDamageMessageTicks(ulong player)
         {

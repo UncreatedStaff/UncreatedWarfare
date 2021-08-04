@@ -44,7 +44,10 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName names = F.GetPlayerOriginalNames(player);
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
+                                {
                                     await Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
+                                    await Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
+                                }
                                 SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                                 F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, 
                                     player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
@@ -79,7 +82,10 @@ namespace Uncreated.Warfare.Commands
                                 FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
+                                {
                                     await Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    await Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
+                                }
                                 F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
                                     callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
