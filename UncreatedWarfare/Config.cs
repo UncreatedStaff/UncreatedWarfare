@@ -37,6 +37,7 @@ namespace Uncreated.Warfare
         public ushort ToastIDSevere;
         public ushort MiniToastXP;
         public ushort MiniToastOfficerPoints;
+        public ushort BigToast;
         public ushort EndScreenUI;
         public bool UseColoredConsoleModule;
         public bool AllowCosmetics;
@@ -81,6 +82,7 @@ namespace Uncreated.Warfare
             this.ToastIDSevere = 36003;
             this.MiniToastXP = 36001;
             this.MiniToastOfficerPoints = 36002;
+            this.BigToast = 36006;
             this.UseColoredConsoleModule = true;
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;

@@ -316,8 +316,8 @@ namespace Uncreated.Warfare
                     if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
                         p.ShowUIForPlayer(ucplayer);
                 }
-                XP.XPManager.UpdateUI(player.player, await XP.XPManager.GetXP(player.player, team, false));
-                Officers.OfficerManager.UpdateUI(player.player, await Officers.OfficerManager.GetOfficerPoints(player.player, team, false));
+                XP.XPManager.UpdateUI(player.player, await XP.XPManager.GetXP(player.player, team, false), out _);
+                Officers.OfficerManager.UpdateUI(player.player, await Officers.OfficerManager.GetOfficerPoints(player.player, team, false), out _);
             }
         }
         protected override void Unload()

@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Officers
                 {
                     player.OfficerRank = GetOfficerRank(officer.officerLevel);
                 }
-                UpdateUI(player.Player, points);
+                UpdateUI(player.Player, points, out _);
             }
         }
         public static async Task OnPlayerLeft(UCPlayer player)
@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Officers
         public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             int op = await GetOfficerPoints(player.player, newGroup, true);
-            UpdateUI(player.player, op);
+            UpdateUI(player.player, op, out _);
         }
 
         public static async Task<int> GetOfficerPoints(Player player, ulong team, bool important)
@@ -85,13 +85,25 @@ namespace Uncreated.Warfare.Officers
         {
             if (team < 1 || team > 2) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+
+            int oldStars = int.MaxValue;
+            if (ucplayer != null)
+                oldStars = GetStars(ucplayer.cachedOfp);
+
             int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
             if (ucplayer != null)
                 ucplayer.cachedOfp = newBalance;
+
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
 
-            UpdateUI(player, newBalance);
+            UpdateUI(player, newBalance, out var stars);
+
+            if (stars > oldStars)
+            {
+                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), F.Translate("officer_ui_stars", player, amount.ToString(), amount.S()), ToastMessageSeverity.BIG);
+            }
+
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
                 c.stats.AddOfficerPoints(amount);
@@ -173,12 +185,12 @@ namespace Uncreated.Warfare.Officers
             officer = GetObject(o => o.steamID == playerID.m_SteamID);
             return officer != null;
         }
-        public static void UpdateUI(Player player, int balance)
+        public static void UpdateUI(Player player, int balance, out int stars)
         {
             int currentPoints = GetCurrentLevelPoints(balance);
             int requiredPoints = GetRequiredLevelPoints(balance);
 
-            int stars = GetStars(balance);
+            stars = GetStars(balance);
 
             EffectManager.sendUIEffect(config.Data.StarsUI, (short)config.Data.StarsUI, player.channel.owner.transportConnection, true);
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Icon",

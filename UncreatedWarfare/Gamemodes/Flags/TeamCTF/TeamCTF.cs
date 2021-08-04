@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -166,10 +167,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public override async Task DeclareWin(ulong winner)
         {
             F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
+
             foreach (SteamPlayer client in Provider.clients)
             {
-                client.SendChat("team_win", UCWarfare.GetColor("team_win"), TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
+                client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
+
+                ToastMessage.QueueMessage(client.player, F.Translate("team_win", client, "", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
             }
             this.State = EState.FINISHED;
             await UCWarfare.ReplaceBarricadesAndStructures();
