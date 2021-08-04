@@ -15,8 +15,8 @@ namespace Uncreated.Warfare.FOBs
     public class FOBManager
     {
         public static Config<FOBConfig> config;
-        static readonly List<FOB> Team1FOBs = new List<FOB>();
-        static readonly List<FOB> Team2FOBs = new List<FOB>();
+        internal static readonly List<FOB> Team1FOBs = new List<FOB>();
+        internal static readonly List<FOB> Team2FOBs = new List<FOB>();
 
         public FOBManager()
         {

@@ -206,6 +206,7 @@ namespace Uncreated.Warfare
                 { "build_error_tooclosetomain", "<color=#fae69c>You cannot build too close to main.</color>" },
                 { "build_error_maxemplacements", "<color=#d1c597>This FOB already has {0} {1}s.</color>" },
                 { "build_error_notbuildable", "<color=#d1c597>That barricade is not buildable.</color>" },
+                { "build_error_too_many_fobs", "<color=#d1c597>There can not be more than 10 fobs at a time.</color>" },
                 { "fob_nofobs", "<color=#b5a591>Your team has no active FOBs. Take a Logi Truck and go and build some!</color>" },
                 { "fob_built", "<color=#b0ffa8>Successfully built FOB! Your team may now spawn on it.</color>" },
                 { "fob_teleported", "<color=#fae69c>You have been deployed to <color=#54e3ff>{0}</color>.</color>" },
@@ -385,6 +386,8 @@ namespace Uncreated.Warfare
                 { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
                 { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
                 { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!     " },
+                
+                { "afk_warning", "<color=#f53b3b>You will be AFK-Kicked in {0} if you don't move.</color>" },
 
                 { "vehicle_owner_not_in_vehicle", "Wait for the owner {0} to get in." },
                 { "vehicle_owner_not_in_vehicle_squad", "Wait for the owner {0} to get in, or join the squad {1}." },
@@ -704,8 +707,8 @@ namespace Uncreated.Warfare
                 { "gain_star", "FOR EXCELLENT LEADERSHIP, YOU HAVE BEEN AWARDED" },
 
                 { "injured_ui_header", "You are injured" },
-                { "injured_ui_give_up", "Press <b>Code Hotkey #3</b> to give up.\n<b>Slash</b> by default." },
-                { "injured_chat", "You were injured, press <color=#cedcde><plugin_2/></color> to give up." }
+                { "injured_ui_give_up", "Press <b>'/'</b> to give up.\n " },
+                { "injured_chat", "<color=#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.</color>" }
             };
         }
         public static Dictionary<string, string> DefaultTranslations;

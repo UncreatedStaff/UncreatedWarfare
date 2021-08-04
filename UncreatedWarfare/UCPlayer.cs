@@ -33,6 +33,7 @@ namespace Uncreated.Warfare
         public string CharacterName;
         public string NickName;
         public Rank OfficerRank;
+        public Coroutine StorageCoroutine;
         /// <summary>[Unreliable]</summary>
         public async Task<Rank> XPRank()
         {

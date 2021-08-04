@@ -111,11 +111,11 @@ namespace Uncreated.Warfare.Commands
                 {
                     ucplayer.Message("request_kit_e_notsquadleader");
                 }
-                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out var requestCooldown) && !ucplayer.OnDutyOrAdmin())
+                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out var requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
                 {
                     player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
                 }
-                else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var premiumCooldown, kit.Name) && !ucplayer.OnDutyOrAdmin())
+                else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var premiumCooldown, kit.Name) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
                 {
                     player.Message("kit_e_cooldown", premiumCooldown.ToString());
                 }

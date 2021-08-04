@@ -138,6 +138,16 @@ namespace Uncreated.Warfare.Revives
                 ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
             }
         }
+        public void RevivePlayer(Player target)
+        {
+            if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
+            {
+                r.RevivePlayer();
+                ulong team = target.GetTeam();
+                EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
+                ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, team);
+            }
+        }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
             if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
@@ -153,7 +163,7 @@ namespace Uncreated.Warfare.Revives
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    !(parameters.player.life.health < 30 && parameters.damage > 150)
+                    !((parameters.player.life.health < 30 && parameters.damage > 100) || (parameters.player.life.health < 100 && parameters.damage > 200))
                     // && !(parameters.cause == EDeathCause.GRENADE || parameters.cause == EDeathCause.CHARGE || parameters.cause == EDeathCause.LANDMINE || parameters.cause == EDeathCause.MISSILE)
                     )
                 {
@@ -181,9 +191,17 @@ namespace Uncreated.Warfare.Revives
             parameters.player.movement.sendPluginSpeedMultiplier(0.1f);
             parameters.player.movement.sendPluginJumpMultiplier(0);
 
+            if (!parameters.player.movement.forceRemoveFromVehicle())
+            {
+                shouldAllow = true;
+                return;
+            }
+
+            // change back later
             EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI),
                 parameters.player.channel.owner.transportConnection, true, F.Translate("injured_ui_header", parameters.player),
                 F.Translate("injured_ui_give_up", parameters.player));
+            EffectManager.sendUIEffectText(unchecked((short)UCWarfare.Config.GiveUpUI), parameters.player.channel.owner.transportConnection, true, "GiveUpText", F.Translate("injured_ui_give_up", parameters.player));
             parameters.player.SendChat("injured_chat");
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);

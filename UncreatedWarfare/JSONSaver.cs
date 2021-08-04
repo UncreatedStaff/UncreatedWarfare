@@ -76,7 +76,7 @@ namespace Uncreated
             ActiveObjects = newList;
             StreamWriter file = File.CreateText(directory);
             JsonWriter writer = new JsonTextWriter(file);
-            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
+            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
             try
             {
                 serializer.Serialize(writer, newList);
@@ -96,7 +96,7 @@ namespace Uncreated
                 try
                 {
                     string json = r.ReadToEnd();
-                    var list = JsonConvert.DeserializeObject<List<T>>(json);
+                    var list = JsonConvert.DeserializeObject<List<T>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
 
                     r.Close();
                     r.Dispose();

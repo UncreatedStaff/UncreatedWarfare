@@ -111,9 +111,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 return false;
             }
         }
+        protected override bool TimeToTicket()
+        {
+            if (_counter2 > 1 / Config.PlayerCheckSpeedSeconds)
+            {
+                _counter2 = 0;
+                return true;
+            }
+            else
+            {
+                _counter2++;
+                return false;
+            }
+        }
         public override async Task EvaluateTickets()
         {
-            TicketCounter++;
             TicketManager.GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
             TicketManager.GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
 
@@ -143,8 +155,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 await TicketManager.OnFlagTick();
             }
 
+            if (Team1Bleed < 0)
+                TicketManager.UpdateUITeam1();
+            if (Team2Bleed < 0)
+                TicketManager.UpdateUITeam2();
+
             TicketCounter++;
-            if (TicketCounter >= 60)
+            if (TicketCounter > 60)
                 TicketCounter = 0;
         }
         public override async Task DeclareWin(ulong winner)

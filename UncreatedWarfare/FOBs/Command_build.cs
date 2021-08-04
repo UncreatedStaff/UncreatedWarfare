@@ -36,7 +36,7 @@ namespace Uncreated.Warfare.FOBs
                 player.SendChat("build_error_noteam");
                 return;
             }
-
+            ulong team = player.GetTeam();
             BarricadeData foundation = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
 
             if (foundation == null || !TeamManager.IsFriendly(player, foundation.group))
@@ -47,6 +47,11 @@ namespace Uncreated.Warfare.FOBs
 
             if (foundation.barricade.id == FOBManager.config.Data.FOBBaseID)
             {
+                if ((team == 1 ? FOBManager.Team1FOBs : FOBManager.Team2FOBs).Count > 9)
+                {
+                    player.SendChat("build_error_too_many_fobs");
+                    return;
+                }
                 BuildManager.TryBuildFOB(foundation, player);
             }
             else if (foundation.barricade.id == FOBManager.config.Data.AmmoCrateBaseID)
