@@ -366,7 +366,7 @@ namespace Uncreated.Warfare.Squads
                 if (p.CSteamID != squad.Leader.CSteamID)
                     p.Message("squad_player_promoted", newLeader.Player.channel.owner.playerID.nickName);
                 else
-                    p.Message("squad_promoted");
+                    p.Message("squad_promoted", squad.Leader.SteamPlayer.playerID.nickName);
             }
 
             SortMembers(squad);

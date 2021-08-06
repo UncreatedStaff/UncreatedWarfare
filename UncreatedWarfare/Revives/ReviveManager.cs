@@ -169,7 +169,7 @@ namespace Uncreated.Warfare.Revives
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    !((parameters.player.life.health < 30 && parameters.damage > 100) || parameters.damage > 200)
+                    !((parameters.player.life.health < 30 && parameters.damage >= 100) || parameters.damage >= 200)
                     // && !(parameters.cause == EDeathCause.GRENADE || parameters.cause == EDeathCause.CHARGE || parameters.cause == EDeathCause.LANDMINE || parameters.cause == EDeathCause.MISSILE)
                     )
                 {
@@ -181,7 +181,6 @@ namespace Uncreated.Warfare.Revives
                 float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                 parameters = p;
                 parameters.damage *= (UCWarfare.Config.InjuredDamageMultiplier / 10) * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
-                F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.");
             }
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)

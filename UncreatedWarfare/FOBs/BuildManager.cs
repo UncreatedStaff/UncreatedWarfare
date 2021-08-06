@@ -536,6 +536,7 @@ namespace Uncreated.Warfare.FOBs
                                 //indexes_to_remove_at.Add(j);
                                 ItemManager.regions[regionCoordinate.x, regionCoordinate.y].items[j] = null;
                                 ItemManager.ReceiveTakeItem(regionCoordinate.x, regionCoordinate.y, item.instanceID);
+                                //Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
                                 removed_count++;
                             }
                         }

@@ -564,7 +564,7 @@ namespace Uncreated.Warfare
                 { "kit_weapons", "<b>{0}</b>" },
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0:N2}" },
-                { "kit_required_level", "<color=#{1}>L {0}</color> <color=#{3}>- {2}</color>" }, // {0} = level number
+                { "kit_required_level", "<color=#{1}>L {0}</color><color=#{3}> - {2}</color>" }, // {0} = level number
                 { "kit_owned", "OWNED" },
                 { "kit_unlimited", "unlimited" },
                 { "kit_not_owned", "NOT OWNED" },
@@ -851,10 +851,10 @@ namespace Uncreated.Warfare
 
             // Request
             new ColorData("kit_public_header", "ffffff"),
-            new ColorData("kit_level_available", "ffffff"),
+            new ColorData("kit_level_available", "ff974d"),
             new ColorData("kit_level_available_abbr", "999999"),
-            new ColorData("kit_level_unavailable", "800000"),
-            new ColorData("kit_level_unavailable_abbr", "500000"),
+            new ColorData("kit_level_unavailable", "c4785e"),
+            new ColorData("kit_level_unavailable_abbr", "999999"),
             new ColorData("kit_level_dollars", "7878ff"),
             new ColorData("kit_level_dollars_owned", "769fb5"),
             new ColorData("kit_weapon_list", "343434"),
