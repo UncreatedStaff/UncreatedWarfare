@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_error_nocrate"); 
                     return;
                 }
-                if (!KitManager.HasKit(player.Steam64, out var kit))
+                if (!KitManager.HasKit(player.Steam64, out Kit kit))
                 {
                     player.SendChat("ammo_no_kit"); 
                     return;

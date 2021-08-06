@@ -85,7 +85,7 @@ namespace Uncreated.Warfare.Tickets
         }
         private static async void OnVehicleExploded(InteractableVehicle vehicle)
         {
-            if (VehicleBay.VehicleExists(vehicle.id, out var data))
+            if (VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
             {
                 if (TeamManager.IsTeam1(vehicle.lockedGroup))
                 {

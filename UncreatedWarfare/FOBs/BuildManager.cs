@@ -17,29 +17,28 @@ namespace Uncreated.Warfare.FOBs
 {
     public class BuildManager
     {
-
-        public BuildManager() { }
-
         public static bool TryBuildFOB(BarricadeData foundation, UnturnedPlayer player)
         {
             List<RegionCoordinate> regions = new List<RegionCoordinate>();
-            Regions.getRegionsInRadius(player.Position, 400, regions);
+            Regions.getRegionsInRadius(player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            VehicleManager.getVehiclesInRadius(player.Position, 400, vehicles);
+            VehicleManager.getVehiclesInRadius(player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, vehicles);
 
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
 
             List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
-            List<BarricadeData> NearbyBarricades = barricadeDatas.Where(b =>
-                    (b.point - player.Position).sqrMagnitude <= Math.Pow(20, 2))
+            List<BarricadeData> NearbyBarricades = barricadeDatas
+                .Where(b =>
+                    (b.point - player.Position).sqrMagnitude <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius)
                 .OrderBy(b => (b.point - player.Position).sqrMagnitude <= Math.Pow(20, 2))
                 .ToList();
 
-            List<BarricadeData> TotalFOBs = barricadeDatas.Where(b =>
-                TeamManager.IsFriendly(player, b.group) &&                         // All barricades that are friendly
-                b.barricade.id == FOBManager.config.Data.FOBID                          // All barricades that are FOB structures
+            List<BarricadeData> TotalFOBs = barricadeDatas
+                .Where(b =>
+                TeamManager.IsFriendly(player, b.group) &&        // All barricades that are friendly
+                b.barricade.id == FOBManager.config.Data.FOBID    // All barricades that are FOB structures
                 ).ToList();
 
             if (TotalFOBs.Count >= FOBManager.config.Data.FobLimit)
@@ -66,7 +65,12 @@ namespace Uncreated.Warfare.FOBs
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
-            NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - player.Position).sqrMagnitude <= Mathf.Pow(50, 2)) && item.item.id == BuildID).ToList();
+            NearbyBuild = ItemManager.regions
+                .Cast<ItemRegion>()
+                .SelectMany(region => region.items)
+                .Where(item => ((item.point - player.Position)
+                .sqrMagnitude <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius) && item.item.id == BuildID)
+                .ToList();
 
             List<InteractableVehicle> logitrucks = vehicles.Where(v => FOBManager.config.Data.LogiTruckIDs.Contains(v.id)).ToList();
 
@@ -82,18 +86,18 @@ namespace Uncreated.Warfare.FOBs
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.FOBRequiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.FOBRequiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             Barricade barricade = new Barricade(FOBManager.config.Data.FOBID);
 
-            UnityEngine.Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
+            Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
             player.SendChat("fob_built");
 
-            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             Task.Run(async () =>
             {
                 await TicketManager.AwardSquadXP(ucplayer,
@@ -113,7 +117,7 @@ namespace Uncreated.Warfare.FOBs
             barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
             List<BarricadeData> FOBstructures = barricadeDatas.Where(b =>
-                (b.point - player.Position).sqrMagnitude <= Math.Pow(20, 2) &&
+                (b.point - player.Position).sqrMagnitude <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius &&
                 b.barricade.id == FOBManager.config.Data.FOBID &&
                 TeamManager.IsFriendly(player, b.group)
             ).ToList();
@@ -135,30 +139,24 @@ namespace Uncreated.Warfare.FOBs
         public static bool TryBuildAmmoCrate(BarricadeData foundation, UnturnedPlayer player)
         {
             List<RegionCoordinate> regions = new List<RegionCoordinate>();
-            Regions.getRegionsInRadius(player.Position, 400, regions);
-
+            Regions.getRegionsInRadius(player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-
             List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
-
             List<BarricadeData> NearbyBarricades = barricadeDatas.Where(b =>
                     (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2))
                 .OrderBy(b => (b.point - player.Position).magnitude)
                 .ToList();
-
             List<BarricadeData> NearbyFOBs = barricadeDatas.Where(b =>
                 TeamManager.IsFriendly(player, b.group) &&
                 b.barricade.id == FOBManager.config.Data.FOBID &&
                 (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2)
                 ).OrderBy(b => (b.point - player.Position).magnitude)
                 .ToList();
-
             List<BarricadeData> NearbyAmmoCrates = barricadeDatas.Where(b =>
                 TeamManager.IsFriendly(player, b.group) &&
                 b.barricade.id == FOBManager.config.Data.AmmoCrateID &&
                 (b.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Math.Pow(100, 2)
                 ).ToList();
-
             if (NearbyFOBs.Count == 0)
             {
                 player.SendChat("build_error_fobtoofar");
@@ -169,7 +167,6 @@ namespace Uncreated.Warfare.FOBs
                 player.SendChat("ammocrate_error_alreadyexists");
                 return false;
             }
-
             ushort BuildID = 0;
             if (TeamManager.IsTeam1(player))
                 BuildID = FOBManager.config.Data.Team1BuildID;
@@ -178,7 +175,12 @@ namespace Uncreated.Warfare.FOBs
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
-            NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
+            NearbyBuild = ItemManager.regions
+                .Cast<ItemRegion>()
+                .SelectMany(region => region.items)
+                .Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude 
+                <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius) && item.item.id == BuildID)
+                .ToList();
 
             if (NearbyBuild.Count < FOBManager.config.Data.AmmoCrateRequiredBuild)
             {
@@ -186,7 +188,8 @@ namespace Uncreated.Warfare.FOBs
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.AmmoCrateRequiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.AmmoCrateRequiredBuild, player.Position, 
+                FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             Barricade barricade = new Barricade(FOBManager.config.Data.AmmoCrateID);
 
@@ -197,7 +200,7 @@ namespace Uncreated.Warfare.FOBs
 
             player.SendChat("ammocrate_built");
 
-            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             Task.Run(async () =>
             {
                 await TicketManager.AwardSquadXP(ucplayer,
@@ -273,14 +276,19 @@ namespace Uncreated.Warfare.FOBs
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
-            NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
+            NearbyBuild = ItemManager.regions
+                .Cast<ItemRegion>()
+                .SelectMany(region => region.items)
+                .Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point)
+                .sqrMagnitude <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius) && item.item.id == BuildID)
+                .ToList();
 
             if (NearbyBuild.Count < FOBManager.config.Data.RepairStationRequiredBuild)
             {
                 player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), FOBManager.config.Data.RepairStationRequiredBuild.ToString(Data.Locale));
             }
 
-            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.RepairStationRequiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.RepairStationRequiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             Barricade barricade = new Barricade(FOBManager.config.Data.RepairStationID);
 
@@ -291,7 +299,7 @@ namespace Uncreated.Warfare.FOBs
 
             player.SendChat("repairstation_built");
 
-            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
             Task.Run(async () =>
             {
@@ -306,7 +314,7 @@ namespace Uncreated.Warfare.FOBs
             });
 
             regions = new List<RegionCoordinate>();
-            Regions.getRegionsInRadius(player.Position, 50, regions);
+            Regions.getRegionsInRadius(player.Position, FOBManager.config.Data.FOBBuildPickupRadius, regions);
             barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
@@ -369,7 +377,12 @@ namespace Uncreated.Warfare.FOBs
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
-            NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
+            NearbyBuild = ItemManager.regions
+                .Cast<ItemRegion>()
+                .SelectMany(region => region.items)
+                .Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point)
+                .sqrMagnitude <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius) && item.item.id == BuildID)
+                .ToList();
 
             if (NearbyBuild.Count < emplacement.requiredBuild)
             {
@@ -377,7 +390,7 @@ namespace Uncreated.Warfare.FOBs
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, emplacement.requiredBuild, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, emplacement.requiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
 
@@ -406,7 +419,7 @@ namespace Uncreated.Warfare.FOBs
 
             player.SendChat("emplacement_built", vehicle.asset.vehicleName);
 
-            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             Task.Run(async () =>
             {
                 await TicketManager.AwardSquadXP(ucplayer,
@@ -433,7 +446,7 @@ namespace Uncreated.Warfare.FOBs
         public static bool TryBuildFortification(BarricadeData foundation, UnturnedPlayer player, Fortification fortification)
         {
             List<RegionCoordinate> regions = new List<RegionCoordinate>();
-            Regions.getRegionsInRadius(player.Position, 400, regions);
+            Regions.getRegionsInRadius(player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
 
@@ -464,7 +477,12 @@ namespace Uncreated.Warfare.FOBs
 
             List<ItemData> NearbyBuild = new List<ItemData>();
 
-            NearbyBuild = ItemManager.regions.Cast<ItemRegion>().SelectMany(region => region.items).Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Mathf.Pow(100, 2)) && item.item.id == BuildID).ToList();
+            NearbyBuild = ItemManager.regions
+                .Cast<ItemRegion>()
+                .SelectMany(region => region.items)
+                .Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point)
+                .sqrMagnitude <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius) && item.item.id == BuildID)
+                .ToList();
 
             if (NearbyBuild.Count < fortification.required_build)
             {
@@ -472,7 +490,7 @@ namespace Uncreated.Warfare.FOBs
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, fortification.required_build, player.Position, 400, regions);
+            RemoveNearbyItemsByID(BuildID, fortification.required_build, player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
 
             Barricade barricade = new Barricade(fortification.barricade_id);
 
@@ -483,7 +501,7 @@ namespace Uncreated.Warfare.FOBs
 
             player.SendChat("fortification_built", barricade.asset.itemName);
 
-            var ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             Task.Run(async () =>
             {
                 await TicketManager.AwardSquadXP(ucplayer,
@@ -513,37 +531,32 @@ namespace Uncreated.Warfare.FOBs
             return true;
         }
 
-        public static void RemoveNearbyItemsByID(ulong id, int amount, Vector3 center, float sqrRadius, List<RegionCoordinate> search)
+        public static bool RemoveNearbyItemsByID(ulong id, int amount, Vector3 center, float sqrRadius, List<RegionCoordinate> search)
         {
-            if (ItemManager.regions == null || sqrRadius == 0)
-            {
-                return;
-            }
+            if (ItemManager.regions == null || sqrRadius == 0 || sqrRadius < 0) return true;
             int removed_count = 0;
-
             for (int i = 0; i < search.Count; i++)
             {
-                RegionCoordinate regionCoordinate = search[i];
-                if (ItemManager.regions[regionCoordinate.x, regionCoordinate.y] != null)
+                RegionCoordinate r = search[i];
+                if (ItemManager.regions[r.x, r.y] != null)
                 {
-                    for (int j = 0; j < ItemManager.regions[regionCoordinate.x, regionCoordinate.y].items.Count; j++)
+                    for (int j = ItemManager.regions[r.x, r.y].items.Count - 1; j >= 0; j--)
                     {
                         if (removed_count < amount)
                         {
-                            ItemData item = ItemManager.regions[regionCoordinate.x, regionCoordinate.y].items[j];
-                            if ((item.point - center).sqrMagnitude <= Mathf.Pow(20, 2) && item.item.id == id)
+                            ItemData item = ItemManager.regions[r.x, r.y].items[j];
+                            if ((item.point - center).sqrMagnitude <= 20 * 20 && item.item.id == id)
                             {
-                                //indexes_to_remove_at.Add(j);
-                                ItemManager.regions[regionCoordinate.x, regionCoordinate.y].items[j] = null;
-                                ItemManager.ReceiveTakeItem(regionCoordinate.x, regionCoordinate.y, item.instanceID);
-                                //Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
+                                Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
+                                    Regions.EnumerateClients(r.x, r.y, ItemManager.ITEM_REGIONS), r.x, r.y, item.instanceID);
+                                ItemManager.regions[r.x, r.y].items.RemoveAt(j);
                                 removed_count++;
                             }
                         }
                     }
-                    ItemManager.regions[regionCoordinate.x, regionCoordinate.y].items.RemoveAll(item => item == null);
                 }
             }
+            return removed_count >= amount;
         }
     }
 }
