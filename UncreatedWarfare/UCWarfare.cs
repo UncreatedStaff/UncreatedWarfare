@@ -39,7 +39,7 @@ namespace Uncreated.Warfare
                 else return Configuration.Instance.SQL;
             }
         }
-        public const bool LoadMySQLDataFromElsewhere = true;
+        public bool LoadMySQLDataFromElsewhere = true;
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
@@ -238,6 +238,8 @@ namespace Uncreated.Warfare
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
             BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
+            ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
+            PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice;
         }
         private void UnsubscribeFromEvents()
         {
@@ -273,6 +275,8 @@ namespace Uncreated.Warfare
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
             BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
+            ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
+            PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;

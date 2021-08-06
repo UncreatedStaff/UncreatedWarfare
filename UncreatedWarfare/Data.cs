@@ -135,12 +135,14 @@ namespace Uncreated.Warfare
         internal static MethodInfo AppendConsoleMethod;
         internal static MethodInfo ReplicateStance;
         internal static FieldInfo PrivateStance;
+        internal static FieldInfo ItemManagerInstanceCount;
         internal static ConsoleInputOutputBase defaultIOHandler;
         internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
         internal static CancellationTokenSource CancelTcp = new CancellationTokenSource();
+        internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         public static void LoadColoredConsole()
         {
-            CommandWindow.Log("Loading Colored Console Method");
+            //CommandWindow.Log("Loading Colored Console Method");
             try
             {
                 FieldInfo defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -235,6 +237,7 @@ namespace Uncreated.Warfare
             FieldInfo sendRegionInfo;
             FieldInfo sendChatInfo;
             FieldInfo clearAllUiInfo;
+            FieldInfo sendTakeItemInfo;
             try
             {
                 updateSignInfo = barricadeManager.GetField("SendUpdateSign", BindingFlags.NonPublic | BindingFlags.Static);
@@ -277,11 +280,28 @@ namespace Uncreated.Warfare
             }
             try
             {
+                sendTakeItemInfo = typeof(ItemManager).GetField("SendTakeItem", BindingFlags.NonPublic | BindingFlags.Static);
+                SendTakeItem = (ClientStaticMethod<byte, byte, uint>)sendTakeItemInfo.GetValue(null);
+            }
+            catch (Exception ex)
+            {
+                F.LogWarning("Couldn't get SendTakeItem from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
+            }
+            try
+            {
                 ReplicateStance = typeof(PlayerStance).GetMethod("replicateStance", BindingFlags.Instance | BindingFlags.NonPublic);
             }
             catch (Exception ex)
             {
                 F.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
+            }
+            try
+            {
+                ItemManagerInstanceCount = typeof(ItemManager).GetField("instanceCount", BindingFlags.Static | BindingFlags.NonPublic);
+            }
+            catch (Exception ex)
+            {
+                F.LogWarning("Couldn't get instanceCount from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
             }
             try
             {

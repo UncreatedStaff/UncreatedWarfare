@@ -15,6 +15,7 @@ namespace Uncreated.SQL
         public bool DebugLogging = false;
         protected MySqlData _login;
         protected DbDataReader CurrentReader;
+        private bool _openSuccess;
         public MySqlDatabase(MySqlData data)
         {
             _login = data;
@@ -64,10 +65,12 @@ namespace Uncreated.SQL
             {
                 SQL.Open();
                 if (DebugLogging) Log(nameof(OpenSync) + ": Opened Connection.", ConsoleColor.DarkGray);
+                _openSuccess = true;
                 return true;
             }
             catch (MySqlException ex)
             {
+                _openSuccess = false;
                 switch (ex.Number)
                 {
                     case 0:
@@ -90,10 +93,12 @@ namespace Uncreated.SQL
             {
                 await SQL.OpenAsync();
                 if (DebugLogging) Log(nameof(OpenAsync) + ": Opened Connection.", ConsoleColor.DarkGray);
+                _openSuccess = true;
                 return true;
             }
             catch (DbException ex)
             {
+                _openSuccess = false;
                 switch (ex.ErrorCode)
                 {
                     case 0:
@@ -112,6 +117,7 @@ namespace Uncreated.SQL
         }
         public bool CloseSync()
         {
+            _openSuccess = false;
             try
             {
                 while (CurrentReader != null && !CurrentReader.IsClosed)
@@ -131,6 +137,7 @@ namespace Uncreated.SQL
         }
         public async Task<bool> CloseAsync()
         {
+            _openSuccess = false;
             try
             {
                 while (CurrentReader != null && !CurrentReader.IsClosed)
@@ -151,6 +158,7 @@ namespace Uncreated.SQL
         public async Task Query(string query, object[] parameters, Action<MySqlDataReader> ReadLoopAction)
         {
             if(query == null) throw new ArgumentNullException(nameof(query));
+            if (!_openSuccess) throw new Exception("Not connected");
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
@@ -203,6 +211,7 @@ namespace Uncreated.SQL
         public async Task<T> Scalar<T>(string query, object[] parameters, Func<object, T> converter)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
+            if (!_openSuccess) throw new Exception("Not connected");
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
 
@@ -261,6 +270,7 @@ namespace Uncreated.SQL
         public async Task NonQuery(string command, object[] parameters)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
+            if (!_openSuccess) throw new Exception("Not connected");
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
@@ -300,6 +310,7 @@ namespace Uncreated.SQL
         public void QuerySync(string query, object[] parameters, Action<MySqlDataReader> ReadLoopAction)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
+            if (!_openSuccess) throw new Exception("Not connected");
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
@@ -323,6 +334,7 @@ namespace Uncreated.SQL
         public T ScalarSync<T>(string query, object[] parameters)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
+            if (!_openSuccess) throw new Exception("Not connected");
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
 
@@ -344,6 +356,7 @@ namespace Uncreated.SQL
         public void NonQuerySync(string command, object[] parameters)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
+            if (!_openSuccess) throw new Exception("Not connected");
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);

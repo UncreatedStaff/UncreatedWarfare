@@ -4,6 +4,8 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management.Instrumentation;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
@@ -56,6 +58,8 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
+
+                WipeDroppedItems(player.Player.inventory);
                 KitManager.ResupplyKit(player, kit);
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
@@ -180,6 +184,7 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
+                WipeDroppedItems(player.Player.inventory);
                 KitManager.ResupplyKit(player, kit);
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
@@ -200,6 +205,31 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             }
+        }
+        internal static void WipeDroppedItems(PlayerInventory player)
+        {
+            if (!EventFunctions.droppeditems.TryGetValue(player.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
+                return;
+            for (byte x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (byte y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    if (Regions.checkSafe(x, y))
+                    {
+                        ItemRegion region = ItemManager.regions[x, y];
+                        for (int i = 0; i < instances.Count; i++)
+                        {
+                            int index = region.items.FindIndex(r => r.instanceID == instances[i]);
+                            if (index != -1)
+                            {
+                                Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
+                                ItemManager.regions[x, y].items.RemoveAt(index);
+                            }
+                        }
+                    }
+                }
+            }
+            instances.Clear();
         }
     }
 }

@@ -81,6 +81,9 @@ namespace Uncreated.Warfare.Components
                     toastMessageOpen = UCWarfare.Config.MiniToastXP;
                     break;
                 case ToastMessageSeverity.MINIOFFICERPTS: 
+                    toastMessageOpen = UCWarfare.Config.MiniToastOfficerPoints;
+                    break;
+                case ToastMessageSeverity.BIG:
                     toastMessageOpen = UCWarfare.Config.BigToast;
                     break;
             }
@@ -130,13 +133,6 @@ namespace Uncreated.Warfare.Components
             }
             else if (!player.IsInMain())
                 stats.AddToTimeDeployed(dt);
-            InteractableVehicle veh = player.movement.getVehicle();
-            if (veh != null)
-            {
-                veh.findPlayerSeat(player.channel.owner.playerID.steamID, out byte seat);
-                if (seat == 0)
-                    stats.AddToTimeDriving(dt);
-            }
         }
         /// <summary>Start a delayed teleport on the player.</summary>
         /// <returns>True if there were no requests pending, false if there were.</returns>

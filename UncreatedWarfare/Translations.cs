@@ -1159,7 +1159,7 @@ namespace Uncreated.Warfare
             { "LANDMINE_UNKNOWN_TRIGGERED_UNKNOWNKILLER", "{0} was blown up by a landmine set off by {5}." },
             { "MELEE", "{1} struck {0} in the {2} with a {3}." },
             { "MELEE_UNKNOWN", "{1} struck {0} in the {2}." },
-            { "MISSILE", "{1} blew up {0}with a {3} from {4} away." },
+            { "MISSILE", "{1} blew up {0} with a {3} from {4} away." },
             { "MISSILE_UNKNOWN", "{1} blew up {0} with a missile from {4} away." },
             { "MISSILE_SUICIDE_UNKNOWN", "{0} blew themselves up." },
             { "MISSILE_SUICIDE", "{0} blew themselves up with a {3}." },

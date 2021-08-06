@@ -7,12 +7,6 @@ using Uncreated.SQL;
 using Uncreated.Players;
 using SDG.Unturned;
 using Steamworks;
-using Rocket.Core.Steam;
-using Uncreated.Warfare.Stats;
-using Google.Protobuf.WellKnownTypes;
-using System.Reflection;
-using static SDG.Unturned.SleekBlueprint;
-using System.Drawing;
 
 namespace Uncreated.Warfare
 {
@@ -365,37 +359,37 @@ namespace Uncreated.Warfare
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
-                new object[] { Banned, Banner, Duration, Reason, DateTime.Now.ToString(TIME_FORMAT_SQL) });
+                new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public async Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason, DateTime time)
             => await NonQuery(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
-                new object[] { Banned, Banner, Duration, Reason, time.ToString(TIME_FORMAT_SQL) });
+                new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, time) });
         public async Task AddKick(ulong Kicked, ulong Kicker, string Reason)
             => await NonQuery(
                 "INSERT INTO `kicks` " +
                 "(`Kicked`, `Kicker`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
-                new object[] { Kicked, Kicker, Reason, DateTime.Now.ToString(TIME_FORMAT_SQL) });
+                new object[] { Kicked, Kicker, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public async Task AddWarning(ulong Warned, ulong Warner, string Reason)
             => await NonQuery(
                 "INSERT INTO `warnings` " +
                 "(`Warned`, `Warner`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
-                new object[] { Warned, Warner, Reason, DateTime.Now.ToString(TIME_FORMAT_SQL) });
+                new object[] { Warned, Warner, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public async Task AddBattleyeKick(ulong Kicked, string Reason)
             => await NonQuery(
                 "INSERT INTO `battleye_kicks` " +
                 "(`Kicked`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
-                new object[] { Kicked, Reason, DateTime.Now.ToString(TIME_FORMAT_SQL) });
+                new object[] { Kicked, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public async Task AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
             => await NonQuery(
                 "INSERT INTO `teamkills` " +
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4, @5, @6);",
-                new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, DateTime.Now.ToString(TIME_FORMAT_SQL) });
+                new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public MySqlTableLang GetTable(string key)
         {
             if (Data.TableData.TryGetValue(key, out MySqlTableLang lang))

@@ -275,7 +275,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "XPGainedValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.xpgained, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeOnPointValue", F.ObjectTranslate("stats_player_time_value", player.playerID.steamID.m_SteamID, stats.TimeOnPoint, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "CapturesValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.captures, defaultColor));
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.ObjectTranslate("stats_player_time_value", player.playerID.steamID.m_SteamID, stats.TimeDriving, defaultColor));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TimeInVehicleValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.damagedone, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillsValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.teamkills, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "EnemyFOBsDestroyedValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.fobsdestroyed, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "OfficerPointsGainedValue", F.ObjectTranslate("stats_player_value", player.playerID.steamID.m_SteamID, stats.officerpointsgained, defaultColor));
@@ -357,9 +357,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public int teamkills;
         public int fobsdestroyed;
         public int fobsplaced;
-        public TimeSpan TimeDriving { get => TimeSpan.FromSeconds(timeDrivingCounter); }
-        private float timeDrivingCounter;
+        //public TimeSpan TimeDriving { get => TimeSpan.FromSeconds(timeDrivingCounter); }
+        //private float timeDrivingCounter;
+        public int damagedone;
         public int onlineCount;
+        public int revives;
         public PlayerCurrentGameStats(Player player)
         {
             this.player = player;
@@ -377,10 +379,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.teamkills = 0;
             this.fobsdestroyed = 0;
             this.fobsplaced = 0;
-            this.timeDrivingCounter = 0;
+            this.damagedone = 0;
             this.xpgained = 0;
             this.officerpointsgained = 0;
             this.onlineCount = 0;
+            this.revives = 0;
         }
         public void AddKill()
         {
@@ -393,7 +396,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void AddOfficerPoints(int amount) => officerpointsgained += amount;
         public void AddToTimeDeployed(float amount) => timeDeployedCounter += amount;
         public void AddToTimeOnPoint(float amount) => timeOnPointCounter += amount;
-        public void AddToTimeDriving(float amount) => timeDrivingCounter += amount;
+        //public void AddToTimeDriving(float amount) => timeDrivingCounter += amount;
         public void CheckGame()
         {
             if (player != null)
@@ -404,7 +407,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             $"Player: {id} ({(player == null ? "offline" : player.channel.owner.playerID.playerName)})\n" +
             $"Kills: {kills}\nDeaths: {deaths}\nKills on point: {killsonpoint}\nTime Deployed: {TimeDeployed:g}\n" +
             $"Time On Point: {TimeOnPoint:g}\nCaptures: {captures}\nTeamkills: {teamkills}\nFobs Destroyed: {fobsdestroyed}\n" +
-            $"Fobs Placed: {fobsplaced}\nTime Driving: {TimeDriving:g}\nXP Gained: {xpgained}\nOfficer Pts Gained: {officerpointsgained}\n" +
+            $"Fobs Placed: {fobsplaced}\nDamage Done: {damagedone}\nXP Gained: {xpgained}\nOfficer Pts Gained: {officerpointsgained}\n" +
             $"OnlineTime:{(float)onlineCount / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%.";
     }
     public class WarStatsTracker : MonoBehaviour
@@ -496,12 +499,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         private void CompileArmyAverageT1(int newcount)
         {
             float oldArmySize = averageArmySizeT1 * gamepercentagecounter;
-            averageArmySizeT1 = (oldArmySize + newcount) / gamepercentagecounter;
+            averageArmySizeT1 = gamepercentagecounter == 0 ? (oldArmySize + newcount) : ((oldArmySize + newcount) / gamepercentagecounter);
         }
         private void CompileArmyAverageT2(int newcount)
         {
             float oldArmySize = averageArmySizeT2 * gamepercentagecounter;
-            averageArmySizeT2 = (oldArmySize + newcount) / gamepercentagecounter;
+            averageArmySizeT2 = gamepercentagecounter == 0 ? (oldArmySize + newcount) : ((oldArmySize + newcount) / gamepercentagecounter);
         }
         private IEnumerator<WaitForSeconds> CompileAverages()
         {

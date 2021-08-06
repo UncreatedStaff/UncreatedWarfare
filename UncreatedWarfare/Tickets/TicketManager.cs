@@ -455,12 +455,14 @@ namespace Uncreated.Warfare.Tickets
 
         public static async Task AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
         {
-            await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), xp, F.Translate(KeyplayerTranslationKey, ucplayer.Steam64));
+            string xpstr = F.Translate(KeyplayerTranslationKey, ucplayer.Steam64);
+            string sqstr = F.Translate(squadTranslationKey, ucplayer.Steam64);
+            await XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), xp, xpstr);
 
             if (ucplayer.Squad != null && ucplayer.Squad?.Members.Count > 1)
             {
                 if (ucplayer == ucplayer.Squad.Leader)
-                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), ofp, F.Translate(squadTranslationKey, ucplayer.Steam64));
+                    await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), ofp, sqstr);
 
                 int squadxp = (int)Math.Round(xp * squadMultiplier);
                 int squadofp = (int)Math.Round(ofp * squadMultiplier);
@@ -469,12 +471,12 @@ namespace Uncreated.Warfare.Tickets
                 {
                     for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
                     {
-                        var member = ucplayer.Squad.Members[i];
+                        UCPlayer member = ucplayer.Squad.Members[i];
                         if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
                         {
-                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, squadTranslationKey);
+                            await XPManager.AddXP(member.Player, ucplayer.GetTeam(), squadxp, sqstr);
                             if (member.IsSquadLeader())
-                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, squadTranslationKey);
+                                await OfficerManager.AddOfficerPoints(ucplayer.Player, ucplayer.GetTeam(), squadofp, sqstr);
                         }
                     }
                 }

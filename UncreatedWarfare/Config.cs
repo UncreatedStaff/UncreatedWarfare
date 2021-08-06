@@ -61,6 +61,8 @@ namespace Uncreated.Warfare
         public ushort GiveUpUI;
         public float MaxTimeInStorages;
         public ushort[] LimitedStorages;
+        public bool ClearItemsOnAmmoBoxUse;
+        public bool RelayMicsDuringEndScreen;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -98,13 +100,15 @@ namespace Uncreated.Warfare
             this.MortarWeapon = 38328;
             this.MortarWarningDistance = 75f;
             this.StatsInterval = 60f;
-            this.AfkCheckInterval = 180f;
+            this.AfkCheckInterval = 450f;
             this.AMCDamageMultiplier = 0.25f;
             this.ReplaceEmptyNamesWithID = true;
             this.OverrideKitRequirements = true;
             this.GiveUpUI = 36009;
             this.MaxTimeInStorages = 15f;
             this.LimitedStorages = new ushort[] { 38317, 38319, 38343, 38344 };
+            this.ClearItemsOnAmmoBoxUse = true;
+            this.RelayMicsDuringEndScreen = true;
         }
     }
     public class Modules

@@ -21,6 +21,7 @@ namespace Uncreated.Warfare.Revives
         public readonly List<UCPlayer> Medics = new List<UCPlayer>();
         private Coroutine Updater;
         const float SIM_TIME = 0.08f;
+        const bool CAN_HEAL_ENEMIES = true;
         public ReviveManager()
         {
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
@@ -57,7 +58,7 @@ namespace Uncreated.Warfare.Revives
                 shouldAllow = false;
                 return;
             }
-            if (medic.GetTeam() != downed.GetTeam())
+            if (!CAN_HEAL_ENEMIES || medic.GetTeam() != downed.GetTeam())
             {
                 medic.Message("heal_e_enemy");
                 shouldAllow = false;
@@ -77,6 +78,8 @@ namespace Uncreated.Warfare.Revives
         {
             if (obj.player.TryGetComponent(out Reviver r))
                 r.TellStandDelayed(1.5f);
+            obj.player.movement.sendPluginSpeedMultiplier(1.0f);
+            obj.player.movement.sendPluginJumpMultiplier(1.0f);
         }
 
         internal void OnPlayerConnected(UnturnedPlayer player)
@@ -131,9 +134,12 @@ namespace Uncreated.Warfare.Revives
                 ulong team = medic.GetTeam();
                 ulong tteam = target.GetTeam();
                 if (team == tteam)
-                    await XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP, 
+                {
+                    await XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP,
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
-
+                    if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats != null)
+                        c.stats.revives++;
+                }
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
                 ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
             }
@@ -163,7 +169,7 @@ namespace Uncreated.Warfare.Revives
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    !((parameters.player.life.health < 30 && parameters.damage > 100) || (parameters.player.life.health < 100 && parameters.damage > 200))
+                    !((parameters.player.life.health < 30 && parameters.damage > 100) || parameters.damage > 200)
                     // && !(parameters.cause == EDeathCause.GRENADE || parameters.cause == EDeathCause.CHARGE || parameters.cause == EDeathCause.LANDMINE || parameters.cause == EDeathCause.MISSILE)
                     )
                 {
@@ -175,10 +181,15 @@ namespace Uncreated.Warfare.Revives
                 float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                 parameters = p;
                 parameters.damage *= (UCWarfare.Config.InjuredDamageMultiplier / 10) * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
+                F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.");
             }
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
+            if (parameters.player.movement.getVehicle() != null && parameters.cause == EDeathCause.VEHICLE || !parameters.player.movement.forceRemoveFromVehicle())
+            {
+                return;
+            }
             shouldAllow = false;
             parameters.player.equipment.dequip();
 
@@ -190,13 +201,6 @@ namespace Uncreated.Warfare.Revives
 
             parameters.player.movement.sendPluginSpeedMultiplier(0.1f);
             parameters.player.movement.sendPluginJumpMultiplier(0);
-
-            if (!parameters.player.movement.forceRemoveFromVehicle())
-            {
-                shouldAllow = true;
-                return;
-            }
-
             // change back later
             EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI),
                 parameters.player.channel.owner.transportConnection, true, F.Translate("injured_ui_header", parameters.player),
@@ -252,6 +256,9 @@ namespace Uncreated.Warfare.Revives
                 {
                     DownedPlayers.Remove(player.CSteamID.m_SteamID);
                     DeathInfo.Remove(player.CSteamID.m_SteamID);
+                    player.Player.movement.sendPluginSpeedMultiplier(1.0f);
+                    player.Player.movement.sendPluginJumpMultiplier(1.0f);
+                    player.Player.life.serverSetBleeding(false);
                 }
 
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, player.Player.channel.owner.transportConnection);
@@ -386,6 +393,26 @@ namespace Uncreated.Warfare.Revives
         private class Reviver : UnturnedPlayerComponent
         {
             private Coroutine stance;
+#pragma warning disable IDE0051
+            void Start()
+            {
+                Player.Player.life.onHurt += OnPlayerPostDamage;
+                Player.Player.inventory.onDropItemRequested += EventFunctions.OnDropItemTry;
+            }
+            void OnDisable()
+            {
+                Player.Player.life.onHurt -= OnPlayerPostDamage;
+                Player.Player.inventory.onDropItemRequested -= EventFunctions.OnDropItemTry;
+            }
+#pragma warning restore IDE0051
+            private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
+            {
+                if (F.TryGetPlaytimeComponent(killerid, out Components.PlaytimeComponent c) && c.stats != null)
+                {
+                    c.stats.damagedone += damage;
+                }
+            }
+
             public void TellProneDelayed(float time = 0.5f)
             {
                 stance = StartCoroutine(WaitToChangeStance(EPlayerStance.PRONE, time));

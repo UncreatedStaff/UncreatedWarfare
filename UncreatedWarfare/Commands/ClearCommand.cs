@@ -66,7 +66,7 @@ namespace Uncreated.Warfare.Commands
                 }
             } else if (operation == "i" || operation == "items" || operation == "item")
             {
-                ItemManager.askClearAllItems();
+                ClearItems();
                 if (isConsole) F.LogError(F.Translate("clear_items_cleared", 0, out _));
                 else player.SendChat("clear_items_cleared");
             }
@@ -97,6 +97,11 @@ namespace Uncreated.Warfare.Commands
             VehicleManager.askVehicleDestroyAll();
             for (int i = 0; i < spawnsToReset.Count; i++)
                 spawnsToReset[i].SpawnVehicle();
+        }
+        public static void ClearItems()
+        {
+            EventFunctions.itemstemp.Clear();
+            ItemManager.askClearAllItems();
         }
     }
 }

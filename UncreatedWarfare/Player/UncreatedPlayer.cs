@@ -519,7 +519,7 @@ namespace Uncreated.Players
         public float delay;
         public const float FULL_TOAST_TIME = 12f;
         public const float MINI_TOAST_TIME = 4f;
-        public const float BIG_TOAST_TIME = 6f;
+        public const float BIG_TOAST_TIME = 5.5f;
         public ToastMessage(string message, ToastMessageSeverity severity)
         {
             this.Message = message;

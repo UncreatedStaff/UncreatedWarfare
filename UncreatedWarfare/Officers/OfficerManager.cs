@@ -97,11 +97,13 @@ namespace Uncreated.Warfare.Officers
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
 
-            UpdateUI(player, newBalance, out var stars);
+            UpdateUI(player, newBalance, out int stars);
 
             if (stars > oldStars)
             {
-                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), F.Translate("officer_ui_stars", player, amount.ToString(), amount.S()), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), 
+                    F.Colorize(F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), 
+                    UCWarfare.GetColorHex("star_color")), ToastMessageSeverity.BIG);
             }
 
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))

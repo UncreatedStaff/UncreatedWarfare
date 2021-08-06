@@ -133,6 +133,7 @@ namespace Uncreated.Warfare.Commands
                         if (KitManager.HasKit(player.CSteamID, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
+                        Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
                         await KitManager.GiveKit(ucplayer, kit);
                         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
@@ -185,7 +186,7 @@ namespace Uncreated.Warfare.Commands
             }
             else if (data.RequiredClass != Kit.EClass.NONE && kit.Class != data.RequiredClass)
             {
-                var requiredKit = KitManager.GetKitsWhere(k => k.Class == data.RequiredClass).FirstOrDefault();
+                Kit requiredKit = KitManager.GetKitsWhere(k => k.Class == data.RequiredClass).FirstOrDefault();
 
                 ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ? requiredKit.DisplayName.ToUpper() : "UNKNOWN");
                 return;

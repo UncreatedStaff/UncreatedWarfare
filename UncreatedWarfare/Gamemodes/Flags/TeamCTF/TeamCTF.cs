@@ -173,11 +173,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
 
-                ToastMessage.QueueMessage(client.player, F.Translate("team_win", client, "", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
             }
             this.State = EState.FINISHED;
             await UCWarfare.ReplaceBarricadesAndStructures();
             Commands.ClearCommand.WipeVehiclesAndRespawn();
+            Commands.ClearCommand.ClearItems();
             await TicketManager.OnRoundWin(winner);
             await Task.Delay(Config.end_delay * 1000);
             await InvokeOnTeamWin(winner);
@@ -267,6 +268,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
             PrintFlagRotation();
+            await EvaluatePoints();
         }
         public override void PrintFlagRotation()
         {
@@ -635,7 +637,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.DefendIcon = '´';
             this.ShowLeaderboard = true;
             this.PathingData = new AutoObjectiveData();
-            this.end_delay = 5;
+            this.end_delay = 15;
             this.NearOtherBaseKillTimer = 10f;
             this.team1spawnangle = 0f;
             this.team2spawnangle = 0f;

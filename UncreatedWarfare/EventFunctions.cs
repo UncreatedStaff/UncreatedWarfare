@@ -22,6 +22,7 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Item = SDG.Unturned.Item;
 using Kit = Uncreated.Warfare.Kits.Kit;
 
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -55,6 +56,50 @@ namespace Uncreated.Warfare
         internal static void OnStructureDestroyed(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID)
         {
             Data.VehicleSpawner.OnStructureDestroyed(region, data, drop, instanceID);
+        }
+        internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
+        internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
+        internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
+        {
+            if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
+            if (KitManager.HasKit(inv.player, out Kit kit))
+            {
+                bool inkit = kit.Items.Exists(k => k.ID == item.id);
+                if (inkit)
+                {
+                    if (!itemstemp.ContainsKey(item))
+                        itemstemp.Add(item, inv);
+                    else itemstemp[item] = inv;
+                }
+            }
+        }
+        internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
+        {
+            if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
+            if (itemstemp.TryGetValue(item, out PlayerInventory inv))
+            {
+                uint nextindex;
+                try
+                {
+                    nextindex = (uint)Data.ItemManagerInstanceCount.GetValue(null);
+                }
+                catch
+                {
+                    F.LogError("Unable to get ItemManager.instanceCount.");
+                    itemstemp.Remove(item);
+                    return;
+                }
+                nextindex++;
+                if (droppeditems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
+                {
+                    if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
+                    else instanceids.Add(nextindex);
+                } else
+                {
+                    droppeditems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint>() { nextindex });
+                }
+                itemstemp.Remove(item);
+            }
         }
         internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
         {
@@ -267,6 +312,14 @@ namespace Uncreated.Warfare
             }
             
         }
+
+        internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, 
+            ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
+        {
+            if (!(UCWarfare.Config.RelayMicsDuringEndScreen && Data.Gamemode != null && Data.Gamemode.State == Gamemodes.EState.FINISHED)) return;
+            cullingHandler = (source, target) => true;
+        }
+
         internal static void OnBattleyeKicked(SteamPlayer client, string reason)
         {
             FPlayerName names = F.GetPlayerOriginalNames(client.player);
@@ -519,6 +572,7 @@ namespace Uncreated.Warfare
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
             Data.ReviveManager.OnPlayerDisconnected(player.Player.channel.owner);
+            droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = ucplayer.KitName;

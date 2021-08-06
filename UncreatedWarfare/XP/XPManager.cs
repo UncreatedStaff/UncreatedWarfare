@@ -88,15 +88,15 @@ namespace Uncreated.Warfare.XP
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
 
-            UpdateUI(player, newBalance, out var rank);
+            UpdateUI(player, newBalance, out Rank rank);
 
             if (rank.level > oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
             }
             else if (rank.level < oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
             }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)

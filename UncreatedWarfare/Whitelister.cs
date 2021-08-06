@@ -29,24 +29,24 @@ namespace Uncreated.Warfare
         }
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
         {
-            var player = UnturnedPlayer.FromPlayer(P);
+            UCPlayer player = UCPlayer.FromPlayer(P);
 
             if (F.OnDuty(player))
             {
                 return;
             }
 
-            if (KitManager.HasKit(player.CSteamID, out var kit))
+            if (KitManager.HasKit(player.CSteamID, out Kit kit))
             {
                 int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
 
-                int allowedItems = kit.Items.Where(k => k.ID == itemData.item.id).Count();
+                int allowedItems = kit.Items.Count(k => k.ID == itemData.item.id);
                 if (allowedItems == 0)
-                    allowedItems = kit.Clothes.Where(k => k.ID == itemData.item.id).Count();
+                    allowedItems = kit.Clothes.Count(k => k.ID == itemData.item.id);
 
                 if (allowedItems == 0)
                 {
-                    if (!IsWhitelisted(itemData.item.id, out var whitelistedItem))
+                    if (!IsWhitelisted(itemData.item.id, out WhitelistItem whitelistedItem))
                     {
                         shouldAllow = false;
                         player.Message("whitelist_notallowed");
@@ -67,6 +67,11 @@ namespace Uncreated.Warfare
             {
                 shouldAllow = false;
                 player.Message("whitelist_nokit");
+            }
+            if (EventFunctions.droppeditems.TryGetValue(P.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances)) 
+            {
+                if (instances != null)
+                    instances.Remove(instanceID);
             }
         }
         private void OnBarricadeSalvageRequested(CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
