@@ -39,7 +39,7 @@ namespace Uncreated.Warfare
                 else return Configuration.Instance.SQL;
             }
         }
-        public bool LoadMySQLDataFromElsewhere = true;
+        public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
