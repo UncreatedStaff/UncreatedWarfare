@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Officers
 
             if (stars > oldStars)
             {
-                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), F.Translate("officer_ui_stars", player, amount.ToString(), amount.S()), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), ToastMessageSeverity.BIG);
             }
 
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))

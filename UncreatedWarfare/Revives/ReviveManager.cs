@@ -163,7 +163,7 @@ namespace Uncreated.Warfare.Revives
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    !((parameters.player.life.health < 30 && parameters.damage > 100) || (parameters.player.life.health < 100 && parameters.damage > 200))
+                    !((parameters.player.life.health < 30 && parameters.damage >= 100) || (parameters.player.life.health < 100 && parameters.damage >= 200))
                     // && !(parameters.cause == EDeathCause.GRENADE || parameters.cause == EDeathCause.CHARGE || parameters.cause == EDeathCause.LANDMINE || parameters.cause == EDeathCause.MISSILE)
                     )
                 {

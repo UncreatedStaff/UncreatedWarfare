@@ -92,11 +92,11 @@ namespace Uncreated.Warfare.XP
 
             if (rank.level > oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
             }
             else if (rank.level < oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
             }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
@@ -363,10 +363,10 @@ namespace Uncreated.Warfare.XP
             FriendlyRevivedXP = 10;
             FOBKilledXP = 100;
             FOBDeployedXP = 10;
-            FlagCapturedXP = 200;
+            FlagCapturedXP = 120;
             FlagAttackXP = 5;
             FlagDefendXP = 5;
-            FlagNeutralizedXP = 50;
+            FlagNeutralizedXP = 40;
             TransportPlayerXP = 2;
             TimeBetweenXpAndOfpAwardForTransport = 10f;
             BuiltFOBXP = 50;
@@ -377,14 +377,14 @@ namespace Uncreated.Warfare.XP
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
             {
-                {EVehicleType.HUMVEE, 50},
-                {EVehicleType.TRANSPORT, 50},
-                {EVehicleType.LOGISTICS, 80},
-                {EVehicleType.SCOUT_CAR, 120},
-                {EVehicleType.APC, 300},
-                {EVehicleType.IFV, 400},
-                {EVehicleType.MBT, 700},
-                {EVehicleType.HELI_TRANSPORT, 200},
+                {EVehicleType.HUMVEE, 40},
+                {EVehicleType.TRANSPORT, 30},
+                {EVehicleType.LOGISTICS, 50},
+                {EVehicleType.SCOUT_CAR, 60},
+                {EVehicleType.APC, 80},
+                {EVehicleType.IFV, 100},
+                {EVehicleType.MBT, 200},
+                {EVehicleType.HELI_TRANSPORT, 70},
                 {EVehicleType.EMPLACEMENT, 30},
             };
 
@@ -394,10 +394,10 @@ namespace Uncreated.Warfare.XP
 
             Ranks = new List<Rank>()
             {
-                new Rank(0, "Recruit", "Rec.", 1000),
-                new Rank(1, "Private", "Pvt.", 2000),
-                new Rank(2, "Private 1st Class", "Pfc.", 2500),
-                new Rank(3, "Corporal", "Cpl.", 3000),
+                new Rank(0, "Recruit", "Rec.", 1500),
+                new Rank(1, "Private", "Pvt.", 3500),
+                new Rank(2, "Private 1st Class", "Pfc.", 5000),
+                new Rank(3, "Corporal", "Cpl.", 7000),
                 new Rank(4, "Specialist", "Spec.", 5000),
                 new Rank(5, "Sergeant", "Sgt.", 7000),
                 new Rank(6, "Staff Sergeant", "Ssg.", 9000),
