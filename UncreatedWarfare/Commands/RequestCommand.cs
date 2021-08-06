@@ -111,11 +111,11 @@ namespace Uncreated.Warfare.Commands
                 {
                     ucplayer.Message("request_kit_e_notsquadleader");
                 }
-                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out var requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
+                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
                 {
                     player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
                 }
-                else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var premiumCooldown, kit.Name) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
+                else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out Cooldown premiumCooldown, kit.Name) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
                 {
                     player.Message("kit_e_cooldown", premiumCooldown.ToString());
                 }
@@ -179,7 +179,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_notinsquad");
                 return;
             }
-            else if (!KitManager.HasKit(ucplayer.CSteamID, out var kit))
+            else if (!KitManager.HasKit(ucplayer.CSteamID, out Kit kit))
             {
                 ucplayer.Message("request_vehicle_e_nokit");
                 return;

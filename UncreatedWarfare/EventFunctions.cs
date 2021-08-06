@@ -316,8 +316,12 @@ namespace Uncreated.Warfare
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, 
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
-            if (!(UCWarfare.Config.RelayMicsDuringEndScreen && Data.Gamemode != null && Data.Gamemode.State == Gamemodes.EState.FINISHED)) return;
-            cullingHandler = (source, target) => true;
+            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == Gamemodes.EState.ACTIVE) return;
+            cullingHandler = new PlayerVoice.RelayVoiceCullingHandler((source, target) =>
+            {
+                return true;
+            });
+            shouldBroadcastOverRadio = true;
         }
 
         internal static void OnBattleyeKicked(SteamPlayer client, string reason)

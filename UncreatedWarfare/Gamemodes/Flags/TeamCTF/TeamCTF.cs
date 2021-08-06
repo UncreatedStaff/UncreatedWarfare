@@ -126,43 +126,46 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override async Task EvaluateTickets()
         {
-            TicketManager.GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
-            TicketManager.GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
+            if (State == EState.ACTIVE)
+            {
+                TicketManager.GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
+                TicketManager.GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
 
-            if (TicketCounter % 60 == 0)
-            {
-                if (Team1Bleed == -1)
-                    TicketManager.Team1Tickets--;
-                if (Team2Bleed == -1)
-                    TicketManager.Team2Tickets--;
-            }
-            if (TicketCounter % 30 == 0)
-            {
-                if (Team1Bleed == -2)
-                    TicketManager.Team1Tickets--;
-                if (Team2Bleed == -2)
-                    TicketManager.Team2Tickets--;
-            }
-            if (TicketCounter % 10 == 0)
-            {
-                if (Team1Bleed == -3)
-                    TicketManager.Team1Tickets--;
-                if (Team2Bleed == -3)
-                    TicketManager.Team2Tickets--;
-            }
-            if (TicketCounter % Config.xpSecondInterval == 0)
-            {
-                await TicketManager.OnFlagTick();
-            }
+                if (TicketCounter % 60 == 0)
+                {
+                    if (Team1Bleed == -1)
+                        TicketManager.Team1Tickets--;
+                    if (Team2Bleed == -1)
+                        TicketManager.Team2Tickets--;
+                }
+                if (TicketCounter % 30 == 0)
+                {
+                    if (Team1Bleed == -2)
+                        TicketManager.Team1Tickets--;
+                    if (Team2Bleed == -2)
+                        TicketManager.Team2Tickets--;
+                }
+                if (TicketCounter % 10 == 0)
+                {
+                    if (Team1Bleed == -3)
+                        TicketManager.Team1Tickets--;
+                    if (Team2Bleed == -3)
+                        TicketManager.Team2Tickets--;
+                }
+                if (TicketCounter % Config.xpSecondInterval == 0)
+                {
+                    await TicketManager.OnFlagTick();
+                }
 
-            if (Team1Bleed < 0)
-                TicketManager.UpdateUITeam1();
-            if (Team2Bleed < 0)
-                TicketManager.UpdateUITeam2();
+                if (Team1Bleed < 0)
+                    TicketManager.UpdateUITeam1();
+                if (Team2Bleed < 0)
+                    TicketManager.UpdateUITeam2();
 
-            TicketCounter++;
-            if (TicketCounter > 60)
-                TicketCounter = 0;
+                TicketCounter++;
+                if (TicketCounter > 60)
+                    TicketCounter = 0;
+            }
         }
         public override async Task DeclareWin(ulong winner)
         {
@@ -415,6 +418,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     await DeclareWin(NewOwner);
                     ObjectiveT1Index = Rotation.Count - 1;
+                    return;
                 }
                 else
                 {
@@ -434,6 +438,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     await DeclareWin(NewOwner);
                     ObjectiveT2Index = 0;
+                    return;
                 }
                 else
                 {

@@ -165,13 +165,11 @@ namespace Uncreated.Warfare.Revives
                     return;
                 }
                 if (UCWarfare.Config.Debug)
-                    F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.");
+                    F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.", ConsoleColor.DarkGray);
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    !((parameters.player.life.health < 30 && parameters.damage >= 100) || parameters.damage >= 200)
-                    // && !(parameters.cause == EDeathCause.GRENADE || parameters.cause == EDeathCause.CHARGE || parameters.cause == EDeathCause.LANDMINE || parameters.cause == EDeathCause.MISSILE)
-                    )
+                    !((parameters.player.life.health < 30 && parameters.damage >= 100) || parameters.damage >= 200))
                 {
                     InjurePlayer(ref shouldAllow, ref parameters, killer);
                 }
@@ -181,11 +179,13 @@ namespace Uncreated.Warfare.Revives
                 float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                 parameters = p;
                 parameters.damage *= (UCWarfare.Config.InjuredDamageMultiplier / 10) * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
+                if (UCWarfare.Config.Debug)
+                    F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
             }
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
-            if (parameters.player.movement.getVehicle() != null && parameters.cause == EDeathCause.VEHICLE || !parameters.player.movement.forceRemoveFromVehicle())
+            if (parameters.player.movement.getVehicle() != null && parameters.cause == EDeathCause.VEHICLE)
             {
                 return;
             }

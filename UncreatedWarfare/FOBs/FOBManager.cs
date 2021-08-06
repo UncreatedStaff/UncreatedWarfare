@@ -260,14 +260,14 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateUIAll()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 UpdateUI(player);
             }
         }
         public static void UpdateUIForTeam(ulong team)
         {
-            foreach (var player in PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team))
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team))
             {
                 UpdateUI(player);
             }
@@ -298,6 +298,7 @@ namespace Uncreated.Warfare.FOBs
         public ushort FOBBaseID;
         public ushort FOBID;
         public ushort FOBRequiredBuild;
+        public int FOBBuildPickupRadius;
         public byte FobLimit;
 
         public float AmmoCommandCooldown;
@@ -344,6 +345,7 @@ namespace Uncreated.Warfare.FOBs
             FOBBaseID = 38310;
             FOBID = 38311;
             FOBRequiredBuild = 20;
+            FOBBuildPickupRadius = 20;
             FobLimit = 10;
 
             AmmoCrateBaseID = 38316;

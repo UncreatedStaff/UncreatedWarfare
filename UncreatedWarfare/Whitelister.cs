@@ -133,29 +133,38 @@ namespace Uncreated.Warfare
             ref ulong group,
             ref bool shouldAllow)
         {
-            UCPlayer player = UCPlayer.FromID(owner);
-            if (TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+            try
             {
+                UCPlayer player = UCPlayer.FromID(owner);
+                if (player == null || player.Player == null || F.OnDuty(player)) return;
+                if (player == null || TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+                {
+                    shouldAllow = false;
+                    player.Message("whitelist_noplace");
+                    return;
+                }
+                if (player == null || player.Player == null || F.OnDuty(player)) return;
+                if (player.OnDuty()) return;
+                if (KitManager.HasKit(player.CSteamID, out Kit kit))
+                {
+                    if (kit.Items.Exists(k => k.ID == barricade.id))
+                    {
+                        return;
+                    }
+                    else if (IsWhitelisted(barricade.id, out _))
+                    {
+                        return;
+                    }
+                }
+
                 shouldAllow = false;
                 player.Message("whitelist_noplace");
-                return;
             }
-            if (player == null || player.Player == null || F.OnDuty(player)) return;
-            if (player.OnDuty()) return;
-            if (KitManager.HasKit(player.CSteamID, out Kit kit))
+            catch (Exception ex)
             {
-                if (kit.Items.Exists(k => k.ID == barricade.id))
-                {
-                    return;
-                }
-                else if (IsWhitelisted(barricade.id, out _))
-                {
-                    return;
-                }
+                F.LogError("Error verifying barricade place with the whitelist: ");
+                F.LogError(ex);
             }
-
-            shouldAllow = false;
-            player.Message("whitelist_noplace");
         }
         private void OnStructurePlaceRequested(
             Structure structure,
@@ -169,28 +178,36 @@ namespace Uncreated.Warfare
             ref bool shouldAllow
             )
         {
-            var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
-            if (TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+            try
             {
+                UCPlayer player = UCPlayer.FromID(owner);
+                if (player == null || player.Player == null || F.OnDuty(player)) return;
+                if (player == null || TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+                {
+                    shouldAllow = false;
+                    player.Message("whitelist_noplace");
+                    return;
+                }
+                if (KitManager.HasKit(player.CSteamID, out Kit kit))
+                {
+                    if (kit.Items.Exists(k => k.ID == structure.id))
+                    {
+                        return;
+                    }
+                    else if (IsWhitelisted(structure.id, out _))
+                    {
+                        return;
+                    }
+                }
+
                 shouldAllow = false;
                 player.Message("whitelist_noplace");
-                return;
             }
-            if (player == null || player.Player == null || F.OnDuty(player)) return;
-            if (KitManager.HasKit(player.CSteamID, out Kit kit))
+            catch (Exception ex)
             {
-                if (kit.Items.Exists(k => k.ID == structure.id))
-                {
-                    return;
-                }
-                else if (IsWhitelisted(structure.id, out _))
-                {
-                    return;
-                }
+                F.LogError("Error verifying structure place with the whitelist: ");
+                F.LogError(ex);
             }
-
-            shouldAllow = false;
-            player.Message("whitelist_noplace");
         }
         public static void AddItem(ushort ID) => AddObjectToSave(new WhitelistItem(ID, 255));
         public static void RemoveItem(ushort ID) => RemoveWhere(i => i.itemID == ID);
