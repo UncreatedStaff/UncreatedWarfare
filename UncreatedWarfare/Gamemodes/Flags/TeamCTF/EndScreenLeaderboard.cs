@@ -158,7 +158,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, headers[0], F.Translate("lb_header_1_no_squad", player)); // squad header
                 }
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.ObjectTranslate("player_name_header", player.playerID.steamID.m_SteamID, originalNames.CharacterName, F.GetTeamColorHex(player), (stats.onlineCount / warstats.gamepercentagecounter) * 100));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.ObjectTranslate("player_name_header", player.playerID.steamID.m_SteamID, originalNames.CharacterName, F.GetTeamColorHex(player), (float)stats.onlineCount / warstats.gamepercentagecounter * 100f));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
                     TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
                     TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
@@ -417,8 +417,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public int totalFlagOwnerChanges; // works
         public float averageArmySizeT1; // works
         public float averageArmySizeT2; // works
-        private int averageArmySizeT1counter = 0;
-        private int averageArmySizeT2counter = 0;
         public int fobsPlacedT1; // works
         public int fobsPlacedT2; // works
         public int fobsDestroyedT1; // works
@@ -458,7 +456,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             for (int i = 0; i < Provider.clients.Count; i++)
             {
                 if (playerstats.TryGetValue(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerCurrentGameStats p))
+                {
+                    p.player = Provider.clients[i].player;
                     p.Reset();
+                }
                 else
                 {
                     PlayerCurrentGameStats s = new PlayerCurrentGameStats(Provider.clients[i].player);
@@ -467,14 +468,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         pt.stats = s;
                 }
             }
+            foreach (KeyValuePair<ulong, PlayerCurrentGameStats> p in playerstats.ToList())
+            {
+                SteamPlayer player = PlayerTool.getSteamPlayer(p.Key);
+                if (player == null) playerstats.Remove(p.Key);
+            }
             durationCounter = 0;
             casualtiesT1 = 0;
             casualtiesT2 = 0;
             totalFlagOwnerChanges = 0;
             averageArmySizeT1 = 0;
             averageArmySizeT2 = 0;
-            averageArmySizeT1counter = 0;
-            averageArmySizeT2counter = 0;
+            gamepercentagecounter = 0;
             fobsPlacedT1 = 0;
             fobsPlacedT2 = 0;
             fobsDestroyedT1 = 0;
@@ -490,15 +495,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         private void CompileArmyAverageT1(int newcount)
         {
-            float oldArmySize = averageArmySizeT1 * averageArmySizeT1counter;
-            averageArmySizeT1counter++;
-            averageArmySizeT1 = (oldArmySize + newcount) / averageArmySizeT1counter;
+            float oldArmySize = averageArmySizeT1 * gamepercentagecounter;
+            averageArmySizeT1 = (oldArmySize + newcount) / gamepercentagecounter;
         }
         private void CompileArmyAverageT2(int newcount)
         {
-            float oldArmySize = averageArmySizeT2 * averageArmySizeT2counter;
-            averageArmySizeT2counter++;
-            averageArmySizeT2 = (oldArmySize + newcount) / averageArmySizeT2counter;
+            float oldArmySize = averageArmySizeT2 * gamepercentagecounter;
+            averageArmySizeT2 = (oldArmySize + newcount) / gamepercentagecounter;
         }
         private IEnumerator<WaitForSeconds> CompileAverages()
         {
@@ -534,7 +537,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.RemoveAll(p =>
             {
-                if (p == default)
+                if (p == null) return true;
+                if (p.player == null)
                 {
                     SteamPlayer player = PlayerTool.getSteamPlayer(p.id);
                     if (player == default || player.player == default) return true;
@@ -635,7 +639,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.RemoveAll(p =>
             {
-                if (p == default)
+                if (p == null) return true;
+                if (p.player == null)
                 {
                     SteamPlayer player = PlayerTool.getSteamPlayer(p.id);
                     if (player == default || player.player == default) return true;
@@ -655,7 +660,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             List<PlayerCurrentGameStats> stats = playerstats.Values.ToList();
             stats.RemoveAll(p =>
             {
-                if (p == default)
+                if (p == null) return true;
+                if (p.player == null)
                 {
                     SteamPlayer player = PlayerTool.getSteamPlayer(p.id);
                     if (player == default || player.player == default) return true;

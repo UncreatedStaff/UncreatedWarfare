@@ -109,7 +109,7 @@ namespace Uncreated.Warfare
         }
         private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
         {
-            var player = UnturnedPlayer.FromCSteamID(steamID);
+            UCPlayer player = UCPlayer.FromCSteamID(steamID);
             if (!player.OnDuty())
             {
                 shouldAllow = false;
@@ -128,10 +128,16 @@ namespace Uncreated.Warfare
             ref ulong group,
             ref bool shouldAllow)
         {
-            var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
+            UCPlayer player = UCPlayer.FromID(owner);
+            if (TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+            {
+                shouldAllow = false;
+                player.Message("whitelist_noplace");
+                return;
+            }
             if (player == null || player.Player == null || F.OnDuty(player)) return;
-
-            if (KitManager.HasKit(player.CSteamID, out var kit))
+            if (player.OnDuty()) return;
+            if (KitManager.HasKit(player.CSteamID, out Kit kit))
             {
                 if (kit.Items.Exists(k => k.ID == barricade.id))
                 {
@@ -159,14 +165,14 @@ namespace Uncreated.Warfare
             )
         {
             var player = UnturnedPlayer.FromCSteamID(new CSteamID(owner));
-            if (TeamManager.IsInAnyMain(player) && !player.OnDutyOrAdmin())
+            if (TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
             {
                 shouldAllow = false;
                 player.Message("whitelist_noplace");
                 return;
             }
             if (player == null || player.Player == null || F.OnDuty(player)) return;
-            if (KitManager.HasKit(player.CSteamID, out var kit))
+            if (KitManager.HasKit(player.CSteamID, out Kit kit))
             {
                 if (kit.Items.Exists(k => k.ID == structure.id))
                 {

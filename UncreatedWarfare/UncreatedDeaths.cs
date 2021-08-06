@@ -1,4 +1,5 @@
-﻿using Rocket.Unturned.Player;
+﻿using Rocket.Core.Steam;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -38,18 +39,25 @@ namespace Uncreated.Warfare
             {
                 Task e = TicketManager.OnFriendlyKilled(parameters);
                 Task a = Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                Task r;
+                if (Configuration.Instance.AdminLoggerSettings.LogTKs)
+                    r = Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID,
+                        parameters.dead.channel.owner.playerID.steamID.m_SteamID,
+                        parameters.key, parameters.itemName ?? "", parameters.item, parameters.distance);
+                else r = null;
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
                 {
                     pt.stats.AddTeamkill();
                     pt.UCPlayerStats.warfare_stats.TellTeamkill(parameters, false);
                     pt.UCPlayerStats.SaveAsync();
                 }
-                if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf)
+                if (Data.Gamemode is TeamCTF ctf)
                 {
                     ctf.GameStats.teamkills++;
                 }
                 await a;
                 await e;
+                await r;
             }
             OnTeamkill?.Invoke(this, parameters);
         }
@@ -390,7 +398,7 @@ namespace Uncreated.Warfare
                     }
                     if (landmineID != 0)
                     {
-                        ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, landmineID);
+                        ItemAsset asset = Assets.find(EAssetType.ITEM, landmineID) as ItemAsset;
                         if (asset != null) landmineName = asset.itemName;
                         else landmineName = landmineID.ToString(Data.Locale);
                     }
@@ -932,7 +940,7 @@ namespace Uncreated.Warfare
                 FPlayerName killerName;
                 bool foundKiller;
                 ushort item;
-                string itemName;
+                string itemName = null;
                 float distance = 0f;
                 bool translateName = false;
                 ulong killerTeam;
@@ -947,18 +955,24 @@ namespace Uncreated.Warfare
                         killer = null;
                         killerTeam = info.killerTeam;
                         foundKiller = false;
+                        bool foundvehasset = true;
                         if (itemIsVehicle)
                         {
                             VehicleAsset asset = (VehicleAsset)Assets.find(EAssetType.VEHICLE, item);
                             if (asset != null) itemName = asset.vehicleName;
-                            else itemName = item.ToString(Data.Locale);
+                            else
+                            {
+                                itemName = item.ToString(Data.Locale);
+                                foundvehasset = false;
+                            }
                         }
-                        else
+                        if (!itemIsVehicle || !foundvehasset)
                         {
                             ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, item);
                             if (asset != null) itemName = asset.itemName;
                             else itemName = item.ToString(Data.Locale);
                         }
+                        
                     } else
                     {
                         killer = dead.Player.channel.owner;
@@ -1043,6 +1057,7 @@ namespace Uncreated.Warfare
                             killerName = new FPlayerName() { CharacterName = "zombie", NickName = "zombie", PlayerName = "zombie", Steam64 = murderer == default || murderer == CSteamID.Nil ? 0 : murderer.m_SteamID };
                     }
                 }
+                if (itemName == null) itemName = item.ToString();
                 if (foundKiller)
                 {
                     if (killer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)

@@ -254,6 +254,7 @@ namespace Uncreated.Warfare
         public bool LogLastJoinedTime;
         public List<ushort> AllowedBarricadesOnVehicles;
         public uint TimeBetweenShutdownMessages;
+        public string[] BattleyeExclusions;
         public AdminLoggerSettings()
         {
             this.InternOnDutyGroup = "intern";
@@ -270,6 +271,12 @@ namespace Uncreated.Warfare
             this.LogLastJoinedTime = true;
             this.AllowedBarricadesOnVehicles = new List<ushort>();
             this.TimeBetweenShutdownMessages = 60;
+            this.BattleyeExclusions = new string[]
+            {
+                "Client not responding",
+                "Unofficial Modules not supported",
+                "Query Timeout"
+            };
         }
     }
     public class PlayerStatsSettings
