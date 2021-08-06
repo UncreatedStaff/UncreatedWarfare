@@ -26,15 +26,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public WarStatsTracker warstats;
         public ulong winner;
         public CancellationTokenSource CancelToken = new CancellationTokenSource();
-        List<KeyValuePair<Player, char>> topsquadplayers;
-        List<PlayerCurrentGameStats> statsT1 = new List<PlayerCurrentGameStats>();
-        List<PlayerCurrentGameStats> statsT2 = new List<PlayerCurrentGameStats>();
+        //List<KeyValuePair<Player, char>> topsquadplayers;
+        List<PlayerCurrentGameStats> statsT1;
+        List<PlayerCurrentGameStats> statsT2;
         Players.FPlayerName longestShotTaker;
         ulong longestShotTakerTeam;
         float longestShot;
         bool longestShotTaken;
-        string squadname;
-        ulong squadteam;
+        //string squadname;
+        //ulong squadteam;
         public async Task EndGame(string progresschars)
         {
             await GetValues();
@@ -104,7 +104,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
 
-                CTFUI.ClearListUI(player.transportConnection, (Data.Gamemode as TeamCTF).Config.FlagUICount);
                 player.player.movement.sendPluginSpeedMultiplier(0f);
                 player.player.life.serverModifyHealth(100);
                 player.player.life.serverModifyFood(100);
@@ -126,6 +125,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         KitManager.ResupplyKit(ucplayer, kit);
                 }
                 player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
+                CTFUI.ClearListUI(player.transportConnection, (Data.Gamemode as TeamCTF).Config.FlagUICount);
                 KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
                 PlayerCurrentGameStats stats;
                 if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
@@ -148,11 +148,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
                     TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
                 
-                // LEADERBOARD
-
+                /*
+                 * LEADERBOARD
+                 */ 
                 for (int i = 0; i < Math.Min(15, statsT1.Count); i++)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1N" + i, i == 0 ? TeamManager.TranslateName(1, player, true).ToUpper() : player.playerID.nickName);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1N" + i, i == 0 ? TeamManager.TranslateName(1, player, true).ToUpper() : (statsT1[i].player == null ? WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER : statsT1[i].player.channel.owner.playerID.nickName));
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1K" + i, statsT1[i].kills.ToString());
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1D" + i, statsT1[i].deaths.ToString());
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1X" + i, statsT1[i].xpgained.ToString());
@@ -160,10 +161,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1C" + i, statsT1[i].captures.ToString());
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1T" + i, statsT1[i].damagedone.ToString());
                 }
-
                 for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2N" + i, i == 0 ? TeamManager.TranslateName(2, player, true).ToUpper() : player.playerID.nickName);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2N" + i, i == 0 ? TeamManager.TranslateName(2, player, true).ToUpper() : (statsT2[i].player == null ? WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER : statsT2[i].player.channel.owner.playerID.nickName));
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2K" + i, statsT2[i].kills.ToString());
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2D" + i, statsT2[i].deaths.ToString());
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2X" + i, statsT2[i].xpgained.ToString());
@@ -482,11 +482,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 else return false;
             });
 
-            var totalT1 = new PlayerCurrentGameStats();
-            var totalT2 = new PlayerCurrentGameStats();
+            PlayerCurrentGameStats totalT1 = new PlayerCurrentGameStats();
+            PlayerCurrentGameStats totalT2 = new PlayerCurrentGameStats();
             for (int i = 0; i < playerstats.Values.Count; i++)
             {
-                var stat = playerstats.Values.ElementAt(i);
+                PlayerCurrentGameStats stat = playerstats.Values.ElementAt(i);
 
                 if (stat.id.GetTeamFromPlayerSteam64ID() == 1)
                 {
@@ -497,7 +497,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     totalT1.captures += stat.captures;
                     totalT1.damagedone += stat.damagedone;
                 }
-                else if (stat.id.GetTeamFromPlayerSteam64ID() == 1)
+                else if (stat.id.GetTeamFromPlayerSteam64ID() == 2)
                 {
                     totalT2.kills += stat.kills;
                     totalT2.deaths += stat.deaths;
