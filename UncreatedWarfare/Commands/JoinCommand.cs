@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
@@ -83,6 +84,7 @@ namespace Uncreated.Warfare.Commands
                         player.Player.quests.leaveGroup(true);
                         PlayerManager.Save();
                         player.SendChat("join_e_badname", restrictedNamePrefix);
+                        UCInventoryManager.ClearInventory(player);
                         return;
                     }
                     player.SendChat("joined_standby");
@@ -99,6 +101,9 @@ namespace Uncreated.Warfare.Commands
                         ConsoleColor.Cyan);
 
                     player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());
+
+                    if (KitManager.KitExists(TeamManager.GetUnarmedFromS64ID(player.Steam64), out var kit))
+                        await KitManager.GiveKit(player, kit);
 
                     player.SendChat("join_s", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
