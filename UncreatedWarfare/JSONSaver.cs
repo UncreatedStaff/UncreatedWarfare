@@ -88,7 +88,7 @@ namespace Uncreated
                 throw ex;
             }
         }
-        protected static List<T> GetExistingObjects(bool readFile = false)
+        public static List<T> GetExistingObjects(bool readFile = false)
         {
             if(readFile || ActiveObjects == default || ActiveObjects.Count == 0)
             {

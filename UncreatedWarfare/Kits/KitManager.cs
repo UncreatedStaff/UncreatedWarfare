@@ -429,6 +429,7 @@ namespace Uncreated.Warfare.Kits
                 else Weapons = asset.itemName;
             }
         }
+        [JsonConstructor]
         public Kit()
         {
             Name = "default";
@@ -450,7 +451,6 @@ namespace Uncreated.Warfare.Kits
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
             Weapons = string.Empty;
         }
-        [JsonConstructor]
         public Kit(string Name, 
             EClass Class, 
             string SignName, 
