@@ -413,18 +413,18 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.SendRegion) return true;
                 if (!BarricadeManager.tryGetRegion(x, y, plant, out BarricadeRegion region))
                     return false;
-                if (!region.barricades.Exists(b => b.IsSign(region))) return true; // run base function if there are no signs.
-                if (region.barricades.Count > 0 && region.drops.Count == region.barricades.Count)
+                //if (!region.barricades.Exists(b => b.IsSign(region))) return true; // run base function if there are no signs.
+                if (region.drops.Count > 0)
                 {
                     byte packet = 0;
                     int index = 0;
                     int count = 0;
-                    while (index < region.barricades.Count)
+                    while (index < region.drops.Count)
                     {
                         int num = 0;
-                        while (count < region.barricades.Count)
+                        while (count < region.drops.Count)
                         {
-                            num += 38 + region.barricades[count].barricade.state.Length;
+                            num += 38 + region.drops[count].GetServersideData().barricade.state.Length;
                             count++;
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;
@@ -438,9 +438,10 @@ namespace Uncreated.Warfare
                             writer.WriteUInt16((ushort)(count - index));
                             for (; index < count; ++index)
                             {
-                                BarricadeData barricade = region.barricades[index];
+                                BarricadeDrop drop = region.drops[index];
+                                BarricadeData serversideData = drop.GetServersideData();
                                 InteractableStorage interactable = region.drops[index].interactable as InteractableStorage;
-                                writer.WriteUInt16(barricade.barricade.id);
+                                writer.WriteUInt16(serversideData.barricade.id);
                                 if (interactable != null)
                                 {
                                     byte[] bytes1;
@@ -466,7 +467,7 @@ namespace Uncreated.Warfare
                                     }
                                     else
                                         bytes1 = new byte[16];
-                                    Array.Copy(barricade.barricade.state, 0, bytes1, 0, 16);
+                                    Array.Copy(serversideData.barricade.state, 0, bytes1, 0, 16);
                                     writer.WriteUInt8((byte)bytes1.Length);
                                     writer.WriteBytes(bytes1);
                                 }
@@ -482,7 +483,7 @@ namespace Uncreated.Warfare
                                         newtext.Replace("<size=", "");
                                             newtext.Replace("</size>", "");
                                         }
-                                        byte[] state = region.barricades[index].barricade.state;
+                                        byte[] state = region.drops[index].GetServersideData().barricade.state;
                                         byte[] bytes = Encoding.UTF8.GetBytes(newtext);
 
                                         if (bytes.Length > byte.MaxValue)
@@ -501,18 +502,18 @@ namespace Uncreated.Warfare
                                     }
                                     else
                                     {
-                                        writer.WriteUInt8((byte)barricade.barricade.state.Length);
-                                        writer.WriteBytes(barricade.barricade.state);
+                                        writer.WriteUInt8((byte)serversideData.barricade.state.Length);
+                                        writer.WriteBytes(serversideData.barricade.state);
                                     }
                                 }
-                                writer.WriteClampedVector3(barricade.point, fracBitCount: 11);
-                                writer.WriteUInt8(barricade.angle_x);
-                                writer.WriteUInt8(barricade.angle_y);
-                                writer.WriteUInt8(barricade.angle_z);
-                                writer.WriteUInt8((byte)Mathf.RoundToInt((float)(barricade.barricade.health / barricade.barricade.asset.health * 100.0)));
-                                writer.WriteUInt64(barricade.owner);
-                                writer.WriteUInt64(barricade.group);
-                                writer.WriteUInt32(barricade.instanceID);
+                                writer.WriteClampedVector3(serversideData.point, fracBitCount: 11);
+                                writer.WriteUInt8(serversideData.angle_x);
+                                writer.WriteUInt8(serversideData.angle_y);
+                                writer.WriteUInt8(serversideData.angle_z);
+                                writer.WriteUInt8((byte)Mathf.RoundToInt((float)(serversideData.barricade.health / serversideData.barricade.asset.health * 100.0)));
+                                writer.WriteUInt64(serversideData.owner);
+                                writer.WriteUInt64(serversideData.group);
+                                writer.WriteNetId(drop.GetNetId());
                             }
                         });
                         packet++;
@@ -570,6 +571,8 @@ namespace Uncreated.Warfare
                 float ___range2, bool ___isBroken, ref float ___lastTriggered)
             {
                 if (!UCWarfare.Config.Patches.UseableTrapOnTriggerEnter) return true;
+                if (other.isTrigger || Time.realtimeSinceStartup - ___lastActive < ___setupDelay || __instance.transform.parent != null && other.transform == __instance.transform.parent || !Provider.isServer)
+                    return false;
                 CSteamID owner = CSteamID.Nil;
                 BarricadeOwnerDataComponent OwnerComponent = null;
                 if (Data.OwnerComponents != null && __instance.transform != null)
@@ -583,8 +586,6 @@ namespace Uncreated.Warfare
                         Data.OwnerComponents.RemoveAt(c);
                     }
                 }
-                if (other.isTrigger || Time.realtimeSinceStartup - ___lastActive < ___setupDelay || __instance.transform.parent != null && other.transform == __instance.transform.parent || !Provider.isServer)
-                    return false;
                 ___lastTriggered = Time.realtimeSinceStartup;
                 OnLandmineExplode?.Invoke(__instance, other, OwnerComponent);
                 if (___isExplosive) // if hurts all in range, makes explosion
@@ -606,7 +607,8 @@ namespace Uncreated.Warfare
                     {
                         if (other.gameObject.TryGetComponent(out ThrowableOwnerDataComponent throwable))
                         {
-                            F.Log("Found Throwable " + throwable.owner.channel.owner.playerID.playerName);
+                            if (UCWarfare.Config.Debug)
+                                F.Log("Found Throwable " + throwable.owner.channel.owner.playerID.playerName, ConsoleColor.DarkGray);
                             if(F.TryGetPlaytimeComponent(throwable.owner, out PlaytimeComponent c))
                                 c.LastLandmineTriggered = new LandmineDataForPostAccess(__instance, OwnerComponent);
                         }
@@ -808,8 +810,12 @@ namespace Uncreated.Warfare
                     Passenger passenger = __instance.passengers[index];
                     if (passenger != null && passenger.player != null && passenger.player.player != null && !passenger.player.player.life.isDead)
                     {
-                        F.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}");
-                        passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SKULL, instigator, out _);
+                        if (UCWarfare.Config.Debug)
+                            F.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}", ConsoleColor.DarkGray);
+                        if (__instance.asset.ShouldExplosionCauseDamage)
+                            passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SKULL, instigator, out _);
+                        else
+                            VehicleManager.forceRemovePlayer(__instance, passenger.player.playerID.steamID);
                     }
                 }
                 if (__instance.asset.dropsTableId > 0)
@@ -824,6 +830,8 @@ namespace Uncreated.Warfare
                     }
                 }
                 VehicleManager.sendVehicleExploded(__instance);
+                if (__instance.asset.explosion == 0)
+                    return false;
                 EffectManager.sendEffect(__instance.asset.explosion, EffectManager.LARGE, __instance.transform.position);
                 return false;
             }
