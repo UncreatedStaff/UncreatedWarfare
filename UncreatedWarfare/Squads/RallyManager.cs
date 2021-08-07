@@ -15,12 +15,14 @@ namespace Uncreated.Warfare.Squads
     {
         private static List<RallyPoint> rallypoints = new List<RallyPoint>();
 
-        public static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
+        public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
+            BarricadeData data = drop.GetServersideData();
+
             if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
                 var player = UCPlayer.FromID(data.owner);
-                if (player.Squad != null)
+                if (player?.Squad != null)
                 {
                     RegisterNewRallyPoint(data, player.Squad);
                 }

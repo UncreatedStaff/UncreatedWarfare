@@ -19,7 +19,7 @@ namespace Uncreated.Warfare
 {
     public static class Patches
     {
-        public delegate void BarricadeDroppedEventArgs(BarricadeRegion region, BarricadeData data, ref Transform location);
+        public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);
         public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort index, ushort plant);
         public delegate void StructureDestroyedEventArgs(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID);
         public delegate void BarricadeHealthEventArgs(BarricadeData data);
@@ -251,7 +251,7 @@ namespace Uncreated.Warfare
                         {
                             if (player.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
                                 ChatManager.serverSendMessage("[S] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
-                            else if ((client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)) 
+                            else if ((client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num))
                                 ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                         }
                     }
@@ -373,20 +373,24 @@ namespace Uncreated.Warfare
             /// </summary>
             [HarmonyPatch(typeof(BarricadeManager), "ServerSetSignTextInternal")]
             [HarmonyPrefix]
-            static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, ushort index, string trimmedText)
+            static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, string trimmedText)
             {
                 if (!UCWarfare.Config.Patches.ServerSetSignTextInternal) return true;
                 if (trimmedText.StartsWith("sign_"))
                 {
-                    if(trimmedText.Length > 5)
+                    if (trimmedText.Length > 5)
                     {
-                        if(Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            Task.Run( async () => await F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText));
+                        if (Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
+                            Task.Run(async () => await F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText));
                         else
                             Task.Run(async () => await F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText));
                     } else
                         Task.Run(async () => await F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText));
-                    byte[] state = region.barricades[index].barricade.state;
+                    
+
+                    BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
+
+                    byte[] state = drop.GetServersideData().barricade.state;
                     byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
                     byte[] numArray2 = numArray1;
@@ -394,7 +398,7 @@ namespace Uncreated.Warfare
                     numArray1[16] = (byte)bytes.Length;
                     if (bytes.Length != 0)
                         Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
-                    region.barricades[index].barricade.state = numArray1;
+                    drop.ReceiveUpdateState(numArray1);
                     sign.updateText(trimmedText);
                     return false;
                 } else
@@ -478,8 +482,8 @@ namespace Uncreated.Warfare
                                         if (newtext.StartsWith("sign_"))
                                         {
                                             newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
-                                        // size is not allowed in signs.
-                                        newtext.Replace("<size=", "");
+                                            // size is not allowed in signs.
+                                            newtext.Replace("<size=", "");
                                             newtext.Replace("</size>", "");
                                         }
                                         byte[] state = region.barricades[index].barricade.state;
@@ -593,10 +597,10 @@ namespace Uncreated.Warfare
                     {
                         if (!Provider.isPvP || !(other.transform.parent == null) && other.transform.parent.CompareTag("Vehicle"))
                             return false;
-                        if(other.transform.TryGetComponent(out Player player))
+                        if (other.transform.TryGetComponent(out Player player))
                         {
-                            if(F.TryGetPlaytimeComponent(player, out PlaytimeComponent c))
-                                if(OwnerComponent != null)
+                            if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c))
+                                if (OwnerComponent != null)
                                     c.LastLandmineTriggered = new LandmineDataForPostAccess(__instance, OwnerComponent);
                         }
                         EffectManager.sendEffect(___explosion2, EffectManager.LARGE, __instance.transform.position); // fix vehicles exploded by landmines not applying proper kills.
@@ -607,7 +611,7 @@ namespace Uncreated.Warfare
                         if (other.gameObject.TryGetComponent(out ThrowableOwnerDataComponent throwable))
                         {
                             F.Log("Found Throwable " + throwable.owner.channel.owner.playerID.playerName);
-                            if(F.TryGetPlaytimeComponent(throwable.owner, out PlaytimeComponent c))
+                            if (F.TryGetPlaytimeComponent(throwable.owner, out PlaytimeComponent c))
                                 c.LastLandmineTriggered = new LandmineDataForPostAccess(__instance, OwnerComponent);
                         }
                         EffectManager.sendEffect(___explosion2, EffectManager.LARGE, __instance.transform.position);
@@ -757,7 +761,7 @@ namespace Uncreated.Warfare
                                 if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
                                 {
                                     vc.item = c.lastExplodedVehicle;
-                                    
+
                                 }
                             }
                         }
@@ -788,7 +792,7 @@ namespace Uncreated.Warfare
                     instigator = vc.owner;
                 } else
                 {
-                    if(__instance.passengers.Length > 0)
+                    if (__instance.passengers.Length > 0)
                     {
                         if (__instance.passengers[0].player != null)
                             instigator = __instance.passengers[0].player.playerID.steamID;
@@ -829,27 +833,9 @@ namespace Uncreated.Warfare
             }
             // SDG.Unturned.BarricadeManager
             /// <summary>
-            /// Prefix of <see cref="BarricadeManager.dropBarricadeIntoRegionInternal(BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group, out BarricadeData data, out Transform result, out uint instanceID)"/> to invoke <see cref="BarricadeSpawnedHandler"/>.
-            /// </summary>
-            [HarmonyPatch(typeof(BarricadeManager), "dropBarricadeIntoRegionInternal")]
-            [HarmonyPostfix]
-            static void DropBarricadePostFix(BarricadeRegion region, BarricadeData data, ref Transform result, ref uint instanceID)
-            {
-                if (!UCWarfare.Config.Patches.dropBarricadeIntoRegionInternal) return;
-                if (result == null) return;
-
-                BarricadeDrop drop = region.drops.LastOrDefault();
-
-                if (drop?.instanceID == instanceID)
-                {
-                    BarricadeSpawnedHandler?.Invoke(region, data, ref result);
-                }
-            }
-            // SDG.Unturned.BarricadeManager
-            /// <summary>
             /// Prefix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="BarricadeDestroyedHandler"/>.
             /// </summary>
-            [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade")]
+            [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade", typeof(BarricadeRegion), typeof(byte), typeof(byte), typeof(ushort), typeof(ushort))]
             [HarmonyPrefix]
             static void DestroyBarricadePostFix(ref BarricadeRegion region, byte x, byte y, ushort plant, ref ushort index)
             {
@@ -864,7 +850,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
             /// </summary>
-            [HarmonyPatch(typeof(StructureManager), "destroyStructure")]
+            [HarmonyPatch(typeof(StructureManager), "destroyStructure", typeof(StructureRegion), typeof(byte), typeof(byte), typeof(ushort), typeof(Vector3))]
             [HarmonyPrefix]
             static void DestroyStructurePostFix(StructureRegion region, byte x, byte y, ushort index, Vector3 ragdoll)
             {
@@ -875,21 +861,20 @@ namespace Uncreated.Warfare
                 }
             }
 
-
-            // SDG.Unturned.BarricadeManager
-            /// <summary>
-            /// Prefix of <see cref="BarricadeManager.sendHealthChanged(byte x, byte y, ushort plant, ushort index, BarricadeRegion region)"/> to invoke <see cref="BarricadeHealthChangedHandler"/>.
-            /// </summary>
-            [HarmonyPatch(typeof(BarricadeManager), "sendHealthChanged")]
-            [HarmonyPrefix]
-            static void DamageBarricadePrefix(ref ushort index, ref BarricadeRegion region)
-            {
-                if (!UCWarfare.Config.Patches.sendHealthChanged) return;
-                if (region.barricades[index] != null)
-                {
-                    BarricadeHealthChangedHandler?.Invoke(region.barricades[index]);
-                }
-            }
+            //// SDG.Unturned.BarricadeManager
+            ///// <summary>
+            ///// Prefix of <see cref="BarricadeManager.sendHealthChanged(byte x, byte y, ushort plant, ushort index, BarricadeRegion region)"/> to invoke <see cref="BarricadeHealthChangedHandler"/>.
+            ///// </summary>
+            //[HarmonyPatch(typeof(BarricadeManager), "sendHealthChanged")]
+            //[HarmonyPrefix]
+            //static void DamageBarricadePrefix(ref ushort index, ref BarricadeRegion region)
+            //{
+            //    if (!UCWarfare.Config.Patches.sendHealthChanged) return;
+            //    if (region.barricades[index] != null)
+            //    {
+            //        BarricadeHealthChangedHandler?.Invoke(region.barricades[index]);
+            //    }
+            //}
 #pragma warning restore IDE0051
 #pragma warning restore IDE0060 // Remove unused parameter
         }

@@ -853,7 +853,7 @@ namespace Uncreated.Warfare
             new ColorData("kit_public_header", "ffffff"),
             new ColorData("kit_level_available", "ff974d"),
             new ColorData("kit_level_available_abbr", "999999"),
-            new ColorData("kit_level_unavailable", "c4785e"),
+            new ColorData("kit_level_unavailable", "b06d3e"),
             new ColorData("kit_level_unavailable_abbr", "999999"),
             new ColorData("kit_level_dollars", "7878ff"),
             new ColorData("kit_level_dollars_owned", "769fb5"),

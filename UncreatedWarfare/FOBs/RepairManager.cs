@@ -16,9 +16,10 @@ namespace Uncreated.Warfare.FOBs
     {
         private static List<RepairStation> stations = new List<RepairStation>();
 
-        public static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
+        public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
-            BarricadeDrop drop = null;
+            BarricadeData data = drop.GetServersideData();
+
             if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
                 for (int i = 0; i < region.barricades.Count; i++)
@@ -43,9 +44,9 @@ namespace Uncreated.Warfare.FOBs
         public static void LoadRepairStations()
         {
             stations.Clear();
-            List<Barricade> barricades = GetRepairStationBarricades();
+            List<RBarricade> barricades = GetRepairStationBarricades();
 
-            foreach (Barricade barricade in barricades)
+            foreach (RBarricade barricade in barricades)
             {
                 RepairStation station = new RepairStation(barricade.data, UCBarricadeManager.GetDropFromBarricadeData(barricade.data));
                 stations.Add(station);
@@ -85,9 +86,9 @@ namespace Uncreated.Warfare.FOBs
             }
         }
 
-        public static List<Barricade> GetRepairStationBarricades()
+        public static List<RBarricade> GetRepairStationBarricades()
         {
-            List<Barricade> barricades = new List<Barricade>();
+            List<RBarricade> barricades = new List<RBarricade>();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -98,18 +99,18 @@ namespace Uncreated.Warfare.FOBs
 {
                         if (region.barricades[i].barricade.id == FOBManager.config.Data.RepairStationID)
                         {
-                            barricades.Add(new Barricade(region.barricades[i], region.drops[i]));
+                            barricades.Add(new RBarricade(region.barricades[i], region.drops[i]));
                         }
                     }
                 }
             }
             return barricades;
         }
-        public struct Barricade
+        public struct RBarricade
         {
             public BarricadeData data;
             public BarricadeDrop drop;
-            public Barricade(BarricadeData data, BarricadeDrop drop)
+            public RBarricade(BarricadeData data, BarricadeDrop drop)
             {
                 this.data = data;
                 this.drop = drop;

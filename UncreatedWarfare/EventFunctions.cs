@@ -126,14 +126,19 @@ namespace Uncreated.Warfare
         {
             if (!UCWarfare.Config.AllowCosmetics && UnturnedPlayer.FromSteamPlayer(player).OffDuty()) state = false;
         }
-        internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeData data, ref Transform location)
+        internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
-            F.Log("Placed barricade: " + data.barricade.asset.itemName + ", " + location.position.ToString(), ConsoleColor.DarkGray);
-            BarricadeOwnerDataComponent c = location.gameObject.AddComponent<BarricadeOwnerDataComponent>();
-            c.SetData(data, region, location);
+            BarricadeData data = drop.GetServersideData();
+
+            if (UCWarfare.Config.Debug)
+                F.Log("Placed barricade: " + data.barricade.asset.itemName + ", " + data.point.ToString(), ConsoleColor.DarkGray);
+
+            BarricadeOwnerDataComponent c = drop.model.gameObject.AddComponent<BarricadeOwnerDataComponent>();
+            c.SetData(data, region, drop.model);
             Data.OwnerComponents.Add(c);
-            RallyManager.OnBarricadePlaced(region, data, ref location);
-            RepairManager.OnBarricadePlaced(region, data, ref location);
+            RallyManager.OnBarricadePlaced(drop, region);
+
+            RepairManager.OnBarricadePlaced(drop, region);
         }
         internal static async void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner)
         {
