@@ -153,23 +153,49 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                  */ 
                 for (int i = 0; i < Math.Min(15, statsT1.Count); i++)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1N" + i, i == 0 ? TeamManager.TranslateName(1, player, true).ToUpper() : (statsT1[i].player == null ? WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER : statsT1[i].player.channel.owner.playerID.nickName));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1K" + i, statsT1[i].kills.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1D" + i, statsT1[i].deaths.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1X" + i, statsT1[i].xpgained.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1F" + i, statsT1[i].officerpointsgained.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1C" + i, statsT1[i].captures.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1T" + i, statsT1[i].damagedone.ToString());
+                    string n = (i == 0 ? TeamManager.TranslateName(1, player, true).ToUpper() : statsT1[i].player.channel.owner.playerID.nickName);
+                    string k = statsT1[i].kills.ToString();
+                    string d = statsT1[i].deaths.ToString();
+                    string x = statsT1[i].xpgained.ToString();
+                    string f = statsT1[i].officerpointsgained.ToString();
+                    string c = statsT1[i].captures.ToString();
+                    string t = statsT1[i].damagedone.ToString();
+
+                    if (statsT1[i].player != null && player.playerID.steamID == statsT1[i].player.channel.owner.playerID.steamID)
+                    {
+                        n.Colorize("dbffdc"); k.Colorize("dbffdc"); d.Colorize("dbffdc"); x.Colorize("dbffdc"); f.Colorize("dbffdc"); c.Colorize("dbffdc"); t.Colorize("dbffdc");
+                    }
+
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1N" + i, n);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1K" + i, k);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1D" + i, d);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1X" + i, x);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1F" + i, f);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1C" + i, c);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "1T" + i, t);
                 }
                 for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
                 {
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2N" + i, i == 0 ? TeamManager.TranslateName(2, player, true).ToUpper() : (statsT2[i].player == null ? WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER : statsT2[i].player.channel.owner.playerID.nickName));
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2K" + i, statsT2[i].kills.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2D" + i, statsT2[i].deaths.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2X" + i, statsT2[i].xpgained.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2F" + i, statsT2[i].officerpointsgained.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2C" + i, statsT2[i].captures.ToString());
-                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2T" + i, statsT2[i].damagedone.ToString());
+                    string n = (i == 0 ? TeamManager.TranslateName(2, player, true).ToUpper() : statsT2[i].player.channel.owner.playerID.nickName);
+                    string k = statsT2[i].kills.ToString();
+                    string d = statsT2[i].deaths.ToString();
+                    string x = statsT2[i].xpgained.ToString();
+                    string f = statsT2[i].officerpointsgained.ToString();
+                    string c = statsT2[i].captures.ToString();
+                    string t = statsT2[i].damagedone.ToString();
+
+                    if (statsT2[i].player != null && player.playerID.steamID == statsT2[i].player.channel.owner.playerID.steamID)
+                    {
+                        n.Colorize("dbffdc"); k.Colorize("dbffdc"); d.Colorize("dbffdc"); x.Colorize("dbffdc"); f.Colorize("dbffdc"); c.Colorize("dbffdc"); t.Colorize("dbffdc");
+                    }
+
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2N" + i, n);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2K" + i, k);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2D" + i, d);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2X" + i, x);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2F" + i, f);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2C" + i, c);
+                    EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2T" + i, t);
                 }
 
                 //UCPlayer topOfficer = PlayerManager.OnlinePlayers.OrderByDescending(x => x.cachedOfp).FirstOrDefault();

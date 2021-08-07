@@ -350,7 +350,6 @@ namespace Uncreated.Warfare.Tickets
             }
             UpdateUITeam2();
         }
-
         public static void UpdateUI(ITransportConnection connection, ulong team, int bleed, string message)
         {
             ushort UIID = 0;
@@ -403,7 +402,7 @@ namespace Uncreated.Warfare.Tickets
                 int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();
 
                 float friendlyRatio = (float)friendlyCount * fg.Rotation.Count();
-                float enemyRatio = (float)enemyCount / fg.Rotation.Count();
+                float enemyRatio = (float)enemyCount / (float) fg.Rotation.Count();
 
                 if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
                 {

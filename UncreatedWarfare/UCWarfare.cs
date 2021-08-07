@@ -221,7 +221,7 @@ namespace Uncreated.Warfare
             UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
             Patches.InternalPatches.OnLandmineExplode += EventFunctions.OnLandmineExploded;
             PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
-            Patches.BarricadeSpawnedHandler += EventFunctions.OnBarricadePlaced;
+            BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
             Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
@@ -258,7 +258,7 @@ namespace Uncreated.Warfare
             UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
             Patches.InternalPatches.OnLandmineExplode -= EventFunctions.OnLandmineExploded;
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
-            Patches.BarricadeSpawnedHandler -= EventFunctions.OnBarricadePlaced;
+            BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
             Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
