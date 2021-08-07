@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.XP
                     "Rank", rank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Level", F.Translate("ui_xp_level", player, rank.level.ToString(Data.Locale))
+                    "Level", rank.level == 0 ? "" : F.Translate("ui_xp_level", player, rank.level.ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
