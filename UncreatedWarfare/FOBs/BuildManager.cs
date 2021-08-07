@@ -141,21 +141,21 @@ namespace Uncreated.Warfare.FOBs
             List<RegionCoordinate> regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius, regions);
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
-            List<BarricadeData> NearbyBarricades = barricadeDatas.Where(b =>
-                    (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2))
-                .OrderBy(b => (b.point - player.Position).magnitude)
+            List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
+            List<BarricadeDrop> NearbyBarricades = barricadeDrops.Where(b =>
+                    (b.model.position - player.Position).sqrMagnitude <= 10000)
+                .OrderBy(b => (b.model.position - player.Position).sqrMagnitude)
                 .ToList();
-            List<BarricadeData> NearbyFOBs = barricadeDatas.Where(b =>
-                TeamManager.IsFriendly(player, b.group) &&
-                b.barricade.id == FOBManager.config.Data.FOBID &&
-                (b.point - player.Position).sqrMagnitude <= Math.Pow(100, 2)
-                ).OrderBy(b => (b.point - player.Position).magnitude)
+            List<BarricadeDrop> NearbyFOBs = barricadeDrops.Where(b =>
+                TeamManager.IsFriendly(player, b.GetServersideData().group) &&
+                b.GetServersideData().barricade.id == FOBManager.config.Data.FOBID &&
+                (b.model.position - player.Position).sqrMagnitude <= 10000
+                ).OrderBy(b => (b.model.position - player.Position).magnitude)
                 .ToList();
-            List<BarricadeData> NearbyAmmoCrates = barricadeDatas.Where(b =>
-                TeamManager.IsFriendly(player, b.group) &&
-                b.barricade.id == FOBManager.config.Data.AmmoCrateID &&
-                (b.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude <= Math.Pow(100, 2)
+            List<BarricadeDrop> NearbyAmmoCrates = barricadeDrops.Where(b =>
+                TeamManager.IsFriendly(player, b.GetServersideData().group) &&
+                b.GetServersideData().barricade.id == FOBManager.config.Data.AmmoCrateID &&
+                (b.model.position - NearbyFOBs.FirstOrDefault().model.position).sqrMagnitude <= 10000
                 ).ToList();
             if (NearbyFOBs.Count == 0)
             {
@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.FOBs
             NearbyBuild = ItemManager.regions
                 .Cast<ItemRegion>()
                 .SelectMany(region => region.items)
-                .Where(item => ((item.point - NearbyFOBs.FirstOrDefault().point).sqrMagnitude 
+                .Where(item => ((item.point - NearbyFOBs.FirstOrDefault().model.position).sqrMagnitude 
                 <= FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius) && item.item.id == BuildID)
                 .ToList();
 
@@ -216,9 +216,6 @@ namespace Uncreated.Warfare.FOBs
             regions = new List<RegionCoordinate>();
             Regions.getRegionsInRadius(player.Position, 50, regions);
             barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-            barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
-
-            List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             BarricadeDrop foundationDrop = barricadeDrops.Where(d => d.instanceID == foundation.instanceID).FirstOrDefault();
 

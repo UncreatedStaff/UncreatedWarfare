@@ -208,7 +208,7 @@ namespace Uncreated.Warfare.Vehicles
                     BarricadeData = F.GetBarricadeFromInstID(SpawnPadInstanceID, out BarricadeDrop drop);
                     BarricadeDrop = drop;
                     initialized = true;
-                    if (BarricadeData is null)
+                    if (BarricadeData == null)
                     {
                         F.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
                         if (StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.BARRICADE, out Structures.Structure structure))
@@ -217,27 +217,20 @@ namespace Uncreated.Warfare.Vehicles
                                 new Barricade(structure.id, ushort.MaxValue, structure.Metadata, structure.Asset as ItemBarricadeAsset),
                                 structure.transform.position.Vector3, structure.transform.Rotation, structure.owner, structure.group
                                 );
-                            if (BarricadeManager.tryGetInfo(newBarricade, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                            BarricadeDrop newdrop = BarricadeManager.FindBarricadeByRootTransform(newBarricade);
+                            if (newdrop != null)
                             {
-                                if (region != default)
-                                {
-                                    BarricadeDrop = region.drops[index];
-                                    BarricadeData = region.barricades[index];
-                                    structure.instance_id = BarricadeDrop.instanceID;
-                                    SpawnPadInstanceID = BarricadeDrop.instanceID;
-                                    VehicleSpawner.Save();
-                                    StructureSaver.Save();
-                                    initialized = true;
-                                }
-                                else
-                                {
-                                    F.LogError("VEHICLE SPAWNER ERROR: spawned barricade could not be found.");
-                                    initialized = false;
-                                }
+                                BarricadeDrop = newdrop;
+                                BarricadeData = newdrop.GetServersideData();
+                                structure.instance_id = newdrop.instanceID;
+                                SpawnPadInstanceID = newdrop.instanceID;
+                                VehicleSpawner.Save();
+                                StructureSaver.Save();
+                                initialized = true;
                             }
                             else
                             {
-                                F.LogError("VEHICLE SPAWNER ERROR: Barricade could not be replaced");
+                                F.LogError("VEHICLE SPAWNER ERROR: spawned barricade could not be found.");
                                 initialized = false;
                             }
                         }
@@ -264,31 +257,39 @@ namespace Uncreated.Warfare.Vehicles
                                 structure.transform.position.Vector3, structure.transform.euler_angles.x, structure.transform.euler_angles.y,
                                 structure.transform.euler_angles.z, structure.owner, structure.group))
                             {
-                                F.LogError("VEHICLE SPAWNER ERROR: Structure could not be replaced");
+                                F.LogWarning("VEHICLE SPAWNER ERROR: Structure could not be replaced");
+                                initialized = false;
                             }
                             else
                             {
-                                StructureData newdata = F.GetStructureFromTransform(structure.transform, out StructureDrop newdrop);
-                                if (newdata == default || newdrop == default)
+                                if (Regions.tryGetCoordinate(structure.transform.position.Vector3, out byte x, out byte y))
                                 {
-                                    F.LogError("VEHICLE SPAWNER ERROR: spawned structure could not be found");
+                                    StructureDrop newdrop = StructureManager.regions[x, y].drops.LastOrDefault(nd => nd.model.position == structure.transform.position.Vector3);
+                                    if (newdrop == null)
+                                    {
+                                        F.LogWarning("VEHICLE SPAWNER ERROR: Spawned structure could not be found");
+                                        initialized = false;
+                                    }
+                                    else
+                                    {
+                                        StructureData = newdrop.GetServersideData();
+                                        StructureDrop = newdrop;
+                                        structure.instance_id = newdrop.instanceID;
+                                        SpawnPadInstanceID = newdrop.instanceID;
+                                        VehicleSpawner.Save();
+                                        StructureSaver.Save();
+                                        initialized = true;
+                                    }
+                                } else
+                                {
+                                    F.LogWarning("VEHICLE SPAWNER ERROR: Unable to get region coordinates.");
                                     initialized = false;
-                                }
-                                else
-                                {
-                                    StructureData = newdata;
-                                    StructureDrop = newdrop;
-                                    structure.instance_id = newdata.instanceID;
-                                    SpawnPadInstanceID = newdrop.instanceID;
-                                    VehicleSpawner.Save();
-                                    StructureSaver.Save();
-                                    initialized = true;
                                 }
                             }
                         }
                         else
                         {
-                            F.LogError("VEHICLE SPAWNER ERROR: corresponding StructureData could not be found");
+                            F.LogWarning("VEHICLE SPAWNER ERROR: Corresponding StructureData could not be found");
                             initialized = false;
                         }
                     }

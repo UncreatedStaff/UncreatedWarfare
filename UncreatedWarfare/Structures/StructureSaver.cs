@@ -180,19 +180,21 @@ namespace Uncreated.Warfare.Structures
                         new Barricade(id, asset.health, Metadata, asset),
                         transform.position.Vector3, transform.Rotation, owner, group
                         );
-                    if (BarricadeManager.tryGetInfo(newBarricade, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                    if (newBarricade == null)
                     {
-                        if (newBarricade.TryGetComponent(out InteractableSign sign))
+                        exists = false;
+                        return;
+                    }
+                    BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(newBarricade);
+                    if (drop != null)
+                    {
+                        if (newBarricade.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(newBarricade.position, out byte x, out byte y))
                         {
-                            await F.InvokeSignUpdateForAll(x, y, plant, index, sign.text);
-                        }
-                        if (region != default)
-                        {
-                            instance_id = region.drops[index].instanceID;
+                            await F.InvokeSignUpdateForAll(sign, x, y, sign.text);
+                            instance_id = drop.instanceID;
                             exists = true;
                             StructureSaver.Save();
-                        }
-                        else
+                        } else
                         {
                             exists = false;
                         }
@@ -215,21 +217,28 @@ namespace Uncreated.Warfare.Structures
                         transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
                         transform.euler_angles.z, owner, group))
                     {
-                        F.LogError("STRUCTURE SAVER ERROR: Structure could not be replaced");
+                        F.LogWarning("Error in StructureSaver SpawnCheck(): Structure could not be placed, unknown error.");
+                        exists = false;
                     }
                     else
                     {
-                        StructureData newdata = F.GetStructureFromTransform(transform, out StructureDrop newdrop);
-                        if (newdata == default || newdrop == default)
+                        if (Regions.tryGetCoordinate(transform.position.Vector3, out byte x, out byte y))
                         {
-                            F.LogError("STRUCTURE SAVER ERROR: spawned structure could not be found");
+                            StructureDrop newdrop = StructureManager.regions[x, y].drops.LastOrDefault(nd => nd.model.position == transform.position.Vector3);
+                            if (newdrop == null)
+                            {
+                                F.LogWarning("Error in StructureSaver SpawnCheck(): Spawned structure could be placed but was not able to locate a structure at that position.");
+                                exists = false;
+                            } else
+                            {
+                                F.Log("Respawned structure", ConsoleColor.DarkGray);
+                                instance_id = newdrop.instanceID;
+                                StructureSaver.Save();
+                                exists = true;
+                            }
+                        } else
+                        {
                             exists = false;
-                        }
-                        else
-                        {
-                            instance_id = newdata.instanceID;
-                            StructureSaver.Save();
-                            exists = true;
                         }
                     }
                 } else exists = true;

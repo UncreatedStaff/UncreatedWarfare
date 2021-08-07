@@ -183,21 +183,21 @@ namespace Uncreated.Warfare
             {
                 for (byte y = 0; y < Regions.WORLD_SIZE; y++)
                 {
-                    for (int i = BarricadeManager.regions[x, y].barricades.Count - 1; i >= 0; i--)
+                    for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
                     {
-                        uint instid = BarricadeManager.regions[x, y].barricades[i].instanceID;
+                        uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
                         if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
                         {
                             if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
                                 storage.despawnWhenDestroyed = true;
-                            BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y], x, y, ushort.MaxValue, (ushort)i);
+                            BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
                         }
                     }
-                    for (int i = StructureManager.regions[x, y].structures.Count - 1; i >= 0; i--)
+                    for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
                     {
-                        uint instid = StructureManager.regions[x, y].structures[i].instanceID;
+                        uint instid = StructureManager.regions[x, y].drops[i].instanceID;
                         if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
-                            StructureManager.destroyStructure(StructureManager.regions[x, y], x, y, (ushort)i, Vector3.zero);
+                            StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
                     }
                 }
             }
@@ -299,8 +299,7 @@ namespace Uncreated.Warfare
                     {
                         if (sign.text.StartsWith("sign_"))
                         {
-                            if (BarricadeManager.tryGetInfo(drop.model, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion _))
-                                await F.InvokeSignUpdateFor(player, x, y, plant, index, region, false); 
+                            await F.InvokeSignUpdateFor(player, sign, false); 
                         }
                     }
                 }

@@ -31,44 +31,47 @@ namespace Uncreated.Warfare
         }
         public static BarricadeData GetBarricadeByInstanceID(uint InstanceID)
         {
-            var barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
+            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
 
-            var barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
+            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
 
             return barricadeDatas.Find(brd => brd.instanceID == InstanceID);
-        }
-        public static BarricadeData GetBarricadeFromTransform(Transform transform)
-        {
-            if (BarricadeManager.tryGetInfo(transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
-                return region.barricades[index];
-            else return default;
         }
         public static StructureData GetStructureDataFromLook(UnturnedPlayer player) => GetStructureDataFromLook(player, out _);
         public static StructureData GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop drop)
         {
             Transform structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
-            if (structureTransform == null || !StructureManager.tryGetInfo(structureTransform, out _, out _, out var index,
-                out var region))
+            if (structureTransform != null)
             {
                 drop = null;
                 return null;
             }
-            drop = region.drops[index];
-            return region.structures[index];
+            StructureDrop sdrop = StructureManager.FindStructureByRootTransform(structureTransform);
+            if (sdrop != null)
+            {
+                drop = null;
+                return null;
+            }
+            drop = sdrop;
+            return sdrop.GetServersideData();
         }
         public static BarricadeData GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
         public static BarricadeData GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop drop)
         {
             Transform barricadeTransform = GetBarricadeTransformFromLook(look);
-
-            if (barricadeTransform == null || !BarricadeManager.tryGetInfo(barricadeTransform, out _, out _, out _, out ushort index,
-                out var region))
+            if (barricadeTransform != null)
             {
                 drop = null;
                 return null;
             }
-            drop = region.drops[index];
-            return region.barricades[index];
+            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
+            if (bdrop != null)
+            {
+                drop = null;
+                return null;
+            }
+            drop = bdrop;
+            return bdrop.GetServersideData();
         }
         public static Transform GetTransformFromLook(PlayerLook look, int Raymask) => 
             Physics.Raycast(look.aim.position, look.aim.forward, out RaycastHit hit, 4, Raymask) ? hit.transform : default;

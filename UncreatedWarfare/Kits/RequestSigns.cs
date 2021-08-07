@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,8 +44,28 @@ namespace Uncreated.Warfare.Kits
             await sign.InvokeUpdate();
         }
         public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
-        public static bool SignExists(InteractableSign sign, out RequestSign found) => ObjectExists(s => s != default && sign != default && 
-        BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && s.instance_id == region.drops[index].instanceID, out found);
+        public static bool SignExists(InteractableSign sign, out RequestSign found)
+        {
+            if (sign == null)
+            {
+                found = null;
+                return false;
+            }
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                if (ActiveObjects[i] == null)
+                {
+                    BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
+                    if (drop != null && drop.instanceID == ActiveObjects[i].instance_id)
+                    {
+                        found = ActiveObjects[i];
+                        return true;
+                    }
+                }
+            }
+            found = null;
+            return false;
+        }
         public static bool SignExists(uint instance_id, out RequestSign found) => ObjectExists(s => s != default && s.instance_id == instance_id, out found);
         public static bool SignExists(string kitName, out RequestSign sign) => ObjectExists(x => x.kit_name == kitName, out sign);
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
@@ -78,23 +99,18 @@ namespace Uncreated.Warfare.Kits
                 await ActiveObjects[i].InvokeUpdate();
             }
         }
-        public static void SetOwner(RequestSign sign, ulong newOwner) => SetProperty(sign, nameof(sign.owner), newOwner, out _, out _, out _);
-        public static void SetGroupOwner(RequestSign sign, ulong group) => SetProperty(sign, nameof(sign.group), group, out _, out _, out _);
         public static void SetSignTextSneaky(InteractableSign sign, string text)
         {
-            if (!BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
-                return;
+            BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
+            byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
             byte[] bytes = Encoding.UTF8.GetBytes(text);
-            byte[] state = region.barricades[index].barricade.state;
-            if (bytes.Length > byte.MaxValue)
-                return;
             byte[] numArray1 = new byte[17 + bytes.Length];
             byte[] numArray2 = numArray1;
             Buffer.BlockCopy(state, 0, numArray2, 0, 16);
             numArray1[16] = (byte)bytes.Length;
             if (bytes.Length != 0)
                 Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
-            region.barricades[index].barricade.state = numArray1;
+            barricadeByRootFast.GetServersideData().barricade.state = numArray1;
         }
     }
     public class RequestSign
@@ -148,16 +164,18 @@ namespace Uncreated.Warfare.Kits
         public RequestSign(InteractableSign sign)
         {
             if (sign == default) throw new ArgumentNullException(nameof(sign));
-            if (BarricadeManager.tryGetInfo(sign.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
+            if (drop != null)
             {
-                this.sign_id = region.barricades[index].barricade.id;
-                this.instance_id = region.drops[index].instanceID;
+                this.sign_id = drop.GetServersideData().barricade.id;
+                this.instance_id = drop.instanceID;
                 this.transform = new SerializableTransform(sign.transform);
                 this.barricadetransform = sign.transform;
                 this.SignText = sign.text;
                 this.group = sign.group.m_SteamID;
                 this.owner = sign.owner.m_SteamID;
-            } else throw new ArgumentNullException(nameof(sign));
+            }
+            else throw new ArgumentNullException(nameof(sign));
         }
         public RequestSign()
         {
@@ -172,64 +190,70 @@ namespace Uncreated.Warfare.Kits
         }
         public async Task InvokeUpdate(SteamPlayer player)
         {
-            if (barricadetransform != default)
-                if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
-                    await F.InvokeSignUpdateFor(player, x, y, plant, index, SignText);
-                else F.LogError("Failed to find barricade!");
+            if (barricadetransform != null)
+            {
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
+                if (drop != null && drop.model.TryGetComponent(out InteractableSign sign))
+                {
+                    await F.InvokeSignUpdateFor(player, sign, SignText);
+                }
+                else F.LogError("Failed to find barricade from saved transform!");
+            }
             else
             {
                 BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (data != null && drop != null)
                 {
-                    if (BarricadeManager.tryGetInfo(drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                        await F.InvokeSignUpdateFor(player, x, y, plant, index, region, true, SignText);
-                    else F.LogError("Failed to find barricade! bot");
+                    BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
+                    if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign))
+                        await F.InvokeSignUpdateFor(player, sign, true, SignText);
+                    else F.LogError("Failed to find barricade after respawning again!");
                 }
-                else F.LogError("Failed to find barricade! 2");
+                else F.LogError("Failed to find barricade after respawn!");
             }
         }
         public async Task InvokeUpdate()
         {
-            if (barricadetransform != default)
-                if (BarricadeManager.tryGetInfo(barricadetransform, out byte x, out byte y, out ushort plant, out ushort index, out _))
-                    await F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
-                else F.LogError("Failed to find barricade!");
+            if (barricadetransform != null)
+            {
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
+                if (drop != null && drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+                {
+                    await F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
+                }
+                else F.LogError("Failed to find barricade from saved transform!");
+            }
             else
             {
                 BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (data != null && drop != null)
                 {
-                    if (BarricadeManager.tryGetInfo(drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out _))
-                        await F.InvokeSignUpdateForAllKits(x, y, plant, index, SignText);
-                    else F.LogError("Failed to find barricade! bot");
+                    BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
+                    if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+                        await F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
+                    else F.LogError("Failed to find barricade after respawning again!");
                 }
-                else F.LogError("Failed to find barricade! 2");
+                else F.LogError("Failed to find barricade after respawn!");
             }
         }
         /// <summary>Spawns the sign if it is not already placed.</summary>
         public async Task SpawnCheck(bool save)
         {
             BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
-            if (data == default)
+            if (drop == null || data == null)
             {
                 this.barricadetransform = BarricadeManager.dropNonPlantedBarricade(
                     new Barricade(sign_id),
                     transform.position.Vector3, transform.Rotation, owner, group
                     );
-                if (BarricadeManager.tryGetInfo(this.barricadetransform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+                drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
+                if (drop != null)
                 {
-                    F.Log("Replaced lost request sign for " + kit_name);
-                    if (region != default)
-                    {
-                        instance_id = region.drops[index].instanceID;
-                        exists = true;
-                        await InvokeUpdate();
-                        if (save) RequestSigns.Save();
-                    }
-                    else
-                    {
-                        exists = false;
-                    }
+                    F.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Black);
+                    instance_id = drop.instanceID;
+                    exists = true;
+                    await InvokeUpdate();
+                    if (save) RequestSigns.Save();
                 }
                 else
                 {
@@ -244,7 +268,7 @@ namespace Uncreated.Warfare.Kits
                 if (save) RequestSigns.Save();
                 await InvokeUpdate();
             }
-            if (exists && barricadetransform.TryGetComponent(out InteractableSign sign))
+            if (exists && barricadetransform != null && barricadetransform.TryGetComponent(out InteractableSign sign))
             {
                 if (sign.text != SignText)
                 {

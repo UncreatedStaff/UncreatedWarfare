@@ -128,7 +128,7 @@ namespace Uncreated.Warfare
                 else return null;
             }
         }
-        internal static ClientStaticMethod<byte, byte, ushort, ushort, string> SendUpdateSign { get; private set; }
+        internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static ClientStaticMethod SendEffectClearAll { get; private set; }
         internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
@@ -232,7 +232,6 @@ namespace Uncreated.Warfare
                 ReviveManager = new ReviveManager();
             }
             F.Log("Getting client calls...", ConsoleColor.Magenta);
-            Type barricadeManager = typeof(BarricadeManager);
             FieldInfo updateSignInfo;
             FieldInfo sendRegionInfo;
             FieldInfo sendChatInfo;
@@ -240,8 +239,8 @@ namespace Uncreated.Warfare
             FieldInfo sendTakeItemInfo;
             try
             {
-                updateSignInfo = barricadeManager.GetField("SendUpdateSign", BindingFlags.NonPublic | BindingFlags.Static);
-                SendUpdateSign = (ClientStaticMethod<byte, byte, ushort, ushort, string>)updateSignInfo.GetValue(null);
+                updateSignInfo = typeof(InteractableSign).GetField("SendChangeText", BindingFlags.NonPublic | BindingFlags.Static);
+                SendChangeText = (ClientInstanceMethod<string>)updateSignInfo.GetValue(null);
             }
             catch (Exception ex)
             {
@@ -251,7 +250,7 @@ namespace Uncreated.Warfare
             }
             try
             {
-                sendRegionInfo = barricadeManager.GetField("SendMultipleBarricades", BindingFlags.NonPublic | BindingFlags.Static);
+                sendRegionInfo = typeof(BarricadeManager).GetField("SendMultipleBarricades", BindingFlags.NonPublic | BindingFlags.Static);
                 SendMultipleBarricades = (ClientStaticMethod)sendRegionInfo.GetValue(null);
             }
             catch (Exception ex)

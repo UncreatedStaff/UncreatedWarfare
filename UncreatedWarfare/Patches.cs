@@ -30,10 +30,8 @@ namespace Uncreated.Warfare
         public delegate void PlayerGesture(Player player, EPlayerGesture gesture, ref bool allow);
         public delegate void PlayerMarker(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed);
 
-        public static event BarricadeDroppedEventArgs BarricadeSpawnedHandler;
         public static event BarricadeDestroyedEventArgs BarricadeDestroyedHandler;
         public static event StructureDestroyedEventArgs StructureDestroyedHandler;
-        public static event BarricadeHealthEventArgs BarricadeHealthChangedHandler;
         public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
         public static event BatteryStealingDelegate OnBatterySteal_Global;
@@ -369,7 +367,7 @@ namespace Uncreated.Warfare
             }
             // SDG.Unturned.BarricadeManager
             /// <summary>
-            /// Prefix of <see cref="BarricadeManager.ServerSetSignText(InteractableSign, string)"/> to set translation data of signs.
+            /// Prefix of <see cref="BarricadeManager.ServerSetSignTextInternal(InteractableSign, BarricadeRegion, byte, byte, ushort, string)"/> to set translation data of signs.
             /// </summary>
             [HarmonyPatch(typeof(BarricadeManager), "ServerSetSignTextInternal")]
             [HarmonyPrefix]
@@ -381,11 +379,11 @@ namespace Uncreated.Warfare
                     if (trimmedText.Length > 5)
                     {
                         if (Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            Task.Run(async () => await F.InvokeSignUpdateForAllKits(x, y, plant, index, trimmedText));
+                            Task.Run(async () => await F.InvokeSignUpdateForAllKits(sign, x, y, trimmedText));
                         else
-                            Task.Run(async () => await F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText));
+                            Task.Run(async () => await F.InvokeSignUpdateForAll(sign, x, y, trimmedText));
                     } else
-                        Task.Run(async () => await F.InvokeSignUpdateForAll(x, y, plant, index, trimmedText));
+                        Task.Run(async () => await F.InvokeSignUpdateForAll(sign, x, y, trimmedText));
                     
 
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
@@ -847,9 +845,9 @@ namespace Uncreated.Warfare
             static void DestroyBarricadePostFix(ref BarricadeRegion region, byte x, byte y, ushort plant, ref ushort index)
             {
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
-                if (region.barricades[index] != null)
+                if (region.drops[index] != null)
                 {
-                    BarricadeDestroyedHandler?.Invoke(region, region.barricades[index], region.drops[index], region.barricades[index].instanceID, index, plant);
+                    BarricadeDestroyedHandler?.Invoke(region, region.drops[index].GetServersideData(), region.drops[index], region.drops[index].GetServersideData().instanceID, index, plant);
                 }
             }
 
@@ -862,9 +860,9 @@ namespace Uncreated.Warfare
             static void DestroyStructurePostFix(StructureRegion region, byte x, byte y, ushort index, Vector3 ragdoll)
             {
                 if (!UCWarfare.Config.Patches.destroyStructure) return;
-                if (region.structures[index] != null)
+                if (region.drops[index] != null)
                 {
-                    StructureDestroyedHandler?.Invoke(region, region.structures[index], region.drops[index], region.structures[index].instanceID);
+                    StructureDestroyedHandler?.Invoke(region, region.drops[index].GetServersideData(), region.drops[index], region.drops[index].GetServersideData().instanceID);
                 }
             }
 

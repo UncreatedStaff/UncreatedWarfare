@@ -10,6 +10,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Structure = Uncreated.Warfare.Structures.Structure;
+using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -41,11 +42,12 @@ namespace Uncreated.Warfare.Commands
                                 if (structure == default) player.SendChat("structure_not_looking");
                                 else
                                 {
-                                    if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
+                                    StructureDrop drop = StructureManager.FindStructureByRootTransform(structure.transform);
+                                    if (drop != null)
                                     {
-                                        if (!StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structexists))
+                                        if (!StructureSaver.StructureExists(drop.instanceID, EStructType.STRUCTURE, out Structure structexists))
                                         {
-                                            if (StructureSaver.AddStructure(region.drops[index], region.structures[index], out Structure structureaded))
+                                            if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
                                             {
                                                 player.SendChat("structure_saved", structureaded.Asset.itemName);
                                             }
@@ -64,11 +66,12 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                if (BarricadeManager.tryGetInfo(barricade2.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
+                                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricade2.transform);
+                                if (drop != null)
                                 {
-                                    if (!StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureexists))
+                                    if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structure structureexists))
                                     {
-                                        if (StructureSaver.AddStructure(region.drops[index], region.barricades[index], out Structure structureaded))
+                                        if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
                                         {
                                             player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
                                         }
@@ -96,24 +99,29 @@ namespace Uncreated.Warfare.Commands
                             {
                                 player.SendChat("structure_saved_not_bush");
                             }
-                            else if (BarricadeManager.tryGetInfo(barricade.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
+                            else
                             {
-                                if (!StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureexists))
+                                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricade.transform);
+                                if (drop != null)
                                 {
-                                    if (StructureSaver.AddStructure(region.drops[index], region.barricades[index], out Structure structureaded))
+                                    if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structure structureexists))
                                     {
-                                        player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                    } else
-                                    {
-                                        player.SendChat("structure_not_looking");
+                                        if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
+                                        {
+                                            player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                        } else
+                                        {
+                                            player.SendChat("structure_not_looking");
+                                        }
                                     }
-                                } else
-                                {
-                                    player.SendChat("structure_saved_already",
-                                        structureexists == default ? "unknown" : structureexists.Asset.itemName);
+                                    else
+                                    {
+                                        player.SendChat("structure_saved_already",
+                                            structureexists == default ? "unknown" : structureexists.Asset.itemName);
+                                    }
                                 }
+                                else player.SendChat("structure_not_looking");
                             }
-                            else player.SendChat("structure_not_looking");
                         }
                     }
                     else
@@ -134,9 +142,10 @@ namespace Uncreated.Warfare.Commands
                                 if (structure == default) player.SendChat("structure_not_looking");
                                 else
                                 {
-                                    if (StructureManager.tryGetInfo(structure.transform, out _, out _, out ushort index, out StructureRegion region) && region != default)
+                                    StructureDrop drop = StructureManager.FindStructureByRootTransform(structure.transform);
+                                    if (drop != null)
                                     {
-                                        if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.STRUCTURE, out Structure structureaded))
+                                        if (StructureSaver.StructureExists(drop.instanceID, EStructType.STRUCTURE, out Structure structureaded))
                                         {
                                             StructureSaver.RemoveStructure(structureaded);
                                             player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
@@ -146,19 +155,16 @@ namespace Uncreated.Warfare.Commands
                                             string itemname;
                                             if (structure is Interactable2SalvageStructure str)
                                             {
-                                                if (StructureManager.tryGetInfo(str.transform, out _, out _, out ushort index2, out StructureRegion region2))
-                                                {
-                                                    StructureData data = region2.structures[index2];
-                                                    if (data != default) itemname = Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset iasset ? iasset.itemName : data.structure.id.ToString(Data.Locale);
-                                                    else itemname = str.name;
-                                                }
+                                                StructureData data = drop.GetServersideData();
+                                                if (data != default) itemname = Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset iasset ? iasset.itemName : data.structure.id.ToString(Data.Locale);
                                                 else itemname = str.name;
                                             }
                                             else if (structure is Interactable2SalvageBarricade bar)
                                             {
-                                                if (BarricadeManager.tryGetInfo(bar.transform, out _, out _, out _, out ushort index2, out BarricadeRegion region2))
+                                                BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(bar.transform);
+                                                if (bdrop != null)
                                                 {
-                                                    BarricadeData data = region2.barricades[index2];
+                                                    BarricadeData data = bdrop.GetServersideData();
                                                     if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
                                                     else itemname = bar.name;
                                                 }
@@ -172,10 +178,11 @@ namespace Uncreated.Warfare.Commands
                                 }
                             }
                             else
-                            {
-                                if (BarricadeManager.tryGetInfo(barricade2.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
+{
+                                BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(barricade2.transform);
+                                if (bdrop != null)
                                 {
-                                    if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureaded))
+                                    if (StructureSaver.StructureExists(bdrop.instanceID, EStructType.BARRICADE, out Structure structureaded))
                                     {
                                         StructureSaver.RemoveStructure(structureaded);
                                         player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
@@ -183,12 +190,8 @@ namespace Uncreated.Warfare.Commands
                                     else
                                     {
                                         string itemname;
-                                        if (BarricadeManager.tryGetInfo(barricade2.transform, out _, out _, out _, out ushort index2, out BarricadeRegion region2))
-                                        {
-                                            BarricadeData data = region2.barricades[index2];
-                                            if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
-                                            else itemname = barricade2.name;
-                                        }
+                                        BarricadeData data = bdrop.GetServersideData();
+                                        if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
                                         else itemname = barricade2.name;
                                         player.SendChat("structure_unsaved_already",
                                             structureaded == default ? "unknown" : itemname);
@@ -198,7 +201,8 @@ namespace Uncreated.Warfare.Commands
                         }
                         else
                         {
-                            if (BarricadeManager.tryGetInfo(barricade.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) && region != default)
+                            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(barricade.transform);
+                            if (bdrop != null)
                             {
                                 if (barricade is InteractableVehicle)
                                 {
@@ -210,7 +214,7 @@ namespace Uncreated.Warfare.Commands
                                 }
                                 else
                                 {
-                                    if (StructureSaver.StructureExists(region.drops[index].instanceID, EStructType.BARRICADE, out Structure structureaded))
+                                    if (StructureSaver.StructureExists(bdrop.instanceID, EStructType.BARRICADE, out Structure structureaded))
                                     {
                                         StructureSaver.RemoveStructure(structureaded);
                                         player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
@@ -218,12 +222,8 @@ namespace Uncreated.Warfare.Commands
                                     else
                                     {
                                         string itemname;
-                                        if (BarricadeManager.tryGetInfo(barricade.transform, out _, out _, out _, out ushort index2, out BarricadeRegion region2))
-                                        {
-                                            BarricadeData data = region2.barricades[index2];
-                                            if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
-                                            else itemname = barricade.name;
-                                        }
+                                        BarricadeData data = bdrop.GetServersideData();
+                                        if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
                                         else itemname = barricade.name;
                                         player.SendChat("structure_unsaved_already",
                                             structureaded == default ? "unknown" : itemname);
@@ -326,12 +326,13 @@ namespace Uncreated.Warfare.Commands
         }
         private void DestroyBarricade(UnityEngine.MonoBehaviour i, Player player)
         {
-            if (BarricadeManager.tryGetInfo(i.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
+            if (bdrop != null && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
             {
-                BarricadeData data = region.barricades[index];
+                BarricadeData data = bdrop.GetServersideData();
                 player.SendChat("structure_popped",
                     Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale));
-                BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
             }
             else
             {
@@ -340,12 +341,13 @@ namespace Uncreated.Warfare.Commands
         }
         private void DestroyStructure(UnityEngine.MonoBehaviour i, Player player)
         {
-            if (StructureManager.tryGetInfo(i.transform, out byte x, out byte y, out ushort index, out StructureRegion region))
+            StructureDrop sdrop = StructureManager.FindStructureByRootTransform(i.transform);
+            if (sdrop != null && Regions.tryGetCoordinate(sdrop.model.position, out byte x, out byte y))
             {
-                StructureData data = region.structures[index];
+                StructureData data = sdrop.GetServersideData();
                 player.SendChat("structure_popped",
                     Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale));
-                StructureManager.destroyStructure(region, x, y, index, i.transform.position);
+                StructureManager.destroyStructure(sdrop, x, y, UnityEngine.Vector3.down);
             }
             else
             {
@@ -387,9 +389,10 @@ namespace Uncreated.Warfare.Commands
         }
         private void ExamineBarricade(UnityEngine.MonoBehaviour i, Player player, bool sendurl)
         {
-            if (BarricadeManager.tryGetInfo(i.transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
+            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
+            if (bdrop != null)
             {
-                BarricadeData data = region.barricades[index]; 
+                BarricadeData data = bdrop.GetServersideData(); 
                 if(data.owner == default || data.owner == 0)
                 {
                     player.SendChat("structure_examine_not_examinable");
@@ -418,9 +421,10 @@ namespace Uncreated.Warfare.Commands
         }
         private void ExamineStructure(UnityEngine.MonoBehaviour i, Player player, bool sendurl)
         {
-            if (StructureManager.tryGetInfo(i.transform, out _, out _, out ushort index, out StructureRegion region))
+            StructureDrop sdrop = StructureManager.FindStructureByRootTransform(i.transform);
+            if (sdrop != null)
             {
-                StructureData data = region.structures[index];
+                StructureData data = sdrop.GetServersideData();
                 if (data.owner == default || data.owner == 0)
                 {
                     player.SendChat("structure_examine_not_examinable");

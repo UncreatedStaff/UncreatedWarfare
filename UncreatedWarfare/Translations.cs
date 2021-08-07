@@ -52,7 +52,7 @@ namespace Uncreated.Warfare
                 { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
 
                 // group
-                { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</color>" },
+                { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</i></color>" },
                 { "current_group", "<color=#e6e3d5>Group <color=#4785ff>{0}</color>: <color=#4785ff>{1}</color>.</color>" },
                 { "cant_create_group", "<color=#ff8c69>You can't create a group right now.</color>" },
                 { "created_group", "<color=#e6e3d5>Created group <color=#4785ff>{0}</color>: <color=#4785ff>{1}</color>.</color>" },

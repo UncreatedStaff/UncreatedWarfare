@@ -20,8 +20,8 @@ namespace Uncreated.Warfare
             : base(Data.KitsStorage + "whitelist.json")
         {
             ItemManager.onTakeItemRequested += OnItemPickup;
-            BarricadeManager.onSalvageBarricadeRequested += OnBarricadeSalvageRequested;
-            StructureManager.onSalvageStructureRequested += OnStructureSalvageRequested;
+            BarricadeDrop.OnSalvageRequested_Global += OnBarricadeSalvageRequested;
+            StructureDrop.OnSalvageRequested_Global += OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested += OnEditSignRequest;
             BarricadeManager.onDeployBarricadeRequested += OnBarricadePlaceRequested;
@@ -74,40 +74,26 @@ namespace Uncreated.Warfare
                     instances.Remove(instanceID);
             }
         }
-        private void OnBarricadeSalvageRequested(CSteamID steamID, byte x, byte y, ushort plant, ushort index, ref bool shouldAllow)
+        private void OnBarricadeSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
-            var player = UnturnedPlayer.FromCSteamID(steamID);
+            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
             if (player.OnDuty())
-            {
                 return;
-            }
-            if (BarricadeManager.tryGetRegion(x, y, plant, out var region))
-            {
-                BarricadeData data = region.barricades[index];
-                if (data.owner == steamID.m_SteamID || IsWhitelisted(data.barricade.id, out var whitelistedItem))
-                {
-                    return;
-                }
-            }
+            BarricadeData data = barricade.GetServersideData();
+            if (data.owner == instigatorClient.playerID.steamID.m_SteamID || IsWhitelisted(data.barricade.id, out _))
+                return;
 
             player.Message("whitelist_nosalvage");
             shouldAllow = false;
         }
-        private void OnStructureSalvageRequested(CSteamID steamID, byte x, byte y, ushort index, ref bool shouldAllow)
+        private void OnStructureSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
-            var player = UnturnedPlayer.FromCSteamID(steamID);
+            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
             if (player.OnDuty())
-            {
                 return;
-            }
-            if (StructureManager.tryGetRegion(x, y, out var region))
-            {
-                StructureData data = region.structures[index];
-                if (data.owner == steamID.m_SteamID || IsWhitelisted(data.structure.id, out var whitelistedItem))
-                {
-                    return;
-                }
-            }
+            StructureData data = structure.GetServersideData();
+            if (data.owner == instigatorClient.playerID.steamID.m_SteamID || IsWhitelisted(data.structure.id, out _))
+                return;
 
             player.Message("whitelist_nosalvage");
             shouldAllow = false;
@@ -216,8 +202,8 @@ namespace Uncreated.Warfare
         public void Dispose()
         {
             ItemManager.onTakeItemRequested -= OnItemPickup;
-            BarricadeManager.onSalvageBarricadeRequested -= OnBarricadeSalvageRequested;
-            StructureManager.onSalvageStructureRequested -= OnStructureSalvageRequested;
+            BarricadeDrop.OnSalvageRequested_Global -= OnBarricadeSalvageRequested;
+            StructureDrop.OnSalvageRequested_Global -= OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested -= OnEditSignRequest;
             BarricadeManager.onDeployBarricadeRequested -= OnBarricadePlaceRequested;

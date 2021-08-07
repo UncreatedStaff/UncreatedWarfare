@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Rocket.API;
+using System.Management.Instrumentation;
 
 namespace Uncreated.Warfare
 {
@@ -1171,14 +1172,14 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this ulong playerID) => playerID.GetBaseSpawn(out _);
         public static string QuickSerialize(object obj) => JsonConvert.SerializeObject(obj);
         public static T QuickDeserialize<T>(string json) => JsonConvert.DeserializeObject<T>(json);
-        public static async Task InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, string text)
+        public static async Task InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, string text)
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
                 newtext = await TranslateSign(text, client.playerID.steamID.m_SteamID, false);
-            Data.SendUpdateSign.Invoke(ENetReliability.Reliable, client.transportConnection, x, y, plant, index, newtext);
+            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
-        public static async Task InvokeSignUpdateForAll(byte x, byte y, ushort plant, ushort index, string text)
+        public static async Task InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
         {
             Dictionary<string, List<SteamPlayer>> playergroups = new Dictionary<string, List<SteamPlayer>>();
             IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
@@ -1210,12 +1211,12 @@ namespace Uncreated.Warfare
                         newtext = await TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID, false);
                     List<ITransportConnection> toSendTo = new List<ITransportConnection>();
                     languageGroup.Value.ForEach(l => toSendTo.Add(l.transportConnection));
-                    Data.SendUpdateSign.Invoke(ENetReliability.Reliable, toSendTo, x, y, plant, index, newtext);
+                    Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, toSendTo, newtext);
                 }
             }
         }
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-        public static async Task InvokeSignUpdateForAllKits(byte x, byte y, ushort plant, ushort index, string text)
+        public static async Task InvokeSignUpdateForAllKits(InteractableSign sign, byte x, byte y, string text)
         {
             if (text == null) return;
             IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
@@ -1224,7 +1225,7 @@ namespace Uncreated.Warfare
                 string newtext = text;
                 if (text.StartsWith("sign_"))
                     newtext = await TranslateSign(text, connections.Current.playerID.steamID.m_SteamID, false);
-                Data.SendUpdateSign.Invoke(ENetReliability.Reliable, connections.Current.transportConnection, x, y, plant, index, newtext);
+                Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, connections.Current.transportConnection, newtext);
             }
             connections.Dispose();
         }
@@ -1236,43 +1237,16 @@ namespace Uncreated.Warfare
                     yield return client;
             }
         }
-        public static async Task InvokeSignUpdateFor(SteamPlayer client, byte x, byte y, ushort plant, ushort index, BarricadeRegion region, bool changeText = false, string text = "")
+        public static async Task InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
         {
-            if (text == default || client == default || region == default) return;
+            if (text == default || client == default) return;
             string newtext;
             if (!changeText)
-            {
-                newtext = GetSignText(index, region);
-            }
+                newtext = sign.text;
             else newtext = text;
             if (newtext.StartsWith("sign_"))
                 newtext = await TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID, false);
-            Data.SendUpdateSign.Invoke(ENetReliability.Reliable, client.transportConnection, x, y, plant, index, newtext);
-        }
-        public static string GetSignText(ushort index, BarricadeRegion region)
-        {
-            if (region.drops[index].model.TryGetComponent(out InteractableSign sign))
-                return sign.text;
-            else return string.Empty;
-        }
-        public static string GetSignText(Transform transform)
-        {
-            if (BarricadeManager.tryGetInfo(transform, out _, out _, out _, out ushort index, out BarricadeRegion region))
-                return GetSignText(index, region);
-            else return string.Empty;
-        }
-        public static bool IsSign(this BarricadeDrop barricade) => barricade.model.TryGetComponent(out InteractableSign _);
-        public static bool IsSign(this BarricadeData barricade, BarricadeRegion region)
-        {
-            if (barricade == null || region == null) return false;
-            int index = region.barricades.FindIndex(b => b != null && b.instanceID == barricade.instanceID);
-            if (index < region.drops.Count)
-            {
-                BarricadeDrop drop = region.drops[index];
-                if (drop != null && drop.interactable != null && drop.interactable.GetType() == typeof(InteractableSign)) return true;
-                else return false;
-            }
-            else return false;
+            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
         public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
         public static float GetTerrainHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
@@ -2343,12 +2317,12 @@ namespace Uncreated.Warfare
                 {
                     BarricadeRegion region = BarricadeManager.regions[x, y];
                     if (region == default) continue;
-                    for (int i = 0; i < region.barricades.Count; i++)
+                    for (int i = 0; i < region.drops.Count; i++)
                     {
-                        if (region.barricades[i].instanceID == instanceID)
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
                         {
                             drop = region.drops[i];
-                            return region.barricades[i];
+                            return region.drops[i].GetServersideData();
                         }
                     }
                 }
@@ -2356,12 +2330,12 @@ namespace Uncreated.Warfare
             for (int vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
             {
                 VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[vr];
-                for (int i = 0; i < region.barricades.Count; i++)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
-                    if (region.barricades[i].instanceID == instanceID)
+                    if (region.drops[i].instanceID == instanceID)
                     {
                         drop = region.drops[i];
-                        return region.barricades[i];
+                        return region.drops[i].GetServersideData();
                     }
                 }
             }
@@ -2376,12 +2350,12 @@ namespace Uncreated.Warfare
                 {
                     StructureRegion region = StructureManager.regions[x, y];
                     if (region == default) continue;
-                    for (int i = 0; i < region.structures.Count; i++)
+                    for (int i = 0; i < region.drops.Count; i++)
                     {
-                        if (region.structures[i].instanceID == instanceID)
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
                         {
                             drop = region.drops[i];
-                            return region.structures[i];
+                            return region.drops[i].GetServersideData();
                         }
                     }
                 }
@@ -2389,7 +2363,7 @@ namespace Uncreated.Warfare
             drop = default;
             return default;
         }
-        public static BarricadeData GetBarricadeFromTransform(SerializableTransform location, out BarricadeDrop drop)
+        public static BarricadeDrop GetBarriadeBySerializedTransform(SerializableTransform t)
         {
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -2397,32 +2371,18 @@ namespace Uncreated.Warfare
                 {
                     BarricadeRegion region = BarricadeManager.regions[x, y];
                     if (region == default) continue;
-                    for (int i = 0; i < region.barricades.Count; i++)
-                    {
-                        if (location == region.drops[i].model.transform)
+                    for (int i = 0; i < region.drops.Count; i++)
+{
+                        if (t == region.drops[i].model)
                         {
-                            drop = region.drops[i];
-                            return region.barricades[i];
+                            return region.drops[i];
                         }
                     }
                 }
             }
-            for (int vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
-            {
-                VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[vr];
-                for (int i = 0; i < region.barricades.Count; i++)
-                {
-                    if (location == region.drops[i].model.transform)
-                    {
-                        drop = region.drops[i];
-                        return region.barricades[i];
-                    }
-                }
-            }
-            drop = default;
-            return default;
+            return null;
         }
-        public static StructureData GetStructureFromTransform(SerializableTransform location, out StructureDrop drop)
+        public static StructureDrop GetStructureBySerializedTransform(SerializableTransform t)
         {
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -2430,18 +2390,16 @@ namespace Uncreated.Warfare
                 {
                     StructureRegion region = StructureManager.regions[x, y];
                     if (region == default) continue;
-                    for (int i = 0; i < region.structures.Count; i++)
+                    for (int i = 0; i < region.drops.Count; i++)
                     {
-                        if (location == region.drops[i].model.transform)
+                        if (t == region.drops[i].model)
                         {
-                            drop = region.drops[i];
-                            return region.structures[i];
+                            return region.drops[i];
                         }
                     }
                 }
             }
-            drop = default;
-            return default;
+            return null;
         }
         public static string TranslateBranch(EBranch branch, UCPlayer player)
         {
