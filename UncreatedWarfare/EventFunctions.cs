@@ -350,8 +350,9 @@ namespace Uncreated.Warfare
         {
             if (storage == null || !shouldAllow || UCWarfare.Config.LimitedStorages == null || UCWarfare.Config.LimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
             SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
-            if (player == null || !BarricadeManager.tryGetInfo(storage.transform, out _, out _, out _, out ushort index, out BarricadeRegion region) || 
-                region == null || !UCWarfare.Config.LimitedStorages.Contains(region.barricades[index].barricade.id)) return;
+            BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
+            if (player == null || storagedrop == null || 
+                !UCWarfare.Config.LimitedStorages.Contains(storagedrop.GetServersideData().barricade.id)) return;
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
             if (ucplayer == null) return;
             if (ucplayer.StorageCoroutine != null)

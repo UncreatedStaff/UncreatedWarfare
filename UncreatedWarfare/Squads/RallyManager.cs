@@ -85,18 +85,18 @@ namespace Uncreated.Warfare.Squads
         public static void WipeAllRallies()
         {
             rallypoints.Clear();
-            foreach (var player in Provider.clients)
+            foreach (SteamPlayer player in Provider.clients)
             {
                 EffectManager.askEffectClearByID(SquadManager.config.Data.rallyUI, player.transportConnection);
             }
 
-            var barricades = GetRallyPointBarricades();
-
-            foreach (var barricade in barricades)
+            IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().GetEnumerator();
+            while (barricades.MoveNext())
             {
-                if (BarricadeManager.tryGetInfo(UCBarricadeManager.GetDropFromBarricadeData(barricade).model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                    BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                if (Regions.tryGetCoordinate(barricades.Current.model.position, out byte x, out byte y))
+                    BarricadeManager.destroyBarricade(barricades.Current, x, y, ushort.MaxValue);
             }
+            barricades.Dispose();
         }
         public static void TryDeleteRallyPoint(uint instanceID)
         {
@@ -156,15 +156,13 @@ namespace Uncreated.Warfare.Squads
             return rallypoint != null;
         }
 
-        public static List<BarricadeData> GetRallyPointBarricades()
+        public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
         {
-            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
+            IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
-            return barricadeDatas.Where(b =>
-                (b.barricade.id == SquadManager.config.Data.Team1RallyID ||
-                b.barricade.id == SquadManager.config.Data.Team2RallyID )   // All barricades that are RallyPoints
-                ).ToList();
+            return barricadeDrops.Where(b =>
+                b.GetServersideData().barricade.id == SquadManager.config.Data.Team1RallyID ||
+                b.GetServersideData().barricade.id == SquadManager.config.Data.Team2RallyID);
         }
     }
 

@@ -530,7 +530,7 @@ namespace Uncreated.Warfare.Vehicles
                 List<VBarricade> barricades = new List<VBarricade>();
                 for (int i = 0; i < vehicleRegion.drops.Count; i++)
                 {
-                    BarricadeData bdata = vehicleRegion.barricades[i];
+                    BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
                     barricades.Add(new VBarricade(bdata.barricade.id, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
                         bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
                 }

@@ -103,25 +103,23 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-                List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
+                IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
-                List<BarricadeData> NearbyAmmoStations = barricadeDatas.Where(
-                    b => (b.point - vehicle.transform.position).sqrMagnitude <= 10000 &&
-                    b.barricade.id == FOBManager.config.Data.AmmoCrateID)
-                    .OrderBy(b => (b.point - vehicle.transform.position).sqrMagnitude)
+                IEnumerable<BarricadeDrop> NearbyAmmoStations = barricadeDrops.Where(
+                    b => (b.GetServersideData().point - vehicle.transform.position).sqrMagnitude <= 10000 &&
+                    b.GetServersideData().barricade.id == FOBManager.config.Data.AmmoCrateID)
+                    .OrderBy(b => (b.model.position - vehicle.transform.position).sqrMagnitude)
                     .ToList();
 
-                if (NearbyAmmoStations.Count == 0)
+                if (NearbyAmmoStations.Count() == 0)
                 {
                     player.SendChat("ammo_vehicle_not_near_ammo_crate"); 
                     return;
                 }
 
-                BarricadeData ammoStation = NearbyAmmoStations.FirstOrDefault();
-                BarricadeDrop ammoStationDrop = BarricadeManager.regions.Cast<BarricadeRegion>().Concat(BarricadeManager.vehicleRegions).SelectMany(brd => brd.drops).FirstOrDefault(k => k.instanceID == ammoStation.instanceID);
+                BarricadeDrop ammoStation = NearbyAmmoStations.FirstOrDefault();
 
-                storage = ammoStationDrop.interactable as InteractableStorage;
+                storage = ammoStation.interactable as InteractableStorage;
 
                 if (storage == null)
                 {
@@ -130,12 +128,10 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 int ammo_count = 0;
-
+                ulong team = player.GetTeam();
                 foreach (ItemJar jar in storage.items.items)
                 {
-                    if (player.IsTeam1() && jar.item.id == FOBManager.config.Data.Team1AmmoID)
-                        ammo_count++;
-                    else if (player.IsTeam2() && jar.item.id == FOBManager.config.Data.Team2AmmoID)
+                    if (team == 1 && jar.item.id == FOBManager.config.Data.Team1AmmoID || team == 2 && jar.item.id == FOBManager.config.Data.Team2AmmoID)
                         ammo_count++;
                 }
 

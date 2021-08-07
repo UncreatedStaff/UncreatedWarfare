@@ -29,15 +29,6 @@ namespace Uncreated.Warfare
                 return null;
             }
         }
-        public static BarricadeData GetBarricadeByInstanceID(uint InstanceID)
-        {
-            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-
-            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
-
-            return barricadeDatas.Find(brd => brd.instanceID == InstanceID);
-        }
-        public static StructureData GetStructureDataFromLook(UnturnedPlayer player) => GetStructureDataFromLook(player, out _);
         public static StructureData GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop drop)
         {
             Transform structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);

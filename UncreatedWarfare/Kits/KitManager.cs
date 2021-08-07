@@ -502,7 +502,6 @@ namespace Uncreated.Warfare.Kits
             } else
                 this.Weapons = Weapons;
         }
-
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public bool IsLimited(out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {

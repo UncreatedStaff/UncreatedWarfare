@@ -34,8 +34,8 @@ namespace Uncreated.Warfare.FOBs
         public static void LoadFobs()
         {
             GetRegionBarricadeLists(
-                out List<BarricadeData> Team1FOBBarricades,
-                out List<BarricadeData> Team2FOBBarricades
+                out List<BarricadeDrop> Team1FOBBarricades,
+                out List<BarricadeDrop> Team2FOBBarricades
                 );
 
             Team1FOBs.Clear();
@@ -51,12 +51,12 @@ namespace Uncreated.Warfare.FOBs
             }
             UpdateUIAll();
         }
-        public static void RegisterNewFOB(BarricadeData Structure)
+        public static void RegisterNewFOB(BarricadeDrop Structure)
         {
-            ulong team = Structure.group.GetTeam();
+            ulong team = Structure.GetServersideData().group.GetTeam();
             if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
             {
-                if (F.TryGetPlaytimeComponent(Structure.owner, out PlaytimeComponent c) && c.stats != null)
+                if (F.TryGetPlaytimeComponent(Structure.GetServersideData().owner, out PlaytimeComponent c) && c.stats != null)
                     c.stats.fobsplaced++;
                 if (team == 1)
                 {
@@ -66,7 +66,7 @@ namespace Uncreated.Warfare.FOBs
                     ctf.GameStats.fobsPlacedT2++;
                 }
             }
-            if (TeamManager.IsTeam1(Structure.group))
+            if (team == 1)
             {
                 for (int i = 0; i < Team1FOBs.Count; i++)
                 {
@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.FOBs
 
                 Team1FOBs.Add(new FOB("FOB" + (Team1FOBs.Count + 1).ToString(Data.Locale), Team1FOBs.Count + 1, Structure));
             }
-            else if (TeamManager.IsTeam2(Structure.group))
+            else if (team == 2)
             {
                 for (int i = 0; i < Team2FOBs.Count; i++)
                 {
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.FOBs
                 Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(Data.Locale), Team2FOBs.Count + 1, Structure));
             }
 
-            UpdateUIForTeam(Structure.group.GetTeam());
+            UpdateUIForTeam(team);
         }
 
         public static void TryDeleteFOB(uint instanceID, ulong team, ulong player)
@@ -147,22 +147,21 @@ namespace Uncreated.Warfare.FOBs
         }
 
         public static void GetRegionBarricadeLists(
-                out List<BarricadeData> Team1Barricades,
-                out List<BarricadeData> Team2Barricades
+                out List<BarricadeDrop> Team1Barricades,
+                out List<BarricadeDrop> Team2Barricades
                 )
         {
-            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
+            IEnumerable<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>();
 
-            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
-            Team1Barricades = barricadeDatas.Where(b =>
-                b.barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
-                TeamManager.IsTeam1(b.group)        // All barricades that are friendly
+            Team1Barricades = barricadeDrops.Where(b =>
+                b.GetServersideData().barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
+                TeamManager.IsTeam1(b.GetServersideData().group)        // All barricades that are friendly
                 ).ToList();
-            Team2Barricades = barricadeDatas.Where(b =>
-                b.barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
-                TeamManager.IsTeam2(b.group)        // All barricades that are friendly
+            Team2Barricades = barricadeDrops.Where(b =>
+                b.GetServersideData().barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
+                TeamManager.IsTeam2(b.GetServersideData().group)        // All barricades that are friendly
                 ).ToList();
         }
 
@@ -278,9 +277,9 @@ namespace Uncreated.Warfare.FOBs
     {
         public string Name;
         public int Number;
-        public BarricadeData Structure;
+        public BarricadeDrop Structure;
         public DateTime DateCreated;
-        public FOB(string Name, int number, BarricadeData Structure)
+        public FOB(string Name, int number, BarricadeDrop Structure)
         {
             this.Name = Name;
             Number = number;

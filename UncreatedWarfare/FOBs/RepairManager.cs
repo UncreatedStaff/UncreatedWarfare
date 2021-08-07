@@ -22,7 +22,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
-                for (int i = 0; i < region.barricades.Count; i++)
+                for (int i = 0; i < region.drops.Count; i++)
                 {
                     if (data.instanceID == region.drops[i].instanceID)
                     {

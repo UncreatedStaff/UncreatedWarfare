@@ -258,13 +258,12 @@ namespace Uncreated.Warfare
                 {
                     BarricadeRegion region = BarricadeManager.regions[x, y];
                     if (region == default) continue;
-                    for (int i = 0; i < region.barricades.Count; i++)
+                    for (int i = 0; i < region.drops.Count; i++)
                     {
-                        BarricadeData b = region.barricades[i];
-                        if (b == default) continue;
-                        if (b.barricade.id == FOBs.FOBManager.config.Data.FOBID &&
-                            b.group == GetTeam() &&
-                            (b.point - Position).sqrMagnitude <= 20 * 20)
+                        BarricadeDrop b = region.drops[i];
+                        if (b.GetServersideData().barricade.id == FOBs.FOBManager.config.Data.FOBID &&
+                            b.GetServersideData().group == GetTeam() &&
+                            (b.model.position - Position).sqrMagnitude <= 20 * 20)
                             return true;
                     }
                 }
