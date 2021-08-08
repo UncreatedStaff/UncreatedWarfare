@@ -529,10 +529,17 @@ namespace Uncreated.Warfare
                 { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}</color>.</color>" },
                 { "officer_discharged", "<color=#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.</color>" },
                 { "officer_announce_promoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#e3b552>PROMOTED</color> to <color=#e05353>{1}</color> of the <color=#baccca>{2}</color>!</color>" },
-                { "officer_announce_demoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}s</color>.</color>" },
+                { "officer_announce_demoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{1}</color>.</color>" },
                 { "officer_announce_discharged", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#ab2e2e>DISCHARGED</color> from the rank of <color=#e05353>{1}s</color> for unacceptable behaviour.</color>" },
                 { "officer_ui_no_stars", "no stars" },
                 { "officer_ui_stars", "{0} star{1}" },
+
+                // promotions
+
+                { "xp_announce_promoted", "<color=#9e9788><color=#a1c4ff>{0}</color> was <color=#e3b552>promoted</color> to <color=#ffffff>{1}</color>." },
+                { "xp_announce_demoted", "<color=#9e9788><color=#a1c4ff>{0}</color> was <color=#c47f5c>demoted</color> to <color=#e05353>{1}</color>.</color>" },
+                { "ofp_announce_gained", "<color=#9e9788><color=#a1c4ff>{0}</color> has been awarded <color=#ffc569>{1}</color> for good leadership.</color>" },
+
 
                 // Clear
                 { "clear_not_enough_args", "<color=#ff8c69>The clear command requires 1 argument.</color>" },

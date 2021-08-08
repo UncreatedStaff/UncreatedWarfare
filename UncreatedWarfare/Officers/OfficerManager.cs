@@ -101,9 +101,11 @@ namespace Uncreated.Warfare.Officers
 
             if (stars > oldStars)
             {
-                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), 
-                    F.Colorize(F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), 
-                    UCWarfare.GetColorHex("star_color")), ToastMessageSeverity.BIG);
+                string startString = F.Colorize(F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), UCWarfare.GetColorHex("star_color"));
+
+                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), startString, ToastMessageSeverity.BIG);
+
+                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
             }
 
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
