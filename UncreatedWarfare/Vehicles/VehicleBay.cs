@@ -1,4 +1,5 @@
-﻿using Rocket.API;
+﻿using Newtonsoft.Json;
+using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles
@@ -431,6 +433,18 @@ namespace Uncreated.Warfare.Vehicles
         public EVehicleType Type;
         [JsonSettable]
         public bool RequiresSL;
+        [JsonIgnore]
+        public Rank RequiredRank
+        {
+            get
+            {
+                if (_rank == null || _rank.level != RequiredLevel)
+                    _rank = XPManager.GetRankFromLevel(RequiredLevel);
+                return _rank;
+            }
+        }
+        [JsonIgnore]
+        private Rank _rank;
         public List<ushort> Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;

@@ -866,6 +866,18 @@ namespace Uncreated.Warfare
                 StructureDestroyedHandler?.Invoke(structure.GetServersideData(), structure, structure.GetServersideData().instanceID);
             }
 
+            // SDG.Unturned.PlayerLife
+            /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to invoke prevent starving in main base.</summary>
+            [HarmonyPatch(typeof(PlayerLife), "askStarve")]
+            [HarmonyPrefix]
+            static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askStarve || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
+
+            // SDG.Unturned.PlayerLife
+            /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to invoke prevent dehydrating in main base.</summary>
+            [HarmonyPatch(typeof(PlayerLife), "askDehydrate")]
+            [HarmonyPrefix]
+            static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askDehydrate || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
+
             //// SDG.Unturned.BarricadeManager
             ///// <summary>
             ///// Prefix of <see cref="BarricadeManager.sendHealthChanged(byte x, byte y, ushort plant, ushort index, BarricadeRegion region)"/> to invoke <see cref="BarricadeHealthChangedHandler"/>.

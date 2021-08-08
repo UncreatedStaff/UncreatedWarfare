@@ -213,6 +213,8 @@ namespace Uncreated.Warfare
         public bool ReceiveChatRequest;
         public bool EnableQueueSkip;
         public bool closeStorage;
+        public bool askStarve;
+        public bool askDehydrate;
 
         public PatchToggles()
         {
@@ -239,6 +241,8 @@ namespace Uncreated.Warfare
             this.ReceiveChatRequest = true;
             this.EnableQueueSkip = true;
             this.closeStorage = true;
+            this.askStarve = true;
+            this.askDehydrate = true;
         }
 
     }

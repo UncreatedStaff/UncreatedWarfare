@@ -521,8 +521,8 @@ namespace Uncreated.Warfare
                 { "VEHICLE_TEAMKILLED", "{0} blew up a friendly {2}." },
 
                 // vehicle bay signs
-                { "vehiclebay_sign_no_min_level", "<color=#{4}><color=#{1}>{0}</color>\nTickets: <color=#{3}>{2}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: Ticket cost, 3: Ticket cost color , 4: background color
-                { "vehiclebay_sign_min_level", "<color=#{6}><color=#{1}>{0}</color>\n<color=#{3}>{2}</color>\nTickets: <color=#{5}>{4}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: rank, 3: rank color, 4: Ticket cost, 5: Ticket cost color, 6: background color
+                { "vehiclebay_sign_no_min_level", "<color=#{4}><color=#{1}>{0}</color>\n\nTickets: <color=#{3}>{2}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: Ticket cost, 3: Ticket cost color , 4: background color
+                { "vehiclebay_sign_min_level", "<color=#{5}><color=#{1}>{0}</color>\n{2}\nTickets: <color=#{4}>{3}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: rank, 3: Ticket cost, 4: Ticket cost color, 5: background color
 
                 // Officers
                 { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of the <color=#baccca>{1}</color>!</color>" },

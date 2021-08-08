@@ -505,9 +505,8 @@ namespace Uncreated.Warfare.Vehicles
                         yield break;
                     }
                 }
-
                 VehicleBay.DeleteVehicle(Owner);
-                if (VehicleSpawner.HasLinkedSpawn(Owner.instanceID, out var spawn))
+                if (VehicleSpawner.HasLinkedSpawn(Owner.instanceID, out VehicleSpawn spawn))
                     spawn.SpawnVehicle();
             }
         }

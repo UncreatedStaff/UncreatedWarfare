@@ -289,7 +289,7 @@ namespace Uncreated.Warfare.Kits
                                 if (spawn.HasLinkedVehicle(out InteractableVehicle veh))
                                 {
                                     veh.forceRemoveAllPlayers();
-                                    VehicleManager.askVehicleDestroy(veh);
+                                    VehicleBay.DeleteVehicle(veh);
                                     asset = veh.asset;
                                 } else
                                 {

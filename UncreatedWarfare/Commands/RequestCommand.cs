@@ -213,6 +213,20 @@ namespace Uncreated.Warfare.Commands
                 
                 VehicleBay.IncrementRequestCount(vehicle.id, true);
 
+                if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
+                {
+                    if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null &&
+                        spawn.BarricadeDrop.model.TryGetComponent(out SpawnedVehicleComponent c))
+                    {
+                        c.StartIdleRespawnTimer();
+                    }
+                    else if
+                       (spawn.type == Structures.EStructType.STRUCTURE && spawn.StructureDrop != null &&
+                        spawn.StructureDrop.model.TryGetComponent(out c))
+                    {
+                        c.StartIdleRespawnTimer();
+                    }
+                }
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
 

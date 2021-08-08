@@ -299,8 +299,8 @@ namespace Uncreated.Warfare
                 if (UCWarfare.Config.ModifySkillLevels)
                 {
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 3);
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 4);
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
+                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 3);
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
                 }
@@ -380,12 +380,28 @@ namespace Uncreated.Warfare
         {
             if (Data.Gamemode is TeamCTF ctf && player.IsOnFlag(out Flag flag))
             {
-                CTFUI.RefreshStaticUI(player.GetTeam(), flag, true).SendToPlayer(ctf.Config.PlayerIcon, ctf.Config.UseUI, 
+                SendUIParameters p = CTFUI.RefreshStaticUI(player.GetTeam(), flag, true);
+                if (p.status != F.EFlagStatus.BLANK && p.status != F.EFlagStatus.DONT_DISPLAY)
+                    p.SendToPlayer(ctf.Config.PlayerIcon, ctf.Config.UseUI, 
                     ctf.Config.CaptureUI, ctf.Config.ShowPointsOnUI, ctf.Config.ProgressChars, player.channel.owner, 
                     player.channel.owner.transportConnection);
             }
+            if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
+            {
+                if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null && 
+                    spawn.BarricadeDrop.model.TryGetComponent(out Vehicles.SpawnedVehicleComponent c))
+                {
+                    c.StopIdleRespawnTimer();
+                }
+                else if 
+                   (spawn.type == Structures.EStructType.STRUCTURE && spawn.StructureDrop != null &&
+                    spawn.StructureDrop.model.TryGetComponent(out c))
+                {
+                    c.StopIdleRespawnTimer();
+                }
+            }
         }
-        static Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
+        static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
         internal static void RemoveDamageMessageTicks(ulong player)
         {
             lastSentMessages.Remove(player);

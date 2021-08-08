@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using SDG.Unturned;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -93,7 +94,21 @@ namespace Uncreated.Warfare.Commands
         {
             List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
             for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out _)) spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
+            {
+                if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out InteractableVehicle veh))
+{
+                    VehicleBarricadeRegion reg = BarricadeManager.findRegionFromVehicle(veh);
+                    for (int s = 0; s < reg.drops.Count; s++)
+                    {
+                        if (reg.drops[s].interactable is InteractableStorage storage)
+                        {
+                            storage.despawnWhenDestroyed = true;
+                        }
+                    }
+                    spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
+                }
+
+            }
             VehicleManager.askVehicleDestroyAll();
             for (int i = 0; i < spawnsToReset.Count; i++)
                 spawnsToReset[i].SpawnVehicle();

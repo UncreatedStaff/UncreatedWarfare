@@ -22,7 +22,6 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Rocket.API;
-using System.Management.Instrumentation;
 
 namespace Uncreated.Warfare
 {
@@ -1614,12 +1613,31 @@ namespace Uncreated.Warfare
                     if (asset == default) return norm;
                     if (data.RequiredLevel > 0)
                     {
-                        Rank rank = XPManager.GetRankFromLevel(data.RequiredLevel);
-                        Rank playerrank = player == 0 ? null : XPManager.GetRank(await XPManager.GetXP(player, player.GetTeamFromPlayerSteam64ID(), false), out _, out _);
+                        UCPlayer ucplayer = UCPlayer.FromID(player);
+                        Rank playerrank = null;
+                        if (ucplayer != null)
+                        {
+                            playerrank = await ucplayer.XPRank();
+                        }
+                        Rank rank = data.RequiredRank;
                         if (rank == default) return norm;
-                        return Translate("vehiclebay_sign_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), rank.TranslateName(player), 
-                            player != 0 && rank.level > playerrank.level ? UCWarfare.GetColorHex("vbs_locked_vehicle_color") : UCWarfare.GetColorHex("vbs_rank_color"), data.TicketCost.ToString(Data.Locale),
-                            UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
+                        string level;
+                        if (player != 0 && rank != null && rank.level > playerrank.level)
+                        {
+                            level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
+                                UCWarfare.GetColorHex("kit_level_unavailable"),
+                            rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                        } else if (rank != null)
+                        {
+                            level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
+                                UCWarfare.GetColorHex("kit_level_available"),
+                            rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                        } else
+                        {
+                            level = "\n";
+                        }
+                        return Translate("vehiclebay_sign_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), 
+                            level, data.TicketCost.ToString(Data.Locale), UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
                     }
                     else
                     {

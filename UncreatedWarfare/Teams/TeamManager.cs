@@ -128,7 +128,41 @@ namespace Uncreated.Warfare.Teams
             }
             return false;
         }
-
+        public static bool IsInMain(Player player)
+        {
+            if (player.life.isDead) return false;
+            ulong team = player.GetTeam();
+            if (team == 1)
+            {
+                return Team1Main.IsInside(player.transform.position);
+            }
+            if (team == 2)
+            {
+                return Team2Main.IsInside(player.transform.position);
+            }
+            return false;
+        }
+        public static bool IsInMainOrLobby(Player player)
+        {
+            if (player.life.isDead) return false;
+            ulong team = player.GetTeam();
+            if (LobbyZone.IsInside(player.transform.position))
+                return true;
+            if (team == 1)
+            {
+                return Team1Main.IsInside(player.transform.position);
+            }
+            if (team == 2)
+            {
+                return Team2Main.IsInside(player.transform.position);
+            }
+            return false;
+        }
+        public static bool IsInAnyMainOrLobby(Player player)
+        {
+            if (player.life.isDead) return false;
+            return LobbyZone.IsInside(player.transform.position) || Team1Main.IsInside(player.transform.position) || Team2Main.IsInside(player.transform.position);
+        }
         public static bool IsInAnyMain(Vector3 player)
         {
             return Team1Main.IsInside(player) || Team2Main.IsInside(player);
