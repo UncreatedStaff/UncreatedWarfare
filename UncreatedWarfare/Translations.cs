@@ -412,6 +412,8 @@ namespace Uncreated.Warfare
                 { "vehicle_no_kit", "You can not get in a vehicle without a kit." },
                 { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to man this vehicle." },
                 { "vehicle_need_another_person_with_kit", "You must have another <color=#cedcde>{0}</color> in this vehicle before you can enter the gunner's seat." },
+                { "vehicle_need_driver", "Your vehicle needs a DRIVER before you can switch to the gunner's seat." },
+                { "vehicle_cannot_switch", "You cannot switch from driver's seat to gunner's seat in this vehicle." },
                 
                 // other
                 { "friendly_mortar_incoming", "FRIENDLY MORTAR STRIKE INCOMING" },
@@ -662,7 +664,8 @@ namespace Uncreated.Warfare
                 { "xp_friendly_downed", "DOWNED FRIENDLY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_friendly_killed", "TEAMKILLED {0}" },
-                { "xp_fob_killed", "DESTROYED FOB" },
+                { "xp_fob_killed", "FOB DESTROYED" },
+                { "xp_fob_teamkilled", "FRIENDLY FOB DESTROYED" },
                 { "xp_deployed_fob", "TEAMMATE DEPLOYED" },
 
                 { "xp_victory", "VICTORY" },

@@ -127,7 +127,17 @@ namespace Uncreated.Warfare.FOBs
                 }
                 UCPlayer ucplayer = UCPlayer.FromID(player);
                 if (ucplayer != null)
-                    Task.Run(async () => await XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player)));
+                {
+                    if (ucplayer.GetTeam() == team)
+                    {
+                        Task.Run(async () => await XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player)));
+                    }
+                    else
+                    {
+                        Task.Run(async () => await XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player)));
+                    }
+                }
+                    
             }
             UpdateUIForTeam(team);
         }
@@ -163,33 +173,6 @@ namespace Uncreated.Warfare.FOBs
                 b.GetServersideData().barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam2(b.GetServersideData().group)        // All barricades that are friendly
                 ).ToList();
-        }
-
-        public static void WipeAllFOBRelatedBarricades()
-        {
-            IEnumerator<BarricadeDrop> FOBComponents = UCBarricadeManager.GetBarricadesWhere(d =>
-            {
-                BarricadeData b = d.GetServersideData();
-                ulong team = b.group.GetTeam();
-                return (team == 1 || team == 2) && (
-                    b.barricade.id == config.Data.FOBID ||
-                    b.barricade.id == config.Data.FOBBaseID ||
-                    b.barricade.id == config.Data.AmmoCrateID ||
-                    b.barricade.id == config.Data.AmmoCrateBaseID ||
-                    b.barricade.id == config.Data.RepairStationID ||
-                    b.barricade.id == config.Data.RepairStationBaseID ||
-                    config.Data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
-                    config.Data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
-                    config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id));
-            }).GetEnumerator();
-            while (FOBComponents.MoveNext())
-            {
-                if (FOBComponents.Current != null && Regions.tryGetCoordinate(FOBComponents.Current.model.position, out byte x, out byte y))
-                {
-                    BarricadeManager.destroyBarricade(FOBComponents.Current, x, y, ushort.MaxValue);
-                }
-            }
-            UpdateUIAll();
         }
 
         public static bool FindFOBByName(string name, ulong team, out FOB fob)
