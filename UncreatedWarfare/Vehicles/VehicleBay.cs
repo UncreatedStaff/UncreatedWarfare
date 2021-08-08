@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Vehicles
         public VehicleBay()
             : base(Data.VehicleStorage + "vehiclebay.json")
         {
-            VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequestedNew;
+            VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
         }
 
@@ -384,7 +384,7 @@ namespace Uncreated.Warfare.Vehicles
 
         public void Dispose()
         {
-            VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequestedNew;
+            VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
         }
 
