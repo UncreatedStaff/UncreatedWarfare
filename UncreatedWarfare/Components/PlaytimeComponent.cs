@@ -185,7 +185,7 @@ namespace Uncreated.Warfare.Components
                             player.Message("deploy_c_damaged");
                         yield break;
                     }
-                    if (fob != null && fob.Structure.barricade.isDead)
+                    if (fob != null && fob.Structure.GetServersideData().barricade.isDead)
                     {
                         if (shouldMessagePlayer)
                             player.Message("deploy_c_fobdead");
@@ -212,7 +212,7 @@ namespace Uncreated.Warfare.Components
 
                 if (fob != null)
                 {
-                    UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.owner);
+                    UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.GetServersideData().owner);
                     Task.Run(async () =>
                     {
                         if (FOBowner != null)
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare.Components
                             }
                         }
                         else
-                            await Data.DatabaseManager.AddXP(fob.Structure.owner, fob.Structure.group, XP.XPManager.config.Data.FOBDeployedXP);
+                            await Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group, XP.XPManager.config.Data.FOBDeployedXP);
                     });
                 }
                 yield break;

@@ -245,11 +245,11 @@ namespace Uncreated.Warfare.FOBs
                 if (UINumber >= 10)
                     break;
                 
-                if (FOBList[i] == null || FOBList[i].Structure.barricade.isDead)
+                if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
                     continue;
 
                 Node nearerstLocation = locations.Aggregate((n1, n2) => 
-                    (n1.point - FOBList[i].Structure.point).sqrMagnitude <= (n2.point - FOBList[i].Structure.point).sqrMagnitude ? n1 : n2);
+                    (n1.point - FOBList[i].Structure.GetServersideData().point).sqrMagnitude <= (n2.point - FOBList[i].Structure.GetServersideData().point).sqrMagnitude ? n1 : n2);
                 
                 EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)), 
                     player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name,
