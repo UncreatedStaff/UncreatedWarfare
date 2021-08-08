@@ -2393,6 +2393,25 @@ namespace Uncreated.Warfare
             drop = default;
             return default;
         }
+        public static StructureDrop GetStructureFromInstID(uint instanceID)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    StructureRegion region = StructureManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
+                        {
+                            return region.drops[i];
+                        }
+                    }
+                }
+            }
+            return default;
+        }
         public static BarricadeDrop GetBarriadeBySerializedTransform(SerializableTransform t)
         {
             for (int x = 0; x < Regions.WORLD_SIZE; x++)

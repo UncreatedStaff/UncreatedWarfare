@@ -191,13 +191,15 @@ namespace Uncreated.Warfare.Structures
                         if (newBarricade.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(newBarricade.position, out byte x, out byte y))
                         {
                             await F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                            instance_id = drop.instanceID;
-                            exists = true;
-                            StructureSaver.Save();
-                        } else
-                        {
-                            exists = false;
                         }
+                        if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
+                        {
+                            vbspawn.SpawnPadInstanceID = drop.instanceID;
+                            Vehicles.VehicleSpawner.Save();
+                        }
+                        instance_id = drop.instanceID;
+                        exists = true;
+                        StructureSaver.Save();
                     }
                     else
                     {
@@ -232,6 +234,11 @@ namespace Uncreated.Warfare.Structures
                             } else
                             {
                                 F.Log("Respawned structure", ConsoleColor.DarkGray);
+                                if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.STRUCTURE, out Vehicles.VehicleSpawn vbspawn))
+                                {
+                                    vbspawn.SpawnPadInstanceID = newdrop.instanceID;
+                                    Vehicles.VehicleSpawner.Save();
+                                }
                                 instance_id = newdrop.instanceID;
                                 StructureSaver.Save();
                                 exists = true;

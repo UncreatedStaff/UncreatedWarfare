@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Vehicles
         public VehicleBay()
             : base(Data.VehicleStorage + "vehiclebay.json")
         {
-            VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
+            VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequestedNew;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
         }
 
@@ -35,6 +35,18 @@ namespace Uncreated.Warfare.Vehicles
             bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
             vehicleData = v;
             return result;
+        }
+        public static void IncrementRequestCount(ushort vehicleID, bool save)
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                if (ActiveObjects[i].VehicleID == vehicleID)
+                {
+                    ActiveObjects[i].RequestCount++;
+                    break;
+                }
+            }
+            if (save) Save();
         }
         public static void SetItems(ushort vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
         public static void AddCrewmanSeat(ushort vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
@@ -148,7 +160,7 @@ namespace Uncreated.Warfare.Vehicles
                 DeleteVehicle(VehicleManager.vehicles[i]);
             }
         }
-
+        /*
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
             if (vehicle == null) return;
@@ -226,7 +238,7 @@ namespace Uncreated.Warfare.Vehicles
                 shouldAllow = false;
                 return;
             }
-        }
+        } */
         private void OnVehicleEnterRequestedNew(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
             if (vehicle == null) return;
@@ -237,14 +249,14 @@ namespace Uncreated.Warfare.Vehicles
                 return;
             }
 
-            if (!KitManager.HasKit(player, out var kit))
+            if (!KitManager.HasKit(player, out Kit kit))
             {
                 player.SendChat("vehicle_no_kit");
                 shouldAllow = false;
                 return;
             }
 
-            if (!VehicleExists(vehicle.id, out var vehicleData))
+            if (!VehicleExists(vehicle.id, out VehicleData vehicleData))
             {
                 EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                 return;
@@ -423,7 +435,7 @@ namespace Uncreated.Warfare.Vehicles
 
         public void Dispose()
         {
-            VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
+            VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequestedNew;
             VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
         }
 
@@ -473,6 +485,7 @@ namespace Uncreated.Warfare.Vehicles
         public List<ushort> Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
+        public int RequestCount;
         public VehicleData(ushort vehicleID)
         {
             VehicleID = vehicleID;
@@ -491,6 +504,7 @@ namespace Uncreated.Warfare.Vehicles
             Items = new List<ushort>() { 28, 277 };
             CrewSeats = new List<byte>();
             Metadata = null;
+            RequestCount = 0;
         }
         public VehicleData()
         {
@@ -510,6 +524,7 @@ namespace Uncreated.Warfare.Vehicles
             Items = new List<ushort>() { 28, 277 };
             CrewSeats = new List<byte>();
             Metadata = null;
+            RequestCount = 0;
         }
         public List<VehicleSpawn> GetSpawners()
         {

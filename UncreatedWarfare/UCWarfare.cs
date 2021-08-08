@@ -39,7 +39,7 @@ namespace Uncreated.Warfare
                 else return Configuration.Instance.SQL;
             }
         }
-        public bool LoadMySQLDataFromElsewhere = true; // for having sql password defaults without having them in our source code.
+        public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
@@ -114,19 +114,19 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
+            Data.StructureManager = new StructureSaver();
             if (Config.Modules.VehicleSpawning)
             {
-                Data.VehicleSpawner = new VehicleSpawner();
                 Data.VehicleBay = new VehicleBay();
+                Data.VehicleSpawner = new VehicleSpawner();
                 Data.VehicleSigns = new VehicleSigns();
             }
             Announcer = gameObject.AddComponent<Components.UCAnnouncer>();
             Data.RequestSignManager = new RequestSigns();
-            Data.StructureManager = new StructureSaver();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
             Data.TeamManager = new TeamManager();
-            F.Log("Wiping barricades then replacing important ones...", ConsoleColor.Magenta);
+            F.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
             await ReplaceBarricadesAndStructures();
             Data.VehicleSpawner.OnLevelLoaded();
             FOBManager.LoadFobs();
@@ -295,7 +295,7 @@ namespace Uncreated.Warfare
                 List<BarricadeDrop> signs = new List<BarricadeDrop>();
                 foreach (BarricadeDrop drop in region.drops)
                 {
-                    if (drop.model.TryGetComponent(out InteractableSign sign))
+                    if (drop.interactable is InteractableSign sign)
                     {
                         if (sign.text.StartsWith("sign_"))
                         {

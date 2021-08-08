@@ -147,6 +147,8 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 return false;
             }, out spawn);
+        public static bool SpawnExists(uint bayInstanceID, EStructType type, out VehicleSpawn spawn) =>
+            ObjectExists(s => s.SpawnPadInstanceID == bayInstanceID && s.type == type, out spawn);
         public static bool HasLinkedSpawn(uint vehicleInstanceID, out VehicleSpawn spawn) =>
             ObjectExists(s => s.VehicleInstanceID == vehicleInstanceID, out spawn);
 
@@ -244,10 +246,10 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 else if (type == EStructType.STRUCTURE)
                 {
-                    StructureData = F.GetStructureFromInstID(SpawnPadInstanceID, out StructureDrop drop);
-                    StructureDrop = drop;
+                    StructureDrop = F.GetStructureFromInstID(SpawnPadInstanceID);
+                    StructureData = StructureDrop.GetServersideData();
                     initialized = true;
-                    if (StructureData is null)
+                    if (StructureDrop == null)
                     {
                         F.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
                         if (StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.STRUCTURE, out Structures.Structure structure))
@@ -289,11 +291,12 @@ namespace Uncreated.Warfare.Vehicles
                         }
                         else
                         {
-                            F.LogWarning("VEHICLE SPAWNER ERROR: Corresponding StructureData could not be found");
+                            F.LogError("VEHICLE SPAWNER ERROR: Corresponding StructureData could not be found");
                             initialized = false;
                         }
                     }
-                    StructureDrop.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(this);
+                    if (initialized)
+                        StructureDrop.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(this);
                 }
                 IsActive = initialized;
             }

@@ -200,7 +200,6 @@ namespace Uncreated.Warfare.Commands
             }
             int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
             Rank rank = XPManager.GetRank(xp, out _, out _);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (rank == default || rank.level < data.RequiredLevel)
             {
                 ucplayer.Message("request_vehicle_e_wronglevel", data.RequiredLevel.ToString(Data.Locale));
@@ -211,6 +210,8 @@ namespace Uncreated.Warfare.Commands
                 vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
                 VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
+                
+                VehicleBay.IncrementRequestCount(vehicle.id, true);
 
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
@@ -220,8 +221,8 @@ namespace Uncreated.Warfare.Commands
 
                 if (!FOBManager.config.Data.Emplacements.Exists(e => e.vehicleID == vehicle.id))
                 {
-                    ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true);
-                    ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true);
+                    ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
+                    ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
                 }
                 
                 foreach (ushort item in data.Items)
@@ -234,7 +235,6 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_alreadyrequested");
                 return;
             }
-            await rtn;
             return;
         }
     }
