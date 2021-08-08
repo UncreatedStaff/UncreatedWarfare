@@ -2470,5 +2470,26 @@ namespace Uncreated.Warfare
             }
             else return "nullNoHit";
         }
+
+        // https://stackoverflow.com/questions/1225052/best-way-to-shorten-utf8-string-based-on-byte-length (firda)
+        public static byte[] ClampToByteCount(this string s, int n, out bool clamped)
+        {
+            byte[] a = Encoding.UTF8.GetBytes(s);
+            if (a.Length <= n)
+            {
+                clamped = false;
+                return a;
+            }
+
+            if (n > 0 && (a[n] & 0xC0) == 0x80)
+            {
+                while (--n > 0 && (a[n] & 0xC0) == 0x80)
+                    F.Log("cutoff letter " + a[n]);
+            }
+            byte[] newbytes = new byte[n];
+            Array.Copy(a, 0, newbytes, 0, n);
+            clamped = true;
+            return newbytes;
+        }
     }
 }

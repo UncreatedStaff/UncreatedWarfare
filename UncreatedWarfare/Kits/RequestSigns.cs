@@ -30,7 +30,8 @@ namespace Uncreated.Warfare.Kits
         public static bool AddRequestSign(InteractableSign sign, out RequestSign signadded)
         {
             signadded = default;
-            if(!ObjectExists(x => x.transform.Position == sign.transform.position && x.transform.Rotation == sign.transform.rotation, out _))
+            BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
+            if (drop != null && !ObjectExists(x => x.instance_id == drop.instanceID, out signadded))
             {
                 signadded = new RequestSign(sign);
                 AddObjectToSave(signadded);
@@ -38,10 +39,10 @@ namespace Uncreated.Warfare.Kits
             }
             return false;
         }
-        public static async Task RemoveRequestSign(RequestSign sign)
+        public static void RemoveRequestSign(RequestSign sign)
         {
-            RemoveWhere(x => x.transform == sign.transform);
-            await sign.InvokeUpdate();
+            RemoveWhere(x => x.instance_id == sign.instance_id);
+            //await sign.InvokeUpdate();
         }
         public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
         public static bool SignExists(InteractableSign sign, out RequestSign found)
@@ -51,16 +52,19 @@ namespace Uncreated.Warfare.Kits
                 found = null;
                 return false;
             }
+            BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
+            if (drop == null)
+            {
+                found = null;
+                return false;
+            }
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
-                if (ActiveObjects[i] == null)
+                if (drop != null && drop.instanceID == ActiveObjects[i].instance_id)
                 {
-                    BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
-                    if (drop != null && drop.instanceID == ActiveObjects[i].instance_id)
-                    {
-                        found = ActiveObjects[i];
-                        return true;
-                    }
+                    found = ActiveObjects[i];
+                    F.Log(found.instance_id.ToString());
+                    return true;
                 }
             }
             found = null;

@@ -4,8 +4,8 @@
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
     <Copyright>None</Copyright>
-    <OutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins\</OutputPath>
-    <Version>0.1.0.0</Version>
+    <OutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</OutputPath>
+    <Version>3.21.0.0</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -24,8 +24,8 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.0</FileVersion>
+    <AssemblyVersion>3.21.0.0</AssemblyVersion>
+    <FileVersion>3.21.0.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
   </PropertyGroup>

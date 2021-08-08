@@ -117,7 +117,6 @@ namespace Uncreated.Warfare
         public async Task<uint> GetKills(ulong Steam64, ulong Team)
         {
             uint kills = 0;
-            MySqlTableLang table = GetTable("");
             await Query(
                 "SELECT `Kills` " +
                 "FROM `playerstats` " +
@@ -278,21 +277,15 @@ namespace Uncreated.Warfare
         }
         public async Task AddDeath(ulong Steam64, ulong Team, int amount = 1)
         {
-            MySqlTableLang table = GetTable("playerstats");
-            string s64 = table.GetColumnName("Steam64");
-            string team = table.GetColumnName("Team");
-            string kills = table.GetColumnName("Kills");
-            string deaths = table.GetColumnName("Deaths");
-            string teamkills = table.GetColumnName("Teamkills");
             if (amount == 0) return;
             if (amount > 0)
             {
                 await NonQuery(
-                    $"INSERT INTO `{table.TableName}` " +
-                    $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                    $"INSERT INTO `playerstats` " +
+                    $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, '0', @2, '0') " +
                     $"ON DUPLICATE KEY UPDATE " +
-                    $"`{deaths}` = `{deaths}` + VALUES(`{deaths}`);",
+                    $"`Deaths` = `Deaths` + VALUES(`Deaths`);",
                     new object[] { Steam64, Team, amount });
             }
             else
@@ -301,19 +294,19 @@ namespace Uncreated.Warfare
                 if (amount >= oldDeaths)
                 {
                     await NonQuery(
-                        $"INSERT INTO `{table.TableName}` " +
-                        $"(`{s64}`, `{team}`, `{kills}`, `{deaths}`, `{teamkills}`) " +
+                        $"INSERT INTO `playerstats` " +
+                        $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
                         $"ON DUPLICATE KEY UPDATE " +
-                        $"`{deaths}` = 0;", // clamp to 0
+                        $"`Deaths` = 0;", // clamp to 0
                         new object[] { Steam64, Team });
                 }
                 else
                 {
                     await NonQuery(
-                        $"UPDATE `{table.TableName}` SET " +
-                        $"`{deaths}` = `{deaths}` - @2 " +
-                        $"WHERE `{s64}` = @0 AND `{team}` = @1;",
+                        $"UPDATE `playerstats` SET " +
+                        $"`Deaths` = `Deaths` - @2 " +
+                        $"WHERE `Steam64` = @0 AND `Team` = @1;",
                         new object[] { Steam64, Team, Math.Abs(amount) });
                 }
             }
@@ -390,30 +383,18 @@ namespace Uncreated.Warfare
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4, @5, @6);",
                 new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public MySqlTableLang GetTable(string key)
-        {
-            if (Data.TableData.TryGetValue(key, out MySqlTableLang lang))
-                return lang;
-            else return new MySqlTableLang(key, new Dictionary<string, string>());
-        }
         public async Task<bool> HasPlayerJoined(ulong Steam64)
         {
-            MySqlTableLang table = GetTable("logindata");
-            string s64 = table.GetColumnName("Steam64");
             int amt = await Scalar(
                 $"SELECT COUNT(*) " +
-                $"FROM `{table}` " +
-                $"WHERE `{s64}` = @0;",
+                $"FROM `logindata` " +
+                $"WHERE `Steam64` = @0;",
                 new object[1] { Steam64 },
                 o => Convert.ToInt32(o));
             return amt > 0;
         }
         public async Task RegisterLogin(Player player)
         {
-            MySqlTableLang table = GetTable("logindata");
-            string s64 = table.GetColumnName("Steam64");
-            string ip = table.GetColumnName("IP");
-            string lastentry = table.GetColumnName("LastLoggedIn");
             string ipaddress;
             if (player.channel.owner.getIPv4Address(out uint ipnum))
             {
@@ -426,12 +407,84 @@ namespace Uncreated.Warfare
                 ipaddress = Parser.getIPFromUInt32(ipnum);
             else ipaddress = LOCAL_IP;
             await NonQuery(
-                $"INSERT INTO `{table.TableName}` " +
-                $"(`{s64}`, `{ip}`, `{lastentry}`) " +
+                $"INSERT INTO `logindata` " +
+                $"(`Steam64`, `IP`, `LastLoggedIn`) " +
                 $"VALUES(@0, @1, @2) " +
                 $"ON DUPLICATE KEY UPDATE " +
-                $"`{ip}` = VALUES(`{ip}`), `{lastentry}` = VALUES(`{lastentry}`);",
+                $"`IP` = VALUES(`IP`), `LastLoggedIn` = VALUES(`LastLoggedIn`);",
                 new object[3] { player.channel.owner.playerID.steamID.m_SteamID, ipaddress, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        }
+        /// <returns> 0 if not banned, else duration (-1 meaning forever) </returns>
+        public async Task<int> IPBanCheck(ulong id, uint packedIP)
+        { // returns true if banned
+            ulong bannedid = 0;
+            string oldids = string.Empty;
+            int durationref = 0;
+            DateTime bantime = DateTime.Now;
+            await Query(
+                $"SELECT * " +
+                $"FROM `ipbans` " +
+                $"WHERE `PackedIP` = @0 " +
+                $"LIMIT 1;", 
+                new object[] { packedIP }, R =>
+                {
+                    bannedid = R.GetUInt64("Instigator");
+                    oldids = R.GetString("OtherIDs");
+                    durationref = R.GetInt32("DurationMinutes");
+                    bantime = R.GetDateTime("InitialBanDate");
+                });
+            if (bannedid == 0) return 0;
+            if (durationref != -1 && bantime.AddMinutes(durationref) <= DateTime.Now) return 0;
+            string idstr = id.ToString(Data.Locale);
+            string[] ids = oldids.Split(',');
+            if (ids.Contains(idstr) || ids.Length > 9) return durationref;
+            string[] newids = new string[ids.Length + 1];
+            for (int i = 0; i < ids.Length; i++)
+                newids[i] = ids[i];
+            newids[ids.Length] = idstr;
+            string newidsstr = string.Join(",", newids);
+            await NonQuery(
+                $"UPDATE `ipbans` " +
+                $"SET `OtherIDs` = @1 " +
+                $"WHERE `PackedIP` = @0;",
+                new object[] { packedIP, newidsstr }
+                );
+            return durationref;
+        }
+        /// <returns><see langword="true"/> if player was already banned and the duration was updated, else <see langword="false"/></returns>
+        public async Task<bool> AddIPBan(ulong id, uint packedIP, string unpackedIP, int duration = -1, string reason = "")
+        {
+            if (await IPBanCheck(id, packedIP) != 0)
+            {
+                await NonQuery(
+                    $"UPDATE `ipbans` " +
+                    $"SET `DurationMinutes` = @1 " +
+                    $"WHERE `PackedIP` = @0;",
+                    new object[] { packedIP, duration }
+                    );
+                return false;
+            }
+            await NonQuery(
+                $"INSERT INTO `ipbans` " +
+                $"(`PackedIP`, `Instigator`, `OtherIDs`, `IPAddress`, `InitialBanDate`, `DurationMinutes`, `Reason`) " +
+                $"VALUES(@0, @1, @2, @3, @4, @5, @6);",
+                new object[] { packedIP, id, id.ToString(Data.Locale), unpackedIP, DateTime.Now, duration, reason }
+                );
+            return true;
+        }
+        public async Task<string> GetIP(ulong id)
+        {
+            string ip = null;
+            await Query(
+                $"SELECT `IP` " +
+                $"FROM `logindata` " +
+                $"WHERE `Steam64` = @0 " +
+                $"LIMIT 1;",
+                new object[] { id },
+                R => ip = R.GetString("IP")
+                );
+            if (ip == null) return "255.255.255.255";
+            else return ip;
         }
         public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
             => F.Log(message, color);

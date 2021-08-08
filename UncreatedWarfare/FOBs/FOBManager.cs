@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.FOBs
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
         }
 
-        public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
+        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == config.Data.FOBID)
             {
@@ -167,47 +167,39 @@ namespace Uncreated.Warfare.FOBs
 
         public static void WipeAllFOBRelatedBarricades()
         {
-            List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
-
-            List<BarricadeData> barricadeDatas = barricadeRegions.SelectMany(brd => brd.barricades).ToList();
-            List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
-
-            List<BarricadeData> FOBComponents = barricadeDatas.Where(b =>
-            (TeamManager.HasTeam(b.group) && 
-            (b.barricade.id == config.Data.FOBID ||
-            b.barricade.id == config.Data.FOBBaseID ||
-            b.barricade.id == config.Data.AmmoCrateID ||
-            b.barricade.id == config.Data.AmmoCrateBaseID ||
-            b.barricade.id == config.Data.RepairStationID ||
-            b.barricade.id == config.Data.RepairStationBaseID)) || (
-            config.Data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
-            config.Data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
-            config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id))
-            ).ToList();
-
-            foreach (BarricadeData data in FOBComponents)
+            IEnumerator<BarricadeDrop> FOBComponents = UCBarricadeManager.GetBarricadesWhere(d =>
             {
-                BarricadeDrop drop = barricadeDrops.Find(d => d.instanceID == data.instanceID);
-                if (drop != null)
+                BarricadeData b = d.GetServersideData();
+                ulong team = b.group.GetTeam();
+                return (team == 1 || team == 2) && (
+                    b.barricade.id == config.Data.FOBID ||
+                    b.barricade.id == config.Data.FOBBaseID ||
+                    b.barricade.id == config.Data.AmmoCrateID ||
+                    b.barricade.id == config.Data.AmmoCrateBaseID ||
+                    b.barricade.id == config.Data.RepairStationID ||
+                    b.barricade.id == config.Data.RepairStationBaseID ||
+                    config.Data.Emplacements.Exists(e => e.baseID == b.barricade.id) ||
+                    config.Data.Fortifications.Exists(f => f.base_id == b.barricade.id) ||
+                    config.Data.Fortifications.Exists(f => f.barricade_id == b.barricade.id));
+            }).GetEnumerator();
+            while (FOBComponents.MoveNext())
+            {
+                if (FOBComponents.Current != null && Regions.tryGetCoordinate(FOBComponents.Current.model.position, out byte x, out byte y))
                 {
-                    if (BarricadeManager.tryGetInfo(drop.model, out byte _x, out byte _y, out ushort _plant, out ushort _index, out BarricadeRegion _barricadeRegion))
-                    {
-                        BarricadeManager.destroyBarricade(_barricadeRegion, _x, _y, _plant, _index);
-                    }
+                    BarricadeManager.destroyBarricade(FOBComponents.Current, x, y, ushort.MaxValue);
                 }
             }
-
             UpdateUIAll();
         }
 
         public static bool FindFOBByName(string name, ulong team, out FOB fob)
         {
-            if (TeamManager.IsTeam1(team))
+            if (team == 1)
             {
                 fob = Team1FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
                 return fob != null;
             }
-            else if (TeamManager.IsTeam2(team))
+            else if (team == 2)
             {
                 fob = Team2FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
                 return fob != null;
@@ -218,43 +210,35 @@ namespace Uncreated.Warfare.FOBs
 
         public static void UpdateUI(UCPlayer player)
         {
-            List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
-
-            List<FOB> FOBList = null;
-
-            if (player.IsTeam1())
+            List<FOB> FOBList;
+            ulong team = player.GetTeam();
+            if (team == 1)
             {
                 FOBList = Team1FOBs;
             }
-            else if (player.IsTeam2())
+            else if (team == 2)
             {
                 FOBList = Team2FOBs;
             }
-            else
-                return;
-
+            else return;
             ushort UINumber = 0;
-
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < config.Data.FobLimit; i++)
             {
-                EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
-            }
+                if (i >= FOBList.Count)
+                {
+                    EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
+                } else
+                {
+                    if (UINumber >= 10)
+                        break;
 
-            for (ushort i = 0; i < FOBList.Count; i++)
-            {
-                if (UINumber >= 10)
-                    break;
-                
-                if (FOBList[i] == null || FOBList[i].Structure.barricade.isDead)
-                    continue;
+                    if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
+                        continue;
 
-                Node nearerstLocation = locations.Aggregate((n1, n2) => 
-                    (n1.point - FOBList[i].Structure.point).sqrMagnitude <= (n2.point - FOBList[i].Structure.point).sqrMagnitude ? n1 : n2);
-                
-                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)), 
-                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name,
-                    nearerstLocation is LocationNode node ? ' ' + node.name : string.Empty));
-                UINumber++;
+                    EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)),
+                        player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name, FOBList[i].ClosestLocation));
+                    UINumber++;
+                }
             }
         }
         public static void UpdateUIAll()
@@ -279,12 +263,20 @@ namespace Uncreated.Warfare.FOBs
         public int Number;
         public BarricadeDrop Structure;
         public DateTime DateCreated;
+        public string ClosestLocation;
         public FOB(string Name, int number, BarricadeDrop Structure)
         {
             this.Name = Name;
             Number = number;
             this.Structure = Structure;
             DateCreated = new DateTime(DateTime.Now.Ticks);
+            ClosestLocation = 
+                LevelNodes.nodes
+                .Where(n => n.type == ENodeType.LOCATION)
+                .Cast<LocationNode>()
+                .Aggregate((n1, n2) =>
+                    (n1.point - Structure.model.position).sqrMagnitude <= (n2.point - Structure.model.position).sqrMagnitude ? n1 : n2)
+                .name;
         }
     }
 

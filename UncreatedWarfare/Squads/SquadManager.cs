@@ -261,10 +261,10 @@ namespace Uncreated.Warfare.Squads
 
                 UpdateUIMemberCount(squad.Team);
 
-                if (RallyManager.HasRally(squad, out var rally1))
+                if (RallyManager.HasRally(squad, out RallyPoint rally1))
                 {
-                    if (BarricadeManager.tryGetInfo(rally1.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                        BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                    if (rally1.drop != null && Regions.tryGetCoordinate(rally1.drop.model.position, out byte x, out byte y))
+                        BarricadeManager.destroyBarricade(rally1.drop, x, y, ushort.MaxValue);
 
                     RallyManager.TryDeleteRallyPoint(rally1.structure.instanceID);
                 }
@@ -291,7 +291,7 @@ namespace Uncreated.Warfare.Squads
             ClearUIsquad(player.Player);
             UpdateUIMemberCount(squad.Team);
 
-            if (RallyManager.HasRally(squad, out var rally2))
+            if (RallyManager.HasRally(squad, out RallyPoint rally2))
                 rally2.ClearUIForPlayer(player);
 
             PlayerManager.Save();
@@ -309,10 +309,10 @@ namespace Uncreated.Warfare.Squads
             }
             UpdateUIMemberCount(squad.Team);
 
-            if (RallyManager.HasRally(squad, out var rally))
+            if (RallyManager.HasRally(squad, out RallyPoint rally))
             {
-                if (BarricadeManager.tryGetInfo(rally.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                    BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                if (rally.drop != null && Regions.tryGetCoordinate(rally.drop.model.position, out byte x, out byte y))
+                    BarricadeManager.destroyBarricade(rally.drop, x, y, ushort.MaxValue);
 
                 RallyManager.TryDeleteRallyPoint(rally.structure.instanceID);
             }
@@ -349,7 +349,7 @@ namespace Uncreated.Warfare.Squads
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
 
-            if (RallyManager.HasRally(squad, out var rally))
+            if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ClearUIForPlayer(player);
 
             PlayerManager.Save();

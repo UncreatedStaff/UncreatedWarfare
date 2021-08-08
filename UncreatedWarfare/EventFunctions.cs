@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Enumerations;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -53,9 +52,9 @@ namespace Uncreated.Warfare
             await XPManager.OnGroupChanged(player, oldGroup, newGroup);
             await OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
         }
-        internal static void OnStructureDestroyed(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID)
+        internal static void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
         {
-            Data.VehicleSpawner.OnStructureDestroyed(region, data, drop, instanceID);
+            Data.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
         internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
@@ -101,7 +100,7 @@ namespace Uncreated.Warfare
                 itemstemp.Remove(item);
             }
         }
-        internal static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
+        internal static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (Data.OwnerComponents != null)
             {
@@ -112,11 +111,11 @@ namespace Uncreated.Warfare
                     Data.OwnerComponents.RemoveAt(c);
                 }
             }
-            FOBManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
-            RallyManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
-            RepairManager.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
-            Data.VehicleSpawner.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
-            Data.VehicleSigns.OnBarricadeDestroyed(region, data, drop, instanceID, plant, index);
+            FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            RepairManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            Data.VehicleSpawner.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            Data.VehicleSigns.OnBarricadeDestroyed(data, drop, instanceID, plant);
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
         {
@@ -611,28 +610,36 @@ namespace Uncreated.Warfare
                 F.Broadcast("player_disconnected", names.CharacterName);
                 if (UCWarfare.Config.RemoveLandminesOnDisconnect)
                 {
-                    IEnumerator<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
-                   && x.barricade?.asset?.type == EItemType.TRAP).GetEnumerator();
-                    while (ownedTraps.MoveNext())
+                    try
                     {
-                        BarricadeOwnerDataComponent comp = ownedTraps.Current;
-                        if (comp == null) continue;
-                        if (BarricadeManager.tryGetInfo(comp.barricadeTransform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
+                        IEnumerator<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
+                            && x.barricade?.asset?.type == EItemType.TRAP).GetEnumerator();
+                        while (ownedTraps.MoveNext())
                         {
-                            BarricadeManager.destroyBarricade(region, x, y, plant, index);
-                            F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
+                            BarricadeOwnerDataComponent comp = ownedTraps.Current;
+                            if (comp == null) continue;
+                            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(comp.barricadeTransform);
+                            if (drop != null && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+                            {
+                                BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                                F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
+                            }
+                            Data.OwnerComponents.Remove(comp);
+                            UnityEngine.Object.Destroy(comp);
                         }
-                        Data.OwnerComponents.Remove(comp);
-                        UnityEngine.Object.Destroy(comp);
+                        ownedTraps.Dispose();
                     }
-                    ownedTraps.Dispose();
+                    catch (Exception ex)
+                    {
+                        F.LogError($"Error removing disconnecting player {names.PlayerName}'s landmines:");
+                        F.LogError(ex);
+                    }
                 }
                 if (gotptcomp)
                 {
                     UnityEngine.Object.Destroy(c);
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
                 }
-                //Data.ReviveManager.OnPlayerDisconnected(player); (now called from Provider event)
             }
             catch (Exception ex)
             {
@@ -651,7 +658,7 @@ namespace Uncreated.Warfare
             try
             {
                 if (RequestSigns.SignExists(kit, out RequestSign sign))
-                    sign.InvokeUpdate().GetAwaiter().GetResult();
+                    Task.Run( async() => await sign.InvokeUpdate() );
             }
             catch (Exception ex)
             {
@@ -665,49 +672,75 @@ namespace Uncreated.Warfare
         {
             SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
             if (player == default(SteamPending)) return;
-            F.Log(player.playerID.playerName);
-            if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
-                Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
-            else
-                Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
-            ulong team = 0;
-            if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out var save))
+            try
             {
-                team = save.Team;
-            }
-            string globalPrefix = "";
-            string teamPrefix = "";
+                if (player.transportConnection.TryGetIPv4Address(out uint address))
+                {
+                    int duration = Data.DatabaseManager.IPBanCheck(player.playerID.steamID.m_SteamID, address).GetAwaiter().GetResult();
+                    if (duration != 0)
+                    {
+                        isValid = false;
+                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + F.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
+                        return;
+                    }
+                } else
+                {
+                    isValid = false;
+                    explanation = "Uncreated Network was unable to check your ban status, try again later or contact a Director if this keeps happening.";
+                    return;
+                }
+                if (UCWarfare.Config.Debug)
+                    F.Log(player.playerID.playerName, ConsoleColor.DarkGray);
+                if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
+                    Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
+                else
+                    Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
+                ulong team = 0;
+                if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
+                {
+                    team = save.Team;
+                }
+                string globalPrefix = "";
+                string teamPrefix = "";
 
-            // add team tags to global prefix
-            if (TeamManager.IsTeam1(team)) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
-            else if (TeamManager.IsTeam2(team)) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
+                // add team tags to global prefix
+                if (team == 1) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
+                else if (team == 2) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
 
-            int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
-            //int stars = 0;
-                                                                        // was not being used so i commented it
-            Rank rank = null;
-            /*
-            if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
-            {
-                rank = OfficerManager.GetOfficerRank(officer.officerLevel);
-                int officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
-                stars = OfficerManager.GetStars(officerPoints);
-            }
-            else
-            {*/
+                int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
+                // int stars = 0;
+                // was not being used so i commented it
+                Rank rank = null;
+                /*
+                if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
+                {
+                    rank = OfficerManager.GetOfficerRank(officer.officerLevel);
+                    int officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
+                    stars = OfficerManager.GetStars(officerPoints);
+                }
+                else
+                {*/
                 rank = XPManager.GetRank(xp, out _, out _);
-            //}
+                //}
 
-            if (TeamManager.IsTeam1(team) || TeamManager.IsTeam2(team))
+                if (team == 1 || team == 2)
+                {
+                    globalPrefix += rank.abbreviation;
+                    teamPrefix += rank.abbreviation;
+
+                    globalPrefix += " ";
+                    teamPrefix += " ";
+
+                    player.playerID.characterName = globalPrefix + (player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName);
+                    player.playerID.nickName = teamPrefix + (player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName);
+                }
+            }
+            catch (Exception ex)
             {
-                globalPrefix += rank.abbreviation;
-                teamPrefix += rank.abbreviation;
-
-                globalPrefix += " ";
-                teamPrefix += " ";
-
-                player.playerID.characterName = globalPrefix + (player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName);
-                player.playerID.nickName = teamPrefix + (player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName);
+                F.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
+                F.LogError(ex);
+                isValid = false;
+                explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
             }
         }
     }

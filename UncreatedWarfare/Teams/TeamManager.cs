@@ -210,6 +210,13 @@ namespace Uncreated.Warfare.Teams
             else if (team == 2) return Team2Players;
             else return Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == team).ToList();
         }
+        public static ulong GetGroupID(ulong team)
+        {
+            if (team == 1) return Team1ID;
+            else if (team == 2) return Team2ID;
+            else if (team == 3) return AdminID;
+            else return 0;
+        }
         public static ulong GetTeam(UnturnedPlayer player) => F.GetTeam(player);
         public static ulong GetTeam(SteamPlayer player) => F.GetTeam(player);
         public static ulong GetTeam(Player player) => F.GetTeam(player);

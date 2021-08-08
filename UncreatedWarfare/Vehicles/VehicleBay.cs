@@ -97,10 +97,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
         {
-            VehicleBarricadeRegion vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out int index);
-            if (index > -1)
+            VehicleBarricadeRegion vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out ushort plant);
+            if (plant < ushort.MaxValue)
             {
-                ushort plant = unchecked((ushort)index);
                 for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
                 {
                     if (i >= 0)
@@ -108,7 +107,7 @@ namespace Uncreated.Warfare.Vehicles
                         if (vehicleRegion.drops[i].interactable is InteractableStorage store)
                             store.despawnWhenDestroyed = true;
 
-                        BarricadeManager.destroyBarricade(vehicleRegion, 0, 0, plant, unchecked((ushort)i));
+                        BarricadeManager.destroyBarricade(vehicleRegion.drops[i], 0, 0, plant);
                     }
                 }
             }
