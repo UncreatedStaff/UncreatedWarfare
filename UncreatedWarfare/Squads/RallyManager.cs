@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.Squads
                 }
             }
         }
-        public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
+        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
@@ -122,11 +122,12 @@ namespace Uncreated.Warfare.Squads
                     existing.ClearUIForSquad();
                     existing.IsActive = false;
                     rallypoints.RemoveAll(r => r.structure.instanceID == existing.structure.instanceID);
-                    if (BarricadeManager.tryGetInfo(existing.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                        BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                    BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(existing.drop.model.transform);
+                    if (drop != null && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+                        BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                 }
 
-                var rallypoint = new RallyPoint(data, UCBarricadeManager.GetDropFromBarricadeData(data), squad);
+                RallyPoint rallypoint = new RallyPoint(data, UCBarricadeManager.GetDropFromBarricadeData(data), squad);
                 rallypoint.drop.model.transform.gameObject.AddComponent<RallyComponent>().Initialize(rallypoint);
 
                 rallypoints.Add(rallypoint);
@@ -136,12 +137,10 @@ namespace Uncreated.Warfare.Squads
 
                 rallypoint.ShowUIForSquad();
 
-                foreach (var rally in rallypoints)
+                if (UCWarfare.Config.Debug)
                 {
-                    F.Log("Rally point: " + rally.squad.Name);
-                    F.Log("Rally point: " + rally.IsActive);
-                    F.Log("Rally point: " + rally.structure.instanceID);
-                    F.Log("Rally point: " + rally.drop.instanceID);
+                    foreach (RallyPoint rally in rallypoints)
+                        F.Log($"Rally point: Squad: {rally.squad.Name}, Active: {rally.IsActive}, Structure: {rally.structure.instanceID}, Drop: {rally.drop.instanceID}." + rally.squad.Name, ConsoleColor.DarkGray);
                 }
             }
         }
@@ -294,8 +293,8 @@ namespace Uncreated.Warfare.Squads
 
                         if (enemies.Count > 0)
                         {
-                            if (BarricadeManager.tryGetInfo(parent.drop.model.transform, out byte x, out byte y, out ushort plant, out ushort index, out BarricadeRegion region))
-                                BarricadeManager.destroyBarricade(region, x, y, plant, index);
+                            if (parent.drop != null && Regions.tryGetCoordinate(parent.drop.model.position, out byte x, out byte y))
+                                BarricadeManager.destroyBarricade(parent.drop, x, y, ushort.MaxValue);
 
                             RallyManager.TryDeleteRallyPoint(parent.structure.instanceID);
 

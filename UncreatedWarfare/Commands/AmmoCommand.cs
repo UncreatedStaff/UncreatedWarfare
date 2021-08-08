@@ -26,13 +26,13 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
-            InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
+            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop drop);
+            //InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
-            if (barricade != null && barricade.barricade != null && FOBManager.config.Data.AmmoCrateID == barricade.barricade.id)
+            if (barricade != null && drop != null && barricade.barricade != null && FOBManager.config.Data.AmmoCrateID == barricade.barricade.id)
             {
-                if (storage is null)
+                if (!(drop.interactable is InteractableStorage storage))
                 {
                     player.SendChat("ammo_crate_has_no_storage"); 
                     return;
@@ -42,7 +42,8 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_not_in_team"); 
                     return;
                 }
-                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
+                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) || 
+                    (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
                 {
                     player.SendChat("ammo_no_stock"); 
                     return;
@@ -103,13 +104,7 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
-
-                IEnumerable<BarricadeDrop> NearbyAmmoStations = barricadeDrops.Where(
-                    b => (b.GetServersideData().point - vehicle.transform.position).sqrMagnitude <= 10000 &&
-                    b.GetServersideData().barricade.id == FOBManager.config.Data.AmmoCrateID)
-                    .OrderBy(b => (b.model.position - vehicle.transform.position).sqrMagnitude)
-                    .ToList();
+                IEnumerable<BarricadeDrop> NearbyAmmoStations = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.AmmoCrateID, 100, vehicle.transform.position, player.GetTeam(), true);
 
                 if (NearbyAmmoStations.Count() == 0)
                 {
@@ -119,9 +114,7 @@ namespace Uncreated.Warfare.Commands
 
                 BarricadeDrop ammoStation = NearbyAmmoStations.FirstOrDefault();
 
-                storage = ammoStation.interactable as InteractableStorage;
-
-                if (storage == null)
+                if (!(ammoStation.interactable is InteractableStorage storage))
                 {
                     player.SendChat("ammo_crate_has_no_storage"); 
                     return;

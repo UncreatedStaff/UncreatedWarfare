@@ -29,14 +29,11 @@ namespace Uncreated.Warfare.Commands
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
 
-            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
-            InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
-
             if (command.Length > 0)
             {
-                if(command[0].ToLower() == "save")
+                if (command[0].ToLower() == "save")
                 {
-                    if(player.HasPermission("uc.request.save"))
+                    if (player.HasPermission("uc.request.save"))
                     {
                         InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
                         if (sign == default) player.Message("request_not_looking");
@@ -48,11 +45,13 @@ namespace Uncreated.Warfare.Commands
                                 if (KitManager.KitExists(signadded.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
                                 player.Message("request_saved_sign", signadded.kit_name, teamcolor);
                             }
+                            else player.Message("request_already_saved"); // sign already registered
                         }
-                    } else
+                    }
+                    else
                         player.Message("no_permissions");
                     return;
-                } 
+                }
                 else if (command[0].ToLower() == "remove")
                 {
                     if (player.HasPermission("uc.request.remove"))
@@ -61,14 +60,14 @@ namespace Uncreated.Warfare.Commands
                         if (sign == default) player.Message("request_not_looking");
                         else
                         {
-                            if(RequestSigns.SignExists(sign, out RequestSign requestsign))
+                            if (RequestSigns.SignExists(sign, out RequestSign requestsign))
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
                                 if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
-                                    player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
-                                await RequestSigns.RemoveRequestSign(requestsign);
+                                player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
+                                RequestSigns.RemoveRequestSign(requestsign);
                             }
-                            else player.Message("request_not_looking");
+                            else player.Message("request_already_removed");
                         }
                     }
                     else
@@ -76,6 +75,9 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
             }
+
+            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
             if (signlook != null)
             {
                 if (!RequestSigns.SignExists(signlook, out RequestSign requestsign))

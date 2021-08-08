@@ -111,7 +111,8 @@ namespace Uncreated.Players
                 {
                     File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
                     F.LogError($"Error in UncreatedPlayer.TryLoad with id {id}, saved a backup then rewrote the file:");
-                    F.LogError(ex);
+                    if (UCWarfare.Config.Debug)
+                        F.LogError(ex);
                 }
             }
             player = default;
@@ -133,7 +134,8 @@ namespace Uncreated.Players
                 {
                     File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
                     F.LogError($"Error in UncreatedPlayer.Load with id {id}, saved a backup then rewrote the file:");
-                    F.LogError(ex);
+                    if (UCWarfare.Config.Debug)
+                        F.LogError(ex);
                 }
             }
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
@@ -163,7 +165,8 @@ namespace Uncreated.Players
                 {
                     File.WriteAllText(path.Substring(0, path.Length - 5) + "_corrupt.json", json); // resave the file somewhere else then overrwrite it
                     F.LogError($"Error in UncreatedPlayer.Load with id {id}, saved a backup then rewrote the file:");
-                    F.LogError(ex);
+                    if (UCWarfare.Config.Debug)
+                        F.LogError(ex);
                     if (!create) return null;
                 }
             }
@@ -195,7 +198,8 @@ namespace Uncreated.Players
                 catch (Exception ex)
                 {
                     F.LogError("Error saving player " + usernames.player_name);
-                    F.LogError(ex);
+                    if (UCWarfare.Config.Debug)
+                        F.LogError(ex);
                 }
                 isSaving = false;
             }).ConfigureAwait(false);

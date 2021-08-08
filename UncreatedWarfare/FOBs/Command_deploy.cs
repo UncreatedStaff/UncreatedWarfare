@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     if (FOBManager.FindFOBByName(command[0], player.GetTeam(), out var FOB))
                     {
-                        c.TeleportDelayed(FOB.Structure.GetServersideData().point, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
+                        c.TeleportDelayed(FOB.Structure.model.position, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
                     }
                     else
                     {

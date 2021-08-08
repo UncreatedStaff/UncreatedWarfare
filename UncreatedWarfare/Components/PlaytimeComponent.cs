@@ -208,7 +208,7 @@ namespace Uncreated.Warfare.Components
 
                 if (shouldMessagePlayer)
                     player.Message("deploy_s", locationName);
-                CooldownManager.StartCooldown(Warfare.UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
+                CooldownManager.StartCooldown(UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
 
                 if (fob != null)
                 {
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare.Components
                             }
                         }
                         else
-                            await Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group, XP.XPManager.config.Data.FOBDeployedXP);
+                            await Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP);
                     });
                 }
                 yield break;

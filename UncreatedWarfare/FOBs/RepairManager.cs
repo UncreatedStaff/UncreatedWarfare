@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.FOBs
                     RegisterNewRepairStation(data, drop);
             }
         }
-        public static void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
+        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
@@ -95,11 +95,11 @@ namespace Uncreated.Warfare.FOBs
                 {
                     BarricadeRegion region = BarricadeManager.regions[x, y];
                     if (region == default) continue;
-                    for (int i = 0; i < region.barricades.Count; i++)
+                    for (int i = 0; i < region.drops.Count; i++)
 {
-                        if (region.barricades[i].barricade.id == FOBManager.config.Data.RepairStationID)
+                        if (region.drops[i].GetServersideData().barricade.id == FOBManager.config.Data.RepairStationID)
                         {
-                            barricades.Add(new RBarricade(region.barricades[i], region.drops[i]));
+                            barricades.Add(new RBarricade(region.drops[i].GetServersideData(), region.drops[i]));
                         }
                     }
                 }

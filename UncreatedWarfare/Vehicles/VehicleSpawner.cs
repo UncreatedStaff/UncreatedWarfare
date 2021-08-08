@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Vehicles
                 spawn.StartVehicleRespawnTimer();
             }
         }
-        internal void OnBarricadeDestroyed(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant, ushort index)
+        internal void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
             {
@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-        internal void OnStructureDestroyed(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID)
+        internal void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
         {
             if (data.structure.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
             {

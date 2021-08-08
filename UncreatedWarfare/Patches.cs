@@ -20,8 +20,8 @@ namespace Uncreated.Warfare
     public static class Patches
     {
         public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);
-        public delegate void BarricadeDestroyedEventArgs(BarricadeRegion region, BarricadeData data, BarricadeDrop drop, uint instanceID, ushort index, ushort plant);
-        public delegate void StructureDestroyedEventArgs(StructureRegion region, StructureData data, StructureDrop drop, uint instanceID);
+        public delegate void BarricadeDestroyedEventArgs(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
+        public delegate void StructureDestroyedEventArgs(StructureData data, StructureDrop drop, uint instanceID);
         public delegate void BarricadeHealthEventArgs(BarricadeData data);
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
@@ -410,12 +410,11 @@ namespace Uncreated.Warfare
             /// </summary>
             [HarmonyPatch(typeof(BarricadeManager), "SendRegion")]
             [HarmonyPrefix]
-            static bool SendRegion(SteamPlayer client, byte x, byte y, ushort plant)
+            static bool SendRegion(SteamPlayer client, byte x, byte y, ushort plant, float sortOrder)
             {
                 if (!UCWarfare.Config.Patches.SendRegion) return true;
                 if (!BarricadeManager.tryGetRegion(x, y, plant, out BarricadeRegion region))
                     return false;
-                //if (!region.barricades.Exists(b => b.IsSign(region))) return true; // run base function if there are no signs.
                 if (region.drops.Count > 0)
                 {
                     byte packet = 0;
@@ -438,11 +437,12 @@ namespace Uncreated.Warfare
                             writer.WriteUInt16(plant);
                             writer.WriteUInt8(packet);
                             writer.WriteUInt16((ushort)(count - index));
+                            writer.WriteFloat(sortOrder);
                             for (; index < count; ++index)
                             {
                                 BarricadeDrop drop = region.drops[index];
                                 BarricadeData serversideData = drop.GetServersideData();
-                                InteractableStorage interactable = region.drops[index].interactable as InteractableStorage;
+                                InteractableStorage interactable = drop.interactable as InteractableStorage;
                                 writer.WriteUInt16(serversideData.barricade.id);
                                 if (interactable != null)
                                 {
@@ -473,46 +473,44 @@ namespace Uncreated.Warfare
                                     writer.WriteUInt8((byte)bytes1.Length);
                                     writer.WriteBytes(bytes1);
                                 }
+                                else if (drop.interactable is InteractableSign sign)
+                                {
+                                    string newtext = sign.text;
+                                    if (newtext.StartsWith("sign_"))
+                                    {
+                                        newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
+                                        // size is not allowed in signs.
+                                        newtext.Replace("<size=", "");
+                                        newtext.Replace("</size>", "");
+                                    }
+                                    byte[] state = region.drops[index].GetServersideData().barricade.state;
+                                    byte[] textbytes = F.ClampToByteCount(newtext, byte.MaxValue - 18, out bool requiredClamping);
+                                    if (requiredClamping)
+                                    {
+                                        F.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
+                                    }
+                                    if (textbytes.Length > byte.MaxValue - 18)
+                                    {
+                                        F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
+                                        textbytes = Encoding.UTF8.GetBytes(sign.text);
+                                    }
+                                    byte[] numArray1 = new byte[17 + textbytes.Length];
+                                    numArray1[16] = (byte)textbytes.Length;
+                                    if (textbytes.Length != 0)
+                                        Buffer.BlockCopy(textbytes, 0, numArray1, 17, textbytes.Length);
+                                    writer.WriteUInt8((byte)numArray1.Length);
+                                    writer.WriteBytes(numArray1);
+                                }
                                 else
                                 {
-                                    if (region.drops[index].interactable != null && region.drops[index].interactable is InteractableSign sign)
-                                    {
-                                        string newtext = sign.text;
-                                        if (newtext.StartsWith("sign_"))
-                                        {
-                                            newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
-                                            // size is not allowed in signs.
-                                            newtext.Replace("<size=", "");
-                                            newtext.Replace("</size>", "");
-                                        }
-                                        byte[] state = region.drops[index].GetServersideData().barricade.state;
-                                        byte[] bytes = Encoding.UTF8.GetBytes(newtext);
-
-                                        if (bytes.Length > byte.MaxValue)
-                                        {
-                                            F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue} UTF8 bytes (was {bytes.Length} bytes)!");
-                                            bytes = Encoding.UTF8.GetBytes(sign.text);
-                                        }
-                                        byte[] numArray1 = new byte[17 + bytes.Length];
-                                        byte[] numArray2 = numArray1;
-                                        Buffer.BlockCopy(state, 0, numArray2, 0, 16);
-                                        numArray1[16] = (byte)bytes.Length;
-                                        if (bytes.Length != 0)
-                                            Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
-                                        writer.WriteUInt8((byte)numArray1.Length);
-                                        writer.WriteBytes(numArray1);
-                                    }
-                                    else
-                                    {
-                                        writer.WriteUInt8((byte)serversideData.barricade.state.Length);
-                                        writer.WriteBytes(serversideData.barricade.state);
-                                    }
+                                    writer.WriteUInt8((byte)serversideData.barricade.state.Length);
+                                    writer.WriteBytes(serversideData.barricade.state);
                                 }
                                 writer.WriteClampedVector3(serversideData.point, fracBitCount: 11);
                                 writer.WriteUInt8(serversideData.angle_x);
                                 writer.WriteUInt8(serversideData.angle_y);
                                 writer.WriteUInt8(serversideData.angle_z);
-                                writer.WriteUInt8((byte)Mathf.RoundToInt((float)(serversideData.barricade.health / serversideData.barricade.asset.health * 100.0)));
+                                writer.WriteUInt8((byte)Mathf.RoundToInt(serversideData.barricade.health / (float)serversideData.barricade.asset.health * 100f));
                                 writer.WriteUInt64(serversideData.owner);
                                 writer.WriteUInt64(serversideData.group);
                                 writer.WriteNetId(drop.GetNetId());
@@ -520,9 +518,17 @@ namespace Uncreated.Warfare
                         });
                         packet++;
                     }
-                    return false;
                 }
-                else return true; // no barricades
+                else
+                    Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
+                    {
+                        writer.WriteUInt8(x);
+                        writer.WriteUInt8(y);
+                        writer.WriteUInt16(plant);
+                        writer.WriteUInt8(0);
+                        writer.WriteUInt16(0);
+                    });
+                return false;
             }
             public static event OnLandmineExplodeDelegate OnLandmineExplode;
             public delegate void OnLandmineExplodeDelegate(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner);
@@ -840,30 +846,24 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="BarricadeDestroyedHandler"/>.
             /// </summary>
-            [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade", typeof(BarricadeRegion), typeof(byte), typeof(byte), typeof(ushort), typeof(ushort))]
+            [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade", typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort))]
             [HarmonyPrefix]
-            static void DestroyBarricadePostFix(ref BarricadeRegion region, byte x, byte y, ushort plant, ref ushort index)
+            static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
             {
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
-                if (region.drops[index] != null)
-                {
-                    BarricadeDestroyedHandler?.Invoke(region, region.drops[index].GetServersideData(), region.drops[index], region.drops[index].GetServersideData().instanceID, index, plant);
-                }
+                BarricadeDestroyedHandler?.Invoke(barricade.GetServersideData(), barricade, barricade.GetServersideData().instanceID, plant);
             }
 
             // SDG.Unturned.StructureManager
             /// <summary>
             /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
             /// </summary>
-            [HarmonyPatch(typeof(StructureManager), "destroyStructure", typeof(StructureRegion), typeof(byte), typeof(byte), typeof(ushort), typeof(Vector3))]
+            [HarmonyPatch(typeof(StructureManager), "destroyStructure", typeof(StructureDrop), typeof(byte), typeof(byte), typeof(Vector3))]
             [HarmonyPrefix]
-            static void DestroyStructurePostFix(StructureRegion region, byte x, byte y, ushort index, Vector3 ragdoll)
+            static void DestroyStructurePostFix(StructureDrop structure, byte x, byte y, Vector3 ragdoll)
             {
                 if (!UCWarfare.Config.Patches.destroyStructure) return;
-                if (region.drops[index] != null)
-                {
-                    StructureDestroyedHandler?.Invoke(region, region.drops[index].GetServersideData(), region.drops[index], region.drops[index].GetServersideData().instanceID);
-                }
+                StructureDestroyedHandler?.Invoke(structure.GetServersideData(), structure, structure.GetServersideData().instanceID);
             }
 
             //// SDG.Unturned.BarricadeManager
