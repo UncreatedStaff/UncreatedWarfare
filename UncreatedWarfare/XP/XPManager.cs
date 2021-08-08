@@ -93,10 +93,12 @@ namespace Uncreated.Warfare.XP
             if (rank.level > oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
+                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
             else if (rank.level < oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
+                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demomoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
