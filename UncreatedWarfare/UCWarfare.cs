@@ -52,7 +52,11 @@ namespace Uncreated.Warfare
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
 
-            F.SetPrivatePlayerCount(Config.MaxPlayerCount);
+            //F.SetPrivatePlayerCount(Config.MaxPlayerCount);
+            if (Provider.clients.Count >= 24)
+            {
+                Provider.maxPlayers = Config.MaxPlayerCount;
+            }
             F.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
 
             F.Log("Patching methods...", ConsoleColor.Magenta);

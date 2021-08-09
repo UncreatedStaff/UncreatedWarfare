@@ -116,6 +116,20 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         player.Player.SendChat("no_permissions");
+                } 
+                else if (cmd == "slots")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.slots") || player.HasPermission("uc.reload.all"))
+                    {
+                        if (Provider.clients.Count >= 24)
+                        {
+                            Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
+                        }
+                        if (isConsole) F.Log(F.Translate("reload_reloaded_slots", 0, out _));
+                        else player.SendChat("reload_reloaded_slots");
+                    }
+                    else
+                        player.Player.SendChat("no_permissions");
                 }
             }
         }
@@ -130,6 +144,7 @@ namespace Uncreated.Warfare.Commands
                 FOBManager.config.Reload();
 
                 UCWarfare.Instance.Configuration.Load();
+                if (Data.DatabaseManager != null) Data.DatabaseManager.DebugLogging |= UCWarfare.Config.Debug;
             }
             catch (Exception ex)
             {

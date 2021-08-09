@@ -230,6 +230,10 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
+            if (Provider.clients.Count >= 24)
+            {
+                Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
+            }
             try
             {
                 PlayerManager.InvokePlayerConnected(player); // must always be first
@@ -268,27 +272,35 @@ namespace Uncreated.Warfare
                 PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 Task.Run(async () =>
                 {
-                    await pt.StartTracking(player.Player);
-                    Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                    await OfficerManager.OnPlayerJoined(ucplayer);
-                    await XPManager.OnPlayerJoined(ucplayer);
-                    await Client.SendPlayerJoined(names);
-                    await Data.DatabaseManager.CheckUpdateUsernames(names);
-                    bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                    await Data.DatabaseManager.RegisterLogin(player.Player);
-                    await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
-                    ulong team = player.GetTeam();
-                    ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
-                    if ((ucplayer.KitName == null || ucplayer.KitName == string.Empty) && team > 0 && team < 3)
-                    {
-                        if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
-                            await KitManager.GiveKit(ucplayer, unarmed);
-                        else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) await KitManager.GiveKit(ucplayer, unarmed);
-                        else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                    try
+                    { 
+                        await pt.StartTracking(player.Player);
+                        Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
+                        await OfficerManager.OnPlayerJoined(ucplayer);
+                        await XPManager.OnPlayerJoined(ucplayer);
+                        await Client.SendPlayerJoined(names);
+                        await Data.DatabaseManager.CheckUpdateUsernames(names);
+                        bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                        await Data.DatabaseManager.RegisterLogin(player.Player);
+                        await Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
+                        ulong team = player.GetTeam();
+                        ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                            UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
+                        if ((ucplayer.KitName == null || ucplayer.KitName == string.Empty) && team > 0 && team < 3)
+                        {
+                            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+                                await KitManager.GiveKit(ucplayer, unarmed);
+                            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) await KitManager.GiveKit(ucplayer, unarmed);
+                            else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                        }
+                        pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStats.WarfareName);
                     }
-                    pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStats.WarfareName);
-                });
+                    catch (Exception ex)
+                    {
+                        F.LogError("Error in async block of post player joined: ");
+                        F.LogError(ex);
+                    }
+                }).GetAwaiter().GetResult();
                 F.Broadcast("player_connected", names.CharacterName);
                 if (!UCWarfare.Config.AllowCosmetics)
                 {
@@ -307,14 +319,14 @@ namespace Uncreated.Warfare
                 Data.ReviveManager.OnPlayerConnected(player);
 
                 TicketManager.OnPlayerJoined(ucplayer);
-
             }
             catch (Exception ex)
             {
                 F.LogError("Error in the main OnPostPlayerConnected:");
                 F.LogError(ex);
             }
-            
+            F.Log("end of player connected");
+
         }
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, 
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
@@ -595,6 +607,10 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            if (Provider.clients.Count - 1 < 24)
+            {
+                Provider.maxPlayers = 24;
+            }
             Data.ReviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);

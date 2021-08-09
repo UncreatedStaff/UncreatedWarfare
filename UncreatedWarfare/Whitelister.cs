@@ -59,8 +59,16 @@ namespace Uncreated.Warfare
                 }
                 else if (itemCount >= allowedItems)
                 {
-                    shouldAllow = false;
-                    player.Message("whitelist_kit_maxamount");
+                    if (!IsWhitelisted(itemData.item.id, out WhitelistItem whitelistedItem))
+                    {
+                        shouldAllow = false;
+                        player.Message("whitelist_kit_maxamount");
+                    }
+                    else if (itemCount >= whitelistedItem.amount)
+                    {
+                        shouldAllow = false;
+                        player.Message("whitelist_maxamount");
+                    }
                 }
             }
             else

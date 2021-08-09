@@ -82,7 +82,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Postfix of <see cref="PlayerInventory.closeStorage()"/> to stop the coroutine that auto-closes storages.
             /// </summary>
-            [HarmonyPatch(typeof(PlayerInventory), "closeStorage")]
+            [HarmonyPatch(typeof(PlayerInventory), nameof(PlayerInventory.closeStorage))]
             [HarmonyPostfix]
             static void OnStopStoring(PlayerInventory __instance)
             {
@@ -155,20 +155,23 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.EnableQueueSkip) return;
                 if (Provider.pending.Count > 0)
                 {
-                    SteamPending pending = Provider.pending[Provider.pending.Count - 1];
-                    if (pending.hasSentVerifyPacket)
-                        return;
-                    RocketPlayer pl = new RocketPlayer(pending.playerID.steamID.m_SteamID.ToString(Data.Locale), pending.playerID.playerName, false);
-                    if (pl.IsIntern() || pl.IsAdmin() ||   // checks for admin or intern status, then for 'HasQueueSkip' in the player's player save.
-                       (PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip))
-                        pending.sendVerifyPacket();
+                    for (int i = 0; i < Provider.pending.Count; i++)
+                    {
+                        SteamPending pending = Provider.pending[i];
+                        if (pending.hasSentVerifyPacket)
+                            return;
+                        RocketPlayer pl = new RocketPlayer(pending.playerID.steamID.m_SteamID.ToString(Data.Locale), pending.playerID.playerName, false);
+                        if (pl.IsIntern() || pl.IsAdmin() ||   // checks for admin or intern status, then for 'HasQueueSkip' in the player's player save.
+                           (PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip))
+                            pending.sendVerifyPacket();
+                    }
                 }
             }
             // SDG.Unturned.ChatManager
             /// <summary>
             /// Postfix of <see cref="ChatManager.ReceiveChatRequest(in ServerInvocationContext, byte, string)"/> to reroute local chats to squad.
             /// </summary>
-            [HarmonyPatch(typeof(ChatManager), "ReceiveChatRequest")]
+            [HarmonyPatch(typeof(ChatManager), nameof(ChatManager.ReceiveChatRequest))]
             [HarmonyPrefix]
             static bool OnChatRequested(in ServerInvocationContext context, byte flags, string text)
             {
@@ -270,7 +273,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="PlayerAnimator.ReceiveGesture(EPlayerGesture)"/> to add an event.
             /// </summary>
-            [HarmonyPatch(typeof(PlayerAnimator), "ReceiveGestureRequest")]
+            [HarmonyPatch(typeof(PlayerAnimator), nameof(PlayerAnimator.ReceiveGestureRequest))]
             [HarmonyPrefix]
             static bool OnGestureReceived(EPlayerGesture newGesture, PlayerAnimator __instance)
             {
@@ -300,7 +303,7 @@ namespace Uncreated.Warfare
             ///<summary>
             /// Prefix of <see cref="PlayerInventory.ReceiveDragItem(byte, byte, byte, byte, byte, byte, byte)"/> to disallow players leaving their group.
             ///</summary>
-            [HarmonyPatch(typeof(PlayerInventory), "ReceiveDragItem")]
+            [HarmonyPatch(typeof(PlayerInventory), nameof(PlayerInventory.ReceiveDragItem))]
             [HarmonyPrefix]
             static bool CancelStoringNonWhitelistedItem(PlayerInventory __instance, byte page_0, byte x_0, byte y_0, byte page_1, byte x_1, byte y_1, byte rot_1)
             {
@@ -315,7 +318,7 @@ namespace Uncreated.Warfare
             ///<summary>
             /// Prefix of <see cref="GroupManager.requestGroupExit(Player)"/> to disallow players leaving their group.
             ///</summary>
-            [HarmonyPatch(typeof(GroupManager), "requestGroupExit")]
+            [HarmonyPatch(typeof(GroupManager), nameof(GroupManager.requestGroupExit))]
             [HarmonyPrefix]
             static bool CancelLeavingGroup(Player player)
             {
@@ -328,7 +331,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="PlayerClothing.ReceiveVisualToggleRequest(EVisualToggleType)"/> to use an event to cancel it.
             /// </summary>
-            [HarmonyPatch(typeof(PlayerClothing), "ReceiveVisualToggleRequest")]
+            [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ReceiveVisualToggleRequest))]
             [HarmonyPrefix]
             static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
             {
@@ -342,7 +345,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="PlayerClothing.ServerSetVisualToggleState(EVisualToggleType, bool)"/> to use an event to cancel it.
             /// </summary>
-            [HarmonyPatch(typeof(PlayerClothing), "ServerSetVisualToggleState")]
+            [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ServerSetVisualToggleState))]
             [HarmonyPrefix]
             static bool CancelCosmeticSetPrefix(EVisualToggleType type, ref bool isVisible, PlayerClothing __instance)
             {
@@ -356,7 +359,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="VehicleManager.ReceiveStealVehicleBattery(in ServerInvocationContext)"/> to disable the removal of batteries from vehicles.
             /// </summary>
-            [HarmonyPatch(typeof(VehicleManager), "ReceiveStealVehicleBattery")]
+            [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.ReceiveStealVehicleBattery))]
             [HarmonyPrefix]
             static bool BatteryStealingOverride(in ServerInvocationContext context)
             {
@@ -430,7 +433,7 @@ namespace Uncreated.Warfare
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;
                         }
-                        Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, async writer =>
+                        Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
                         {
                             writer.WriteUInt8(x);
                             writer.WriteUInt8(y);
@@ -478,17 +481,17 @@ namespace Uncreated.Warfare
                                     string newtext = sign.text;
                                     if (newtext.StartsWith("sign_"))
                                     {
-                                        newtext = await F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
+                                        newtext = F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false).GetAwaiter().GetResult();
                                         // size is not allowed in signs.
                                         newtext.Replace("<size=", "");
                                         newtext.Replace("</size>", "");
                                     }
                                     byte[] state = region.drops[index].GetServersideData().barricade.state;
-                                    byte[] textbytes = F.ClampToByteCount(newtext, byte.MaxValue - 18, out bool requiredClamping);
-                                    if (requiredClamping)
+                                    byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);
+                                    /*if (requiredClamping)
                                     {
                                         F.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
-                                    }
+                                    }*/
                                     if (textbytes.Length > byte.MaxValue - 18)
                                     {
                                         F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
@@ -724,7 +727,7 @@ namespace Uncreated.Warfare
                 }
             }
             // SDG.Unturned.VehicleManager
-            [HarmonyPatch(typeof(VehicleManager), "damage")]
+            [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.damage))]
             [HarmonyPrefix]
             static bool DamageVehicle(InteractableVehicle vehicle, float damage, float times, bool canRepair, CSteamID instigatorSteamID, EDamageOrigin damageOrigin)
             {
@@ -846,7 +849,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="BarricadeDestroyedHandler"/>.
             /// </summary>
-            [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade", typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort))]
+            [HarmonyPatch(typeof(BarricadeManager), nameof(BarricadeManager.destroyBarricade), typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort))]
             [HarmonyPrefix]
             static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
             {
@@ -858,7 +861,7 @@ namespace Uncreated.Warfare
             /// <summary>
             /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
             /// </summary>
-            [HarmonyPatch(typeof(StructureManager), "destroyStructure", typeof(StructureDrop), typeof(byte), typeof(byte), typeof(Vector3))]
+            [HarmonyPatch(typeof(StructureManager), nameof(StructureManager.destroyStructure), typeof(StructureDrop), typeof(byte), typeof(byte), typeof(Vector3))]
             [HarmonyPrefix]
             static void DestroyStructurePostFix(StructureDrop structure, byte x, byte y, Vector3 ragdoll)
             {
@@ -868,13 +871,13 @@ namespace Uncreated.Warfare
 
             // SDG.Unturned.PlayerLife
             /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to invoke prevent starving in main base.</summary>
-            [HarmonyPatch(typeof(PlayerLife), "askStarve")]
+            [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]
             [HarmonyPrefix]
             static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askStarve || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
 
             // SDG.Unturned.PlayerLife
             /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to invoke prevent dehydrating in main base.</summary>
-            [HarmonyPatch(typeof(PlayerLife), "askDehydrate")]
+            [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askDehydrate))]
             [HarmonyPrefix]
             static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askDehydrate || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
 

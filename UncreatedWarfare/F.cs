@@ -1462,6 +1462,7 @@ namespace Uncreated.Warfare
         }
         public static void SetPrivatePlayerCount(byte amount)
         {
+            return;
             if (Provider.maxPlayers == amount) return;
             try
             {
@@ -1676,10 +1677,12 @@ namespace Uncreated.Warfare
                     weapons = Translate("kit_weapons", player, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
                 string cost;
                 string playercount;
-                if (kit.IsPremium && kit.PremiumCost > 0)
+                if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
                 {
                     if (kit.AllowedUsers.Contains(player))
-                        cost = ObjectTranslate("kit_owned", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                        cost = ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                    else if (kit.PremiumCost == -1)
+                        cost = Translate("kit_price_exclusive", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
                     else
                         cost = ObjectTranslate("kit_price_dollars", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                 } else if (kit.RequiredLevel > 0)

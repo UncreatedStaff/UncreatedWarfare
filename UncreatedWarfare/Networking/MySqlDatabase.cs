@@ -163,14 +163,16 @@ namespace Uncreated.SQL
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(Query) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                while (CurrentReader != null && !CurrentReader.IsClosed)
+                int counter = 0;
+                while (CurrentReader != null && !CurrentReader.IsClosed && counter < 100)
                 {
-                    await Task.Delay(1);
+                    await Task.Delay(10);
+                    counter++;
                 }
                 if (!await InternalQuery(Q, ReadLoopAction, true))
                 {
                     await Task.Delay(10);
-                    int counter = 0;
+                    counter = 0;
                     while (counter < 10 && !await InternalQuery(Q, ReadLoopAction, counter != 9))
                     {
                         counter++;
@@ -217,14 +219,16 @@ namespace Uncreated.SQL
 
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(Scalar) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                while (CurrentReader != null && !CurrentReader.IsClosed)
+                int counter = 0;
+                while (CurrentReader != null && !CurrentReader.IsClosed && counter < 100)
                 {
-                    await Task.Delay(1);
+                    await Task.Delay(10);
+                    counter++;
                 }
                 ScalarResponse<T> response = await InternalScalar(Q, converter, true);
                 if (!response.success)
                 {
-                    int counter = 0;
+                    counter = 0;
                     while (counter < 10)
                     {
                         await Task.Delay(10);
@@ -275,13 +279,15 @@ namespace Uncreated.SQL
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                while (CurrentReader != null && !CurrentReader.IsClosed)
+                int counter = 0;
+                while (CurrentReader != null && !CurrentReader.IsClosed && counter < 100)
                 {
-                    await Task.Delay(1);
+                    await Task.Delay(10);
+                    counter++;
                 }
                 if (!await InternalNonQuery(Q, false))
                 {
-                    int counter = 0;
+                    counter = 0;
                     while (counter < 10 && !await InternalNonQuery(Q, counter != 9))
                     {
                         await Task.Delay(10);
@@ -315,9 +321,11 @@ namespace Uncreated.SQL
             {
                 for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(Warfare.Data.Locale), parameters[i]);
                 if (DebugLogging) Log(nameof(QuerySync) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                while (CurrentReader != null && !CurrentReader.IsClosed)
+                int counter = 0;
+                while (CurrentReader != null && !CurrentReader.IsClosed && counter < 100)
                 {
-                    System.Threading.Thread.Sleep(1);
+                    System.Threading.Thread.Sleep(10);
+                    counter++;
                 }
                 using (CurrentReader = Q.ExecuteReader())
                 {

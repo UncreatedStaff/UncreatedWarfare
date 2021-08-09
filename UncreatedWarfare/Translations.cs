@@ -223,7 +223,7 @@ namespace Uncreated.Warfare
 
                 // deployment
                 { "deploy_s", "<color=#fae69c>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
-                { "deploy_c_fobdead", "<color=#ffa238>The FOB you were deploying to was detroyed!</color>" },
+                { "deploy_c_fobdead", "<color=#ffa238>The FOB you were deploying to was destroyed!</color>" },
                 { "deploy_c_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
                 { "deploy_c_damaged", "<color=#ffa238>You are now in combat and can no longer deploy!</color>" },
                 { "deploy_c_dead", "<color=#ffa238>You died and can no longer deploy!</color>" },
@@ -593,6 +593,7 @@ namespace Uncreated.Warfare
                 { "kit_weapons", "<b>{0}</b>" },
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0:N2}" },
+                { "kit_price_exclusive", "EXCLUSIVE" },
                 { "kit_required_level", "<color=#{1}>L {0}</color><color=#{3}> - {2}</color>" }, // {0} = level number
                 { "kit_owned", "OWNED" },
                 { "kit_unlimited", "unlimited" },
@@ -612,6 +613,7 @@ namespace Uncreated.Warfare
                 { "reload_reloaded_flags", "<color=#e6e3d5>Re-read flags from file and begain to start a new game.</color>" },
                 { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
                 { "reload_reloaded_kits", "<color=#e6e3d5>Reloaded all kits and request signs.</color>" },
+                { "reload_reloaded_slots", "<color=#e6e3d5>Reset the slots plugin to max.</color>" },
 
                 //test
                 { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
@@ -887,6 +889,7 @@ namespace Uncreated.Warfare
             new ColorData("kit_level_unavailable_abbr", "999999"),
             new ColorData("kit_level_dollars", "7878ff"),
             new ColorData("kit_level_dollars_owned", "769fb5"),
+            new ColorData("kit_level_dollars_exclusive", "96ffb2"),
             new ColorData("kit_weapon_list", "343434"),
             new ColorData("kit_unlimited_players", "111111"),
             new ColorData("kit_player_counts_available", "96ffb2"),

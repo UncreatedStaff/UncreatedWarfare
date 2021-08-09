@@ -266,121 +266,129 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
-            if (!VehicleExists(vehicle.id, out var vehicleData))
-                return;
-
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
-
-            if (!KitManager.HasKit(player, out var kit))
+            try
             {
-                player.SendChat("vehicle_no_kit");
-                shouldAllow = false;
-                return;
-            }
+                if (!VehicleExists(vehicle.id, out var vehicleData))
+                    return;
 
-            UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
 
-            bool isOwnerOnline = owner != default;
-
-            bool IsInOwnerSquad = owner.Squad != null && owner.Squad.Members.Contains(player);
-
-            if (!IsInOwnerSquad)
-            {
-                bool isOwnerInVehicle = false;
-
-                foreach (Passenger passenger in vehicle.passengers)
+                if (!KitManager.HasKit(player, out var kit))
                 {
-                    if (passenger.player != null)
-                    {
-                        if (passenger.player.playerID.steamID == vehicle.lockedOwner)
-                        {
-                            isOwnerInVehicle = true;
-                            break;
-                        }
-                    }
+                    player.SendChat("vehicle_no_kit");
+                    shouldAllow = false;
+                    return;
                 }
 
-                if (!isOwnerInVehicle)
+                UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+
+                bool isOwnerOnline = owner != default;
+
+                bool IsInOwnerSquad = owner.Squad != null && owner.Squad.Members.Contains(player);
+
+                if (!IsInOwnerSquad)
                 {
-                    float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
+                    bool isOwnerInVehicle = false;
 
-                    if (vehicle.isLocked && OwnerDistanceFromVehicle < Math.Pow(200, 2))
+                    foreach (Passenger passenger in vehicle.passengers)
                     {
-                        Players.FPlayerName ownernames = F.GetPlayerOriginalNames(owner.SteamPlayer);
-
-                        if (owner.Squad != null)
-                            player.SendChat("vehicle_owner_not_in_vehicle_squad", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()), owner.Squad.Name);
-                        else
-                            player.SendChat("vehicle_owner_not_in_vehicle", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()));
-
-                        shouldAllow = false;
-                        return;
-                    }
-                }
-            }
-
-            if (vehicleData.CrewSeats.Count > 1)
-            {
-                if (vehicleData.RequiredClass != Kit.EClass.NONE) // if the vehicle requires a CREWMAN kit
-                {
-                    if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
-                    {
-                        if (kit.Class == vehicleData.RequiredClass)
+                        if (passenger.player != null)
                         {
-                            bool isThereAnotherCrewman = false;
-                            foreach (Passenger passenger in vehicle.passengers)
+                            if (passenger.player.playerID.steamID == vehicle.lockedOwner)
                             {
-                                if (passenger == null || passenger.player == null || passenger.player.playerID.steamID == player.CSteamID)
-                                    continue;
-
-                                if (UCPlayer.FromSteamPlayer(passenger.player)?.KitClass == vehicleData.RequiredClass)
-                                {
-                                    isThereAnotherCrewman = true;
-                                    break;
-                                }
-                            }
-
-                            if (!isThereAnotherCrewman)
-                            {
-                                player.SendChat("vehicle_need_another_person_with_kit", vehicleData.RequiredClass.ToString().ToUpper());
-                                shouldAllow = false;
-                                return;
+                                isOwnerInVehicle = true;
+                                break;
                             }
                         }
-                        else
+                    }
+
+                    if (!isOwnerInVehicle)
+                    {
+                        float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
+
+                        if (vehicle.isLocked && OwnerDistanceFromVehicle < Math.Pow(200, 2))
                         {
-                            player.SendChat("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                            Players.FPlayerName ownernames = F.GetPlayerOriginalNames(owner.SteamPlayer);
+
+                            if (owner.Squad != null)
+                                player.SendChat("vehicle_owner_not_in_vehicle_squad", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()), owner.Squad.Name);
+                            else
+                                player.SendChat("vehicle_owner_not_in_vehicle", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()));
+
                             shouldAllow = false;
                             return;
                         }
                     }
                 }
-                else
+
+                if (vehicleData.CrewSeats.Count > 1)
                 {
-                    if (fromSeatIndex == 0)
+                    if (vehicleData.RequiredClass != Kit.EClass.NONE) // if the vehicle requires a CREWMAN kit
                     {
                         if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
                         {
+                            if (kit.Class == vehicleData.RequiredClass)
+                            {
+                                bool isThereAnotherCrewman = false;
+                                foreach (Passenger passenger in vehicle.passengers)
+                                {
+                                    if (passenger == null || passenger.player == null || passenger.player.playerID.steamID == player.CSteamID)
+                                        continue;
 
-                            player.SendChat("vehicle_cannot_switch");
-                            shouldAllow = false;
-                            return;
+                                    if (UCPlayer.FromSteamPlayer(passenger.player)?.KitClass == vehicleData.RequiredClass)
+                                    {
+                                        isThereAnotherCrewman = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!isThereAnotherCrewman)
+                                {
+                                    player.SendChat("vehicle_need_another_person_with_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                                    shouldAllow = false;
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                player.SendChat("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                                shouldAllow = false;
+                                return;
+                            }
                         }
                     }
                     else
                     {
-                        if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
+                        if (fromSeatIndex == 0)
                         {
-
-                            if (vehicle.passengers.Length > 0 && vehicle.passengers[0] == null || vehicle.passengers[0].player == null)
+                            if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
                             {
-                                player.SendChat("vehicle_need_driver");
+
+                                player.SendChat("vehicle_cannot_switch");
                                 shouldAllow = false;
                                 return;
                             }
                         }
+                        else
+                        {
+                            if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
+                            {
+
+                                if (vehicle.passengers.Length > 0 && vehicle.passengers[0] == null || vehicle.passengers[0].player == null)
+                                {
+                                    player.SendChat("vehicle_need_driver");
+                                    shouldAllow = false;
+                                    return;
+                                }
+                            }
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error in OnVehicleSeatChanged: ");
+                F.LogError(ex);
             }
         }
 
@@ -464,7 +472,7 @@ namespace Uncreated.Warfare.Vehicles
             RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
-            Items = new List<ushort>() { 28, 277 };
+            Items = new List<ushort>();
             CrewSeats = new List<byte>();
             Metadata = null;
             RequestCount = 0;
@@ -484,7 +492,7 @@ namespace Uncreated.Warfare.Vehicles
             RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
-            Items = new List<ushort>() { 28, 277 };
+            Items = new List<ushort>();
             CrewSeats = new List<byte>();
             Metadata = null;
             RequestCount = 0;

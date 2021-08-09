@@ -182,7 +182,8 @@ namespace Uncreated.Players
         {
             _ = Task.Run(async () =>
             {
-                F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
+                if (UCWarfare.Config.Debug)
+                    F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
                 while (isSaving) await Task.Delay(1);
                 isSaving = true;
                 try
