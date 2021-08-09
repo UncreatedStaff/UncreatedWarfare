@@ -63,6 +63,7 @@ namespace Uncreated.Warfare
         public ushort[] LimitedStorages;
         public bool ClearItemsOnAmmoBoxUse;
         public bool RelayMicsDuringEndScreen;
+        public float TimeBetweenTp;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -109,6 +110,7 @@ namespace Uncreated.Warfare
             this.LimitedStorages = new ushort[] { 38317, 38319, 38343, 38344 };
             this.ClearItemsOnAmmoBoxUse = true;
             this.RelayMicsDuringEndScreen = true;
+            this.TimeBetweenTp = 0.1f;
         }
     }
     public class Modules

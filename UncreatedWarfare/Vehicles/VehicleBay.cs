@@ -272,7 +272,8 @@ namespace Uncreated.Warfare.Vehicles
                     return;
 
                 UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
-
+                if (player == null)
+                    return;
                 if (!KitManager.HasKit(player, out var kit))
                 {
                     player.SendChat("vehicle_no_kit");
@@ -284,7 +285,7 @@ namespace Uncreated.Warfare.Vehicles
 
                 bool isOwnerOnline = owner != default;
 
-                bool IsInOwnerSquad = owner.Squad != null && owner.Squad.Members.Contains(player);
+                bool IsInOwnerSquad = isOwnerOnline && owner.Squad != null && owner.Squad.Members.Contains(player);
 
                 if (!IsInOwnerSquad)
                 {

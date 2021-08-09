@@ -185,10 +185,8 @@ namespace Uncreated.Warfare.Revives
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
-            if (parameters.player.movement.getVehicle() != null && parameters.cause == EDeathCause.VEHICLE)
-            {
+            if (parameters.player.movement.getVehicle() != null || parameters.cause == EDeathCause.VEHICLE)
                 return;
-            }
             shouldAllow = false;
             parameters.player.equipment.dequip();
 

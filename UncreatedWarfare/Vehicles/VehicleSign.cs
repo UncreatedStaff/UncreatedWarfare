@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Structure = Uncreated.Warfare.Structures.Structure;
 
@@ -198,7 +199,26 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-        public void SpawnCheck() => save?.SpawnCheck();
+        public void SpawnCheck()
+        {
+            if (save == null)
+            {
+                F.LogWarning("Save was null in VehicleSign.");
+            } else
+            {
+                save?.SpawnCheck();
+                BarricadeDrop drop = F.GetBarricadeFromInstID(save.instance_id);
+                if (drop != null && save.exists && drop.interactable is InteractableSign sign)
+                {
+                    if (sign.text != placeholder_text)
+                    {
+                        RequestSigns.SetSignTextSneaky(sign, placeholder_text);
+                        sign.updateText(placeholder_text);
+                    }
+                }
+            }
+        }
+
         public async Task InvokeUpdate(SteamPlayer player)
         {
             F.GetBarricadeFromInstID(save.instance_id, out BarricadeDrop drop);

@@ -60,10 +60,7 @@ namespace Uncreated.Warfare
         public float seconds;
         public object[] data;
         public TimeSpan Timeleft {
-            get
-            {
-                return TimeSpan.FromSeconds((seconds - (DateTime.Now - timeAdded).TotalSeconds) >= 0 ? (seconds - (DateTime.Now - timeAdded).TotalSeconds) : 0);
-            }
+            get => TimeSpan.FromSeconds((seconds - (DateTime.Now - timeAdded).TotalSeconds) >= 0 ? (seconds - (DateTime.Now - timeAdded).TotalSeconds) : 0);
         }
 
         public Cooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
@@ -76,7 +73,7 @@ namespace Uncreated.Warfare
         }
         public override string ToString()
         {
-            var time = Timeleft;
+            TimeSpan time = Timeleft;
 
             string line = string.Empty;
             if (time.Hours > 0)

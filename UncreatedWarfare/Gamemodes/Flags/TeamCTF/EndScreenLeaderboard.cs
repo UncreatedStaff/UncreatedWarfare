@@ -33,6 +33,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         ulong longestShotTakerTeam;
         float longestShot;
         bool longestShotTaken;
+        public Queue<SteamPlayer> TeleportQueue = new Queue<SteamPlayer>();
+        private float lastTp = 0;
         //string squadname;
         //ulong squadteam;
         public async Task EndGame(string progresschars)
@@ -66,6 +68,25 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             else if (OnLeaderboardExpired != null)
             {
                 await OnLeaderboardExpired.Invoke();
+            }
+        }
+        internal void FixedUpdate()
+        {
+            if ((UCWarfare.Config.TimeBetweenTp == -1 || Time.realtimeSinceStartup - lastTp > UCWarfare.Config.TimeBetweenTp) && TeleportQueue.Count > 0)
+            {
+                SteamPlayer queued = TeleportQueue.Dequeue();
+                if (queued != null && queued.player != null)
+                {
+                    lastTp = Time.realtimeSinceStartup;
+                    if (queued.player.life.isDead)
+                    {
+                        queued.player.life.ReceiveRespawnRequest(false);
+                    }
+                    else
+                    {
+                        queued.player.teleportToLocation(F.GetBaseSpawn(queued, out ulong playerteam), F.GetBaseAngle(playerteam));
+                    }
+                }
             }
         }
         public async Task GetValues()
@@ -114,7 +135,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 Data.ReviveManager.RevivePlayer(player.player);
 
                 if (!player.player.life.isDead)
-                    player.player.teleportToLocation(F.GetBaseSpawn(player, out ulong playerteam), F.GetBaseAngle(playerteam));
+                {
+                    TeleportQueue.Enqueue(player);
+                }
                 else
                     player.player.life.ReceiveRespawnRequest(false);
 
@@ -141,7 +164,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameStartsIn", F.Translate("next_game_start_label", player));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format", player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(SecondsEndGameLength)));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
-                
                 
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.ObjectTranslate("player_name_header", player.playerID.steamID.m_SteamID, originalNames.CharacterName, F.GetTeamColorHex(player), (float)stats.onlineCount / warstats.gamepercentagecounter * 100f));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
@@ -188,7 +210,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     {
                         n.Colorize("dbffdc"); k.Colorize("dbffdc"); d.Colorize("dbffdc"); x.Colorize("dbffdc"); f.Colorize("dbffdc"); c.Colorize("dbffdc"); t.Colorize("dbffdc");
                     }
-
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2N" + i, n);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2K" + i, k);
                     EffectManager.sendUIEffectText(UiIdentifier, channel, true, "2D" + i, d);
