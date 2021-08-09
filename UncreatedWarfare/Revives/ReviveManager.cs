@@ -198,11 +198,9 @@ namespace Uncreated.Warfare.Revives
 
             parameters.player.movement.sendPluginSpeedMultiplier(0.1f);
             parameters.player.movement.sendPluginJumpMultiplier(0);
-            // change back later
             EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI),
                 parameters.player.channel.owner.transportConnection, true, F.Translate("injured_ui_header", parameters.player),
                 F.Translate("injured_ui_give_up", parameters.player));
-            EffectManager.sendUIEffectText(unchecked((short)UCWarfare.Config.GiveUpUI), parameters.player.channel.owner.transportConnection, true, "GiveUpText", F.Translate("injured_ui_give_up", parameters.player));
             parameters.player.SendChat("injured_chat");
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);

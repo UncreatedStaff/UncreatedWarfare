@@ -154,6 +154,7 @@ namespace Uncreated.Warfare
                 { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from the squad.</color>" },
                 { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
                 { "squad_no_no_words", "<color=#ff8c69>You can't name a squad that.</color>" },
+                { "squads_disabled", "<color=#ff8c69>Squads are disabled.</color>" },
 
                 { "squad_ui_name", "{0}" },
                 { "squad_ui_player_name", "{0}" },

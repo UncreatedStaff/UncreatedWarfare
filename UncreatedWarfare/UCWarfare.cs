@@ -162,7 +162,7 @@ namespace Uncreated.Warfare
             else
                 _actionQueue.Enqueue(action);
         }
-        public void Update()
+        public void FixedUpdate()
         {
             while (_actionQueue.Count > 0)
             {

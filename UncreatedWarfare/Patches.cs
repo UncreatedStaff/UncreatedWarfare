@@ -533,9 +533,6 @@ namespace Uncreated.Warfare
                     });
                 return false;
             }
-            public static event OnLandmineExplodeDelegate OnLandmineExplode;
-            public delegate void OnLandmineExplodeDelegate(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner);
-
             // SDG.Unturned.Bumper
             /// <summary>
             /// Adds the id of the vehicle that hit the player to their pt component.
@@ -568,7 +565,6 @@ namespace Uncreated.Warfare
                 }
                 return true;
             }
-
             // SDG.Unturned.InteractableTrap
             /// <summary>
             /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider other)"/> to set the killer to the player that placed the landmine.
@@ -598,7 +594,6 @@ namespace Uncreated.Warfare
                     }
                 }
                 ___lastTriggered = Time.realtimeSinceStartup;
-                OnLandmineExplode?.Invoke(__instance, other, OwnerComponent);
                 if (___isExplosive) // if hurts all in range, makes explosion
                 {
                     if (other.transform.CompareTag("Player")) // if player hit.
@@ -856,7 +851,6 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
                 BarricadeDestroyedHandler?.Invoke(barricade.GetServersideData(), barricade, barricade.GetServersideData().instanceID, plant);
             }
-
             // SDG.Unturned.StructureManager
             /// <summary>
             /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
@@ -868,7 +862,6 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.destroyStructure) return;
                 StructureDestroyedHandler?.Invoke(structure.GetServersideData(), structure, structure.GetServersideData().instanceID);
             }
-
             // SDG.Unturned.PlayerLife
             /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to invoke prevent starving in main base.</summary>
             [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]
@@ -880,21 +873,6 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askDehydrate))]
             [HarmonyPrefix]
             static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askDehydrate || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
-
-            //// SDG.Unturned.BarricadeManager
-            ///// <summary>
-            ///// Prefix of <see cref="BarricadeManager.sendHealthChanged(byte x, byte y, ushort plant, ushort index, BarricadeRegion region)"/> to invoke <see cref="BarricadeHealthChangedHandler"/>.
-            ///// </summary>
-            //[HarmonyPatch(typeof(BarricadeManager), "sendHealthChanged")]
-            //[HarmonyPrefix]
-            //static void DamageBarricadePrefix(ref ushort index, ref BarricadeRegion region)
-            //{
-            //    if (!UCWarfare.Config.Patches.sendHealthChanged) return;
-            //    if (region.barricades[index] != null)
-            //    {
-            //        BarricadeHealthChangedHandler?.Invoke(region.barricades[index]);
-            //    }
-            //}
 #pragma warning restore IDE0051
 #pragma warning restore IDE0060 // Remove unused parameter
         }

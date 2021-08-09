@@ -30,9 +30,7 @@ namespace Uncreated.Warfare
         public const float SPAWN_HEIGHT_ABOVE_GROUND = 0.5f;
         public const char INFINITY_SYMBOL = '∞';
         public static readonly List<char> vowels = new List<char> { 'a', 'e', 'i', 'o', 'u' };
-        /// <summary>
-        /// Convert an HTMLColor string to a actual color.
-        /// </summary>
+        /// <summary>Convert an HTMLColor string to a actual color.</summary>
         /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
         public static Color Hex(this string htmlColorCode)
         {
@@ -966,11 +964,6 @@ namespace Uncreated.Warfare
         public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, SendUIParameters p, SteamPlayer player, ITransportConnection connection, ulong translationID) =>
             UIOrChat(charactericon, useui, uiid, pts, progresschars, p.team, p.status, p.chatTranslation, p.chatColor, connection, player, p.points, translationID,
                 p.sendChat, p.sendUI, p.absoluteCap, p.overrideChatConfig, p.formatting, p.team1count, p.team2count);
-        public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, ulong team, EFlagStatus type, string translation_key, Color color, SteamPlayer player, int circleAmount,
-            ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true, bool absolute = true, bool sendChatOverride = false,
-            string[] formatting = null, int team1count = 0, int team2count = 0)
-            => UIOrChat(charactericon, useui, uiid, pts, progresschars, team, type, translation_key, color, Provider.findTransportConnection(player.playerID.steamID), player, circleAmount, playerID,
-                SendChatIfConfiged, SendUIIfConfiged, absolute, sendChatOverride, formatting, team1count, team2count);
         public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, ulong team, EFlagStatus type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player,
             int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
             bool absolute = true, bool sendChatOverride = false, string[] formatting = null, int team1count = 0, int team2count = 0)
@@ -1123,7 +1116,6 @@ namespace Uncreated.Warfare
                     player.SendChat(translation_key, color, formatting);
             }
         }
-        public static Vector3 GetBaseSpawn(this SteamPlayer player) => player.player.GetBaseSpawn();
         public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
@@ -1168,9 +1160,6 @@ namespace Uncreated.Warfare
             else if (team == 2) return TeamManager.Team2SpawnAngle;
             else return TeamManager.LobbySpawnAngle;
         }
-        public static Vector3 GetBaseSpawn(this ulong playerID) => playerID.GetBaseSpawn(out _);
-        public static string QuickSerialize(object obj) => JsonConvert.SerializeObject(obj);
-        public static T QuickDeserialize<T>(string json) => JsonConvert.DeserializeObject<T>(json);
         public static async Task InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, string text)
         {
             string newtext = text;
@@ -1406,22 +1395,6 @@ namespace Uncreated.Warfare
                 texture.Apply();
         }
         public static Vector2 GetPositionOnCircle(float radians, float radius = 1) => new Vector2(Mathf.Cos(radians) * radius, Mathf.Sin(radians) * radius);
-        public static Texture2D FlipVertical(Texture2D original)
-        {
-            Texture2D rtn = new Texture2D(original.width, original.height);
-            for (int i = 0; i < original.height; i++)
-                rtn.SetPixels(0, original.height - 1 - i, original.width, 1, original.GetPixels(0, i, original.width, 1));
-            rtn.Apply();
-            return rtn;
-        }
-        public static Texture2D FlipHorizontal(Texture2D original)
-        {
-            Texture2D rtn = new Texture2D(original.width, original.height);
-            for (int i = 0; i < original.width; i++)
-                rtn.SetPixels(original.width - 1 - i, 9, 1, original.height, original.GetPixels(i, 0, 1, original.height));
-            rtn.Apply();
-            return rtn;
-        }
         public static bool TryGetPlaytimeComponent(this Player player, out PlaytimeComponent component)
         {
             component = GetPlaytimeComponent(player, out bool success);
@@ -1458,21 +1431,6 @@ namespace Uncreated.Warfare
             {
                 success = false;
                 return null;
-            }
-        }
-        public static void SetPrivatePlayerCount(byte amount)
-        {
-            return;
-            if (Provider.maxPlayers == amount) return;
-            try
-            {
-                FieldInfo field = typeof(Provider).GetField("_maxPlayers", BindingFlags.NonPublic | BindingFlags.Static);
-                field.SetValue(null, amount);
-            }
-            catch (Exception ex)
-            {
-                LogError("Error setting player count:");
-                LogError(ex);
             }
         }
         public static PlaytimeComponent GetPlaytimeComponent(this CSteamID player, out bool success)
@@ -2284,10 +2242,6 @@ namespace Uncreated.Warfare
             float gridSquareSize = Level.size / Stats.Playstyle.GRID_SIZE;
             return new Vector2(Mathf.Floor(position.x / gridSquareSize) * gridSquareSize, Mathf.Floor(position.z / gridSquareSize) * gridSquareSize);
         }
-        public static UncreatedPlayer GetPlayerStats(UnturnedPlayer player) => GetPlayerStats(player.Player.channel.owner.playerID.steamID.m_SteamID);
-        public static UncreatedPlayer GetPlayerStats(Player player) => GetPlayerStats(player.channel.owner.playerID.steamID.m_SteamID);
-        public static UncreatedPlayer GetPlayerStats(SteamPlayer player) => GetPlayerStats(player.playerID.steamID.m_SteamID);
-        public static UncreatedPlayer GetPlayerStats(CSteamID player) => GetPlayerStats(player.m_SteamID);
         public static UncreatedPlayer GetPlayerStats(ulong player)
         {
             if (TryGetPlaytimeComponent(player, out PlaytimeComponent c))
@@ -2303,26 +2257,6 @@ namespace Uncreated.Warfare
             int high = number.CompareTo(highBound);
             int low = number.CompareTo(lowBound);
             return (low == 1 || (inclusiveLow && low == 0)) && (high == -1 || (inclusiveHigh && high == 0));
-        }
-        public static string GetClosestNode(this Vector3 position)
-        {
-            if (!Level.isLoaded) return string.Empty;
-            float? smallest = null;
-            int index = 0;
-            for(int i = 0; i < LevelNodes.nodes.Count; i++)
-            {
-                float distance = (position - LevelNodes.nodes[i].point).sqrMagnitude;
-                if (LevelNodes.nodes[i] is LocationNode)
-                {
-                    if (!smallest.HasValue || distance < smallest)
-                    {
-                        index = i;
-                        smallest = distance;
-                    }
-                }
-            }
-            if (LevelNodes.nodes[index] is LocationNode name) return name.name;
-            else return string.Empty;
         }
         public static void SendSteamURL(this SteamPlayer player, string message, ulong SteamID) => player.SendURL(message, $"https://steamcommunity.com/profiles/{SteamID}/");
         public static void SendURL(this SteamPlayer player, string message, string url)
@@ -2481,25 +2415,6 @@ namespace Uncreated.Warfare
 
             return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
         }
-        public static Vector3 TraceForceParabola(Vector3 direction, Vector3 start, int Raymask)
-        {
-            Vector3 prev = start;
-            F.Log("START: " + prev.ToString() + ", DIRECTION: " + direction.ToString());
-            for (int i = 1; ; i++)
-            {
-                float t = Time.fixedDeltaTime * i * 10;
-                if (t > 60f) break;
-                Vector3 pos = start + direction * t + Physics.gravity * t * t * 0.5f;
-                F.Log(i.ToString(Data.Locale) + " (" + t.ToString(Data.Locale) + ").");
-                F.Log(pos.ToString());
-                if (Physics.Linecast(prev, pos, out RaycastHit hit, Raymask) && hit.transform != null && !hit.transform.gameObject.CompareTag("Border")) return hit.point;
-                if(Provider.clients.Count > 0)
-                    EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.EmptyMarker, Provider.clients[0].transportConnection, pos);
-                prev = pos;
-            }
-            F.Log("FAILED");
-            return Vector3.zero;
-        }
         public static string GetLayer(Vector3 direction, Vector3 origin, int Raymask)
         {
             if (Physics.Raycast(origin, direction, out RaycastHit hit, 8192f, Raymask))
@@ -2509,27 +2424,6 @@ namespace Uncreated.Warfare
                 else return "nullHitNoTransform";
             }
             else return "nullNoHit";
-        }
-
-        // https://stackoverflow.com/questions/1225052/best-way-to-shorten-utf8-string-based-on-byte-length (firda)
-        public static byte[] ClampToByteCount(this string s, int n, out bool clamped)
-        {
-            byte[] a = Encoding.UTF8.GetBytes(s);
-            if (a.Length <= n)
-            {
-                clamped = false;
-                return a;
-            }
-
-            if (n > 0 && (a[n] & 0xC0) == 0x80)
-            {
-                while (--n > 0 && (a[n] & 0xC0) == 0x80)
-                    F.Log("cutoff letter " + a[n]);
-            }
-            byte[] newbytes = new byte[n];
-            Array.Copy(a, 0, newbytes, 0, n);
-            clamped = true;
-            return newbytes;
         }
     }
 }

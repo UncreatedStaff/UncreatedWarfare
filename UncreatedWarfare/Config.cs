@@ -64,6 +64,7 @@ namespace Uncreated.Warfare
         public bool ClearItemsOnAmmoBoxUse;
         public bool RelayMicsDuringEndScreen;
         public float TimeBetweenTp;
+        public bool EnableSquads;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -111,6 +112,7 @@ namespace Uncreated.Warfare
             this.ClearItemsOnAmmoBoxUse = true;
             this.RelayMicsDuringEndScreen = true;
             this.TimeBetweenTp = 0.1f;
+            this.EnableSquads = true;
         }
     }
     public class Modules
