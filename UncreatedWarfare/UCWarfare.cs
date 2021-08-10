@@ -146,30 +146,46 @@ namespace Uncreated.Warfare
 
         public static void ReplaceBarricadesAndStructures()
         {
-            for (byte x = 0; x < Regions.WORLD_SIZE; x++)
+            try
             {
-                for (byte y = 0; y < Regions.WORLD_SIZE; y++)
+                for (byte x = 0; x < Regions.WORLD_SIZE; x++)
                 {
-                    for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                    for (byte y = 0; y < Regions.WORLD_SIZE; y++)
                     {
-                        uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
-                        if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
+                        try
                         {
-                            if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
-                                storage.despawnWhenDestroyed = true;
-                            BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
+                            for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            {
+                                uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
+                                if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
+                                {
+                                    if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
+                                        storage.despawnWhenDestroyed = true;
+                                    BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
+                                }
+                            }
+                            for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            {
+                                uint instid = StructureManager.regions[x, y].drops[i].instanceID;
+                                if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
+                                    StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            F.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
+                            F.LogError(ex);
                         }
                     }
-                    for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
-                    {
-                        uint instid = StructureManager.regions[x, y].drops[i].instanceID;
-                        if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
-                            StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
-                    }
                 }
+                RequestSigns.DropAllSigns();
+                StructureSaver.DropAllStructures();
             }
-            RequestSigns.DropAllSigns();
-            StructureSaver.DropAllStructures();
+            catch (Exception ex)
+            {
+                F.LogError($"Failed to clear barricades/structures:");
+                F.LogError(ex);
+            }
         }
         private void SubscribeToEvents()
         {

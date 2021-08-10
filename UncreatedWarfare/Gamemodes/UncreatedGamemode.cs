@@ -54,7 +54,6 @@ namespace Uncreated.Warfare.Gamemodes
         protected abstract void EventLoopAction();
         private IEnumerator<WaitForSeconds> EventLoop()
         {
-            F.Log(EventLoopSpeed.ToString());
             while (!isPendingCancel)
             {
                 yield return new WaitForSeconds(EventLoopSpeed);

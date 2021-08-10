@@ -155,6 +155,11 @@ namespace Uncreated.Warfare.Revives
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
+            if (Data.Gamemode.State != Gamemodes.EState.ACTIVE)
+            {
+                shouldAllow = false;
+                return;
+            }
             if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
             {
                 SteamPlayer killer = PlayerTool.getSteamPlayer(parameters.killer);
