@@ -661,7 +661,7 @@ namespace Uncreated.Warfare
         {
             string localizedString = Translate(text, player.playerID.steamID.m_SteamID, formatting);
             if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
-                UCWarfare.I.QueueMainThreadAction(() => SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player));
+                SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
             else
             {
                 LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
@@ -679,7 +679,7 @@ namespace Uncreated.Warfare
                     LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                 }
                 if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                    UCWarfare.I.QueueMainThreadAction(() => SendSingleMessage(newMessage, textColor, EChatMode.SAY, null, newMessage.Contains("</"), player));
+                    SendSingleMessage(newMessage, textColor, EChatMode.SAY, null, newMessage.Contains("</"), player);
                 else
                     LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                         + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -696,7 +696,7 @@ namespace Uncreated.Warfare
         {
             string localizedString = Translate(text, player.playerID.steamID.m_SteamID, out Color textColor, formatting);
             if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
-                UCWarfare.I.QueueMainThreadAction(() => SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player));
+                SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
             else
             {
                 LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
@@ -714,7 +714,7 @@ namespace Uncreated.Warfare
                     LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                 }
                 if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                    UCWarfare.I.QueueMainThreadAction(() => SendSingleMessage(newMessage, textColor, EChatMode.SAY, null, newMessage.Contains("</"), player));
+                    SendSingleMessage(newMessage, textColor, EChatMode.SAY, null, newMessage.Contains("</"), player);
                 else
                     LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                         + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -1160,14 +1160,14 @@ namespace Uncreated.Warfare
             else if (team == 2) return TeamManager.Team2SpawnAngle;
             else return TeamManager.LobbySpawnAngle;
         }
-        public static async Task InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, string text)
+        public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, string text)
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
-                newtext = await TranslateSign(text, client.playerID.steamID.m_SteamID, false);
+                newtext = TranslateSign(text, client.playerID.steamID.m_SteamID, false);
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
-        public static async Task InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
+        public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
         {
             Dictionary<string, List<SteamPlayer>> playergroups = new Dictionary<string, List<SteamPlayer>>();
             IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
@@ -1196,7 +1196,7 @@ namespace Uncreated.Warfare
                 {
                     string newtext = text;
                     if (text.StartsWith("sign_"))
-                        newtext = await TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID, false);
+                        newtext = TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID, false);
                     List<ITransportConnection> toSendTo = new List<ITransportConnection>();
                     languageGroup.Value.ForEach(l => toSendTo.Add(l.transportConnection));
                     Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, toSendTo, newtext);
@@ -1204,7 +1204,7 @@ namespace Uncreated.Warfare
             }
         }
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-        public static async Task InvokeSignUpdateForAllKits(InteractableSign sign, byte x, byte y, string text)
+        public static void InvokeSignUpdateForAllKits(InteractableSign sign, byte x, byte y, string text)
         {
             if (text == null) return;
             IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
@@ -1212,7 +1212,7 @@ namespace Uncreated.Warfare
             {
                 string newtext = text;
                 if (text.StartsWith("sign_"))
-                    newtext = await TranslateSign(text, connections.Current.playerID.steamID.m_SteamID, false);
+                    newtext = TranslateSign(text, connections.Current.playerID.steamID.m_SteamID, false);
                 Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, connections.Current.transportConnection, newtext);
             }
             connections.Dispose();
@@ -1225,7 +1225,7 @@ namespace Uncreated.Warfare
                     yield return client;
             }
         }
-        public static async Task InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
+        public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
         {
             if (text == default || client == default) return;
             string newtext;
@@ -1233,7 +1233,7 @@ namespace Uncreated.Warfare
                 newtext = sign.text;
             else newtext = text;
             if (newtext.StartsWith("sign_"))
-                newtext = await TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID, false);
+                newtext = TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID, false);
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
         public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
@@ -1558,7 +1558,7 @@ namespace Uncreated.Warfare
             return false;
         }
         public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
-        public static async Task<string> TranslateSign(string key, ulong player, bool important, params string[] formatting)
+        public static string TranslateSign(string key, ulong player, bool important, params string[] formatting)
         {
             string norm = Translate(key, player, formatting);
             if (!key.StartsWith("sign_") || norm != key) return norm;
@@ -1576,7 +1576,7 @@ namespace Uncreated.Warfare
                         Rank playerrank = null;
                         if (ucplayer != null)
                         {
-                            playerrank = await ucplayer.XPRank();
+                            playerrank = ucplayer.XPRank();
                         }
                         Rank rank = data.RequiredRank;
                         if (rank == default) return norm;
@@ -1614,7 +1614,7 @@ namespace Uncreated.Warfare
                 if (ucplayer != null)
                 {
                     playerteam = ucplayer.GetTeam();
-                    playerrank = await ucplayer.XPRank();
+                    playerrank = ucplayer.XPRank();
                 }
                 string lang = DecideLanguage(player, kit.SignTexts);
                 string name;

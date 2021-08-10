@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Aliases => new List<string>() { };
         public List<string> Permissions => new List<string>() { "uc.shutdown" };
         public static Coroutine Messager = null;
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             if (caller.DisplayName == "Console")
             {
@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (command.Length == 0)
                 {
-                    await Networking.Client.SendShuttingDown(0, "None specified.");
+                    Networking.Client.SendShuttingDown(0, "None specified.");
                     Provider.shutdown(0);
                     return;
                 }
@@ -50,7 +50,7 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
-                    await Networking.Client.SendShuttingDown(0, reason);
+                    Networking.Client.SendShuttingDown(0, reason);
                     Provider.shutdown(0, reason);
                 } else if (option == "aftergame" || option == "after" || option == "game")
                 {
@@ -89,7 +89,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     time = F.GetTimeFromSeconds(seconds, 0);
                     F.Log(F.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
-                    await Networking.Client.SendShuttingDown(0, reason);
+                    Networking.Client.SendShuttingDown(0, reason);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 } else
                 {
@@ -106,7 +106,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (command.Length == 0)
                 {
-                    await Networking.Client.SendShuttingDown(0, "None specified.");
+                    Networking.Client.SendShuttingDown(0, "None specified.");
                     Provider.shutdown(0);
                     return;
                 }
@@ -125,7 +125,7 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
-                    await Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
+                    Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
                     Provider.shutdown(0, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
@@ -167,7 +167,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     time = F.GetTimeFromSeconds(seconds, 0);
                     F.Log(F.Translate("shutdown_broadcast_after_time_console_player", 0, out _, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
-                    await Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
+                    Networking.Client.SendShuttingDown(player.playerID.steamID.m_SteamID, reason);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 }
                 else

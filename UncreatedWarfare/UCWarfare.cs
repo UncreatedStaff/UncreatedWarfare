@@ -24,6 +24,7 @@ using System.Linq;
 
 namespace Uncreated.Warfare
 {
+    public delegate void VoidDelegate();
     public partial class UCWarfare : RocketPlugin<Config>
     {
         public static UCWarfare Instance;
@@ -46,7 +47,6 @@ namespace Uncreated.Warfare
         private bool InitialLoadEventSubscription;
         protected override void Load()
         {
-            ThreadTool.SetGameThread();
             Instance = this;
             Data.LoadColoredConsole();
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare
                     _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
                 }
             }
-            Data.LoadVariables().GetAwaiter().GetResult();
+            Data.LoadVariables();
             if (Level.isLoaded)
             {
                 //StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
@@ -112,9 +112,8 @@ namespace Uncreated.Warfare
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
-        private async void OnLevelLoaded(int level)
+        private void OnLevelLoaded(int level)
         {
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
@@ -131,57 +130,21 @@ namespace Uncreated.Warfare
             Data.ExtraZones = JSONMethods.LoadExtraZones();
             Data.TeamManager = new TeamManager();
             F.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
-            await ReplaceBarricadesAndStructures();
+            ReplaceBarricadesAndStructures();
             Data.VehicleSpawner.OnLevelLoaded();
             FOBManager.LoadFobs();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
-            await Data.Gamemode.OnLevelLoaded();
-            await rtn;
+            Data.Gamemode.OnLevelLoaded();
             if (Provider.clients.Count > 0)
             {
                 List<Players.FPlayerName> playersOnline = Provider.clients.Select(x => F.GetPlayerOriginalNames(x)).ToList();
-                await Networking.Client.SendPlayerList(playersOnline);
+                Networking.Client.SendPlayerList(playersOnline);
             }
         }
 
-        readonly Queue<System.Action> _actionQueue = new Queue<System.Action>();
-        public void QueueMainThreadAction(System.Action action)
-        {
-            if (action == null)
-            {
-                F.LogError("Tried to queue a null action: ");
-                F.LogError(System.Environment.StackTrace);
-                return;
-            }
-            //F.Log("Queued an action: " + action.Method.Name);
-            //F.Log(System.Environment.StackTrace);
-            if (ThreadUtil.IsGameThread(Thread.CurrentThread))
-                action.Invoke();
-            else
-                _actionQueue.Enqueue(action);
-        }
-        public void FixedUpdate()
-        {
-            while (_actionQueue.Count > 0)
-            {
-                try
-                {
-                    System.Action action = _actionQueue.Dequeue();
-                    if(action == null)
-                        F.LogError("Failed to run a task in the Action Queue, action was null.");
-                    else
-                        action.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    F.LogError("Failed to run a task in the Action Queue: ");
-                    F.LogError(ex);
-                }
-            }
-        }
-        public static async Task ReplaceBarricadesAndStructures()
+        public static void ReplaceBarricadesAndStructures()
         {
             for (byte x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -205,8 +168,8 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            await RequestSigns.DropAllSigns();
-            await StructureSaver.DropAllStructures();
+            RequestSigns.DropAllSigns();
+            StructureSaver.DropAllStructures();
         }
         private void SubscribeToEvents()
         {
@@ -215,7 +178,7 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-            if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData += Networking.Client.ProcessResponse;
+            //if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData += Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
             Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
             BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
@@ -253,7 +216,7 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-            if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Client.ProcessResponse;
+            //if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
             BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
@@ -292,7 +255,7 @@ namespace Uncreated.Warfare
             F.Log("Subscribing to events...", ConsoleColor.Magenta);
             SubscribeToEvents();
         }
-        internal async Task UpdateLangs(SteamPlayer player)
+        internal void UpdateLangs(SteamPlayer player)
         {
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
@@ -303,7 +266,7 @@ namespace Uncreated.Warfare
                     {
                         if (sign.text.StartsWith("sign_"))
                         {
-                            await F.InvokeSignUpdateFor(player, sign, false); 
+                            F.InvokeSignUpdateFor(player, sign, false); 
                         }
                     }
                 }
@@ -323,8 +286,8 @@ namespace Uncreated.Warfare
                     if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
                         p.ShowUIForPlayer(ucplayer);
                 }
-                XP.XPManager.UpdateUI(player.player, await XP.XPManager.GetXP(player.player, team, false), out _);
-                Officers.OfficerManager.UpdateUI(player.player, await Officers.OfficerManager.GetOfficerPoints(player.player, team, false), out _);
+                XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, team, false), out _);
+                Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, team, false), out _);
             }
         }
         protected override void Unload()
@@ -351,7 +314,7 @@ namespace Uncreated.Warfare
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            Networking.TCPClient.I?.Dispose();
+            //Networking.TCPClient.I?.Dispose();
         }
         public static Color GetColor(string key)
         {

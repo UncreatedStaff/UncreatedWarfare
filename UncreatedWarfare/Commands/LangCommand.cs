@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Commands
 {
-    public delegate Task PlayerChangedLanguageDelegate(UnturnedPlayer player, LanguageAliasSet oldLanguage, LanguageAliasSet newLanguage);
+    public delegate void PlayerChangedLanguageDelegate(UnturnedPlayer player, LanguageAliasSet oldLanguage, LanguageAliasSet newLanguage);
     public class LangCommand : IRocketCommand
     {
         public static event PlayerChangedLanguageDelegate OnPlayerChangedLanguage;
@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/lang";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.lang" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DefaultLanguage);
                             if(OnPlayerChangedLanguage != null)
-                                await OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
+                                OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
                             player.SendChat("reset_language", fullname);
                         }
                     } else
@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, aliases.key);
                             if (OnPlayerChangedLanguage != null)
-                                await OnPlayerChangedLanguage.Invoke(player, oldSet, aliases);
+                                OnPlayerChangedLanguage.Invoke(player, oldSet, aliases);
                             player.SendChat("changed_language", aliases.display_name);
                         }
                     }

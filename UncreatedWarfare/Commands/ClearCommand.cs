@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.clear" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == "Console";
@@ -80,7 +80,7 @@ namespace Uncreated.Warfare.Commands
             else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" || 
                 operation == "struct" || operation == "barricades" || operation == "barricade")
             {
-                await UCWarfare.ReplaceBarricadesAndStructures();
+                UCWarfare.ReplaceBarricadesAndStructures();
                 if (isConsole) F.LogError(F.Translate("clear_structures_cleared", 0, out _));
                 else player.SendChat("clear_structures_cleared");
             } else

@@ -90,27 +90,27 @@ namespace Uncreated.Warfare.Components
             if (message.Message != null)
             {
                 if (message.SecondaryMessage != null)
-                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
-                        player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage));
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                        player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
                 else
-                    UCWarfare.I.QueueMainThreadAction(() => EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
-                        player.channel.owner.transportConnection, true, message.Message));
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                        player.channel.owner.transportConnection, true, message.Message);
             }
             StartCoroutine(ToastDelay(message.delay));
         }
         private IEnumerator<WaitForSeconds> ToastDelay(float delay)
         {
             yield return new WaitForSeconds(delay);
-            UCWarfare.I.QueueMainThreadAction(() => EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection));
+            EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection);
             toastMessageOpen = 0;
             if (toastMessages.Count > 0)
                 SendToastMessage(toastMessages.Dequeue());
         }
-        public async Task StartTracking(Player player)
+        public void StartTracking(Player player)
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
-            UCPlayerStats = await UncreatedPlayer.LoadAsync(player.channel.owner.playerID.steamID.m_SteamID);
+            UCPlayerStats = UncreatedPlayer.Load(player.channel.owner.playerID.steamID.m_SteamID);
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwnerDataComponent>();
             toastMessageOpen = 0;
@@ -213,25 +213,22 @@ namespace Uncreated.Warfare.Components
                 if (fob != null)
                 {
                     UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.GetServersideData().owner);
-                    Task.Run(async () =>
+                    if (FOBowner != null)
                     {
-                        if (FOBowner != null)
+                        if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
                         {
-                            if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
-                            {
-                                await XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP,
-                                    F.Translate("xp_deployed_fob", FOBowner));
+                            XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP,
+                                F.Translate("xp_deployed_fob", FOBowner));
 
-                                if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
-                                {
-                                    await Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), 
-                                        XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
-                                }
+                            if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
+                            {
+                                Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), 
+                                    XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
                             }
                         }
-                        else
-                            await Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP);
-                    });
+                    }
+                    else
+                        Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP);
                 }
                 yield break;
             }

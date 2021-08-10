@@ -13,11 +13,11 @@ namespace Uncreated.Warfare.Structures
     {
         public StructureSaver() : base(Data.StructureStorage + "structures.json") { }
         protected override string LoadDefaults() => "[]";
-        public static async Task DropAllStructures()
+        public static void DropAllStructures()
         {
             foreach (Structure structure in ActiveObjects)
             {
-                await structure.SpawnCheck();
+                structure.SpawnCheck();
                 if (!structure.exists)
                     F.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
             }
@@ -168,7 +168,7 @@ namespace Uncreated.Warfare.Structures
             this.exists = false;
         }
         /// <summary>Spawns the structure if it is not already placed.</summary>
-        public async Task SpawnCheck()
+        public void SpawnCheck()
         {
             if (type == EStructType.BARRICADE)
             {
@@ -190,7 +190,7 @@ namespace Uncreated.Warfare.Structures
                     {
                         if (newBarricade.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(newBarricade.position, out byte x, out byte y))
                         {
-                            await F.InvokeSignUpdateForAll(sign, x, y, sign.text);
+                            F.InvokeSignUpdateForAll(sign, x, y, sign.text);
                         }
                         if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
                         {

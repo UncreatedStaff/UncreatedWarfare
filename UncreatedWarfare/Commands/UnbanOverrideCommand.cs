@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Commands
 
         public List<string> Permissions => new List<string> { "uc.unban" };
 
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             if (!Dedicator.isDedicated)
                 return;
@@ -45,8 +45,8 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-                                await Client.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
-                            FPlayerName names = await Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
+                                Client.LogPlayerUnbanned(steamplayer.m_SteamID, Provider.server.m_SteamID, DateTime.Now);
+                            FPlayerName names = Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {
                                 F.Log(F.Translate("unban_unbanned_console_id_operator", 0, out _, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
@@ -77,11 +77,9 @@ namespace Uncreated.Warfare.Commands
                             F.SendChat(player, "unban_player_not_banned", command[0]);
                         else
                         {
-                            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
-                            if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-                                await Client.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
-                            await rtn;
-                            FPlayerName names = await Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
+                            /*if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
+                                Client.LogPlayerUnbanned(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);*/
+                            FPlayerName names = Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
                             if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {

@@ -24,50 +24,46 @@ namespace Uncreated.Warfare.XP
             config = new Config<XPData>(Data.XPStorage, "config.json");
         }
 
-        public static async Task OnPlayerJoined(UCPlayer player)
+        public static void OnPlayerJoined(UCPlayer player)
         {
             F.Log(player.CharacterName);
             if (player.IsTeam1() || player.IsTeam2())
             {
-                int amt = await GetXP(player.Player, player.GetTeam(), true);
+                int amt = GetXP(player.Player, player.GetTeam(), true);
                 UpdateUI(player.Player, amt, out _);
             }
         }
-        public static async Task OnPlayerLeft(UCPlayer player)
+        public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            await Task.Yield(); // just to remove the warning, feel free to remove, its basically an empty line.
-        }
-        public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
-        {
-            int xp = await GetXP(player.player, newGroup, true);
+            int xp = GetXP(player.player, newGroup, true);
             UpdateUI(player.player, xp, out _);
         }
-        public static async Task<int> GetXP(Player player, ulong team, bool important)
+        public static int GetXP(Player player, ulong team, bool important)
         {
             if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             if (ucplayer == default || important || ucplayer.cachedXp == -1)
             {
-                int newxp = await Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
+                int newxp = Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
                 if (ucplayer != null)
                     ucplayer.cachedXp = newxp;
                 return newxp;
             } else return ucplayer.cachedXp;
         }
-        public static async Task<int> GetXP(ulong player, ulong team, bool important)
+        public static int GetXP(ulong player, ulong team, bool important)
         {
             if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromID(player);
             if (ucplayer == default || important || ucplayer.cachedXp == -1)
             {
-                int newxp = await Data.DatabaseManager.GetXP(player, team);
+                int newxp = Data.DatabaseManager.GetXP(player, team);
                 if (ucplayer != default)
                     ucplayer.cachedXp = newxp;
                 return newxp;
             }
             else return ucplayer.cachedXp;
         }
-        public static async Task AddXP(Player player, ulong team, int amount, string message = "")
+        public static void AddXP(Player player, ulong team, int amount, string message = "")
         {
             if (team < 1 || team > 2) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -75,10 +71,10 @@ namespace Uncreated.Warfare.XP
             Rank oldRank = null;
             if (ucplayer != null)
             {
-                oldRank = await ucplayer.XPRank();
+                oldRank = ucplayer.XPRank();
             }
 
-            int newBalance = await Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
+            int newBalance = Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
 
             if (ucplayer != null)
             {
@@ -102,10 +98,10 @@ namespace Uncreated.Warfare.XP
             }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
-                await VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
+                VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
                 // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
             for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                await Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
+                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
                 // update the color of the ranks on all the request signs in case the player unlocked a new rank.
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {

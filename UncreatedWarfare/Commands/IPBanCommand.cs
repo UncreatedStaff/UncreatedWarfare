@@ -22,7 +22,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/ipban <player> <duration minutes> [reason]";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string> { "uc.ipban" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             if (!Dedicator.isDedicated)
                 return;
@@ -51,19 +51,19 @@ namespace Uncreated.Warfare.Commands
                                         string translate = "ip_ban_permanent_console_operator";
                                         if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                         {
-                                            await Client.LogPlayerBanned(result, Provider.server.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
-                                            await Data.DatabaseManager.AddBan(result, 0, SteamBlacklist.PERMANENT / 60u, reason);
-                                            string ip = await Data.DatabaseManager.GetIP(result);
+                                            Client.LogPlayerBanned(result, Provider.server.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
+                                            Data.DatabaseManager.AddBan(result, 0, SteamBlacklist.PERMANENT / 60u, reason);
+                                            string ip = Data.DatabaseManager.GetIP(result);
                                             if (ip == "255.255.255.255")
                                             {
                                                 translate = "ip_ban_permanent_console_operator_noip";
                                             } else
                                             {
                                                 uint packaged = Parser.getUInt32FromIP(ip);
-                                                await Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
+                                                Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
                                             }
                                         }
-                                        FPlayerName names = await Data.DatabaseManager.GetUsernames(result);
+                                        FPlayerName names = Data.DatabaseManager.GetUsernames(result);
                                         F.Log(F.Translate(translate, 0, out _, names.PlayerName, result.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                         F.Broadcast("ban_permanent_broadcast_operator", names.PlayerName);
                                     }
@@ -76,9 +76,9 @@ namespace Uncreated.Warfare.Commands
                                         string translate = "ip_ban_console_operator";
                                         if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                         {
-                                            await Data.DatabaseManager.AddBan(result, 0, duration, reason);
-                                            await Client.LogPlayerBanned(result, Provider.server.m_SteamID, reason, duration, DateTime.Now);
-                                            string ip = await Data.DatabaseManager.GetIP(result);
+                                            Data.DatabaseManager.AddBan(result, 0, duration, reason);
+                                            Client.LogPlayerBanned(result, Provider.server.m_SteamID, reason, duration, DateTime.Now);
+                                            string ip = Data.DatabaseManager.GetIP(result);
                                             if (ip == "255.255.255.255")
 {
                                                 translate = "ip_ban_console_operator_noip";
@@ -86,10 +86,10 @@ namespace Uncreated.Warfare.Commands
                                             else
                                             {
                                                 uint packaged = Parser.getUInt32FromIP(ip);
-                                                await Data.DatabaseManager.AddIPBan(result, packaged, ip, (int)duration, reason);
+                                                Data.DatabaseManager.AddIPBan(result, packaged, ip, (int)duration, reason);
                                             }
                                         }
-                                        FPlayerName names = await Data.DatabaseManager.GetUsernames(result);
+                                        FPlayerName names = Data.DatabaseManager.GetUsernames(result);
                                         string time = F.GetTimeFromMinutes(duration, 0);
                                         F.Log(F.Translate(translate, 0, out _, names.PlayerName, result.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
                                         foreach (SteamPlayer player in Provider.clients)
@@ -124,9 +124,9 @@ namespace Uncreated.Warfare.Commands
                                     Provider.requestBanPlayer(Provider.server, steamplayer.playerID.steamID, ipv4AddressOrZero, reason, SteamBlacklist.PERMANENT);
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                     {
-                                        await Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, 0, SteamBlacklist.PERMANENT / 60u, reason);
-                                        await Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
-                                        await Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
+                                        Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, 0, SteamBlacklist.PERMANENT / 60u, reason);
+                                        Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
                                     }
                                     F.Log(F.Translate("ip_ban_permanent_console_operator", 0, out _, name, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     F.Broadcast("ban_permanent_broadcast_operator", steamplayer.playerID.playerName);
@@ -141,9 +141,9 @@ namespace Uncreated.Warfare.Commands
                                     string name = F.GetPlayerOriginalNames(steamplayer).PlayerName;
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                     {
-                                        await Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, 0, SteamBlacklist.PERMANENT / 60u, reason);
-                                        await Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, result, DateTime.Now);
-                                        await Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
+                                        Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, 0, SteamBlacklist.PERMANENT / 60u, reason);
+                                        Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, result, DateTime.Now);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
                                     }
                                     F.Log(F.Translate("ip_ban_console_operator", 0, out _, name, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
                                     foreach (SteamPlayer player in Provider.clients)
@@ -187,9 +187,9 @@ namespace Uncreated.Warfare.Commands
                                             string translate2 = "ip_ban_permanent_console";
                                             if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                             {
-                                                await Data.DatabaseManager.AddBan(result, player.CSteamID.m_SteamID, SteamBlacklist.PERMANENT / 60u, reason);
-                                                await Client.LogPlayerBanned(result, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
-                                                string ip = await Data.DatabaseManager.GetIP(result);
+                                                Data.DatabaseManager.AddBan(result, player.CSteamID.m_SteamID, SteamBlacklist.PERMANENT / 60u, reason);
+                                                Client.LogPlayerBanned(result, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
+                                                string ip = Data.DatabaseManager.GetIP(result);
                                                 if (ip == "255.255.255.255")
                                                 {
                                                     translate = "ip_ban_permanent_feedback_noip";
@@ -198,10 +198,10 @@ namespace Uncreated.Warfare.Commands
                                                 else
                                                 {
                                                     uint packaged = Parser.getUInt32FromIP(ip);
-                                                    await Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
+                                                    Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
                                                 }
                                             }
-                                            FPlayerName names = await Data.DatabaseManager.GetUsernames(result);
+                                            FPlayerName names = Data.DatabaseManager.GetUsernames(result);
                                             F.Log(F.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat(translate, names.CharacterName);
@@ -218,9 +218,9 @@ namespace Uncreated.Warfare.Commands
                                             string translate2 = "ip_ban_console";
                                             if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                             {
-                                                await Data.DatabaseManager.AddBan(result, player.CSteamID.m_SteamID, duration, reason);
-                                                await Client.LogPlayerBanned(result, player.CSteamID.m_SteamID, reason, duration, DateTime.Now);
-                                                string ip = await Data.DatabaseManager.GetIP(result);
+                                                Data.DatabaseManager.AddBan(result, player.CSteamID.m_SteamID, duration, reason);
+                                                Client.LogPlayerBanned(result, player.CSteamID.m_SteamID, reason, duration, DateTime.Now);
+                                                string ip = Data.DatabaseManager.GetIP(result);
                                                 if (ip == "255.255.255.255")
                                                 {
                                                     translate = "ip_ban_feedback_noip";
@@ -229,10 +229,10 @@ namespace Uncreated.Warfare.Commands
                                                 else
                                                 {
                                                     uint packaged = Parser.getUInt32FromIP(ip);
-                                                    await Data.DatabaseManager.AddIPBan(result, packaged, ip, (int)duration, reason);
+                                                    Data.DatabaseManager.AddIPBan(result, packaged, ip, (int)duration, reason);
                                                 }
                                             }
-                                            FPlayerName names = await Data.DatabaseManager.GetUsernames(result);
+                                            FPlayerName names = Data.DatabaseManager.GetUsernames(result);
                                             string timeLocalized = F.GetTimeFromMinutes(duration, 0);
                                             F.Log(F.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
@@ -277,9 +277,9 @@ namespace Uncreated.Warfare.Commands
                                     Provider.requestBanPlayer(player.CSteamID, steamplayer.playerID.steamID, ipv4AddressOrZero, reason, SteamBlacklist.PERMANENT);
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                     {
-                                        await Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, SteamBlacklist.PERMANENT / 60u, reason);
-                                        await Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
-                                        await Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
+                                        Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, SteamBlacklist.PERMANENT / 60u, reason);
+                                        Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
                                     }
                                     F.Log(F.Translate("ip_ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
@@ -296,9 +296,9 @@ namespace Uncreated.Warfare.Commands
                                     Provider.requestBanPlayer(player.CSteamID, steamplayer.playerID.steamID, ipv4AddressOrZero, reason, result * 60);
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                     {
-                                        await Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, result, reason);
-                                        await Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, result, DateTime.Now);
-                                        await Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
+                                        Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, result, reason);
+                                        Client.LogPlayerBanned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, result, DateTime.Now);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
                                     }
                                     string timeLocalized = F.GetTimeFromMinutes(result, 0);
                                     F.Log(F.Translate("ip_ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 

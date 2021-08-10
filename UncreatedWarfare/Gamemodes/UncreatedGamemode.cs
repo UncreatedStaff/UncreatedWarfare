@@ -11,57 +11,57 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes
 {
     public delegate Task TeamWinDelegate(ulong team);
-    public abstract class Gamemode : IDisposable
+    public abstract class Gamemode : MonoBehaviour
     {
         public readonly string Name;
-        private int EventLoopSpeed;
+        private float EventLoopSpeed;
         private bool useEventLoop;
-        public ConfiguredTaskAwaitable EventLoopTask;
-        protected CancellationTokenSource Token { get; private set; }
         public event TeamWinDelegate OnTeamWin;
         public EState State;
         protected string shutdownMessage = string.Empty;
         protected bool shutdownAfterGame = false;
         protected ulong shutdownPlayer = 0;
+        public Coroutine EventLoopCoroutine;
+        public bool isPendingCancel;
 
         public long GameID;
         public Gamemode(string Name, float EventLoopSpeed)
         {
             this.Name = Name;
-            this.Token = new CancellationTokenSource();
-            this.EventLoopSpeed = Mathf.RoundToInt(EventLoopSpeed * 1000f);
+            this.EventLoopSpeed = EventLoopSpeed;
             this.useEventLoop = EventLoopSpeed > 0;
             this.State = EState.LOADING;
         }
         protected void SetTiming(float NewSpeed)
         {
-            this.EventLoopSpeed = Mathf.RoundToInt(NewSpeed * 1000f);
+            this.EventLoopSpeed = NewSpeed;
             this.useEventLoop = NewSpeed > 0;
         }
         public void Cancel()
         {
-            this.Token.Cancel();
+            isPendingCancel = true;
+            if (EventLoopCoroutine == null)
+                return;
+            StopCoroutine(EventLoopCoroutine);
         }
-        public virtual Task Init()
-        {
-            this.Token = new CancellationTokenSource();
-            return Task.CompletedTask;
-        }
-        protected async Task InvokeOnTeamWin(ulong winner)
+        public virtual void Init()
+        { }
+        protected void InvokeOnTeamWin(ulong winner)
         {
             if (OnTeamWin != null)
-                await OnTeamWin.Invoke(winner);
+                OnTeamWin.Invoke(winner);
         }
-        protected abstract Task EventLoopAction();
-        private async Task EventLoop(CancellationToken cancel)
+        protected abstract void EventLoopAction();
+        private IEnumerator<WaitForSeconds> EventLoop()
         {
-            while (!cancel.IsCancellationRequested)
+            F.Log(EventLoopSpeed.ToString());
+            while (!isPendingCancel)
             {
-                await Task.Delay(this.EventLoopSpeed);
+                yield return new WaitForSeconds(EventLoopSpeed);
                 DateTime start = DateTime.Now;
                 try
                 {
-                    await EventLoopAction();
+                    EventLoopAction();
                 }
                 catch (Exception ex)
                 {
@@ -84,40 +84,32 @@ namespace Uncreated.Warfare.Gamemodes
             shutdownMessage = string.Empty;
             shutdownPlayer = 0;
         }
-        public abstract Task DeclareWin(ulong winner);
-        public async virtual Task StartNextGame(bool onLoad = false)
+        public abstract void DeclareWin(ulong winner);
+        public virtual void StartNextGame(bool onLoad = false)
         {
             GameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = GameID;
             PlayerManager.Save();
-            await Task.Yield();
         }
         public virtual void Dispose()
         {
             Cancel();
         }
-        public virtual async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
-        {
-            await Task.Yield();
-        }
-        public virtual async Task OnPlayerJoined(SteamPlayer player)
-        {
-            await Task.Yield();
-        }
-        public virtual async Task OnPlayerLeft(ulong player)
-        {
-            await Task.Yield();
-        }
-        public virtual async Task OnPlayerDeath(UCWarfare.DeathEventArgs args)
-        {
-            await Task.Yield();
-        }
-        public virtual async Task OnLevelLoaded()
+        public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        { }
+        public virtual void OnPlayerJoined(SteamPlayer player)
+        { }
+        public virtual void OnPlayerLeft(ulong player)
+        { }
+        public virtual void OnPlayerDeath(UCWarfare.DeathEventArgs args)
+        { }
+        public virtual void OnLevelLoaded()
         {
             if (useEventLoop)
-                EventLoopTask = EventLoop(Token.Token).ConfigureAwait(false);
-            await Task.Yield();
+            {
+                EventLoopCoroutine = StartCoroutine(EventLoop());
+            }
         }
         public static Gamemode FindGamemode(string name, Dictionary<string, Type> modes)
         {
@@ -127,7 +119,7 @@ namespace Uncreated.Warfare.Gamemodes
                 {
                     if (type == default) return null;
                     if (!type.IsSubclassOf(typeof(Gamemode))) return null;
-                    Gamemode gamemode = (Gamemode)Activator.CreateInstance(type);
+                    Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(type) as Gamemode;
                     return gamemode;
                 }
                 else return null;

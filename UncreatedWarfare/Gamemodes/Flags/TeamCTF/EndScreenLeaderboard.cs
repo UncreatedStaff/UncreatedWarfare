@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     {
         public const float SecondsEndGameLength = 30f;
         public const short UiIdentifier = 10000;
-        public event Networking.EmptyTaskDelegate OnLeaderboardExpired;
+        public event VoidDelegate OnLeaderboardExpired;
         private float secondsLeft;
         public bool ShuttingDown = false;
         public string ShuttingDownMessage = string.Empty;
@@ -35,22 +35,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         bool longestShotTaken;
         public Queue<SteamPlayer> TeleportQueue = new Queue<SteamPlayer>();
         private float lastTp = 0;
+        public Coroutine EndGameUpdateTimer;
         //string squadname;
         //ulong squadteam;
-        public async Task EndGame(string progresschars)
+        public void EndGame(string progresschars)
         {
-            await GetValues();
+            GetValues();
             SendEndScreen(winner, progresschars);
             secondsLeft = SecondsEndGameLength;
-            _ = StartUpdatingTimer(CancelToken.Token, progresschars).ConfigureAwait(false);
-            await Task.Yield();
+            EndGameUpdateTimer = StartCoroutine(StartUpdatingTimer(progresschars));
         }
-        private async Task StartUpdatingTimer(CancellationToken token, string progresschars)
+        private IEnumerator<WaitForSeconds> StartUpdatingTimer(string progresschars)
         {
-            while (secondsLeft > 0 && !token.IsCancellationRequested)
+            while (secondsLeft > 0)
             {
                 secondsLeft -= updateTimeFrequency;
-                await Task.Delay(Mathf.RoundToInt(updateTimeFrequency * 1000));
+                yield return new WaitForSeconds(updateTimeFrequency);
                 UpdateLeaderboard(secondsLeft, progresschars);
             }
             EffectManager.ClearEffectByID_AllPlayers(UCWarfare.Config.EndScreenUI);
@@ -62,12 +62,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             if (ShuttingDown)
             {
-                await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
+                //await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
                 Provider.shutdown(0, ShuttingDownMessage);
             }
             else if (OnLeaderboardExpired != null)
             {
-                await OnLeaderboardExpired.Invoke();
+                OnLeaderboardExpired.Invoke();
             }
         }
         internal void FixedUpdate()
@@ -89,7 +89,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
         }
-        public async Task GetValues()
+        public void GetValues()
         {
             // topsquadplayers = warstats.GetTopSquad(out squadname, out squadteam, winner);
             warstats.GetTopStats(14, out statsT1, out statsT2);
@@ -100,7 +100,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 SteamPlayer longestshottaker = PlayerTool.getSteamPlayer(warstats.LongestShot.Key);
                 if (longestshottaker == null)
                 {
-                    longestShotTaker = await Data.DatabaseManager.GetUsernames(warstats.LongestShot.Key);
+                    longestShotTaker = Data.DatabaseManager.GetUsernames(warstats.LongestShot.Key);
                     if (PlayerManager.HasSave(warstats.LongestShot.Key, out PlayerSave save))
                         longestShotTakerTeam = save.Team;
                     else longestShotTakerTeam = 0;

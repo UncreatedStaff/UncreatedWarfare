@@ -25,9 +25,8 @@ namespace Uncreated.Warfare.Commands
 
         public List<string> Permissions => new List<string> { "uc.group" }; //.join, .create, .current
 
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
-            await ThreadTool.SwitchToGameThread();
             UnturnedPlayer player = caller as UnturnedPlayer;
             if (command.Length == 0)
             {
@@ -92,7 +91,7 @@ namespace Uncreated.Warfare.Commands
                         if(player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
                         {
                             GroupManager.save();
-                            await EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, groupInfo.groupID.m_SteamID);
+                            EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, groupInfo.groupID.m_SteamID);
                             ulong team = player.GetTeam();
                             if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                             if (team == 1)

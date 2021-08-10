@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Networking.Invocations
 {
-    public delegate Task SendTask(byte[] data);
+    public delegate void SendTask(byte[] data);
     public abstract class NetworkCall
     {
         protected readonly ECall call;
@@ -54,56 +54,6 @@ namespace Uncreated.Networking.Invocations
                 d.Dispose();
             Client.Waits.Remove(id);
         }
-        protected async Task<bool> InvokeReliableInternal(byte id, byte[] data, int counter, CancellationTokenSource canceller)
-        {
-            return await InvokeAndWaitTask(id, data, counter, canceller);
-        }
-        private async Task<bool> InvokeAndWaitTask(byte id, byte[] data, int counter, CancellationTokenSource canceller)
-        {
-            await send.Invoke(data);
-            if (NullCheck != null && NullCheck.Invoke()) return false;
-            CancellationTokenSource temp = new CancellationTokenSource();
-            temp.CancelAfter(WAIT_TIMEOUT);
-            await Client.BeginReadCancellableAwaitable.Invoke(temp.Token);
-            temp.Dispose();
-            int c = counter;
-            try
-            {
-                await Task.Delay(WAIT_TIMEOUT, canceller.Token);
-            }
-            catch (OperationCanceledException) when (canceller.Token.IsCancellationRequested)
-            {
-                if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d2))
-                {
-                    RemovePending(id, d2.Value, true, false);
-                    if (d2.Key) return true;
-                    else if (c++ < COUNTER_MAX) return await InvokeAndWaitTask(id, data, c, canceller); // loop until counter >= COUNTER_MAX
-                    else return false;
-                }
-                return true;
-            }
-            if (Client.Waits.TryGetValue(id, out KeyValuePair<bool, CancellationTokenSource> d))
-            {
-                if (!d.Value.IsCancellationRequested)
-                {
-                    if (c++ >= COUNTER_MAX)
-                    {
-                        RemovePending(id, d.Value, true, true);
-                        return false;
-                    }
-                    else
-                        return await InvokeAndWaitTask(id, data, c, canceller); // loop until counter >= COUNTER_MAX
-                }
-                else
-                {
-                    RemovePending(id, d.Value, true, false);
-                    if (d.Key) return true;
-                    else if (c++ < COUNTER_MAX) return await InvokeAndWaitTask(id, data, c, canceller); // loop until counter >= COUNTER_MAX
-                    else return false;
-                }
-            }
-            else return true;
-        }
     }
     public class NetworkInvocationRaw<T> : NetworkCall
     {
@@ -114,17 +64,8 @@ namespace Uncreated.Networking.Invocations
             this.reader = read;
             this.writer = write;
         }
-        public async Task Invoke(T arg) => await send?.Invoke(GetBytes(arg, EReturnType.SEND_NO_RETURN));
+        public void Invoke(T arg) => send?.Invoke(GetBytes(arg, EReturnType.SEND_NO_RETURN));
         public byte[] GetBytes(T arg, EReturnType expectrtn, byte id = 0) => writer.Invoke(arg).Callify(call, expectrtn, id, 0);
-        public async Task InvokeAndWaitAsync(T arg)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
-        }
         public bool Read(byte[] bytes, out T output)
         {
             try
@@ -143,22 +84,13 @@ namespace Uncreated.Networking.Invocations
     public class NetworkInvocation : NetworkCall
     {
         public NetworkInvocation(ECall call) : base(call) { }
-        public async Task Invoke()
+        public void Invoke()
         {
-            await send?.Invoke(GetBytes(EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(EReturnType expectrtn, byte id = 0)
         {
             return ByteMath.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync()
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
     }
     public class NetworkInvocation<T1> : NetworkCall
@@ -170,22 +102,13 @@ namespace Uncreated.Networking.Invocations
             this.writer1 = ByteMath.GetWriteFunction<T1>();
             this.reader1 = ByteMath.GetReadFunction<T1>();
         }
-        public async Task Invoke(T1 arg1)
+        public void Invoke(T1 arg1)
         {
-            await send?.Invoke(GetBytes(arg1, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, EReturnType expectrtn, byte id = 0)
         {
             return writer1.Invoke(arg1).Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1)
         {
@@ -214,9 +137,9 @@ namespace Uncreated.Networking.Invocations
             this.reader1 = ByteMath.GetReadFunction<T1>();
             this.reader2 = ByteMath.GetReadFunction<T2>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2)
+        public void Invoke(T1 arg1, T2 arg2)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, EReturnType expectrtn, byte id = 0)
         {
@@ -226,15 +149,6 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b1, 0, rtn, 0, b1.Length);
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2)
         {
@@ -269,9 +183,9 @@ namespace Uncreated.Networking.Invocations
             this.reader2 = ByteMath.GetReadFunction<T2>();
             this.reader3 = ByteMath.GetReadFunction<T3>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, EReturnType expectrtn, byte id = 0)
         {
@@ -283,15 +197,6 @@ namespace Uncreated.Networking.Invocations
             Array.Copy(b2, 0, rtn, b1.Length, b2.Length);
             Array.Copy(b3, 0, rtn, b1.Length + b2.Length, b3.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3)
         {
@@ -335,9 +240,9 @@ namespace Uncreated.Networking.Invocations
             this.reader3 = ByteMath.GetReadFunction<T3>();
             this.reader4 = ByteMath.GetReadFunction<T4>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, EReturnType expectrtn, byte id = 0)
         {
@@ -355,15 +260,6 @@ namespace Uncreated.Networking.Invocations
             i += b3.Length;
             Array.Copy(b4, 0, rtn, i, b4.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4)
         {
@@ -414,9 +310,9 @@ namespace Uncreated.Networking.Invocations
             this.reader4 = ByteMath.GetReadFunction<T4>();
             this.reader5 = ByteMath.GetReadFunction<T5>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, EReturnType expectrtn, byte id = 0)
         {
@@ -437,15 +333,6 @@ namespace Uncreated.Networking.Invocations
             i += b4.Length;
             Array.Copy(b5, 0, rtn, i, b5.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5)
         {
@@ -503,9 +390,9 @@ namespace Uncreated.Networking.Invocations
             this.reader5 = ByteMath.GetReadFunction<T5>();
             this.reader6 = ByteMath.GetReadFunction<T6>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, EReturnType expectrtn, byte id = 0)
         {
@@ -529,15 +416,6 @@ namespace Uncreated.Networking.Invocations
             i += b5.Length;
             Array.Copy(b6, 0, rtn, i, b6.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6)
         {
@@ -602,9 +480,9 @@ namespace Uncreated.Networking.Invocations
             this.reader6 = ByteMath.GetReadFunction<T6>();
             this.reader7 = ByteMath.GetReadFunction<T7>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, EReturnType expectrtn, byte id = 0)
         {
@@ -631,15 +509,6 @@ namespace Uncreated.Networking.Invocations
             i += b6.Length;
             Array.Copy(b7, 0, rtn, i, b7.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7)
         {
@@ -711,9 +580,9 @@ namespace Uncreated.Networking.Invocations
             this.reader7 = ByteMath.GetReadFunction<T7>();
             this.reader8 = ByteMath.GetReadFunction<T8>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, EReturnType expectrtn, byte id = 0)
         {
@@ -743,15 +612,6 @@ namespace Uncreated.Networking.Invocations
             i += b7.Length;
             Array.Copy(b8, 0, rtn, i, b8.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8)
         {
@@ -830,9 +690,9 @@ namespace Uncreated.Networking.Invocations
             this.reader8 = ByteMath.GetReadFunction<T8>();
             this.reader9 = ByteMath.GetReadFunction<T9>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, EReturnType expectrtn, byte id = 0)
         {
@@ -865,15 +725,6 @@ namespace Uncreated.Networking.Invocations
             i += b8.Length;
             Array.Copy(b9, 0, rtn, i, b9.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9)
         {
@@ -959,9 +810,9 @@ namespace Uncreated.Networking.Invocations
             this.reader9 = ByteMath.GetReadFunction<T9>();
             this.reader10 = ByteMath.GetReadFunction<T10>();
         }
-        public async Task Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+        public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
         {
-            await send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, EReturnType.SEND_NO_RETURN));
+            send?.Invoke(GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, EReturnType.SEND_NO_RETURN));
         }
         public byte[] GetBytes(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, EReturnType expectrtn, byte id = 0)
         {
@@ -997,15 +848,6 @@ namespace Uncreated.Networking.Invocations
             i += b9.Length;
             Array.Copy(b10, 0, rtn, i, b10.Length);
             return rtn.Callify(call, expectrtn, id, 0);
-        }
-        public async Task InvokeAndWaitAsync(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-        {
-            if (send != null)
-            {
-                byte id = ID;
-                byte[] data = GetBytes(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, EReturnType.SEND_NO_RETURN_RELIABLE, id);
-                await InvokeReliableInternal(id, data, 0, AddPending(id));
-            }
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9, out T10 arg10)
         {

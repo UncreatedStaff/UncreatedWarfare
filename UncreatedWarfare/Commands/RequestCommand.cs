@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/request";
         public List<string> Aliases => new List<string>() { };
         public List<string> Permissions => new List<string>() { "uc.request" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Commands
                     if (vbsign.bay != default && vbsign.bay.HasLinkedVehicle(out InteractableVehicle veh))
                     {
                         if(veh != default)
-                            await RequestVehicle(ucplayer, veh);
+                            RequestVehicle(ucplayer, veh);
                     }
                 }
                 else if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
-                    int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
+                    int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
                     Rank rank = XPManager.GetRank(xp, out _, out _);
                     if ((rank == default || rank.level < kit.RequiredLevel) && !UCWarfare.Config.OverrideKitRequirements)
                     {
@@ -136,7 +136,7 @@ namespace Uncreated.Warfare.Commands
                             branchChanged = true;
 
                         Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
-                        await KitManager.GiveKit(ucplayer, kit);
+                        KitManager.GiveKit(ucplayer, kit);
                         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)
@@ -157,14 +157,14 @@ namespace Uncreated.Warfare.Commands
             }
             else if (vehicle != null)
             {
-                await RequestVehicle(ucplayer, vehicle);
+                RequestVehicle(ucplayer, vehicle);
             }
             else
             {
                 ucplayer.Message("request_not_looking");
             }
         }
-        private async Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle)
+        private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle)
         {
             if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
             {
@@ -198,7 +198,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_cooldown", F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
                 return;
             }
-            int xp = await XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
+            int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
             Rank rank = XPManager.GetRank(xp, out _, out _);
             if (rank == default || rank.level < data.RequiredLevel)
             {

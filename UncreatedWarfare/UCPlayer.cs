@@ -35,10 +35,10 @@ namespace Uncreated.Warfare
         public Rank OfficerRank;
         public Coroutine StorageCoroutine;
         /// <summary>[Unreliable]</summary>
-        public async Task<Rank> XPRank()
+        public Rank XPRank()
         {
             if (cachedXp == -1)
-                await RedownloadCachedXP();
+                RedownloadCachedXP();
             if (_rank == null || isXpDirty)
             {
                 _rank = XPManager.GetRank(cachedXp, out _, out _);
@@ -138,9 +138,9 @@ namespace Uncreated.Warfare
         public ulong GetTeam() => Player.quests.groupID.m_SteamID;
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
-        public async Task RedownloadCachedXP()
+        public void RedownloadCachedXP()
         {
-            cachedXp = await Data.DatabaseManager?.GetXP(Steam64, Player.GetTeam());
+            cachedXp = Data.DatabaseManager.GetXP(Steam64, Player.GetTeam());
         }
         public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName)
         {

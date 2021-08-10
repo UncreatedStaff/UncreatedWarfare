@@ -30,12 +30,11 @@ namespace Uncreated.Warfare.Officers
             config = new Config<OfficerConfigData>(Data.OfficerStorage, "config.json");
             Reload();
         }
-
-        public static async Task OnPlayerJoined(UCPlayer player)
+        public static void OnPlayerJoined(UCPlayer player)
         {
             if (player.IsTeam1() || player.IsTeam2())
             {
-                int points = await GetOfficerPoints(player.Player, player.GetTeam(), true);
+                int points = GetOfficerPoints(player.Player, player.GetTeam(), true);
 
                 if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
                 {
@@ -44,23 +43,18 @@ namespace Uncreated.Warfare.Officers
                 UpdateUI(player.Player, points, out _);
             }
         }
-        public static async Task OnPlayerLeft(UCPlayer player)
+        public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            await Task.Yield(); // just to remove the warning, feel free to remove, its basically an empty line.
-        }
-        public static async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
-        {
-            int op = await GetOfficerPoints(player.player, newGroup, true);
+            int op = GetOfficerPoints(player.player, newGroup, true);
             UpdateUI(player.player, op, out _);
         }
-
-        public static async Task<int> GetOfficerPoints(Player player, ulong team, bool important)
+        public static int GetOfficerPoints(Player player, ulong team, bool important)
         {
             if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             if (ucplayer == default || important || ucplayer.cachedOfp == -1)
             {
-                int newofp = await Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
+                int newofp = Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
                 if (ucplayer != null)
                     ucplayer.cachedOfp = newofp;
                 return newofp;
@@ -68,20 +62,20 @@ namespace Uncreated.Warfare.Officers
             else return ucplayer.cachedOfp;
             
         }
-        public static async Task<int> GetOfficerPoints(ulong player, ulong team, bool important)
+        public static int GetOfficerPoints(ulong player, ulong team, bool important)
         {
             if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromID(player);
             if (ucplayer == default || important || ucplayer.cachedOfp == -1)
             {
-                int newofp = await Data.DatabaseManager.GetOfficerPoints(player, team);
+                int newofp = Data.DatabaseManager.GetOfficerPoints(player, team);
                 if (ucplayer != default)
                     ucplayer.cachedOfp = newofp;
                 return newofp;
             }
             else return ucplayer.cachedOfp;
         }
-        public static async Task AddOfficerPoints(Player player, ulong team, int amount, string message ="")
+        public static void AddOfficerPoints(Player player, ulong team, int amount, string message ="")
         {
             if (team < 1 || team > 2) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -90,7 +84,7 @@ namespace Uncreated.Warfare.Officers
             if (ucplayer != null)
                 oldStars = GetStars(ucplayer.cachedOfp);
 
-            int newBalance = await Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
+            int newBalance = Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
             if (ucplayer != null)
                 ucplayer.cachedOfp = newBalance;
 
@@ -118,7 +112,6 @@ namespace Uncreated.Warfare.Officers
         {
             return config.Data.OfficerRanks.Where(r => r.level == officerRankLevel).FirstOrDefault();
         }
-
         public static void ChangeOfficerRank(UCPlayer player, Rank newRank, EBranch branch)
         {
             if (ObjectExists(o => o.steamID == player.Steam64, out var officer))
@@ -168,7 +161,6 @@ namespace Uncreated.Warfare.Officers
                 }
             }
         }
-
         public static void DischargeOfficer(UCPlayer player, Rank currentRank)
         {
             RemoveWhere(o => o.steamID == player.CSteamID.m_SteamID);
@@ -183,7 +175,6 @@ namespace Uncreated.Warfare.Officers
                 }
             }
         }
-
         public static bool IsOfficer(CSteamID playerID, out Officer officer)
         {
             officer = GetObject(o => o.steamID == playerID.m_SteamID);
@@ -251,7 +242,6 @@ namespace Uncreated.Warfare.Officers
 
             return Mathf.RoundToInt(Mathf.Floor(((0.5f * d) - a + Mathf.Sqrt(Mathf.Pow(a - 0.5f * d, 2f) + (2f * d * totalPoints))) / d));
         }
-
         protected override string LoadDefaults() => "[]";
     }
 
@@ -261,7 +251,6 @@ namespace Uncreated.Warfare.Officers
         public ulong team;
         public int officerLevel;
         public EBranch branch;
-
         public Officer(ulong steamID, ulong team, int officerLevel, EBranch branch)
         {
             this.steamID = steamID;
@@ -294,17 +283,13 @@ namespace Uncreated.Warfare.Officers
         public int BuiltBarricadePoints;
         public int RallyDeployPoints;
         public Dictionary<EVehicleType, int> VehicleDestroyedPoints;
-
         public int FirstStarPoints;
         public int PointsIncreasePerStar;
         public float PointsMultiplier;
-
         public ushort StarsUI;
         public List<Rank> OfficerRanks;
-
         public char FullBlock;
         public char StarCharacter;
-
         public override void SetDefaults()
         {
             FriendlyKilledPoints = -1;
@@ -353,7 +338,6 @@ namespace Uncreated.Warfare.Officers
             FullBlock = '█';
             StarCharacter = '¼';
         }
-
         public OfficerConfigData() { }
     }
 }

@@ -128,18 +128,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 else return UCWarfare.GetColorHex("neutral_color");
             }
         }
-        public async Task ResetFlag()
+        public void ResetFlag()
         {
-            await SetOwner(0, false);
+            SetOwner(0, false);
             _points = 0;
             HasBeenCapturedT1 = false;
             HasBeenCapturedT2 = false;
             Hide(1);
             Hide(2);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if(OnReset != null)
                 OnReset.Invoke(this, EventArgs.Empty);
-            await rtn;
         }
         public void Dispose()
         {
@@ -150,14 +148,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public ulong Owner {
             get => _owner;
         }
-        public async Task SetOwner(ulong value, bool invokeEvent = true)
+        public void SetOwner(ulong value, bool invokeEvent = true)
         {
             if (_owner != value)
             {
                 ulong oldowner = _owner;
                 _owner = value;
                 if(invokeEvent)
-                    await OnOwnerChanged?.Invoke(oldowner, _owner, this);
+                    OnOwnerChanged?.Invoke(oldowner, _owner, this);
             }
         }
         public void SetOwnerNoEventInvocation(ulong newOwner)
@@ -207,7 +205,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             get => _points;
         }
-        public async Task SetPoints(int value)
+        public void SetPoints(int value)
         {
             int OldPoints = _points;
             if (value > MaxPoints) _points = MaxPoints;
@@ -216,15 +214,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (OldPoints != _points)
             {
                 LastDeltaPoints = _points - OldPoints;
-                await OnPointsChanged?.Invoke(_points, OldPoints, this);
+                OnPointsChanged?.Invoke(_points, OldPoints, this);
             }
         }
         public event PlayerDelegate OnPlayerEntered;
         public event PlayerDelegate OnPlayerLeft;
-        public delegate Task PointsChangedDelegate(int NewPoints, int OldPoints, Flag flag);
-        public delegate Task PlayerDelegate(Flag flag, Player player);
+        public delegate void PointsChangedDelegate(int NewPoints, int OldPoints, Flag flag);
+        public delegate void PlayerDelegate(Flag flag, Player player);
         public event PointsChangedDelegate OnPointsChanged;
-        public delegate Task OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
+        public delegate void OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
         public event OwnerChangedDelegate OnOwnerChanged;
         public event EventHandler<DiscoveredEventArgs> OnDiscovered;
         public event EventHandler<DiscoveredEventArgs> OnHidden;
@@ -283,37 +281,37 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             PlayersOnFlag.Remove(player);
         }
         public bool IsNeutral() => _points == 0;
-        public async Task CapT1(int amount)
+        public void CapT1(int amount)
         {
-            await SetPoints(Points + amount);
+            SetPoints(Points + amount);
             if (Points >= MaxPoints)
-                await SetOwner(1);
+                SetOwner(1);
         }
-        public async Task CapT1()
+        public void CapT1()
         {
-            await SetPoints(MaxPoints);
-            await SetOwner(1);
+            SetPoints(MaxPoints);
+            SetOwner(1);
         }
-        public async Task CapT2(int amount)
+        public void CapT2(int amount)
         {
-            await SetPoints(Points - amount);
+            SetPoints(Points - amount);
             if (Points <= -MaxPoints)
-                await SetOwner(2);
+                SetOwner(2);
         }
-        public async Task CapT2()
+        public void CapT2()
         {
-            await SetPoints(-MaxPoints);
-            await SetOwner(2);
+            SetPoints(-MaxPoints);
+            SetOwner(2);
         }
-        public async Task Cap(ulong team, int amount)
+        public void Cap(ulong team, int amount)
         {
-            if (team == 1) await CapT1(amount);
-            else if (team == 2) await CapT2(amount);
+            if (team == 1) CapT1(amount);
+            else if (team == 2) CapT2(amount);
         }
-        public async Task Cap(ulong team)
+        public void Cap(ulong team)
         {
-            if (team == 1) await CapT1();
-            else if (team == 2) await CapT2();
+            if (team == 1) CapT1();
+            else if (team == 2) CapT2();
         }
         public bool T1Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam1.ID == ID; }
         public bool T2Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam2.ID == ID; }
@@ -443,7 +441,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 return false;
             }
         }
-        public async Task EvaluatePoints(bool overrideInactiveCheck = false)
+        public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
             if (Manager.State == EState.ACTIVE || overrideInactiveCheck)
             {
@@ -455,7 +453,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (winner == 1 || winner == 2)
                             {
-                                await Cap(winner, 1);
+                                Cap(winner, 1);
                             }
                         }
                     }
@@ -463,7 +461,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     {
                         // invoke points updated method to show contested.
                         this.LastDeltaPoints = 0;
-                        await OnPointsChanged?.Invoke(_points, _points, this);
+                        OnPointsChanged?.Invoke(_points, _points, this);
                     }
                 }
             }

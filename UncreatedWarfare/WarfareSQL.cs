@@ -19,10 +19,10 @@ namespace Uncreated.Warfare
         {
             DebugLogging |= UCWarfare.Config.Debug;
         }
-        public async Task<FPlayerName> GetUsernames(ulong Steam64)
+        public FPlayerName GetUsernames(ulong Steam64)
         {
             FPlayerName? name = null;
-            await Query(
+            Query(
                 $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
                 $"FROM `usernames` " +
                 $"WHERE `Steam64` = @0 LIMIT 1;",
@@ -36,9 +36,9 @@ namespace Uncreated.Warfare
             string tname = Steam64.ToString(Data.Locale);
             return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
         }
-        public async Task CheckUpdateUsernames(FPlayerName player)
+        public void CheckUpdateUsernames(FPlayerName player)
         {
-            FPlayerName oldNames = await GetUsernames(player.Steam64);
+            FPlayerName oldNames = GetUsernames(player.Steam64);
             bool updatePlayerName = false;
             bool updateCharacterName = false;
             bool updateNickName = false;
@@ -76,7 +76,7 @@ namespace Uncreated.Warfare
                 sb.Append('`').Append(valueNames[i]).Append("` = VALUES(`").Append(valueNames[i]).Append("`)");
             }
             string updates = sb.ToString();
-            await NonQuery(
+            NonQuery(
                 $"INSERT INTO `usernames` " +
                 $"(`Steam64`, `PlayerName`, `CharacterName`, `NickName`) VALUES(@0, @1, @2, @3) " +
                 $"ON DUPLICATE KEY UPDATE " +
@@ -84,10 +84,10 @@ namespace Uncreated.Warfare
                 $";", 
                 parameters);
         }
-        public async Task<int> GetXP(ulong Steam64, ulong Team)
+        public int GetXP(ulong Steam64, ulong Team)
         {
             int xp = 0;
-            await Query(
+            Query(
                 "SELECT `XP` " +
                 "FROM `levels` " +
                 "WHERE `Steam64` = @0 " +
@@ -99,10 +99,10 @@ namespace Uncreated.Warfare
                 });
             return xp;
         }
-        public async Task<int> GetOfficerPoints(ulong Steam64, ulong Team)
+        public int GetOfficerPoints(ulong Steam64, ulong Team)
         {
             int officer_points = 0;
-            await Query(
+            Query(
                 $"SELECT `OfficerPoints` " +
                 $"FROM `levels` " +
                 $"WHERE `Steam64` = @0 " +
@@ -114,10 +114,10 @@ namespace Uncreated.Warfare
                 });
             return officer_points;
         }
-        public async Task<uint> GetKills(ulong Steam64, ulong Team)
+        public uint GetKills(ulong Steam64, ulong Team)
         {
             uint kills = 0;
-            await Query(
+            Query(
                 "SELECT `Kills` " +
                 "FROM `playerstats` " +
                 "WHERE `Steam64` = @0 " +
@@ -129,10 +129,10 @@ namespace Uncreated.Warfare
                 });
             return kills;
         }
-        public async Task<uint> GetDeaths(ulong Steam64, ulong Team)
+        public uint GetDeaths(ulong Steam64, ulong Team)
         {
             uint deaths = 0;
-            await Query(
+            Query(
                 $"SELECT `Deaths` " +
                 $"FROM `playerstats` " +
                 $"WHERE `Steam64` = @0 " +
@@ -144,10 +144,10 @@ namespace Uncreated.Warfare
                 });
             return deaths;
         }
-        public async Task<uint> GetTeamkills(ulong Steam64, ulong Team)
+        public uint GetTeamkills(ulong Steam64, ulong Team)
         {
             uint teamkills = 0;
-            await Query(
+            Query(
                 "SELECT `Teamkills` " +
                 "FROM `playerstats` " +
                 "WHERE `Steam64` = @0 " +
@@ -160,13 +160,13 @@ namespace Uncreated.Warfare
             return teamkills;
         }
         /// <returns>New XP Value</returns>
-        public async Task<int> AddXP(ulong Steam64, ulong Team, int amount)
+        public int AddXP(ulong Steam64, ulong Team, int amount)
         {
-            int oldBalance = await GetXP(Steam64, Team);
+            int oldBalance = GetXP(Steam64, Team);
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
-                await NonQuery(
+                NonQuery(
                     "INSERT INTO `levels` " +
                     "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
                     "VALUES(@0, @1, @2, '0') " +
@@ -179,7 +179,7 @@ namespace Uncreated.Warfare
                 int absamount = Math.Abs(amount);
                 if (absamount >= oldBalance)
                 {
-                    await NonQuery(
+                    NonQuery(
                         "INSERT INTO `levels` " +
                         "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
                         "VALUES(@0, @1, '0', '0') " +
@@ -189,7 +189,7 @@ namespace Uncreated.Warfare
                     return 0;
                 } else
                 {
-                    await NonQuery(
+                    NonQuery(
                         "UPDATE `levels` SET " +
                         "`XP` = `XP` - @2 " +
                         "WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -199,14 +199,14 @@ namespace Uncreated.Warfare
             }
         }
         /// <returns>New Officer Points Value</returns>
-        public async Task<int> AddOfficerPoints(ulong Steam64, ulong Team, int amount)
+        public int AddOfficerPoints(ulong Steam64, ulong Team, int amount)
         {
-            int oldBalance = await GetOfficerPoints(Steam64, Team);
+            int oldBalance = GetOfficerPoints(Steam64, Team);
 
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
-                await NonQuery(
+                NonQuery(
                     "INSERT INTO `levels` " +
                     "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
                     "VALUES(@0, @1, '0', @2) " +
@@ -219,7 +219,7 @@ namespace Uncreated.Warfare
             {
                 if (amount >= oldBalance)
                 {
-                    await NonQuery(
+                    NonQuery(
                         "INSERT INTO `levels` " +
                         "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
                         "VALUES(@0, @1, '0', '0') " +
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    await NonQuery(
+                    NonQuery(
                         "UPDATE `levels` SET " +
                         "`OfficerPoints` = `OfficerPoints` - @2 " +
                         "WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -239,12 +239,12 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public async Task AddKill(ulong Steam64, ulong Team, int amount = 1)
+        public void AddKill(ulong Steam64, ulong Team, int amount = 1)
         {
             if (amount == 0) return;
             if (amount > 0)
             {
-                await NonQuery(
+                NonQuery(
                     $"INSERT INTO `playerstats` " +
                     $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, @2, '0', '0') " +
@@ -254,10 +254,10 @@ namespace Uncreated.Warfare
             }
             else
             {
-                uint oldkills = await GetKills(Steam64, Team);
+                uint oldkills = GetKills(Steam64, Team);
                 if (amount >= oldkills)
                 {
-                    await NonQuery(
+                    NonQuery(
                         $"INSERT INTO `playerstats` " +
                         $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
@@ -267,7 +267,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    await NonQuery(
+                    NonQuery(
                         $"UPDATE `playerstats` SET " +
                         $"`Kills` = `Kills` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -275,12 +275,12 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public async Task AddDeath(ulong Steam64, ulong Team, int amount = 1)
+        public void AddDeath(ulong Steam64, ulong Team, int amount = 1)
         {
             if (amount == 0) return;
             if (amount > 0)
             {
-                await NonQuery(
+                NonQuery(
                     $"INSERT INTO `playerstats` " +
                     $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, '0', @2, '0') " +
@@ -290,10 +290,10 @@ namespace Uncreated.Warfare
             }
             else
             {
-                uint oldDeaths = await GetDeaths(Steam64, Team);
+                uint oldDeaths = GetDeaths(Steam64, Team);
                 if (amount >= oldDeaths)
                 {
-                    await NonQuery(
+                    NonQuery(
                         $"INSERT INTO `playerstats` " +
                         $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
@@ -303,7 +303,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    await NonQuery(
+                    NonQuery(
                         $"UPDATE `playerstats` SET " +
                         $"`Deaths` = `Deaths` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -311,12 +311,12 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public async Task AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
+        public void AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
         {
             if (amount == 0) return;
             if (amount > 0)
             {
-                await NonQuery(
+                NonQuery(
                     $"INSERT INTO `playerstats` " +
                     $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, '0', '0', @2) " +
@@ -326,10 +326,10 @@ namespace Uncreated.Warfare
             }
             else
             {
-                uint oldTeamkills = await GetTeamkills(Steam64, Team);
+                uint oldTeamkills = GetTeamkills(Steam64, Team);
                 if (amount >= oldTeamkills)
                 {
-                    await NonQuery(
+                    NonQuery(
                         $"INSERT INTO `playerstats` " +
                         $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
@@ -339,7 +339,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    await NonQuery(
+                    NonQuery(
                         $"UPDATE `playerstats` SET " +
                         $"`Teamkills` = `Teamkills` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -347,45 +347,45 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public async Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason)
-            => await NonQuery(
+        public void AddBan(ulong Banned, ulong Banner, uint Duration, string Reason)
+            => NonQuery(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
                 new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public async Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason, DateTime time)
-            => await NonQuery(
+        public void AddBan(ulong Banned, ulong Banner, uint Duration, string Reason, DateTime time)
+            => NonQuery(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
                 new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, time) });
-        public async Task AddKick(ulong Kicked, ulong Kicker, string Reason)
-            => await NonQuery(
+        public void AddKick(ulong Kicked, ulong Kicker, string Reason)
+            => NonQuery(
                 "INSERT INTO `kicks` " +
                 "(`Kicked`, `Kicker`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
                 new object[] { Kicked, Kicker, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public async Task AddWarning(ulong Warned, ulong Warner, string Reason)
-            => await NonQuery(
+        public void AddWarning(ulong Warned, ulong Warner, string Reason)
+            => NonQuery(
                 "INSERT INTO `warnings` " +
                 "(`Warned`, `Warner`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
                 new object[] { Warned, Warner, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public async Task AddBattleyeKick(ulong Kicked, string Reason)
-            => await NonQuery(
+        public void AddBattleyeKick(ulong Kicked, string Reason)
+            => NonQuery(
                 "INSERT INTO `battleye_kicks` " +
                 "(`Kicked`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
                 new object[] { Kicked, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public async Task AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
-            => await NonQuery(
+        public  void AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
+            => NonQuery(
                 "INSERT INTO `teamkills` " +
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4, @5, @6);",
                 new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public async Task<bool> HasPlayerJoined(ulong Steam64)
+        public bool HasPlayerJoined(ulong Steam64)
         {
-            int amt = await Scalar(
+            int amt = Scalar(
                 $"SELECT COUNT(*) " +
                 $"FROM `logindata` " +
                 $"WHERE `Steam64` = @0;",
@@ -393,7 +393,7 @@ namespace Uncreated.Warfare
                 o => Convert.ToInt32(o));
             return amt > 0;
         }
-        public async Task RegisterLogin(Player player)
+        public void RegisterLogin(Player player)
         {
             string ipaddress;
             if (player.channel.owner.getIPv4Address(out uint ipnum))
@@ -406,7 +406,7 @@ namespace Uncreated.Warfare
             else if (SteamGameServer.GetPublicIP().TryGetIPv4Address(out ipnum))
                 ipaddress = Parser.getIPFromUInt32(ipnum);
             else ipaddress = LOCAL_IP;
-            await NonQuery(
+            NonQuery(
                 $"INSERT INTO `logindata` " +
                 $"(`Steam64`, `IP`, `LastLoggedIn`) " +
                 $"VALUES(@0, @1, @2) " +
@@ -415,13 +415,13 @@ namespace Uncreated.Warfare
                 new object[3] { player.channel.owner.playerID.steamID.m_SteamID, ipaddress, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         }
         /// <returns> 0 if not banned, else duration (-1 meaning forever) </returns>
-        public async Task<int> IPBanCheck(ulong id, uint packedIP)
+        public int IPBanCheck(ulong id, uint packedIP)
         { // returns true if banned
             ulong bannedid = 0;
             string oldids = string.Empty;
             int durationref = 0;
             DateTime bantime = DateTime.Now;
-            await Query(
+            Query(
                 $"SELECT * " +
                 $"FROM `ipbans` " +
                 $"WHERE `PackedIP` = @0 " +
@@ -443,7 +443,7 @@ namespace Uncreated.Warfare
                 newids[i] = ids[i];
             newids[ids.Length] = idstr;
             string newidsstr = string.Join(",", newids);
-            await NonQuery(
+            NonQuery(
                 $"UPDATE `ipbans` " +
                 $"SET `OtherIDs` = @1 " +
                 $"WHERE `PackedIP` = @0;",
@@ -452,11 +452,11 @@ namespace Uncreated.Warfare
             return durationref;
         }
         /// <returns><see langword="true"/> if player was already banned and the duration was updated, else <see langword="false"/></returns>
-        public async Task<bool> AddIPBan(ulong id, uint packedIP, string unpackedIP, int duration = -1, string reason = "")
+        public bool AddIPBan(ulong id, uint packedIP, string unpackedIP, int duration = -1, string reason = "")
         {
-            if (await IPBanCheck(id, packedIP) != 0)
+            if (IPBanCheck(id, packedIP) != 0)
             {
-                await NonQuery(
+                NonQuery(
                     $"UPDATE `ipbans` " +
                     $"SET `DurationMinutes` = @1 " +
                     $"WHERE `PackedIP` = @0;",
@@ -464,7 +464,7 @@ namespace Uncreated.Warfare
                     );
                 return false;
             }
-            await NonQuery(
+            NonQuery(
                 $"INSERT INTO `ipbans` " +
                 $"(`PackedIP`, `Instigator`, `OtherIDs`, `IPAddress`, `InitialBanDate`, `DurationMinutes`, `Reason`) " +
                 $"VALUES(@0, @1, @2, @3, @4, @5, @6);",
@@ -472,10 +472,10 @@ namespace Uncreated.Warfare
                 );
             return true;
         }
-        public async Task<string> GetIP(ulong id)
+        public string GetIP(ulong id)
         {
             string ip = null;
-            await Query(
+            Query(
                 $"SELECT `IP` " +
                 $"FROM `logindata` " +
                 $"WHERE `Steam64` = @0 " +

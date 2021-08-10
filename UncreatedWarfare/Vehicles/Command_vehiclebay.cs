@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Kits
         public string Syntax => "/vehiclebay";
         public List<string> Aliases => new List<string>() { "vb" };
         public List<string> Permissions => new List<string>() { "uc.vehiclebay" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
@@ -113,7 +113,7 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     List<VehicleSign> signs = VehicleSigns.GetLinkedSigns(spawners[i]);
                                     for (int s = 0; s < signs.Count; s++)
-                                        await signs[s].InvokeUpdate();
+                                        signs[s].InvokeUpdate();
                                 }
                             }
                         }
@@ -333,9 +333,9 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     if (VehicleSigns.SignExists(sign, out _))
                                     {
-                                        await VehicleSigns.UnlinkSign(sign);
+                                        VehicleSigns.UnlinkSign(sign);
                                     }
-                                    await VehicleSigns.LinkSign(sign, c.currentlylinking);
+                                    VehicleSigns.LinkSign(sign, c.currentlylinking);
                                     player.SendChat("vehiclebay_link_finished");
                                     c.currentlylinking = null;
                                 }

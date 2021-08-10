@@ -121,7 +121,7 @@ namespace Uncreated.Warfare.Kits
 
             return clothes;
         }
-        public static async Task GiveKit(UCPlayer player, Kit kit)
+        public static void GiveKit(UCPlayer player, Kit kit)
         {
             if (kit == null)
                 return;
@@ -130,7 +130,7 @@ namespace Uncreated.Warfare.Kits
             {
                 UCInventoryManager.ClearInventory(player);
             }
-            foreach (var clothing in kit.Clothes)
+            foreach (KitClothing clothing in kit.Clothes)
             {
                 if (clothing.type == KitClothing.EClothingType.SHIRT)
                     player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
@@ -179,8 +179,8 @@ namespace Uncreated.Warfare.Kits
 
             OnKitChanged?.Invoke(player, kit, oldkit);
             if (oldkit != null && oldkit != string.Empty)
-                await RequestSigns.InvokeLangUpdateForSignsOfKit(oldkit);
-            await RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
+                RequestSigns.InvokeLangUpdateForSignsOfKit(oldkit);
+            RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
 
         }
         public static void ResupplyKit(UCPlayer player, Kit kit)
@@ -220,7 +220,7 @@ namespace Uncreated.Warfare.Kits
                 player.Player.inventory.tryAddItem(jar.item, true);
             }
         }
-        public static async Task<bool> TryGiveUnarmedKit(UCPlayer player)
+        public static bool TryGiveUnarmedKit(UCPlayer player)
         {
             string unarmedKit = "";
             if (player.IsTeam1())
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare.Kits
 
             if (KitManager.KitExists(unarmedKit, out var kit))
             {
-                await KitManager.GiveKit(player, kit);
+                KitManager.GiveKit(player, kit);
                 return true;
             }
             return false;
@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Kits
                 return kit.AllowedUsers.Contains(playerID);
             else return false;
         }
-        public static async Task<bool> UpdateText(string kitname, string SignName, string language = JSONMethods.DefaultLanguage)
+        public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DefaultLanguage)
         {
             if (KitExists(kitname, out Kit kit))
             {
@@ -276,14 +276,14 @@ namespace Uncreated.Warfare.Kits
                     matches[i].SignName = SignName;
                     matches[i].SignTexts.Remove(language);
                     matches[i].SignTexts.Add(language, SignName);
-                    await RequestSigns.InvokeLangUpdateForSignsOfKit(matches[i].Name);
+                    RequestSigns.InvokeLangUpdateForSignsOfKit(matches[i].Name);
                 }
                 return true;
             }
             else return false;
         }
         public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => GetObjectsWhere(k => k.AllowedUsers.Contains(playerID));
-        public static async Task GiveAccess(ulong playerID, string kitName)
+        public static void GiveAccess(ulong playerID, string kitName)
         {
             if (KitExists(kitName, out Kit kit))
             {
@@ -292,18 +292,18 @@ namespace Uncreated.Warfare.Kits
                     kit.AllowedUsers.Add(playerID);
                     Save();
                     if (RequestSigns.SignExists(kit.Name, out RequestSign sign))
-                        await sign.InvokeUpdate();
+                        sign.InvokeUpdate();
                 }
             }
         }
-        public static async Task RemoveAccess(ulong playerID, string kitName)
+        public static void RemoveAccess(ulong playerID, string kitName)
         {
             if (KitExists(kitName, out Kit kit))
             {
                 kit.AllowedUsers.RemoveAll(i => i == playerID);
                 Save();
                 if (RequestSigns.SignExists(kit.Name, out RequestSign sign))
-                    await sign.InvokeUpdate();
+                    sign.InvokeUpdate();
             }
         }
 

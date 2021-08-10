@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Squads
         public string Syntax => "/squad";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.squad" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
             if (UCWarfare.Config.EnableSquads)
@@ -105,7 +105,7 @@ namespace Uncreated.Warfare.Squads
                     {
                         if (SquadManager.IsInSquad(target.CSteamID, squad))
                         {
-                            await SquadManager.PromoteToLeader(squad, target);
+                            SquadManager.PromoteToLeader(squad, target);
                         }
                         else
                             player.SendChat("squad_e_playernotinsquad", name);
@@ -147,7 +147,7 @@ namespace Uncreated.Warfare.Squads
                 {
                     if (SquadManager.IsInAnySquad(player.CSteamID, out var squad, out _))
                     {
-                        await SquadManager.LeaveSquad(player, squad);
+                        SquadManager.LeaveSquad(player, squad);
                     }
                     else
                         player.SendChat("squad_e_notinsquad");

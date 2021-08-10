@@ -157,7 +157,7 @@ namespace Uncreated.Warfare
                 CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
         }
-        public static async Task LoadVariables()
+        public static void LoadVariables()
         {
             F.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
@@ -192,7 +192,7 @@ namespace Uncreated.Warfare
             // Managers
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
-            await DatabaseManager.OpenAsync();
+            DatabaseManager.Open();
             LogoutSaver = new PlayerManager();
             Whitelister = new Whitelister();
             SquadManager = new SquadManager();
@@ -205,19 +205,20 @@ namespace Uncreated.Warfare
             F.Log("Searching for gamemode: " + UCWarfare.Config.ActiveGamemode, ConsoleColor.Magenta);
             Gamemode = Gamemode.FindGamemode(UCWarfare.Config.ActiveGamemode, GAME_MODES);
             if (Gamemode == null)
-            { 
+            {
                 F.LogError("Unable to find gamemode by the name " + UCWarfare.Config.ActiveGamemode + ", defaulting to " + nameof(TeamCTF));
-                Gamemode = new TeamCTF();
+                Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
             }
-            await Gamemode.Init();
+            Gamemode.Init();
             F.Log("Initialized gamemode.", ConsoleColor.Magenta);
+            /*
             if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
             {
                 F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
                     UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
                 _ = Networking.TCPClient.I.Connect(CancelTcp).ConfigureAwait(false);
-            }
+            }*/
             if (UCWarfare.Config.Modules.Kits)
             {
                 KitManager = new KitManager();
@@ -310,7 +311,6 @@ namespace Uncreated.Warfare
             {
                 F.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
             }
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
                 R.Permissions.AddGroup(AdminOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
@@ -324,7 +324,6 @@ namespace Uncreated.Warfare
                 R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
             else defgroup.Permissions = DefaultPerms;
             R.Permissions.SaveGroup(defgroup);
-            await rtn;
         }
         private static void DuplicateKeyError(Exception ex)
         {

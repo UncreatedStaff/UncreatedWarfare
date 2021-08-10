@@ -368,6 +368,8 @@ namespace Uncreated.Warfare
                 OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
                 return allow;
             }
+            public static event OnLandmineExplodeDelegate OnLandmineExplode;
+            public delegate void OnLandmineExplodeDelegate(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner);
             // SDG.Unturned.BarricadeManager
             /// <summary>
             /// Prefix of <see cref="BarricadeManager.ServerSetSignTextInternal(InteractableSign, BarricadeRegion, byte, byte, ushort, string)"/> to set translation data of signs.
@@ -382,11 +384,11 @@ namespace Uncreated.Warfare
                     if (trimmedText.Length > 5)
                     {
                         if (Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            Task.Run(async () => await F.InvokeSignUpdateForAllKits(sign, x, y, trimmedText));
+                            F.InvokeSignUpdateForAllKits(sign, x, y, trimmedText);
                         else
-                            Task.Run(async () => await F.InvokeSignUpdateForAll(sign, x, y, trimmedText));
+                            F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
                     } else
-                        Task.Run(async () => await F.InvokeSignUpdateForAll(sign, x, y, trimmedText));
+                        F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
                     
 
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
@@ -481,7 +483,7 @@ namespace Uncreated.Warfare
                                     string newtext = sign.text;
                                     if (newtext.StartsWith("sign_"))
                                     {
-                                        newtext = F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false).GetAwaiter().GetResult();
+                                        newtext = F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
                                         // size is not allowed in signs.
                                         newtext.Replace("<size=", "");
                                         newtext.Replace("</size>", "");
@@ -594,6 +596,7 @@ namespace Uncreated.Warfare
                     }
                 }
                 ___lastTriggered = Time.realtimeSinceStartup;
+                OnLandmineExplode?.Invoke(__instance, other, OwnerComponent);
                 if (___isExplosive) // if hurts all in range, makes explosion
                 {
                     if (other.transform.CompareTag("Player")) // if player hit.

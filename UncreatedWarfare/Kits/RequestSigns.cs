@@ -17,11 +17,11 @@ namespace Uncreated.Warfare.Kits
     {
         public RequestSigns() : base(Data.StructureStorage + "request_signs.json") { }
         protected override string LoadDefaults() => "[]";
-        public static async Task DropAllSigns()
+        public static void DropAllSigns()
         {
             foreach(RequestSign sign in ActiveObjects)
             {
-                await sign.SpawnCheck(false);
+                sign.SpawnCheck(false);
                 if (!sign.exists)
                     F.LogError("Failed to spawn sign " + sign.kit_name);
             }
@@ -73,34 +73,34 @@ namespace Uncreated.Warfare.Kits
         public static bool SignExists(uint instance_id, out RequestSign found) => ObjectExists(s => s != default && s.instance_id == instance_id, out found);
         public static bool SignExists(string kitName, out RequestSign sign) => ObjectExists(x => x.kit_name == kitName, out sign);
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
-        public static async Task InvokeLangUpdateForSignsOfKit(SteamPlayer player, string kitName)
+        public static void InvokeLangUpdateForSignsOfKit(SteamPlayer player, string kitName)
         {
             List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
             for (int i = 0; i < s.Count; i++)
             {
-                await s[i].InvokeUpdate(player);
+                s[i].InvokeUpdate(player);
             }
         }
-        public static async Task InvokeLangUpdateForSignsOfKit(string kitName)
+        public static void InvokeLangUpdateForSignsOfKit(string kitName)
         {
             List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
             for (int i = 0; i < s.Count; i++)
             {
-                await s[i].InvokeUpdate();
+                s[i].InvokeUpdate();
             }
         }
-        public static async Task InvokeLangUpdateForAllSigns(SteamPlayer player)
+        public static void InvokeLangUpdateForAllSigns(SteamPlayer player)
         {
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
-                await ActiveObjects[i].InvokeUpdate(player);
+                ActiveObjects[i].InvokeUpdate(player);
             }
         }
-        public static async Task InvokeLangUpdateForAllSigns()
+        public static void InvokeLangUpdateForAllSigns()
         {
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
-                await ActiveObjects[i].InvokeUpdate();
+                ActiveObjects[i].InvokeUpdate();
             }
         }
         public static void SetSignTextSneaky(InteractableSign sign, string text)
@@ -192,14 +192,14 @@ namespace Uncreated.Warfare.Kits
             this.barricadetransform = default;
             this.exists = false;
         }
-        public async Task InvokeUpdate(SteamPlayer player)
+        public void InvokeUpdate(SteamPlayer player)
         {
             if (barricadetransform != null)
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
                 if (drop != null && drop.model.TryGetComponent(out InteractableSign sign))
                 {
-                    await F.InvokeSignUpdateFor(player, sign, SignText);
+                    F.InvokeSignUpdateFor(player, sign, SignText);
                 }
                 else F.LogError("Failed to find barricade from saved transform!");
             }
@@ -210,20 +210,20 @@ namespace Uncreated.Warfare.Kits
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
                     if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign))
-                        await F.InvokeSignUpdateFor(player, sign, true, SignText);
+                        F.InvokeSignUpdateFor(player, sign, true, SignText);
                     else F.LogError("Failed to find barricade after respawning again!");
                 }
                 else F.LogError("Failed to find barricade after respawn!");
             }
         }
-        public async Task InvokeUpdate()
+        public void InvokeUpdate()
         {
             if (barricadetransform != null)
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
                 if (drop != null && drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
                 {
-                    await F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
+                    F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
                 }
                 else F.LogError("Failed to find barricade from saved transform!");
             }
@@ -234,14 +234,14 @@ namespace Uncreated.Warfare.Kits
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
                     if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                        await F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
+                        F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
                     else F.LogError("Failed to find barricade after respawning again!");
                 }
                 else F.LogError("Failed to find barricade after respawn!");
             }
         }
         /// <summary>Spawns the sign if it is not already placed.</summary>
-        public async Task SpawnCheck(bool save)
+        public void SpawnCheck(bool save)
         {
             BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (drop == null || data == null)
@@ -256,7 +256,7 @@ namespace Uncreated.Warfare.Kits
                     F.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Black);
                     instance_id = drop.instanceID;
                     exists = true;
-                    await InvokeUpdate();
+                    InvokeUpdate();
                     if (save) RequestSigns.Save();
                 }
                 else
@@ -270,7 +270,7 @@ namespace Uncreated.Warfare.Kits
                 this.barricadetransform = drop.model.transform;
                 this.transform = new SerializableTransform(barricadetransform);
                 if (save) RequestSigns.Save();
-                await InvokeUpdate();
+                InvokeUpdate();
             }
             if (exists && barricadetransform != null && barricadetransform.TryGetComponent(out InteractableSign sign))
             {

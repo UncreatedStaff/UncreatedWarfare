@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Kits
         public string Syntax => "/kit";
         public List<string> Aliases => new List<string>() { "kit" };
         public List<string> Permissions => new List<string>() { "uc.kit" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Kits
                                 if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                                     branchChanged = true;
 
-                                await KitManager.GiveKit(ucplayer, kit);
+                                KitManager.GiveKit(ucplayer, kit);
                                 ucplayer.SendChat("request_kit_given", kit.DisplayName.ToUpper());
 
                                 if (branchChanged)
@@ -133,14 +133,14 @@ namespace Uncreated.Warfare.Kits
                     if (!KitManager.KitExists(kitName, out var kit)) // create kit
                     {
                         KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
-                        await RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         player.SendChat("kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
                         KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
-                        await RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         player.SendChat("kit_overwritten", kitName);
                         return;
                     }
@@ -170,7 +170,7 @@ namespace Uncreated.Warfare.Kits
                         if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
-                        await KitManager.GiveKit(ucplayer, kit);
+                        KitManager.GiveKit(ucplayer, kit);
                         ucplayer.SendChat("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)
@@ -207,7 +207,7 @@ namespace Uncreated.Warfare.Kits
                             string text = sb.ToString();
                             text.Replace("\\n", "\n");
                             F.Log(text);
-                            if (await KitManager.UpdateText(command[2], text, command[3]))
+                            if (KitManager.UpdateText(command[2], text, command[3]))
                                 player.SendChat("kit_setprop", "sign text", command[2], command[3] + " : " + text);
                             else
                                 player.SendChat("kit_e_noexist", command[2]);
@@ -259,7 +259,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         // success
                         player.SendChat("kit_setprop", property, kitName, newValue);
-                        await RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         return;
                     }
                 }
@@ -297,8 +297,8 @@ namespace Uncreated.Warfare.Kits
                     //success
                     FPlayerName name = F.GetPlayerOriginalNames(target.Player);
                     player.SendChat("kit_accessgiven", name.CharacterName, kitName);
-                    await KitManager.GiveAccess(target.Steam64, kit.Name);
-                    await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                    KitManager.GiveAccess(target.Steam64, kit.Name);
+                    RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
                 // remove player access to kit
@@ -328,8 +328,8 @@ namespace Uncreated.Warfare.Kits
                     //success
                     FPlayerName name = F.GetPlayerOriginalNames(target.Player);
                     player.SendChat("kit_accessremoved", name.CharacterName, kitName);
-                    await KitManager.RemoveAccess(target.Steam64, kit.Name);
-                    await RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                    KitManager.RemoveAccess(target.Steam64, kit.Name);
+                    RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
             }

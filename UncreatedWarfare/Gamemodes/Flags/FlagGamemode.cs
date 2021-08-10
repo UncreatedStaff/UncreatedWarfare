@@ -18,15 +18,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected abstract bool TimeToCheck();
         protected abstract bool TimeToTicket();
         public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
-        {
-
-        }
-        public override async Task Init()
+        { }
+        public override void Init()
         {
             this.State = EState.PAUSED;
-            await base.Init();
+            base.Init();
         }
-        protected override async Task EventLoopAction()
+        protected override void EventLoopAction()
         {
             bool ttc = TimeToCheck();
             for (int i = 0; i < Rotation.Count; i++)
@@ -40,21 +38,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             if (ttc)
             {
-                await EvaluatePoints();
-                await OnEvaluate();
+                EvaluatePoints();
+                OnEvaluate();
             }
             if (TimeToTicket())
-                await EvaluateTickets();
+                EvaluateTickets();
         }
         protected uint TicketCounter = 0;
-        public virtual async Task EvaluateTickets()
-        {
-            await Task.Yield();
-        }
-        public virtual async Task OnEvaluate()
-        {
-            await Task.Yield();
-        }
+        public virtual void EvaluateTickets()
+        { }
+        public virtual void OnEvaluate()
+        { }
         public void LoadAllFlags()
         {
             AllFlags.Clear();
@@ -76,12 +70,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             F.Log(sb.ToString(), ConsoleColor.Green);
         }
-        public abstract Task LoadRotation();
-        protected virtual async Task EvaluatePoints()
+        public abstract void LoadRotation();
+        protected virtual void EvaluatePoints()
         {
             if (State == EState.ACTIVE)
                 for (int i = 0; i < Rotation.Count; i++)
-                    await Rotation[i].EvaluatePoints();
+                    Rotation[i].EvaluatePoints();
         }
         public virtual void InitFlag(Flag flag)
         {
@@ -90,7 +84,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             flag.OnOwnerChanged += FlagOwnerChanged;
             flag.OnPointsChanged += FlagPointsChanged;
         }
-        public virtual async Task ResetFlags()
+        public virtual void ResetFlags()
         {
             foreach (Flag flag in Rotation)
             {
@@ -98,7 +92,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 flag.OnPlayerLeft -= PlayerLeftFlagRadius;
                 flag.OnOwnerChanged -= FlagOwnerChanged;
                 flag.OnPointsChanged -= FlagPointsChanged;
-                await flag.ResetFlag();
+                flag.ResetFlag();
             }
             Rotation.Clear();
         }
@@ -125,20 +119,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else OnFlag.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
             flag.EnterPlayer(player);
         }
-        protected abstract Task PlayerEnteredFlagRadius(Flag flag, Player player);
-        protected abstract Task PlayerLeftFlagRadius(Flag flag, Player player);
-        protected abstract Task FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag);
-        protected abstract Task FlagPointsChanged(int NewPoints, int OldPoints, Flag flag);
-        public override async Task OnLevelLoaded()
+        protected abstract void PlayerEnteredFlagRadius(Flag flag, Player player);
+        protected abstract void PlayerLeftFlagRadius(Flag flag, Player player);
+        protected abstract void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag);
+        protected abstract void FlagPointsChanged(int NewPoints, int OldPoints, Flag flag);
+        public override void OnLevelLoaded()
         {
             LoadAllFlags();
-            await StartNextGame(true);
-            await base.OnLevelLoaded();
+            StartNextGame(true);
+            base.OnLevelLoaded();
         }
         public override void Dispose()
         {
             base.Dispose();
-            ResetFlags().GetAwaiter().GetResult();
+            ResetFlags();
             OnFlag.Clear();
             Rotation.Clear();
             _counter = 0;

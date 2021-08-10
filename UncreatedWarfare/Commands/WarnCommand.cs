@@ -27,7 +27,7 @@ namespace Uncreated.Warfare.Commands
 
         public List<string> Permissions => new List<string> { "uc.warn" };
 
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             if (!Dedicator.isDedicated)
                 return;
@@ -55,8 +55,8 @@ namespace Uncreated.Warfare.Commands
                                     name.PlayerName, player.playerID.steamID.m_SteamID.ToString(), reason), ConsoleColor.Cyan);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                 {
-                                    await Data.DatabaseManager.AddWarning(player.playerID.steamID.m_SteamID, 0, reason);
-                                    await Client.LogPlayerWarned(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
+                                    Data.DatabaseManager.AddWarning(player.playerID.steamID.m_SteamID, 0, reason);
+                                    Client.LogPlayerWarned(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
                                 }
                                 F.SendChat(player.playerID.steamID, "warn_warned_private_operator", reason);
                                 ToastMessage.QueueMessage(player, F.Translate("warn_warned_private_operator", player, out _, reason),  ToastMessageSeverity.WARNING);
@@ -94,8 +94,8 @@ namespace Uncreated.Warfare.Commands
                                     ConsoleColor.Cyan);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                 {
-                                    await Data.DatabaseManager.AddWarning(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
-                                    await Client.LogPlayerWarned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    Data.DatabaseManager.AddWarning(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
+                                    Client.LogPlayerWarned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 }
                                 F.SendChat(player, "warn_warned_feedback", name.CharacterName);
                                 ToastMessage.QueueMessage(steamplayer, 

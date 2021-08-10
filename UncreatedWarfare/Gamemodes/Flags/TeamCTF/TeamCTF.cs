@@ -41,13 +41,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public event ObjectiveChangedDelegate OnObjectiveChanged;
         public event FlagCapturedHandler OnFlagCaptured;
         public event FlagNeutralizedHandler OnFlagNeutralized;
-        public event Networking.EmptyTaskDelegate OnNewGameStarting;
+        public event VoidDelegate OnNewGameStarting;
         public TeamCTF() : base(nameof(TeamCTF), 1f)
         {
             _config = new Config<TeamCTFData>(Data.FlagStorage, "config.json");
             SetTiming(Config.PlayerCheckSpeedSeconds);
         }
-        public override async Task OnEvaluate()
+        public override void OnEvaluate()
         {
             IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
             while (players.MoveNext())
@@ -61,9 +61,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     {
                         InAMC.Add(players.Current.playerID.steamID.m_SteamID);
                         int a = Mathf.RoundToInt(Config.NearOtherBaseKillTimer);
-                        Players.ToastMessage.QueueMessage(players.Current,
+                        ToastMessage.QueueMessage(players.Current,
                             F.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
-                            Players.ToastMessageSeverity.WARNING);
+                            ToastMessageSeverity.WARNING);
                         UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
                     }
                 } else
@@ -72,7 +72,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
             players.Dispose();
-            await Task.Yield();
         }
         public IEnumerator<WaitForSeconds> KillPlayerInEnemyTerritory(SteamPlayer player)
         {
@@ -83,20 +82,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.player.life.askDamage(byte.MaxValue, Vector3.zero, EDeathCause.ACID, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
             }
         }
-        public override async Task OnPlayerDeath(UCWarfare.DeathEventArgs args)
-        {
-            OnPlayerDeathSync(args);
-            await Task.Yield();
-        }
-        public void OnPlayerDeathSync(UCWarfare.DeathEventArgs args)
+        public override void OnPlayerDeath(UCWarfare.DeathEventArgs args)
         {
             InAMC.Remove(args.dead.channel.owner.playerID.steamID.m_SteamID);
             EventFunctions.RemoveDamageMessageTicks(args.dead.channel.owner.playerID.steamID.m_SteamID);
         }
-        public override async Task Init()
+        public override void Init()
         {
             GameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
-            await base.Init();
         }
         protected override bool TimeToCheck()
         {
@@ -124,7 +117,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 return false;
             }
         }
-        public override async Task EvaluateTickets()
+        public override void EvaluateTickets()
         {
             if (State == EState.ACTIVE)
             {
@@ -154,7 +147,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
                 if (TicketCounter % Config.xpSecondInterval == 0)
                 {
-                    await TicketManager.OnFlagTick();
+                    TicketManager.OnFlagTick();
                 }
 
                 if (Team1Bleed < 0)
@@ -167,7 +160,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     TicketCounter = 0;
             }
         }
-        public override async Task DeclareWin(ulong winner)
+        public override void DeclareWin(ulong winner)
         {
             F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
@@ -179,12 +172,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
             }
             this.State = EState.FINISHED;
-            await UCWarfare.ReplaceBarricadesAndStructures();
+            UCWarfare.ReplaceBarricadesAndStructures();
             Commands.ClearCommand.WipeVehiclesAndRespawn();
             Commands.ClearCommand.ClearItems();
-            await TicketManager.OnRoundWin(winner);
-            await Task.Delay(Config.end_delay * 1000);
-            await InvokeOnTeamWin(winner);
+            TicketManager.OnRoundWin(winner);
+            StartCoroutine(EndGame2(winner));
+        }
+        private IEnumerator<WaitForSeconds> EndGame2(ulong winner)
+        {
+            yield return new WaitForSeconds(Config.end_delay);
+            InvokeOnTeamWin(winner);
             if (Config.ShowLeaderboard)
             {
                 EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
@@ -195,36 +192,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EndScreen.ShuttingDownMessage = shutdownMessage;
                 EndScreen.ShuttingDownPlayer = shutdownPlayer;
                 isScreenUp = true;
-                await EndScreen.EndGame(Config.ProgressChars);
+                EndScreen.EndGame(Config.ProgressChars);
             }
-            else await OnShouldStartNewGame();
+            else OnShouldStartNewGame();
         }
-        private async Task OnShouldStartNewGame()
+        private void OnShouldStartNewGame()
         {
             if (EndScreen != default)
                 EndScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
             UnityEngine.Object.Destroy(EndScreen);
             isScreenUp = false;
-            await StartNextGame();
+            StartNextGame();
         }
         public void ReloadConfig()
         {
             _config.Reload();
         }
-        public override async Task StartNextGame(bool onLoad = false)
+        public override void StartNextGame(bool onLoad = false)
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
-            await base.StartNextGame(onLoad); // set game id
-            await LoadRotation();
+            base.StartNextGame(onLoad); // set game id
+            LoadRotation();
             State = EState.ACTIVE;
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
-            await InvokeOnNewGameStarting(onLoad);
+            InvokeOnNewGameStarting(onLoad);
         }
-        public override async Task LoadRotation()
+        public override void LoadRotation()
         {
             if (AllFlags == null) return;
-            await ResetFlags();
+            ResetFlags();
             OnFlag.Clear();
             if (Config.PathingMode == ObjectivePathing.EPathingMode.AUTODISTANCE)
             {
@@ -271,17 +268,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
             PrintFlagRotation();
-            await EvaluatePoints();
+            EvaluatePoints();
         }
         public override void PrintFlagRotation()
         {
             F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.Green);
             base.PrintFlagRotation();
         }
-        private async Task InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
+        private void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
         {
             if (OnObjectiveChanged != null)
-                await OnObjectiveChanged.Invoke(OldFlagObj, NewFlagObj, Team, OldObj, NewObj);
+                OnObjectiveChanged.Invoke(OldFlagObj, NewFlagObj, Team, OldObj, NewObj);
             if (Team != 0)
             {
                 if (GameStats != null)
@@ -308,22 +305,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
         }
-        private async Task InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+        private void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
             if (OnFlagCaptured != null)
-                await OnFlagCaptured.Invoke(flag, capturedTeam, lostTeam);
-            await TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+                OnFlagCaptured.Invoke(flag, capturedTeam, lostTeam);
+            TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         }
-        private async Task InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+        private void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
             if (OnFlagNeutralized != null)
-                await OnFlagNeutralized.Invoke(flag, capturedTeam, lostTeam);
-            await TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+                OnFlagNeutralized.Invoke(flag, capturedTeam, lostTeam);
+            TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         }
-        private async Task InvokeOnNewGameStarting(bool onLoad)
+        private void InvokeOnNewGameStarting(bool onLoad)
         {
             if (OnNewGameStarting != null)
-                await OnNewGameStarting.Invoke();
+                OnNewGameStarting.Invoke();
             TicketManager.OnNewGameStarting();
             if (!onLoad)
             {
@@ -333,7 +330,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             FOBManager.UpdateUIAll();
             RallyManager.WipeAllRallies();
         }
-        protected override async Task PlayerEnteredFlagRadius(Flag flag, Player player)
+        protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
         {
             ulong team = player.GetTeam();
             //F.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
@@ -368,9 +365,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         t2v.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
                 }
             }
-            await Task.Yield();
         }
-        protected override async Task PlayerLeftFlagRadius(Flag flag, Player player)
+        protected override void PlayerLeftFlagRadius(Flag flag, Player player)
         {
             ITransportConnection Channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
@@ -408,23 +404,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         t2v.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, capper.channel.owner, capper.channel.owner.transportConnection);
                 }
             }
-            await Task.Yield();
         }
-        protected override async Task FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
+        protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {
             if (NewOwner == 1)
             {
                 if (ObjectiveT1Index >= Rotation.Count - 1) // if t1 just capped the last flag
                 {
-                    await DeclareWin(NewOwner);
+                    DeclareWin(NewOwner);
                     ObjectiveT1Index = Rotation.Count - 1;
                     return;
                 }
                 else
                 {
                     ObjectiveT1Index = flag.index + 1;
-                    await InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
-                    await InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                    InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
+                    InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                     {
                         if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats != null)
@@ -436,7 +431,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 if (ObjectiveT2Index < 1) // if t2 just capped the last flag
                 {
-                    await DeclareWin(NewOwner);
+                    DeclareWin(NewOwner);
                     ObjectiveT2Index = 0;
                     return;
                 }
@@ -444,8 +439,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
 
                     ObjectiveT2Index = flag.index - 1;
-                    await InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
-                    await InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                    InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
+                    InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                     {
                         if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats != null)
@@ -459,8 +454,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 ObjectiveT1Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    await InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
-                    await InvokeOnFlagNeutralized(flag, 2, 1);
+                    InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnFlagNeutralized(flag, 2, 1);
                 }
             }
             else if (OldOwner == 2)
@@ -469,8 +464,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 ObjectiveT2Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    await InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
-                    await InvokeOnFlagNeutralized(flag, 1, 2);
+                    InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnFlagNeutralized(flag, 1, 2);
                 }
             }
             SendUIParameters t1 = SendUIParameters.Nil;
@@ -514,11 +509,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
         }
-        protected override async Task FlagPointsChanged(int NewPoints, int OldPoints, Flag flag)
+        protected override void FlagPointsChanged(int NewPoints, int OldPoints, Flag flag)
         {
             if (NewPoints == 0)
-                await flag.SetOwner(0);
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                flag.SetOwner(0);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
             SendUIParameters t1v = SendUIParameters.Nil;
@@ -539,19 +533,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 else if (team == 2) 
                     (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
             }
-            await rtn;
         }
-        public override async Task OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
             CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
             if (OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
                 CTFUI.RefreshStaticUI(newteam, Rotation.FirstOrDefault(x => x.ID == OnFlag[player.playerID.steamID.m_SteamID])
                     ?? Rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
             CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
-            await rtn;
         }
-        public override async Task OnPlayerJoined(SteamPlayer player)
+        public override void OnPlayerJoined(SteamPlayer player)
         {
             GameStats.AddPlayer(player.player);
             if (isScreenUp && EndScreen != null && Config.ShowLeaderboard)
@@ -561,17 +552,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
-            await Task.Yield();
         }
-        public override async Task OnPlayerLeft(ulong player)
+        public override void OnPlayerLeft(ulong player)
         {
             foreach (Flag flag in Rotation)
                 flag.RecalcCappers(true);
-            await Task.Yield();
-        }
-        public override async Task OnLevelLoaded()
-        {
-            await base.OnLevelLoaded();
         }
         public override void Dispose()
         {

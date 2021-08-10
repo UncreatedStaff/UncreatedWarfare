@@ -61,17 +61,14 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             player.SendChat("fob_built");
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run(async () =>
-            {
-                await TicketManager.AwardSquadXP(ucplayer,
-                    60,
-                    XPManager.config.Data.BuiltFOBXP,
-                    OfficerManager.config.Data.BuiltFOBPoints,
-                    "xp_built_fob",
-                    "ofp_squad_built_fob",
-                    0.4F
-                    );
-            });
+            TicketManager.AwardSquadXP(ucplayer,
+                60,
+                XPManager.config.Data.BuiltFOBXP,
+                OfficerManager.config.Data.BuiltFOBPoints,
+                "xp_built_fob",
+                "ofp_squad_built_fob",
+                0.4F
+                );
             IEnumerable<BarricadeDrop> FOBstructures = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.FOBID, FOBManager.config.Data.FOBBuildPickupRadius, player.Position, player.GetTeam(), true);
             FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault());
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
@@ -115,17 +112,14 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             player.SendChat("ammocrate_built");
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run(async () =>
-            {
-                await TicketManager.AwardSquadXP(ucplayer,
-                    60,
-                    XPManager.config.Data.BuiltAmmoCrateXP,
-                    OfficerManager.config.Data.BuiltAmmoCratePoints,
-                    "xp_built_ammo_crate",
-                    "ofp_squad_built_ammo_crate",
-                    0.4F
-                    );
-            });
+            TicketManager.AwardSquadXP(ucplayer,
+                60,
+                XPManager.config.Data.BuiltAmmoCrateXP,
+                OfficerManager.config.Data.BuiltAmmoCratePoints,
+                "xp_built_ammo_crate",
+                "ofp_squad_built_ammo_crate",
+                0.4F
+                );
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {
@@ -167,17 +161,14 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             player.SendChat("repairstation_built");
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run(async () =>
-            {
-                await TicketManager.AwardSquadXP(ucplayer,
-                    60,
-                    XPManager.config.Data.BuiltRepairStationXP,
-                    OfficerManager.config.Data.BuiltRepairStationPoints,
-                    "xp_built_repair_station",
-                    "ofp_squad_built_repair_station",
-                    0.4F
-                    );
-            });
+            TicketManager.AwardSquadXP(ucplayer,
+                60,
+                XPManager.config.Data.BuiltRepairStationXP,
+                OfficerManager.config.Data.BuiltRepairStationPoints,
+                "xp_built_repair_station",
+                "ofp_squad_built_repair_station",
+                0.4F
+                );
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {
@@ -234,17 +225,14 @@ namespace Uncreated.Warfare.FOBs
             }
             player.SendChat("emplacement_built", vehicle.asset.vehicleName);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run(async () =>
-            {
-                await TicketManager.AwardSquadXP(ucplayer,
-                    60,
-                    XPManager.config.Data.BuiltEmplacementXP,
-                    OfficerManager.config.Data.BuiltEmplacementPoints,
-                    "xp_built_emplacement",
-                    "ofp_squad_built_emplacement",
-                    0.4F
-                    );
-            });
+            TicketManager.AwardSquadXP(ucplayer,
+                60,
+                XPManager.config.Data.BuiltEmplacementXP,
+                OfficerManager.config.Data.BuiltEmplacementPoints,
+                "xp_built_emplacement",
+                "ofp_squad_built_emplacement",
+                0.4F
+                );
             vehicle.updateVehicle();
             vehicle.updatePhysics();
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
@@ -282,17 +270,14 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             player.SendChat("fortification_built", barricade.asset.itemName);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Task.Run(async () =>
-            {
-                await TicketManager.AwardSquadXP(ucplayer,
-                    60,
-                    XPManager.config.Data.BuiltBarricadeXP,
-                    OfficerManager.config.Data.BuiltBarricadePoints,
-                    "xp_built_fortification",
-                    "ofp_squad_built_fortification",
-                    0.4F
-                    );
-            });
+            TicketManager.AwardSquadXP(ucplayer,
+                60,
+                XPManager.config.Data.BuiltBarricadeXP,
+                OfficerManager.config.Data.BuiltBarricadePoints,
+                "xp_built_fortification",
+                "ofp_squad_built_fortification",
+                0.4F
+                );
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {

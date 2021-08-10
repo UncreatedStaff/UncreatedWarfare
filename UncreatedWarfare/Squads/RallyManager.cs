@@ -242,7 +242,7 @@ namespace Uncreated.Warfare.Squads
 
             ShowUIForPlayer(player);
 
-            Task.Run(async () => await OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.Data.SpawnOnRallyPoints, F.Translate("ofp_rally_used", squad.Leader.Steam64)));
+            OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.Data.SpawnOnRallyPoints, F.Translate("ofp_rally_used", squad.Leader.Steam64));
         }
     }
 

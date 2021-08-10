@@ -1158,6 +1158,7 @@ namespace Uncreated.Warfare
             { "ANIMAL", "{0} was attacked by an animal." },
             { "ARENA", "{0} stepped outside the arena boundary." },
             { "BLEEDING", "{0} bled out from {1}." },
+            { "BLEEDING_UNKNOWN", "{0} bled out." },
             { "BLEEDING_SUICIDE", "{0} bled out." },
             { "BONES", "{0} fell to their death." },
             { "BOULDER", "{0} was crushed by a mega zombie." },

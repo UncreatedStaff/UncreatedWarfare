@@ -111,7 +111,6 @@ namespace Uncreated.Warfare.Revives
                     save.ShouldRespawnOnJoin = true;
                     PlayerManager.Save();
                 }
-                UCWarfare.I.shouldwait = true; // make death message synchronous and not run and forget.
                 player.player.life.askDamage(byte.MaxValue, Vector3.up, p.cause, p.limb, p.killer, out _, p.trackKill, p.ragdollEffect, false, true);
                 // player will be removed from list in OnDeath
             }
@@ -126,7 +125,7 @@ namespace Uncreated.Warfare.Revives
             Data.PrivateStance.SetValue(player.stance, stance);
             Data.ReplicateStance.Invoke(player.stance, new object[] { false });
         }
-        internal async Task OnPlayerHealedAsync(Player medic, Player target)
+        internal void OnPlayerHealed(Player medic, Player target)
         {
             if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
@@ -135,7 +134,7 @@ namespace Uncreated.Warfare.Revives
                 ulong tteam = target.GetTeam();
                 if (team == tteam)
                 {
-                    await XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP,
+                    XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP,
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
                     if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats != null)
                         c.stats.revives++;

@@ -529,13 +529,10 @@ namespace Uncreated.Warfare.Vehicles
                         UCPlayer player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
                         if (player != null)
                         {
-                            Task.Run(async () =>
-                            {
-                                //if (player.Squad != null)
-                                //    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
-                                //else
-                                await XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 1), F.Translate("xp_transporting_players", player.Steam64));
-                            });
+                            //if (player.Squad != null)
+                            //    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
+                            //else
+                            XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 1), F.Translate("xp_transporting_players", player.Steam64));
                         }
                     }
                 }

@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static List<VehicleSign> GetLinkedSigns(VehicleSpawn spawn) => GetObjectsWhere(x => x.bay.SpawnPadInstanceID == spawn.SpawnPadInstanceID && x.bay.type == spawn.type);
         protected override string LoadDefaults() => "[]";
-        public static async Task UnlinkSign(InteractableSign sign)
+        public static void UnlinkSign(InteractableSign sign)
         {
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             if (drop != null)
@@ -56,7 +56,7 @@ namespace Uncreated.Warfare.Vehicles
                     if (ActiveObjects[i] != null && ActiveObjects[i].instance_id == drop.instanceID)
                     {
                         BarricadeManager.ServerSetSignText(sign, "");
-                        await ActiveObjects[i].InvokeUpdate();
+                        ActiveObjects[i].InvokeUpdate();
                         StructureSaver.RemoveStructure(ActiveObjects[i].save);
                         ActiveObjects.Remove(ActiveObjects[i]);
                         Save();
@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Vehicles
             vbsign = default;
             return false;
         }
-        public static async Task<bool> LinkSign(InteractableSign sign, VehicleSpawn spawn)
+        public static bool LinkSign(InteractableSign sign, VehicleSpawn spawn)
         {
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             if (drop != null)
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Vehicles
                 n.save.state = Convert.ToBase64String(drop.GetServersideData().barricade.state);
                 n.save.ResetMetadata();
                 StructureSaver.Save();
-                await n.InvokeUpdate();
+                n.InvokeUpdate();
                 return true;
             }
             return false;
@@ -140,7 +140,7 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             save = structure;
                             this.instance_id = structure.instance_id;
-                            Task.Run( async () => await structure.SpawnCheck() );
+                            structure.SpawnCheck();
                         }
                     }
                     else
@@ -219,19 +219,19 @@ namespace Uncreated.Warfare.Vehicles
             }
         }
 
-        public async Task InvokeUpdate(SteamPlayer player)
+        public void InvokeUpdate(SteamPlayer player)
         {
             F.GetBarricadeFromInstID(save.instance_id, out BarricadeDrop drop);
             if (drop != default && drop.model != default)
                 if (drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
-                    await F.InvokeSignUpdateFor(player, sign, placeholder_text);
+                    F.InvokeSignUpdateFor(player, sign, placeholder_text);
         }
-        public async Task InvokeUpdate()
+        public void InvokeUpdate()
         {
             F.GetBarricadeFromInstID(save.instance_id, out BarricadeDrop drop);
             if (drop != default && drop.model != default)
                 if (drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
-                    await F.InvokeSignUpdateForAllKits(sign, x, y, placeholder_text);
+                    F.InvokeSignUpdateForAllKits(sign, x, y, placeholder_text);
         }
     }
 }

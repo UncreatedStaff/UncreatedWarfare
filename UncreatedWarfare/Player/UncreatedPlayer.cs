@@ -139,10 +139,10 @@ namespace Uncreated.Players
                 }
             }
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
-            newplayer.SavePathAsync(path);
+            newplayer.SavePath(path);
             return newplayer;
         }
-        public static async Task<UncreatedPlayer> LoadAsync(ulong id, bool create = true)
+        public static UncreatedPlayer Load(ulong id, bool create = true)
         {
             string path = FileName(id);
             if (id == default) throw new ArgumentException("SteamID was not a valid Steam64 ID", "steam_id");
@@ -151,7 +151,7 @@ namespace Uncreated.Players
                 string json;
                 using (StreamReader reader = File.OpenText(path))
                 {
-                    json = await reader.ReadToEndAsync();
+                    json = reader.ReadToEnd();
                     reader.Close();
                     reader.Dispose();
                 }
@@ -172,38 +172,35 @@ namespace Uncreated.Players
             }
             if (!create) return null;
             UncreatedPlayer newplayer = new UncreatedPlayer(id);
-            newplayer.SavePathAsync(path);
+            newplayer.SavePath(path);
             return newplayer;
         }
-        public override void Save() => SavePathAsync(FileName(steam_id));
-        public void SaveAsync() => SavePathAsync(FileName(steam_id));
+        public override void Save() => SavePath(FileName(steam_id));
+        public void SaveAsync() => SavePath(FileName(steam_id));
         static readonly JsonSerializerSettings Settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
-        private void SavePathAsync(string path)
+        private void SavePath(string path)
         {
-            _ = Task.Run(async () =>
+            if (UCWarfare.Config.Debug)
+                F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
+            
+            isSaving = true;
+            try
             {
+                using (TextWriter writer = File.CreateText(path))
+                {
+                    string data = JsonConvert.SerializeObject(this, Settings);
+                    writer.Write(data);
+                    writer.Close();
+                    writer.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error saving player " + usernames.player_name);
                 if (UCWarfare.Config.Debug)
-                    F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
-                while (isSaving) await Task.Delay(1);
-                isSaving = true;
-                try
-                {
-                    using (TextWriter writer = File.CreateText(path))
-                    {
-                        string data = JsonConvert.SerializeObject(this, Settings);
-                        await writer.WriteAsync(data);
-                        writer.Close();
-                        writer.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    F.LogError("Error saving player " + usernames.player_name);
-                    if (UCWarfare.Config.Debug)
-                        F.LogError(ex);
-                }
-                isSaving = false;
-            }).ConfigureAwait(false);
+                    F.LogError(ex);
+            }
+            isSaving = false;
         }
         protected override void SaveEscalator() => Save();
         public void LogIn(SteamPlayer player, string server) => LogIn(player, F.GetPlayerOriginalNames(player), server);

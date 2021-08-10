@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/kick <player> <reason>";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string> { "uc.kick" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             if (!Dedicator.isDedicated)
                 return;
@@ -45,14 +45,12 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    await Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
-                                    await Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
+                                    Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
+                                    Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
                                 }
-                                SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
                                 F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, 
                                     player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                 F.Broadcast("kick_kicked_broadcast_operator", names.PlayerName);
-                                await rtn;
                             }
                         }
                     }
@@ -83,8 +81,8 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    await Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
-                                    await Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
+                                    Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
                                 }
                                 F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 

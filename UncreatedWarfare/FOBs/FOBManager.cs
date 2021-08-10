@@ -130,11 +130,11 @@ namespace Uncreated.Warfare.FOBs
                 {
                     if (ucplayer.GetTeam() == team)
                     {
-                        Task.Run(async () => await XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player)));
+                        XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
                     }
                     else
                     {
-                        Task.Run(async () => await XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player)));
+                        XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player));
                     }
                 }
                     

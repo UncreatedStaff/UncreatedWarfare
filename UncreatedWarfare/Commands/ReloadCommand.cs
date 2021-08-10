@@ -19,15 +19,15 @@ namespace Uncreated.Warfare.Commands
 {
     public class ReloadCommand : IRocketCommand
     {
-        public static event Networking.EmptyTaskDelegate OnTranslationsReloaded;
-        public static event Networking.EmptyTaskDelegate OnFlagsReloaded;
+        public static event VoidDelegate OnTranslationsReloaded;
+        public static event VoidDelegate OnFlagsReloaded;
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "reload";
         public string Help => "Reload certain parts of UCWarfare.";
         public string Syntax => "/reload [module]";
         public List<string> Aliases => new List<string>();
         public List<string> Permissions => new List<string>() { "uc.reload" };
-        public async void Execute(IRocketPlayer caller, string[] command)
+        public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == "Console";
@@ -36,17 +36,14 @@ namespace Uncreated.Warfare.Commands
             {
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
-                    await ReloadTranslations();
+                    ReloadTranslations();
                     ReloadAllConfigFiles();
                     ReloadConfig();
-                    await ReloadKits();
-                    await ReloadFlags();
-                    await ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload Command");
-
-                    SynchronizationContext rtn = await ThreadTool.SwitchToGameThread();
+                    ReloadKits();
+                    ReloadFlags();
+                    //ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload Command");
 
                     player?.SendChat("reload_reloaded_all");
-                    await rtn;
                 }
                 else
                     player?.Player.SendChat("no_permissions");
@@ -68,7 +65,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
                     {
-                        await ReloadTranslations();
+                        ReloadTranslations();
                         if (isConsole) F.Log(F.Translate("reload_reloaded_lang", 0, out _));
                         else player.SendChat("reload_reloaded_lang");
                     }
@@ -78,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.flags") || player.HasPermission("uc.reload.all"))
                     {
-                        await ReloadFlags();
+                        ReloadFlags();
                         if (isConsole) F.Log(F.Translate("reload_reloaded_flags", 0, out _));
                         else player.SendChat("reload_reloaded_flags");
                     }
@@ -88,7 +85,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.tcp") || player.HasPermission("uc.reload.all"))
                     {
-                        await ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload command.");
+                        //ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload command.");
                         if (isConsole) F.Log(F.Translate("reload_reloaded_tcp", 0, out _));
                         else player.SendChat("reload_reloaded_tcp");
                     }
@@ -99,7 +96,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.kits") || player.HasPermission("uc.reload.all"))
                     {
-                        await ReloadKits();
+                        ReloadKits();
                         if (isConsole) F.Log(F.Translate("reload_reloaded_kits", 0, out _));
                         else player.SendChat("reload_reloaded_kits");
                     }
@@ -144,7 +141,7 @@ namespace Uncreated.Warfare.Commands
                 FOBManager.config.Reload();
 
                 UCWarfare.Instance.Configuration.Load();
-                if (Data.DatabaseManager != null) Data.DatabaseManager.DebugLogging |= UCWarfare.Config.Debug;
+                if (Data.DatabaseManager != null) Data.DatabaseManager.DebugLogging = UCWarfare.Config.Debug;
             }
             catch (Exception ex)
             {
@@ -152,7 +149,7 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(ex);
             }
         }
-        internal static async Task ReloadTranslations()
+        internal static void ReloadTranslations()
         {
             try
             {
@@ -161,7 +158,7 @@ namespace Uncreated.Warfare.Commands
                 Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
                 Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
                 if(OnTranslationsReloaded != null)
-                    await OnTranslationsReloaded.Invoke();
+                    OnTranslationsReloaded.Invoke();
             }
             catch (Exception ex)
             { 
@@ -169,7 +166,7 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(ex);
             }
         }
-        internal static async Task ReloadFlags()
+        internal static void ReloadFlags()
         {
             try
             {
@@ -178,12 +175,12 @@ namespace Uncreated.Warfare.Commands
                     if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF tctf)
                         tctf.ReloadConfig();
                     flaggm.LoadAllFlags();
-                    await flaggm.StartNextGame(false);
+                    flaggm.StartNextGame(false);
                 }
                 Data.ExtraZones = JSONMethods.LoadExtraZones();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();
                 if(OnFlagsReloaded != null)
-                    await OnFlagsReloaded.Invoke();
+                    OnFlagsReloaded.Invoke();
             }
             catch (Exception ex)
             {
@@ -191,34 +188,12 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(ex);
             }
         }
-        internal static async Task ReloadTCPServer(ulong admin, string reason)
-        {
-            try
-            {
-                if (Networking.TCPClient.I != null && Networking.TCPClient.I.connection != null)
-                {
-                    await Networking.Client.SendReloading(admin, reason);
-                    Networking.TCPClient.I?.Shutdown();
-                }
-                Data.CancelTcp.Cancel();
-                Data.CancelTcp.Token.WaitHandle.WaitOne();
-                Data.CancelTcp = new CancellationTokenSource();
-                Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
-                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                _ = Networking.TCPClient.I.Connect(Data.CancelTcp).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                F.LogError("Execption when reloading TCP client.");
-                F.LogError(ex);
-            }
-        }
-        internal static async Task ReloadKits()
+        internal static void ReloadKits()
         {
             Kits.KitManager.Reload();
             foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
             {
-                await sign.InvokeUpdate();
+                sign.InvokeUpdate();
             }
         }
         internal static void ReloadAllConfigFiles()
