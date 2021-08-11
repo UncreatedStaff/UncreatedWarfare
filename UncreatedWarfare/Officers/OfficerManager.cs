@@ -299,7 +299,7 @@ namespace Uncreated.Warfare.Officers
             MemberFlagNeutralizedPoints = 10;
             TransportPlayerPoints = 1;
             SpawnOnRallyPoints = 1;
-            BuiltFOBPoints = 70;
+            BuiltFOBPoints = 50;
             BuiltAmmoCratePoints = 10;
             BuiltRepairStationPoints = 40;
             BuiltEmplacementPoints = 5;
@@ -307,31 +307,31 @@ namespace Uncreated.Warfare.Officers
             RallyDeployPoints = 10;
             VehicleDestroyedPoints = new Dictionary<EVehicleType, int>()
             {
-                {EVehicleType.HUMVEE, 50},
-                {EVehicleType.TRANSPORT, 50},
-                {EVehicleType.LOGISTICS, 80},
-                {EVehicleType.SCOUT_CAR, 120},
-                {EVehicleType.APC, 300},
-                {EVehicleType.IFV, 400},
-                {EVehicleType.MBT, 700},
-                {EVehicleType.HELI_TRANSPORT, 200},
+                {EVehicleType.HUMVEE, 40},
+                {EVehicleType.TRANSPORT, 30},
+                {EVehicleType.LOGISTICS, 50},
+                {EVehicleType.SCOUT_CAR, 60},
+                {EVehicleType.APC, 80},
+                {EVehicleType.IFV, 100},
+                {EVehicleType.MBT, 200},
+                {EVehicleType.HELI_TRANSPORT, 60},
                 {EVehicleType.EMPLACEMENT, 30},
             };
 
 
 
-            FirstStarPoints = 1000;
-            PointsIncreasePerStar = 500;
+            FirstStarPoints = 2000;
+            PointsIncreasePerStar = 400;
             PointsMultiplier = 1;
 
             StarsUI = 36033;
 
             OfficerRanks = new List<Rank>
             {
-                new Rank(1, "Captain", "Cpt.", 30000),
-                new Rank(2, "Major", "Maj.", 40000),
-                new Rank(3, "Lieutenant", "Lt.", 50000),
-                new Rank(4, "Colonel", "Col.", 60000),
+                new Rank(1, "Captain", "Cpt.", 50000),
+                new Rank(2, "Major", "Maj.", 60000),
+                new Rank(3, "Lieutenant", "Lt.", 70000),
+                new Rank(4, "Colonel", "Col.", 80000),
                 new Rank(5, "General", "Gen.", 100000)
             };
 

@@ -284,11 +284,11 @@ namespace Uncreated.Warfare.Teams
                 if(team == 1)
                 {
                     if (Team2Count > Team1Count) return true;
-                    if ((Team1Count - Team2Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
+                    if ((float)(Team1Count - Team2Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
                 } else if (team == 2)
                 {
                     if (Team1Count > Team2Count) return true;
-                    if ((Team2Count - Team1Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
+                    if ((float)(Team2Count - Team1Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
                 }
             }
             return true;

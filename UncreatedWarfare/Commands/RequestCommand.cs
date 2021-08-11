@@ -198,6 +198,14 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_cooldown", F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
                 return;
             }
+
+            double delay = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
+
+            if (delay < data.Delay)
+            {
+                ucplayer.Message("request_vehicle_e_delay", F.GetTimeFromSeconds(unchecked((uint)Math.Round(delay)), ucplayer.Steam64));
+                return;
+            }
             int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
             Rank rank = XPManager.GetRank(xp, out _, out _);
             if (rank == default || rank.level < data.RequiredLevel)

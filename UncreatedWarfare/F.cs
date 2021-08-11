@@ -54,6 +54,8 @@ namespace Uncreated.Warfare
         }
         public static string GetTimeFromSeconds(this uint seconds, ulong player)
         {
+            seconds += 1;
+
             if (seconds < 60) // < 1 minute
             {
                 return seconds.ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);

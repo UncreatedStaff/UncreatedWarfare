@@ -23,12 +23,24 @@ namespace Uncreated.Warfare.Tickets
 
         public static int Team1Tickets;
         public static int Team2Tickets;
+        public static DateTime TimeSinceMatchStart;
+        private static ulong _previousWinner;
+        private static int _Team1previousTickets;
+        private static int _Team2previousTickets;
         public TicketManager()
         {
             config = new Config<TicketData>(Data.TicketStorage, "config.json");
 
+            TimeSinceMatchStart = DateTime.Now;
+
+            _previousWinner = 0;
+
             Team1Tickets = config.Data.StartingTickets;
             Team2Tickets = config.Data.StartingTickets;
+            _Team1previousTickets = config.Data.StartingTickets;
+            _Team2previousTickets = config.Data.StartingTickets;
+
+            
 
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
@@ -159,6 +171,19 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnRoundWin(ulong team)
         {
+            _previousWinner = team;
+
+            float winMultiplier = 0.15f;
+            float handicapMultiplier = 0;
+            if (team == 1 && _Team2previousTickets > _Team1previousTickets)
+            {
+                handicapMultiplier = ((float)_Team2previousTickets / _Team1previousTickets) * 0.1F;
+            }
+            else if (team == 2 && _Team1previousTickets > _Team2previousTickets)
+            {
+                handicapMultiplier = ((float)_Team1previousTickets / _Team2previousTickets) * 0.1F;
+            }
+
             List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team).ToList();
 
             for (int i = 0; i < players.Count; i++)
@@ -168,12 +193,15 @@ namespace Uncreated.Warfare.Tickets
                 if (F.TryGetPlaytimeComponent(player.CSteamID, out var component))
                 {
                     if (component.stats.xpgained > 0)
-                        XPManager.AddXP(player.Player, team, Mathf.RoundToInt(component.stats.xpgained * 0.2f), F.Translate("xp_victory", player.Steam64));
+                        XPManager.AddXP(player.Player, team, Mathf.RoundToInt(component.stats.xpgained * winMultiplier), F.Translate("xp_victory", player.Steam64));
+
+                    if (handicapMultiplier > 0)
+                        XPManager.AddXP(player.Player, team, Mathf.RoundToInt(component.stats.xpgained * handicapMultiplier), F.Translate("xp_handicap", player.Steam64));
 
                     if (player.IsSquadLeader())
                     {
                         if (component.stats.officerpointsgained > 0)
-                            OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, Mathf.RoundToInt(component.stats.officerpointsgained * 0.2f), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
+                            OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, team, Mathf.RoundToInt(component.stats.officerpointsgained * winMultiplier), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
                     }
                 }
             }
@@ -307,7 +335,6 @@ namespace Uncreated.Warfare.Tickets
                 }
             }
         }
-
         public static void OnPlayerJoined(UCPlayer player)
         {
             ulong team = player.GetTeam();
@@ -324,8 +351,27 @@ namespace Uncreated.Warfare.Tickets
 
         public static void OnNewGameStarting()
         {
-            Team1Tickets = config.Data.StartingTickets;
-            Team2Tickets = config.Data.StartingTickets;
+            TimeSinceMatchStart = DateTime.Now;
+
+            int subtractAmount = config.Data.TicketHandicapDifference / 2;
+
+            if (_Team1previousTickets >= 170 && _Team2previousTickets >= 170)
+            {
+                if (_previousWinner == 1)
+                {
+                    _Team1previousTickets -= 20;
+                    _Team2previousTickets += 20;
+                }
+                else if (_previousWinner == 2)
+                {
+                    _Team1previousTickets += 20;
+                    _Team2previousTickets -= 20;
+                }
+            }
+
+            Team1Tickets = _Team1previousTickets;
+            Team2Tickets = _Team2previousTickets;
+
             UpdateUITeam1();
             UpdateUITeam2();
         }
@@ -451,7 +497,6 @@ namespace Uncreated.Warfare.Tickets
                 message = "";
             }
         }
-
         public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
         {
             string xpstr = F.Translate(KeyplayerTranslationKey, ucplayer.Steam64);
@@ -489,6 +534,7 @@ namespace Uncreated.Warfare.Tickets
     public class TicketData : ConfigData
     {
         public int StartingTickets;
+        public int TicketHandicapDifference;
         public int FOBCost;
         public int TicketsFlagCaptured;
         public int TicketsFlagLost;
@@ -498,6 +544,7 @@ namespace Uncreated.Warfare.Tickets
         public override void SetDefaults()
         {
             StartingTickets = 200;
+            TicketHandicapDifference = 40;
             FOBCost = 15;
             TicketsFlagCaptured = 20;
             TicketsFlagLost = -20;
