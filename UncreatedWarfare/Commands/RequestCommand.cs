@@ -28,7 +28,6 @@ namespace Uncreated.Warfare.Commands
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
-
             if (command.Length > 0)
             {
                 if (command[0].ToLower() == "save")
@@ -137,6 +136,7 @@ namespace Uncreated.Warfare.Commands
 
                         Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
                         KitManager.GiveKit(ucplayer, kit);
+                        KitManager.AddRequest(kit);
                         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)

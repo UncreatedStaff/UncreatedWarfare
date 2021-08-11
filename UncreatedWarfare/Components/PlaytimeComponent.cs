@@ -52,6 +52,7 @@ namespace Uncreated.Warfare.Components
         public ushort lastExplodedVehicle;
         public ushort lastRoadkilled;
         private Coroutine _currentTeleportRequest;
+        private FOB _pendingFob;
         public UncreatedPlayer UCPlayerStats;
         public Vehicles.VehicleSpawn currentlylinking;
         public void QueueMessage(ToastMessage message)
@@ -157,8 +158,10 @@ namespace Uncreated.Warfare.Components
                 _currentTeleportRequest = default;
             }
         }
+        public FOB PendingFOB { get => _pendingFob; }
         private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 position, float angle, float seconds, bool shouldCancelOnMove, bool shouldCancelOnDamage, bool shouldMessagePlayer, string locationName, FOB fob)
         {
+            _pendingFob = fob;
             byte originalhealth = player.life.health;
             Vector3 originalPosition = new Vector3(player.transform.position.x, player.transform.position.y, player.transform.position.z);
 

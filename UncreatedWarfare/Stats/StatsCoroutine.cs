@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.Stats
                             {
                                 stats.warfare_stats.Update(player, false);
                                 stats.UpdateSession(WarfareStats.WarfareName, false);
-                                stats.SaveAsync();
+                                stats.Save();
                             }
                         }
                     }

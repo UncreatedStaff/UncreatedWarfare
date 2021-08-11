@@ -122,5 +122,33 @@ namespace Uncreated.Warfare
                 }
             }
         }
+
+        internal static void PickGroupAfterJoin(UCPlayer ucplayer)
+        {
+            ulong oldGroup = ucplayer.Player.quests.groupID.m_SteamID;
+            if (HasSave(ucplayer.Steam64, out PlayerSave save))
+            {
+                if (TeamManager.CanJoinTeam(save.Team) && ucplayer.Player.quests.groupID.m_SteamID != save.Team)
+                {
+                    ucplayer.Player.quests.ServerAssignToGroup(new CSteamID(TeamManager.GetGroupID(save.Team)), EPlayerGroupRank.MEMBER, true);
+                } else
+                {
+                    ulong other = TeamManager.Other(save.Team);
+                    if (TeamManager.CanJoinTeam(other) && ucplayer.Player.quests.groupID.m_SteamID != other)
+                    {
+                        ucplayer.Player.quests.ServerAssignToGroup(new CSteamID(TeamManager.GetGroupID(other)), EPlayerGroupRank.MEMBER, true);
+                    }
+                }
+            }
+            if (oldGroup != ucplayer.Player.quests.groupID.m_SteamID)
+            {
+                ulong team = ucplayer.Player.quests.groupID.m_SteamID.GetTeam();
+                if (team != oldGroup.GetTeam())
+                {
+                    ucplayer.Player.teleportToLocation(F.GetBaseSpawn(ucplayer.Player), F.GetBaseAngle(team));
+                }
+            }
+            GroupManager.save();
+        }
     }
 }

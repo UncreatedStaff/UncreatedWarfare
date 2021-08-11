@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Kits
         }
         private void PlayerLife_OnPreDeath(PlayerLife life)
         {
-            if (HasKit(life.player.channel.owner.playerID.steamID, out var kit))
+            if (HasKit(life.player.channel.owner.playerID.steamID, out Kit kit))
             {
                 for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
                 {
@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         ItemJar jar = life.player.inventory.getItem(page, index);
 
-                        var asset = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id);
+                        ItemAsset asset = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id);
                         float percentage = (float)jar.item.amount / asset.amount;
 
                         bool notInKit = !kit.HasItemOfID(jar.item.id);
@@ -109,16 +109,16 @@ namespace Uncreated.Warfare.Kits
         {
             PlayerClothing playerClothes = player.Player.clothing;
 
-            var clothes = new List<KitClothing>();
-
-            clothes.Add(new KitClothing(playerClothes.shirt, playerClothes.shirtQuality, Convert.ToBase64String(playerClothes.shirtState), KitClothing.EClothingType.SHIRT));
-            clothes.Add(new KitClothing(playerClothes.pants, playerClothes.pantsQuality, Convert.ToBase64String(playerClothes.pantsState), KitClothing.EClothingType.PANTS));
-            clothes.Add(new KitClothing(playerClothes.vest, playerClothes.vestQuality, Convert.ToBase64String(playerClothes.vestState), KitClothing.EClothingType.VEST));
-            clothes.Add(new KitClothing(playerClothes.hat, playerClothes.hatQuality, Convert.ToBase64String(playerClothes.hatState), KitClothing.EClothingType.HAT));
-            clothes.Add(new KitClothing(playerClothes.mask, playerClothes.maskQuality, Convert.ToBase64String(playerClothes.maskState), KitClothing.EClothingType.MASK));
-            clothes.Add(new KitClothing(playerClothes.backpack, playerClothes.backpackQuality, Convert.ToBase64String(playerClothes.backpackState), KitClothing.EClothingType.BACKPACK));
-            clothes.Add(new KitClothing(playerClothes.glasses, playerClothes.glassesQuality, Convert.ToBase64String(playerClothes.glassesState), KitClothing.EClothingType.GLASSES));
-
+            List<KitClothing> clothes = new List<KitClothing>
+            {
+                new KitClothing(playerClothes.shirt, playerClothes.shirtQuality, Convert.ToBase64String(playerClothes.shirtState), KitClothing.EClothingType.SHIRT),
+                new KitClothing(playerClothes.pants, playerClothes.pantsQuality, Convert.ToBase64String(playerClothes.pantsState), KitClothing.EClothingType.PANTS),
+                new KitClothing(playerClothes.vest, playerClothes.vestQuality, Convert.ToBase64String(playerClothes.vestState), KitClothing.EClothingType.VEST),
+                new KitClothing(playerClothes.hat, playerClothes.hatQuality, Convert.ToBase64String(playerClothes.hatState), KitClothing.EClothingType.HAT),
+                new KitClothing(playerClothes.mask, playerClothes.maskQuality, Convert.ToBase64String(playerClothes.maskState), KitClothing.EClothingType.MASK),
+                new KitClothing(playerClothes.backpack, playerClothes.backpackQuality, Convert.ToBase64String(playerClothes.backpackState), KitClothing.EClothingType.BACKPACK),
+                new KitClothing(playerClothes.glasses, playerClothes.glassesQuality, Convert.ToBase64String(playerClothes.glassesState), KitClothing.EClothingType.GLASSES)
+            };
             return clothes;
         }
         public static void GiveKit(UCPlayer player, Kit kit)
@@ -228,12 +228,17 @@ namespace Uncreated.Warfare.Kits
             if (player.IsTeam2())
                 unarmedKit = TeamManager.Team2UnarmedKit;
 
-            if (KitManager.KitExists(unarmedKit, out var kit))
+            if (KitExists(unarmedKit, out var kit))
             {
-                KitManager.GiveKit(player, kit);
+                GiveKit(player, kit);
                 return true;
             }
             return false;
+        }
+        public static void AddRequest(Kit kit)
+        {
+            kit.Requests++;
+            Save();
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
@@ -389,6 +394,7 @@ namespace Uncreated.Warfare.Kits
         public Dictionary<string, string> SignTexts;
         [JsonSettable]
         public string Weapons;
+        public int Requests;
         [JsonIgnore]
         public Rank RequiredRank { 
             get
@@ -428,6 +434,7 @@ namespace Uncreated.Warfare.Kits
                 else if (!(Assets.find(EAssetType.ITEM, i.ID) is ItemAsset asset)) Weapons = string.Empty;
                 else Weapons = asset.itemName;
             }
+            Requests = 0;
         }
         [JsonConstructor]
         public Kit()
@@ -450,6 +457,7 @@ namespace Uncreated.Warfare.Kits
             AllowedUsers = new List<ulong>();
             SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, $"<color=#{{0}}>{SignName}</color>\n<color=#{{2}}>{{1}}</color>" } };
             Weapons = string.Empty;
+            Requests = 0;
         }
         public Kit(string Name, 
             EClass Class, 
@@ -469,7 +477,8 @@ namespace Uncreated.Warfare.Kits
             List<ulong> AllowedUsers, 
             Dictionary<string, string> 
             SignTexts, 
-            string Weapons)
+            string Weapons,
+            int Requests)
         {
             this.Name = Name;
             this.Class = Class;
@@ -501,6 +510,7 @@ namespace Uncreated.Warfare.Kits
                 }
             } else
                 this.Weapons = Weapons;
+            this.Requests = Requests;
         }
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public bool IsLimited(out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)

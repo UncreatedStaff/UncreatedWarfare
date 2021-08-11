@@ -209,6 +209,26 @@ namespace Uncreated.Warfare.Stats
             }
             if (save) Save();
         }
+        public void TellBuiltFob()
+        {
+
+        }
+        public void TellEmplacementBuilt(ushort id)
+        {
+
+        }
+        public void TellRevivedTeammate()
+        {
+
+        }
+        public void TellDestroyedVehicle(ushort id)
+        {
+
+        }
+        public void TellFortificationBuilt(ushort id)
+        {
+
+        }
         [JsonConstructor]
         public WarfareStats(long playtime, float time_deployed, uint kills, uint deaths, uint teamkills, uint officer_points, uint xp, int level, string rank, string rank_abbreviation, List<Team> teams, Offences offences)
         {

@@ -47,7 +47,7 @@ namespace Uncreated.Warfare
                 {
                     pt.stats.AddTeamkill();
                     pt.UCPlayerStats.warfare_stats.TellTeamkill(parameters, false);
-                    pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.Save();
                 }
                 if (Data.Gamemode is TeamCTF ctf)
                 {
@@ -104,7 +104,7 @@ namespace Uncreated.Warfare
                 {
                     pt.stats.AddKill();
                     pt.UCPlayerStats.warfare_stats.TellKill(parameters, false);
-                    pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.Save();
                 }
             }
             OnKill?.Invoke(this, parameters);
@@ -172,7 +172,7 @@ namespace Uncreated.Warfare
                 {
                     pt.stats.AddDeath();
                     pt.UCPlayerStats.warfare_stats.TellDeathSuicide(parameters, false);
-                    pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.Save();
                 }
                 if (Data.Gamemode is TeamCTF ctf)
                 {
@@ -259,7 +259,7 @@ namespace Uncreated.Warfare
                     pt.stats.AddDeath();
 
                     pt.UCPlayerStats.warfare_stats.TellDeathNonSuicide(parameters, false);
-                    pt.UCPlayerStats.SaveAsync();
+                    pt.UCPlayerStats.Save();
                 }
                 if (Data.Gamemode is TeamCTF ctf)
                 {
