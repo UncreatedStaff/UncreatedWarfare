@@ -155,6 +155,7 @@ namespace Uncreated.Warfare
                 { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
                 { "squad_no_no_words", "<color=#ff8c69>You can't name a squad that.</color>" },
                 { "squads_disabled", "<color=#ff8c69>Squads are disabled.</color>" },
+                { "squad_too_many", "<color=#ff8c69>There can not be more than 8 squads on a team at once.</color>" },
 
                 { "squad_ui_name", "{0}" },
                 { "squad_ui_player_name", "{0}" },

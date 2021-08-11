@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Squads
                         List<Squad> sortedSquads = friendlySquads.OrderBy(s => s.Name != currentSquad.Name).ToList();
 
                         // send a list of all squads
-                        for (int i = 0; i < sortedSquads.Count; i++)
+                        for (int i = 0; i < Math.Min(sortedSquads.Count, 8); i++)
                         {
                             EffectManager.sendUIEffect((ushort)(config.Data.squadLTUI + i),
                                 unchecked((short)(config.Data.squadLTUI + i)),
@@ -119,16 +119,16 @@ namespace Uncreated.Warfare.Squads
                             EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), player.transportConnection);
                             
                         // send labels for squad showing leader name, player count, islocked
-                        for (int i = 0; i < friendlySquads.Count; i++)
+                        for (int i = 0; i < Math.Min(friendlySquads.Count, 8); i++)
                         {
                             EffectManager.sendUIEffect((ushort)(config.Data.squadLUI + i),
                                 unchecked((short)(config.Data.squadLUI + i)),
                                 player.transportConnection,
                                 true,
                                 F.Translate("squad_ui_squad_name", player, friendlySquads[i].Name),
-                                F.Translate("squad_ui_player_count", player, friendlySquads[i].IsLocked ? 
-                                config.Data.lockCharacter + "  " : "", friendlySquads[i].Members.Count.ToString(Data.Locale)),
-                                F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(friendlySquads[i].Leader).CharacterName)
+                                F.Translate("squad_ui_player_count", player, friendlySquads[i].IsLocked ?
+                                config.Data.lockCharacter + "  " : "", friendlySquads[i].Members.Count.ToString(Data.Locale))
+                                //F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(friendlySquads[i].Leader).CharacterName)
                             );
                         }
                     }
@@ -138,7 +138,7 @@ namespace Uncreated.Warfare.Squads
 
         public static void InvokePlayerJoined(UCPlayer player, string squadName)
         {
-            var squad = Squads.Find(s => s.Name == squadName && s.Team == player.GetTeam());
+            Squad squad = Squads.Find(s => s.Name == squadName && s.Team == player.GetTeam());
 
             if (squad != null && !squad.IsFull())
             {

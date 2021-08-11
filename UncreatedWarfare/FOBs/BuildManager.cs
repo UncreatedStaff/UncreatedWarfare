@@ -140,7 +140,6 @@ namespace Uncreated.Warfare.FOBs
                 player.SendChat("build_error_fobtoofar");
                 return false;
             }
-            BarricadeDrop nearestFOB = NearbyFOBs.FirstOrDefault();
             IEnumerable<BarricadeDrop> NearbyRepairStations = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.RepairStationID, 100, player.Position, team, true);
             if (NearbyRepairStations.Count() != 0)
             {
@@ -262,8 +261,7 @@ namespace Uncreated.Warfare.FOBs
                 BuildID = FOBManager.config.Data.Team1BuildID;
             else if (team == 2)
                 BuildID = FOBManager.config.Data.Team2BuildID;
-            List<ItemData> NearbyBuild = new List<ItemData>();
-            NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, foundation.point);
+            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, foundation.point);
             if (NearbyBuild.Count < fortification.required_build)
             {
                 player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), fortification.required_build.ToString(Data.Locale));

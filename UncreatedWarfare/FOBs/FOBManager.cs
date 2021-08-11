@@ -111,6 +111,17 @@ namespace Uncreated.Warfare.FOBs
             }
             else removed = null;
 
+            if (removed != null)
+            {
+                IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
+                while (pts.MoveNext())
+                {
+                    if (pts.Current.PendingFOB != null && pts.Current.PendingFOB.Number == removed.Number)
+                    {
+                        pts.Current.CancelTeleport();
+                    }
+                }
+            }
 
             if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null && ctf.State == Gamemodes.EState.ACTIVE)
             // doesnt count destroying fobs after game ends

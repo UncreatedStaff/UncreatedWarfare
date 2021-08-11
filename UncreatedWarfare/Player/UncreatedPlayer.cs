@@ -48,7 +48,7 @@ namespace Uncreated.Players
             this.addresses.OnNeedsSave += SaveEscalator;
             this.sessions.OnNeedsSave += SaveEscalator;
             if (this.usernames != default) this.usernames.OnNeedsSave += SaveEscalator;
-            Save();
+            base.Save();
         }
         public UncreatedPlayer(SteamPlayer player)
         {
@@ -68,7 +68,7 @@ namespace Uncreated.Players
             this.discord_account.OnNeedsSave += SaveEscalator;
             this.sessions.OnNeedsSave += SaveEscalator;
             this.globalization_data.OnNeedsSave += SaveEscalator;
-            Save();
+            base.Save();
         }
         public UncreatedPlayer(ulong id)
         {
@@ -92,7 +92,7 @@ namespace Uncreated.Players
             this.globalization_data.OnNeedsSave += SaveEscalator;
             this.addresses.OnNeedsSave += SaveEscalator;
             this.sessions.OnNeedsSave += SaveEscalator;
-            Save();
+            base.Save();
         }
         public UncreatedPlayer() { }
         public static bool TryLoad(ulong id, out UncreatedPlayer player)
@@ -176,14 +176,11 @@ namespace Uncreated.Players
             return newplayer;
         }
         public override void Save() => SavePath(FileName(steam_id));
-        public void SaveAsync() => SavePath(FileName(steam_id));
-        static readonly JsonSerializerSettings Settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
+        static readonly JsonSerializerSettings Settings = new JsonSerializerSettings { Formatting = Formatting.None };
         private void SavePath(string path)
         {
             if (UCWarfare.Config.Debug)
                 F.Log("Saving " + usernames.player_name, ConsoleColor.DarkCyan);
-            
-            isSaving = true;
             try
             {
                 using (TextWriter writer = File.CreateText(path))
@@ -200,9 +197,8 @@ namespace Uncreated.Players
                 if (UCWarfare.Config.Debug)
                     F.LogError(ex);
             }
-            isSaving = false;
         }
-        protected override void SaveEscalator() => Save();
+        protected override void SaveEscalator() => base.Save();
         public void LogIn(SteamPlayer player, string server) => LogIn(player, F.GetPlayerOriginalNames(player), server);
         public void LogIn(SteamPlayer player, FPlayerName name, string server)
         {
@@ -216,12 +212,12 @@ namespace Uncreated.Players
                 usernames.PlayerNameObject = name;
             }
             sessions.StartSession(server, false);
-            SaveAsync();
+            Save();
         }
         public void UpdateSession(string server, bool save = true)
         {
             sessions.ModifyCurrentSession(server, false);
-            if (save) SaveAsync();
+            if (save) Save();
         }
     }
     public abstract class StatsCollection : PlayerObject

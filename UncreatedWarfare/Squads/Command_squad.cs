@@ -33,6 +33,7 @@ namespace Uncreated.Warfare.Squads
                 if (i < command.Length - 1)
                     name += " ";
             }
+            ulong team = player.GetTeam();
             string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
             if (command.Length >= 1 && op == "create")
             {
@@ -41,7 +42,11 @@ namespace Uncreated.Warfare.Squads
                     player.SendChat("correct_usage", "/squad create <squad name>");
                     return;
                 }
-
+                if (SquadManager.Squads.Count(x => x.Team == team) >= 8)
+                {
+                    player.SendChat("squad_too_many");
+                    return;
+                }
                 if (!SquadManager.IsInAnySquad(player.CSteamID, out _, out _))
                 {
                     string newname = name;
@@ -49,9 +54,9 @@ namespace Uncreated.Warfare.Squads
                     if (name != newname || name.Length > SquadManager.config.Data.MaxSquadNameLength)
                     {
                         player.SendChat("squad_no_no_words", name);
-                    } else if (!SquadManager.FindSquad(name, player.GetTeam(), out Squad squad))
+                    } else if (!SquadManager.FindSquad(name, team, out Squad squad))
                     {
-                        squad = SquadManager.CreateSquad(name, player, player.GetTeam(), player.Branch);
+                        squad = SquadManager.CreateSquad(name, player, team, player.Branch);
 
                         player.SendChat("squad_created", squad.Name);
                     }
@@ -69,7 +74,7 @@ namespace Uncreated.Warfare.Squads
                     return;
                 }
 
-                if (SquadManager.FindSquad(name, player.GetTeam(), out Squad squad))
+                if (SquadManager.FindSquad(name, team, out Squad squad))
                 {
                     if (!SquadManager.IsInAnySquad(player.CSteamID, out _, out _))
                     {
