@@ -213,7 +213,7 @@ namespace Uncreated.Warfare
                 { "fob_built", "<color=#b0ffa8>Successfully built FOB! Your team may now spawn on it.</color>" },
                 { "fob_teleported", "<color=#fae69c>You have been deployed to <color=#54e3ff>{0}</color>.</color>" },
                 { "fob_error_nologi", "<color=#ffab87>You need to be near a friendly logistics truck in order to build a FOB!</color>" },
-                { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing friendly fob! You need to be 300m away from it to construct a new fob.</color>" },
+                { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing friendly fob! You need to be 200m away from it to construct a new fob.</color>" },
                 { "fob_error_limitreached", "<color=#ffa238>The number of FOBs allowed on the map has been reached.</color>" },
                 { "ammocrate_built", "<color=#b0ffa8>Successfully built ammo crate. Your team may now resupply from it.</color>" },
                 { "ammocrate_error_alreadyexists", "<color=#ffa238>This FOB already has an ammo crate.</color>" },
