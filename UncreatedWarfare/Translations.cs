@@ -213,7 +213,7 @@ namespace Uncreated.Warfare
                 { "fob_built", "<color=#b0ffa8>Successfully built FOB! Your team may now spawn on it.</color>" },
                 { "fob_teleported", "<color=#fae69c>You have been deployed to <color=#54e3ff>{0}</color>.</color>" },
                 { "fob_error_nologi", "<color=#ffab87>You need to be near a friendly logistics truck in order to build a FOB!</color>" },
-                { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing friendly fob! You need to be 300m away from it to construct a new fob.</color>" },
+                { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing friendly fob! You need to be 200m away from it to construct a new fob.</color>" },
                 { "fob_error_limitreached", "<color=#ffa238>The number of FOBs allowed on the map has been reached.</color>" },
                 { "ammocrate_built", "<color=#b0ffa8>Successfully built ammo crate. Your team may now resupply from it.</color>" },
                 { "ammocrate_error_alreadyexists", "<color=#ffa238>This FOB already has an ammo crate.</color>" },
@@ -412,9 +412,10 @@ namespace Uncreated.Warfare
                 { "vehicle_owner_not_in_vehicle", "Wait for the owner {0} to get in." },
                 { "vehicle_owner_not_in_vehicle_squad", "Wait for the owner {0} to get in, or join the squad {1}." },
                 { "vehicle_no_kit", "You can not get in a vehicle without a kit." },
-                { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to man this vehicle." },
+                { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to main this vehicle." },
                 { "vehicle_need_another_person_with_kit", "You must have another <color=#cedcde>{0}</color> in this vehicle before you can enter the gunner's seat." },
                 { "vehicle_need_driver", "Your vehicle needs a DRIVER before you can switch to the gunner's seat." },
+                { "vehicle_need_crew", "Wait for this vehicle's CREW to get in first." },
                 { "vehicle_cannot_switch", "You cannot switch from driver's seat to gunner's seat in this vehicle." },
                 
                 // other
@@ -438,8 +439,10 @@ namespace Uncreated.Warfare
                 { "request_kit_e_wronglevel", "<color=#a8918a>You must be <color=#ffc29c>Level {0}</color> to request this kit.</color>" },
                 { "request_kit_e_wrongbranch", "<color=#a8918a>You must be a different branch.</color>" },
                 { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to get this kit.</color>" },
+                { "request_loadout_e_notallowed", "<color=#a8918a>You do not own this loadout.</color>" },
                 { "request_vehicle_e_notrequestable", "<color=#a8918a>This vehicle cannot be reqested.</color>" },
                 { "request_vehicle_e_cooldown", "<color=#b3ab9f>This vehicle can be requested in: <color=#ffe2ab>{0}</color>.</color>" },
+                { "request_vehicle_e_delay", "<color=#b3ab9f>This vehicle is delayed for another: <color=#94cfff>{0}</color>.</color>" },
                 { "request_vehicle_e_notinsquad", "<color=#b3ab9f>You must be <color=#cedcde>IN A SQUAD</color> in order to request this vehicle.</color>" },
                 { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
                 { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
@@ -601,7 +604,8 @@ namespace Uncreated.Warfare
                 { "kit_unlimited", "unlimited" },
                 { "kit_not_owned", "NOT OWNED" },
                 { "kit_player_count", "{0}/{1}" },
-                { "sign_kit_request", "{0}\n{1}\n{2}\n{3}" },  
+                { "sign_kit_request", "{0}\n{1}\n{2}\n{3}" },
+                { "loadout_name", "<b>LOADOUT #{0}</b>" },
                 // {0} = name, {1} = Lvl __ or '\n' if lvl == 0 or if premium cost, {2} = weapon list, {3} player count on team
 
                 // revives
@@ -680,6 +684,7 @@ namespace Uncreated.Warfare
                 { "xp_deployed_fob", "TEAMMATE DEPLOYED" },
 
                 { "xp_victory", "VICTORY" },
+                { "xp_handicap", "HARD FOUGHT" },
                 { "xp_flag_captured", "FLAG CAPTURED" },
                 { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
                 { "xp_flag_attack", "ATTACK" },

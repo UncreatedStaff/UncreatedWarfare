@@ -61,7 +61,8 @@ namespace Uncreated.Warfare.FOBs
                 if (team == 1)
                 {
                     ctf.GameStats.fobsPlacedT1++;
-                } else if (team == 2)
+                }
+                else if (team == 2)
                 {
                     ctf.GameStats.fobsPlacedT2++;
                 }
@@ -221,17 +222,25 @@ namespace Uncreated.Warfare.FOBs
                 if (i >= FOBList.Count)
                 {
                     EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
-                } else
+                }
+                else
                 {
                     if (UINumber >= 10)
                         break;
 
-                    if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
-                        continue;
+                    //if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
+                    //    continue;
 
-                    EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)),
+                    try
+                    {
+                        EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)),
                         player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name, FOBList[i].ClosestLocation));
-                    UINumber++;
+                        UINumber++;
+                    }
+                    catch(Exception ex)
+                    {
+                        CommandWindow.LogError("FOB UI ERROR: " + ex.Message);
+                    }
                 }
             }
         }

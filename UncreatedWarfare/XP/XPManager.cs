@@ -384,7 +384,7 @@ namespace Uncreated.Warfare.XP
                 {EVehicleType.APC, 80},
                 {EVehicleType.IFV, 100},
                 {EVehicleType.MBT, 200},
-                {EVehicleType.HELI_TRANSPORT, 70},
+                {EVehicleType.HELI_TRANSPORT, 60},
                 {EVehicleType.EMPLACEMENT, 30},
             };
 
@@ -395,16 +395,16 @@ namespace Uncreated.Warfare.XP
             Ranks = new List<Rank>()
             {
                 new Rank(0, "Recruit", "Rec.", 1500),
-                new Rank(1, "Private", "Pvt.", 3500),
-                new Rank(2, "Private 1st Class", "Pfc.", 5000),
-                new Rank(3, "Corporal", "Cpl.", 7000),
-                new Rank(4, "Specialist", "Spec.", 5000),
-                new Rank(5, "Sergeant", "Sgt.", 7000),
-                new Rank(6, "Staff Sergeant", "Ssg.", 9000),
-                new Rank(7, "Sergeant 1st Class", "Sfc.", 12000),
-                new Rank(8, "Sergeant Major", "S.M.", 16000),
-                new Rank(9, "Warrant Officer", "W.O.", 25000),
-                new Rank(10, "Chief Warrant Officer", "C.W.O.", 35000)
+                new Rank(1, "Private", "Pvt.", 3800),
+                new Rank(2, "Private 1st Class", "Pfc.", 5300),
+                new Rank(3, "Corporal", "Cpl.", 7200),
+                new Rank(4, "Specialist", "Spec.", 12500),
+                new Rank(5, "Sergeant", "Sgt.", 15000),
+                new Rank(6, "Staff Sergeant", "Ssg.", 20000),
+                new Rank(7, "Sergeant 1st Class", "Sfc.", 24000),
+                new Rank(8, "Sergeant Major", "S.M.", 28000),
+                new Rank(9, "Warrant Officer", "W.O.", 32000),
+                new Rank(10, "Chief Warrant Officer", "C.W.O.", 40000)
             };
         }
         public XPData() => SetDefaults();

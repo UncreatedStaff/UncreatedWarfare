@@ -92,66 +92,67 @@ namespace Uncreated.Warfare.Commands
                             RequestVehicle(ucplayer, veh);
                     }
                 }
-                else if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
+                if (requestsign.kit_name.StartsWith("loadout_"))
                 {
-                    ucplayer.Message("request_kit_e_kitnoexist");
-                }
-                else if (ucplayer.KitName == kit.Name)
-                {
-                    ucplayer.Message("request_kit_e_alreadyhaskit");
-                }
-                else if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64) && !UCWarfare.Config.OverrideKitRequirements)
-                {
-                    ucplayer.Message("request_kit_e_notallowed");
-                }
-                else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
-                {
-                    ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
-                }
-                else if (kit.Class == Kit.EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
-                {
-                    ucplayer.Message("request_kit_e_notsquadleader");
-                }
-                else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
-                {
-                    player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
-                }
-                else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out Cooldown premiumCooldown, kit.Name) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
-                {
-                    player.Message("kit_e_cooldown", premiumCooldown.ToString());
+                    if (int.TryParse(requestsign.kit_name.Last().ToString(), out int loadoutNumber))
+                    {
+                        var loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == ucplayer.GetTeam() && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
+
+                        if (loadouts.Count != 0)
+                        {
+                            if (loadoutNumber - 1 >= 0 && loadoutNumber < loadouts.Count)
+                            {
+                                var kit = loadouts[loadoutNumber - 1];
+
+                                GiveKit(ucplayer, kit);
+                            }
+                        }
+                    }
+                    ucplayer.Message("request_loadout_e_notallowed");
+                    return;
                 }
                 else
                 {
-                    int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
-                    Rank rank = XPManager.GetRank(xp, out _, out _);
-                    if ((rank == default || rank.level < kit.RequiredLevel) && !UCWarfare.Config.OverrideKitRequirements)
+                    if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
                     {
-                        ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel.ToString(Data.Locale));
+                        ucplayer.Message("request_kit_e_kitnoexist");
+                    }
+                    else if (ucplayer.KitName == kit.Name)
+                    {
+                        ucplayer.Message("request_kit_e_alreadyhaskit");
+                    }
+                    else if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64) && !UCWarfare.Config.OverrideKitRequirements)
+                    {
+                        ucplayer.Message("request_kit_e_notallowed");
+                    }
+                    else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
+                    {
+                        ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
+                    }
+                    else if (kit.Class == Kit.EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
+                    {
+                        ucplayer.Message("request_kit_e_notsquadleader");
+                    }
+                    else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
+                    {
+                        player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
+                    }
+                    else if (kit.IsPremium && CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out Cooldown premiumCooldown, kit.Name) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
+                    {
+                        player.Message("kit_e_cooldown", premiumCooldown.ToString());
                     }
                     else
                     {
-                        bool branchChanged = false;
-                        if (KitManager.HasKit(player.CSteamID, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
-                            branchChanged = true;
-
-                        Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
-                        KitManager.GiveKit(ucplayer, kit);
-                        KitManager.AddRequest(kit);
-                        ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
-
-                        if (branchChanged)
+                        int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
+                        Rank rank = XPManager.GetRank(xp, out _, out _);
+                        if ((rank == default || rank.level < kit.RequiredLevel) && !UCWarfare.Config.OverrideKitRequirements)
                         {
-                            ucplayer.Branch = kit.Branch;
-                            ucplayer.Message("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                            ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel.ToString(Data.Locale));
                         }
-
-                        if (kit.IsPremium)
+                        else
                         {
-                            CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
+                            GiveKit(ucplayer, kit);
                         }
-                        CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.Data.RequestKitCooldown);
-
-                        PlayerManager.Save();
                     }
                 }
             }
@@ -163,6 +164,31 @@ namespace Uncreated.Warfare.Commands
             {
                 ucplayer.Message("request_not_looking");
             }
+        }
+        private void GiveKit(UCPlayer ucplayer, Kit kit)
+        {
+            bool branchChanged = false;
+            if (KitManager.HasKit(ucplayer.CSteamID, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                branchChanged = true;
+
+            Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
+            KitManager.GiveKit(ucplayer, kit);
+            KitManager.AddRequest(kit);
+            ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
+
+            if (branchChanged)
+            {
+                ucplayer.Branch = kit.Branch;
+                ucplayer.Message("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+            }
+
+            if (kit.IsPremium)
+            {
+                CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
+            }
+            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.Data.RequestKitCooldown);
+
+            PlayerManager.Save();
         }
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle)
         {
@@ -196,6 +222,15 @@ namespace Uncreated.Warfare.Commands
             else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
             {
                 ucplayer.Message("request_vehicle_e_cooldown", F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
+                return;
+            }
+
+            double delay = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
+            double timeleft = data.Delay - delay;
+
+            if (delay < data.Delay)
+            {
+                ucplayer.Message("request_vehicle_e_delay", F.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
                 return;
             }
             int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);

@@ -56,7 +56,7 @@ namespace Uncreated.Warfare
         {
             if (seconds < 60) // < 1 minute
             {
-                return seconds.ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
+                return (seconds + 1).ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
             }
             else if (seconds < 3600) // < 1 hour
             {
@@ -1562,7 +1562,6 @@ namespace Uncreated.Warfare
         {
             string norm = Translate(key, player, formatting);
             if (!key.StartsWith("sign_") || norm != key) return norm;
-            if (key.Length <= 5) return key;
             string kitname = key.Substring(5);
             if (kitname.StartsWith("vbs_") && ushort.TryParse(kitname.Substring(4), System.Globalization.NumberStyles.Any, Data.Locale, out ushort vehicleid))
             {
@@ -1606,6 +1605,37 @@ namespace Uncreated.Warfare
                 }
                 else return norm;
             } 
+            else if (kitname.StartsWith("loadout_"))
+            {
+                if (int.TryParse(kitname.Last().ToString(), out int loadoutNumber))
+                {
+                    var loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == player.GetTeam() && k.AllowedUsers.Contains(player)).ToList();
+
+                    if (loadouts.Count != 0)
+                    {
+                        if (loadoutNumber - 1 >= 0 && loadoutNumber < loadouts.Count)
+                        {
+                            var kit = loadouts[loadoutNumber - 1];
+
+                            return Translate("sign_kit_request", player,
+                                F.Translate("loadout_name", player, loadoutNumber.ToString()),
+                                kit.DisplayName.ToString().ToUpper(),
+                                kit.Weapons == "" ? " " : Translate("kit_weapons", player, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
+                                ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"))
+                                );
+                        }
+                    }
+
+                    return Translate("sign_kit_request", player,
+                                F.Translate("loadout_name", player, loadoutNumber.ToString()),
+                                " ",
+                                ObjectTranslate("kit_price_dollars", player, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
+                                " "
+                                );
+                }
+                else
+                    return key;
+            }
             else if (KitManager.KitExists(kitname, out Kit kit))
             {
                 UCPlayer ucplayer = UCPlayer.FromID(player);

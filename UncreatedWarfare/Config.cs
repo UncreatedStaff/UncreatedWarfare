@@ -65,6 +65,7 @@ namespace Uncreated.Warfare
         public bool RelayMicsDuringEndScreen;
         public float TimeBetweenTp;
         public bool EnableSquads;
+        public float LoadoutCost;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -113,6 +114,7 @@ namespace Uncreated.Warfare
             this.RelayMicsDuringEndScreen = true;
             this.TimeBetweenTp = 0.1f;
             this.EnableSquads = true;
+            this.LoadoutCost = 8;
         }
     }
     public class Modules

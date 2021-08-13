@@ -306,7 +306,7 @@ namespace Uncreated.Warfare
                     player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
                 }
                 Data.ReviveManager.OnPlayerConnected(player);
-                PlayerManager.PickGroupAfterJoin(ucplayer);
+                //PlayerManager.PickGroupAfterJoin(ucplayer);
                 TicketManager.OnPlayerJoined(ucplayer);
             }
             catch (Exception ex)
