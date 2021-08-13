@@ -31,7 +31,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         List<PlayerCurrentGameStats> statsT2;
         Players.FPlayerName longestShotTaker;
         ulong longestShotTakerTeam;
-        float longestShot;
+        float longestShotDistance;
+        string longestShotWeapon;
         bool longestShotTaken;
         public Queue<SteamPlayer> TeleportQueue = new Queue<SteamPlayer>();
         private float lastTp = 0;
@@ -94,28 +95,32 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             // topsquadplayers = warstats.GetTopSquad(out squadname, out squadteam, winner);
             warstats.GetTopStats(14, out statsT1, out statsT2);
 
-            longestShotTaken = !warstats.LongestShot.Equals(default(KeyValuePair<ulong, float>));
+            longestShotTaken = warstats.LongestShot.Player != 0;
             if (longestShotTaken)
             {
-                SteamPlayer longestshottaker = PlayerTool.getSteamPlayer(warstats.LongestShot.Key);
+                SteamPlayer longestshottaker = PlayerTool.getSteamPlayer(warstats.LongestShot.Player);
                 if (longestshottaker == null)
                 {
-                    longestShotTaker = Data.DatabaseManager.GetUsernames(warstats.LongestShot.Key);
-                    if (PlayerManager.HasSave(warstats.LongestShot.Key, out PlayerSave save))
-                        longestShotTakerTeam = save.Team;
-                    else longestShotTakerTeam = 0;
+                    longestShotTaker = Data.DatabaseManager.GetUsernames(warstats.LongestShot.Player);
+                    longestShotTakerTeam = warstats.LongestShot.Team;
                 }
                 else
                 {
                     longestShotTaker = F.GetPlayerOriginalNames(longestshottaker);
-                    longestShotTakerTeam = longestshottaker.GetTeam();
+                    longestShotTakerTeam = warstats.LongestShot.Team;
                 }
-                longestShot = warstats.LongestShot.Value;
+                longestShotDistance = warstats.LongestShot.Distance;
+                if (Assets.find(EAssetType.ITEM, warstats.LongestShot.Gun) is ItemAsset asset)
+                    longestShotWeapon = asset.itemName;
+                else if (Assets.find(EAssetType.VEHICLE, warstats.LongestShot.Gun) is VehicleAsset vasset)
+                    longestShotWeapon = vasset.vehicleName;
+                else longestShotWeapon = string.Empty;
             } else
             {
-                longestShot = 0;
+                longestShotDistance = 0;
                 longestShotTaker = Players.FPlayerName.Nil;
                 longestShotTakerTeam = 0;
+                longestShotWeapon = string.Empty;
             }
         }
         public void SendScreenToPlayer(SteamPlayer player, string progresschars) => SendScreenToPlayer(winner, player, TeamManager.GetTeamHexColor(winner), progresschars);
@@ -283,7 +288,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "FOBsDestroyedT2Value", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.fobsDestroyedT2, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TeamkillingCasualtiesValue", F.ObjectTranslate("stats_war_value", player.playerID.steamID.m_SteamID, warstats.teamkills, defaultColor));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "TopRankingOfficerValue", longestShotTaken ? 
-                    F.Translate("longest_shot_format", player.playerID.steamID.m_SteamID, longestShot.ToString("N1"), 
+                    F.Translate("longest_shot_format", player.playerID.steamID.m_SteamID, longestShotDistance.ToString("N1"), longestShotWeapon,
                     F.ColorizeName(longestShotTaker.CharacterName, longestShotTakerTeam)) : WarStatsTracker.NO_PLAYER_NAME_PLACEHOLDER);
             }
             catch (Exception ex)
@@ -387,6 +392,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             $"Fobs Placed: {fobsplaced}\nDamage Done: {damagedone}\nXP Gained: {xpgained}\nOfficer Pts Gained: {officerpointsgained}\n" +
             $"OnlineTime:{(float)onlineCount / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%.";
     }
+    public struct LongestShot
+    {
+        public static LongestShot Nil = new LongestShot() { Distance = 0, Gun = 0, Player = 0, Team = 0 };
+        public ulong Player;
+        public float Distance;
+        public ushort Gun;
+        public ulong Team;
+    }
     public class WarStatsTracker : MonoBehaviour
     {
         public TimeSpan Duration { get => TimeSpan.FromSeconds(durationCounter); }
@@ -404,7 +417,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public int teamkills; // works
         internal int gamepercentagecounter;
         public Coroutine update;
-        public KeyValuePair<ulong, float> LongestShot;
+        public LongestShot LongestShot = LongestShot.Nil;
         public void Update()
         {
             durationCounter += Time.deltaTime;
@@ -466,7 +479,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             fobsDestroyedT2 = 0;
             teamkills = 0;
             update = StartCoroutine(CompileAverages());
-            LongestShot = default;
+            LongestShot = LongestShot.Nil;
         }
         public void StopCounting()
         {

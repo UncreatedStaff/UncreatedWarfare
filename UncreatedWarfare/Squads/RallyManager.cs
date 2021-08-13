@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Squads
 {
     public class RallyManager
     {
-        private static List<RallyPoint> rallypoints = new List<RallyPoint>();
+        private static readonly List<RallyPoint> rallypoints = new List<RallyPoint>();
 
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
@@ -138,10 +138,8 @@ namespace Uncreated.Warfare.Squads
                 rallypoint.ShowUIForSquad();
 
                 if (UCWarfare.Config.Debug)
-                {
                     foreach (RallyPoint rally in rallypoints)
                         F.Log($"Rally point: Squad: {rally.squad.Name}, Active: {rally.IsActive}, Structure: {rally.structure.instanceID}, Drop: {rally.drop.instanceID}." + rally.squad.Name, ConsoleColor.DarkGray);
-                }
             }
         }
         public static bool HasRally(UCPlayer player, out RallyPoint rallypoint)

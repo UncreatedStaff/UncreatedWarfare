@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.FOBs
 {
     public class RepairManager
     {
-        private static List<RepairStation> stations = new List<RepairStation>();
+        private static readonly List<RepairStation> stations = new List<RepairStation>();
 
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
@@ -75,14 +75,8 @@ namespace Uncreated.Warfare.FOBs
 
                 stations.Add(station);
                 if (UCWarfare.Config.Debug)
-                {
-                    foreach (var s in stations)
-                    {
-                        F.Log("Repair station: " + s.structure.instanceID, ConsoleColor.DarkGray);
-                        F.Log("Repair station: " + s.drop.instanceID, ConsoleColor.DarkGray);
-                        F.Log("Repair station: " + s.IsActive, ConsoleColor.DarkGray);
-                    }
-                }
+                    foreach (RepairStation s in stations)
+                        F.Log($"Repair station: Active: {s.IsActive}, Structure: {s.structure.instanceID}, Drop: {s.drop.instanceID}.", ConsoleColor.DarkGray);
             }
         }
 

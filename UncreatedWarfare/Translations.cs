@@ -274,7 +274,7 @@ namespace Uncreated.Warfare
                 { "stats_war_float_value", "<color=#{1}>{0:0.00}</color>" },
                 { "player_name_header", "<color=#{1}>{0}</color> - {2:n0}% presence." },
                 { "war_name_header", "<color=#{1}>{0}</color> vs <color=#{3}>{2}</color>" },
-                { "longest_shot_format", "{0}m\n{1}" },
+                { "longest_shot_format", "{0}m - {1}\n{2}" },
                 { "lblKills", "Kills: " },
                 { "lblDeaths", "Deaths: " },
                 { "lblKDR", "K/D Ratio: " },

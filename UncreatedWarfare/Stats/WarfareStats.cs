@@ -771,14 +771,6 @@ namespace Uncreated.Warfare.Stats
             }
 
             float DistanceFromObjective = Mathf.Sqrt(F.GetSqrDistanceFromClosestObjective(parameters.killer.transform.position, out Gamemodes.Flags.Flag closestObjective, false));
-            if (parameters.cause == EDeathCause.GUN && parameters.killer != null && Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != default)
-            {
-                if (ctf.GameStats.LongestShot.Equals(default(KeyValuePair<ulong, float>))
-                    || ctf.GameStats.LongestShot.Value < DistanceFromObjective)
-                {
-                    ctf.GameStats.LongestShot = new KeyValuePair<ulong, float>(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.distance);
-                }
-            }
             if (playstyle != default)
             {
                 playstyle.avg_distance_from_objective_on_kill = ((playstyle.avg_distance_from_objective_on_kill * (kills - 1)) + DistanceFromObjective) / kills;

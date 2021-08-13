@@ -216,31 +216,23 @@ namespace Uncreated.Warfare.FOBs
                 FOBList = Team2FOBs;
             }
             else return;
-            ushort UINumber = 0;
-            for (int i = 0; i < config.Data.FobLimit; i++)
+            for (int i = FOBList.Count; i < config.Data.FobLimit; i++)
             {
-                if (i >= FOBList.Count)
+                EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
+            }
+            for (int i = 0; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
+            {
+                //if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
+                //    continue;
+                try
                 {
-                    EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
+                    EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
+                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name, FOBList[i].ClosestLocation));
                 }
-                else
+                catch(Exception ex)
                 {
-                    if (UINumber >= 10)
-                        break;
-
-                    //if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
-                    //    continue;
-
-                    try
-                    {
-                        EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + UINumber)), unchecked((short)(config.Data.FirstFOBUiId + UINumber)),
-                        player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name, FOBList[i].ClosestLocation));
-                        UINumber++;
-                    }
-                    catch(Exception ex)
-                    {
-                        CommandWindow.LogError("FOB UI ERROR: " + ex.Message);
-                    }
+                    F.LogError("Error in FOB UI: ");
+                    F.LogError(ex);
                 }
             }
         }

@@ -25,10 +25,9 @@ namespace Uncreated.Warfare
         public delegate void PlayerDeathHandler(DeathEventArgs death);
         public static event PlayerDeathHandler OnPlayerDeathGlobal;
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
-        public event EventHandler<KillEventArgs> OnTeamkill;
         private void Teamkill(KillEventArgs parameters)
         {
-            F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
+            //F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
             F.Log(F.Translate("teamkilled_console_log", 0,
                 F.GetPlayerOriginalNames(parameters.killer).PlayerName,
                 parameters.killer.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
@@ -54,9 +53,8 @@ namespace Uncreated.Warfare
                     ctf.GameStats.teamkills++;
                 }
             }
-            OnTeamkill?.Invoke(this, parameters);
         }
-        public class KillEventArgs : EventArgs
+        public class KillEventArgs
         {
             public Player killer;
             public Player dead;
@@ -91,10 +89,9 @@ namespace Uncreated.Warfare
                 return msg;
             }
         }
-        public event EventHandler<KillEventArgs> OnKill;
         private void Kill(KillEventArgs parameters)
         {
-            F.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
+            //F.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -106,10 +103,19 @@ namespace Uncreated.Warfare
                     pt.UCPlayerStats.warfare_stats.TellKill(parameters, false);
                     pt.UCPlayerStats.Save();
                 }
+                if (Data.Gamemode is TeamCTF ctf)
+                {
+                    if (parameters.cause == EDeathCause.GUN && (ctf.GameStats.LongestShot.Player == 0 || ctf.GameStats.LongestShot.Distance < parameters.distance))
+                    {
+                        ctf.GameStats.LongestShot.Player = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
+                        ctf.GameStats.LongestShot.Distance = parameters.distance;
+                        ctf.GameStats.LongestShot.Gun = parameters.item;
+                        ctf.GameStats.LongestShot.Team = team;
+                    }
+                }
             }
-            OnKill?.Invoke(this, parameters);
         }
-        public class SuicideEventArgs : EventArgs
+        public class SuicideEventArgs
         {
             public Player dead;
             public EDeathCause cause;
@@ -144,11 +150,9 @@ namespace Uncreated.Warfare
                 };
             }
         }
-        public event EventHandler<SuicideEventArgs> OnSuicide;
         public void Suicide(SuicideEventArgs parameters)
         {
-            F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
-            OnSuicide?.Invoke(this, parameters);
+            //F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             DeathEventArgs args = new DeathEventArgs
             {
                 cause = parameters.cause,
@@ -187,7 +191,7 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public class DeathEventArgs : EventArgs
+        public class DeathEventArgs
         {
             public Player dead;
             public KillEventArgs killerargs;
@@ -244,10 +248,9 @@ namespace Uncreated.Warfare
                 return msg;
             }
         }
-        public event EventHandler<DeathEventArgs> OnDeathNotSuicide;
         public void DeathNotSuicide(DeathEventArgs parameters)
         {
-            F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
+            //F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.dead.GetTeamByte();
             Data.Gamemode?.OnPlayerDeath(parameters);
             if (team == 1 || team == 2)
@@ -273,7 +276,6 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            OnDeathNotSuicide?.Invoke(this, parameters);
             OnPlayerDeathGlobal?.Invoke(parameters);
         }
         private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
@@ -332,8 +334,7 @@ namespace Uncreated.Warfare
                     }
                     if (landmineID != 0)
                     {
-                        ItemAsset asset = Assets.find(EAssetType.ITEM, landmineID) as ItemAsset;
-                        if (asset != null) landmineName = asset.itemName;
+                        if (Assets.find(EAssetType.ITEM, landmineID) is ItemAsset asset) landmineName = asset.itemName;
                         else landmineName = landmineID.ToString(Data.Locale);
                     }
                     else landmineName = "Unknown";
