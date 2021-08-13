@@ -61,7 +61,8 @@ namespace Uncreated.Warfare.FOBs
                 if (team == 1)
                 {
                     ctf.GameStats.fobsPlacedT1++;
-                } else if (team == 2)
+                }
+                else if (team == 2)
                 {
                     ctf.GameStats.fobsPlacedT2++;
                 }

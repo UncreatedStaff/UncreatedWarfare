@@ -359,13 +359,13 @@ namespace Uncreated.Warfare.Tickets
             {
                 if (_previousWinner == 1)
                 {
-                    _Team1previousTickets -= 20;
-                    _Team2previousTickets += 20;
+                    _Team1previousTickets -= subtractAmount;
+                    _Team2previousTickets += subtractAmount;
                 }
                 else if (_previousWinner == 2)
                 {
-                    _Team1previousTickets += 20;
-                    _Team2previousTickets -= 20;
+                    _Team1previousTickets += subtractAmount;
+                    _Team2previousTickets -= subtractAmount;
                 }
             }
 
@@ -450,52 +450,53 @@ namespace Uncreated.Warfare.Tickets
                 float friendlyRatio = (float)friendlyCount * fg.Rotation.Count();
                 float enemyRatio = (float)enemyCount / (float) fg.Rotation.Count();
 
-                if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
+                if (fg.Rotation.Where(f => f.HasBeenCapturedT1 || f.HasBeenCapturedT2).Count() == fg.Rotation.Count)
                 {
-                    bleed = 0;
-                    message = "";
-                }
-                else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
-                {
-                    message = "enemy_controlling";
-                    bleed = -1;
-                }
-                else if (0.8F < enemyRatio && enemyRatio < 1F)
-                {
-                    message = "enemy_dominating";
-                    bleed = -2;
-                }
-                else if (enemyRatio == 1)
-                {
-                    message = "defeated";
-                    bleed = -3;
-                }
-                else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
-                {
-                    message = "controlling";
-                    bleed = 1;
-                }
-                else if (0.8F < friendlyRatio && friendlyRatio < 1F)
-                {
-                    message = "dominating";
-                    bleed = 2;
-                }
-                else if (friendlyRatio == 1)
-                {
-                    message = "victorious";
-                    bleed = 3;
-                }
-                else
-                {
-                    bleed = 0;
-                    message = "";
+                    if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
+                    {
+                        bleed = 0;
+                        message = "";
+                    }
+                    else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
+                    {
+                        message = "enemy_controlling";
+                        bleed = -1;
+                    }
+                    else if (0.8F < enemyRatio && enemyRatio < 1F)
+                    {
+                        message = "enemy_dominating";
+                        bleed = -2;
+                    }
+                    else if (enemyRatio == 1)
+                    {
+                        message = "defeated";
+                        bleed = -3;
+                    }
+                    else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
+                    {
+                        message = "controlling";
+                        bleed = 1;
+                    }
+                    else if (0.8F < friendlyRatio && friendlyRatio < 1F)
+                    {
+                        message = "dominating";
+                        bleed = 2;
+                    }
+                    else if (friendlyRatio == 1)
+                    {
+                        message = "victorious";
+                        bleed = 3;
+                    }
+                    else
+                    {
+                        bleed = 0;
+                        message = "";
+                    }
                 }
             }
-            else
-            {
-                bleed = 0;
-                message = "";
-            }
+
+            bleed = 0;
+            message = "";
         }
         public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
         {

@@ -249,7 +249,7 @@ namespace Uncreated.Warfare.Vehicles
 
                     for (int i = 0; i < vehicleData.CrewSeats.Count; i++)
                     {
-                        if (vehicleData.CrewSeats[i] < vehicle.passengers.Count() && vehicle.passengers[0] == null || vehicle.passengers[0].player == null)
+                        if (vehicleData.CrewSeats[i] < vehicle.passengers.Count() && vehicle.passengers[0] != null || vehicle.passengers[0].player != null)
                         {
                             if (UCPlayer.FromSteamPlayer(vehicle.passengers[0].player)?.KitClass == vehicleData.RequiredClass)
                             {
@@ -281,6 +281,9 @@ namespace Uncreated.Warfare.Vehicles
             try
             {
                 if (!VehicleExists(vehicle.id, out var vehicleData))
+                    return;
+
+                if (FOBManager.config.Data.Emplacements.Exists(i => i.vehicleID == vehicle.id))
                     return;
 
                 UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
@@ -334,7 +337,7 @@ namespace Uncreated.Warfare.Vehicles
                     }
                 }
 
-                if (vehicleData.CrewSeats.Count > 1)
+                if (vehicleData.CrewSeats.Count > 0)
                 {
                     if (vehicleData.RequiredClass != Kit.EClass.NONE) // if the vehicle requires a CREWMAN kit
                     {
@@ -342,24 +345,27 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             if (kit.Class == vehicleData.RequiredClass)
                             {
-                                bool isThereAnotherCrewman = false;
-                                foreach (Passenger passenger in vehicle.passengers)
+                                if (toSeatIndex != 0)
                                 {
-                                    if (passenger == null || passenger.player == null || passenger.player.playerID.steamID == player.CSteamID)
-                                        continue;
-
-                                    if (UCPlayer.FromSteamPlayer(passenger.player)?.KitClass == vehicleData.RequiredClass)
+                                    bool isThereAnotherCrewman = false;
+                                    foreach (Passenger passenger in vehicle.passengers)
                                     {
-                                        isThereAnotherCrewman = true;
-                                        break;
-                                    }
-                                }
+                                        if (passenger == null || passenger.player == null || passenger.player.playerID.steamID == player.CSteamID)
+                                            continue;
 
-                                if (!isThereAnotherCrewman)
-                                {
-                                    player.SendChat("vehicle_need_another_person_with_kit", vehicleData.RequiredClass.ToString().ToUpper());
-                                    shouldAllow = false;
-                                    return;
+                                        if (UCPlayer.FromSteamPlayer(passenger.player)?.KitClass == vehicleData.RequiredClass)
+                                        {
+                                            isThereAnotherCrewman = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!isThereAnotherCrewman)
+                                    {
+                                        player.SendChat("vehicle_need_another_person_with_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                                        shouldAllow = false;
+                                        return;
+                                    }
                                 }
                             }
                             else

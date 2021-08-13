@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.FOBs
                 player.SendChat("fob_error_limitreached");
                 return false;
             }
-            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, 300, player.Position, true); // get from both teams to check distance from enemy fobs too.
+            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, 200, player.Position, true); // get from both teams to check distance from enemy fobs too.
             if (NearbyFOBs.Count() != 0)
             {
                 player.SendChat("fob_error_fobtooclose");
@@ -57,9 +57,6 @@ namespace Uncreated.Warfare.FOBs
                 return false;
             }
 
-            IEnumerable<BarricadeDrop> FOBstructures = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.FOBID, FOBManager.config.Data.FOBBuildPickupRadius, player.Position, player.GetTeam(), true);
-            FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault());
-
             RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.FOBRequiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius);
             Barricade barricade = new Barricade(FOBManager.config.Data.FOBID);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2), foundation.owner, foundation.group);
@@ -74,7 +71,10 @@ namespace Uncreated.Warfare.FOBs
                 "ofp_squad_built_fob",
                 0.4F
                 );
-            
+
+            IEnumerable<BarricadeDrop> FOBstructures = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.FOBID, FOBManager.config.Data.FOBBuildPickupRadius, player.Position, player.GetTeam(), true);
+            FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault());
+
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {

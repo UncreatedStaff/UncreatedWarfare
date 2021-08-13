@@ -383,6 +383,8 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public float PremiumCost;
         [JsonSettable]
+        public bool IsLoadout;
+        [JsonSettable]
         public float TeamLimit;
         [JsonSettable]
         public float Cooldown;
@@ -419,6 +421,7 @@ namespace Uncreated.Warfare.Kits
             TicketCost = 1;
             IsPremium = false;
             PremiumCost = 0;
+            IsLoadout = false;
             TeamLimit = 1;
             Cooldown = 0;
             SignName = DisplayName;
@@ -450,6 +453,7 @@ namespace Uncreated.Warfare.Kits
             TicketCost = 1;
             IsPremium = false;
             PremiumCost = 0;
+            IsLoadout = false;
             TeamLimit = 1;
             Cooldown = 0;
             SignName = "Default";
@@ -459,59 +463,7 @@ namespace Uncreated.Warfare.Kits
             Weapons = string.Empty;
             Requests = 0;
         }
-        public Kit(string Name, 
-            EClass Class, 
-            string SignName, 
-            EBranch Branch, 
-            ulong Team, 
-            ushort Cost, 
-            ushort RequiredLevel, 
-            ushort TicketCost, 
-            bool IsPremium, 
-            float PremiumCost, 
-            float TeamLimit, 
-            float Cooldown, 
-            bool ShouldClearInventory, 
-            List<KitItem> Items, 
-            List<KitClothing> Clothes, 
-            List<ulong> AllowedUsers, 
-            Dictionary<string, string> 
-            SignTexts, 
-            string Weapons,
-            int Requests)
-        {
-            this.Name = Name;
-            this.Class = Class;
-            this.SignName = SignName;
-            this.Branch = Branch;
-            this.Team = Team;
-            this.Cost = Cost;
-            this.RequiredLevel = RequiredLevel;
-            this.TicketCost = TicketCost;
-            this.IsPremium = IsPremium;
-            this.PremiumCost = PremiumCost;
-            this.TeamLimit = TeamLimit;
-            this.Cooldown = Cooldown;
-            this.ShouldClearInventory = ShouldClearInventory;
-            this.Items = Items;
-            this.Clothes = Clothes;
-            this.AllowedUsers = AllowedUsers;
-            this.SignTexts = SignTexts ?? new Dictionary<string, string>();
-            if (Weapons == null || Weapons == string.Empty)
-            {
-                if (Items == null || Items.Count == 0)
-                    this.Weapons = string.Empty;
-                else
-                {
-                    KitItem i = Items.OrderByDescending(x => x.metadata == null ? 0 : x.metadata.Length).First();
-                    if (i == null) this.Weapons = string.Empty;
-                    else if (!(Assets.find(EAssetType.ITEM, i.ID) is ItemAsset asset)) this.Weapons = string.Empty;
-                    else this.Weapons = asset.itemName;
-                }
-            } else
-                this.Weapons = Weapons;
-            this.Requests = Requests;
-        }
+
         public bool HasItemOfID(ushort ID) => this.Items.Exists(i => i.ID == ID);
         public bool IsLimited(out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
