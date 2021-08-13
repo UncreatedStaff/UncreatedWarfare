@@ -447,6 +447,8 @@ namespace Uncreated.Warfare.Squads
         public ushort SquadLeaderEmptyMarker;
         public ushort MortarMarker;
         public ushort InjuredMarker;
+        public ushort MedicMarker;
+        public float MedicRange;
         public int MaxSquadNameLength;
 
         public override void SetDefaults()
@@ -462,6 +464,8 @@ namespace Uncreated.Warfare.Squads
             SquadLeaderEmptyMarker = 36130;
             MortarMarker = 36120;
             InjuredMarker = 36121;
+            MedicMarker = 36122;
+            MedicRange = 300f;
             SquadDisconnectTime = 120;
             MaxSquadNameLength = 16;
             lockCharacter = '²';

@@ -170,8 +170,8 @@ namespace Uncreated.Warfare.XP
         }
         public static Rank GetRankFromLevel(int level)
         {
-            if (level <= 0) return null;
-            if (config.Data.Ranks.Count > level - 1) return config.Data.Ranks[level - 1];
+            if (level < 0) return null;
+            if (config.Data.Ranks.Count > level) return config.Data.Ranks[level];
             return null;
         }
         public static Rank GetRank(int xpBalance, out int currentXP, out Rank nextRank)
