@@ -282,6 +282,8 @@ namespace Uncreated.Warfare.FOBs
         public ushort Team1AmmoID;
         public ushort Team2AmmoID;
         public ushort FOBBaseID;
+        public float FOBMaxHeightAboveTerrain;
+        public bool RestrictFOBPlacement;
         public ushort FOBID;
         public ushort FOBRequiredBuild;
         public int FOBBuildPickupRadius;
@@ -329,6 +331,8 @@ namespace Uncreated.Warfare.FOBs
             Team1AmmoID = 38314;
             Team2AmmoID = 38315;
             FOBBaseID = 38310;
+            FOBMaxHeightAboveTerrain = 40f;
+            RestrictFOBPlacement = true;
             FOBID = 38311;
             FOBRequiredBuild = 20;
             FOBBuildPickupRadius = 20;

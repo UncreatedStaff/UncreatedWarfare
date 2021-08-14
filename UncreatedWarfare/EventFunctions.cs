@@ -221,7 +221,30 @@ namespace Uncreated.Warfare
                 }
             }
             if (shouldAllow)
+            {
                 RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
+                if (barricade.id == FOBManager.config.Data.FOBBaseID && FOBManager.config.Data.RestrictFOBPlacement)
+                {
+                    if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
+                    {
+                        shouldAllow = false;
+                        UCPlayer player = UCPlayer.FromID(owner);
+                        player.SendChat("no_placement_fobs_underwater");
+                    }
+                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
+                    {
+                        shouldAllow = false;
+                        UCPlayer player = UCPlayer.FromID(owner);
+                        player.SendChat("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                    }
+                    else if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
+                    {
+                        shouldAllow = false;
+                        UCPlayer player = UCPlayer.FromID(owner);
+                        player.SendChat("no_placement_fobs_too_near_base");
+                    }
+                }
+            }
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {

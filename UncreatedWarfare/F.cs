@@ -1239,9 +1239,11 @@ namespace Uncreated.Warfare
         public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
         public static float GetTerrainHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
         {
+            return LevelGround.getHeight(new Vector3(x, 0, z));
+            /*
             if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.GROUND | RayMasks.GROUND2))
                 return h.point.y + above;
-            else return defaultY;
+            else return defaultY; */
         }
         public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
         {
