@@ -290,7 +290,7 @@ namespace Uncreated.Warfare.Revives
         {
             Medics.Add(player);
             Vector3[] newpositions = GetPositionsOfTeam(player.GetTeam());
-            SpawnInjuredMarkers(player.Player.channel.owner.transportConnection, newpositions, true);
+            SpawnInjuredMarkers(player.Player.channel.owner.transportConnection, newpositions, true, player.Position);
         }
         public void DeregisterMedic(UCPlayer player)
         {
@@ -320,13 +320,13 @@ namespace Uncreated.Warfare.Revives
         }
         public void SpawnInjuredMarker(Vector3 Position, ulong Team)
         {
-            IEnumerator<ITransportConnection> player = Medics
+            IEnumerator<UCPlayer> player = Medics
                 .Where(x => x.GetTeam() == Team)
-                .Select(x => x.Player.channel.owner.transportConnection)
                 .GetEnumerator();
             while (player.MoveNext())
             {
-                EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.InjuredMarker, player.Current, Position);
+                if ((player.Current.Position - Position).sqrMagnitude <= Squads.SquadManager.config.Data.MedicRange * Squads.SquadManager.config.Data.MedicRange)
+                    EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.InjuredMarker, player.Current.Player.channel.owner.transportConnection, Position);
             }
             player.Dispose();
         }
@@ -338,14 +338,15 @@ namespace Uncreated.Warfare.Revives
                 // player and Revive UI will be removed from list in OnDeath
             }
         }
-        public void SpawnInjuredMarkers(IEnumerator<ITransportConnection> players, Vector3[] positions, bool dispose, bool clearAll)
+        public void SpawnInjuredMarkers(IEnumerator<UCPlayer> players, Vector3[] positions, bool dispose, bool clearAll)
         {
             while (players.MoveNext())
             {
                 if (clearAll)
-                    EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.InjuredMarker, players.Current);
+                    EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.InjuredMarker, players.Current.Player.channel.owner.transportConnection);
                 for (int i = 0; i < positions.Length; i++)
-                    EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.InjuredMarker, players.Current, positions[i]);
+                    if ((players.Current.Position - positions[i]).sqrMagnitude <= Squads.SquadManager.config.Data.MedicRange * Squads.SquadManager.config.Data.MedicRange)
+                        EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.InjuredMarker, players.Current.Player.channel.owner.transportConnection, positions[i]);
             }
             if (dispose) players.Dispose();
         }
@@ -360,12 +361,13 @@ namespace Uncreated.Warfare.Revives
             }
             if (dispose) players.Dispose();
         }
-        public void SpawnInjuredMarkers(ITransportConnection player, Vector3[] positions, bool clearAll)
+        public void SpawnInjuredMarkers(ITransportConnection player, Vector3[] positions, bool clearAll, Vector3 center)
         {
             if (clearAll)
                 EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.InjuredMarker, player);
             for (int i = 0; i < positions.Length; i++)
-                EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.InjuredMarker, player, positions[i]);
+                if ((center - positions[i]).sqrMagnitude <= Squads.SquadManager.config.Data.MedicRange * Squads.SquadManager.config.Data.MedicRange)
+                    EffectManager.sendEffectReliable(Squads.SquadManager.config.Data.InjuredMarker, player, positions[i]);
         }
         public void SpawnMedicMarkers(ITransportConnection player, Vector3[] positions, bool clearAll)
         {
@@ -376,9 +378,8 @@ namespace Uncreated.Warfare.Revives
         }
         public void ClearInjuredMarker(ulong clearedPlayer, ulong Team)
         {
-            IEnumerator<ITransportConnection> medics = Medics
+            IEnumerator<UCPlayer> medics = Medics
                 .Where(x => x.GetTeam() == Team)
-                .Select(x => x.Player.channel.owner.transportConnection)
                 .GetEnumerator();
             Vector3[] newpositions = DownedPlayers.Keys.Where(x => x != clearedPlayer).Select(x => UCPlayer.FromID(x).Position).ToArray();
             SpawnInjuredMarkers(medics, newpositions, true, true);
@@ -389,8 +390,7 @@ namespace Uncreated.Warfare.Revives
         }
         public void UpdateInjuredMarkers(ulong Team)
         {
-            IEnumerator<ITransportConnection> medics = Medics.Where(x => x.GetTeam() == Team)
-                .Select(x => x.Player.channel.owner.transportConnection).GetEnumerator();
+            IEnumerator<UCPlayer> medics = Medics.Where(x => x.GetTeam() == Team).GetEnumerator();
             Vector3[] newpositions = DownedPlayers.Keys.Select(x => UCPlayer.FromID(x).Position).ToArray();
             SpawnInjuredMarkers(medics, newpositions, true, true);
         }
@@ -401,15 +401,13 @@ namespace Uncreated.Warfare.Revives
                 .ToArray();
         public void UpdateInjuredMarkers()
         {
-            IEnumerator<ITransportConnection> medics = Medics.
+            IEnumerator<UCPlayer> medics = Medics.
                 Where(x => x.GetTeam() == 1)
-                .Select(x => x.Player.channel.owner.transportConnection)
                 .GetEnumerator();
             Vector3[] newpositions = GetPositionsOfTeam(1);
             SpawnInjuredMarkers(medics, newpositions, true, true);
             medics = Medics
                 .Where(x => x.GetTeam() == 2)
-                .Select(x => x.Player.channel.owner.transportConnection)
                 .GetEnumerator();
             newpositions = GetPositionsOfTeam(2);
             SpawnInjuredMarkers(medics, newpositions, true, true);

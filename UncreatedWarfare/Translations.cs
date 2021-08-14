@@ -452,6 +452,7 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
+                { "request_vehicle_e_already_owned", "<color=#a8918a>You have already requested a nearby vehicle.</color>" },
                 { "request_vehicle_given", "<color=#b3a591>This <color=#ffe2ab>{0}</color> is now yours to take into battle.</color>" },
 
                 // structure
@@ -695,6 +696,7 @@ namespace Uncreated.Warfare
                 { "xp_flag_defend", "DEFENCE" },
 
                 { "xp_squad_bonus", "SQUAD BONUS" },
+                { "xp_on_duty", "ON DUTY" },
 
                 { "xp_humvee_destroyed", "HUMVEE DESTROYED" },
                 { "xp_transport_destroyed", "TRANSPORT DESTROYED" },

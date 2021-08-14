@@ -24,16 +24,20 @@ namespace Uncreated.Warfare.Stats
                     IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
                     while (players.MoveNext())
                     {
-                        SteamPlayer player = players.Current;
-                        if (F.TryGetPlaytimeComponent(player.player, out PlaytimeComponent c))
+                        UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
+                        if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
                         {
                             UncreatedPlayer stats = c.UCPlayerStats;
                             if (stats != null)
                             {
-                                stats.warfare_stats.Update(player, false);
+                                stats.warfare_stats.Update(player.SteamPlayer, false);
                                 stats.UpdateSession(WarfareStats.WarfareName, false);
                                 stats.Save();
                             }
+                        }
+                        if (XP.XPManager.config.Data.OnDutyXP > 0 && player.OnDuty())
+                        {
+                            XP.XPManager.AddXP(player.Player, player.GetTeam(), XP.XPManager.config.Data.OnDutyXP, F.Translate("xp_on_duty", player));
                         }
                     }
                     players.Dispose();

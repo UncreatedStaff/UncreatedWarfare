@@ -13,6 +13,7 @@ using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using Uncreated.Warfare.Kits;
 using System.Threading;
+using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -216,14 +217,34 @@ namespace Uncreated.Warfare.Commands
             else if (data.RequiredClass != Kit.EClass.NONE && kit.Class != data.RequiredClass)
             {
                 Kit requiredKit = KitManager.GetKitsWhere(k => k.Class == data.RequiredClass).FirstOrDefault();
-
-                ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ? requiredKit.DisplayName.ToUpper() : "UNKNOWN");
+                string @class;
+                if (requiredKit != null)
+                    @class = requiredKit.DisplayName.ToUpper();
+                else @class = data.RequiredClass.ToString().ToUpper();
+                ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ?  : "UNKNOWN");
                 return;
             }
             else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
             {
                 ucplayer.Message("request_vehicle_e_cooldown", F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
                 return;
+            } else
+            {
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                {
+                    VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
+                    if (spawn == null) continue;
+                    if (spawn.HasLinkedVehicle(out InteractableVehicle veh))
+                    {
+                        if (veh == null || veh.isDead) continue;
+                        if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 && 
+                            (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                        {
+                            ucplayer.Message("request_vehicle_e_already_owned");
+                            return;
+                        }
+                    }
+                }
             }
 
             double delay = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;

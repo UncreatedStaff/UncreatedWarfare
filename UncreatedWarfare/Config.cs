@@ -66,6 +66,7 @@ namespace Uncreated.Warfare
         public float TimeBetweenTp;
         public bool EnableSquads;
         public float LoadoutCost;
+        public float MaxVehicleAbandonmentDistance;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -115,6 +116,7 @@ namespace Uncreated.Warfare
             this.TimeBetweenTp = 0.1f;
             this.EnableSquads = true;
             this.LoadoutCost = 8;
+            this.MaxVehicleAbandonmentDistance = 200f;
         }
     }
     public class Modules
