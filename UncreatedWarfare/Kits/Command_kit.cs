@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.Kits
             {
                 kitName = command[0];
 
-                if (!KitManager.KitExists(kitName, out var kit)) // create kit
+                if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
                 {
                     if (kit.AllowedUsers.Contains(player.CSteamID.m_SteamID))
                     {
@@ -86,44 +86,42 @@ namespace Uncreated.Warfare.Kits
                 player.SendChat("kits_notonduty", kitName);
                 return;
             }
-
             if (command.Length == 2)
             {
                 op = command[0].ToLower();
                 kitName = command[1];
                 if (op == "search")
                 {
+                    kitName = kitName.ToLower();
                     StringBuilder sb = new StringBuilder();
                     try
                     {
-                        IEnumerator<Kit> kits = KitManager.GetKitsWhere(x =>
+                        int counter = 0;
+                        for (int i = 0; i < KitManager.ActiveObjects.Count; i++)
                         {
-                            IEnumerator<string> names = x.SignTexts.Values.GetEnumerator();
-                            bool found = false;
-                            while (names.MoveNext())
-                                if (names.Current.Contains(kitName))
+                            if (KitManager.ActiveObjects[i].SignTexts == null || KitManager.ActiveObjects[i].SignTexts.Count == 0) continue;
+                            for (int n = 0; n < KitManager.ActiveObjects[i].SignTexts.Values.Count; n++)
+                            {
+                                if (KitManager.ActiveObjects[i].SignTexts.Values.ElementAt(n).ToLower().Contains(kitName))
                                 {
-                                    found = true;
+                                    if (counter > 0) sb.Append(", ");
+                                    sb.Append(KitManager.ActiveObjects[i].Name);
+                                    counter++;
                                     break;
                                 }
-                            names.Dispose();
-                            return found;
-                        }).GetEnumerator();
-                        int counter = 0;
-                        while (kits.MoveNext())
-                        {
-                            if (counter > 0) sb.Append(", ");
-                            sb.Append(kits.Current.Name);
-                            counter++;
+                            }
                             if (counter > 8) break;
                         }
-                        kits.Dispose();
                     }
                     catch (Exception ex)
                     {
                         F.LogError("Error searching for kit names.");
                         F.LogError(ex);
                         sb.Append("<color=#dd1111>ERROR</color>");
+                    }
+                    if (sb.Length == 0)
+                    {
+                        sb.Append("--");
                     }
                     player.SendChat("kit_search_results", sb.ToString());
                 }
@@ -151,7 +149,8 @@ namespace Uncreated.Warfare.Kits
                     if (KitManager.KitExists(kitName, out _))
                     {
                         KitManager.DeleteKit(kitName);
-                        
+
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         RequestSigns.RemoveRequestSigns(kitName);
                         player.SendChat("kit_deleted", kitName);
                         return;
@@ -231,13 +230,10 @@ namespace Uncreated.Warfare.Kits
 
                 if (op == "set" || op == "s")
                 {
-                    if (!KitManager.SetProperty(x => x.Name == kitName, property, newValue, out bool founditem, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange))
+                    if (KitManager.KitExists(kitName, out Kit kit))
                     {
-                        if (!founditem) // error - kit does not exist
-                        {
-                            player.SendChat("kit_e_noexist", kitName);
-                            return;
-                        }
+                        bool wasloadout = kit.IsLoadout;
+                        KitManager.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
                         if (!allowedToChange) // error - invalid argument value
                         {
                             player.SendChat("kit_e_invalidarg_not_allowed", property);
@@ -253,13 +249,21 @@ namespace Uncreated.Warfare.Kits
                             player.SendChat("kit_e_invalidprop", property);
                             return;
                         }
-                        return;
-                    }
-                    else
-                    {
                         // success
                         player.SendChat("kit_setprop", property, kitName, newValue);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                        if (wasloadout && !kit.IsLoadout)
+                        {
+                            for (int s = 0; s < RequestSigns.ActiveObjects.Count; s++)
+                            {
+                                if (RequestSigns.ActiveObjects[s].kit_name.StartsWith("loadout_"))
+                                    RequestSigns.ActiveObjects[s].InvokeUpdate();
+                            }
+                        }
+                        return;
+                    } else
+                    {
+                        player.SendChat("kit_e_noexist", kitName);
                         return;
                     }
                 }
@@ -284,8 +288,27 @@ namespace Uncreated.Warfare.Kits
                     // error - no player found
                     if (target == null)
                     {
-                        player.SendChat("kit_e_noplayer", targetPlayer);
-                        return;
+                        if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steamid))
+                        {
+                            target = UCPlayer.FromID(steamid);
+                            if (target == null)
+                            {
+                                if (KitManager.HasAccess(steamid, kit.Name))
+                                {
+                                    player.SendChat("kit_e_alreadyaccess", targetPlayer, kitName);
+                                    return;
+                                }
+                                //success
+                                FPlayerName names = Data.DatabaseManager.GetUsernames(steamid);
+                                player.SendChat("kit_accessgiven", names.CharacterName, kitName);
+                                KitManager.GiveAccess(steamid, kit.Name);
+                                return;
+                            }
+                        } else
+                        {
+                            player.SendChat("kit_e_noplayer", targetPlayer);
+                            return;
+                        }
                     }
                     // error - player already has access
                     if (KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
@@ -315,8 +338,28 @@ namespace Uncreated.Warfare.Kits
                     // error - no player found
                     if (target == null)
                     {
-                        player.SendChat("kit_e_noplayer", targetPlayer);
-                        return;
+                        if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steamid))
+                        {
+                            target = UCPlayer.FromID(steamid);
+                            if (target == null)
+                            {
+                                if (KitManager.HasAccess(steamid, kit.Name))
+                                {
+                                    player.SendChat("kit_e_alreadyaccess", targetPlayer, kitName);
+                                    return;
+                                }
+                                //success
+                                FPlayerName names = Data.DatabaseManager.GetUsernames(steamid);
+                                player.SendChat("kit_accessremoved", names.CharacterName, kitName);
+                                KitManager.RemoveAccess(steamid, kit.Name);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            player.SendChat("kit_e_noplayer", targetPlayer);
+                            return;
+                        }
                     }
                     // error - player already has no access
                     if (!KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))

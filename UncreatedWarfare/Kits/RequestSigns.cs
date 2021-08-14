@@ -75,6 +75,18 @@ namespace Uncreated.Warfare.Kits
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
         public static void InvokeLangUpdateForSignsOfKit(SteamPlayer player, string kitName)
         {
+            if (KitManager.KitExists(kitName, out Kit kitobj))
+            {
+                if (kitobj.IsLoadout)
+                {
+                    for (int i = 0; i < ActiveObjects.Count; i++)
+                    {
+                        if (ActiveObjects[i].kit_name.StartsWith("loadout_"))
+                            ActiveObjects[i].InvokeUpdate(player);
+                    }
+                    return;
+                }
+            }
             List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
             for (int i = 0; i < s.Count; i++)
             {
@@ -83,6 +95,18 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForSignsOfKit(string kitName)
         {
+            if (KitManager.KitExists(kitName, out Kit kitobj))
+            {
+                if (kitobj.IsLoadout)
+                {
+                    for (int i = 0; i < ActiveObjects.Count; i++)
+                    {
+                        if (ActiveObjects[i].kit_name.StartsWith("loadout_"))
+                            ActiveObjects[i].InvokeUpdate();
+                    }
+                    return;
+                }
+            }
             List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
             for (int i = 0; i < s.Count; i++)
             {

@@ -106,7 +106,7 @@ namespace Uncreated.Warfare
             this.AfkCheckInterval = 450f;
             this.AMCDamageMultiplier = 0.25f;
             this.ReplaceEmptyNamesWithID = true;
-            this.OverrideKitRequirements = true;
+            this.OverrideKitRequirements = false;
             this.GiveUpUI = 36009;
             this.MaxTimeInStorages = 15f;
             this.LimitedStorages = new ushort[] { 38317, 38319, 38343, 38344 };

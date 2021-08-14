@@ -331,7 +331,7 @@ namespace Uncreated.Warfare.FOBs
             Team1AmmoID = 38314;
             Team2AmmoID = 38315;
             FOBBaseID = 38310;
-            FOBMaxHeightAboveTerrain = 40f;
+            FOBMaxHeightAboveTerrain = 25f;
             RestrictFOBPlacement = true;
             FOBID = 38311;
             FOBRequiredBuild = 20;

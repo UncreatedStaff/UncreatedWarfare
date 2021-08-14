@@ -608,7 +608,8 @@ namespace Uncreated.Warfare
                 { "kit_not_owned", "NOT OWNED" },
                 { "kit_player_count", "{0}/{1}" },
                 { "sign_kit_request", "{0}\n{1}\n{2}\n{3}" },
-                { "loadout_name", "<b>LOADOUT #{0}</b>" },
+                { "loadout_name", "LOADOUT {0}\n" },
+                { "loadout_name_owned", "" },
                 // {0} = name, {1} = Lvl __ or '\n' if lvl == 0 or if premium cost, {2} = weapon list, {3} player count on team
 
                 // revives

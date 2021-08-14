@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Revives
         {
             while (true)
             {
-                yield return new WaitForSeconds(1);
+                yield return new WaitForSeconds(0.5f);
                 if (DownedPlayers.Count == 0) continue;
                 UpdateInjuredMarkers();
                 UpdateMedicMarkers();
@@ -141,18 +141,21 @@ namespace Uncreated.Warfare.Revives
                         c.stats.revives++;
                 }
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, target.channel.owner.transportConnection);
                 ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
             }
         }
         public void RevivePlayer(Player target)
         {
-            if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
+            if (DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
-                r.RevivePlayer();
+                if (target.TryGetComponent(out Reviver r))
+                    r.RevivePlayer();
+                /*
                 ulong team = target.GetTeam();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
-                ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, team);
-                ClearMedicMarkers(target.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, target.channel.owner.transportConnection);
+                ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, team);*/
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
@@ -264,6 +267,7 @@ namespace Uncreated.Warfare.Revives
                 }
 
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, player.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, player.Player.channel.owner.transportConnection);
             }
             ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
         }
@@ -436,10 +440,6 @@ namespace Uncreated.Warfare.Revives
                 .Select(x => x.Position)
                 .ToArray();
             SpawnMedicMarkers(player, medics, clearOld);
-        }
-        public void ClearMedicMarkers(ITransportConnection player)
-        {
-            EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, player);
         }
         private class Reviver : UnturnedPlayerComponent
         {

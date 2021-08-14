@@ -165,8 +165,17 @@ namespace Uncreated.Warfare.Vehicles
 
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
-            if (vehicle == null) return;
+            if (vehicle == null || !vehicle.isLocked)
+            {
+                EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+                return;
+            }
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+            if (player == null)
+            {
+                EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+                return;
+            }
             if (Data.ReviveManager.DownedPlayers.ContainsKey(nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
             {
                 shouldAllow = false;
@@ -193,6 +202,11 @@ namespace Uncreated.Warfare.Vehicles
             }
 
             UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+            if (owner == null)
+            {
+                EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
+                return;
+            }
 
             bool IsPlayerOwner = vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil;
 
@@ -280,6 +294,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             try
             {
+                if (vehicle == null) return;
                 if (!VehicleExists(vehicle.id, out var vehicleData))
                     return;
 

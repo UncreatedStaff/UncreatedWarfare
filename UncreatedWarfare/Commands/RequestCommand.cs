@@ -74,7 +74,6 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
             }
-
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
             InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
             if (signlook != null)
@@ -94,17 +93,19 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (requestsign.kit_name.StartsWith("loadout_"))
                 {
-                    if (int.TryParse(requestsign.kit_name.Last().ToString(), out int loadoutNumber))
+                    if (ushort.TryParse(requestsign.kit_name.Substring(8), out ushort loadoutNumber))
                     {
-                        var loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == ucplayer.GetTeam() && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
+                        ulong team = ucplayer.GetTeam();
+                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
 
                         if (loadouts.Count != 0)
                         {
-                            if (loadoutNumber - 1 >= 0 && loadoutNumber < loadouts.Count)
+                            if (loadoutNumber > 0 && loadoutNumber <= loadouts.Count)
                             {
-                                var kit = loadouts[loadoutNumber - 1];
+                                Kit kit = loadouts[loadoutNumber - 1];
 
                                 GiveKit(ucplayer, kit);
+                                return;
                             }
                         }
                     }

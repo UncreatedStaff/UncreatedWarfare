@@ -1607,36 +1607,50 @@ namespace Uncreated.Warfare
                 }
                 else return norm;
             } 
-            else if (kitname.StartsWith("loadout_"))
+            else if (kitname.StartsWith("loadout_") && ushort.TryParse(kitname.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
             {
-                if (int.TryParse(kitname.Last().ToString(), out int loadoutNumber))
+                UCPlayer ucplayer = UCPlayer.FromID(player);
+                if (ucplayer != null)
                 {
-                    var loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == player.GetTeam() && k.AllowedUsers.Contains(player)).ToList();
+                    ulong team = ucplayer.GetTeam();
+                    List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(player)).ToList();
 
-                    if (loadouts.Count != 0)
+                    if (loadouts.Count > 0)
                     {
-                        if (loadoutNumber - 1 >= 0 && loadoutNumber < loadouts.Count)
+                        if (loadoutid > 0 && loadoutid <= loadouts.Count)
                         {
-                            var kit = loadouts[loadoutNumber - 1];
+                            Kit kit = loadouts[loadoutid - 1];
 
+                            string lang = DecideLanguage(player, kit.SignTexts);
+                            if (!kit.SignTexts.TryGetValue(lang, out string name))
+                                name = kit.DisplayName ?? kit.Name;
+                            bool keepline = false;
+                            foreach (char @char in name)
+                            {
+                                if (@char == '\n')
+                                {
+                                    keepline = true;
+                                    break;
+                                }
+                            }
+                            string cost = Translate("loadout_name_owned", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                            if (!keepline) cost = "\n" + cost;
                             return Translate("sign_kit_request", player,
-                                F.Translate("loadout_name", player, loadoutNumber.ToString()),
-                                kit.DisplayName.ToString().ToUpper(),
+                                name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                                cost,
                                 kit.Weapons == "" ? " " : Translate("kit_weapons", player, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
                                 ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"))
                                 );
                         }
                     }
-
-                    return Translate("sign_kit_request", player,
-                                F.Translate("loadout_name", player, loadoutNumber.ToString()),
-                                " ",
-                                ObjectTranslate("kit_price_dollars", player, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
-                                " "
-                                );
                 }
-                else
-                    return key;
+                
+                return Translate("sign_kit_request", player,
+                            Translate("loadout_name", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                            string.Empty,
+                            ObjectTranslate("kit_price_dollars", player, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
+                            string.Empty
+                            );
             }
             else if (KitManager.KitExists(kitname, out Kit kit))
             {
@@ -1649,8 +1663,7 @@ namespace Uncreated.Warfare
                     playerrank = ucplayer.XPRank();
                 }
                 string lang = DecideLanguage(player, kit.SignTexts);
-                string name;
-                if (!kit.SignTexts.TryGetValue(lang, out name))
+                if (!kit.SignTexts.TryGetValue(lang, out string name))
                     name = kit.DisplayName ?? kit.Name;
                 bool keepline = false;
                 foreach (char @char in name)
