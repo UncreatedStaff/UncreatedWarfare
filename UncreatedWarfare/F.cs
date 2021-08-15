@@ -1986,7 +1986,7 @@ namespace Uncreated.Warfare
             else
             {
                 if (!Data.Languages.TryGetValue(player, out string lang) || !Data.DeathLocalization.TryGetValue(lang, out Dictionary<string, string> loc) || (!loc.ContainsKey(key) && !loc.ContainsKey("LANDMINE")))
-                    lang = Data.Languages[player];
+                    lang = JSONMethods.DefaultLanguage;
                 if (!Data.DeathLocalization.TryGetValue(lang, out loc))
                 {
                     if (Data.DeathLocalization.Count > 0)

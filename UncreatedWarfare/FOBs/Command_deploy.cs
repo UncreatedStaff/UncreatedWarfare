@@ -25,6 +25,12 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
+            if (Data.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
+            {
+                player.Message("deploy_e_injured");
+                return;
+            }
+
             if (command.Length == 1)
             {
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.Player, out _);

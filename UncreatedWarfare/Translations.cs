@@ -237,6 +237,7 @@ namespace Uncreated.Warfare
                 { "deploy_e_cooldown", "<color=#b5a591>You can deploy again in: <color=#e3c27f>{0}</color>.</color>" },
                 { "deploy_e_alreadydeploying", "<color=#b5a591>You are already deploying somewhere.</color>" },
                 { "deploy_e_incombat", "<color=#ffaa42>You are in combat, soldier! You can deploy in another: <color=#e3987f>{0}</color>.</color>" },
+                { "deploy_e_injured", "<color=#ffaa42>You can not deploy while injured, get a medic to revive you or give up.</color>" },
                 { "deploy_standby", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. You will arrive in <color=#eeeeee>{1} seconds</color>.</color>" },
                 { "deploy_standby_nomove", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. Stand still for <color=#eeeeee>{1} seconds</color>.</color>" },
 
