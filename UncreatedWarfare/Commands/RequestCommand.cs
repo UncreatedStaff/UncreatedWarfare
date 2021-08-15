@@ -221,7 +221,7 @@ namespace Uncreated.Warfare.Commands
                 if (requiredKit != null)
                     @class = requiredKit.DisplayName.ToUpper();
                 else @class = data.RequiredClass.ToString().ToUpper();
-                ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ?  : "UNKNOWN");
+                ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ? requiredKit.DisplayName : data.RequiredClass.ToString().Replace('_', ' ').ToUpper());
                 return;
             }
             else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))

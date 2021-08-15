@@ -33,14 +33,14 @@ namespace Uncreated.Warfare
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
         private MySqlData _sqlElsewhere;
-        public MySqlData SQL { 
+        public MySqlData SQL {
             get
             {
                 if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default))) return _sqlElsewhere;
                 else return Configuration.Instance.SQL;
             }
         }
-        public bool LoadMySQLDataFromElsewhere = true; // for having sql password defaults without having them in our source code.
+        public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
