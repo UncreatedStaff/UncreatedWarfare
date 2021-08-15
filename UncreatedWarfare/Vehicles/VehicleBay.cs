@@ -238,7 +238,7 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
 
-                            if (vehicle.isLocked && OwnerDistanceFromVehicle < Math.Pow(200, 2))
+                            if (vehicle.isLocked && OwnerDistanceFromVehicle < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
                             {
                                 Players.FPlayerName ownernames = F.GetPlayerOriginalNames(owner.SteamPlayer);
 
@@ -337,7 +337,7 @@ namespace Uncreated.Warfare.Vehicles
                     {
                         float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
 
-                        if (vehicle.isLocked && OwnerDistanceFromVehicle < Math.Pow(200, 2))
+                        if (vehicle.isLocked && OwnerDistanceFromVehicle < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
                         {
                             Players.FPlayerName ownernames = F.GetPlayerOriginalNames(owner.SteamPlayer);
 

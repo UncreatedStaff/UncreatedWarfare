@@ -347,6 +347,7 @@ namespace Uncreated.Warfare.XP
         public int BuiltRepairStationXP;
         public int BuiltEmplacementXP;
         public int BuiltBarricadeXP;
+        public int OnDutyXP;
         public Dictionary<EVehicleType, int> VehicleDestroyedXP;
 
         public float XPMultiplier;
@@ -374,6 +375,7 @@ namespace Uncreated.Warfare.XP
             BuiltRepairStationXP = 25;
             BuiltEmplacementXP = 15;
             BuiltBarricadeXP = 5;
+            OnDutyXP = 5;
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
             {
