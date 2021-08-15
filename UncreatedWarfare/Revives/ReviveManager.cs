@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.Revives
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
-                    parameters.damage < 220)
+                    parameters.damage < 300)
                 {
                     InjurePlayer(ref shouldAllow, ref parameters, killer);
                 }
