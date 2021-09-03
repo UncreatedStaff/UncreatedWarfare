@@ -27,6 +27,7 @@ namespace Uncreated.Warfare
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
         public delegate void PlayerTriedStoreItem(Player player, byte page, ItemJar jar, ref bool allow);
+        public delegate void InventoryItemAdded(Player __instance, byte page, byte index, ItemJar jar);
         public delegate void PlayerGesture(Player player, EPlayerGesture gesture, ref bool allow);
         public delegate void PlayerMarker(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed);
 
@@ -36,6 +37,7 @@ namespace Uncreated.Warfare
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
         public static event BatteryStealingDelegate OnBatterySteal_Global;
         public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
+        public static event InventoryItemAdded OnItemAddedToInventory_Global;
         public static event PlayerGesture OnPlayerGesture_Global;
         public static event PlayerMarker OnPlayerMarker_Global;
 
@@ -314,6 +316,7 @@ namespace Uncreated.Warfare
                     OnPlayerTriedStoreItem_Global?.Invoke(__instance.player, page_0, jar, ref allow);
                 return allow;
             }
+
             // SDG.Unturned.GroupManager
             ///<summary>
             /// Prefix of <see cref="GroupManager.requestGroupExit(Player)"/> to disallow players leaving their group.
@@ -878,6 +881,64 @@ namespace Uncreated.Warfare
             static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askDehydrate || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
 #pragma warning restore IDE0051
 #pragma warning restore IDE0060 // Remove unused parameter
+
+
+            [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
+            [HarmonyPrefix]
+            static void OnItemDropRemovedPrefix(
+                ref ItemData __state,
+                in ServerInvocationContext context,
+                byte x,
+                byte y,
+                uint instanceID,
+                byte to_x,
+                byte to_y,
+                byte to_rot,
+                byte to_page)
+            {
+                __state = null;
+
+                ItemRegion region = ItemManager.regions[x, y];
+                for (ushort index = 0; index < region.items.Count; ++index)
+                {
+                    ItemData itemData = region.items[index];
+                    if (itemData.instanceID == instanceID)
+                    {
+                        __state = itemData;
+                    }
+                }
+            }
+
+            [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
+            [HarmonyPostfix]
+            static void OnItemDropRemovedPostfix(
+                ItemData __state,
+                in ServerInvocationContext context,
+                byte x,
+                byte y,
+                uint instanceID,
+                byte to_x,
+                byte to_y,
+                byte to_rot,
+                byte to_page)
+            {
+                if (__state != null)
+                {
+                    FOBs.FOBManager.OnItemRemoved(__state);
+                }
+            }
+
+            [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.dropItem))]
+            [HarmonyPostfix]
+            static void OnItemDropDropped(
+                Item item,
+                Vector3 point,
+                bool playEffect,
+                bool isDropped,
+                bool wideSpread)
+            {
+                FOBs.FOBManager.OnItemDropped(item, point);
+            }
         }
     }
 }

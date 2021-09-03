@@ -184,7 +184,7 @@ namespace Uncreated.Warfare.Commands
                                                 if (pl.playerID.steamID.m_SteamID != player.CSteamID.m_SteamID)
                                                 {
                                                     timeLocalized = F.GetTimeFromMinutes(duration, pl.playerID.steamID.m_SteamID);
-                                                    player.SendChat("ban_broadcast", names.CharacterName, callerName.CharacterName, timeLocalized);
+                                                    pl.SendChat("ban_broadcast", names.CharacterName, callerName.CharacterName, timeLocalized);
                                                 }
                                             }
                                         }

@@ -138,6 +138,28 @@ namespace Uncreated.Warfare
             RallyManager.OnBarricadePlaced(drop, region);
 
             RepairManager.OnBarricadePlaced(drop, region);
+
+            // ammo bag
+            if (FOBManager.config.Data.AmmoBagIDs.Contains(data.barricade.id))
+            {
+                drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
+            }
+
+            if (data.barricade.id == FOBManager.config.Data.AmmoCrateID)
+            {
+                if (drop.interactable is InteractableStorage storage)
+                {
+                    storage.onStateRebuilt = (InteractableStorage s, byte[] state, int size) =>
+                    {
+                        FOBManager.OnAmmoCrateUpdated(s, drop);
+                    };
+                }
+            }
+
+            if (data.barricade.id == FOBManager.config.Data.FOBBaseID)
+            {
+                drop.model.gameObject.AddComponent<FOBBaseComponent>().Initialize(drop, data);
+            }
         }
         internal static void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner)
         {
@@ -244,6 +266,16 @@ namespace Uncreated.Warfare
                         player.SendChat("no_placement_fobs_too_near_base");
                     }
                 }
+                else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.id))
+                {
+                    UCPlayer player = UCPlayer.FromID(owner);
+                    if (player != null && player.OffDuty() && player.KitClass != Kit.EClass.RIFLEMAN)
+                    {
+                        shouldAllow = false;
+                        player.SendChat("ammo_not_rifleman");
+                        return;
+                    }
+                }
             }
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)
@@ -269,6 +301,7 @@ namespace Uncreated.Warfare
             try
             {
                 // reset the player to spawn if they have joined in a different game as they last played in.
+
                 if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                 {
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
@@ -281,12 +314,21 @@ namespace Uncreated.Warfare
                             player.Player.teleportToLocation(player.Player.GetBaseSpawn(out ulong t), t.GetBaseAngle());
                         }
                         save.ShouldRespawnOnJoin = false;
+
                         PlayerManager.Save();
+                    }
+                }
+                UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+                if (KitManager.KitExists(ucplayer.KitName, out var kit))
+                {
+                    if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
+                    {
+                        if (!KitManager.TryGiveRiflemanKit(ucplayer))
+                            KitManager.TryGiveUnarmedKit(ucplayer);
                     }
                 }
                 Data.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
                 FPlayerName names = F.GetPlayerOriginalNames(player);
-                UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
                     UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
@@ -708,21 +750,21 @@ namespace Uncreated.Warfare
             if (player == default(SteamPending)) return;
             try
             {
-                if (player.transportConnection.TryGetIPv4Address(out uint address))
-                {
-                    int duration = Data.DatabaseManager.IPBanCheck(player.playerID.steamID.m_SteamID, address);
-                    if (duration != 0)
-                    {
-                        isValid = false;
-                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + F.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
-                        return;
-                    }
-                } else
-                {
-                    isValid = false;
-                    explanation = "Uncreated Network was unable to check your ban status, try again later or contact a Director if this keeps happening.";
-                    return;
-                }
+                //if (player.transportConnection.TryGetIPv4Address(out uint address))
+                //{
+                //    int duration = Data.DatabaseManager.IPBanCheck(player.playerID.steamID.m_SteamID, address);
+                //    if (duration != 0)
+                //    {
+                //        isValid = false;
+                //        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + F.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
+                //        return;
+                //    }
+                //} else
+                //{
+                //    isValid = false;
+                //    explanation = "Uncreated Network was unable to check your ban status, try again later or contact a Director if this keeps happening.";
+                //    return;
+                //}
                 if (UCWarfare.Config.Debug)
                     F.Log(player.playerID.playerName, ConsoleColor.DarkGray);
                 if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))

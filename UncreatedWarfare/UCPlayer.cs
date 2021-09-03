@@ -68,6 +68,7 @@ namespace Uncreated.Warfare
             }
         }
         public bool IsOnline;
+        public int LifeCounter;
         private int _cachedOfp = -1;
         public int cachedOfp
         {
@@ -164,6 +165,7 @@ namespace Uncreated.Warfare
             IsOnline = true;
             _cachedXp = -1;
             _cachedOfp = -1;
+            LifeCounter = 0;
         }
         public char Icon
         {

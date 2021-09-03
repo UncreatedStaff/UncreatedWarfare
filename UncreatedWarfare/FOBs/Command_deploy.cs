@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Commands
 
                 ulong team = player.GetTeam();
 
-                if (!IsInMain && !IsInLobby)
+                if (!(IsInMain || IsInLobby))
                 {
                     if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out Cooldown combatlog))
                     {
@@ -75,14 +75,18 @@ namespace Uncreated.Warfare.Commands
                         player.Message("deploy_e_cooldown", cooldown.ToString());
                         return;
                     }
-                    if (FOBManager.FindFOBByName(command[0], player.GetTeam(), out var FOB))
-                    {
-                        c.TeleportDelayed(FOB.Structure.model.position, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
-                    }
-                    else
+                    if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out var FOB))
                     {
                         player.Message("deploy_e_fobnotfound", command[0]);
+                        return;
                     }
+                    if (FOB.nearbyEnemies.Count != 0)
+                    {
+                        player.Message("deploy_e_enemiesnearby", command[0]);
+                        return;
+                    }
+
+                    c.TeleportDelayed(FOB.Structure.model.position, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
                 }
             }
             else

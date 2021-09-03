@@ -1545,6 +1545,10 @@ namespace Uncreated.Warfare
             else if (team == 2) return TeamManager.Team2Main.IsInside(player.transform.position);
             else return false;
         }
+        public static bool IsInMain(Vector3 point)
+        {
+            return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
+        }
         public static bool IsOnFlag(this Player player) => Data.Gamemode is FlagGamemode fg && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
         public static bool IsOnFlag(this Player player, out Flag flag)
         {

@@ -26,12 +26,12 @@ namespace Uncreated.Warfare.Revives
         {
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
             DeathInfo = new Dictionary<ulong, DeathInfo>();
-            Medics = PlayerManager.OnlinePlayers.Where(x => x.KitName != null && x.KitName != string.Empty 
+            Medics = PlayerManager.OnlinePlayers.Where(x => x.KitName != null && x.KitName != string.Empty
             && KitManager.KitExists(x.KitName, out Kit kit) && kit.Class == Kit.EClass.MEDIC).ToList();
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
             UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
-            foreach(SteamPlayer player in Provider.clients)
+            foreach (SteamPlayer player in Provider.clients)
             {
                 player.player.stance.onStanceUpdated += delegate
                 {
@@ -275,7 +275,7 @@ namespace Uncreated.Warfare.Revives
         {
             //F.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
             if (DownedPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
-            {   
+            {
                 shouldAllow = false;
             }
         }
@@ -299,7 +299,7 @@ namespace Uncreated.Warfare.Revives
         }
         public void Dispose()
         {
-            foreach(DamagePlayerParameters paramaters in DownedPlayers.Values)
+            foreach (DamagePlayerParameters paramaters in DownedPlayers.Values)
             {
                 if (paramaters.player.transform.TryGetComponent(out Reviver reviver))
                 {
@@ -381,24 +381,34 @@ namespace Uncreated.Warfare.Revives
             IEnumerator<UCPlayer> medics = Medics
                 .Where(x => x.GetTeam() == Team)
                 .GetEnumerator();
-            Vector3[] newpositions = DownedPlayers.Keys.Where(x => x != clearedPlayer).Select(x => UCPlayer.FromID(x).Position).ToArray();
+            ulong[] downed = DownedPlayers.Keys.ToArray();
+            List<Vector3> positions = new List<Vector3>();
+            for (int i = 0; i < downed.Length; i++)
+            {
+                if (downed[i] == clearedPlayer) continue;
+                UCPlayer player = UCPlayer.FromID(downed[i]);
+                if (player == null) continue;
+                positions.Add(player.Position);
+            }
+            Vector3[] newpositions = positions.ToArray();
             SpawnInjuredMarkers(medics, newpositions, true, true);
         }
         public void ClearInjuredMarkers(UCPlayer medic)
         {
             EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.InjuredMarker, medic.Player.channel.owner.transportConnection);
         }
-        public void UpdateInjuredMarkers(ulong Team)
+        public Vector3[] GetPositionsOfTeam(ulong Team)
         {
-            IEnumerator<UCPlayer> medics = Medics.Where(x => x.GetTeam() == Team).GetEnumerator();
-            Vector3[] newpositions = DownedPlayers.Keys.Select(x => UCPlayer.FromID(x).Position).ToArray();
-            SpawnInjuredMarkers(medics, newpositions, true, true);
+            ulong[] downed = DownedPlayers.Keys.ToArray();
+            List<Vector3> positions = new List<Vector3>();
+            for (int i = 0; i < downed.Length; i++)
+            {
+                UCPlayer player = UCPlayer.FromID(downed[i]);
+                if (player == null || player.GetTeam() != Team) continue;
+                positions.Add(player.Position);
+            }
+            return positions.ToArray();
         }
-        public Vector3[] GetPositionsOfTeam(ulong Team) =>
-                DownedPlayers
-                .Where(x => x.Value.player.GetTeam() == Team)
-                .Select(x => UCPlayer.FromID(x.Key).Position)
-                .ToArray();
         public void UpdateInjuredMarkers()
         {
             IEnumerator<UCPlayer> medics = Medics.
@@ -420,8 +430,8 @@ namespace Uncreated.Warfare.Revives
                 if (downed == null) continue;
                 ulong team = downed.GetTeam();
                 Vector3[] medics = Medics
-                    .Where(x => x.GetTeam() == team && 
-                        (x.Position - downed.Position).sqrMagnitude < 
+                    .Where(x => x.GetTeam() == team &&
+                        (x.Position - downed.Position).sqrMagnitude <
                         Squads.SquadManager.config.Data.MedicRange * Squads.SquadManager.config.Data.MedicRange)
                     .Select(x => x.Position)
                     .ToArray();
@@ -503,7 +513,7 @@ namespace Uncreated.Warfare.Revives
                 Player.Player.movement.sendPluginJumpMultiplier(1.0f);
                 Player.Player.life.serverSetBleeding(false);
                 CancelStance();
-                if(remove)
+                if (remove)
                 {
                     reviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                     reviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
@@ -513,7 +523,7 @@ namespace Uncreated.Warfare.Revives
             public void FinishKillingPlayer(ReviveManager reviveManager, bool isDead = false)
             {
                 this.RevivePlayer(reviveManager, false);
-                if(!isDead)
+                if (!isDead)
                 {
                     DamagePlayerParameters parameters = reviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
                     parameters.damage = 100.0f;

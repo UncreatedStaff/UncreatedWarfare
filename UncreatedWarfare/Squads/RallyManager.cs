@@ -51,9 +51,9 @@ namespace Uncreated.Warfare.Squads
                     {
                         int nearbyEnemiesCount = 0;
                         if (player.IsTeam1())
-                            nearbyEnemiesCount = PlayerManager.Team2Players.Count(p => (p.Position - player.Position).sqrMagnitude < RallyComponent.ENEMY_DISTANCE_MIN * RallyComponent.ENEMY_DISTANCE_MIN);
+                            nearbyEnemiesCount = PlayerManager.Team2Players.Count(p => (p.Position - player.Position).sqrMagnitude < Math.Pow(SquadManager.config.Data.RallyDespawnDistance, 2));
                         if (player.IsTeam2())
-                            nearbyEnemiesCount = PlayerManager.Team1Players.Count(p => (p.Position - player.Position).sqrMagnitude < RallyComponent.ENEMY_DISTANCE_MIN * RallyComponent.ENEMY_DISTANCE_MIN);
+                            nearbyEnemiesCount = PlayerManager.Team1Players.Count(p => (p.Position - player.Position).sqrMagnitude < Math.Pow(SquadManager.config.Data.RallyDespawnDistance, 2));
 
                         if (nearbyEnemiesCount > 0)
                         {
@@ -180,7 +180,7 @@ namespace Uncreated.Warfare.Squads
             this.squad = squad;
             AwaitingPlayers = new List<UCPlayer>();
             IsActive = true;
-            timer = 60;
+            timer = SquadManager.config.Data.RallyTimer;
 
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
             Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
@@ -192,18 +192,18 @@ namespace Uncreated.Warfare.Squads
             if (!IsActive)
                 return;
 
-            //List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
-            //Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - rallypoint.structure.point).sqrMagnitude <= (n2.point - rallypoint.structure.point).sqrMagnitude ? n1 : n2);
+            List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
+            Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
 
             TimeSpan seconds = TimeSpan.FromSeconds(timer);
 
-            //line += $" ({((LocationNode)nearerstLocation).name})";
+            string nearestLocation = $" ({((LocationNode)nearerstLocation).name})";
 
             foreach (UCPlayer member in squad.Members)
             {
                 if (AwaitingPlayers.Contains(member))
                 {
-                    string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty);
+                    string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
                     EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
                     line);
                 }
@@ -253,7 +253,6 @@ namespace Uncreated.Warfare.Squads
             parent = rallypoint;
             StartCoroutine(RallyPointLoop());
         }
-        public const int ENEMY_DISTANCE_MIN = 70;
         private IEnumerator<WaitForSeconds> RallyPointLoop()
         {
             while (parent.IsActive)
@@ -269,7 +268,7 @@ namespace Uncreated.Warfare.Squads
                     }
                     parent.AwaitingPlayers.Clear();
 
-                    parent.timer = 60;
+                    parent.timer = SquadManager.config.Data.RallyTimer;
                 }
                 else
                 {
@@ -286,7 +285,7 @@ namespace Uncreated.Warfare.Squads
                         // check for enemies nearby rally points every 5 seconds
                         List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                             p.GetTeam() == enemyTeam &&
-                            (p.Position - parent.structure.point).sqrMagnitude < ENEMY_DISTANCE_MIN * ENEMY_DISTANCE_MIN
+                            (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(SquadManager.config.Data.RallyDespawnDistance, 2)
                             ).ToList();
 
                         if (enemies.Count > 0)

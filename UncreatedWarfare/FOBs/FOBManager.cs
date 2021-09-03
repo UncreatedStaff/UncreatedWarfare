@@ -9,18 +9,238 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Teams;
+using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs
 {
+    public delegate void PlayerEnteredFOBRadiusHandler(FOB fob, UCPlayer player);
+    public delegate void PlayerLeftFOBRadiusHandler(FOB fob, UCPlayer player);
+
     public class FOBManager
     {
         public static Config<FOBConfig> config;
         internal static readonly List<FOB> Team1FOBs = new List<FOB>();
         internal static readonly List<FOB> Team2FOBs = new List<FOB>();
 
+        public static event PlayerEnteredFOBRadiusHandler OnPlayerEnteredFOBRadius;
+        public static event PlayerLeftFOBRadiusHandler OnPlayerLeftFOBRadius;
+        public static event PlayerEnteredFOBRadiusHandler OnEnemyEnteredFOBRadius;
+        public static event PlayerLeftFOBRadiusHandler OnEnemyLeftFOBRadius;
+
         public FOBManager()
         {
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
+
+            OnPlayerEnteredFOBRadius += OnEnteredFOBRadius;
+            OnPlayerLeftFOBRadius += OnLeftFOBRadius;
+            OnEnemyEnteredFOBRadius += OnEnemyEnteredFOB;
+            OnEnemyLeftFOBRadius += OnEnemyLeftFOB;
+
+        }
+
+        public static void Dispose()
+        {
+            OnPlayerEnteredFOBRadius -= OnEnteredFOBRadius;
+            OnPlayerLeftFOBRadius -= OnLeftFOBRadius;
+            OnEnemyEnteredFOBRadius -= OnEnemyEnteredFOB;
+            OnEnemyLeftFOBRadius -= OnEnemyLeftFOB;
+        }
+        public static void OnItemDropped(Item item, Vector3 point)
+        {
+            if (item.id == config.Data.Team1BuildID || item.id == config.Data.Team2BuildID)
+            {
+                IEnumerable<BarricadeDrop> TotalFOBs = UCBarricadeManager.GetAllFobs();
+                IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, config.Data.FOBBuildPickupRadius, point, true);
+
+                if (NearbyFOBs.Count() != 0)
+                {
+                    UpdateBuildUIForFOB(NearbyFOBs.FirstOrDefault());
+                }
+                else
+                {
+                    IEnumerable<BarricadeDrop> NearbyFOBBases = UCBarricadeManager.GetNearbyBarricades(config.Data.FOBBaseID, 30, point, true);
+
+                    if (NearbyFOBBases.Count() != 0)
+                    {
+                        UpdateBuildUIForFOB(NearbyFOBBases.FirstOrDefault());
+                    }
+                }
+            }
+        }
+        public static void OnItemRemoved(ItemData itemData)
+        {
+            if (itemData.item.id == config.Data.Team1BuildID || itemData.item.id == config.Data.Team2BuildID)
+            {
+                IEnumerable<BarricadeDrop> TotalFOBs = UCBarricadeManager.GetAllFobs();
+                IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, config.Data.FOBBuildPickupRadius, itemData.point, true);
+
+                if (NearbyFOBs.Count() != 0)
+                {
+                    UpdateBuildUIForFOB(NearbyFOBs.FirstOrDefault());
+                }
+                else
+                {
+                    IEnumerable<BarricadeDrop> NearbyFOBBases = UCBarricadeManager.GetNearbyBarricades(config.Data.FOBBaseID, 30, itemData.point, true);
+
+                    if (NearbyFOBBases.Count() != 0)
+                    {
+                        UpdateBuildUIForFOB(NearbyFOBBases.FirstOrDefault());
+                    }
+                }
+            }
+        }
+        public static void UpdateBuildUIForFOB(BarricadeDrop fob)
+        {
+            var data = fob.GetServersideData();
+
+            ushort BuildID = 0;
+            if (data.group == 1)
+                BuildID = config.Data.Team1BuildID;
+            else if (data.group == 2)
+                BuildID = config.Data.Team2BuildID;
+            else
+                return;
+
+            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, config.Data.FOBBuildPickupRadius, fob.model.position);
+
+            List<UCPlayer> nearbyPlayers = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == data.group && !p.Player.life.isDead && (p.Position - fob.model.position).sqrMagnitude < Math.Pow(config.Data.FOBBuildPickupRadius, 2)).ToList();
+
+            for (int i = 0; i < nearbyPlayers.Count; i++)
+            {
+                EffectManager.sendUIEffectText((short)unchecked(config.Data.BuildResourceUI), nearbyPlayers[i].Player.channel.owner.transportConnection, true,
+                    "Build",
+                    NearbyBuild.Count.ToString()
+                    );
+            }
+        }
+        public static void OnAmmoCrateUpdated(InteractableStorage storage, BarricadeDrop ammoCrate)
+        {
+            IEnumerable<BarricadeDrop> TotalFOBs = UCBarricadeManager.GetAllFobs().Where(f => f.GetServersideData().group == ammoCrate.GetServersideData().group);
+            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, config.Data.FOBBuildPickupRadius, ammoCrate.model.position, true);
+
+            if (NearbyFOBs.Count() != 0)
+            {
+                UpdateAmmoUIForFOB(storage, ammoCrate, NearbyFOBs.FirstOrDefault());
+            }
+        }
+        public static void UpdateAmmoUIForFOB(InteractableStorage storage, BarricadeDrop ammoCrate, BarricadeDrop fob)
+        {
+            var data = ammoCrate.GetServersideData();
+
+            int ammoCount = 0;
+
+            for (int i = 0; i < storage.items.items.Count; i++)
+            {
+                var jar = storage.items.items[i];
+
+                if ((TeamManager.IsTeam1(data.group) && jar.item.id == config.Data.Team1AmmoID) || (TeamManager.IsTeam2(data.group) && jar.item.id == config.Data.Team2AmmoID))
+                {
+                    ammoCount++;
+                }
+            }
+
+            List<UCPlayer> nearbyPlayers = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == data.group && !p.Player.life.isDead && (p.Position - fob.model.position).sqrMagnitude < Math.Pow(config.Data.FOBBuildPickupRadius, 2)).ToList();
+
+            for (int i = 0; i < nearbyPlayers.Count; i++)
+            {
+                EffectManager.sendUIEffectText((short)unchecked(config.Data.BuildResourceUI), nearbyPlayers[i].Player.channel.owner.transportConnection, true,
+                    "Ammo",
+                    ammoCount.ToString()
+                    );
+            }
+        }
+        public static void OnGameTick(uint counter)
+        {
+            for (int i = 0; i < Team1FOBs.Count; i++)
+            {
+                RecalculateNearbyPlayers(Team1FOBs[i], (int)counter);
+            }
+            for (int i = 0; i < Team2FOBs.Count; i++)
+            {
+                RecalculateNearbyPlayers(Team2FOBs[i], (int)counter);
+            }
+        }
+
+        public static void RecalculateNearbyPlayers(FOB fob, int counter = -1)
+        {
+            for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
+            {
+                if (PlayerManager.OnlinePlayers[j].GetTeam() == fob.Structure.GetServersideData().group)
+                {
+                    if ((fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(config.Data.FOBBuildPickupRadius, 2))
+                    {
+                        if (!fob.nearbyPlayers.Contains(PlayerManager.OnlinePlayers[j]))
+                        {
+                            fob.nearbyPlayers.Add(PlayerManager.OnlinePlayers[j]);
+                            OnPlayerEnteredFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
+                        }
+                        else
+                        {
+                            if (counter % 5 == 0)
+                            {
+                                UpdateBuildUIForFOB(fob.Structure);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (fob.nearbyPlayers.Contains(PlayerManager.OnlinePlayers[j]))
+                        {
+                            fob.nearbyPlayers.Remove(PlayerManager.OnlinePlayers[j]);
+                            OnPlayerLeftFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
+                        }
+                    }
+                }
+                else
+                {
+                    if ((fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(9, 2))
+                    {
+                        if (!fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
+                        {
+                            fob.nearbyEnemies.Add(PlayerManager.OnlinePlayers[j]);
+                            OnEnemyEnteredFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
+                        }
+                    }
+                    else
+                    {
+                        if (fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
+                        {
+                            fob.nearbyEnemies.Remove(PlayerManager.OnlinePlayers[j]);
+                            OnEnemyLeftFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void OnEnteredFOBRadius(FOB fob, UCPlayer player)
+        {
+            EffectManager.sendUIEffect(config.Data.BuildResourceUI, (short)unchecked(config.Data.BuildResourceUI), player.Player.channel.owner.transportConnection, true);
+
+            UpdateBuildUIForFOB(fob.Structure);
+
+            BarricadeDrop NearestAmmoCrate = UCBarricadeManager.GetNearbyBarricades(config.Data.AmmoCrateID, config.Data.FOBBuildPickupRadius, fob.Structure.model.position, true).FirstOrDefault();
+
+            if (NearestAmmoCrate != null)
+            {
+                if (NearestAmmoCrate.interactable is InteractableStorage storage)
+                {
+                    UpdateAmmoUIForFOB(storage, NearestAmmoCrate, fob.Structure);
+                }
+            }
+        }
+        public static void OnLeftFOBRadius(FOB fob, UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(config.Data.BuildResourceUI, player.Player.channel.owner.transportConnection);
+        }
+
+        public static void OnEnemyEnteredFOB(FOB fob, UCPlayer enemy)
+        {
+            UpdateUIForTeam(fob.Structure.GetServersideData().group);
+        }
+        public static void OnEnemyLeftFOB(FOB fob, UCPlayer enemy)
+        {
+            UpdateUIForTeam(fob.Structure.GetServersideData().group);
         }
 
         public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
@@ -28,6 +248,31 @@ namespace Uncreated.Warfare.FOBs
             if (data.barricade.id == config.Data.FOBID)
             {
                 TryDeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeOwnerDataComponent o) ? o.lastDamaged : 0);
+            }
+            else if (data.barricade.id == config.Data.AmmoCrateID)
+            {
+                IEnumerable<BarricadeDrop> TotalFOBs = UCBarricadeManager.GetAllFobs().Where(f => f.GetServersideData().group == data.group);
+                IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, config.Data.FOBBuildPickupRadius, drop.model.position, true);
+
+                if (NearbyFOBs.Count() != 0)
+                {
+                    List<UCPlayer> nearbyPlayers = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == data.group && !p.Player.life.isDead && (p.Position - NearbyFOBs.FirstOrDefault().model.position).sqrMagnitude < Math.Pow(config.Data.FOBBuildPickupRadius, 2)).ToList();
+
+                    for (int i = 0; i < nearbyPlayers.Count; i++)
+                    {
+                        EffectManager.sendUIEffectText((short)unchecked(config.Data.BuildResourceUI), nearbyPlayers[i].Player.channel.owner.transportConnection, true,
+                            "Ammo",
+                            "0"
+                            );
+                    }
+                }
+            }
+            else if (data.barricade.id == config.Data.FOBBaseID)
+            {
+                if (drop.model.TryGetComponent<FOBBaseComponent>(out var component))
+                {
+                    component.OnDestroyed();
+                }
             }
         }
 
@@ -114,6 +359,9 @@ namespace Uncreated.Warfare.FOBs
 
             if (removed != null)
             {
+                for (int i = 0; i < removed.nearbyPlayers.Count; i++)
+                    EffectManager.askEffectClearByID(config.Data.BuildResourceUI, removed.nearbyPlayers[i].Player.channel.owner.transportConnection);
+
                 IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
                 while (pts.MoveNext())
                 {
@@ -222,12 +470,12 @@ namespace Uncreated.Warfare.FOBs
             }
             for (int i = 0; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
             {
-                //if (FOBList[i] == null || FOBList[i].Structure.GetServersideData().barricade.isDead)
-                //    continue;
                 try
                 {
+                    string name = FOBList[i].nearbyEnemies.Count == 0 ? $"<color=#54e3ff>{FOBList[i].Name}</color>" : $"<color=#ff8754>{FOBList[i].Name}</color>";
+
                     EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
-                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name, FOBList[i].ClosestLocation));
+                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
                 }
                 catch(Exception ex)
                 {
@@ -259,6 +507,8 @@ namespace Uncreated.Warfare.FOBs
         public BarricadeDrop Structure;
         public DateTime DateCreated;
         public string ClosestLocation;
+        public List<UCPlayer> nearbyPlayers;
+        public List<UCPlayer> nearbyEnemies;
         public FOB(string Name, int number, BarricadeDrop Structure)
         {
             this.Name = Name;
@@ -272,6 +522,8 @@ namespace Uncreated.Warfare.FOBs
                 .Aggregate((n1, n2) =>
                     (n1.point - Structure.model.position).sqrMagnitude <= (n2.point - Structure.model.position).sqrMagnitude ? n1 : n2)
                 .name;
+            nearbyPlayers = new List<UCPlayer>();
+            nearbyEnemies = new List<UCPlayer>();
         }
     }
 
@@ -305,6 +557,7 @@ namespace Uncreated.Warfare.FOBs
         public List<Fortification> Fortifications;
         public List<ushort> LogiTruckIDs;
         public List<ushort> AmmoBagIDs;
+        public int AmmoBagMaxUses;
 
         public float DeloyMainDelay;
         public float DeloyFOBDelay;
@@ -323,6 +576,7 @@ namespace Uncreated.Warfare.FOBs
         public bool ShouldKillMaincampers;
 
         public ushort FirstFOBUiId;
+        public ushort BuildResourceUI;
 
         public override void SetDefaults()
         {
@@ -334,26 +588,22 @@ namespace Uncreated.Warfare.FOBs
             FOBMaxHeightAboveTerrain = 25f;
             RestrictFOBPlacement = true;
             FOBID = 38311;
-            FOBRequiredBuild = 20;
-            FOBBuildPickupRadius = 20;
+            FOBRequiredBuild = 15;
+            FOBBuildPickupRadius = 80;
             FobLimit = 10;
 
             AmmoCrateBaseID = 38316;
             AmmoCrateID = 38317;
-            AmmoCrateRequiredBuild = 3;
-            AmmoCommandCooldown = 5f;
+            AmmoCrateRequiredBuild = 2;
+            AmmoCommandCooldown = 0f;
 
             RepairStationBaseID = 38318;
             RepairStationID = 38319;
-            RepairStationRequiredBuild = 10;
-
-            MortarID = 38313;
-            MortarBaseID = 38336;
-            MortarRequiredBuild = 10;
-            MortarShellID = 38330;
+            RepairStationRequiredBuild = 6;
 
             LogiTruckIDs = new List<ushort>() { 38305, 38306, 38311, 38312 };
             AmmoBagIDs = new List<ushort>() { 38398 };
+            AmmoBagMaxUses = 3;
 
             Fortifications = new List<Fortification>() {
                 new Fortification
@@ -376,9 +626,27 @@ namespace Uncreated.Warfare.FOBs
                 },
                 new Fortification
                 {
+                    base_id = 38356,
+                    barricade_id = 38357,
+                    required_build = 2
+                },
+                new Fortification
+                {
                     base_id = 38358,
                     barricade_id = 38359,
                     required_build = 1
+                },
+                new Fortification
+                {
+                    base_id = 38360,
+                    barricade_id = 38361,
+                    required_build = 3
+                },
+                new Fortification
+                {
+                    base_id = 38362,
+                    barricade_id = 38363,
+                    required_build = 3
                 }
             };
 
@@ -389,7 +657,7 @@ namespace Uncreated.Warfare.FOBs
                     vehicleID = 38316,
                     ammoID = 38302,
                     ammoAmount = 2,
-                    requiredBuild = 6
+                    requiredBuild = 4
                 },
                 new Emplacement
                 {
@@ -397,7 +665,7 @@ namespace Uncreated.Warfare.FOBs
                     vehicleID = 38317,
                     ammoID = 38305,
                     ammoAmount = 2,
-                    requiredBuild = 6
+                    requiredBuild = 4
                 },
                 new Emplacement
                 {
@@ -405,7 +673,7 @@ namespace Uncreated.Warfare.FOBs
                     vehicleID = 38315,
                     ammoID = 38341,
                     ammoAmount = 1,
-                    requiredBuild = 10
+                    requiredBuild = 8
                 },
                 new Emplacement
                 {
@@ -413,7 +681,7 @@ namespace Uncreated.Warfare.FOBs
                     vehicleID = 38314,
                     ammoID = 38338,
                     ammoAmount = 1,
-                    requiredBuild = 10
+                    requiredBuild = 8
                 },
                 new Emplacement
                 {
@@ -421,7 +689,7 @@ namespace Uncreated.Warfare.FOBs
                     vehicleID = 38313,
                     ammoID = 38330,
                     ammoAmount = 3,
-                    requiredBuild = 8
+                    requiredBuild = 6
                 },
             };
 
@@ -437,6 +705,7 @@ namespace Uncreated.Warfare.FOBs
             ShouldKillMaincampers = true;
 
             FirstFOBUiId = 36020;
+            BuildResourceUI = 36090;
         }
 
         public FOBConfig() { }

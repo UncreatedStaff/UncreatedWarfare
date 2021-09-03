@@ -436,6 +436,7 @@ namespace Uncreated.Warfare.Squads
         public ushort Team1RallyID;
         public ushort Team2RallyID;
         public ushort RallyTimer;
+        public float RallyDespawnDistance;
         public ushort rallyUI;
         public ushort squadLUI;
         public ushort squadSUI;
@@ -455,7 +456,8 @@ namespace Uncreated.Warfare.Squads
         {
             Team1RallyID = 38381;
             Team2RallyID = 38382;
-            RallyTimer = 60;
+            RallyTimer = 45;
+            RallyDespawnDistance = 30;
             rallyUI = 36030;
             squadLUI = 36040;
             squadSUI = 36060;

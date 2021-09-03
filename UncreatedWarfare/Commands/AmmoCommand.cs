@@ -30,52 +30,10 @@ namespace Uncreated.Warfare.Commands
             //InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
-            if (barricade != null && drop != null && barricade.barricade != null && FOBManager.config.Data.AmmoCrateID == barricade.barricade.id)
+            
+            if (vehicle != null)
             {
-                if (!(drop.interactable is InteractableStorage storage))
-                {
-                    player.SendChat("ammo_crate_has_no_storage"); 
-                    return;
-                }
-                if (!player.IsTeam1() && !player.IsTeam2())
-                {
-                    player.SendChat("ammo_not_in_team"); 
-                    return;
-                }
-                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) || 
-                    (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
-                {
-                    player.SendChat("ammo_no_stock"); 
-                    return;
-                }
-                if (!KitManager.HasKit(player.Steam64, out Kit kit))
-                {
-                    player.SendChat("ammo_no_kit"); 
-                    return;
-                }
-                if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
-                {
-                    player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
-                    return;
-                }
-
-
-                WipeDroppedItems(player.Player.inventory);
-                KitManager.ResupplyKit(player, kit);
-
-                EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
-
-                player.SendChat("ammo_success");
-                if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                    CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
-                if (player.IsTeam1())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
-                else if (player.IsTeam2())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team2AmmoID);
-            }
-            else if (vehicle != null)
-            {
-                if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData) || vehicleData.Items?.Count == 0)
+                if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData))
                 {
                     player.SendChat("ammo_vehicle_cant_rearm"); 
                     return;
@@ -135,7 +93,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (vehicleData.Items.Count == 0)
                 {
-                    player.SendChat("ammo_vehicle_full_already"); 
+                    player.SendChat("ammo_vehicle_full_already");
                     return;
                 }
 
@@ -150,49 +108,88 @@ namespace Uncreated.Warfare.Commands
                     ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
 
                 if (player.IsTeam1())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
+                    UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team1AmmoID, vehicleData.RearmCost);
                 else if (player.IsTeam2())
-                    UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team2AmmoID);
-            }
-            else
-            {
-                int ammoBagsCount = 0;
-                foreach (ushort itemID in FOBManager.config.Data.AmmoBagIDs)
-                {
-                    ammoBagsCount += UCInventoryManager.CountItems(player.Player, itemID);
-                }
+                    UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team2AmmoID, vehicleData.RearmCost);
 
-                if (ammoBagsCount == 0)
+                return;
+            }
+            else if (barricade != null && drop != null && barricade.barricade != null)
+            {
+                if (!player.IsTeam1() && !player.IsTeam2())
                 {
-                    player.SendChat("ammo_error_nocrate"); 
+                    player.SendChat("ammo_not_in_team");
                     return;
                 }
                 if (!KitManager.HasKit(player.Steam64, out Kit kit))
                 {
-                    player.SendChat("ammo_no_kit"); 
+                    player.SendChat("ammo_no_kit");
                     return;
                 }
-
-                WipeDroppedItems(player.Player.inventory);
-                KitManager.ResupplyKit(player, kit);
-
-                EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
-
-                player.SendChat("ammo_success_bag");
-
-                for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+                if (FOBManager.config.Data.AmmoCrateID == barricade.barricade.id)
                 {
-                    byte pageCount = player.Player.inventory.getItemCount(page);
-
-                    for (byte index = 0; index < pageCount; index++)
+                    if (!(drop.interactable is InteractableStorage storage))
                     {
-                        if (FOBManager.config.Data.AmmoBagIDs.Contains(player.Player.inventory.getItem(page, index).item.id))
+                        player.SendChat("ammo_crate_has_no_storage");
+                        return;
+                    }
+                    if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
+                    {
+                        player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
+                        return;
+                    }
+                    if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) ||
+                    (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
+                    {
+                        player.SendChat("ammo_no_stock");
+                        return;
+                    }
+
+                    WipeDroppedItems(player.Player.inventory);
+                    KitManager.ResupplyKit(player, kit);
+
+                    EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
+
+                    player.SendChat("ammo_success");
+
+                    if (FOBManager.config.Data.AmmoCommandCooldown > 0)
+                        CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
+                    if (player.IsTeam1())
+                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
+                    else if (player.IsTeam2())
+                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team2AmmoID);
+                }
+                else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.barricade.id))
+                {
+                    if (drop.model.TryGetComponent<AmmoBagComponent>(out var ammobag))
+                    {
+                        if (ammobag.ResuppliedPlayers.TryGetValue(player.Steam64, out var lifeIndex) && lifeIndex == player.LifeCounter)
                         {
-                            player.Player.inventory.removeItem(page, index);
+                            player.Message("ammo_bag_already_resupplied");
                             return;
                         }
+
+                        ammobag.ResupplyPlayer(player, kit);
+
+                        EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
+
+                        WipeDroppedItems(player.Player.inventory);
+                    }
+                    else
+                    {
+                        player.SendChat("ERROR: AmmoBagComponent was not found. Please report this to the admins.");
+                        CommandWindow.LogError("ERROR: Missing AmmoBagComponent on an ammo bag");
                     }
                 }
+                else
+                {
+                    player.SendChat("ammo_error_nocrate");
+                    return;
+                }
+            }
+            else
+            {
+                player.SendChat("ammo_error_nocrate");
             }
         }
         internal static void WipeDroppedItems(PlayerInventory player)

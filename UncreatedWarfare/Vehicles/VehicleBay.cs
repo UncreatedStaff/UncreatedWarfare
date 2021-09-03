@@ -167,7 +167,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             try
             {
-                if (vehicle == null || !vehicle.isLocked)
+                if (vehicle == null || !vehicle.asset.canBeLocked)
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
@@ -265,9 +265,9 @@ namespace Uncreated.Warfare.Vehicles
 
                         for (int i = 0; i < vehicleData.CrewSeats.Count; i++)
                         {
-                            if (vehicleData.CrewSeats[i] < vehicle.passengers.Count() && vehicle.passengers[0] != null || vehicle.passengers[0].player != null)
+                            if (i < vehicle.passengers.Count() && vehicle.passengers[i] != null && vehicle.passengers[i].player != null)
                             {
-                                if (UCPlayer.FromSteamPlayer(vehicle.passengers[0].player)?.KitClass == vehicleData.RequiredClass)
+                                if (UCPlayer.FromSteamPlayer(vehicle.passengers[i].player)?.KitClass == vehicleData.RequiredClass)
                                 {
                                     crewCount++;
                                 }
@@ -298,10 +298,13 @@ namespace Uncreated.Warfare.Vehicles
                 if (shouldAllow)
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
             }
-            
         }
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
+            Transform engine = vehicle.transform.Find("engine");
+
+
+
             try
             {
                 if (vehicle == null) return;

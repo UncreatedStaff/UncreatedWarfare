@@ -123,6 +123,8 @@ namespace Uncreated.Warfare.Kits
         }
         public static void GiveKit(UCPlayer player, Kit kit)
         {
+            //DateTime start = DateTime.Now;
+
             if (kit == null)
                 return;
 
@@ -150,13 +152,16 @@ namespace Uncreated.Warfare.Kits
 
             foreach (KitItem k in kit.Items)
             {
-                Item item = new Item(k.ID, k.amount, k.quality) 
+                Item item = new Item(k.ID, k.amount, k.quality)
                 { metadata = Convert.FromBase64String(k.metadata) };
 
                 if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                     if (player.Player.inventory.tryAddItem(item, true))
                         ItemManager.dropItem(item, player.Position, true, true, true);
             }
+
+            //DateTime breakpoint_items = DateTime.Now;
+
             string oldkit = player.KitName;
 
             if (player.KitClass == Kit.EClass.MEDIC && kit.Class != Kit.EClass.MEDIC)
@@ -169,7 +174,9 @@ namespace Uncreated.Warfare.Kits
             }
             player.KitName = kit.Name;
             player.KitClass = kit.Class;
-            
+
+            DateTime breakpoint_medic = DateTime.Now;
+
             PlayerManager.UpdateObjectsWhere(x => x.Steam64 == player.Steam64, x => { x.KitName = kit.Name; });
 
             if (kit.IsPremium && kit.Cooldown > 0)
@@ -177,13 +184,29 @@ namespace Uncreated.Warfare.Kits
                 CooldownManager.StartCooldown(player, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
             }
 
+            //DateTime breakpoint_playermanager = DateTime.Now;
+
             OnKitChanged?.Invoke(player, kit, oldkit);
+
+            //DateTime breakpoint_event = DateTime.Now;
+
             if (oldkit != null && oldkit != string.Empty)
                 RequestSigns.InvokeLangUpdateForSignsOfKit(oldkit);
             RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
 
+            //DateTime end = DateTime.Now;
+
+            //F.Log
+            //    (
+            //        (end - start).TotalMilliseconds + "ms - total\n" +
+            //        (breakpoint_items - start).TotalMilliseconds + "ms - give items\n" +
+            //        (breakpoint_medic - breakpoint_items).TotalMilliseconds + "ms - medic stuff\n" +
+            //        (breakpoint_playermanager - breakpoint_medic).TotalMilliseconds + "ms - player manager updates\n" +
+            //        (breakpoint_event - breakpoint_playermanager).TotalMilliseconds + "ms - event invocation\n" +
+            //        (end - breakpoint_event).TotalMilliseconds + "ms - send sign translations\n"
+            //    );
         }
-        public static void ResupplyKit(UCPlayer player, Kit kit)
+        public static void ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false)
         {
             List<ItemJar> nonKitItems = new List<ItemJar>();
 
@@ -198,7 +221,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     ItemJar jar = player.Player.inventory.getItem(page, 0);
 
-                    if (!kit.HasItemOfID(jar.item.id))
+                    if (!kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(jar.item.id, out _))
                     {
                         nonKitItems.Add(jar);
                     }
@@ -208,6 +231,9 @@ namespace Uncreated.Warfare.Kits
 
             foreach (var i in kit.Items)
             {
+                if (ignoreAmmoBags && FOBs.FOBManager.config.Data.AmmoBagIDs.Contains(i.ID))
+                    continue;
+
                 var item = new Item(i.ID, i.amount, i.quality);
                 item.metadata = System.Convert.FromBase64String(i.metadata);
 
@@ -231,6 +257,24 @@ namespace Uncreated.Warfare.Kits
             if (KitExists(unarmedKit, out var kit))
             {
                 GiveKit(player, kit);
+                return true;
+            }
+            return false;
+        }
+        public static bool TryGiveRiflemanKit(UCPlayer player)
+        {
+            Kit rifleman = GetKitsWhere(k =>
+                    k.Team == player.GetTeam() &&
+                    k.Class == Kit.EClass.RIFLEMAN &&
+                    !k.IsPremium &&
+                    !k.IsLoadout &&
+                    k.TeamLimit == 1 &&
+                    k.RequiredLevel == 0
+                ).FirstOrDefault();
+
+            if (rifleman != null)
+            {
+                GiveKit(player, rifleman);
                 return true;
             }
             return false;

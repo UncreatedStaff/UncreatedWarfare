@@ -297,8 +297,8 @@ namespace Uncreated.Warfare.Officers
             MemberFlagTickPoints = 1;
             MemberFlagCapturePoints = 30;
             MemberFlagNeutralizedPoints = 10;
-            TransportPlayerPoints = 1;
-            SpawnOnRallyPoints = 1;
+            TransportPlayerPoints = 10;
+            SpawnOnRallyPoints = 20;
             BuiltFOBPoints = 50;
             BuiltAmmoCratePoints = 10;
             BuiltRepairStationPoints = 40;

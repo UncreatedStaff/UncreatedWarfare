@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.Kits
             {
                 kitName = command[0];
 
-                if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
+                if (KitManager.KitExists(kitName, out Kit kit)) // create kit
                 {
                     if (kit.AllowedUsers.Contains(player.CSteamID.m_SteamID))
                     {

@@ -348,6 +348,7 @@ namespace Uncreated.Warfare.XP
         public int BuiltEmplacementXP;
         public int BuiltBarricadeXP;
         public int OnDutyXP;
+        public int RessupplyFriendlyXP;
         public Dictionary<EVehicleType, int> VehicleDestroyedXP;
 
         public float XPMultiplier;
@@ -360,7 +361,7 @@ namespace Uncreated.Warfare.XP
         {
             EnemyKilledXP = 10;
             FriendlyKilledXP = -50;
-            FriendlyRevivedXP = 10;
+            FriendlyRevivedXP = 25;
             FOBKilledXP = 100;
             FOBTeamkilledXP = -1000;
             FOBDeployedXP = 10;
@@ -368,7 +369,7 @@ namespace Uncreated.Warfare.XP
             FlagAttackXP = 5;
             FlagDefendXP = 5;
             FlagNeutralizedXP = 40;
-            TransportPlayerXP = 2;
+            TransportPlayerXP = 10;
             TimeBetweenXpAndOfpAwardForTransport = 10f;
             BuiltFOBXP = 50;
             BuiltAmmoCrateXP = 10;
@@ -376,6 +377,7 @@ namespace Uncreated.Warfare.XP
             BuiltEmplacementXP = 15;
             BuiltBarricadeXP = 5;
             OnDutyXP = 5;
+            RessupplyFriendlyXP = 25;
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
             {

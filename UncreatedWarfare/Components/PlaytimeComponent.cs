@@ -174,24 +174,40 @@ namespace Uncreated.Warfare.Components
                     {
                         if (shouldMessagePlayer)
                             player.Message("deploy_c_dead");
+
+                        CancelTeleport();
                         yield break;
                     }
                     if (shouldCancelOnMove && player.transform.position != originalPosition)
                     {
                         if (shouldMessagePlayer)
                             player.Message("deploy_c_moved");
+
+                        CancelTeleport();
                         yield break;
                     }
                     if (shouldCancelOnDamage && player.life.health != originalhealth)
                     {
                         if (shouldMessagePlayer)
                             player.Message("deploy_c_damaged");
+
+                        CancelTeleport();
+                        yield break;
+                    }
+                    if (fob != null && fob.nearbyEnemies.Count != 0)
+                    {
+                        if (shouldMessagePlayer)
+                            player.Message("deploy_c_enemiesNearby");
+
+                        CancelTeleport();
                         yield break;
                     }
                     if (fob != null && fob.Structure.GetServersideData().barricade.isDead)
                     {
                         if (shouldMessagePlayer)
                             player.Message("deploy_c_fobdead");
+
+                        CancelTeleport();
                         yield break;
                     }
                 }
@@ -199,6 +215,8 @@ namespace Uncreated.Warfare.Components
                 {
                     F.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
                     F.LogError(ex);
+
+                    CancelTeleport();
                 }
                 counter++;
                 yield return new WaitForSeconds(0.5F);

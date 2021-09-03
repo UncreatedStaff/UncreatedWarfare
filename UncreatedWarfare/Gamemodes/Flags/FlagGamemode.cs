@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SDG.Unturned;
+using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
@@ -27,6 +28,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected override void EventLoopAction()
         {
             bool ttc = TimeToCheck();
+
+            FOBManager.OnGameTick(TicketCounter);
+
             for (int i = 0; i < Rotation.Count; i++)
             {
                 if (Rotation[i] == null) continue;

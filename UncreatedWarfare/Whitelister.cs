@@ -25,7 +25,23 @@ namespace Uncreated.Warfare
             StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested += OnEditSignRequest;
             BarricadeManager.onDeployBarricadeRequested += OnBarricadePlaceRequested;
+            BarricadeManager.onDamageBarricadeRequested += OnBarricadeDamageRequested;
+            StructureManager.onDamageStructureRequested += OnStructureDamageRequested;
             Reload();
+        }
+        private void OnStructureDamageRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        {
+            if (F.IsInMain(structureTransform.position))
+            {
+                shouldAllow = false;
+            }
+        }
+        private void OnBarricadeDamageRequested(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        {
+            if (F.IsInMain(barricadeTransform.position))
+            {
+                shouldAllow = false;
+            }
         }
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
         {
@@ -33,6 +49,14 @@ namespace Uncreated.Warfare
 
             if (F.OnDuty(player))
             {
+                return;
+            }
+
+            bool IsWhiteListed = IsWhitelisted(itemData.item.id, out WhitelistItem whitelistedItem);
+
+            if (to_page == PlayerInventory.STORAGE && !IsWhiteListed)
+            {
+                shouldAllow = false;
                 return;
             }
 
@@ -46,7 +70,7 @@ namespace Uncreated.Warfare
 
                 if (allowedItems == 0)
                 {
-                    if (!IsWhitelisted(itemData.item.id, out WhitelistItem whitelistedItem))
+                    if (!IsWhiteListed)
                     {
                         shouldAllow = false;
                         player.Message("whitelist_notallowed");
@@ -59,7 +83,7 @@ namespace Uncreated.Warfare
                 }
                 else if (itemCount >= allowedItems)
                 {
-                    if (!IsWhitelisted(itemData.item.id, out WhitelistItem whitelistedItem))
+                    if (!IsWhiteListed)
                     {
                         shouldAllow = false;
                         player.Message("whitelist_kit_maxamount");
@@ -87,9 +111,16 @@ namespace Uncreated.Warfare
             UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
             if (player.OnDuty())
                 return;
+
             BarricadeData data = barricade.GetServersideData();
-            if (data.owner == instigatorClient.playerID.steamID.m_SteamID || IsWhitelisted(data.barricade.id, out _))
+            if (IsWhitelisted(data.barricade.id, out _))
                 return;
+
+            //if (KitManager.KitExists(player.KitName, out var kit))
+            //{
+            //    if (kit.Items.Exists(i => i.ID == data.barricade.id))
+            //        return;
+            //}
 
             player.Message("whitelist_nosalvage");
             shouldAllow = false;
@@ -100,7 +131,7 @@ namespace Uncreated.Warfare
             if (player.OnDuty())
                 return;
             StructureData data = structure.GetServersideData();
-            if (data.owner == instigatorClient.playerID.steamID.m_SteamID || IsWhitelisted(data.structure.id, out _))
+            if (IsWhitelisted(data.structure.id, out _))
                 return;
 
             player.Message("whitelist_nosalvage");

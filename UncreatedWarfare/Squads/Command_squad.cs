@@ -21,9 +21,10 @@ namespace Uncreated.Warfare.Squads
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
-            if (UCWarfare.Config.EnableSquads)
+            if (!UCWarfare.Config.EnableSquads)
             {
                 player.SendChat("squads_disabled");
+                return;
             }
 
             string name = "";

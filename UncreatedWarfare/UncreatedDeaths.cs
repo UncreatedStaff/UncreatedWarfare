@@ -251,6 +251,7 @@ namespace Uncreated.Warfare
         public void DeathNotSuicide(DeathEventArgs parameters)
         {
             //F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
+
             byte team = parameters.dead.GetTeamByte();
             Data.Gamemode?.OnPlayerDeath(parameters);
             if (team == 1 || team == 2)
@@ -280,6 +281,10 @@ namespace Uncreated.Warfare
         }
         private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
+            var ucplayer = UCPlayer.FromUnturnedPlayer(dead);
+            if (ucplayer != null)
+                ucplayer.LifeCounter++;
+
             if (cause == EDeathCause.LANDMINE)
             {
                 SteamPlayer placer = PlayerTool.getSteamPlayer(murderer.m_SteamID);

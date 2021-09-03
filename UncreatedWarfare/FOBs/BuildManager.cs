@@ -57,7 +57,8 @@ namespace Uncreated.Warfare.FOBs
                 return false;
             }
 
-            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.FOBRequiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius);
+            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.FOBRequiredBuild, foundation.point, FOBManager.config.Data.FOBBuildPickupRadius);
+
             Barricade barricade = new Barricade(FOBManager.config.Data.FOBID);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2), foundation.owner, foundation.group);
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
@@ -87,7 +88,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (foundation == null || foundation.barricade == null || player == null || player.Player == null) return false;
             ulong team = player.GetTeam();
-            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team);
+            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team, FOBManager.config.Data.FOBBuildPickupRadius);
             if (NearbyFOBs.Count() == 0)
             {
                 player.SendChat("build_error_fobtoofar");
@@ -105,13 +106,15 @@ namespace Uncreated.Warfare.FOBs
                 BuildID = FOBManager.config.Data.Team1BuildID;
             else if (team == 2)
                 BuildID = FOBManager.config.Data.Team2BuildID;
-            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, foundation.point);
+            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, nearestFOB.model.position);
             if (NearbyBuild.Count < FOBManager.config.Data.AmmoCrateRequiredBuild)
             {
                 player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), FOBManager.config.Data.AmmoCrateRequiredBuild.ToString(Data.Locale));
                 return false;
             }
-            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.AmmoCrateRequiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius);
+            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.AmmoCrateRequiredBuild, nearestFOB.model.position, FOBManager.config.Data.FOBBuildPickupRadius);
+            FOBManager.UpdateBuildUIForFOB(NearbyFOBs.FirstOrDefault());
+
             Barricade barricade = new Barricade(FOBManager.config.Data.AmmoCrateID);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2), foundation.owner, foundation.group);
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
@@ -137,12 +140,13 @@ namespace Uncreated.Warfare.FOBs
         {
             if (foundation == null || foundation.barricade == null || player == null || player.Player == null) return false;
             ulong team = player.GetTeam();
-            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team);
+            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team, FOBManager.config.Data.FOBBuildPickupRadius);
             if (NearbyFOBs.Count() == 0)
             {
                 player.SendChat("build_error_fobtoofar");
                 return false;
             }
+            var nearestFOB = NearbyFOBs.FirstOrDefault();
             IEnumerable<BarricadeDrop> NearbyRepairStations = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.RepairStationID, 100, player.Position, team, true);
             if (NearbyRepairStations.Count() != 0)
             {
@@ -154,12 +158,14 @@ namespace Uncreated.Warfare.FOBs
                 BuildID = FOBManager.config.Data.Team1BuildID;
             else if (team == 2)
                 BuildID = FOBManager.config.Data.Team2BuildID;
-            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, foundation.point);
+            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, nearestFOB.model.position);
             if (NearbyBuild.Count < FOBManager.config.Data.RepairStationRequiredBuild)
             {
                 player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), FOBManager.config.Data.RepairStationRequiredBuild.ToString(Data.Locale));
             }
-            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.RepairStationRequiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius);
+            RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.RepairStationRequiredBuild, nearestFOB.model.position, FOBManager.config.Data.FOBBuildPickupRadius);
+            FOBManager.UpdateBuildUIForFOB(NearbyFOBs.FirstOrDefault());
+
             Barricade barricade = new Barricade(FOBManager.config.Data.RepairStationID);
             Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
@@ -186,7 +192,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (foundation == null || foundation.barricade == null || player == null || player.Player == null || emplacement == null) return false;
             ulong team = player.GetTeam();
-            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team);
+            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team, FOBManager.config.Data.FOBBuildPickupRadius);
             if (NearbyFOBs.Count() == 0)
             {
                 player.SendChat("build_error_fobtoofar");
@@ -209,13 +215,17 @@ namespace Uncreated.Warfare.FOBs
                 BuildID = FOBManager.config.Data.Team1BuildID;
             else if (team == 2)
                 BuildID = FOBManager.config.Data.Team2BuildID;
-            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, foundation.point);
+            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, nearestFOB.model.position);
+            F.Log(NearbyBuild.Count + "/" + emplacement.requiredBuild);
             if (NearbyBuild.Count < emplacement.requiredBuild)
             {
                 player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), emplacement.requiredBuild.ToString(Data.Locale));
                 return false;
             }
-            RemoveNearbyItemsByID(BuildID, emplacement.requiredBuild, player.Position, FOBManager.config.Data.FOBBuildPickupRadius);
+            
+            RemoveNearbyItemsByID(BuildID, emplacement.requiredBuild, nearestFOB.model.position, FOBManager.config.Data.FOBBuildPickupRadius);
+            FOBManager.UpdateBuildUIForFOB(NearbyFOBs.FirstOrDefault());
+
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             for (int i = 0; i < emplacement.ammoAmount; i++)
                 ItemManager.dropItem(new Item(emplacement.ammoID, true), player.Position, true, true, true);
@@ -229,6 +239,13 @@ namespace Uncreated.Warfare.FOBs
 
                 VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, player.CSteamID, player.Player.quests.groupID, true);
             }
+
+            if (emplacement.baseID == 38336)
+            {
+                Barricade barricade = new Barricade(38364);
+                BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2), foundation.owner, foundation.group);
+            }
+
             player.SendChat("emplacement_built", vehicle.asset.vehicleName);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             TicketManager.AwardSquadXP(ucplayer,
@@ -252,7 +269,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (foundation == null || foundation.barricade == null || player == null || player.Player == null) return false;
             ulong team = player.GetTeam();
-            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team);
+            IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyFOBs(player.Position, team, FOBManager.config.Data.FOBBuildPickupRadius);
             if (NearbyFOBs.Count() == 0)
             {
                 player.SendChat("build_error_fobtoofar");
@@ -264,13 +281,16 @@ namespace Uncreated.Warfare.FOBs
                 BuildID = FOBManager.config.Data.Team1BuildID;
             else if (team == 2)
                 BuildID = FOBManager.config.Data.Team2BuildID;
-            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, foundation.point);
+            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, FOBManager.config.Data.FOBBuildPickupRadius, nearestFOB.model.position);
+            F.Log(NearbyBuild.Count + "/" + fortification.required_build);
             if (NearbyBuild.Count < fortification.required_build)
             {
                 player.SendChat("build_error_notenoughbuild", NearbyBuild.Count.ToString(Data.Locale), fortification.required_build.ToString(Data.Locale));
                 return false;
             }
-            RemoveNearbyItemsByID(BuildID, fortification.required_build, player.Position, FOBManager.config.Data.FOBBuildPickupRadius);
+            RemoveNearbyItemsByID(BuildID, fortification.required_build, nearestFOB.model.position, FOBManager.config.Data.FOBBuildPickupRadius);
+            FOBManager.UpdateBuildUIForFOB(NearbyFOBs.FirstOrDefault());
+
             Barricade barricade = new Barricade(fortification.barricade_id);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2), foundation.owner, foundation.group);
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
@@ -312,7 +332,7 @@ namespace Uncreated.Warfare.FOBs
                         if (removed_count < amount)
                         {
                             ItemData item = ItemManager.regions[r.x, r.y].items[j];
-                            if ((item.point - center).sqrMagnitude <= 20 * 20 && item.item.id == id)
+                            if (item.item.id == id && (item.point - center).sqrMagnitude <= sqrRadius)
                             {
                                 Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
                                     Regions.EnumerateClients(r.x, r.y, ItemManager.ITEM_REGIONS), r.x, r.y, item.instanceID);
