@@ -93,7 +93,6 @@ namespace Uncreated.Warfare.Officers
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
                 c.stats.AddOfficerPoints(amount);
-                c.UCPlayerStats.warfare_stats.AddOfficerPoints(amount);
             }
         }
         public static Rank GetOfficerRank(int officerRankLevel)

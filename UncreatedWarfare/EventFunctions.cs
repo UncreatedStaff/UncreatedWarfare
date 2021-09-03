@@ -312,7 +312,6 @@ namespace Uncreated.Warfare
                     else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(ucplayer, unarmed);
                     else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
                 }
-                pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStatsOld.WarfareName);
                 F.Broadcast("player_connected", names.CharacterName);
                 if (!UCWarfare.Config.AllowCosmetics)
                 {
@@ -673,8 +672,6 @@ namespace Uncreated.Warfare
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.CSteamID, out bool gotptcomp);
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
-                if (gotptcomp)
-                    c.UCPlayerStats.UpdateSession(WarfareStatsOld.WarfareName);
                 //Client.SendPlayerLeft(names);
                 Data.Gamemode.OnPlayerLeft(id);
                 F.Broadcast("player_disconnected", names.CharacterName);

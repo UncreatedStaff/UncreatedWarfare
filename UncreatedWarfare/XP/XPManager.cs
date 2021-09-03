@@ -100,7 +100,6 @@ namespace Uncreated.Warfare.XP
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
                 c.stats.AddXP(amount);
-                c.UCPlayerStats.warfare_stats.AddXP(amount);
             }
         }
         public static void UpdateUI(Player nelsonplayer, int balance, out Rank rank)

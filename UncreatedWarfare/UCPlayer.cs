@@ -77,9 +77,6 @@ namespace Uncreated.Warfare
             set
             {
                 _cachedOfp = value;
-                if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
-                    c.UCPlayerStats.warfare_stats.TellOfficerPts(_cachedXp, Player.GetTeam());
-                else F.LogWarning("Unable to set cached ofp because something was null.");
             }
         }
         private int _cachedXp = -1;
@@ -90,9 +87,6 @@ namespace Uncreated.Warfare
             set
             {
                 _cachedXp = value;
-                if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
-                    c.UCPlayerStats.warfare_stats.TellXP(_cachedXp, Player.GetTeam());
-                else F.LogWarning("Unable to set cached xp because something was null.");
                 isXpDirty = true;
             }
         }

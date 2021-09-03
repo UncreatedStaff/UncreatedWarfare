@@ -443,7 +443,7 @@ namespace Uncreated.Warfare.Tickets
                 int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();
 
                 float friendlyRatio = (float)friendlyCount * fg.Rotation.Count();
-                float enemyRatio = (float)enemyCount / (float)fg.Rotation.Count();
+                float enemyRatio = enemyCount / (float)fg.Rotation.Count();
 
                 if (fg.Rotation.Where(f => f.HasBeenCapturedT1 || f.HasBeenCapturedT2).Count() == fg.Rotation.Count)
                 {

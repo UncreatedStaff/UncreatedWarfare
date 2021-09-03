@@ -52,7 +52,6 @@ namespace Uncreated.Warfare.Components
         public ushort lastRoadkilled;
         private Coroutine _currentTeleportRequest;
         private FOB _pendingFob;
-        public UncreatedPlayer UCPlayerStats;
         public Vehicles.VehicleSpawn currentlylinking;
         public void QueueMessage(ToastMessage message)
         {
@@ -110,7 +109,6 @@ namespace Uncreated.Warfare.Components
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
-            UCPlayerStats = UncreatedPlayer.Load(player.channel.owner.playerID.steamID.m_SteamID);
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwnerDataComponent>();
             toastMessageOpen = 0;
