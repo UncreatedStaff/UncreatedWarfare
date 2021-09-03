@@ -1,12 +1,6 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Management.Instrumentation;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -90,7 +84,7 @@ namespace Uncreated.Warfare.FOBs
                     BarricadeRegion region = BarricadeManager.regions[x, y];
                     if (region == default) continue;
                     for (int i = 0; i < region.drops.Count; i++)
-{
+                    {
                         if (region.drops[i].GetServersideData().barricade.id == FOBManager.config.Data.RepairStationID)
                         {
                             barricades.Add(new RBarricade(region.drops[i].GetServersideData(), region.drops[i]));

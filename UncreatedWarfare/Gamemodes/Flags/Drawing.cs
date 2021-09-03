@@ -1,11 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -224,7 +221,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                                 zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
                                 new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
-                            zonecolor, false, 3); 
+                            zonecolor, false, 3);
                         F.DrawLine(img,
                              new Line(
                                  zones[i].InverseZone.Center,
@@ -260,11 +257,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 flags = ObjectivePathing.InstantiateFlags(ctf.Config.team1adjacencies, ctf.AllFlags, null, null);
                 foreach (KeyValuePair<Flag, float> t1mainarrow in flags)
-                    DrawLineGradient(new Line(TeamManager.Team1Main.InverseZone.Center, t1mainarrow.Key.ZoneData.InverseZone.Center), thickness, img, TeamManager.Team1Color, 
+                    DrawLineGradient(new Line(TeamManager.Team1Main.InverseZone.Center, t1mainarrow.Key.ZoneData.InverseZone.Center), thickness, img, TeamManager.Team1Color,
                         gamemode.Rotation.Count > 0 && gamemode.Rotation[0].ID == t1mainarrow.Key.ID ? color1path : color2, false);
                 flags = ObjectivePathing.InstantiateFlags(ctf.Config.team2adjacencies, ctf.AllFlags, null, null);
                 foreach (KeyValuePair<Flag, float> t2mainarrow in flags)
-                    DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center), thickness, img, 
+                    DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center), thickness, img,
                         gamemode.Rotation.Count > 0 && gamemode.Rotation.Last().ID == t2mainarrow.Key.ID ? color1path : color1, TeamManager.Team2Color, false);
             }
             List<int> drewPaths = new List<int>();
@@ -307,10 +304,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 if (i == gamemode.Rotation.Count)
                 {
                     line = new Line(gamemode.Rotation[i - 1].ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center);
-                } else if (i == 0)
+                }
+                else if (i == 0)
                 {
                     line = new Line(TeamManager.Team1Main.InverseZone.Center, gamemode.Rotation[i].ZoneData.InverseZone.Center);
-                } else
+                }
+                else
                 {
                     line = new Line(gamemode.Rotation[i - 1].ZoneData.InverseZone.Center, gamemode.Rotation[i].ZoneData.InverseZone.Center);
                 }

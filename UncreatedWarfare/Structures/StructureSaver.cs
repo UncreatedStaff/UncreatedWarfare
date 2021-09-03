@@ -1,10 +1,7 @@
 ﻿using Newtonsoft.Json;
 using SDG.Unturned;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Structures
@@ -33,7 +30,8 @@ namespace Uncreated.Warfare.Structures
             {
                 structureadded = AddObjectToSave(new Structure(drop, data));
                 return structureadded != default;
-            } else
+            }
+            else
             {
                 structureadded = default;
                 return false;
@@ -127,17 +125,18 @@ namespace Uncreated.Warfare.Structures
             this.instance_id = instance_id;
             if (type == EStructType.BARRICADE)
             {
-                 F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (drop == default)
                 {
                     this.transform = transform;
                     exists = false;
-                } else
+                }
+                else
                 {
                     this.transform = new SerializableTransform(drop.model.transform);
                     exists = true;
                 }
-            } 
+            }
             else if (type == EStructType.STRUCTURE)
             {
                 F.GetStructureFromInstID(instance_id, out StructureDrop drop);
@@ -151,7 +150,7 @@ namespace Uncreated.Warfare.Structures
                     this.transform = new SerializableTransform(drop.model.transform);
                     exists = true;
                 }
-            } 
+            }
             else exists = false;
             this.owner = owner;
             this.group = group;
@@ -231,7 +230,8 @@ namespace Uncreated.Warfare.Structures
                             {
                                 F.LogWarning("Error in StructureSaver SpawnCheck(): Spawned structure could be placed but was not able to locate a structure at that position.");
                                 exists = false;
-                            } else
+                            }
+                            else
                             {
                                 F.Log("Respawned structure", ConsoleColor.DarkGray);
                                 if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.STRUCTURE, out Vehicles.VehicleSpawn vbspawn))
@@ -243,12 +243,14 @@ namespace Uncreated.Warfare.Structures
                                 StructureSaver.Save();
                                 exists = true;
                             }
-                        } else
+                        }
+                        else
                         {
                             exists = false;
                         }
                     }
-                } else exists = true;
+                }
+                else exists = true;
             }
         }
         public Structure(StructureDrop drop, StructureData data)

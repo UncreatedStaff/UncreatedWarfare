@@ -5,25 +5,17 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Players;
-using Uncreated.SQL;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using System.Reflection;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Flags;
-using SDG.NetPak;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -61,7 +53,7 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_givexp_player_not_found", command[1]);
                             return;
                         }
-                        XPManager.AddXP(target.Player, target.GetTeam(), amount, isConsole ? F.Translate("xp_from_operator", target.Steam64) :
+                        XPManager.AddXP(target.Player, amount, isConsole ? F.Translate("xp_from_operator", target.Steam64) :
                             F.Translate("xp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                         player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
                     }
@@ -83,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                             player.SendChat("test_giveof_player_not_found", command[1]);
                             return;
                         }
-                        OfficerManager.AddOfficerPoints(target.Player, target.GetTeam(), amount, isConsole ? F.Translate("ofp_from_operator", target.Steam64) :
+                        OfficerManager.AddOfficerPoints(target.Player, amount, isConsole ? F.Translate("ofp_from_operator", target.Steam64) :
                             F.Translate("ofp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                         player.SendChat("test_giveof_success", amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName);
                     }
@@ -252,15 +244,15 @@ namespace Uncreated.Warfare.Commands
                 Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default(Flag))
                 {
-                    player.SendChat("test_zone_not_in_zone", 
-                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
-                        player.transform.position.z.ToString(Data.Locale), player.transform.rotation.eulerAngles.y.ToString(Data.Locale), 
+                    player.SendChat("test_zone_not_in_zone",
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
+                        player.transform.position.z.ToString(Data.Locale), player.transform.rotation.eulerAngles.y.ToString(Data.Locale),
                         fg.Rotation.Count.ToString(Data.Locale));
                 }
                 else
                 {
-                    player.SendChat("test_zone_current_zone", flag.Name, 
-                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                    player.SendChat("test_zone_current_zone", flag.Name,
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
                         player.transform.position.z.ToString(Data.Locale));
                 }
             }
@@ -304,8 +296,8 @@ namespace Uncreated.Warfare.Commands
                     Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                     if (extrazone == default)
                     {
-                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale), 
-                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale),
+                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
                             fg.AllFlags.Count.ToString(Data.Locale));
                         return;
                     }
@@ -322,7 +314,8 @@ namespace Uncreated.Warfare.Commands
                     zoneName = flag.Name;
                     zoneColor = flag.TeamSpecificHexColor;
                 }
-            } else
+            }
+            else
             {
                 List<Zone> zones = Data.ExtraZones.Values.ToList();
                 zones.Sort(delegate (Zone a, Zone b)
@@ -332,8 +325,8 @@ namespace Uncreated.Warfare.Commands
                 Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                 if (extrazone == default)
                 {
-                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale), 
-                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
+                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
                         zones.Count.ToString(Data.Locale));
                     return;
                 }
@@ -466,7 +459,8 @@ namespace Uncreated.Warfare.Commands
                     F.Log(F.Translate("test_time_enabled_console", 0, out _));
                 else
                     F.Log(F.Translate("test_time_disabled_console", 0, out _));
-            } else
+            }
+            else
             {
                 if (UCWarfare.I.CoroutineTiming)
                     player.SendChat("test_time_enabled");
@@ -565,7 +559,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void rotation(string[] command, Player player)
         {
-            if(Data.Gamemode is FlagGamemode fg)
+            if (Data.Gamemode is FlagGamemode fg)
                 fg.PrintFlagRotation();
         }
         private const byte DOWN_DAMAGE = 55;
@@ -682,42 +676,56 @@ namespace Uncreated.Warfare.Commands
             }
             player.SendChat("Vehicles: " + sb.ToString());
         }
-        private void crash(string[] command, Player player)
+        private void game(string[] command, Player player)
         {
-            for (int i = 0; i < Provider.clients.Count; i++)
+            if (Data.Gamemode is TeamCTF ctf)
             {
-                if (Provider.clients[i].playerID.steamID.m_SteamID == player.channel.owner.playerID.steamID.m_SteamID)
+                StringBuilder flags = new StringBuilder();
+                for (int f = 0; f < ctf.Rotation.Count; f++)
                 {
-                    Provider.clients[i].SendChat("Crashing you.");
-                    string name = Provider.clients[i].player.name;
-                    F.Broadcast("Crashing " + name);
-                    // This RPC will call on client side SDG.Unturned.ClientMessageHandler_PlayerDisconnected.ReadMessage(NetPakReader reader)
-                    // which will call SDG.Unturned.Provider.removePlayer(byte index)
-                    // The original Unturned code does the opposite to my code - it sends this to everyone else except the kicking player
-                    SendMessageToClient(
-                        EClientMessage.PlayerDisconnected,
-                        ENetReliability.Reliable,
-                        Provider.clients[i].transportConnection,
-                        (NetPakWriter writer) => writer.WriteUInt8((byte)i));
-                    F.Broadcast("Crashed " + name);
+                    if (f == 0) flags.Append('\n');
+                    flags.Append(ctf.Rotation[f].Name).Append("\nOwner: ").Append(ctf.Rotation[f].Owner).Append(" Players: \n1: ")
+                        .Append(string.Join(",", ctf.Rotation[f].PlayersOnFlagTeam1.Select(x => F.GetPlayerOriginalNames(x).PlayerName))).Append("\n2: ")
+                        .Append(string.Join(",", ctf.Rotation[f].PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
+                        .Append("\nPoints: ").Append(ctf.Rotation[f].Points).Append(" State: ").Append(ctf.Rotation[f].LastDeltaPoints).Append('\n');
                 }
+                F.Log(
+                    $"Game {ctf.GameID}: " +
+                    $"Tickets: 1: {Tickets.TicketManager.Team1Tickets}, 2: {Tickets.TicketManager.Team2Tickets}\n" +
+                    $"Starting Tickets: 1: {Tickets.TicketManager._Team1previousTickets}, 2: {Tickets.TicketManager._Team2previousTickets}\n" +
+                    $"{ctf.Rotation.Count} Flags: {flags}Players:\n" +
+                    $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (F.TryGetPlaytimeComponent(x.player, out PlaytimeComponent c) ? F.GetTimeFromSeconds((uint)Mathf.RoundToInt(c.CurrentTimeSeconds), 0) : "unknown pt")))}"// ends with \n
+                    );
             }
         }
-        private static void SendMessageToClient(
-            EClientMessage index,
-            ENetReliability reliability,
-            ITransportConnection transportConnection,
-            Action<NetPakWriter> callback)
+        private void migratelevels(string[] command, Player player)
         {
-            NetPakWriter writer = new NetPakWriter
+            if (player != null)
             {
-                buffer = Block.buffer
-            };
-            writer.Reset();
-            writer.WriteEnum(index);
-            callback(writer);
-            writer.Flush();
-            transportConnection.Send(writer.buffer, writer.writeByteIndex, reliability);
+                player.SendChat("This command can only be called from console.");
+                return;
+            }
+            F.Log("Migrating...", ConsoleColor.Yellow);
+            Data.DatabaseManager.MigrateLevels();
+            F.Log("Migrated all levels.", ConsoleColor.Yellow);
+        }
+        private void dumpranks(string[] command, Player player)
+        {
+            if (player != null)
+            {
+                player.SendChat("This command can only be called from console.");
+                return;
+            }
+            F.Log("Ranks: ");
+            for (int i = 0; i < XPManager.config.Data.Ranks.Length; i++)
+            {
+                F.Log($"{XPManager.config.Data.Ranks[i].name}, {XPManager.config.Data.Ranks[i].level}, {XPManager.config.Data.Ranks[i].XP}");
+            }
+            F.Log("Officers: ");
+            for (int i = 0; i < OfficerManager.config.Data.OfficerRanks.Length; i++)
+            {
+                F.Log($"{OfficerManager.config.Data.OfficerRanks[i].name}, {OfficerManager.config.Data.OfficerRanks[i].level}, {OfficerManager.config.Data.OfficerRanks[i].XP}");
+            }
         }
     }
 #pragma warning restore IDE0051 // Remove unused private members

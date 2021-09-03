@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Numerics;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using SDG.Unturned;
+using System;
+using System.Collections.Generic;
+using System.Text;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -19,7 +14,7 @@ namespace Uncreated.Warfare.Kits
         protected override string LoadDefaults() => "[]";
         public static void DropAllSigns()
         {
-            foreach(RequestSign sign in ActiveObjects)
+            foreach (RequestSign sign in ActiveObjects)
             {
                 sign.SpawnCheck(false);
                 if (!sign.exists)
@@ -63,7 +58,6 @@ namespace Uncreated.Warfare.Kits
                 if (drop != null && drop.instanceID == ActiveObjects[i].instance_id)
                 {
                     found = ActiveObjects[i];
-                    F.Log(found.instance_id.ToString());
                     return true;
                 }
             }
@@ -154,11 +148,12 @@ namespace Uncreated.Warfare.Kits
             }
         }
         [JsonIgnore]
-        public string SignText { 
-            get => "sign_" + kit_name; 
+        public string SignText
+        {
+            get => "sign_" + kit_name;
             set
             {
-                if(value == default) kit_name = TeamManager.DefaultKit;
+                if (value == default) kit_name = TeamManager.DefaultKit;
                 else if (value.Length > 5 && value.StartsWith("sign_"))
                     kit_name = value.Substring(5);
                 else kit_name = value;

@@ -1,28 +1,22 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using Uncreated.Warfare.Stats;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Squads;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Components
 {
     public struct LandmineDataForPostAccess
     {
         public ushort barricadeID;
-        public int barricadeInstId;
+        public uint barricadeInstId;
         public SteamPlayer owner;
         public ulong ownerID;
         public LandmineDataForPostAccess(InteractableTrap trap, BarricadeOwnerDataComponent owner)
         {
-            if(trap == default || owner == default)
+            if (trap == default || owner == default)
             {
                 barricadeID = 0;
                 barricadeInstId = 0;
@@ -30,10 +24,15 @@ namespace Uncreated.Warfare.Components
                 if (owner != default)
                     this.ownerID = owner.ownerID;
                 else this.ownerID = 0;
-            } else
+            }
+            else
             {
                 this.barricadeID = owner.barricade.id;
-                this.barricadeInstId = trap.GetInstanceID();
+                BarricadeDrop data = BarricadeManager.FindBarricadeByRootTransform(trap.transform);
+                if (data != null)
+                    this.barricadeInstId = data.instanceID;
+                else
+                    this.barricadeInstId = 0;
                 this.owner = owner.owner;
                 this.ownerID = owner.ownerID;
             }
@@ -53,7 +52,6 @@ namespace Uncreated.Warfare.Components
         public ushort lastRoadkilled;
         private Coroutine _currentTeleportRequest;
         private FOB _pendingFob;
-        public UncreatedPlayer UCPlayerStats;
         public Vehicles.VehicleSpawn currentlylinking;
         public void QueueMessage(ToastMessage message)
         {
@@ -66,7 +64,7 @@ namespace Uncreated.Warfare.Components
         ushort toastMessageOpen;
         private void SendToastMessage(ToastMessage message)
         {
-            switch(message.Severity)
+            switch (message.Severity)
             {
                 default:
                 case ToastMessageSeverity.INFO:
@@ -81,7 +79,7 @@ namespace Uncreated.Warfare.Components
                 case ToastMessageSeverity.MINIXP:
                     toastMessageOpen = UCWarfare.Config.MiniToastXP;
                     break;
-                case ToastMessageSeverity.MINIOFFICERPTS: 
+                case ToastMessageSeverity.MINIOFFICERPTS:
                     toastMessageOpen = UCWarfare.Config.MiniToastOfficerPoints;
                     break;
                 case ToastMessageSeverity.BIG:
@@ -91,10 +89,10 @@ namespace Uncreated.Warfare.Components
             if (message.Message != null)
             {
                 if (message.SecondaryMessage != null)
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen),
                         player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
                 else
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen),
                         player.channel.owner.transportConnection, true, message.Message);
             }
             StartCoroutine(ToastDelay(message.delay));
@@ -111,7 +109,6 @@ namespace Uncreated.Warfare.Components
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
-            UCPlayerStats = UncreatedPlayer.Load(player.channel.owner.playerID.steamID.m_SteamID);
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwnerDataComponent>();
             toastMessageOpen = 0;
@@ -139,7 +136,7 @@ namespace Uncreated.Warfare.Components
         /// <returns>True if there were no requests pending, false if there were.</returns>
         public bool TeleportDelayed(Vector3 position, float angle, float seconds, bool shouldCancelOnMove = false, bool shouldCancelOnDamage = false, bool shouldMessagePlayer = false, string locationName = "", FOB fob = null)
         {
-            if(_currentTeleportRequest == default)
+            if (_currentTeleportRequest == default)
             {
                 if (shouldMessagePlayer)
                     player.Message("deploy_standby", locationName, seconds.ToString(Data.Locale));
@@ -238,18 +235,17 @@ namespace Uncreated.Warfare.Components
                     {
                         if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
                         {
-                            XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP,
+                            XP.XPManager.AddXP(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP,
                                 F.Translate("xp_deployed_fob", FOBowner));
 
                             if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
                             {
-                                Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), 
-                                    XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
+                                Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
                             }
                         }
                     }
                     else
-                        Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP);
+                        Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, XP.XPManager.config.Data.FOBDeployedXP);
                 }
                 yield break;
             }

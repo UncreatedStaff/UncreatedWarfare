@@ -1,11 +1,8 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
-using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -26,7 +23,7 @@ namespace Uncreated.Warfare.Commands
             if (command.Length == 0)
             {
                 StringBuilder sb = new StringBuilder();
-                for(int i = 0; i < Data.LanguageAliases.Keys.Count; i++)
+                for (int i = 0; i < Data.LanguageAliases.Keys.Count; i++)
                 {
                     string langInput = Data.LanguageAliases.Keys.ElementAt(i);
                     if (!Data.Localization.ContainsKey(langInput)) continue; // only show languages with translations
@@ -40,9 +37,10 @@ namespace Uncreated.Warfare.Commands
                     if (!aliases.Equals(default(LanguageAliasSet))) sb.Append(" : ").Append(aliases.display_name);
                 }
                 player.SendChat("language_list", sb.ToString());
-            } else if (command.Length == 1)
+            }
+            else if (command.Length == 1)
             {
-                if(op == "current")
+                if (op == "current")
                 {
                     string OldLanguage = JSONMethods.DefaultLanguage;
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -54,7 +52,8 @@ namespace Uncreated.Warfare.Commands
                         oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
 
                     player.SendChat("language_current", $"{oldSet.display_name} : {oldSet.key}");
-                } else if(op == "reset")
+                }
+                else if (op == "reset")
                 {
                     string fullname = JSONMethods.DefaultLanguage;
                     LanguageAliasSet alias;
@@ -62,7 +61,8 @@ namespace Uncreated.Warfare.Commands
                     {
                         alias = Data.LanguageAliases[JSONMethods.DefaultLanguage];
                         fullname = alias.display_name;
-                    } else
+                    }
+                    else
                         alias = new LanguageAliasSet(fullname, fullname, new List<string>());
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                     {
@@ -77,13 +77,15 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DefaultLanguage);
-                            if(OnPlayerChangedLanguage != null)
+                            if (OnPlayerChangedLanguage != null)
                                 OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
                             player.SendChat("reset_language", fullname);
                         }
-                    } else
+                    }
+                    else
                         player.SendChat("reset_language_not_needed", fullname);
-                } else
+                }
+                else
                 {
                     string OldLanguage = JSONMethods.DefaultLanguage;
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -129,7 +131,8 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("dont_have_language", langInput);
                     }
                 }
-            } else
+            }
+            else
             {
                 player.SendChat("reset_language_how");
             }

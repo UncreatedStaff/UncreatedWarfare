@@ -1,14 +1,9 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
 using SDG.Unturned;
+using System.Collections.Generic;
+using System.Text;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -26,7 +21,7 @@ namespace Uncreated.Warfare.Commands
             bool isConsole = caller.DisplayName == "Console";
             if (command.Length < 1)
             {
-                if (isConsole) F.LogError(F.Translate("clear_not_enough_args", 0, out _)); 
+                if (isConsole) F.LogError(F.Translate("clear_not_enough_args", 0, out _));
                 else player.SendChat("clear_not_enough_args");
                 return;
             }
@@ -40,14 +35,15 @@ namespace Uncreated.Warfare.Commands
                         if (isConsole) F.LogError(F.Translate("clear_inventory_console_identity", 0, out _));
                         else player.SendChat("clear_inventory_console_identity");
                         return;
-                    } else
+                    }
+                    else
                     {
                         Kits.UCInventoryManager.ClearInventory(player);
                         if (isConsole) F.LogError(F.Translate("clear_inventory_self", 0, out _));
                         else player.SendChat("clear_inventory_self");
                     }
                 }
-                else 
+                else
                 {
                     StringBuilder name = new StringBuilder();
                     for (int i = 1; i < command.Length; i++)
@@ -59,13 +55,15 @@ namespace Uncreated.Warfare.Commands
                         n = isConsole ? F.GetPlayerOriginalNames(splayer).PlayerName : F.GetPlayerOriginalNames(splayer).CharacterName;
                         if (isConsole) F.LogError(F.Translate("clear_inventory_others", 0, out _, n));
                         else player.SendChat("clear_inventory_others", n);
-                    } else
+                    }
+                    else
                     {
                         if (isConsole) F.LogError(F.Translate("clear_inventory_player_not_found", 0, out _, n));
                         else player.SendChat("clear_inventory_player_not_found", n);
                     }
                 }
-            } else if (operation == "i" || operation == "items" || operation == "item")
+            }
+            else if (operation == "i" || operation == "items" || operation == "item")
             {
                 ClearItems();
                 if (isConsole) F.LogError(F.Translate("clear_items_cleared", 0, out _));
@@ -77,13 +75,14 @@ namespace Uncreated.Warfare.Commands
                 if (isConsole) F.LogError(F.Translate("clear_vehicles_cleared", 0, out _));
                 else player.SendChat("clear_vehicles_cleared");
             }
-            else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" || 
+            else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" ||
                 operation == "struct" || operation == "barricades" || operation == "barricade")
             {
                 UCWarfare.ReplaceBarricadesAndStructures();
                 if (isConsole) F.LogError(F.Translate("clear_structures_cleared", 0, out _));
                 else player.SendChat("clear_structures_cleared");
-            } else
+            }
+            else
             {
                 if (isConsole) F.LogError(F.Translate("correct_usage", 0, out _, Syntax));
                 else player.SendChat("correct_usage", Syntax);
@@ -96,7 +95,7 @@ namespace Uncreated.Warfare.Commands
             for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
             {
                 if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out InteractableVehicle veh))
-{
+                {
                     VehicleBarricadeRegion reg = BarricadeManager.findRegionFromVehicle(veh);
                     for (int s = 0; s < reg.drops.Count; s++)
                     {

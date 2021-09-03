@@ -1,13 +1,7 @@
 ﻿using Rocket.API;
-using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Management.Instrumentation;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
@@ -35,7 +29,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData))
                 {
-                    player.SendChat("ammo_vehicle_cant_rearm"); 
+                    player.SendChat("ammo_vehicle_cant_rearm");
                     return;
                 }
                 if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
@@ -47,7 +41,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (!player.Player.IsInMain())
                     {
-                        player.SendChat("ammo_vehicle_out_of_main"); 
+                        player.SendChat("ammo_vehicle_out_of_main");
                         return;
                     }
 
@@ -66,7 +60,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (NearbyAmmoStations.Count() == 0)
                 {
-                    player.SendChat("ammo_vehicle_not_near_ammo_crate"); 
+                    player.SendChat("ammo_vehicle_not_near_ammo_crate");
                     return;
                 }
 
@@ -74,7 +68,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (!(ammoStation.interactable is InteractableStorage storage))
                 {
-                    player.SendChat("ammo_crate_has_no_storage"); 
+                    player.SendChat("ammo_crate_has_no_storage");
                     return;
                 }
 

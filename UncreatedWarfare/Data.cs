@@ -1,55 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Stats;
-using SDG.Unturned;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Kits;
-using System.Threading;
-using System.Reflection;
-using Uncreated.Players;
-using Uncreated.SQL;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.Squads;
+﻿using Rocket.API.Serialisation;
 using Rocket.Core;
-using Rocket.API.Serialisation;
-using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.XP;
-using System.Globalization;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes;
+using SDG.Unturned;
 using Steamworks;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Reflection;
+using Uncreated.Networking;
+using Uncreated.Players;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.XP;
+using UnityEngine;
 
 namespace Uncreated.Warfare
 {
     public static class Data
     {
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-        public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type> 
-        { 
-            { "TeamCTF", typeof(TeamCTF) } 
+        public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
+        {
+            { "TeamCTF", typeof(TeamCTF) }
         };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
         private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
         private static string _flagStorageTemp;
-        public static string FlagStorage {
+        public static string FlagStorage
+        {
             get
             {
-                if(Provider.map == default) return DataDirectory + @"Maps\Unloaded\Flags\";
+                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Flags\";
                 if (_flagStorageTemp == default)
                     _flagStorageTemp = string.Format(_flagStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _flagStorageTemp;
-            } 
+            }
         }
         private static readonly string _structuresStorage = DataDirectory + @"Maps\{0}\Structures\";
         private static string _structStorageTemp = null;
@@ -103,8 +101,8 @@ namespace Uncreated.Warfare
         public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
         public static KitManager KitManager;
         public static VehicleSpawner VehicleSpawner;
-        public static VehicleBay VehicleBay; 
-        public static VehicleSigns VehicleSigns; 
+        public static VehicleBay VehicleBay;
+        public static VehicleSigns VehicleSigns;
         public static FOBManager FOBManager;
         public static BuildManager BuildManager;
         public static TeamManager TeamManager;
@@ -120,11 +118,19 @@ namespace Uncreated.Warfare
         public static CooldownManager Cooldowns;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
-        public static TeamCTF FlagGamemode
+        public static TeamCTF CtfGamemode
         {
             get
             {
                 if (Gamemode is TeamCTF ctf) return ctf;
+                else return null;
+            }
+        }
+        public static Gamemodes.Flags.FlagGamemode FlagGamemode
+        {
+            get
+            {
+                if (Gamemode is Gamemodes.Flags.FlagGamemode fg) return fg;
                 else return null;
             }
         }
@@ -137,8 +143,7 @@ namespace Uncreated.Warfare
         internal static FieldInfo PrivateStance;
         internal static FieldInfo ItemManagerInstanceCount;
         internal static ConsoleInputOutputBase defaultIOHandler;
-        internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
-        internal static CancellationTokenSource CancelTcp = new CancellationTokenSource();
+        internal static Client NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         public static void LoadColoredConsole()
         {
@@ -157,8 +162,32 @@ namespace Uncreated.Warfare
                 CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
         }
+        public static void ReloadTCP()
+        {
+            if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
+            {
+                if (NetClient != null)
+                {
+                    NetClient.connection.Close();
+                    NetClient.Dispose();
+                }
+                F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
+                NetClient = new Client(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
+                NetClient.AssertConnected();
+                NetClient.connection.OnReceived += ClientReceived;
+                Invocations.Shared.PlayerList.NetInvoke(PlayerManager.GetPlayerList());
+            }
+        }
         public static void LoadVariables()
         {
+            /* INITIALIZE UNCREATED NETWORKING */
+            Logging.OnLog += F.Log;
+            Logging.OnLogWarning += F.LogWarning;
+            Logging.OnLogError += F.LogError;
+            Logging.OnLogException += F.LogError;
+            NetFactory.RegisterNetMethods(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+
+            /* CREATE DIRECTORIES */
             F.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
             F.CheckDir(DataDirectory, out _, true);
@@ -167,6 +196,8 @@ namespace Uncreated.Warfare
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);
+
+            /* LOAD LOCALIZATION ASSETS */
             F.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
@@ -189,7 +220,7 @@ namespace Uncreated.Warfare
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 
-            // Managers
+            /* CONSTRUCT FRAMEWORK */
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             DatabaseManager.Open();
@@ -211,14 +242,7 @@ namespace Uncreated.Warfare
             }
             Gamemode.Init();
             F.Log("Initialized gamemode.", ConsoleColor.Magenta);
-            /*
-            if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
-            {
-                F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
-                Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
-                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                _ = Networking.TCPClient.I.Connect(CancelTcp).ConfigureAwait(false);
-            }*/
+            ReloadTCP();
             if (UCWarfare.Config.Modules.Kits)
             {
                 KitManager = new KitManager();
@@ -232,6 +256,8 @@ namespace Uncreated.Warfare
             {
                 ReviveManager = new ReviveManager();
             }
+
+            /* REFLECT PRIVATE VARIABLES */
             F.Log("Getting client calls...", ConsoleColor.Magenta);
             FieldInfo updateSignInfo;
             FieldInfo sendRegionInfo;
@@ -311,19 +337,34 @@ namespace Uncreated.Warfare
             {
                 F.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
             }
+
+            /* SET UP ROCKET GROUPS */
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
-                R.Permissions.AddGroup(AdminOnDutyGroup);
+                _ = R.Permissions.AddGroup(AdminOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
-                R.Permissions.AddGroup(AdminOffDutyGroup);
+                _ = R.Permissions.AddGroup(AdminOffDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup) == default)
-                R.Permissions.AddGroup(InternOnDutyGroup);
+                _ = R.Permissions.AddGroup(InternOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup) == default)
-                R.Permissions.AddGroup(InternOffDutyGroup);
+                _ = R.Permissions.AddGroup(InternOffDutyGroup);
             RocketPermissionsGroup defgroup = R.Permissions.GetGroup("default");
             if (defgroup == default)
-                R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
+                _ = R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
             else defgroup.Permissions = DefaultPerms;
-            R.Permissions.SaveGroup(defgroup);
+            _ = R.Permissions.SaveGroup(defgroup);
+
+            /* REGISTER STATS MANAGER */
+            StatsManager.LoadTeams();
+            StatsManager.LoadWeapons();
+            StatsManager.LoadKits();
+            StatsManager.LoadVehicles();
+            for (int i = 0; i < Provider.clients.Count; i++)
+                StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
+        }
+        private static void ClientReceived(byte[] bytes, IConnection connection, ref bool shouldParse)
+        {
+            if (UCWarfare.Config.Debug)
+                F.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
         }
         private static void DuplicateKeyError(Exception ex)
         {
@@ -332,7 +373,7 @@ namespace Uncreated.Warfare
             if (stuff.Length >= 2) badKey = stuff[1].Trim();
             F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
             F.LogError(ex);
-            if(ex.InnerException != default)
+            if (ex.InnerException != default)
                 F.LogError(ex.InnerException);
             Level.onLevelLoaded += (int level) =>
             {
@@ -353,7 +394,7 @@ namespace Uncreated.Warfare
                 new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup,
                 "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100);
         }
-        
+
         private static RocketPermissionsGroup InternOnDutyGroup
         {
             get =>
@@ -367,7 +408,7 @@ namespace Uncreated.Warfare
                 "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50);
         }
 
-        private static List<Permission> AdminPerms 
+        private static List<Permission> AdminPerms
         {
             get =>
                 new List<Permission>()

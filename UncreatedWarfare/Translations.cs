@@ -1,13 +1,6 @@
-﻿using Rocket.API.Collections;
-using SDG.Unturned;
-using System;
+﻿using SDG.Unturned;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Stats;
 using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 using Kit = Uncreated.Warfare.Kits.Kit;
 
@@ -181,6 +174,7 @@ namespace Uncreated.Warfare
                 { "rally_e_alreadywaiting", "<color=#959c8c>You are already waiting on rally deployment. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
                 { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
                 { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
+                { "rally_e_obstructed", "<color=#959c8c>This rally point is obstructed, find a more open place to put it.</color>" },
                 { "rally_ui", "<color=#5eff87>RALLY</color>{0}" },
                 { "rally_time_value", " {0:mm\\:ss}" },
 
@@ -414,7 +408,7 @@ namespace Uncreated.Warfare
                 { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
                 { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
                 { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!     " },
-                
+
                 { "afk_warning", "<color=#f53b3b>You will be AFK-Kicked in {0} if you don't move.</color>" },
 
                 { "vehicle_owner_not_in_vehicle", "Wait for the owner {0} to get in." },
@@ -453,6 +447,7 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_delay", "<color=#b3ab9f>This vehicle is delayed for another: <color=#94cfff>{0}</color>.</color>" },
                 { "request_vehicle_e_notinsquad", "<color=#b3ab9f>You must be <color=#cedcde>IN A SQUAD</color> in order to request this vehicle.</color>" },
                 { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
+                { "request_vehicle_e_notinteam", "<color=#a8918a>You must be on the other team to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
                 { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
@@ -630,6 +625,8 @@ namespace Uncreated.Warfare
                 { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
                 { "reload_reloaded_kits", "<color=#e6e3d5>Reloaded all kits and request signs.</color>" },
                 { "reload_reloaded_slots", "<color=#e6e3d5>Reset the slots plugin to max.</color>" },
+                { "reload_reloaded_slots_not_enabled", "<color=#e6e3d5>{0} must be enabled to use this command operation.</color>" },
+                { "reload_reloaded_sql", "<color=#e6e3d5>Reopened the MySql Connection.</color>" },
 
                 //test
                 { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
@@ -637,10 +634,10 @@ namespace Uncreated.Warfare
                 { "test_multiple_matches", "<color=#ff8c69>Multiple methods match <color=#ff758f>{0}</color>.</color>" },
                 { "test_no_players_console", "No player found." },
                 { "test_check_console", "<color=#e6e3d5>Check the console log.</color>" },
-                
+
                 { "test_zonearea_syntax", "<color=#ff8c69>Syntax: <i>/test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false></i>.</color>" },
                 { "test_zonearea_started", "<color=#e6e3d5>Picture has to generate, wait around a minute.</color>" },
-                
+
                 { "test_givexp_syntax", "<color=#ff8c69>Syntax: <i>/test givexp <name> <amount></i>.</color>" },
                 { "test_givexp_player_not_found", "<color=#ff8c69>Could not find player named <color=#ff758f>{0}</color></color>" },
                 { "test_givexp_success", "<color=#e6e3d5>Given {0} XP to {1}.</color>" },
@@ -656,19 +653,19 @@ namespace Uncreated.Warfare
 
                 { "test_visualize_syntax", "<color=#ff8c69>Syntax: <i>/test visualize [spacing] [perline]</i>. Specifying perline will disregard spacing.</color>" },
                 { "test_visualize_success", "<color=#e6e3d5>Spawned {0} particles around zone <color=#{2}>{1}</color>. They will despawn in 1 minute.</color>" },
-                
+
                 { "test_go_syntax", "<color=#ff8c69>Syntax: <i>/test go <flag name|zone name|flag id|zone id|obj1|obj2|t1main|t2main></i>. Specifying perline will disregard spacing.</color>" },
                 { "test_go_no_zone", "<color=#ff8c69>No zone or flag found from search terms: <color=#8ce4ff>{0}</color>.</color>" },
                 { "test_go_success_zone", "<color=#e6e3d5>Teleported to extra zone <color=#8ce4ff>{0}</color>.</color>" },
                 { "test_go_success_flag", "<color=#e6e3d5>Teleported to flag <color=#{1}>{0}</color>.</color>" },
-                
+
                 { "test_time_enabled", "<color=#e6e3d5><color=#8ce4ff>Enabled</color> coroutine timing.</color>" },
                 { "test_time_disabled", "<color=#e6e3d5><color=#8ce4ff>Disabled</color> coroutine timing.</color>" },
                 { "test_time_enabled_console", "Enabled coroutine timing." },
                 { "test_time_disabled_console", "Disabled coroutine timing." },
-                
+
                 { "test_down_success", "<color=#e6e3d5>Applied <color=#8ce4ff>{0}</color> damage to player.</color>" },
-                
+
                 { "test_sign_no_sign", "<color=#ff8c69>No sign found.</color>" },
                 { "test_sign_success", "<color=#e6e3d5>Sign text: <color=#8ce4ff>\"{0}\"</color>.</color>" },
 
@@ -764,7 +761,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, string> DefaultTranslations;
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
-        { 
+        {
             new FlagData(1, "AmmoHill", -89, 297, new ZoneData("rectangle", "86,68"), true, 4, -1, -1),
             new FlagData(2, "Hilltop", 258, 497, new ZoneData("rectangle", "66,72"), true, 3, -1, -1),
             new FlagData(3, "Papanov", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645"), true, 3, -1, -1),
@@ -898,6 +895,7 @@ namespace Uncreated.Warfare
 
             // Deaths
             new ColorData("death_background", "ffffff"),
+            new ColorData("death_background_teamkill", "ff9999"),
             new ColorData("death_zombie_name_color", "788c5a"),
 
             // Request
@@ -973,7 +971,7 @@ namespace Uncreated.Warfare
                 Team = 0,
                 Class = Kit.EClass.UNARMED,
                 Branch = EBranch.DEFAULT,
-                SignTexts = new Dictionary<string, string> { 
+                SignTexts = new Dictionary<string, string> {
                     { DefaultLanguage, "<color=#{0}>Default Kit</color>\n<color=#{2}>{1}</color>" },
                     { "ru-ru", "<color=#{0}>Комплект по умолчанию</color>\n<color=#{2}>{1}</color>" }
                 }
@@ -994,9 +992,9 @@ namespace Uncreated.Warfare
                 Team = 1,
                 Class = Kit.EClass.UNARMED,
                 Branch = EBranch.DEFAULT,
-                SignTexts = new Dictionary<string, string> { 
-                    { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" }, 
-                    { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" } 
+                SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" },
+                    { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" }
                 }
             },
             new Kit("ruunarmed",
@@ -1016,7 +1014,7 @@ namespace Uncreated.Warfare
                 Team = 2,
                 Class = Kit.EClass.UNARMED,
                 Branch = EBranch.DEFAULT,
-                SignTexts = new Dictionary<string, string> { 
+                SignTexts = new Dictionary<string, string> {
                     { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" } ,
                     { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" }
                 }
@@ -1051,7 +1049,7 @@ namespace Uncreated.Warfare
                 Team = 1,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
                 Branch = EBranch.INFANTRY,
-                SignTexts = new Dictionary<string, string> { 
+                SignTexts = new Dictionary<string, string> {
                     { DefaultLanguage, "<color=#{0}>Rifleman 1</color>\n<color=#{2}>{1}</color>" },
                     { "ru-ru", "<color=#{0}>Стрелок 1</color>\n<color=#{2}>{1}</color>" }
                 }
@@ -1092,7 +1090,7 @@ namespace Uncreated.Warfare
                 Team = 2,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
                 Branch = EBranch.INFANTRY,
-                SignTexts = new Dictionary<string, string> { 
+                SignTexts = new Dictionary<string, string> {
                     { DefaultLanguage, "<color=#{0}>Rifleman 1</color>\n<color=#{2}>{1}</color>" },
                     { "ru-ru", "<color=#{0}>Стрелок 1</color>\n<color=#{2}>{1}</color>" }
                 }
@@ -1138,7 +1136,7 @@ namespace Uncreated.Warfare
                 Team = 2,
                 Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
                 Branch = EBranch.INFANTRY,
-                SignTexts = new Dictionary<string, string> { 
+                SignTexts = new Dictionary<string, string> {
                     { DefaultLanguage, "<color=#{0}>Africa 1</color>\n<color=#{2}>{1}</color>" },
                     { "ru-ru", "<color=#{0}>Африка 1</color>\n<color=#{2}>{1}</color>" }
                 }
@@ -1146,8 +1144,8 @@ namespace Uncreated.Warfare
         };
         public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
         {
-            new LanguageAliasSet("en-us", "English", new List<string> { "english", "enus", "en", "us", "inglés", "inglesa", "ingles", 
-                "en-au", "en-bz", "en-ca", "en-cb", "en-ie", "en-jm", "en-nz", "en-ph", "en-tt", "en-za", "en-zw", 
+            new LanguageAliasSet("en-us", "English", new List<string> { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",
+                "en-au", "en-bz", "en-ca", "en-cb", "en-ie", "en-jm", "en-nz", "en-ph", "en-tt", "en-za", "en-zw",
                 "enau", "enbz", "enca", "encb", "enie", "enjm", "ennz", "enph", "entt", "enza", "enzw" } ),
             new LanguageAliasSet("ru-ru", "Russian", new List<string> { "russian", "ruru", "ru", "russia", "cyrillic", "русский", "russkiy", "российский" } ),
             new LanguageAliasSet("es-es", "Spanish", new List<string> { "spanish", "español", "española", "espanol", "espanola", "es", "eses",
@@ -1157,11 +1155,11 @@ namespace Uncreated.Warfare
             new LanguageAliasSet("ar-sa", "Arabic", new List<string> { "arabic", "ar", "arab", "عربى", "eurbaa",
                 "ar-ae", "ar-bh", "ar-dz", "ar-eg", "ar-iq", "ar-jo", "ar-kw", "ar-lb", "ar-ly", "ar-ma", "ar-om", "ar-qa", "ar-sy", "ar-tn", "ar-ye",
                 "arae", "arbh", "ardz", "areg", "ariq", "arjo", "arkw", "arlb", "arly", "arma", "arom", "arqa", "arsy", "artn", "arye"}),
-            new LanguageAliasSet("fr-fr", "French", new List<string> { "french", "fr", "française", "français", "francaise", "francais", 
-                "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc", 
+            new LanguageAliasSet("fr-fr", "French", new List<string> { "french", "fr", "française", "français", "francaise", "francais",
+                "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc",
                 "frbe", "frca", "frch", "frlu", "frmc" }),
             new LanguageAliasSet("pl-pl", "Polish", new List<string> { "polish", "plpl", "polskie", "pol", "pl" }),
-            new LanguageAliasSet("zh-cn", "Chinese (Simplified)", new List<string> { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple", 
+            new LanguageAliasSet("zh-cn", "Chinese (Simplified)", new List<string> { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple",
                 "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
                 "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
             new LanguageAliasSet("zh-tw", "Chinese (Traditional)", new List<string> { "traditional chinese", "chinese traditional",

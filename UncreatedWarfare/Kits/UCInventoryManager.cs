@@ -1,11 +1,6 @@
-﻿using Rocket.Unturned.Enumerations;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -66,7 +61,7 @@ namespace Uncreated.Warfare.Kits
                     player.player.inventory.removeItem(page, 0);
                 }
             }
-            
+
 
             byte[] blank = new byte[0];
             player.player.clothing.askWearBackpack(0, 0, blank, true);

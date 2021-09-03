@@ -1,12 +1,8 @@
-﻿using Org.BouncyCastle.Crypto;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.FOBs;
 using UnityEngine;
 using static UnityEngine.Physics;
 
@@ -58,7 +54,7 @@ namespace Uncreated.Warfare.Vehicles
             List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
             VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
             for (int v = 0; v < vehicles.Count; v++)
-{
+            {
                 if (vehicles[v].id == id)
                     newvehicles.Add(vehicles[v]);
             }

@@ -4,12 +4,8 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
@@ -24,23 +20,23 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public FlagGamemode Manager { get; private set; }
         public int Level { get => _level; }
         private readonly int _level;
-        public int ObjectivePlayerCount 
-        { 
+        public int ObjectivePlayerCount
+        {
             get
             {
                 if (T1Obj) return Team1TotalPlayers;
                 else if (T2Obj) return Team2TotalPlayers;
                 else return 0;
-            } 
+            }
         }
         public int ObjectivePlayerCountCappers
-        { 
+        {
             get
             {
                 if (T1Obj) return Team1TotalCappers;
                 else if (T2Obj) return Team2TotalCappers;
                 else return 0;
-            } 
+            }
         }
         public Vector3 Position
         {
@@ -136,7 +132,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             HasBeenCapturedT2 = false;
             Hide(1);
             Hide(2);
-            if(OnReset != null)
+            if (OnReset != null)
                 OnReset.Invoke(this, EventArgs.Empty);
         }
         public void Dispose()
@@ -145,7 +141,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             GC.SuppressFinalize(this);
         }
         private ulong _owner = 0;
-        public ulong Owner {
+        public ulong Owner
+        {
             get => _owner;
         }
         public void SetOwner(ulong value, bool invokeEvent = true)
@@ -154,7 +151,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 ulong oldowner = _owner;
                 _owner = value;
-                if(invokeEvent)
+                if (invokeEvent)
                     OnOwnerChanged?.Invoke(oldowner, _owner, this);
             }
         }
@@ -324,7 +321,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public bool IsAnObj { get => T1Obj || T2Obj; }
         public bool HasBeenCapturedT1;
         public bool HasBeenCapturedT2;
-        public bool DiscoveredT1 {
+        public bool DiscoveredT1
+        {
             get => _discovered1;
             protected set
             {
@@ -334,13 +332,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     _discovered1 = true;
                     return;
                 }
-                if(value == false && _discovered1 == true)
+                if (value == false && _discovered1 == true)
                 {
                     OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
                     _discovered1 = false;
                     return;
                 }
-            } 
+            }
         }
         public bool DiscoveredT2
         {

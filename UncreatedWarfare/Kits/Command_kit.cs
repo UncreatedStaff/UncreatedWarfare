@@ -1,36 +1,58 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 
 namespace Uncreated.Warfare.Kits
 {
     public class Command_kit : IRocketCommand
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
+        public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "kit";
         public string Help => "creates, renames or deletes a kit";
         public string Syntax => "/kit";
         public List<string> Aliases => new List<string>() { "kit" };
         public List<string> Permissions => new List<string>() { "uc.kit" };
+        static void Reply(UCPlayer player, string key, params string[] formatting)
+        {
+            if (player == null)
+            {
+                F.Log(F.Translate(key, 0, out _, formatting), ConsoleColor.Yellow);
+            }
+            else
+            {
+                player.SendChat(F.Translate(key, player.Steam64, formatting));
+            }
+        }
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UnturnedPlayer player = (UnturnedPlayer)caller;
-            UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
+            UnturnedPlayer player;
+            UCPlayer ucplayer;
+            if (caller.DisplayName == "Console")
+            {
+                player = null;
+                ucplayer = null;
+            }
+            else
+            {
+                player = caller as UnturnedPlayer;
+                ucplayer = UCPlayer.FromIRocketPlayer(caller);
+            }
 
-            string op = "";
-            string property = "";
-            string kitName = "";
-            string newValue = "";
-            string targetPlayer = "";
+            string property;
+            string kitName;
+            string newValue;
+            string targetPlayer;
 
             if (command.Length == 1)
             {
+                if (ucplayer == null)
+                {
+                    F.Log("This command can not be called from console.", ConsoleColor.Red);
+                    return;
+                }
                 kitName = command[0];
 
                 if (KitManager.KitExists(kitName, out Kit kit)) // create kit
@@ -46,46 +68,47 @@ namespace Uncreated.Warfare.Kits
                                     branchChanged = true;
 
                                 KitManager.GiveKit(ucplayer, kit);
-                                ucplayer.SendChat("request_kit_given", kit.DisplayName.ToUpper());
+                                Reply(ucplayer, "request_kit_given", kit.DisplayName.ToUpper());
 
                                 if (branchChanged)
                                 {
                                     ucplayer.Branch = kit.Branch;
-                                    ucplayer.SendChat("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                                    Reply(ucplayer, "branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                                 }
                                 PlayerManager.Save();
                                 return;
                             }
                             else
                             {
-                                player.SendChat("kit_e_cooldown", cooldown.ToString());
+                                Reply(ucplayer, "kit_e_cooldown", cooldown.ToString());
                                 return;
                             }
                         }
                         else
                         {
-                            player.SendChat("kit_e_wrongteam", kitName);
+                            Reply(ucplayer, "kit_e_wrongteam", kitName);
                             return;
                         }
                     }
                     else
                     {
-                        player.SendChat("kit_e_notallowed", kitName);
+                        Reply(ucplayer, "kit_e_notallowed", kitName);
                         return;
                     }
                 }
                 else
                 {
-                    player.SendChat("kit_e_noexist", kitName);
+                    Reply(ucplayer, "kit_e_noexist", kitName);
                     return;
                 }
             }
 
             if (command.Length != 1 && !player.OnDuty())
             {
-                player.SendChat("kits_notonduty", kitName);
+                Reply(ucplayer, "kits_notonduty");
                 return;
             }
+            string op;
             if (command.Length == 2)
             {
                 op = command[0].ToLower();
@@ -97,15 +120,15 @@ namespace Uncreated.Warfare.Kits
                     try
                     {
                         int counter = 0;
-                        for (int i = 0; i < KitManager.ActiveObjects.Count; i++)
+                        foreach (Kit kit in KitManager.ActiveObjects)
                         {
-                            if (KitManager.ActiveObjects[i].SignTexts == null || KitManager.ActiveObjects[i].SignTexts.Count == 0) continue;
-                            for (int n = 0; n < KitManager.ActiveObjects[i].SignTexts.Values.Count; n++)
+                            if (kit.SignTexts == null || kit.SignTexts.Count == 0) continue;
+                            foreach (KeyValuePair<string, string> lang in kit.SignTexts)
                             {
-                                if (KitManager.ActiveObjects[i].SignTexts.Values.ElementAt(n).ToLower().Contains(kitName))
+                                if (lang.Value.ToLower().Contains(kitName))
                                 {
                                     if (counter > 0) sb.Append(", ");
-                                    sb.Append(KitManager.ActiveObjects[i].Name);
+                                    sb.Append(kit.Name);
                                     counter++;
                                     break;
                                 }
@@ -123,23 +146,28 @@ namespace Uncreated.Warfare.Kits
                     {
                         sb.Append("--");
                     }
-                    player.SendChat("kit_search_results", sb.ToString());
+                    Reply(ucplayer, "kit_search_results", sb.ToString());
                 }
                 // create kit
                 else if (op == "create" || op == "c")
                 {
+                    if (ucplayer == null)
+                    {
+                        F.Log("This command can not be called from console.", ConsoleColor.Red);
+                        return;
+                    }
                     if (!KitManager.KitExists(kitName, out var kit)) // create kit
                     {
                         KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
-                        player.SendChat("kit_created", kitName);
+                        Reply(ucplayer, "kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
                         KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
-                        player.SendChat("kit_overwritten", kitName);
+                        Reply(ucplayer, "kit_overwritten", kitName);
                         return;
                     }
                 }
@@ -152,37 +180,42 @@ namespace Uncreated.Warfare.Kits
 
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         RequestSigns.RemoveRequestSigns(kitName);
-                        player.SendChat("kit_deleted", kitName);
+                        Reply(ucplayer, "kit_deleted", kitName);
                         return;
                     }
                     else // error
                     {
-                        player.SendChat("kit_e_noexist", kitName);
+                        Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
                 }
-                else if(op == "give")
+                else if (op == "give")
                 {
-                    if(KitManager.KitExists(kitName, out Kit kit))
+                    if (ucplayer == null)
+                    {
+                        F.Log("This command can not be called from console.", ConsoleColor.Red);
+                        return;
+                    }
+                    if (KitManager.KitExists(kitName, out Kit kit))
                     {
                         bool branchChanged = false;
                         if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
                         KitManager.GiveKit(ucplayer, kit);
-                        ucplayer.SendChat("request_kit_given", kit.DisplayName.ToUpper());
+                        Reply(ucplayer, "request_kit_given", kit.DisplayName.ToUpper());
 
                         if (branchChanged)
                         {
                             ucplayer.Branch = kit.Branch;
-                            ucplayer.SendChat("branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                            Reply(ucplayer, "branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                         }
 
                         PlayerManager.Save();
                     }
                     else // error
                     {
-                        player.SendChat("kit_e_noexist", kitName);
+                        Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
                 }
@@ -207,14 +240,14 @@ namespace Uncreated.Warfare.Kits
                             text.Replace("\\n", "\n");
                             F.Log(text);
                             if (KitManager.UpdateText(command[2], text, command[3]))
-                                player.SendChat("kit_setprop", "sign text", command[2], command[3] + " : " + text);
+                                Reply(ucplayer, "kit_setprop", "sign text", command[2], command[3] + " : " + text);
                             else
-                                player.SendChat("kit_e_noexist", command[2]);
+                                Reply(ucplayer, "kit_e_noexist", command[2]);
                             return;
                         }
                         else
                         {
-                            player.SendChat("kit_e_set_sign_syntax", command[2]);
+                            Reply(ucplayer, "kit_e_set_sign_syntax", command[2]);
                             return;
                         }
                     }
@@ -236,21 +269,21 @@ namespace Uncreated.Warfare.Kits
                         KitManager.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
                         if (!allowedToChange) // error - invalid argument value
                         {
-                            player.SendChat("kit_e_invalidarg_not_allowed", property);
+                            Reply(ucplayer, "kit_e_invalidarg_not_allowed", property);
                             return;
                         }
                         if (!parsed) // error - invalid argument value
                         {
-                            player.SendChat("kit_e_invalidarg", newValue, property);
+                            Reply(ucplayer, "kit_e_invalidarg", newValue, property);
                             return;
                         }
                         if (!foundproperty || !set) // error - invalid property name
                         {
-                            player.SendChat("kit_e_invalidprop", property);
+                            Reply(ucplayer, "kit_e_invalidprop", property);
                             return;
                         }
                         // success
-                        player.SendChat("kit_setprop", property, kitName, newValue);
+                        Reply(ucplayer, "kit_setprop", property, kitName, newValue);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         if (wasloadout && !kit.IsLoadout)
                         {
@@ -261,9 +294,10 @@ namespace Uncreated.Warfare.Kits
                             }
                         }
                         return;
-                    } else
+                    }
+                    else
                     {
-                        player.SendChat("kit_e_noexist", kitName);
+                        Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
                 }
@@ -279,7 +313,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (!KitManager.KitExists(kitName, out var kit))
                     {
-                        player.SendChat("kit_e_noexist", kitName);
+                        Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
 
@@ -295,31 +329,32 @@ namespace Uncreated.Warfare.Kits
                             {
                                 if (KitManager.HasAccess(steamid, kit.Name))
                                 {
-                                    player.SendChat("kit_e_alreadyaccess", targetPlayer, kitName);
+                                    Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
                                     return;
                                 }
                                 //success
                                 FPlayerName names = Data.DatabaseManager.GetUsernames(steamid);
-                                player.SendChat("kit_accessgiven", names.CharacterName, kitName);
+                                Reply(ucplayer, "kit_accessgiven", names.CharacterName, kitName);
                                 KitManager.GiveAccess(steamid, kit.Name);
                                 return;
                             }
-                        } else
+                        }
+                        else
                         {
-                            player.SendChat("kit_e_noplayer", targetPlayer);
+                            Reply(ucplayer, "kit_e_noplayer", targetPlayer);
                             return;
                         }
                     }
                     // error - player already has access
                     if (KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
                     {
-                        player.SendChat("kit_e_alreadyaccess", targetPlayer, kitName);
+                        Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
                         return;
                     }
 
                     //success
                     FPlayerName name = F.GetPlayerOriginalNames(target.Player);
-                    player.SendChat("kit_accessgiven", name.CharacterName, kitName);
+                    Reply(ucplayer, "kit_accessgiven", name.CharacterName, kitName);
                     KitManager.GiveAccess(target.Steam64, kit.Name);
                     RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
@@ -329,7 +364,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (!KitManager.KitExists(kitName, out var kit))
                     {
-                        player.SendChat("kit_e_noexist", kitName);
+                        Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
 
@@ -345,32 +380,32 @@ namespace Uncreated.Warfare.Kits
                             {
                                 if (KitManager.HasAccess(steamid, kit.Name))
                                 {
-                                    player.SendChat("kit_e_alreadyaccess", targetPlayer, kitName);
+                                    Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
                                     return;
                                 }
                                 //success
                                 FPlayerName names = Data.DatabaseManager.GetUsernames(steamid);
-                                player.SendChat("kit_accessremoved", names.CharacterName, kitName);
+                                Reply(ucplayer, "kit_accessremoved", names.CharacterName, kitName);
                                 KitManager.RemoveAccess(steamid, kit.Name);
                                 return;
                             }
                         }
                         else
                         {
-                            player.SendChat("kit_e_noplayer", targetPlayer);
+                            Reply(ucplayer, "kit_e_noplayer", targetPlayer);
                             return;
                         }
                     }
                     // error - player already has no access
                     if (!KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
                     {
-                        player.SendChat("kit_e_noaccess", target.CharacterName, kitName);
-                        return; 
+                        Reply(ucplayer, "kit_e_noaccess", target.CharacterName, kitName);
+                        return;
                     }
 
                     //success
                     FPlayerName name = F.GetPlayerOriginalNames(target.Player);
-                    player.SendChat("kit_accessremoved", name.CharacterName, kitName);
+                    Reply(ucplayer, "kit_accessremoved", name.CharacterName, kitName);
                     KitManager.RemoveAccess(target.Steam64, kit.Name);
                     RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
@@ -378,7 +413,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                player.SendChat("correct_usage", "/kit <create|delete|set>");
+                Reply(ucplayer, "correct_usage", "/kit <create|delete|set>");
             }
         }
     }

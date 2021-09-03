@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare
 {
@@ -59,7 +56,8 @@ namespace Uncreated.Warfare
         public DateTime timeAdded;
         public float seconds;
         public object[] data;
-        public TimeSpan Timeleft {
+        public TimeSpan Timeleft
+        {
             get => TimeSpan.FromSeconds((seconds - (DateTime.Now - timeAdded).TotalSeconds) >= 0 ? (seconds - (DateTime.Now - timeAdded).TotalSeconds) : 0);
         }
 

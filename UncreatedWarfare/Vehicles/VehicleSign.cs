@@ -2,9 +2,6 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Structure = Uncreated.Warfare.Structures.Structure;
@@ -192,7 +189,8 @@ namespace Uncreated.Warfare.Vehicles
                 {
                     F.GetBarricadeFromInstID(bay.SpawnPadInstanceID, out BarricadeDrop drop);
                     if (drop != default) this.bay_transform = new SerializableTransform(drop.model);
-                } else if (bay.type == EStructType.STRUCTURE)
+                }
+                else if (bay.type == EStructType.STRUCTURE)
                 {
                     F.GetStructureFromInstID(bay.SpawnPadInstanceID, out StructureDrop drop);
                     if (drop != default) this.bay_transform = new SerializableTransform(drop.model);
@@ -204,7 +202,8 @@ namespace Uncreated.Warfare.Vehicles
             if (save == null)
             {
                 F.LogWarning("Save was null in VehicleSign.");
-            } else
+            }
+            else
             {
                 save?.SpawnCheck();
                 BarricadeDrop drop = F.GetBarricadeFromInstID(save.instance_id);

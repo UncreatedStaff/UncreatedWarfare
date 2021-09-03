@@ -1,11 +1,8 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using SDG.Unturned;
-using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
@@ -40,13 +37,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (Player player in newPlayers)
                     AddPlayerOnFlag(player, Rotation[i]);
             }
+            if (TimeToTicket())
+                EvaluateTickets();
             if (ttc)
             {
                 EvaluatePoints();
                 OnEvaluate();
             }
-            if (TimeToTicket())
-                EvaluateTickets();
         }
         protected uint TicketCounter = 0;
         public virtual void EvaluateTickets()

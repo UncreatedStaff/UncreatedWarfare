@@ -4,12 +4,13 @@
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
     <Copyright>None</Copyright>
-    <OutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins\</OutputPath>
-    <Version>3.21.0.1</Version>
+    <OutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins\</OutputPath>
+    <Version>3.21.1.0</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
     <PackageLicenseExpression>N/A</PackageLicenseExpression>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>
@@ -26,18 +27,19 @@
     <RootNamespace>Uncreated.Warfare</RootNamespace>
     <AssemblyVersion>3.21.0.0</AssemblyVersion>
     <FileVersion>3.21.0.0</FileVersion>
-    <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath />
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WarningLevel>5</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="SETLOCAL&#xD;&#xA;SET &quot;sourcedir=$(OutDir)&#xD;&#xA;echo FOR /d %25%25a IN (&quot;%25sourcedir%25\*&quot;) DO RD /S /Q &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\*&quot;) DO IF /i NOT &quot;%25%25~nxa&quot;==&quot;$(ProjectName).dll&quot; DEL &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\$(ProjectName)\Lang\en-us\*&quot;) DO  DEL &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\$(ProjectName)\*&quot;) DO DEL &quot;%25%25a&quot;&#xD;&#xA;GOTO :EOF" />
+  </Target>
   <ItemGroup>
     <None Remove="Command_blank.txt" />
   </ItemGroup>
@@ -69,6 +71,12 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="UncreatedNetworking">
+      <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworking\bin\Debug\net472\UncreatedNetworking.dll</HintPath>
+    </Reference>
+    <Reference Include="UncreatedStats">
+      <HintPath>..\UncreatedStats\bin\Debug\net472\UncreatedStats.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
@@ -87,7 +95,7 @@
     <None Include="..\.editorconfig" Link=".editorconfig" />
     <None Include="Resources\icon.png">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath />
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -95,7 +103,4 @@
     <PackageReference Include="MySql.Data" Version="8.0.25" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="SETLOCAL&#xD;&#xA;SET &quot;sourcedir=$(OutDir)&#xD;&#xA;echo FOR /d %25%25a IN (&quot;%25sourcedir%25\*&quot;) DO RD /S /Q &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\*&quot;) DO IF /i NOT &quot;%25%25~nxa&quot;==&quot;$(ProjectName).dll&quot; DEL &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\$(ProjectName)\Lang\en-us\*&quot;) DO  DEL &quot;%25%25a&quot;&#xD;&#xA;FOR %25%25a IN (&quot;%25sourcedir%25\$(ProjectName)\*&quot;) DO DEL &quot;%25%25a&quot;&#xD;&#xA;GOTO :EOF" />
-  </Target>
 </Project>

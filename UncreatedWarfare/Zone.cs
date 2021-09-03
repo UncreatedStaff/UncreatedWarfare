@@ -2,9 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -37,7 +35,7 @@ namespace Uncreated.Warfare
         protected float spacing = -1;
         protected int perline = 10;
         public Vector2[] _particleSpawnPoints;
-        public string Name; 
+        public string Name;
         public Vector2 BoundsTLPos;
         public Vector2 BoundsSize;
         public float BoundsArea;
@@ -64,10 +62,10 @@ namespace Uncreated.Warfare
         public Line[] lines;
         public Vector2[] Corners;
         public RectZone RectInverseZone { get => (RectZone)InverseZone; }
-        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) : 
+        public RectZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) :
             base(Center, data, useMapSizeMultiplier, Name, maxHeight, minHeight, isInverse)
         {
-            if(!isInverse)
+            if (!isInverse)
                 this.InverseZone = new RectZone(Center, data, !useMapSizeMultiplier, Name, maxHeight, minHeight, true);
         }
         /// <param name="corners">Corners to spawn different points at.</param>
@@ -79,16 +77,16 @@ namespace Uncreated.Warfare
             corners = Corners;
             center = Center;
             if (this.spacing == spacing && this.perline == perline && _particleSpawnPoints != null) return _particleSpawnPoints;
-            if(spacing >= 0.1f) this.spacing = spacing;
-            if(perline != 0f && perline != -1f) this.perline = perline;
+            if (spacing >= 0.1f) this.spacing = spacing;
+            if (perline != 0f && perline != -1f) this.perline = perline;
             List<Vector2> rtnSpawnPoints = new List<Vector2>();
-            foreach(Line line in lines)
+            foreach (Line line in lines)
             {
                 if (line.length == 0) continue;
                 float distance;
                 if (this.spacing == -1f) distance = line.length / this.perline;
                 else distance = line.NormalizeSpacing(this.spacing);
-                if(distance != 0) // prevent infinite loops
+                if (distance != 0) // prevent infinite loops
                     for (float i = distance; i < line.length; i += distance)
                     {
                         rtnSpawnPoints.Add(line.GetPointFromDistanceFromPt1(i));
@@ -147,10 +145,10 @@ namespace Uncreated.Warfare
     {
         public float Radius;
         public CircleZone CircleInverseZone { get => (CircleZone)InverseZone; }
-        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) : 
+        public CircleZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) :
             base(Center, data, useMapSizeMultiplier, Name, maxHeight, minHeight, isInverse)
         {
-            if(!isInverse)
+            if (!isInverse)
                 this.InverseZone = new CircleZone(Center, data, !useMapSizeMultiplier, Name, maxHeight, minHeight, true);
         }
 
@@ -178,7 +176,7 @@ namespace Uncreated.Warfare
             float angleRad;
             if (this.spacing == -1f) angleRad = circumference / this.perline / Radius;
             else angleRad = this.spacing / Radius;
-            for(float i = 0; i < pi2F; i += angleRad)
+            for (float i = 0; i < pi2F; i += angleRad)
             {
                 rtnSpawnPoints.Add(new Vector2(Center.x + (Mathf.Cos(i) * Radius), Center.y + (Mathf.Sin(i) * Radius)));
             }
@@ -248,7 +246,7 @@ namespace Uncreated.Warfare
         {
             int canfit = F.DivideRemainder(length, baseSpacing, out int remainder);
             if (remainder == 0) return baseSpacing;
-            if(remainder < baseSpacing / 2)     // extend all others
+            if (remainder < baseSpacing / 2)     // extend all others
                 return length / canfit;
             else                                //add one more and subtend all others
                 return length / (canfit + 1);
@@ -306,7 +304,7 @@ namespace Uncreated.Warfare
                 size = new Vector2(0, 0);
                 return new Vector2(points[0].x, points[0].y);
             }
-            foreach(Vector2 point in points)
+            foreach (Vector2 point in points)
             {
                 if (!maxX.HasValue || maxX.Value > point.x) maxX = point.x;
                 if (!maxY.HasValue || maxY.Value > point.y) maxY = point.y;
@@ -320,10 +318,10 @@ namespace Uncreated.Warfare
             }
             else throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
         }
-        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) : 
+        public PolygonZone(Vector2 Center, ZoneData data, bool useMapSizeMultiplier, string Name, float maxHeight, float minHeight, bool isInverse = false) :
             base(Center, data, useMapSizeMultiplier, Name, maxHeight, minHeight, isInverse)
         {
-            if(!isInverse)
+            if (!isInverse)
                 this.InverseZone = new PolygonZone(Center, data, !useMapSizeMultiplier, Name, maxHeight, minHeight, true);
         }
 
@@ -383,7 +381,8 @@ namespace Uncreated.Warfare
             try
             {
                 BoundsTLPos = GetBounds(Points, out BoundsSize);
-            } catch (NullReferenceException)
+            }
+            catch (NullReferenceException)
             {
                 BoundsSize = new Vector2(0, 0);
                 BoundsTLPos = Center;

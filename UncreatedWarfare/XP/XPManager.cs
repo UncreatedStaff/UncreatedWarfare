@@ -5,13 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using Uncreated.Networking.Encoding;
 using Uncreated.Players;
 using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.XP
 {
@@ -23,49 +20,46 @@ namespace Uncreated.Warfare.XP
         {
             config = new Config<XPData>(Data.XPStorage, "config.json");
         }
-
         public static void OnPlayerJoined(UCPlayer player)
         {
             F.Log(player.CharacterName);
             if (player.IsTeam1() || player.IsTeam2())
             {
-                int amt = GetXP(player.Player, player.GetTeam(), true);
+                int amt = GetXP(player.Player, true);
                 UpdateUI(player.Player, amt, out _);
             }
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            int xp = GetXP(player.player, newGroup, true);
+            int xp = GetXP(player.player, true);
             UpdateUI(player.player, xp, out _);
         }
-        public static int GetXP(Player player, ulong team, bool important)
+        public static int GetXP(Player player, bool important)
         {
-            if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (ucplayer == default || important || ucplayer.cachedXp == -1)
+            if (ucplayer == default || important || ucplayer.CachedXp == -1)
             {
-                int newxp = Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID, team);
+                int newxp = Data.DatabaseManager.GetXP(player.channel.owner.playerID.steamID.m_SteamID);
                 if (ucplayer != null)
-                    ucplayer.cachedXp = newxp;
-                return newxp;
-            } else return ucplayer.cachedXp;
-        }
-        public static int GetXP(ulong player, ulong team, bool important)
-        {
-            if (team < 1 || team > 2) return 0;
-            UCPlayer ucplayer = UCPlayer.FromID(player);
-            if (ucplayer == default || important || ucplayer.cachedXp == -1)
-            {
-                int newxp = Data.DatabaseManager.GetXP(player, team);
-                if (ucplayer != default)
-                    ucplayer.cachedXp = newxp;
+                    ucplayer.CachedXp = newxp;
                 return newxp;
             }
-            else return ucplayer.cachedXp;
+            else return ucplayer.CachedXp;
         }
-        public static void AddXP(Player player, ulong team, int amount, string message = "")
+        public static int GetXP(ulong player, bool important)
         {
-            if (team < 1 || team > 2) return;
+            UCPlayer ucplayer = UCPlayer.FromID(player);
+            if (ucplayer == default || important || ucplayer.CachedXp == -1)
+            {
+                int newxp = Data.DatabaseManager.GetXP(player);
+                if (ucplayer != default)
+                    ucplayer.CachedXp = newxp;
+                return newxp;
+            }
+            else return ucplayer.CachedXp;
+        }
+        public static void AddXP(Player player, int amount, string message = "")
+        {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
 
             Rank oldRank = null;
@@ -74,11 +68,11 @@ namespace Uncreated.Warfare.XP
                 oldRank = ucplayer.XPRank();
             }
 
-            int newBalance = Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, team, (int)(amount * config.Data.XPMultiplier));
+            int newBalance = Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, (int)(amount * config.Data.XPMultiplier));
 
             if (ucplayer != null)
             {
-                ucplayer.cachedXp = newBalance;
+                ucplayer.CachedXp = newBalance;
             }
 
             if (message != "" && amount != 0)
@@ -94,19 +88,18 @@ namespace Uncreated.Warfare.XP
             else if (rank.level < oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
-                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demomoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
                 VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
-                // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
+            // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
             for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
-                // update the color of the ranks on all the request signs in case the player unlocked a new rank.
+                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
+            // update the color of the ranks on all the request signs in case the player unlocked a new rank.
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
                 c.stats.AddXP(amount);
-                c.UCPlayerStats.warfare_stats.AddXP(amount);
             }
         }
         public static void UpdateUI(Player nelsonplayer, int balance, out Rank rank)
@@ -147,7 +140,7 @@ namespace Uncreated.Warfare.XP
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Next", nextRank != null ? 
+                    "Next", nextRank != null ?
                     F.Translate("ui_xp_next_level", player, nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID), nextRank.level.ToString(Data.Locale)) : string.Empty
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
@@ -168,22 +161,22 @@ namespace Uncreated.Warfare.XP
             }
             return bars.ToString();
         }
-        public static Rank GetRankFromLevel(int level)
+        public static Rank GetRankFromLevel(int level, bool clamp = true)
         {
-            if (level < 0) return null;
-            if (config.Data.Ranks.Count > level) return config.Data.Ranks[level];
-            return null;
+            if (level < 0) return clamp ? (config.Data.Ranks.Length > 0 ? config.Data.Ranks[0] : null) : null;
+            if (config.Data.Ranks.Length > level) return config.Data.Ranks[level];
+            return clamp ? (config.Data.Ranks.Length > 0 ? config.Data.Ranks[config.Data.Ranks.Length - 1] : null) : null;
         }
         public static Rank GetRank(int xpBalance, out int currentXP, out Rank nextRank)
         {
             int requiredXP = 0;
             nextRank = null;
-            for (int i = 0; i < config.Data.Ranks.Count; i++)
+            for (int i = 0; i < config.Data.Ranks.Length; i++)
             {
                 requiredXP += config.Data.Ranks[i].XP;
                 if (xpBalance < requiredXP)
                 {
-                    if (i + 1 < config.Data.Ranks.Count)
+                    if (i + 1 < config.Data.Ranks.Length)
                         nextRank = config.Data.Ranks[i + 1];
 
                     currentXP = unchecked(config.Data.Ranks[i].XP - (requiredXP - xpBalance));
@@ -258,7 +251,8 @@ namespace Uncreated.Warfare.XP
                             return name_translations.ElementAt(0).Value;
                         }
                         else return name;
-                    } else
+                    }
+                    else
                     {
                         return newname;
                     }
@@ -326,6 +320,29 @@ namespace Uncreated.Warfare.XP
                 }
             }
         }
+        public static Rank Read(ByteReader R) =>
+            new Rank(R.ReadInt32(), R.ReadString(), R.ReadString(), R.ReadInt32());
+        public static void Write(ByteWriter W, Rank R)
+        {
+            W.Write(R.level);
+            W.Write(R.name);
+            W.Write(R.abbreviation);
+            W.Write(R.XP);
+        }
+        public static Rank[] ReadMany(ByteReader R)
+        {
+            byte count = R.ReadUInt8();
+            Rank[] ranks = new Rank[count];
+            for (int i = 0; i < count; i++)
+                ranks[i] = Read(R);
+            return ranks;
+        }
+        public static void WriteMany(ByteWriter W, Rank[] R)
+        {
+            W.Write((byte)R.Length);
+            for (int i = 0; i < R.Length; i++)
+                Write(W, R[i]);
+        }
     }
 
     public class XPData : ConfigData
@@ -355,7 +372,7 @@ namespace Uncreated.Warfare.XP
 
         public ushort RankUI;
 
-        public List<Rank> Ranks;
+        public Rank[] Ranks;
 
         public override void SetDefaults()
         {
@@ -396,7 +413,7 @@ namespace Uncreated.Warfare.XP
 
             RankUI = 36031;
 
-            Ranks = new List<Rank>()
+            Ranks = new Rank[]
             {
                 new Rank(0, "Recruit", "Rec.", 1500),
                 new Rank(1, "Private", "Pvt.", 3800),
@@ -411,6 +428,7 @@ namespace Uncreated.Warfare.XP
                 new Rank(10, "Chief Warrant Officer", "C.W.O.", 40000)
             };
         }
-        public XPData() => SetDefaults();
+        public XPData()
+        { }
     }
 }

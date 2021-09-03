@@ -1,16 +1,13 @@
 ﻿using HarmonyLib;
-using JetBrains.Annotations;
 using Rocket.API;
 using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using UnityEngine;
@@ -47,11 +44,16 @@ namespace Uncreated.Warfare
         [HarmonyPatch]
         public static class InternalPatches
         {
+            public static Harmony Patcher;
             /// <summary>Patch methods</summary>
             public static void DoPatching()
             {
-                Harmony harmony = new Harmony("net.uncreated.warfare");
-                harmony.PatchAll();
+                Patcher = new Harmony("net.uncreated.warfare");
+                Patcher.PatchAll();
+            }
+            public static void Unpatch()
+            {
+                Patcher.UnpatchAll();
             }
 #pragma warning disable IDE0051
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -148,11 +150,28 @@ namespace Uncreated.Warfare
             }
             // SDG.Unturned.Provider
             /// <summary>
+            /// Prefix of <see cref="Provider.verifyNextPlayerInQueue()"/> to override the max player count when accepting players.
+            /// </summary>
+            [HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
+            [HarmonyPrefix]
+            static bool OnPlayerEnteredQueuePre()
+            {
+                if (!UCWarfare.Config.UsePatchForPlayerCap) return true;
+                if (Provider.pending.Count < 1 || Provider.clients.Count >= UCWarfare.Config.MaxPlayerCount)
+                    return false;
+                SteamPending steamPending = Provider.pending[0];
+                if (steamPending.hasSentVerifyPacket)
+                    return false;
+                steamPending.sendVerifyPacket();
+                return false;
+            }
+            // SDG.Unturned.Provider
+            /// <summary>
             /// Postfix of <see cref="Provider.verifyNextPlayerInQueue()"/> to check if the new player in the queue is an admin, then pass them.
             /// </summary>
             [HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
             [HarmonyPostfix]
-            static void OnPlayerEnteredQueue()
+            static void OnPlayerEnteredQueuePost()
             {
                 if (!UCWarfare.Config.Patches.EnableQueueSkip) return;
                 if (Provider.pending.Count > 0)
@@ -193,16 +212,22 @@ namespace Uncreated.Warfare
                     text = text.Substring(0, ChatManager.MAX_MESSAGE_LENGTH);
                 if (CommandWindow.shouldLogChat)
                 {
+                    FPlayerName n = F.GetPlayerOriginalNames(callingPlayer);
+                    StringBuilder name = new StringBuilder($"[{n.PlayerName} ({n.CharacterName})]:");
+                    for (int i = name.Length; i < 40; i++)
+                    {
+                        name.Append(' ');
+                    }
                     switch (mode)
                     {
                         case EChatMode.GLOBAL:
-                            CommandWindow.Log(Provider.localization.format("Global", callingPlayer.playerID.characterName, callingPlayer.playerID.playerName, text));
+                            F.Log($"[ALL]  {name} \"{text}\"", ConsoleColor.DarkGray);
                             break;
                         case EChatMode.LOCAL:
-                            CommandWindow.Log(Provider.localization.format("Local", callingPlayer.playerID.characterName, callingPlayer.playerID.playerName, text));
+                            F.Log($"[A/S]  {name} \"{text}\"", ConsoleColor.DarkGray);
                             break;
                         case EChatMode.GROUP:
-                            CommandWindow.Log(Provider.localization.format("Group", callingPlayer.playerID.characterName, callingPlayer.playerID.playerName, text));
+                            F.Log($"[TEAM] {name} \"{text}\"", ConsoleColor.DarkGray);
                             break;
                         default:
                             return false;
@@ -210,7 +235,7 @@ namespace Uncreated.Warfare
                 }
                 else if (mode != EChatMode.GLOBAL || mode != EChatMode.LOCAL || mode != EChatMode.GROUP) return false;
                 if (fromUnityEvent)
-                    UnturnedLog.info("UnityEventMsg {0}: '{1}'", callingPlayer.playerID.steamID, text);
+                    F.Log($"UnityEventMsg {callingPlayer.playerID.steamID}: \"{text}\"", ConsoleColor.DarkCyan);
                 Color chatted = Color.white;
                 ulong team = callingPlayer.GetTeam();
                 chatted = Teams.TeamManager.GetTeamColor(team);
@@ -220,7 +245,7 @@ namespace Uncreated.Warfare
                 bool isVisible = true;
                 if (ChatManager.onChatted != null)
                     ChatManager.onChatted(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
-                if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) & isVisible))
+                if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) && isVisible))
                     return false;
                 if (ChatManager.onServerFormattingMessage != null)
                 {
@@ -248,7 +273,8 @@ namespace Uncreated.Warfare
                             if (client.player != null && (double)(client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
                                 ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                         }
-                    } else
+                    }
+                    else
                     {
                         foreach (SteamPlayer client in Provider.clients)
                         {
@@ -390,9 +416,10 @@ namespace Uncreated.Warfare
                             F.InvokeSignUpdateForAllKits(sign, x, y, trimmedText);
                         else
                             F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-                    } else
+                    }
+                    else
                         F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-                    
+
 
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
 
@@ -407,7 +434,8 @@ namespace Uncreated.Warfare
                     drop.ReceiveUpdateState(numArray1);
                     sign.updateText(trimmedText);
                     return false;
-                } else
+                }
+                else
                 {
                     return true;
                 }
@@ -562,7 +590,8 @@ namespace Uncreated.Warfare
                             {
                                 c.lastRoadkilled = ___vehicle.asset.id;
                             }
-                        } else if (___vehicle.speed <= 10.0)
+                        }
+                        else if (___vehicle.speed <= 10.0)
                         {
                             return false;
                         }
@@ -760,13 +789,15 @@ namespace Uncreated.Warfare
                                     if (a != null)
                                         vc.item = a.asset.id;
                                 }
-                            } else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                            }
+                            else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                             {
                                 if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
                                 {
                                     vc.item = c.lastProjected;
                                 }
-                            } else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
+                            }
+                            else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
                             {
                                 if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
                                 {
@@ -799,7 +830,8 @@ namespace Uncreated.Warfare
                 if (__instance.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
                 {
                     instigator = vc.owner;
-                } else
+                }
+                else
                 {
                     if (__instance.passengers.Length > 0)
                     {

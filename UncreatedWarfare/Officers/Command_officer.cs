@@ -1,10 +1,7 @@
 ﻿using Rocket.API;
-using Rocket.Unturned.Player;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.XP;
@@ -34,13 +31,13 @@ namespace Uncreated.Warfare.Commands
                 UCPlayer target = UCPlayer.FromName(command[1]);
                 if (target != null)
                 {
-                    Rank rank = OfficerManager.config.Data.OfficerRanks.Find(r => r.name.Replace(" ", "").ToLower().Contains(command[2].ToLower()));
+                    Rank rank = OfficerManager.config.Data.OfficerRanks.FirstOrDefault(r => r.name.Replace(" ", "").ToLower().Contains(command[2].ToLower()));
 
                     if (rank is null)
                     {
                         if (int.TryParse(command[2], System.Globalization.NumberStyles.Any, Data.Locale, out var level))
                         {
-                            rank = OfficerManager.config.Data.OfficerRanks.Find(r => r.level == level);
+                            rank = OfficerManager.config.Data.OfficerRanks.FirstOrDefault(r => r.level == level);
                         }
                     }
 
@@ -51,7 +48,7 @@ namespace Uncreated.Warfare.Commands
                             OfficerManager.ChangeOfficerRank(target, rank, branch);
                             player.OfficerRank = rank;
                             PlayerManager.Save();
-                            XPManager.UpdateUI(target.Player, target.cachedXp, out _);
+                            XPManager.UpdateUI(target.Player, target.CachedXp, out _);
                         }
                         else
                             player.SendChat("officer_branchnotfound", command[2]);
@@ -78,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                         OfficerManager.DischargeOfficer(target, target.OfficerRank);
                         player.OfficerRank = null;
                         PlayerManager.Save();
-                        XPManager.UpdateUI(target.Player, target.cachedXp, out _);
+                        XPManager.UpdateUI(target.Player, target.CachedXp, out _);
                     }
                     else
                         player.SendChat("officer_notofficer", command[1]);

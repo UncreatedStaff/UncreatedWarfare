@@ -1,12 +1,6 @@
 ﻿
 using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Commands
@@ -22,9 +16,10 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
-            if (UCWarfare.Config.EnableSquads)
+            if (!UCWarfare.Config.EnableSquads)
             {
                 player.SendChat("squads_disabled");
+                return;
             }
 
             if (player.Squad != null)

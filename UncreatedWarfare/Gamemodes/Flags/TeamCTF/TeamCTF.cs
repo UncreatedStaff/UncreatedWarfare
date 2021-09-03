@@ -5,7 +5,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
@@ -22,6 +21,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public delegate Task FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
     public class TeamCTF : FlagGamemode
     {
+        const float MATCH_PRESENT_THRESHOLD = 0.65f;
         // vars
         protected Config<TeamCTFData> _config;
         public TeamCTFData Config { get => _config.Data; }
@@ -54,21 +54,31 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 ulong team = players.Current.GetTeam();
                 UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
-                if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) || 
-                    (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
+                try
                 {
-                    if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
+                    if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) ||
+                        (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
                     {
-                        InAMC.Add(players.Current.playerID.steamID.m_SteamID);
-                        int a = Mathf.RoundToInt(Config.NearOtherBaseKillTimer);
-                        ToastMessage.QueueMessage(players.Current,
-                            F.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
-                            ToastMessageSeverity.WARNING);
-                        UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
+                        if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
+                        {
+                            InAMC.Add(players.Current.playerID.steamID.m_SteamID);
+                            int a = Mathf.RoundToInt(Config.NearOtherBaseKillTimer);
+                            ToastMessage.QueueMessage(players.Current,
+                                F.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
+                                ToastMessageSeverity.WARNING);
+                            UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
+                        }
                     }
-                } else
+                    else
+                    {
+                        InAMC.Remove(players.Current.playerID.steamID.m_SteamID);
+                    }
+                }
+                catch (Exception ex)
                 {
-                    InAMC.Remove(players.Current.playerID.steamID.m_SteamID);
+                    F.LogError("Error checking for duty players on player " + players.Current.playerID.playerName);
+                    if (UCWarfare.Config.Debug)
+                        F.LogError(ex);
                 }
             }
             players.Dispose();
@@ -168,8 +178,28 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
-
+                EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
                 ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
+            }
+            Stats.StatsManager.ModifyTeam(winner, t => t.Wins++, false);
+            Stats.StatsManager.ModifyTeam(Teams.TeamManager.Other(winner), t => t.Losses++, false);
+            foreach (PlayerCurrentGameStats played in GameStats.playerstats.Values)
+            {
+                // Any player who was online for 70% of the match will be awarded a win or punished with a loss
+                if ((float)played.onlineCount1 / GameStats.gamepercentagecounter >= MATCH_PRESENT_THRESHOLD)
+                {
+                    if (winner == 1)
+                        Stats.StatsManager.ModifyStats(played.id, s => s.Wins++, false);
+                    else
+                        Stats.StatsManager.ModifyStats(played.id, s => s.Losses++, false);
+                }
+                else if ((float)played.onlineCount2 / GameStats.gamepercentagecounter >= MATCH_PRESENT_THRESHOLD)
+                {
+                    if (winner == 2)
+                        Stats.StatsManager.ModifyStats(played.id, s => s.Wins++, false);
+                    else
+                        Stats.StatsManager.ModifyStats(played.id, s => s.Losses++, false);
+                }
             }
             this.State = EState.FINISHED;
             UCWarfare.ReplaceBarricadesAndStructures();
@@ -200,7 +230,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if (EndScreen != default)
                 EndScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
-            UnityEngine.Object.Destroy(EndScreen);
+            Destroy(EndScreen);
             isScreenUp = false;
             StartNextGame();
         }
@@ -227,15 +257,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 Config.PathingData.Set();
                 Rotation = ObjectivePathing.CreateAutoPath(AllFlags);
-            } 
+            }
             else if (Config.PathingMode == ObjectivePathing.EPathingMode.LEVELS)
             {
                 Rotation = ObjectivePathing.CreatePathUsingLevels(AllFlags, Config.MaxFlagsPerLevel);
-            } 
+            }
             else if (Config.PathingMode == ObjectivePathing.EPathingMode.ADJACENCIES)
             {
                 Rotation = ObjectivePathing.PathWithAdjacents(AllFlags, Config.team1adjacencies, Config.team2adjacencies);
-            } else
+            }
+            else
             {
                 F.LogWarning("Invalid pathing value, no flags will be loaded. Expect errors.");
             }
@@ -310,6 +341,40 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (OnFlagCaptured != null)
                 OnFlagCaptured.Invoke(flag, capturedTeam, lostTeam);
             TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+            Stats.StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
+            if (flag.IsObj(lostTeam))
+                Stats.StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
+            List<string> kits = new List<string>();
+            if (capturedTeam == 1)
+            {
+                for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
+                {
+                    Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kits.Kit kit) && !kits.Contains(kit.Name))
+                    {
+                        Stats.StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
+                        kits.Add(kit.Name);
+                    }
+                }
+                if (flag.IsObj(2))
+                    for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
+                        Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+            }
+            else if (capturedTeam == 2)
+            {
+                if (flag.IsObj(1))
+                    for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
+                        Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
+                {
+                    Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kits.Kit kit) && !kits.Contains(kit.Name))
+                    {
+                        Stats.StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
+                        kits.Add(kit.Name);
+                    }
+                }
+            }
         }
         private void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
@@ -530,9 +595,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             foreach (Player player in flag.PlayersOnFlag)
             {
                 byte team = player.GetTeamByte();
-                if (team == 1) 
+                if (team == 1)
                     (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
-                else if (team == 2) 
+                else if (team == 2)
                     (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
             }
         }
@@ -550,7 +615,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (isScreenUp && EndScreen != null && Config.ShowLeaderboard)
             {
                 EndScreen.SendScreenToPlayer(player, Config.ProgressChars);
-            } else
+            }
+            else
             {
                 CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
@@ -673,19 +739,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             [JsonConstructor]
             public AutoObjectiveData(
-                float main_search_radius, 
-                float main_stop_radius, 
-                float absolute_max_distance_from_main, 
-                float flag_search_radius, 
-                float forward_bias, 
-                float back_bias, 
-                float left_bias, 
-                float right_bias, 
-                float distance_falloff, 
-                float average_distance_buffer, 
-                float radius_tuning_resolution, 
-                int max_flags, 
-                int min_flags, 
+                float main_search_radius,
+                float main_stop_radius,
+                float absolute_max_distance_from_main,
+                float flag_search_radius,
+                float forward_bias,
+                float back_bias,
+                float left_bias,
+                float right_bias,
+                float distance_falloff,
+                float average_distance_buffer,
+                float radius_tuning_resolution,
+                int max_flags,
+                int min_flags,
                 int max_redos
                 )
             {
@@ -707,19 +773,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             public void Set()
             {
                 ObjectivePathing.SetVariables(
-                    main_search_radius, 
-                    main_stop_radius, 
-                    absolute_max_distance_from_main, 
-                    flag_search_radius, 
-                    forward_bias, 
-                    back_bias, 
+                    main_search_radius,
+                    main_stop_radius,
+                    absolute_max_distance_from_main,
+                    flag_search_radius,
+                    forward_bias,
+                    back_bias,
                     left_bias,
-                    right_bias, 
-                    distance_falloff, 
-                    average_distance_buffer, 
-                    radius_tuning_resolution, 
-                    max_flags, 
-                    min_flags, 
+                    right_bias,
+                    distance_falloff,
+                    average_distance_buffer,
+                    radius_tuning_resolution,
+                    max_flags,
+                    min_flags,
                     max_redos
                 );
             }

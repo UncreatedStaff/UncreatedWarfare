@@ -4,11 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated
 {
@@ -36,7 +32,7 @@ namespace Uncreated
                 CreateFileIfNotExists(defaults);
                 Reload();
                 if (ActiveObjects.Count > 0) return ActiveObjects[0];
-                else 
+                else
                 {
                     return ifFail.Invoke();
                 }
@@ -64,7 +60,7 @@ namespace Uncreated
         {
             if (match == default) return;
             ActiveObjects.RemoveAll(match);
-            if(save) Save();
+            if (save) Save();
         }
         protected static void RemoveAllObjectsFromSave(bool save = true)
         {
@@ -90,13 +86,13 @@ namespace Uncreated
         }
         public static List<T> GetExistingObjects(bool readFile = false)
         {
-            if(readFile || ActiveObjects == default || ActiveObjects.Count == 0)
+            if (readFile || ActiveObjects == default || ActiveObjects.Count == 0)
             {
                 StreamReader r = File.OpenText(directory);
                 try
                 {
                     string json = r.ReadToEnd();
-                    var list = JsonConvert.DeserializeObject<List<T>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
+                    List<T> list = JsonConvert.DeserializeObject<List<T>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
 
                     r.Close();
                     r.Dispose();
@@ -111,12 +107,14 @@ namespace Uncreated
                     }
                     throw new JSONReadException(r, directory, ex);
                 }
-            } else return ActiveObjects;
+            }
+            else return ActiveObjects;
         }
         protected static List<T> GetObjectsWhere(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).Where(predicate).ToList();
         protected static T GetObject(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).FirstOrDefault(predicate);
         protected static bool ObjectExists(Func<T, bool> match, out T item, bool readFile = false)
         {
+            if (readFile) Reload();
             item = GetObject(match);
             return item != null;
         }
@@ -148,41 +146,43 @@ namespace Uncreated
         }
         private static object ParseInput(string input, Type type, out bool parsed)
         {
-            if(input == default || type == default)
+            if (input == default || type == default)
             {
                 parsed = false;
                 return default;
             }
-            if(type == typeof(object))
+            if (type == typeof(object))
             {
                 parsed = true;
                 return input;
             }
-            if(type == typeof(string)) 
+            if (type == typeof(string))
             {
                 parsed = true;
                 return input;
             }
-            if(type == typeof(bool))
+            if (type == typeof(bool))
             {
                 string lowercase = input.ToLower();
                 if (lowercase == "true")
                 {
                     parsed = true;
                     return true;
-                } else if (lowercase == "false")
+                }
+                else if (lowercase == "false")
                 {
                     parsed = true;
                     return false;
-                } else
+                }
+                else
                 {
                     parsed = false;
                     return default;
                 }
             }
-            if(type == typeof(char))
+            if (type == typeof(char))
             {
-                if(input.Length == 1)
+                if (input.Length == 1)
                 {
                     parsed = true;
                     return input[0];
@@ -226,7 +226,7 @@ namespace Uncreated
                     parsed = true;
                     return result;
                 }
-            } 
+            }
             else if (type == typeof(ushort))
             {
                 if (ushort.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ushort result))
@@ -234,7 +234,7 @@ namespace Uncreated
                     parsed = true;
                     return result;
                 }
-            } 
+            }
             else if (type == typeof(ulong))
             {
                 if (ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong result))
@@ -269,12 +269,12 @@ namespace Uncreated
             }
             else if (type == typeof(byte))
             {
-                if(byte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out byte result))
+                if (byte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out byte result))
                 {
                     parsed = true;
                     return result;
                 }
-            } 
+            }
             else if (type == typeof(sbyte))
             {
                 if (sbyte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out sbyte result))
@@ -282,7 +282,7 @@ namespace Uncreated
                     parsed = true;
                     return result;
                 }
-            } 
+            }
             else if (type == typeof(short))
             {
                 if (short.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out short result))
@@ -290,7 +290,7 @@ namespace Uncreated
                     parsed = true;
                     return result;
                 }
-            } 
+            }
             else if (type == typeof(uint))
             {
                 if (uint.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out uint result))
@@ -298,7 +298,7 @@ namespace Uncreated
                     parsed = true;
                     return result;
                 }
-            } 
+            }
             else if (type == typeof(long))
             {
                 if (long.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out long result))
@@ -314,9 +314,9 @@ namespace Uncreated
         public static T SetProperty(T obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
         {
             FieldInfo field = GetField(property, out byte reason);
-            if(reason != 0)
+            if (reason != 0)
             {
-                if(reason == 1 || reason == 2)
+                if (reason == 1 || reason == 2)
                 {
                     set = false;
                     parsed = false;
@@ -336,7 +336,7 @@ namespace Uncreated
             found = true;
             allowedToChange = true;
             object parsedValue = ParseInput(value, field.FieldType, out parsed);
-            if(parsed)
+            if (parsed)
             {
                 if (field != default)
                 {
@@ -371,7 +371,8 @@ namespace Uncreated
                     set = false;
                     return obj;
                 }
-            } else
+            }
+            else
             {
                 set = false;
                 return obj;
@@ -421,12 +422,13 @@ namespace Uncreated
         /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static bool SetProperty(Func<T, bool> selector, string property, string value, out bool foundObject, out bool setSuccessfully, out bool parsed, out bool found, out bool allowedToChange)
         {
-            if(ObjectExists(selector, out T selected))
+            if (ObjectExists(selector, out T selected))
             {
                 foundObject = true;
                 SetProperty(selected, property, value, out setSuccessfully, out parsed, out found, out allowedToChange);
                 return setSuccessfully;
-            } else
+            }
+            else
             {
                 foundObject = false;
                 setSuccessfully = false;
@@ -466,7 +468,7 @@ namespace Uncreated
                     return obj;
                 }
                 else if (reason == 3)
-                { 
+                {
                     found = true;
                     allowedToChange = false;
                     success = false;
@@ -504,7 +506,8 @@ namespace Uncreated
                         success = false;
                         return obj;
                     }
-                } else
+                }
+                else
                 {
                     success = false;
                     return obj;
@@ -519,7 +522,7 @@ namespace Uncreated
         public static void UpdateObjectsWhere(Func<T, bool> selector, Action<T> operation, bool save = true)
         {
             IEnumerator<T> results = ActiveObjects.Where(selector).GetEnumerator();
-            while(results.MoveNext())
+            while (results.MoveNext())
                 operation.Invoke(results.Current);
             results.Dispose();
             if (save) Save();
@@ -598,10 +601,10 @@ namespace Uncreated
             public TypeArgumentException() { }
 
             public TypeArgumentException(MethodBase currentMethod, object badObject, Exception inner)
-                : base(string.Format("Arguments of {0} should match the JSONSaver's specified type: {1}. The object you gave it was of type: {2}", 
+                : base(string.Format("Arguments of {0} should match the JSONSaver's specified type: {1}. The object you gave it was of type: {2}",
                     currentMethod.Name, typeof(T).Name, badObject.GetType().Name), inner)
             {
-                
+
             }
         }
         public class JSONReadException : Exception

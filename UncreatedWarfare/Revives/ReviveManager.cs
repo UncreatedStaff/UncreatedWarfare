@@ -1,12 +1,10 @@
-﻿using Rocket.Unturned;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
@@ -131,14 +129,35 @@ namespace Uncreated.Warfare.Revives
             if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
                 r.RevivePlayer();
-                ulong team = medic.GetTeam();
+                byte team = medic.GetTeamByte();
                 ulong tteam = target.GetTeam();
                 if (team == tteam)
                 {
-                    XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP,
+                    XPManager.AddXP(medic, XPManager.config.Data.FriendlyRevivedXP,
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
                     if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats != null)
                         c.stats.revives++;
+
+                    Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
+                    if (KitManager.HasKit(medic, out Kit kit))
+                    {
+                        Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s =>
+                        {
+                            s.Revives++;
+                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                            if (kitData == default)
+                            {
+                                kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = team, Revives = 1 };
+                                s.Kits.Add(kitData);
+                            }
+                            else
+                            {
+                                kitData.Revives++;
+                            }
+                        }, false);
+                    }
+                    else
+                        Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s => s.Revives++, false);
                 }
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
                 EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, target.channel.owner.transportConnection);
@@ -194,6 +213,8 @@ namespace Uncreated.Warfare.Revives
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
+            if (!shouldAllow)
+                return;
             if (parameters.player.movement.getVehicle() != null || parameters.cause == EDeathCause.VEHICLE)
                 return;
             shouldAllow = false;
@@ -215,28 +236,60 @@ namespace Uncreated.Warfare.Revives
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             SpawnInjuredMarker(parameters.player.transform.position, team);
             UpdateMedicMarkers(parameters.player.channel.owner.transportConnection, team, parameters.player.transform.position, false);
+            ushort item = 0;
             if (killer != default)
             {
                 if (DeathInfo.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DeathInfo info))
                 {
-                    UCWarfare.I.GetKillerInfo(out info.item, out info.distance, out info.killerName, out info.killerTeam, parameters.cause, killer, parameters.player);
+                    UCWarfare.I.GetKillerInfo(out item, out info.distance, out info.killerName, out info.killerTeam, out info.kitName, out info.vehicle, parameters.cause, killer, parameters.player);
+                    info.item = item;
                 }
                 else
                 {
-                    UCWarfare.I.GetKillerInfo(out ushort item, out float distance, out FPlayerName names, out ulong killerTeam, parameters.cause, killer, parameters.player);
+                    UCWarfare.I.GetKillerInfo(out item, out float distance, out FPlayerName names, out ulong killerTeam, out string kitname, out ushort turretvehicle, parameters.cause, killer, parameters.player);
                     DeathInfo.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID,
                         new DeathInfo()
                         {
                             distance = distance,
                             item = item,
                             killerName = names,
-                            killerTeam = killerTeam
+                            killerTeam = killerTeam,
+                            kitName = kitname,
+                            vehicle = turretvehicle
                         });
                 }
                 if (killer.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
                 {
-                    if (killer.GetTeam() != team)
+                    byte kteam = killer.GetTeamByte();
+                    if (kteam != team)
+                    {
                         ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
+
+                        Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
+                        if (KitManager.HasKit(killer, out Kit kit))
+                        {
+                            Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s =>
+                            {
+                                s.Downs++;
+                                Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                                if (kitData == default)
+                                {
+                                    kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = kteam, Downs = 1 };
+                                    s.Kits.Add(kitData);
+                                }
+                                else
+                                {
+                                    kitData.Downs++;
+                                }
+                            }, false);
+                            if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset && asset != null)
+                            {
+                                Stats.StatsManager.ModifyWeapon(item, kit.Name, w => w.Downs++, true);
+                            }
+                        }
+                        else
+                            Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
+                    }
                     else
                         ToastMessage.QueueMessage(killer, "", F.Translate("xp_friendly_downed", killer), ToastMessageSeverity.MINIXP);
                 }

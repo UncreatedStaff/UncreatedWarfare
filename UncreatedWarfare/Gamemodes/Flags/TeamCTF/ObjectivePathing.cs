@@ -1,10 +1,6 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -95,9 +91,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             List<Flag> path = new List<Flag>();
             StartLoop(ref path, rotation);
             int redoCounter = 0;
-            while(redoCounter < MAX_REDOS && 
-                (path.Count < MIN_FLAGS || 
-                (TeamManager.Team2Main.Center - path.Last().Position2D).sqrMagnitude > ABSOLUTE_MAX_DISTANCE_FROM_MAINS * ABSOLUTE_MAX_DISTANCE_FROM_MAINS || 
+            while (redoCounter < MAX_REDOS &&
+                (path.Count < MIN_FLAGS ||
+                (TeamManager.Team2Main.Center - path.Last().Position2D).sqrMagnitude > ABSOLUTE_MAX_DISTANCE_FROM_MAINS * ABSOLUTE_MAX_DISTANCE_FROM_MAINS ||
                 Mathf.Abs(GetAverageDistanceFromTeamMain(true, path) - GetAverageDistanceFromTeamMain(false, path)) > AVERAGE_DISTANCE_BUFFER
                 ))
             { // checks for paths with too few flags or that end too far away from team 2 main
@@ -105,7 +101,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 StartLoop(ref path, rotation);
                 redoCounter++;
             }
-            if(redoCounter >= MAX_REDOS)
+            if (redoCounter >= MAX_REDOS)
                 F.LogError("Unable to correct bad path after " + MAX_REDOS.ToString(Data.Locale) + " tries.");
             return path;
         }
@@ -128,14 +124,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             int i = 0;
             float total = 0;
-            for(; i < list.Count; i++)
+            for (; i < list.Count; i++)
             {
                 total += (team1 ? TeamManager.Team1Main.Center : TeamManager.Team2Main.Center - list[i].Position2D).sqrMagnitude;
             }
             float avg = Mathf.Sqrt(total / i);
             return avg;
         }
-        private static void FlagLoop(ref List<Flag> list,  ref int counter, List<Flag> rotation)
+        private static void FlagLoop(ref List<Flag> list, ref int counter, List<Flag> rotation)
         {
             Flag lastFlag = list.Last();
             List<Flag> candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, rotation, lastFlag.ID, list);
@@ -152,7 +148,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 lastFlag = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
             }
             //if (uppingCounter != 0) F.Log("Had to raise \"FLAG_RADIUS_SEARCH\" to " + FLAG_RADIUS_SEARCH + " until a flag was found.");
-            if(candidates.Count == 0)
+            if (candidates.Count == 0)
             {
                 F.LogError("Ran out of flags before reaching the team 2 base.");
                 return;
@@ -199,7 +195,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             else return BACK_BIAS;
         }
         public static List<Flag> GetFlagsInRadius(Vector2 center, float radius, List<Flag> Rotation) => Rotation.Where(flag => (flag.Position2D - center).sqrMagnitude <= radius * radius).ToList();
-        public static List<Flag> GetFlagsInRadiusExclude(Vector2 center, float radius, List<Flag> Rotation, int excluded_flag_id, List<Flag> history) => 
+        public static List<Flag> GetFlagsInRadiusExclude(Vector2 center, float radius, List<Flag> Rotation, int excluded_flag_id, List<Flag> history) =>
             Rotation.Where(flag => !history.Exists(f => f.ID == flag.ID) && flag.ID != excluded_flag_id && (flag.Position2D - center).sqrMagnitude <= radius * radius).ToList();
         public static float GetAngleFromCenter(Vector2 center, Vector2 point, out float distance, bool degrees = false)
         {
@@ -282,7 +278,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     return;
                 }
                 AdjacentsFlagLoop(flags, selection, t2adjacents);
-            } else
+            }
+            else
             {
                 if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag newFlag))
                 {
@@ -298,9 +295,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             foreach (KeyValuePair<int, float> flag in flags)
             {
                 Flag f = selection.FirstOrDefault(x => x.ID == flag.Key);
-                if (f != default) 
+                if (f != default)
                 {
-                    if(toNotRemove == null || !toNotRemove.Exists(x => x.ID == flag.Key))
+                    if (toNotRemove == null || !toNotRemove.Exists(x => x.ID == flag.Key))
                         rtn.Add(f, flag.Value);
                 }
                 else if (current != null) F.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);

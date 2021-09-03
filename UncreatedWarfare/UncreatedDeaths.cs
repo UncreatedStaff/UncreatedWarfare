@@ -1,21 +1,18 @@
-﻿using Rocket.Core.Steam;
+﻿using Rocket.Unturned.Enumerations;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -38,16 +35,15 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnFriendlyKilled(parameters);
                 Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => s.Teamkills++, false);
+                StatsManager.ModifyTeam(team, t => t.Teamkills++, false);
                 if (Configuration.Instance.AdminLoggerSettings.LogTKs)
                     Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID,
                         parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                         parameters.key, parameters.itemName ?? "", parameters.item, parameters.distance);
-                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
-                {
-                    pt.stats.AddTeamkill();
-                    pt.UCPlayerStats.warfare_stats.TellTeamkill(parameters, false);
-                    pt.UCPlayerStats.Save();
-                }
+                Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
+                    parameters.key, parameters.itemName, DateTime.Now);
+                StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     ctf.GameStats.teamkills++;
@@ -66,6 +62,8 @@ namespace Uncreated.Warfare
             public ELimb limb;
             public float distance;
             public bool teamkill;
+            public string kitname;
+            public ushort turretOwner;
             public override string ToString()
             {
                 string msg;
@@ -97,12 +95,8 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnEnemyKilled(parameters);
                 Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
-                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent pt))
-                {
-                    pt.stats.AddKill();
-                    pt.UCPlayerStats.warfare_stats.TellKill(parameters, false);
-                    pt.UCPlayerStats.Save();
-                }
+                bool atk = false;
+                bool def = false;
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (parameters.cause == EDeathCause.GUN && (ctf.GameStats.LongestShot.Player == 0 || ctf.GameStats.LongestShot.Distance < parameters.distance))
@@ -112,6 +106,82 @@ namespace Uncreated.Warfare
                         ctf.GameStats.LongestShot.Gun = parameters.item;
                         ctf.GameStats.LongestShot.Team = team;
                     }
+                    try
+                    {
+                        for (int f = 0; f < ctf.Rotation.Count; f++)
+                        {
+                            Gamemodes.Flags.Flag flag = ctf.Rotation[f];
+                            if (flag.ZoneData.IsInside(parameters.killer.transform.position))
+                            {
+                                def = flag.IsContested(out ulong winner) || winner != team;
+                                atk = !def;
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        F.LogError("Error checking defending/attacking status on kill.");
+                        F.LogError(ex);
+                    }
+                }
+                StatsManager.ModifyTeam(team, t => t.Kills++, false);
+                if (parameters.turretOwner != 0 && Assets.find(EAssetType.VEHICLE, parameters.turretOwner) is VehicleAsset vasset && vasset != null)
+                    StatsManager.ModifyVehicle(parameters.turretOwner, v => v.KillsWithGunner++);
+                if (KitManager.HasKit(parameters.killer, out Kit kit))
+                {
+                    StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s =>
+                    {
+                        s.Kills++;
+                        WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                        if (kitData == default)
+                        {
+                            kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = team, Kills = 1 };
+                            if (parameters.cause == EDeathCause.GUN)
+                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + parameters.distance) / ++kitData.AverageGunKillDistanceCounter;
+                            s.Kits.Add(kitData);
+                        }
+                        else
+                        {
+                            kitData.Kills++;
+                            if (parameters.cause == EDeathCause.GUN)
+                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + parameters.distance) / ++kitData.AverageGunKillDistanceCounter;
+                        }
+                        if (atk)
+                        {
+                            s.KillsWhileAttackingFlags++;
+                        }
+                        else if (def)
+                        {
+                            s.KillsWhileDefendingFlags++;
+                        }
+                    }, false);
+                }
+                else
+                    StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s =>
+                    { s.Kills++; if (atk) s.KillsWhileAttackingFlags++; else if (def) s.KillsWhileDefendingFlags++; }, false);
+                if (KitManager.KitExists(parameters.kitname, out kit) && parameters.cause != EDeathCause.VEHICLE && parameters.cause != EDeathCause.ROADKILL && Assets.find(EAssetType.ITEM, parameters.item) is ItemAsset asset && asset != null)
+                {
+                    StatsManager.ModifyWeapon(parameters.item, kit.Name, x =>
+                    {
+                        x.Kills++;
+                        if (parameters.limb == ELimb.SKULL)
+                            x.SkullKills++;
+                        else if (parameters.limb == ELimb.SPINE || parameters.limb == ELimb.LEFT_FRONT || parameters.limb == ELimb.RIGHT_FRONT ||
+                                 parameters.limb == ELimb.LEFT_BACK || parameters.limb == ELimb.RIGHT_BACK)
+                            x.BodyKills++;
+                        else if (parameters.limb == ELimb.LEFT_HAND || parameters.limb == ELimb.RIGHT_HAND || parameters.limb == ELimb.LEFT_ARM || parameters.limb == ELimb.RIGHT_ARM)
+                            x.ArmKills++;
+                        else if (parameters.limb == ELimb.LEFT_FOOT || parameters.limb == ELimb.RIGHT_FOOT || parameters.limb == ELimb.LEFT_LEG || parameters.limb == ELimb.RIGHT_LEG)
+                            x.LegKills++;
+                        x.AverageKillDistance = (x.AverageKillDistance * x.AverageKillDistanceCounter + parameters.distance) / ++x.AverageKillDistanceCounter;
+                    }, true);
+                    StatsManager.ModifyKit(kit.Name, k =>
+                    {
+                        k.Kills++;
+                        if (parameters.cause == EDeathCause.GUN)
+                            k.AverageGunKillDistance = (k.AverageGunKillDistance * k.AverageGunKillDistanceCounter + parameters.distance) / ++k.AverageGunKillDistanceCounter;
+                    }, true);
                 }
             }
         }
@@ -172,12 +242,29 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnPlayerSuicide(parameters);
                 Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
-                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                StatsManager.ModifyTeam(team, t => t.Deaths++, false);
+                if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
                 {
-                    pt.stats.AddDeath();
-                    pt.UCPlayerStats.warfare_stats.TellDeathSuicide(parameters, false);
-                    pt.UCPlayerStats.Save();
+                    StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
+                    {
+                        s.Deaths++;
+                        WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                        if (kitData == default)
+                        {
+                            kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = team, Deaths = 1 };
+                            s.Kits.Add(kitData);
+                        }
+                        else
+                        {
+                            kitData.Deaths++;
+                        }
+                    }, false);
+                    StatsManager.ModifyKit(kit.Name, k => k.Deaths++, true);
+                    if (Assets.find(EAssetType.ITEM, parameters.item) is ItemAsset asset && asset != null)
+                        StatsManager.ModifyWeapon(parameters.item, kit.Name, w => w.Deaths++, true);
                 }
+                else
+                    StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s => s.Deaths++, false);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)
@@ -258,13 +345,33 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnPlayerDeath(parameters);
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
-                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                StatsManager.ModifyTeam(team, t => t.Deaths++, false);
+                if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
                 {
-                    pt.stats.AddDeath();
-
-                    pt.UCPlayerStats.warfare_stats.TellDeathNonSuicide(parameters, false);
-                    pt.UCPlayerStats.Save();
+                    StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
+                    {
+                        s.Deaths++;
+                        WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                        if (kitData == default)
+                        {
+                            kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = team, Deaths = 1 };
+                            s.Kits.Add(kitData);
+                        }
+                        else
+                        {
+                            kitData.Deaths++;
+                        }
+                    }, false);
+                    ItemJar primary = parameters.dead.inventory.items[(int)InventoryGroup.Primary].items.FirstOrDefault();
+                    ItemJar secondary = parameters.dead.inventory.items[(int)InventoryGroup.Secondary].items.FirstOrDefault();
+                    if (primary != null)
+                        StatsManager.ModifyWeapon(primary.item.id, kit.Name, x => x.Deaths++, true);
+                    if (secondary != null && primary.item.id != secondary.item.id) // prevents 2 of the same gun from counting twice
+                        StatsManager.ModifyWeapon(secondary.item.id, kit.Name, x => x.Deaths++, true);
+                    StatsManager.ModifyKit(kit.Name, k => k.Deaths++, true);
                 }
+                else
+                    StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s => s.Deaths++, false);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)
@@ -423,7 +530,8 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 LandmineLinkedAssistant = placer.player,
                                 distance = 0,
-                                teamkill = true
+                                teamkill = true,
+                                kitname = string.Empty
                             };
                             Teamkill(a);
                             if (Config.DeathMessages.PenalizeTeamkilledPlayers)
@@ -452,7 +560,8 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 LandmineLinkedAssistant = triggerer,
                                 distance = 0,
-                                teamkill = false
+                                teamkill = false,
+                                kitname = string.Empty
                             };
                             Kill(a);
                             DeathNotSuicide(new DeathEventArgs()
@@ -483,7 +592,8 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 LandmineLinkedAssistant = placer.player,
                                 distance = 0,
-                                teamkill = false
+                                teamkill = false,
+                                kitname = string.Empty
                             };
                             Kill(a);
                             DeathNotSuicide(new DeathEventArgs()
@@ -511,7 +621,8 @@ namespace Uncreated.Warfare
                                 limb = limb,
                                 LandmineLinkedAssistant = triggerer,
                                 distance = 0,
-                                teamkill = false
+                                teamkill = false,
+                                kitname = string.Empty
                             };
                             Kill(a);
                             DeathNotSuicide(new DeathEventArgs()
@@ -557,7 +668,8 @@ namespace Uncreated.Warfare
                             limb = limb,
                             LandmineLinkedAssistant = null,
                             distance = 0,
-                            teamkill = true
+                            teamkill = true,
+                            kitname = string.Empty
                         };
                         Teamkill(a);
                         if (Config.DeathMessages.PenalizeTeamkilledPlayers)
@@ -586,7 +698,8 @@ namespace Uncreated.Warfare
                             limb = limb,
                             LandmineLinkedAssistant = null,
                             distance = 0,
-                            teamkill = false
+                            teamkill = false,
+                            kitname = string.Empty
                         };
                         Kill(a);
                         DeathNotSuicide(new DeathEventArgs()
@@ -631,7 +744,8 @@ namespace Uncreated.Warfare
                             limb = limb,
                             LandmineLinkedAssistant = null,
                             distance = 0,
-                            teamkill = true
+                            teamkill = true,
+                            kitname = string.Empty
                         };
                         Teamkill(a);
                         if (Config.DeathMessages.PenalizeTeamkilledPlayers)
@@ -660,7 +774,8 @@ namespace Uncreated.Warfare
                             limb = limb,
                             LandmineLinkedAssistant = null,
                             distance = 0,
-                            teamkill = false
+                            teamkill = false,
+                            kitname = string.Empty
                         };
                         Kill(a);
                         DeathNotSuicide(new DeathEventArgs()
@@ -688,6 +803,8 @@ namespace Uncreated.Warfare
                 float distance = 0f;
                 bool translateName = false;
                 ulong killerTeam;
+                ushort turretOwner = 0;
+                string kitname;
                 bool itemIsVehicle = cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL;
                 if (killer == null)
                 {
@@ -698,6 +815,7 @@ namespace Uncreated.Warfare
                         killerName = info.killerName;
                         killer = null;
                         killerTeam = info.killerTeam;
+                        kitname = info.kitName;
                         foundKiller = false;
                         bool foundvehasset = true;
                         if (itemIsVehicle)
@@ -716,8 +834,9 @@ namespace Uncreated.Warfare
                             if (asset != null) itemName = asset.itemName;
                             else itemName = item.ToString(Data.Locale);
                         }
-                        
-                    } else
+
+                    }
+                    else
                     {
                         killer = dead.Player.channel.owner;
                         if (cause == EDeathCause.ZOMBIE)
@@ -732,6 +851,7 @@ namespace Uncreated.Warfare
                             killerTeam = 0;
                         }
                         foundKiller = false;
+                        kitname = string.Empty;
                         item = 0;
                         itemName = "Unknown";
                     }
@@ -744,14 +864,18 @@ namespace Uncreated.Warfare
                     try
                     {
                         if (!Data.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
-                            GetKillerInfo(out item, out distance, out _, out _, cause, killer, dead.Player);
+                            GetKillerInfo(out item, out distance, out _, out _, out kitname, out turretOwner, cause, killer, dead.Player);
                         else
                         {
                             item = info.item;
                             distance = info.distance;
+                            if (KitManager.HasKit(killer, out Kits.Kit kit))
+                                kitname = kit.Name;
+                            else kitname = killerTeam == 0 ? string.Empty : (killerTeam == 1 ? TeamManager.Team1UnarmedKit : (killerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty));
+                            turretOwner = info.vehicle;
                         }
                     }
-                    catch { item = 0; }
+                    catch { item = 0; kitname = string.Empty; }
                     if (item != 0)
                     {
                         if (itemIsVehicle)
@@ -773,7 +897,7 @@ namespace Uncreated.Warfare
                 if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
                 if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINCAMP")) key = "MAINCAMP";
                 else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINDEATH")) key = "MAINDEATH";
-                if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH 
+                if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH
                     || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL || cause == EDeathCause.BLEEDING) && foundKiller)
                 {
                     if (item != 0)
@@ -833,7 +957,9 @@ namespace Uncreated.Warfare
                                 key = key,
                                 killer = killer.player,
                                 limb = limb,
-                                teamkill = false
+                                teamkill = false,
+                                kitname = kitname,
+                                turretOwner = turretOwner
                             };
                             Kill(a);
                             DeathNotSuicide(new DeathEventArgs()
@@ -861,7 +987,9 @@ namespace Uncreated.Warfare
                                 key = key,
                                 killer = killer.player,
                                 limb = limb,
-                                teamkill = true
+                                teamkill = true,
+                                kitname = kitname,
+                                turretOwner = turretOwner
                             };
                             Teamkill(a);
                             if (Config.DeathMessages.PenalizeTeamkilledPlayers)
@@ -907,19 +1035,38 @@ namespace Uncreated.Warfare
             F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
-        internal void GetKillerInfo(out ushort item, out float distance, out FPlayerName killernames, out ulong KillerTeam, EDeathCause cause, SteamPlayer killer, Player dead)
+        internal void GetKillerInfo(out ushort item, out float distance, out FPlayerName killernames, out ulong KillerTeam, out string kitname, out ushort vehicle, EDeathCause cause, SteamPlayer killer, Player dead)
         {
+            vehicle = 0;
             if (killer == null || dead == null)
             {
                 killernames = dead == null ? FPlayerName.Nil : F.GetPlayerOriginalNames(dead);
                 distance = 0;
                 KillerTeam = dead == null ? 0 : dead.GetTeam();
+                kitname = KillerTeam == 0 ? string.Empty : (KillerTeam == 1 ? TeamManager.Team1UnarmedKit : (KillerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty));
             }
             else
             {
                 killernames = F.GetPlayerOriginalNames(killer);
                 distance = Vector3.Distance(killer.player.transform.position, dead.transform.position);
                 KillerTeam = killer.GetTeam();
+                kitname = KillerTeam == 0 ? string.Empty : (KillerTeam == 1 ? TeamManager.Team1UnarmedKit : (KillerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty));
+                if (cause == EDeathCause.GUN || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH)
+                {
+                    InteractableVehicle veh = killer.player.movement.getVehicle();
+                    if (veh != null)
+                    {
+                        for (int p = 0; p < veh.passengers.Length; p++)
+                        {
+                            if (veh.passengers[p] != null && veh.passengers[p].player != null && veh.passengers[p].player.playerID.steamID.m_SteamID == killer.playerID.steamID.m_SteamID)
+                            {
+                                if (veh.passengers[p].turret != null)
+                                    vehicle = veh.id;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
             if (killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
             {
@@ -933,7 +1080,8 @@ namespace Uncreated.Warfare
                         item = g.asset.id;
                         if (Config.Debug)
                             F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
-                    } else if (c.thrown[0] != null)
+                    }
+                    else if (c.thrown[0] != null)
                     {
                         item = c.thrown[0].asset.id;
                         if (Config.Debug)
@@ -958,5 +1106,7 @@ namespace Uncreated.Warfare
         public ushort item;
         public FPlayerName killerName;
         public ulong killerTeam;
+        public string kitName;
+        public ushort vehicle;
     }
 }

@@ -1,13 +1,8 @@
 ﻿using Rocket.API;
-using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 
@@ -25,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
             // TODO
-            if(command.Length == 1)
+            if (command.Length == 1)
             {
                 string imput = command[0].ToLower();
                 string t1code = TeamManager.Team1Code.ToLower();
@@ -96,8 +91,8 @@ namespace Uncreated.Warfare.Commands
                     EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, newTeam);
 
                     Players.FPlayerName names = F.GetPlayerOriginalNames(player);
-                    F.Log(F.Translate("join_player_joined_console", 0, out _, 
-                        names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)), 
+                    F.Log(F.Translate("join_player_joined_console", 0, out _,
+                        names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)),
                         ConsoleColor.Cyan);
 
                     player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());
@@ -107,7 +102,7 @@ namespace Uncreated.Warfare.Commands
 
                     player.SendChat("join_s", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-                    new List<CSteamID>(1) {player.CSteamID}.BroadcastToAllExcept("join_announce", names.CharacterName, teamName);
+                    new List<CSteamID>(1) { player.CSteamID }.BroadcastToAllExcept("join_announce", names.CharacterName, teamName);
 
                     if (player.Squad != null)
                         Squads.SquadManager.LeaveSquad(player, player.Squad);

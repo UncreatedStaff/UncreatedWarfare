@@ -1,16 +1,12 @@
 ﻿using Newtonsoft.Json;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
+using System.Linq;
 using UnityEngine;
-using SDG.Unturned;
-using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
-using Uncreated.Warfare.Teams;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using Uncreated.Warfare.Stats;
+using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
 namespace Uncreated.Warfare
 {
@@ -62,14 +58,15 @@ namespace Uncreated.Warfare
                 InnerText = Original.Substring(msgStart, Original.Length - msgStart - 8);
                 found = true;
                 return Original.Substring(start, length).Hex();
-            } else
+            }
+            else
             {
                 InnerText = Original;
                 found = false;
                 return UCWarfare.GetColor("default");
             }
         }
-        public override string ToString() => 
+        public override string ToString() =>
             $"Original: {Original}, Inner text: {Message}, {(UseColor ? $"Color: {Color} ({ColorUtility.ToHtmlStringRGBA(Color)}." : "Unable to find color.")}";
     }
     public struct Point3D
@@ -96,8 +93,9 @@ namespace Uncreated.Warfare
         public float y;
         public float z;
         [JsonIgnore]
-        public Vector3 Vector3 { 
-            get => new Vector3(x, y, z); 
+        public Vector3 Vector3
+        {
+            get => new Vector3(x, y, z);
             set
             {
                 if (value == default)
@@ -134,12 +132,13 @@ namespace Uncreated.Warfare
         public override string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.Locale)}, {Mathf.RoundToInt(y).ToString(Data.Locale)}, {Mathf.RoundToInt(z).ToString(Data.Locale)})";
         public SerializableVector3(Vector3 v)
         {
-            if(v == default)
+            if (v == default)
             {
                 x = 0;
                 y = 0;
                 z = 0;
-            } else
+            }
+            else
             {
                 x = v.x;
                 y = v.y;
@@ -258,7 +257,7 @@ namespace Uncreated.Warfare
     {
         public string TableName;
         public Dictionary<string, string> Columns;
-        public MySqlTableLang(string tableName, Dictionary<string,string> columns)
+        public MySqlTableLang(string tableName, Dictionary<string, string> columns)
         {
             this.TableName = tableName;
             this.Columns = columns;
@@ -272,12 +271,13 @@ namespace Uncreated.Warfare
         public static List<FlagData> ReadFlags()
         {
             F.CheckDir(Data.FlagStorage, out bool madeFolder);
-            if(madeFolder)
+            if (madeFolder)
             {
                 if (!File.Exists(Data.FlagStorage + "flags.json"))
                 {
                     SaveFlags(DefaultFlags);
-                } else
+                }
+                else
                 {
                     List<FlagData> Flags;
                     using (StreamReader Reader = File.OpenText(Data.FlagStorage + "flags.json"))
@@ -339,7 +339,7 @@ namespace Uncreated.Warfare
                 }
                 Dictionary<string, Color> NewDefaults = new Dictionary<string, Color>();
                 Dictionary<string, string> NewDefaultsHex = new Dictionary<string, string>();
-                foreach(ColorData data in DefaultColors)
+                foreach (ColorData data in DefaultColors)
                 {
                     NewDefaults.Add(data.key, data.Color);
                     NewDefaultsHex.Add(data.key, data.color_hex);
@@ -372,7 +372,7 @@ namespace Uncreated.Warfare
             deathloc = new Dictionary<string, Dictionary<string, string>>();
             limbloc = new Dictionary<string, Dictionary<ELimb, string>>();
             F.CheckDir(Data.LangStorage + DefaultLanguage, out bool madeDir);
-            if(madeDir)
+            if (madeDir)
             {
                 if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\localization.json"))
                 {
@@ -494,7 +494,8 @@ namespace Uncreated.Warfare
 
                 }
                 F.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
-            } else
+            }
+            else
             {
                 F.LogError("Failed to load translations, see above.");
                 languages.Add(DefaultLanguage, ConvertTranslations(DefaultTranslations, DefaultLanguage));
@@ -531,7 +532,7 @@ namespace Uncreated.Warfare
         public static Dictionary<int, Zone> LoadExtraZones()
         {
             F.CheckDir(Data.FlagStorage, out bool madeDir);
-            if(madeDir)
+            if (madeDir)
             {
                 if (!File.Exists(Data.FlagStorage + "extra_zones.json"))
                 {
@@ -569,7 +570,8 @@ namespace Uncreated.Warfare
                 foreach (FlagData zone in Zones)
                     NewZones.Add(zone.id, Flag.ComplexifyZone(zone));
                 return NewZones;
-            } else
+            }
+            else
             {
                 F.LogError("Failed to load extra zones, see above. Loading default zones.");
                 Dictionary<int, Zone> NewDefaultZones = new Dictionary<int, Zone>();
@@ -581,7 +583,7 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Vector3> LoadExtraPoints()
         {
             F.CheckDir(Data.FlagStorage, out bool madeDirs);
-            if(madeDirs)
+            if (madeDirs)
             {
                 if (!File.Exists(Data.FlagStorage + "extra_points.json"))
                 {
@@ -619,7 +621,8 @@ namespace Uncreated.Warfare
                 foreach (Point3D point in Points)
                     NewPoints.Add(point.name, point.Vector3);
                 return NewPoints;
-            } else
+            }
+            else
             {
                 F.LogError("Failed to load extra points, see above. Loading default points.");
                 Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
@@ -627,7 +630,7 @@ namespace Uncreated.Warfare
                     NewDefaultPoints.Add(point.name, point.Vector3);
                 return NewDefaultPoints;
             }
-            
+
         }
         public static Dictionary<string, MySqlTableLang> LoadTables()
         {
@@ -732,11 +735,12 @@ namespace Uncreated.Warfare
         }
         public static void SetLanguage(ulong player, string language)
         {
-            if(Data.Languages.ContainsKey(player))
+            if (Data.Languages.ContainsKey(player))
             {
                 Data.Languages[player] = language;
                 SaveLangs(Data.Languages);
-            } else
+            }
+            else
             {
                 Data.Languages.Add(player, language);
                 SaveLangs(Data.Languages);

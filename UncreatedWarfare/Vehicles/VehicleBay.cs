@@ -1,13 +1,9 @@
 ﻿using Newtonsoft.Json;
-using Rocket.API;
-using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
@@ -131,7 +127,8 @@ namespace Uncreated.Warfare.Vehicles
                 if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
                 {
                     barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
-                } else
+                }
+                else
                 {
                     barricade = new Barricade(vb.BarricadeID)
                     { state = Convert.FromBase64String(vb.State) };
@@ -301,10 +298,6 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
-            Transform engine = vehicle.transform.Find("engine");
-
-
-
             try
             {
                 if (vehicle == null) return;
