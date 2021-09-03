@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Uncreated.Warfare.FOBs;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {

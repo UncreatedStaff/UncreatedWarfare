@@ -173,7 +173,7 @@ namespace Uncreated.Warfare.Squads
         public Squad squad;
         public bool IsActive;
         public int timer;
-
+        public string nearestLocation;
         public RallyPoint(BarricadeData structure, BarricadeDrop drop, Squad squad)
         {
             this.structure = structure;
@@ -185,21 +185,14 @@ namespace Uncreated.Warfare.Squads
 
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
             Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
-            nearestLocation = $"{((LocationNode)nearerstLocation).name}";*/
+            nearestLocation = $"{((LocationNode)nearerstLocation).name}";
         }
 
         public void UpdateUIForAwaitingPlayers()
         {
             if (!IsActive)
                 return;
-
-            List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
-            Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
-
             TimeSpan seconds = TimeSpan.FromSeconds(timer);
-
-            string nearestLocation = $" ({((LocationNode)nearerstLocation).name})";
-
             foreach (UCPlayer member in squad.Members)
             {
                 if (AwaitingPlayers.Contains(member))
