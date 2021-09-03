@@ -2,9 +2,6 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -331,7 +328,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.team2count = team2count;
             this.formatting = formatting;
         }
-        public void SendToPlayer(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, SteamPlayer player, ITransportConnection connection) => 
+        public void SendToPlayer(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, SteamPlayer player, ITransportConnection connection) =>
             F.UIOrChat(charactericon, useui, uiid, pts, progresschars, this, player, connection, player.playerID.steamID.m_SteamID);
     }
 }

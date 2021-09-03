@@ -55,7 +55,7 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
-        protected override string LoadDefaults() 
+        protected override string LoadDefaults()
         {
             if (JSONMethods.DefaultKits != default)
                 return JsonConvert.SerializeObject(JSONMethods.DefaultKits, Formatting.Indented);
@@ -69,11 +69,11 @@ namespace Uncreated.Warfare.Kits
         public static bool KitExists(string kitName, out Kit kit) => ObjectExists(i => i != default && kitName != default && i.Name.ToLower() == kitName.ToLower(), out kit);
         public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes, bool save = true)
         {
-            if(KitExists(kitName, out Kit kit))
+            if (KitExists(kitName, out Kit kit))
             {
                 kit.Items = newItems ?? kit.Items;
                 kit.Clothes = newClothes ?? kit.Clothes;
-                if(save) Save();
+                if (save) Save();
                 return true;
             }
             return false;
@@ -148,7 +148,7 @@ namespace Uncreated.Warfare.Kits
 
             foreach (KitItem k in kit.Items)
             {
-                Item item = new Item(k.ID, k.amount, k.quality) 
+                Item item = new Item(k.ID, k.amount, k.quality)
                 { metadata = Convert.FromBase64String(k.metadata) };
 
                 if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
@@ -167,7 +167,7 @@ namespace Uncreated.Warfare.Kits
             }
             player.KitName = kit.Name;
             player.KitClass = kit.Class;
-            
+
             PlayerManager.UpdateObjectsWhere(x => x.Steam64 == player.Steam64, x => { x.KitName = kit.Name; });
 
             if (kit.IsPremium && kit.Cooldown > 0)
@@ -396,7 +396,8 @@ namespace Uncreated.Warfare.Kits
         public string Weapons;
         public int Requests;
         [JsonIgnore]
-        public Rank RequiredRank { 
+        public Rank RequiredRank
+        {
             get
             {
                 if (_rank == null || _rank.level != RequiredLevel)

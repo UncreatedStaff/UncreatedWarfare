@@ -7,15 +7,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using System.Reflection;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -244,15 +244,15 @@ namespace Uncreated.Warfare.Commands
                 Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default(Flag))
                 {
-                    player.SendChat("test_zone_not_in_zone", 
-                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
-                        player.transform.position.z.ToString(Data.Locale), player.transform.rotation.eulerAngles.y.ToString(Data.Locale), 
+                    player.SendChat("test_zone_not_in_zone",
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
+                        player.transform.position.z.ToString(Data.Locale), player.transform.rotation.eulerAngles.y.ToString(Data.Locale),
                         fg.Rotation.Count.ToString(Data.Locale));
                 }
                 else
                 {
-                    player.SendChat("test_zone_current_zone", flag.Name, 
-                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale), 
+                    player.SendChat("test_zone_current_zone", flag.Name,
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
                         player.transform.position.z.ToString(Data.Locale));
                 }
             }
@@ -296,8 +296,8 @@ namespace Uncreated.Warfare.Commands
                     Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                     if (extrazone == default)
                     {
-                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale), 
-                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale),
+                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
                             fg.AllFlags.Count.ToString(Data.Locale));
                         return;
                     }
@@ -314,7 +314,8 @@ namespace Uncreated.Warfare.Commands
                     zoneName = flag.Name;
                     zoneColor = flag.TeamSpecificHexColor;
                 }
-            } else
+            }
+            else
             {
                 List<Zone> zones = Data.ExtraZones.Values.ToList();
                 zones.Sort(delegate (Zone a, Zone b)
@@ -324,8 +325,8 @@ namespace Uncreated.Warfare.Commands
                 Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
                 if (extrazone == default)
                 {
-                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale), 
-                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale), 
+                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
+                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
                         zones.Count.ToString(Data.Locale));
                     return;
                 }
@@ -458,7 +459,8 @@ namespace Uncreated.Warfare.Commands
                     F.Log(F.Translate("test_time_enabled_console", 0, out _));
                 else
                     F.Log(F.Translate("test_time_disabled_console", 0, out _));
-            } else
+            }
+            else
             {
                 if (UCWarfare.I.CoroutineTiming)
                     player.SendChat("test_time_enabled");
@@ -557,7 +559,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void rotation(string[] command, Player player)
         {
-            if(Data.Gamemode is FlagGamemode fg)
+            if (Data.Gamemode is FlagGamemode fg)
                 fg.PrintFlagRotation();
         }
         private const byte DOWN_DAMAGE = 55;

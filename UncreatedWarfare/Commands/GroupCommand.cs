@@ -4,9 +4,6 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
@@ -33,10 +30,11 @@ namespace Uncreated.Warfare.Commands
                 if (player.HasPermission("uc.group.current"))
                 {
                     GroupInfo info = GroupManager.getGroupInfo(player.Player.quests.groupID);
-                    if(info == null)
+                    if (info == null)
                     {
                         player.Player.SendChat("not_in_group");
-                    } else
+                    }
+                    else
                     {
                         player.Player.SendChat("current_group", player.Player.quests.groupID.m_SteamID.ToString(Data.Locale), info.name);
                     }
@@ -61,7 +59,7 @@ namespace Uncreated.Warfare.Commands
                         player.Player.SendChat("created_group",
                             command[1], player.Player.quests.groupID.m_SteamID.ToString(Data.Locale));
                         F.Log(F.Translate("created_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
-                            player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                            player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
                             player.Player.quests.groupID.m_SteamID.ToString(Data.Locale), command[1]), ConsoleColor.Cyan);
                     }
                     else
@@ -88,7 +86,7 @@ namespace Uncreated.Warfare.Commands
                             return;
                         }
                         ulong oldgroup = player.Player.quests.groupID.m_SteamID;
-                        if(player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
+                        if (player.Player.quests.ServerAssignToGroup(groupInfo.groupID, EPlayerGroupRank.MEMBER, true))
                         {
                             GroupManager.save();
                             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, groupInfo.groupID.m_SteamID);
@@ -96,7 +94,7 @@ namespace Uncreated.Warfare.Commands
                             if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                             if (team == 1)
                             {
-                                player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.Team1ID, player, true), 
+                                player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.Team1ID, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
                                 F.Log(F.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.Team1ID, 0),

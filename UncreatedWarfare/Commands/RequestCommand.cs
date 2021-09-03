@@ -5,14 +5,11 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
-using Uncreated.Warfare.Kits;
-using System.Threading;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands
@@ -89,7 +86,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     if (vbsign.bay != default && vbsign.bay.HasLinkedVehicle(out InteractableVehicle veh))
                     {
-                        if(veh != default)
+                        if (veh != default)
                             RequestVehicle(ucplayer, veh, team);
                     }
                 }
@@ -248,7 +245,8 @@ namespace Uncreated.Warfare.Commands
             {
                 ucplayer.Message("request_vehicle_e_cooldown", F.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
                 return;
-            } else
+            }
+            else
             {
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                 {
@@ -257,7 +255,7 @@ namespace Uncreated.Warfare.Commands
                     if (spawn.HasLinkedVehicle(out InteractableVehicle veh))
                     {
                         if (veh == null || veh.isDead) continue;
-                        if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 && 
+                        if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
                             (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
                         {
                             ucplayer.Message("request_vehicle_e_already_owned");
@@ -287,7 +285,7 @@ namespace Uncreated.Warfare.Commands
                 vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
                 VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
-                
+
                 VehicleBay.IncrementRequestCount(vehicle.id, true);
 
                 if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))

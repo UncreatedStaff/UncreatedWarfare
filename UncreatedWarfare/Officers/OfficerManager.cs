@@ -1,30 +1,22 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Players;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Officers
 {
-    public class OfficerManager :JSONSaver<Officer>
+    public class OfficerManager : JSONSaver<Officer>
     {
         public static Config<OfficerConfigData> config;
 
         public OfficerManager()
-            :base(Data.OfficerStorage + "officers.json")
+            : base(Data.OfficerStorage + "officers.json")
         {
             config = new Config<OfficerConfigData>(Data.OfficerStorage, "config.json");
             Reload();
@@ -58,7 +50,7 @@ namespace Uncreated.Warfare.Officers
                 return newofp;
             }
             else return ucplayer.CachedOfp;
-            
+
         }
         public static int GetOfficerPoints(ulong player, bool important)
         {
@@ -72,7 +64,7 @@ namespace Uncreated.Warfare.Officers
             }
             else return ucplayer.CachedOfp;
         }
-        public static void AddOfficerPoints(Player player, int amount, string message ="")
+        public static void AddOfficerPoints(Player player, int amount, string message = "")
         {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
 

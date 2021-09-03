@@ -1,4 +1,5 @@
-﻿using Rocket.Core;
+﻿using Rocket.API;
+using Rocket.Core;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -8,18 +9,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Uncreated.Networking;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 using Color = UnityEngine.Color;
-using Uncreated.Players;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.XP;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Rocket.API;
-using Uncreated.Networking;
 
 namespace Uncreated.Warfare
 {
@@ -238,21 +238,21 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public static string Translate(string key, UCPlayer player, params string[] formatting) => 
+        public static string Translate(string key, UCPlayer player, params string[] formatting) =>
             Translate(key, player.Steam64, formatting);
-        public static string Translate(string key, UCPlayer player, out Color color, params string[] formatting) => 
+        public static string Translate(string key, UCPlayer player, out Color color, params string[] formatting) =>
             Translate(key, player.Steam64, out color, formatting);
-        public static string Translate(string key, SteamPlayer player, params string[] formatting) => 
+        public static string Translate(string key, SteamPlayer player, params string[] formatting) =>
             Translate(key, player.playerID.steamID.m_SteamID, formatting);
-        public static string Translate(string key, SteamPlayer player, out Color color, params string[] formatting) => 
+        public static string Translate(string key, SteamPlayer player, out Color color, params string[] formatting) =>
             Translate(key, player.playerID.steamID.m_SteamID, out color, formatting);
-        public static string Translate(string key, Player player, params string[] formatting) => 
+        public static string Translate(string key, Player player, params string[] formatting) =>
             Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
-        public static string Translate(string key, Player player, out Color color, params string[] formatting) => 
+        public static string Translate(string key, Player player, out Color color, params string[] formatting) =>
             Translate(key, player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
-        public static string Translate(string key, UnturnedPlayer player, params string[] formatting) => 
+        public static string Translate(string key, UnturnedPlayer player, params string[] formatting) =>
             Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, formatting);
-        public static string Translate(string key, UnturnedPlayer player, out Color color, params string[] formatting) => 
+        public static string Translate(string key, UnturnedPlayer player, out Color color, params string[] formatting) =>
             Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
         /// <summary>
         /// Tramslate an unlocalized string to a localized translation structure using the translations file.
@@ -467,7 +467,7 @@ namespace Uncreated.Warfare
         /// <returns>A localized string based on the player's language.</returns>
         public static string Translate(string key, ulong player, out Color color, params string[] formatting)
         {
-            if(key == null)
+            if (key == null)
             {
                 string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
                 LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
@@ -597,7 +597,7 @@ namespace Uncreated.Warfare
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UnturnedPlayer player, string text, Color textColor, params string[] formatting) => 
+        public static void SendChat(this UnturnedPlayer player, string text, Color textColor, params string[] formatting) =>
             SendChat(player.Player.channel.owner, text, textColor, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -606,7 +606,7 @@ namespace Uncreated.Warfare
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UnturnedPlayer player, string text, params string[] formatting) => 
+        public static void SendChat(this UnturnedPlayer player, string text, params string[] formatting) =>
             SendChat(player.Player.channel.owner, text, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -616,7 +616,7 @@ namespace Uncreated.Warfare
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UCPlayer player, string text, Color textColor, params string[] formatting) => 
+        public static void SendChat(this UCPlayer player, string text, Color textColor, params string[] formatting) =>
             SendChat(player.Player.channel.owner, text, textColor, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -625,7 +625,7 @@ namespace Uncreated.Warfare
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UCPlayer player, string text, params string[] formatting) => 
+        public static void SendChat(this UCPlayer player, string text, params string[] formatting) =>
             SendChat(player.Player.channel.owner, text, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -635,7 +635,7 @@ namespace Uncreated.Warfare
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this Player player, string text, Color textColor, params string[] formatting) => 
+        public static void SendChat(this Player player, string text, Color textColor, params string[] formatting) =>
             SendChat(player.channel.owner, text, textColor, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -644,7 +644,7 @@ namespace Uncreated.Warfare
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this Player player, string text, params string[] formatting) => 
+        public static void SendChat(this Player player, string text, params string[] formatting) =>
             SendChat(player.channel.owner, text, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -752,7 +752,7 @@ namespace Uncreated.Warfare
         /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
         /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void Message(this UnturnedPlayer player, string message, params string[] formatting) => 
+        public static void Message(this UnturnedPlayer player, string message, params string[] formatting) =>
             SendChat(player.Player.channel.owner, message, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
@@ -761,7 +761,7 @@ namespace Uncreated.Warfare
         /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
         /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void Message(this Player player, string message, params string[] formatting) => 
+        public static void Message(this Player player, string message, params string[] formatting) =>
             SendChat(player.channel.owner, message, formatting);
         /// <summary>
         /// Send a message in chat to everyone.
@@ -936,7 +936,7 @@ namespace Uncreated.Warfare
         {
             if (type == EFlagStatus.DONT_DISPLAY)
             {
-                if(useui && SendUIIfConfiged)
+                if (useui && SendUIIfConfiged)
                     EffectManager.askEffectClearByID(uiid, PlayerConnection);
                 return;
             }
@@ -1059,7 +1059,8 @@ namespace Uncreated.Warfare
                 {
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1CountIcon", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_1_icon")}>{charactericon}</color>");
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_1")}>{team1count}</color>");
-                } else
+                }
+                else
                 {
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1CountIcon", "");
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T1Count", "");
@@ -1068,7 +1069,8 @@ namespace Uncreated.Warfare
                 {
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2CountIcon", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_2_icon")}>{charactericon}</color>");
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", $"<color=#{UCWarfare.GetColorHex("team_count_ui_color_team_2")}>{team2count}</color>");
-                } else
+                }
+                else
                 {
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2CountIcon", "");
                     EffectManager.sendUIEffectText(key, PlayerConnection, true, "T2Count", "");
@@ -1174,7 +1176,7 @@ namespace Uncreated.Warfare
         {
             if (text == null) return;
             IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
-            while(connections.MoveNext())
+            while (connections.MoveNext())
             {
                 string newtext = text;
                 if (text.StartsWith("sign_"))
@@ -1311,10 +1313,10 @@ namespace Uncreated.Warfare
                 t = Vector2.Lerp(point1, point2, ctr);
                 ctr += frac;
                 texture.SetPixelClamp((int)t.x, (int)t.y, color);
-                if(thickness > 1)
+                if (thickness > 1)
                 {
                     float distance = thickness / 2f;
-                    for(float i = -distance; i <= distance; i += 0.5f)
+                    for (float i = -distance; i <= distance; i += 0.5f)
                         texture.SetPixelClamp(Mathf.RoundToInt(t.x + i), Mathf.RoundToInt(t.y + i), color);
                 }
             }
@@ -1413,10 +1415,10 @@ namespace Uncreated.Warfare
                 success = false;
                 return null;
             }
-            else 
+            else
             {
                 Player p = PlayerTool.getPlayer(player);
-                if(p == null)
+                if (p == null)
                 {
                     success = false;
                     return null;
@@ -1445,10 +1447,10 @@ namespace Uncreated.Warfare
                 success = Data.PlaytimeComponents[player] != null;
                 return Data.PlaytimeComponents[player];
             }
-            else 
+            else
             {
                 SteamPlayer p = PlayerTool.getSteamPlayer(player);
-                if(p == default || p.player == default)
+                if (p == default || p.player == default)
                 {
                     success = false;
                     return null;
@@ -2012,7 +2014,7 @@ namespace Uncreated.Warfare
         /// <param name="backupcause">Used in case the key can not be found.</param>
         public static void BroadcastDeath(string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, bool translateKillerName, ulong killerTeam, ELimb limb, string itemName, float distance, out string message, bool broadcast = true)
         {
-            if(broadcast)
+            if (broadcast)
             {
                 foreach (SteamPlayer player in Provider.clients)
                 {
@@ -2020,7 +2022,7 @@ namespace Uncreated.Warfare
                     string localizedString = TranslateDeath(player.playerID.steamID.m_SteamID, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
                     if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
                     {
-                        ChatManager.say(player.playerID.steamID, localizedString, 
+                        ChatManager.say(player.playerID.steamID, localizedString,
                             UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), localizedString.Contains("</"));
                     }
                     else
@@ -2040,7 +2042,7 @@ namespace Uncreated.Warfare
                             LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                            ChatManager.say(player.playerID.steamID, newMessage, 
+                            ChatManager.say(player.playerID.steamID, newMessage,
                                 UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
@@ -2052,14 +2054,14 @@ namespace Uncreated.Warfare
         }
         public static void BroadcastLandmineDeath(string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, out string message, bool broadcast = true)
         {
-            if(broadcast)
+            if (broadcast)
             {
                 foreach (SteamPlayer player in Provider.clients)
                 {
                     string localizedString = TranslateLandmineDeath(player.playerID.steamID.m_SteamID, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
                     if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
                     {
-                        ChatManager.say(player.playerID.steamID, localizedString, 
+                        ChatManager.say(player.playerID.steamID, localizedString,
                             UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), localizedString.Contains("</"));
                     }
                     else
@@ -2079,12 +2081,12 @@ namespace Uncreated.Warfare
                             LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                            ChatManager.say(player.playerID.steamID, newMessage, 
+                            ChatManager.say(player.playerID.steamID, newMessage,
                                 UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
                                 + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
-                    } 
+                    }
                 }
             }
             message = TranslateLandmineDeath(0, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
@@ -2103,7 +2105,7 @@ namespace Uncreated.Warfare
                 {
                     LogError("Unable to create data directory " + path + ". Check permissions: " + ex.Message);
                     success = false;
-                    if(unloadIfFail)
+                    if (unloadIfFail)
                         UCWarfare.I?.UnloadPlugin();
                 }
             }
@@ -2149,7 +2151,8 @@ namespace Uncreated.Warfare
                     UnturnedLog.info($"[IN] {info}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = info, RCON = true, Severity = Rocket.Core.Logging.ELogType.Info });
                 }
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 CommandWindow.Log(info);
                 LogError(ex);
@@ -2256,7 +2259,8 @@ namespace Uncreated.Warfare
                     objective = default;
                     return float.NaN;
                 }
-            } else
+            }
+            else
             {
                 objective = null;
                 return float.NaN;
@@ -2386,7 +2390,7 @@ namespace Uncreated.Warfare
                     BarricadeRegion region = BarricadeManager.regions[x, y];
                     if (region == default) continue;
                     for (int i = 0; i < region.drops.Count; i++)
-{
+                    {
                         if (t == region.drops[i].model)
                         {
                             return region.drops[i];
@@ -2447,8 +2451,8 @@ namespace Uncreated.Warfare
         }
         public static bool CanStandAtLocation(Vector3 source)
         {
-            return Physics.OverlapCapsuleNonAlloc(source + new Vector3(0.0f, PlayerStance.RADIUS + 0.01f, 0.0f), source + 
-                new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders, 
+            return Physics.OverlapCapsuleNonAlloc(source + new Vector3(0.0f, PlayerStance.RADIUS + 0.01f, 0.0f), source +
+                new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders,
                 RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
         }
         public static void NetInvoke(this NetCall call) =>

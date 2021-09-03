@@ -1,13 +1,7 @@
 ﻿using Rocket.API;
-using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Management.Instrumentation;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
@@ -34,23 +28,23 @@ namespace Uncreated.Warfare.Commands
             {
                 if (!(drop.interactable is InteractableStorage storage))
                 {
-                    player.SendChat("ammo_crate_has_no_storage"); 
+                    player.SendChat("ammo_crate_has_no_storage");
                     return;
                 }
                 if (!player.IsTeam1() && !player.IsTeam2())
                 {
-                    player.SendChat("ammo_not_in_team"); 
+                    player.SendChat("ammo_not_in_team");
                     return;
                 }
-                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) || 
+                if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) ||
                     (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
                 {
-                    player.SendChat("ammo_no_stock"); 
+                    player.SendChat("ammo_no_stock");
                     return;
                 }
                 if (!KitManager.HasKit(player.Steam64, out Kit kit))
                 {
-                    player.SendChat("ammo_no_kit"); 
+                    player.SendChat("ammo_no_kit");
                     return;
                 }
                 if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
@@ -77,7 +71,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData) || vehicleData.Items?.Count == 0)
                 {
-                    player.SendChat("ammo_vehicle_cant_rearm"); 
+                    player.SendChat("ammo_vehicle_cant_rearm");
                     return;
                 }
                 if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
@@ -89,7 +83,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (!player.Player.IsInMain())
                     {
-                        player.SendChat("ammo_vehicle_out_of_main"); 
+                        player.SendChat("ammo_vehicle_out_of_main");
                         return;
                     }
 
@@ -108,7 +102,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (NearbyAmmoStations.Count() == 0)
                 {
-                    player.SendChat("ammo_vehicle_not_near_ammo_crate"); 
+                    player.SendChat("ammo_vehicle_not_near_ammo_crate");
                     return;
                 }
 
@@ -116,7 +110,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (!(ammoStation.interactable is InteractableStorage storage))
                 {
-                    player.SendChat("ammo_crate_has_no_storage"); 
+                    player.SendChat("ammo_crate_has_no_storage");
                     return;
                 }
 
@@ -135,7 +129,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (vehicleData.Items.Count == 0)
                 {
-                    player.SendChat("ammo_vehicle_full_already"); 
+                    player.SendChat("ammo_vehicle_full_already");
                     return;
                 }
 
@@ -164,12 +158,12 @@ namespace Uncreated.Warfare.Commands
 
                 if (ammoBagsCount == 0)
                 {
-                    player.SendChat("ammo_error_nocrate"); 
+                    player.SendChat("ammo_error_nocrate");
                     return;
                 }
                 if (!KitManager.HasKit(player.Steam64, out Kit kit))
                 {
-                    player.SendChat("ammo_no_kit"); 
+                    player.SendChat("ammo_no_kit");
                     return;
                 }
 

@@ -4,13 +4,9 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.XP;
@@ -91,7 +87,8 @@ namespace Uncreated.Warfare
         public int CachedXp
         {
             get => _cachedXp;
-            set {
+            set
+            {
                 _cachedXp = value;
                 if (Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.UCPlayerStats != null && c.UCPlayerStats.warfare_stats != null)
                     c.UCPlayerStats.warfare_stats.TellXP(_cachedXp, Player.GetTeam());
@@ -154,7 +151,8 @@ namespace Uncreated.Warfare
             {
                 KitClass = kit.Class;
                 Branch = kit.Branch;
-            } else
+            }
+            else
             {
                 KitClass = Kit.EClass.NONE;
                 Branch = EBranch.DEFAULT;

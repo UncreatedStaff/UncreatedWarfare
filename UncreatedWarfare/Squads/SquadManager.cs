@@ -1,16 +1,11 @@
-﻿using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Squads
 {
@@ -104,10 +99,10 @@ namespace Uncreated.Warfare.Squads
                                 unchecked((short)(config.Data.squadLTUI + i)),
                                 player.transportConnection,
                                 true,
-                                i == 0 ? 
-                                F.Translate("squad_ui_expanded", player) : 
+                                i == 0 ?
+                                F.Translate("squad_ui_expanded", player) :
                                 F.Translate(sortedSquads[i].IsLocked ?
-                                    "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, 
+                                    "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player,
                                     sortedSquads[i].Members.Count.ToString(Data.Locale))
                             );
                         }
@@ -117,7 +112,7 @@ namespace Uncreated.Warfare.Squads
                         // clear all labels (out of squad)
                         for (int i = 0; i < 8; i++)
                             EffectManager.askEffectClearByID((ushort)(config.Data.squadLUI + i), player.transportConnection);
-                            
+
                         // send labels for squad showing leader name, player count, islocked
                         for (int i = 0; i < Math.Min(friendlySquads.Count, 8); i++)
                         {
@@ -128,7 +123,7 @@ namespace Uncreated.Warfare.Squads
                                 F.Translate("squad_ui_squad_name", player, friendlySquads[i].Name),
                                 F.Translate("squad_ui_player_count", player, friendlySquads[i].IsLocked ?
                                 config.Data.lockCharacter + "  " : "", friendlySquads[i].Members.Count.ToString(Data.Locale))
-                                //F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(friendlySquads[i].Leader).CharacterName)
+                            //F.Translate("squad_ui_leader_name", player, F.GetPlayerOriginalNames(friendlySquads[i].Leader).CharacterName)
                             );
                         }
                     }
@@ -333,14 +328,14 @@ namespace Uncreated.Warfare.Squads
             if (squad.Members.Count <= 1)
                 return;
 
-            if(squad.Members.RemoveAll(p => p.CSteamID.m_SteamID == player.CSteamID.m_SteamID) > 0)
+            if (squad.Members.RemoveAll(p => p.CSteamID.m_SteamID == player.CSteamID.m_SteamID) > 0)
                 player?.Message("squad_kicked");
             SortMembers(squad);
             foreach (UCPlayer p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
                     p.Message("squad_player_kicked", player.Player.channel.owner.playerID.nickName);
-                    
+
             }
 
             player.Squad = null;

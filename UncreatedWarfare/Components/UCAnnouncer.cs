@@ -1,13 +1,8 @@
-﻿using SDG.Framework.Translations;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components
@@ -38,7 +33,8 @@ namespace Uncreated.Warfare.Components
                 {
                     foreach (KeyValuePair<string, TranslationData> translation in d)
                         allKeys.Add(translation.Key);
-                } else if (Messages.Count > 0)
+                }
+                else if (Messages.Count > 0)
                 {
                     d = Messages.ElementAt(0).Value;
                     foreach (KeyValuePair<string, TranslationData> translation in d)
@@ -46,7 +42,8 @@ namespace Uncreated.Warfare.Components
                 }
                 Enumerator = allKeys.GetEnumerator();
                 this.coroutine = StartCoroutine(MessageLoop());
-            } else
+            }
+            else
             {
                 F.LogWarning("Announcer has no messages set up.");
             }

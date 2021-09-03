@@ -2,10 +2,6 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Networking;
 using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
@@ -32,7 +28,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         SteamBlacklistID ban = SteamBlacklist.list[index];
                         DateTime time = DateTime.Now - TimeSpan.FromSeconds(ban.duration - ban.getTime());
-                        Data.DatabaseManager.AddBan(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.duration / 60,  ban.reason, time);
+                        Data.DatabaseManager.AddBan(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.duration / 60, ban.reason, time);
                         Invocations.Shared.LogBanned.NetInvoke(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, ban.duration / 60, time);
                     }
                 }

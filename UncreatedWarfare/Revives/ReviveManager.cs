@@ -1,12 +1,10 @@
-﻿using Rocket.Unturned;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
@@ -26,12 +24,12 @@ namespace Uncreated.Warfare.Revives
         {
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
             DeathInfo = new Dictionary<ulong, DeathInfo>();
-            Medics = PlayerManager.OnlinePlayers.Where(x => x.KitName != null && x.KitName != string.Empty 
+            Medics = PlayerManager.OnlinePlayers.Where(x => x.KitName != null && x.KitName != string.Empty
             && KitManager.KitExists(x.KitName, out Kit kit) && kit.Class == Kit.EClass.MEDIC).ToList();
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
             UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
-            foreach(SteamPlayer player in Provider.clients)
+            foreach (SteamPlayer player in Provider.clients)
             {
                 player.player.stance.onStanceUpdated += delegate
                 {
@@ -329,7 +327,7 @@ namespace Uncreated.Warfare.Revives
         {
             //F.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
             if (DownedPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
-            {   
+            {
                 shouldAllow = false;
             }
         }
@@ -353,7 +351,7 @@ namespace Uncreated.Warfare.Revives
         }
         public void Dispose()
         {
-            foreach(DamagePlayerParameters paramaters in DownedPlayers.Values)
+            foreach (DamagePlayerParameters paramaters in DownedPlayers.Values)
             {
                 if (paramaters.player.transform.TryGetComponent(out Reviver reviver))
                 {
@@ -484,8 +482,8 @@ namespace Uncreated.Warfare.Revives
                 if (downed == null) continue;
                 ulong team = downed.GetTeam();
                 Vector3[] medics = Medics
-                    .Where(x => x.GetTeam() == team && 
-                        (x.Position - downed.Position).sqrMagnitude < 
+                    .Where(x => x.GetTeam() == team &&
+                        (x.Position - downed.Position).sqrMagnitude <
                         Squads.SquadManager.config.Data.MedicRange * Squads.SquadManager.config.Data.MedicRange)
                     .Select(x => x.Position)
                     .ToArray();
@@ -567,7 +565,7 @@ namespace Uncreated.Warfare.Revives
                 Player.Player.movement.sendPluginJumpMultiplier(1.0f);
                 Player.Player.life.serverSetBleeding(false);
                 CancelStance();
-                if(remove)
+                if (remove)
                 {
                     reviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                     reviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
@@ -577,7 +575,7 @@ namespace Uncreated.Warfare.Revives
             public void FinishKillingPlayer(ReviveManager reviveManager, bool isDead = false)
             {
                 this.RevivePlayer(reviveManager, false);
-                if(!isDead)
+                if (!isDead)
                 {
                     DamagePlayerParameters parameters = reviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
                     parameters.damage = 100.0f;

@@ -43,7 +43,8 @@ namespace Uncreated.Warfare.XP
                 if (ucplayer != null)
                     ucplayer.CachedXp = newxp;
                 return newxp;
-            } else return ucplayer.CachedXp;
+            }
+            else return ucplayer.CachedXp;
         }
         public static int GetXP(ulong player, bool important)
         {
@@ -92,10 +93,10 @@ namespace Uncreated.Warfare.XP
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
                 VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
-                // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
+            // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
             for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner); 
-                // update the color of the ranks on all the request signs in case the player unlocked a new rank.
+                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
+            // update the color of the ranks on all the request signs in case the player unlocked a new rank.
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
             {
                 c.stats.AddXP(amount);
@@ -140,7 +141,7 @@ namespace Uncreated.Warfare.XP
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Next", nextRank != null ? 
+                    "Next", nextRank != null ?
                     F.Translate("ui_xp_next_level", player, nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID), nextRank.level.ToString(Data.Locale)) : string.Empty
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
@@ -251,7 +252,8 @@ namespace Uncreated.Warfare.XP
                             return name_translations.ElementAt(0).Value;
                         }
                         else return name;
-                    } else
+                    }
+                    else
                     {
                         return newname;
                     }

@@ -2,10 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -78,7 +75,7 @@ namespace Uncreated.Warfare
                 return null;
             return drop.GetServersideData();
         }
-        public static Transform GetTransformFromLook(PlayerLook look, int Raymask) => 
+        public static Transform GetTransformFromLook(PlayerLook look, int Raymask) =>
             Physics.Raycast(look.aim.position, look.aim.forward, out RaycastHit hit, 4, Raymask) ? hit.transform : default;
         public static Transform GetBarricadeTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.BARRICADE);
         public static Transform GetVehicleTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.VEHICLE);
@@ -164,7 +161,7 @@ namespace Uncreated.Warfare
             IEnumerator<BarricadeDrop> drops = selection.GetEnumerator();
             float sqrRange = range * range;
             while (drops.MoveNext())
-{
+            {
                 if ((drops.Current.model.position - origin).sqrMagnitude <= sqrRange)
                 {
                     list.Add(drops.Current);

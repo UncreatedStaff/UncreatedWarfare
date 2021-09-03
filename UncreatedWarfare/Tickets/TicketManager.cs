@@ -3,7 +3,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -41,7 +40,7 @@ namespace Uncreated.Warfare.Tickets
             _Team1previousTickets = config.Data.StartingTickets;
             _Team2previousTickets = config.Data.StartingTickets;
 
-            
+
 
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
@@ -80,7 +79,7 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
-            XPManager.AddXP(parameters.killer, UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75), 
+            XPManager.AddXP(parameters.killer, UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75),
                 F.Translate("xp_enemy_killed", parameters.killer.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(parameters.dead).CharacterName));
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
         }
@@ -407,7 +406,7 @@ namespace Uncreated.Warfare.Tickets
                 tickets = Team2Tickets;
                 UIID = config.Data.Team2TicketUIID;
             }
-                
+
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
                 bleed < 0 ? bleed.ToString(Data.Locale) : string.Empty,
@@ -444,7 +443,7 @@ namespace Uncreated.Warfare.Tickets
                 int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();
 
                 float friendlyRatio = (float)friendlyCount * fg.Rotation.Count();
-                float enemyRatio = (float)enemyCount / (float) fg.Rotation.Count();
+                float enemyRatio = (float)enemyCount / (float)fg.Rotation.Count();
 
                 if (fg.Rotation.Where(f => f.HasBeenCapturedT1 || f.HasBeenCapturedT2).Count() == fg.Rotation.Count)
                 {

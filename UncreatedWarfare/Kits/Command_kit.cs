@@ -1,11 +1,8 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 
 namespace Uncreated.Warfare.Kits
@@ -37,7 +34,8 @@ namespace Uncreated.Warfare.Kits
             {
                 player = null;
                 ucplayer = null;
-            } else
+            }
+            else
             {
                 player = caller as UnturnedPlayer;
                 ucplayer = UCPlayer.FromIRocketPlayer(caller);

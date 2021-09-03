@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Networking;
-using SDG.Unturned;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.XP;
-using Uncreated.Warfare.Officers;
-using Rocket.API;
-using Rocket.Core;
+﻿using Rocket.API;
 using Rocket.API.Serialisation;
+using Rocket.Core;
+using System;
+using System.Collections.Generic;
+using Uncreated.Networking;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.XP;
 
 namespace Uncreated.Warfare.Networking
 {
@@ -110,7 +106,8 @@ namespace Uncreated.Warfare.Networking
                 if (PlayerManager.HasSaveRead(player, out PlayerSave save))
                 {
                     save.HasQueueSkip = status;
-                } else
+                }
+                else
                 {
                     PlayerManager.AddSave(new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false));
                 }
@@ -272,7 +269,7 @@ namespace Uncreated.Warfare.Networking
             [NetCall(ENetCall.FROM_SERVER, 1110)]
             internal static void ReceiveRequestRankInfo(in IConnection connection)
             {
-                SendRankInfo.Invoke(connection, XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, 
+                SendRankInfo.Invoke(connection, XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks,
                     OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
             }
 

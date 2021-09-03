@@ -1,15 +1,10 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using MySqlX.XDevAPI.Common;
-using Rocket.API;
+﻿using Rocket.API;
 using Rocket.Unturned.Player;
-using SDG.Framework.Translations;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO.Packaging;
-using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Networking;
 
@@ -58,7 +53,8 @@ namespace Uncreated.Warfare.Commands
                                             if (ip == "255.255.255.255")
                                             {
                                                 translate = "ip_ban_permanent_console_operator_noip";
-                                            } else
+                                            }
+                                            else
                                             {
                                                 uint packaged = Parser.getUInt32FromIP(ip);
                                                 Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
@@ -81,7 +77,7 @@ namespace Uncreated.Warfare.Commands
                                             Invocations.Shared.LogBanned.NetInvoke(result, 0UL, reason, duration, DateTime.Now);
                                             string ip = Data.DatabaseManager.GetIP(result);
                                             if (ip == "255.255.255.255")
-{
+                                            {
                                                 translate = "ip_ban_console_operator_noip";
                                             }
                                             else
@@ -203,10 +199,10 @@ namespace Uncreated.Warfare.Commands
                                                 }
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
-                                            F.Log(F.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
+                                            F.Log(F.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat(translate, names.CharacterName);
-                                            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast", 
+                                            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast",
                                                 names.CharacterName, callerName.CharacterName);
                                         }
                                         else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint duration))
@@ -235,7 +231,7 @@ namespace Uncreated.Warfare.Commands
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
                                             string timeLocalized = F.GetTimeFromMinutes(duration, 0);
-                                            F.Log(F.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
+                                            F.Log(F.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                             player.SendChat(translate, names.CharacterName, timeLocalized);
                                             foreach (SteamPlayer pl in Provider.clients)
@@ -282,7 +278,7 @@ namespace Uncreated.Warfare.Commands
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
                                         Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
                                     }
-                                    F.Log(F.Translate("ip_ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                                    F.Log(F.Translate("ip_ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     player.SendChat("ip_ban_permanent_feedback", names.CharacterName, callerName.CharacterName);
                                     F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast",
@@ -302,7 +298,7 @@ namespace Uncreated.Warfare.Commands
                                         Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
                                     }
                                     string timeLocalized = F.GetTimeFromMinutes(result, 0);
-                                    F.Log(F.Translate("ip_ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                                    F.Log(F.Translate("ip_ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                     player.SendChat("ip_ban_feedback", names.CharacterName, callerName.CharacterName, timeLocalized);
                                     foreach (SteamPlayer pl in Provider.clients)

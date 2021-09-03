@@ -5,7 +5,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
@@ -258,15 +257,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 Config.PathingData.Set();
                 Rotation = ObjectivePathing.CreateAutoPath(AllFlags);
-            } 
+            }
             else if (Config.PathingMode == ObjectivePathing.EPathingMode.LEVELS)
             {
                 Rotation = ObjectivePathing.CreatePathUsingLevels(AllFlags, Config.MaxFlagsPerLevel);
-            } 
+            }
             else if (Config.PathingMode == ObjectivePathing.EPathingMode.ADJACENCIES)
             {
                 Rotation = ObjectivePathing.PathWithAdjacents(AllFlags, Config.team1adjacencies, Config.team2adjacencies);
-            } else
+            }
+            else
             {
                 F.LogWarning("Invalid pathing value, no flags will be loaded. Expect errors.");
             }
@@ -359,7 +359,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 if (flag.IsObj(2))
                     for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
                         Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
-            } else if (capturedTeam == 2)
+            }
+            else if (capturedTeam == 2)
             {
                 if (flag.IsObj(1))
                     for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
@@ -594,9 +595,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             foreach (Player player in flag.PlayersOnFlag)
             {
                 byte team = player.GetTeamByte();
-                if (team == 1) 
+                if (team == 1)
                     (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
-                else if (team == 2) 
+                else if (team == 2)
                     (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
             }
         }
@@ -614,7 +615,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             if (isScreenUp && EndScreen != null && Config.ShowLeaderboard)
             {
                 EndScreen.SendScreenToPlayer(player, Config.ProgressChars);
-            } else
+            }
+            else
             {
                 CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
@@ -737,19 +739,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             [JsonConstructor]
             public AutoObjectiveData(
-                float main_search_radius, 
-                float main_stop_radius, 
-                float absolute_max_distance_from_main, 
-                float flag_search_radius, 
-                float forward_bias, 
-                float back_bias, 
-                float left_bias, 
-                float right_bias, 
-                float distance_falloff, 
-                float average_distance_buffer, 
-                float radius_tuning_resolution, 
-                int max_flags, 
-                int min_flags, 
+                float main_search_radius,
+                float main_stop_radius,
+                float absolute_max_distance_from_main,
+                float flag_search_radius,
+                float forward_bias,
+                float back_bias,
+                float left_bias,
+                float right_bias,
+                float distance_falloff,
+                float average_distance_buffer,
+                float radius_tuning_resolution,
+                int max_flags,
+                int min_flags,
                 int max_redos
                 )
             {
@@ -771,19 +773,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             public void Set()
             {
                 ObjectivePathing.SetVariables(
-                    main_search_radius, 
-                    main_stop_radius, 
-                    absolute_max_distance_from_main, 
-                    flag_search_radius, 
-                    forward_bias, 
-                    back_bias, 
+                    main_search_radius,
+                    main_stop_radius,
+                    absolute_max_distance_from_main,
+                    flag_search_radius,
+                    forward_bias,
+                    back_bias,
                     left_bias,
-                    right_bias, 
-                    distance_falloff, 
-                    average_distance_buffer, 
-                    radius_tuning_resolution, 
-                    max_flags, 
-                    min_flags, 
+                    right_bias,
+                    distance_falloff,
+                    average_distance_buffer,
+                    radius_tuning_resolution,
+                    max_flags,
+                    min_flags,
                     max_redos
                 );
             }

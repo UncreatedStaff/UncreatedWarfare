@@ -1,12 +1,7 @@
 ﻿using Rocket.API;
-using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Squads
 {
@@ -54,7 +49,8 @@ namespace Uncreated.Warfare.Squads
                     if (name != newname || name.Length > SquadManager.config.Data.MaxSquadNameLength)
                     {
                         player.SendChat("squad_no_no_words", name);
-                    } else if (!SquadManager.FindSquad(name, team, out Squad squad))
+                    }
+                    else if (!SquadManager.FindSquad(name, team, out Squad squad))
                     {
                         squad = SquadManager.CreateSquad(name, player, team, player.Branch);
 
@@ -118,7 +114,7 @@ namespace Uncreated.Warfare.Squads
                     else
                         player.SendChat("squad_e_playernotfound", name);
                 }
-                else 
+                else
                     player.SendChat("squad_e_notsquadleader", name);
             }
             else if (command.Length >= 1 && op == "kick")

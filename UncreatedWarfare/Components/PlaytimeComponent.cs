@@ -1,16 +1,10 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using Uncreated.Warfare.Stats;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Squads;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Components
 {
@@ -22,7 +16,7 @@ namespace Uncreated.Warfare.Components
         public ulong ownerID;
         public LandmineDataForPostAccess(InteractableTrap trap, BarricadeOwnerDataComponent owner)
         {
-            if(trap == default || owner == default)
+            if (trap == default || owner == default)
             {
                 barricadeID = 0;
                 barricadeInstId = 0;
@@ -71,7 +65,7 @@ namespace Uncreated.Warfare.Components
         ushort toastMessageOpen;
         private void SendToastMessage(ToastMessage message)
         {
-            switch(message.Severity)
+            switch (message.Severity)
             {
                 default:
                 case ToastMessageSeverity.INFO:
@@ -86,7 +80,7 @@ namespace Uncreated.Warfare.Components
                 case ToastMessageSeverity.MINIXP:
                     toastMessageOpen = UCWarfare.Config.MiniToastXP;
                     break;
-                case ToastMessageSeverity.MINIOFFICERPTS: 
+                case ToastMessageSeverity.MINIOFFICERPTS:
                     toastMessageOpen = UCWarfare.Config.MiniToastOfficerPoints;
                     break;
                 case ToastMessageSeverity.BIG:
@@ -96,10 +90,10 @@ namespace Uncreated.Warfare.Components
             if (message.Message != null)
             {
                 if (message.SecondaryMessage != null)
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen),
                         player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
                 else
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen), 
+                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen),
                         player.channel.owner.transportConnection, true, message.Message);
             }
             StartCoroutine(ToastDelay(message.delay));
@@ -144,7 +138,7 @@ namespace Uncreated.Warfare.Components
         /// <returns>True if there were no requests pending, false if there were.</returns>
         public bool TeleportDelayed(Vector3 position, float angle, float seconds, bool shouldCancelOnMove = false, bool shouldCancelOnDamage = false, bool shouldMessagePlayer = false, string locationName = "", FOB fob = null)
         {
-            if(_currentTeleportRequest == default)
+            if (_currentTeleportRequest == default)
             {
                 if (shouldMessagePlayer)
                     player.Message("deploy_standby", locationName, seconds.ToString(Data.Locale));

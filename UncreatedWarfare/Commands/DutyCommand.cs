@@ -1,9 +1,7 @@
 ﻿using Rocket.API;
 using Rocket.API.Serialisation;
 using Rocket.Core;
-using Rocket.Unturned;
 using Rocket.Unturned.Player;
-using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;

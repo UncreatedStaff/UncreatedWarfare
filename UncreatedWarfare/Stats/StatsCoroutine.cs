@@ -1,12 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 
@@ -79,12 +75,14 @@ namespace Uncreated.Warfare.Stats
                                 {
                                     player.SendChat("afk_warning", F.GetTimeFromMinutes((uint)UCWarfare.Config.StatsInterval, player.playerID.steamID.m_SteamID));
                                 }
-                            } else
+                            }
+                            else
                             {
                                 afk.lastLocation = position;
                                 afk.time = n;
                             }
-                        } else
+                        }
+                        else
                         {
                             previousPositions.Add(player.playerID.steamID.m_SteamID, new Afk() { lastLocation = position, player = player.playerID.steamID.m_SteamID, time = n });
                         }

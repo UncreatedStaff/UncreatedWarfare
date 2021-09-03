@@ -2,11 +2,8 @@
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -25,13 +22,13 @@ namespace Uncreated.Warfare.Teams
         public TeamManager()
         {
             _data = new Config<TeamConfig>(Data.TeamStorage, "teams.json");
-            if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _)) 
+            if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _))
                 F.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.Data.team2unarmedkit, out _)) 
+            if (!KitManager.KitExists(_data.Data.team2unarmedkit, out _))
                 F.LogError("Team 2's unarmed kit, \"" + _data.Data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.Data.defaultkit, out _)) 
+            if (!KitManager.KitExists(_data.Data.defaultkit, out _))
                 F.LogError("The default kit, \"" + _data.Data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            
+
         }
         public static ulong Team1ID { get => _data.Data.team1id; }
         public static ulong Team2ID { get => _data.Data.team2id; }
@@ -56,21 +53,30 @@ namespace Uncreated.Warfare.Teams
         public static float Team2SpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.team2spawnangle : 0f; }
         public static float LobbySpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.lobbyspawnangle : 0f; }
         public static string DefaultKit { get => _data.Data.defaultkit; }
-        public static Zone Team1Main { get {
+        public static Zone Team1Main
+        {
+            get
+            {
                 if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(1))
                     return Data.ExtraZones[1];
                 else
                     return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[1]);
-            } }
-        public static Zone Team2Main { get {
+            }
+        }
+        public static Zone Team2Main
+        {
+            get
+            {
                 if (Data.ExtraZones != default && Data.ExtraZones.ContainsKey(2))
                     return Data.ExtraZones[2];
                 else
                     return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[2]);
-            } }
-        public static Zone Team1AMC 
-        { 
-            get {
+            }
+        }
+        public static Zone Team1AMC
+        {
+            get
+            {
                 if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(101))
                     return Data.ExtraZones[101];
                 else return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[101]);
@@ -85,7 +91,8 @@ namespace Uncreated.Warfare.Teams
                 else return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[102]);
             }
         }
-        public static Zone LobbyZone { 
+        public static Zone LobbyZone
+        {
             get
             {
                 if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(-69))
@@ -200,7 +207,7 @@ namespace Uncreated.Warfare.Teams
         }
         public static string GetTeamHexColor(ulong team)
         {
-            switch(team)
+            switch (team)
             {
                 case 1:
                     return Team1ColorHex;
@@ -236,7 +243,7 @@ namespace Uncreated.Warfare.Teams
         {
             t1 = new List<SteamPlayer>();
             t2 = new List<SteamPlayer>();
-            foreach(SteamPlayer player in Provider.clients)
+            foreach (SteamPlayer player in Provider.clients)
             {
                 if (player.player.quests.groupID.m_SteamID == Team1ID) t1.Add(player);
                 else if (player.player.quests.groupID.m_SteamID == Team2ID) t2.Add(player);
@@ -285,11 +292,12 @@ namespace Uncreated.Warfare.Teams
                 int Team1Count = t1.Count;
                 int Team2Count = t2.Count;
                 if (Team1Count == Team2Count) return true;
-                if(team == 1)
+                if (team == 1)
                 {
                     if (Team2Count > Team1Count) return true;
                     if ((float)(Team1Count - Team2Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
-                } else if (team == 2)
+                }
+                else if (team == 2)
                 {
                     if (Team1Count > Team2Count) return true;
                     if ((float)(Team2Count - Team1Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
@@ -396,17 +404,17 @@ namespace Uncreated.Warfare.Teams
 
         public TeamConfig() => SetDefaults();
         [JsonConstructor]
-        public TeamConfig(ulong team1id, 
-            ulong team2id, 
-            ulong adminid, 
-            string team1name, 
-            string team2name, 
-            string adminname, 
-            string team1code, 
-            string team2code, 
-            string admincode, 
-            string team1unarmedkit, 
-            string team2unarmedkit, 
+        public TeamConfig(ulong team1id,
+            ulong team2id,
+            ulong adminid,
+            string team1name,
+            string team2name,
+            string adminname,
+            string team1code,
+            string team2code,
+            string admincode,
+            string team1unarmedkit,
+            string team2unarmedkit,
             string defaultkit,
             float team1spawnangle,
             float team2spawnangle,

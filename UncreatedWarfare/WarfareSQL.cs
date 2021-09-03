@@ -1,12 +1,11 @@
-﻿using System;
+﻿using SDG.Unturned;
+using Steamworks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Uncreated.SQL;
 using Uncreated.Players;
-using SDG.Unturned;
-using Steamworks;
+using Uncreated.SQL;
 
 namespace Uncreated.Warfare
 {
@@ -174,7 +173,8 @@ namespace Uncreated.Warfare
                     "`XP` = `XP` + VALUES(`XP`);",
                     new object[] { Steam64, amount });
                 return unchecked(oldBalance + amount);
-            } else
+            }
+            else
             {
                 int absamount = Math.Abs(amount);
                 if (absamount >= oldBalance)
@@ -187,7 +187,8 @@ namespace Uncreated.Warfare
                         "`XP` = 0;", // clamp to 0
                         new object[] { Steam64 });
                     return 0;
-                } else
+                }
+                else
                 {
                     NonQuery(
                         "UPDATE `points` SET " +
@@ -496,7 +497,8 @@ namespace Uncreated.Warfare
         {
             List<ulong> steamids = new List<ulong>();
             List<FLevels> lvls = new List<FLevels>();
-            Query($"SELECT * FROM `levels`;", new object[0], R => {
+            Query($"SELECT * FROM `levels`;", new object[0], R =>
+            {
                 ulong id = R.GetUInt64("Steam64");
                 lvls.Add(new FLevels
                 {
@@ -518,7 +520,8 @@ namespace Uncreated.Warfare
                     {
                         XPs[lvls[i].Steam64] = lvls[i].xp;
                     }
-                } else
+                }
+                else
                 {
                     XPs.Add(lvls[i].Steam64, lvls[i].xp);
                 }

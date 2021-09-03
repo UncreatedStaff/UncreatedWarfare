@@ -4,9 +4,6 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -95,7 +92,8 @@ namespace Uncreated.Warfare
                 {
                     if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
                     else instanceids.Add(nextindex);
-                } else
+                }
+                else
                 {
                     droppeditems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint>() { nextindex });
                 }
@@ -174,7 +172,7 @@ namespace Uncreated.Warfare
                 PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
                 t.Set(useable, throwable, c);
                 if (UCWarfare.Config.Debug)
-                    F.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ? 
+                    F.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
                         useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
                 if (success)
                     c.thrown.Add(t);
@@ -349,7 +347,7 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
             }
         }
-        internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow, 
+        internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
             if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == Gamemodes.EState.ACTIVE) return;
@@ -366,8 +364,8 @@ namespace Uncreated.Warfare
             ulong team = client.GetTeam();
             F.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
             F.Log(F.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
-            if (UCWarfare.Config.AdminLoggerSettings.LogBattleyeKick && 
-                UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions != null && 
+            if (UCWarfare.Config.AdminLoggerSettings.LogBattleyeKick &&
+                UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions != null &&
                 !UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions.Contains(reason))
             {
                 ulong id = client.playerID.steamID.m_SteamID;
@@ -380,7 +378,7 @@ namespace Uncreated.Warfare
             if (storage == null || !shouldAllow || UCWarfare.Config.LimitedStorages == null || UCWarfare.Config.LimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
             SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
             BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
-            if (player == null || storagedrop == null || 
+            if (player == null || storagedrop == null ||
                 !UCWarfare.Config.LimitedStorages.Contains(storagedrop.GetServersideData().barricade.id)) return;
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
             if (ucplayer == null) return;
@@ -399,7 +397,7 @@ namespace Uncreated.Warfare
             if (TeamManager.IsInAnyMainOrAMCOrLobby(barricadeTransform.position))
             {
                 shouldAllow = false;
-            } 
+            }
             else
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
@@ -439,18 +437,18 @@ namespace Uncreated.Warfare
             {
                 SendUIParameters p = CTFUI.RefreshStaticUI(player.GetTeam(), flag, true);
                 if (p.status != F.EFlagStatus.BLANK && p.status != F.EFlagStatus.DONT_DISPLAY)
-                    p.SendToPlayer(ctf.Config.PlayerIcon, ctf.Config.UseUI, 
-                    ctf.Config.CaptureUI, ctf.Config.ShowPointsOnUI, ctf.Config.ProgressChars, player.channel.owner, 
+                    p.SendToPlayer(ctf.Config.PlayerIcon, ctf.Config.UseUI,
+                    ctf.Config.CaptureUI, ctf.Config.ShowPointsOnUI, ctf.Config.ProgressChars, player.channel.owner,
                     player.channel.owner.transportConnection);
             }
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
             {
-                if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null && 
+                if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null &&
                     spawn.BarricadeDrop.model.TryGetComponent(out Vehicles.SpawnedVehicleComponent c))
                 {
                     c.StopIdleRespawnTimer();
                 }
-                else if 
+                else if
                    (spawn.type == Structures.EStructType.STRUCTURE && spawn.StructureDrop != null &&
                     spawn.StructureDrop.model.TryGetComponent(out c))
                 {
@@ -484,14 +482,14 @@ namespace Uncreated.Warfare
                             killer.SendChat("amc_reverse_damage");
                             if (lasttime == default)
                                 lastSentMessages.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, DateTime.Now.Ticks);
-                            else 
+                            else
                                 lastSentMessages[parameters.player.channel.owner.playerID.steamID.m_SteamID] = DateTime.Now.Ticks;
                         }
                     }
                 }
             }
 
-            if(shouldAllow)
+            if (shouldAllow)
                 Data.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         }
         internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
@@ -528,7 +526,7 @@ namespace Uncreated.Warfare
             ushort lastping = ucplayer.LastPingID == 0 ? markerid : ucplayer.LastPingID;
             if (ucplayer.Squad == null)
             {
-                if(sendNoSquadChat)
+                if (sendNoSquadChat)
                     ucplayer.SendChat("marker_not_in_squad");
                 if (markerid == 0) return;
                 EffectManager.askEffectClearByID(lastping, ucplayer.Player.channel.owner.transportConnection);
@@ -622,7 +620,7 @@ namespace Uncreated.Warfare
                     {
                         rsign.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                         RequestSigns.Save();
-                    } 
+                    }
                     else if (Vehicles.VehicleSigns.SignExists(sign, out Vehicles.VehicleSign vbsign))
                     {
                         vbsign.sign_transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
@@ -757,7 +755,8 @@ namespace Uncreated.Warfare
                         explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + F.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
                         return;
                     }
-                } else
+                }
+                else
                 {
                     isValid = false;
                     explanation = "Uncreated Network was unable to check your ban status, try again later or contact a Director if this keeps happening.";

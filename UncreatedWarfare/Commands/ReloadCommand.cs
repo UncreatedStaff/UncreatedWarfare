@@ -4,17 +4,13 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Reflection;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
-using Uncreated;
-using System.Reflection;
-using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -75,7 +71,8 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         player.Player.SendChat("no_permissions");
-                } else if (cmd == "flags")
+                }
+                else if (cmd == "flags")
                 {
                     if (isConsole || player.HasPermission("uc.reload.flags") || player.HasPermission("uc.reload.all"))
                     {
@@ -85,7 +82,8 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         player.Player.SendChat("no_permissions");
-                } else if (cmd == "tcp")
+                }
+                else if (cmd == "tcp")
                 {
                     if (isConsole || player.HasPermission("uc.reload.tcp") || player.HasPermission("uc.reload.all"))
                     {
@@ -95,7 +93,8 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         player.Player.SendChat("no_permissions");
-                } else if (cmd == "sql")
+                }
+                else if (cmd == "sql")
                 {
                     if (isConsole || player.HasPermission("uc.reload.sql") || player.HasPermission("uc.reload.all"))
                     {
@@ -127,7 +126,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         player.Player.SendChat("no_permissions");
-                } 
+                }
                 else if (cmd == "slots")
                 {
                     if (isConsole || player.HasPermission("uc.reload.slots") || player.HasPermission("uc.reload.all"))
@@ -179,11 +178,11 @@ namespace Uncreated.Warfare.Commands
                 Data.Languages = JSONMethods.LoadLanguagePreferences();
                 Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
                 Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-                if(OnTranslationsReloaded != null)
+                if (OnTranslationsReloaded != null)
                     OnTranslationsReloaded.Invoke();
             }
             catch (Exception ex)
-            { 
+            {
                 F.LogError("Execption when reloading translations.");
                 F.LogError(ex);
             }
@@ -201,7 +200,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 Data.ExtraZones = JSONMethods.LoadExtraZones();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-                if(OnFlagsReloaded != null)
+                if (OnFlagsReloaded != null)
                     OnFlagsReloaded.Invoke();
             }
             catch (Exception ex)

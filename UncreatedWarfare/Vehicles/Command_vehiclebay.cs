@@ -1,11 +1,7 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
@@ -264,13 +260,15 @@ namespace Uncreated.Warfare.Kits
                                 if (VehicleSpawner.IsRegistered(barricade.instanceID, out c.currentlylinking, EStructType.BARRICADE))
                                 {
                                     player.SendChat("vehiclebay_link_started");
-                                } else
+                                }
+                                else
                                 {
                                     F.Log("Couldn't get sign from " + barricade.barricade.id);
                                     player.SendChat("vehiclebay_e_spawnnoexist");
                                 }
                             }
-                        } else
+                        }
+                        else
                         if (op == "deregister" || op == "dereg" || op == "unregister" || op == "unreg")
                         {
                             if (VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
@@ -291,7 +289,8 @@ namespace Uncreated.Warfare.Kits
                                     veh.forceRemoveAllPlayers();
                                     VehicleBay.DeleteVehicle(veh);
                                     asset = veh.asset;
-                                } else
+                                }
+                                else
                                 {
                                     asset = UCAssetManager.FindVehicleAsset(spawn.VehicleID);
                                 }

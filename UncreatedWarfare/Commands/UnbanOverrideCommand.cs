@@ -4,7 +4,6 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Networking;
@@ -55,7 +54,8 @@ namespace Uncreated.Warfare.Commands
                             {
                                 F.Log(F.Translate("unban_unbanned_console_id_operator", 0, out _, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                                 F.Broadcast("unban_unbanned_broadcast_id_operator", steamplayer.m_SteamID.ToString(Data.Locale));
-                            } else
+                            }
+                            else
                             {
                                 F.Log(F.Translate("unban_unbanned_console_name_operator", 0, out _, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                                 F.Broadcast("unban_unbanned_broadcast_name_operator", names.CharacterName);
@@ -93,7 +93,8 @@ namespace Uncreated.Warfare.Commands
                                 F.Log(F.Translate("unban_unbanned_console_id", 0, out _, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                                 F.SendChat(player, "unban_unbanned_feedback_id", steamplayer.m_SteamID.ToString(Data.Locale));
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "unban_unbanned_broadcast_id", steamplayer.m_SteamID.ToString(Data.Locale), callerNames.CharacterName);
-                            } else
+                            }
+                            else
                             {
                                 F.Log(F.Translate("unban_unbanned_console_name", 0, out _, names.PlayerName, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                                 F.SendChat(player, "unban_unbanned_feedback_name", names.CharacterName);

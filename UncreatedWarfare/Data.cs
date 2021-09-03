@@ -1,57 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Stats;
-using SDG.Unturned;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Kits;
-using System.Threading;
-using System.Reflection;
-using Uncreated.Players;
-using Uncreated.SQL;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.Squads;
+﻿using Rocket.API.Serialisation;
 using Rocket.Core;
-using Rocket.API.Serialisation;
-using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.XP;
-using System.Globalization;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes;
+using SDG.Unturned;
 using Steamworks;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Reflection;
 using Uncreated.Networking;
+using Uncreated.Players;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.XP;
+using UnityEngine;
 
 namespace Uncreated.Warfare
 {
     public static class Data
     {
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-        public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type> 
-        { 
-            { "TeamCTF", typeof(TeamCTF) } 
+        public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
+        {
+            { "TeamCTF", typeof(TeamCTF) }
         };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
         private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
         private static string _flagStorageTemp;
-        public static string FlagStorage {
+        public static string FlagStorage
+        {
             get
             {
-                if(Provider.map == default) return DataDirectory + @"Maps\Unloaded\Flags\";
+                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Flags\";
                 if (_flagStorageTemp == default)
                     _flagStorageTemp = string.Format(_flagStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _flagStorageTemp;
-            } 
+            }
         }
         private static readonly string _structuresStorage = DataDirectory + @"Maps\{0}\Structures\";
         private static string _structStorageTemp = null;
@@ -105,8 +101,8 @@ namespace Uncreated.Warfare
         public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
         public static KitManager KitManager;
         public static VehicleSpawner VehicleSpawner;
-        public static VehicleBay VehicleBay; 
-        public static VehicleSigns VehicleSigns; 
+        public static VehicleBay VehicleBay;
+        public static VehicleSigns VehicleSigns;
         public static FOBManager FOBManager;
         public static BuildManager BuildManager;
         public static TeamManager TeamManager;
@@ -375,7 +371,7 @@ namespace Uncreated.Warfare
             if (stuff.Length >= 2) badKey = stuff[1].Trim();
             F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
             F.LogError(ex);
-            if(ex.InnerException != default)
+            if (ex.InnerException != default)
                 F.LogError(ex.InnerException);
             Level.onLevelLoaded += (int level) =>
             {
@@ -396,7 +392,7 @@ namespace Uncreated.Warfare
                 new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup,
                 "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100);
         }
-        
+
         private static RocketPermissionsGroup InternOnDutyGroup
         {
             get =>
@@ -410,7 +406,7 @@ namespace Uncreated.Warfare
                 "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50);
         }
 
-        private static List<Permission> AdminPerms 
+        private static List<Permission> AdminPerms
         {
             get =>
                 new List<Permission>()

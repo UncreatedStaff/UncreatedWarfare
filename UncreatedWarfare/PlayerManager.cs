@@ -1,17 +1,11 @@
-﻿using Newtonsoft.Json;
-using Rocket.API;
-using Rocket.Unturned;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -151,7 +145,8 @@ namespace Uncreated.Warfare
                 if (TeamManager.CanJoinTeam(save.Team) && ucplayer.Player.quests.groupID.m_SteamID != save.Team)
                 {
                     ucplayer.Player.quests.ServerAssignToGroup(new CSteamID(TeamManager.GetGroupID(save.Team)), EPlayerGroupRank.MEMBER, true);
-                } else
+                }
+                else
                 {
                     ulong other = TeamManager.Other(save.Team);
                     if (TeamManager.CanJoinTeam(other) && ucplayer.Player.quests.groupID.m_SteamID != other)

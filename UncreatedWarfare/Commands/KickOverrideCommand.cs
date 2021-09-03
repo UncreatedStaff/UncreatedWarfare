@@ -4,7 +4,6 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Networking;
@@ -49,7 +48,7 @@ namespace Uncreated.Warfare.Commands
                                     Invocations.Shared.LogKicked.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
                                 }
-                                F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, 
+                                F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
                                     player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                 F.Broadcast("kick_kicked_broadcast_operator", names.PlayerName);
                             }
@@ -86,7 +85,7 @@ namespace Uncreated.Warfare.Commands
                                     Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
                                 }
                                 F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
-                                    names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                                    names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                     callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
                                 F.SendChat(player.CSteamID, "kick_kicked_feedback", names.CharacterName);

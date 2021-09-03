@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Rocket.API;
+﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
+using System;
+using System.Collections.Generic;
+using System.Text;
 using Uncreated.Warfare.Networking;
 using UnityEngine;
 
@@ -53,7 +50,8 @@ namespace Uncreated.Warfare.Commands
                 {
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
                     Provider.shutdown(0, reason);
-                } else if (option == "aftergame" || option == "after" || option == "game")
+                }
+                else if (option == "aftergame" || option == "after" || option == "game")
                 {
                     F.Broadcast("shutdown_broadcast_after_game", reason);
                     F.Log(F.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
@@ -68,7 +66,8 @@ namespace Uncreated.Warfare.Commands
                     }
                     Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
                     Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
-                } else if (option == "cancel" || option == "abort")
+                }
+                else if (option == "cancel" || option == "abort")
                 {
                     Data.Gamemode.CancelShutdownAfterGame();
                     F.Broadcast("shutdown_broadcast_after_game_canceled");
@@ -82,7 +81,7 @@ namespace Uncreated.Warfare.Commands
                         catch { }
                     }
                     Invocations.Shared.ShuttingDownCancel.NetInvoke(0UL);
-                } 
+                }
                 else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
                     string time;
@@ -95,12 +94,14 @@ namespace Uncreated.Warfare.Commands
                     F.Log(F.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
                     Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);
-                } else
+                }
+                else
                 {
                     F.LogError(F.Translate("shutdown_syntax", 0), ConsoleColor.Red);
                     return;
                 }
-            } else
+            }
+            else
             {
                 SteamPlayer player = ((UnturnedPlayer)caller).Player.channel.owner;
                 if (!Dedicator.isDedicated)

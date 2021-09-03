@@ -1,20 +1,13 @@
-﻿using Rocket.API;
-using Rocket.Core.Steam;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using UnityEngine;
-using static Uncreated.Warfare.FOBs.FOBConfig;
 using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.FOBs

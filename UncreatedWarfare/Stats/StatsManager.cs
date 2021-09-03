@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
+using System.Linq;
 
 namespace Uncreated.Warfare.Stats
 {
@@ -43,7 +41,7 @@ namespace Uncreated.Warfare.Stats
                 },
                 SaveDirectory + "team1.dat"
             );
-            WarfareTeam.IO.InitializeTo( 
+            WarfareTeam.IO.InitializeTo(
                 () => new WarfareTeam()
                 {
                     DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION,
@@ -63,7 +61,7 @@ namespace Uncreated.Warfare.Stats
                     VehiclesDestroyed = 0,
                     VehiclesRequested = 0,
                     Wins = 0
-                }, 
+                },
                 SaveDirectory + "team1.dat"
             );
             WarfareTeam.IO.ReadFrom(SaveDirectory + "team1.dat", out Team1Stats);
@@ -85,7 +83,7 @@ namespace Uncreated.Warfare.Stats
             {
                 modification.Invoke(Team1Stats);
                 if (save) WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
-            } 
+            }
             else if (team == 2)
             {
                 modification.Invoke(Team2Stats);
@@ -98,7 +96,7 @@ namespace Uncreated.Warfare.Stats
             {
                 modification.Invoke(Team1Stats);
                 if (save) WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
-            } 
+            }
             else if (team == 2)
             {
                 modification.Invoke(Team2Stats);
@@ -127,7 +125,7 @@ namespace Uncreated.Warfare.Stats
                     }
                     if (!Weapons.Exists(x => x.ID == weapon.ID && x.KitID == weapon.KitID))
                         Weapons.Add(weapon);
-                } 
+                }
                 else
                 {
                     F.LogWarning("Invalid weapon file: " + file.FullName);
@@ -235,7 +233,7 @@ namespace Uncreated.Warfare.Stats
                     if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats) && stats != null)
                     {
                         OnlinePlayers.Add(stats);
-                    } 
+                    }
                     else
                     {
                         // copy to new file appended with _corrupt
@@ -263,7 +261,8 @@ namespace Uncreated.Warfare.Stats
                         WarfareStats.IO.WriteTo(reset, dir);
                         OnlinePlayers.Add(reset);
                     }
-                } else
+                }
+                else
                 {
                     WarfareStats reset = new WarfareStats()
                     {
@@ -278,7 +277,7 @@ namespace Uncreated.Warfare.Stats
         }
         public static void DeregisterPlayer(ulong Steam64)
         {
-            WarfareStats stats = OnlinePlayers.FirstOrDefault(x =>  x.Steam64 == Steam64);
+            WarfareStats stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == Steam64);
             if (stats == default) return;
             WarfareStats.IO.WriteTo(stats, StatsDirectory + Steam64.ToString(Data.Locale) + ".dat");
             OnlinePlayers.Remove(stats);

@@ -1,16 +1,10 @@
-﻿using System;
+﻿using Rocket.API;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Rocket.API;
-using Rocket.Unturned.Player;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Structure = Uncreated.Warfare.Structures.Structure;
-using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -109,7 +103,8 @@ namespace Uncreated.Warfare.Commands
                                         if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
                                         {
                                             player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                        } else
+                                        }
+                                        else
                                         {
                                             player.SendChat("structure_not_looking");
                                         }
@@ -178,7 +173,7 @@ namespace Uncreated.Warfare.Commands
                                 }
                             }
                             else
-{
+                            {
                                 BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(barricade2.transform);
                                 if (bdrop != null)
                                 {
@@ -234,7 +229,8 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         player.Player.SendChat("no_permissions");
-                } else if (action == "pop" || action == "destroy")
+                }
+                else if (action == "pop" || action == "destroy")
                 {
                     if (player.HasPermission("uc.structure.pop"))
                     {
@@ -253,10 +249,11 @@ namespace Uncreated.Warfare.Commands
                             {
                                 player.Player.SendChat("structure_pop_not_poppable");
                             }
-                        } else
+                        }
+                        else
                         {
                             Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE | RayMasks.BARRICADE);
-                            if(i2 != default)
+                            if (i2 != default)
                             {
                                 if (i2 is Interactable2SalvageBarricade)
                                 {
@@ -275,7 +272,8 @@ namespace Uncreated.Warfare.Commands
                         }
                     }
                     else player.Player.SendChat("no_permissions");
-                } else if (action == "examine" || action == "wtf")
+                }
+                else if (action == "examine" || action == "wtf")
                 {
                     if (player.HasPermission("uc.structure.examine"))
                     {
@@ -365,19 +363,21 @@ namespace Uncreated.Warfare.Commands
         }
         private void ExamineVehicle(InteractableVehicle vehicle, Player player, bool sendurl)
         {
-            if(vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
+            if (vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
             {
                 player.SendChat("structure_examine_not_locked");
-            } else
+            }
+            else
             {
                 ulong team = F.GetTeamFromPlayerSteam64ID(vehicle.lockedOwner.m_SteamID);
                 string teamname = TeamManager.TranslateName(team, player);
-                if(sendurl)
+                if (sendurl)
                 {
                     player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, teamname), vehicle.lockedOwner.m_SteamID);
-                } else
+                }
+                else
                 {
                     string teamcolor = TeamManager.GetTeamHexColor(team);
                     player.SendChat("structure_last_owner_chat",
@@ -392,8 +392,8 @@ namespace Uncreated.Warfare.Commands
             BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
             if (bdrop != null)
             {
-                BarricadeData data = bdrop.GetServersideData(); 
-                if(data.owner == default || data.owner == 0)
+                BarricadeData data = bdrop.GetServersideData();
+                if (data.owner == default || data.owner == 0)
                 {
                     player.SendChat("structure_examine_not_examinable");
                     return;
@@ -410,7 +410,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("structure_last_owner_chat",
                         Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(data.owner).CharacterName,
-                        data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)), 
+                        data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)),
                         teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                 }
             }
@@ -453,7 +453,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void ExamineTrap(UnityEngine.Transform i, Player player, bool sendurl)
         {
-            if(i.TryGetComponent(out Components.BarricadeOwnerDataComponent data))
+            if (i.TryGetComponent(out Components.BarricadeOwnerDataComponent data))
             {
                 if (data.ownerID == default || data.ownerID == 0)
                 {
@@ -472,7 +472,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("structure_last_owner_chat",
                         Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(data.ownerID).CharacterName,
-                        data.owner == null ? data.ownerID.ToString(Data.Locale) : F.GetPlayerOriginalNames(data.owner).PlayerName, 
+                        data.owner == null ? data.ownerID.ToString(Data.Locale) : F.GetPlayerOriginalNames(data.owner).PlayerName,
                         TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.ownerID)),
                         teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                 }

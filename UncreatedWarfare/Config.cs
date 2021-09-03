@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Rocket.API;
+﻿using Rocket.API;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using Uncreated.SQL;
@@ -333,7 +332,7 @@ namespace Uncreated.Warfare
             PenalizeSuicides = true;
         }
     }
-    public class TeamSettings 
+    public class TeamSettings
     {
         public bool BalanceTeams;
         public float AllowedDifferencePercent;

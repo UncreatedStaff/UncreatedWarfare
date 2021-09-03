@@ -1,23 +1,18 @@
-﻿using Rocket.Core.Steam;
-using Rocket.Unturned.Enumerations;
+﻿using Rocket.Unturned.Enumerations;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -46,7 +41,7 @@ namespace Uncreated.Warfare
                     Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID,
                         parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                         parameters.key, parameters.itemName ?? "", parameters.item, parameters.distance);
-                Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID, 
+                Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
                 if (Data.Gamemode is TeamCTF ctf)
@@ -152,7 +147,7 @@ namespace Uncreated.Warfare
                         if (atk)
                         {
                             s.KillsWhileAttackingFlags++;
-                        } 
+                        }
                         else if (def)
                         {
                             s.KillsWhileDefendingFlags++;
@@ -160,16 +155,16 @@ namespace Uncreated.Warfare
                     }, false);
                 }
                 else
-                    StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => 
-                    { s.Kills++; if (atk) s.KillsWhileAttackingFlags++; else if (def) s.KillsWhileDefendingFlags++; } , false);
+                    StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s =>
+                    { s.Kills++; if (atk) s.KillsWhileAttackingFlags++; else if (def) s.KillsWhileDefendingFlags++; }, false);
                 if (KitManager.KitExists(parameters.kitname, out kit) && parameters.cause != EDeathCause.VEHICLE && parameters.cause != EDeathCause.ROADKILL && Assets.find(EAssetType.ITEM, parameters.item) is ItemAsset asset && asset != null)
                 {
-                    StatsManager.ModifyWeapon(parameters.item, kit.Name, x => 
+                    StatsManager.ModifyWeapon(parameters.item, kit.Name, x =>
                     {
                         x.Kills++;
                         if (parameters.limb == ELimb.SKULL)
                             x.SkullKills++;
-                        else if (parameters.limb == ELimb.SPINE || parameters.limb == ELimb.LEFT_FRONT || parameters.limb == ELimb.RIGHT_FRONT || 
+                        else if (parameters.limb == ELimb.SPINE || parameters.limb == ELimb.LEFT_FRONT || parameters.limb == ELimb.RIGHT_FRONT ||
                                  parameters.limb == ELimb.LEFT_BACK || parameters.limb == ELimb.RIGHT_BACK)
                             x.BodyKills++;
                         else if (parameters.limb == ELimb.LEFT_HAND || parameters.limb == ELimb.RIGHT_HAND || parameters.limb == ELimb.LEFT_ARM || parameters.limb == ELimb.RIGHT_ARM)
@@ -830,8 +825,9 @@ namespace Uncreated.Warfare
                             if (asset != null) itemName = asset.itemName;
                             else itemName = item.ToString(Data.Locale);
                         }
-                        
-                    } else
+
+                    }
+                    else
                     {
                         killer = dead.Player.channel.owner;
                         if (cause == EDeathCause.ZOMBIE)
@@ -891,7 +887,7 @@ namespace Uncreated.Warfare
                 if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
                 if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINCAMP")) key = "MAINCAMP";
                 else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINDEATH")) key = "MAINDEATH";
-                if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH 
+                if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH
                     || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL || cause == EDeathCause.BLEEDING) && foundKiller)
                 {
                     if (item != 0)
@@ -1055,7 +1051,8 @@ namespace Uncreated.Warfare
                         item = g.asset.id;
                         if (Config.Debug)
                             F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
-                    } else if (c.thrown[0] != null)
+                    }
+                    else if (c.thrown[0] != null)
                     {
                         item = c.thrown[0].asset.id;
                         if (Config.Debug)

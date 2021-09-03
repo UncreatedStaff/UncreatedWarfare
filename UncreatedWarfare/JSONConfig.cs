@@ -1,16 +1,13 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare;
 
 namespace Uncreated
 {
-    public class Config<TData> : IConfiguration where TData : ConfigData, new() 
+    public class Config<TData> : IConfiguration where TData : ConfigData, new()
     {
         readonly string _dir;
         public TData Data { get; private set; }
@@ -18,7 +15,7 @@ namespace Uncreated
         public string Directory => _dir;
         public Config(string directory, string filename)
         {
-            if(!System.IO.Directory.Exists(directory))
+            if (!System.IO.Directory.Exists(directory))
                 System.IO.Directory.CreateDirectory(directory);
             this._dir = directory + filename;
 
@@ -86,7 +83,7 @@ namespace Uncreated
                     try
                     {
                         if (fields[i].IsStatic ||  // if the field is static or it contains [JsonIgnore] in its attributes.
-                            fields[i].CustomAttributes.Count(x => x.AttributeType == typeof(JsonIgnoreAttribute) || 
+                            fields[i].CustomAttributes.Count(x => x.AttributeType == typeof(JsonIgnoreAttribute) ||
                             x.AttributeType == typeof(PreventUpgradeAttribute)) > 0) continue;
                         object currentvalue = fields[i].GetValue(Data);
                         object defaultvalue = fields[i].GetValue(defaultConfig);

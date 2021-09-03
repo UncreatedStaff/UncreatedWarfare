@@ -1,16 +1,13 @@
 ﻿using HarmonyLib;
-using JetBrains.Annotations;
 using Rocket.API;
 using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using UnityEngine;
@@ -274,7 +271,8 @@ namespace Uncreated.Warfare
                             if (client.player != null && (double)(client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
                                 ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                         }
-                    } else
+                    }
+                    else
                     {
                         foreach (SteamPlayer client in Provider.clients)
                         {
@@ -415,9 +413,10 @@ namespace Uncreated.Warfare
                             F.InvokeSignUpdateForAllKits(sign, x, y, trimmedText);
                         else
                             F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-                    } else
+                    }
+                    else
                         F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-                    
+
 
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
 
@@ -432,7 +431,8 @@ namespace Uncreated.Warfare
                     drop.ReceiveUpdateState(numArray1);
                     sign.updateText(trimmedText);
                     return false;
-                } else
+                }
+                else
                 {
                     return true;
                 }
@@ -587,7 +587,8 @@ namespace Uncreated.Warfare
                             {
                                 c.lastRoadkilled = ___vehicle.asset.id;
                             }
-                        } else if (___vehicle.speed <= 10.0)
+                        }
+                        else if (___vehicle.speed <= 10.0)
                         {
                             return false;
                         }
@@ -785,13 +786,15 @@ namespace Uncreated.Warfare
                                     if (a != null)
                                         vc.item = a.asset.id;
                                 }
-                            } else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                            }
+                            else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                             {
                                 if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
                                 {
                                     vc.item = c.lastProjected;
                                 }
-                            } else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
+                            }
+                            else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
                             {
                                 if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
                                 {
@@ -824,7 +827,8 @@ namespace Uncreated.Warfare
                 if (__instance.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
                 {
                     instigator = vc.owner;
-                } else
+                }
+                else
                 {
                     if (__instance.passengers.Length > 0)
                     {

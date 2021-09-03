@@ -1,10 +1,8 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using SDG.Unturned;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {

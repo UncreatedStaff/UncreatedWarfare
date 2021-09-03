@@ -5,7 +5,6 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Networking;
 
@@ -158,10 +157,10 @@ namespace Uncreated.Warfare.Commands
                                                 Invocations.Shared.LogBanned.NetInvoke(result, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
-                                            F.Log(F.Translate("ban_permanent_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
+                                            F.Log(F.Translate("ban_permanent_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat("ban_permanent_feedback", names.CharacterName);
-                                            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast", 
+                                            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast",
                                                 names.CharacterName, callerName.CharacterName);
                                         }
                                         else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint duration))
@@ -177,7 +176,7 @@ namespace Uncreated.Warfare.Commands
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
                                             string timeLocalized = F.GetTimeFromMinutes(duration, 0);
-                                            F.Log(F.Translate("ban_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName, 
+                                            F.Log(F.Translate("ban_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                             player.SendChat("ban_feedback", names.CharacterName, timeLocalized);
                                             foreach (SteamPlayer pl in Provider.clients)
@@ -218,7 +217,7 @@ namespace Uncreated.Warfare.Commands
                                         Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, SteamBlacklist.PERMANENT / 60u, reason);
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
                                     }
-                                    F.Log(F.Translate("ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                                    F.Log(F.Translate("ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     player.SendChat("ban_permanent_feedback", names.CharacterName, callerName.CharacterName);
                                     F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast",
@@ -237,7 +236,7 @@ namespace Uncreated.Warfare.Commands
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, result, DateTime.Now);
                                     }
                                     string timeLocalized = F.GetTimeFromMinutes(result, 0);
-                                    F.Log(F.Translate("ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), 
+                                    F.Log(F.Translate("ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                     player.SendChat("ban_feedback", names.CharacterName, callerName.CharacterName, timeLocalized);
                                     foreach (SteamPlayer pl in Provider.clients)
@@ -262,10 +261,10 @@ namespace Uncreated.Warfare.Commands
             FPlayerName callerName;
             if (admin == null)
                 callerName = Data.DatabaseManager.GetUsernames(Admin);
-            else 
+            else
                 callerName = F.GetPlayerOriginalNames(admin);
             FPlayerName names;
-            if (violator == null) 
+            if (violator == null)
                 names = Data.DatabaseManager.GetUsernames(Violator);
             else
                 names = F.GetPlayerOriginalNames(admin);
@@ -290,7 +289,8 @@ namespace Uncreated.Warfare.Commands
                         pl.SendChat("ban_broadcast" + (Admin == 0 ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName, timeLocalized);
                     }
                 }
-            } else
+            }
+            else
             {
                 if (!violator.transportConnection.TryGetIPv4Address(out uint ip)) ip = 0;
                 Provider.requestBanPlayer(violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID, ip, Reason, DurationMins * 60);

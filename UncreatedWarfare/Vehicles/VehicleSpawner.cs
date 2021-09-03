@@ -1,12 +1,8 @@
 ﻿using Newtonsoft.Json;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.XP;
 using UnityEngine;
@@ -139,7 +135,8 @@ namespace Uncreated.Warfare.Vehicles
             }
         }
         public static bool UnusedSpawnExists(ushort vehicleID, out VehicleSpawn spawn) =>
-            ObjectExists(s => {
+            ObjectExists(s =>
+            {
                 if (s.VehicleID == vehicleID && s.VehicleInstanceID != 0)
                 {
                     var vehicle = VehicleManager.getVehicle(s.VehicleInstanceID);
@@ -282,7 +279,8 @@ namespace Uncreated.Warfare.Vehicles
                                         StructureSaver.Save();
                                         initialized = true;
                                     }
-                                } else
+                                }
+                                else
                                 {
                                     F.LogWarning("VEHICLE SPAWNER ERROR: Unable to get region coordinates.");
                                     initialized = false;
@@ -457,7 +455,7 @@ namespace Uncreated.Warfare.Vehicles
         public void Initialize(InteractableVehicle vehicle)
         {
             Owner = vehicle;
-            
+
             if (VehicleBay.VehicleExists(vehicle.id, out var data))
             {
                 this.data = data;

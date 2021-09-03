@@ -116,7 +116,7 @@ namespace Uncreated.Players
         public static void QueueMessage(UnturnedPlayer player, ToastMessage message) => QueueMessage(player.Player, message);
         public static void QueueMessage(UCPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, severity));
         public static void QueueMessage(UCPlayer player, string message, string second_message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessage(UCPlayer player, ToastMessage message) =>  QueueMessage(player.Player, message);
+        public static void QueueMessage(UCPlayer player, ToastMessage message) => QueueMessage(player.Player, message);
         public static void QueueMessage(SteamPlayer player, string message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.player, new ToastMessage(message, severity));
         public static void QueueMessage(SteamPlayer player, string message, string second_message, ToastMessageSeverity severity = ToastMessageSeverity.INFO) => QueueMessage(player.player, new ToastMessage(message, second_message, severity));
         public static void QueueMessage(SteamPlayer player, ToastMessage message) => QueueMessage(player.player, message);
@@ -134,7 +134,8 @@ namespace Uncreated.Players
             {
                 W.Write(true);
                 W.Write(M.SecondaryMessage);
-            } else
+            }
+            else
                 W.Write(false);
             W.Write(M.Severity);
             W.Write(M.delay);

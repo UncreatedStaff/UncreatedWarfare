@@ -1,12 +1,8 @@
-﻿using Newtonsoft.Json;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Teams;
 
@@ -150,7 +146,7 @@ namespace Uncreated.Warfare.FOBs
                         Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                     }
                 }
-                    
+
             }
             UpdateUIForTeam(team);
         }
@@ -230,7 +226,7 @@ namespace Uncreated.Warfare.FOBs
                     EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
                     player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, FOBList[i].Name, FOBList[i].ClosestLocation));
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     F.LogError("Error in FOB UI: ");
                     F.LogError(ex);
@@ -266,7 +262,7 @@ namespace Uncreated.Warfare.FOBs
             Number = number;
             this.Structure = Structure;
             DateCreated = new DateTime(DateTime.Now.Ticks);
-            ClosestLocation = 
+            ClosestLocation =
                 LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
                 .Cast<LocationNode>()

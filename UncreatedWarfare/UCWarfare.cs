@@ -1,29 +1,23 @@
-﻿using Rocket.Core.Plugins;
+﻿using Newtonsoft.Json;
+using Rocket.Core;
+using Rocket.Core.Plugins;
+using Rocket.Unturned;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Uncreated.Warfare.Teams;
-using UnityEngine;
-using Rocket.Core;
-using Rocket.Unturned;
-using Uncreated.Warfare.Stats;
-using Newtonsoft.Json;
-using Uncreated.SQL;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Vehicles;
-using System.Threading;
-using System.Threading.Tasks;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Squads;
-using Steamworks;
-using Rocket.Core.Steam;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using System.Linq;
 using Uncreated.Networking;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
-using System.Reflection;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare
 {
@@ -37,7 +31,8 @@ namespace Uncreated.Warfare
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
         private MySqlData _sqlElsewhere;
-        public MySqlData SQL {
+        public MySqlData SQL
+        {
             get
             {
                 if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default))) return _sqlElsewhere;
@@ -91,7 +86,8 @@ namespace Uncreated.Warfare
                     w.Close();
                     w.Dispose();
                     _sqlElsewhere = Config.SQL;
-                } else
+                }
+                else
                 {
                     string json = File.ReadAllText(Data.ElseWhereSQLPath);
                     _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
@@ -109,7 +105,8 @@ namespace Uncreated.Warfare
                 SubscribeToEvents();
                 OnLevelLoaded(2);
                 InitialLoadEventSubscription = true;
-            } else
+            }
+            else
             {
                 InitialLoadEventSubscription = false;
                 Level.onLevelLoaded += OnLevelLoaded;
@@ -293,14 +290,14 @@ namespace Uncreated.Warfare
                     {
                         if (sign.text.StartsWith("sign_"))
                         {
-                            F.InvokeSignUpdateFor(player, sign, false); 
+                            F.InvokeSignUpdateFor(player, sign, false);
                         }
                     }
                 }
             }
             if (Data.Gamemode is TeamCTF ctf)
             {
-                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation, 
+                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation,
                     ctf.Config.FlagUICount, ctf.Config.AttackIcon, ctf.Config.DefendIcon);
                 ulong team = player.GetTeam();
                 UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
@@ -329,7 +326,7 @@ namespace Uncreated.Warfare
             if (Announcer != null)
                 Destroy(Announcer);
             //if (Queue != null)
-                //Destroy(Queue);
+            //Destroy(Queue);
             Data.Gamemode?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();

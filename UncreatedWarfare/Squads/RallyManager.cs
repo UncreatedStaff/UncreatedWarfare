@@ -1,10 +1,7 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -37,7 +34,7 @@ namespace Uncreated.Warfare.Squads
             ref float angle_x,
             ref float angle_y,
             ref float angle_z,
-            ref ulong owner, 
+            ref ulong owner,
             ref ulong group,
             ref bool shouldAllow
             )
@@ -59,7 +56,8 @@ namespace Uncreated.Warfare.Squads
                         {
                             player.Message("rally_e_enemies");
                             shouldAllow = false;
-                        } else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
+                        }
+                        else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
                         {
                             player.Message("rally_e_obstructed");
                             shouldAllow = false;
