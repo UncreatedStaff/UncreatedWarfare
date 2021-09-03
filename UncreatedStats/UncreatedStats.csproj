@@ -12,9 +12,4 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworking\bin\Debug\net472\UncreatedNetworking.dll</HintPath>
-    </Reference>
-  </ItemGroup>
 </Project>

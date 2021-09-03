@@ -185,7 +185,7 @@ namespace Uncreated.Warfare.Squads
 
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
             Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
-            nearestLocation = $"{((LocationNode)nearerstLocation).name}";*/
+            nearestLocation = $"{((LocationNode)nearerstLocation).name}";
         }
 
         public void UpdateUIForAwaitingPlayers()
