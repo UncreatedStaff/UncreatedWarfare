@@ -340,22 +340,24 @@ namespace Uncreated.Warfare
 
             /* SET UP ROCKET GROUPS */
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
-                R.Permissions.AddGroup(AdminOnDutyGroup);
+                _ = R.Permissions.AddGroup(AdminOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
-                R.Permissions.AddGroup(AdminOffDutyGroup);
+                _ = R.Permissions.AddGroup(AdminOffDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup) == default)
-                R.Permissions.AddGroup(InternOnDutyGroup);
+                _ = R.Permissions.AddGroup(InternOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup) == default)
-                R.Permissions.AddGroup(InternOffDutyGroup);
+                _ = R.Permissions.AddGroup(InternOffDutyGroup);
             RocketPermissionsGroup defgroup = R.Permissions.GetGroup("default");
             if (defgroup == default)
-                R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
+                _ = R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
             else defgroup.Permissions = DefaultPerms;
-            R.Permissions.SaveGroup(defgroup);
+            _ = R.Permissions.SaveGroup(defgroup);
 
             /* REGISTER STATS MANAGER */
             StatsManager.LoadTeams();
             StatsManager.LoadWeapons();
+            StatsManager.LoadKits();
+            StatsManager.LoadVehicles();
             for (int i = 0; i < Provider.clients.Count; i++)
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
         }

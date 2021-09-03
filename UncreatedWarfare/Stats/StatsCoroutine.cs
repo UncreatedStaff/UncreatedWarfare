@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Stats
                     while (players.MoveNext())
                     {
                         byte team = players.Current.GetTeamByte();
-                        if (KitManager.HasKit(players.Current, out Kits.Kit kit))
+                        if (KitManager.HasKit(players.Current, out Kit kit))
                         {
                             StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s =>
                             {
@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Stats
                                 {
                                     kitData.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval;
                                 }
-                            }, false);
+                            }, true);
                         }
                         else
                             StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);

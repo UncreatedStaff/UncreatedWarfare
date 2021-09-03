@@ -422,7 +422,7 @@ namespace Uncreated.Warfare
                 new object[3] { player.channel.owner.playerID.steamID.m_SteamID, ipaddress, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         }
         /// <returns> 0 if not banned, else duration (-1 meaning forever) </returns>
-        public int IPBanCheck(ulong id, uint packedIP)
+        public int IPBanCheck(ulong id, uint packedIP, byte[] hwid)
         { // returns true if banned
             ulong bannedid = 0;
             string oldids = string.Empty;
@@ -459,9 +459,9 @@ namespace Uncreated.Warfare
             return durationref;
         }
         /// <returns><see langword="true"/> if player was already banned and the duration was updated, else <see langword="false"/></returns>
-        public bool AddIPBan(ulong id, uint packedIP, string unpackedIP, int duration = -1, string reason = "")
+        public bool AddIPBan(ulong id, uint packedIP, string unpackedIP, byte[] hwid, int duration = -1, string reason = "")
         {
-            if (IPBanCheck(id, packedIP) != 0)
+            if (IPBanCheck(id, packedIP, hwid) != 0)
             {
                 NonQuery(
                     $"UPDATE `ipbans` " +
@@ -473,9 +473,9 @@ namespace Uncreated.Warfare
             }
             NonQuery(
                 $"INSERT INTO `ipbans` " +
-                $"(`PackedIP`, `Instigator`, `OtherIDs`, `IPAddress`, `InitialBanDate`, `DurationMinutes`, `Reason`) " +
+                $"(`PackedIP`, `Instigator`, `OtherIDs`, `IPAddress`, `InitialBanDate`, `DurationMinutes`, `Reason`, `HWID`) " +
                 $"VALUES(@0, @1, @2, @3, @4, @5, @6);",
-                new object[] { packedIP, id, id.ToString(Data.Locale), unpackedIP, DateTime.Now, duration, reason }
+                new object[] { packedIP, id, id.ToString(Data.Locale), unpackedIP, DateTime.Now, duration, reason, hwid }
                 );
             return true;
         }

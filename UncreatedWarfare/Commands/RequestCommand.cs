@@ -186,6 +186,7 @@ namespace Uncreated.Warfare.Commands
 
             Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
             KitManager.GiveKit(ucplayer, kit);
+            Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
             KitManager.AddRequest(kit);
             ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
@@ -319,6 +320,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
+                Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
             }
             else
             {

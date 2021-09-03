@@ -70,8 +70,6 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
             }
 
-            /* START STATS COROUTINE */
-            StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
 
             /* DEBUG MYSQL LOADING */
             if (LoadMySQLDataFromElsewhere)
@@ -97,6 +95,8 @@ namespace Uncreated.Warfare
             /* DATA CONSTRUCTION */
             Data.LoadVariables();
 
+            /* START STATS COROUTINE */
+            StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
 
             /* LEVEL SUBSCRIPTIONS */
             if (Level.isLoaded)
@@ -351,6 +351,10 @@ namespace Uncreated.Warfare
             {
                 F.LogError("Unpatching Error, perhaps Nelson changed something:");
                 F.LogError(ex);
+            }
+            for (int i = 0; i < StatsManager.OnlinePlayers.Count; i++)
+            {
+                WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
             }
             NetFactory.ClearRegistry();
         }

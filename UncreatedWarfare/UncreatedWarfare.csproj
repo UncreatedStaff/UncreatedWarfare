@@ -74,6 +74,9 @@
     <Reference Include="UncreatedNetworking">
       <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworking\bin\Debug\net472\UncreatedNetworking.dll</HintPath>
     </Reference>
+    <Reference Include="UncreatedStats">
+      <HintPath>..\UncreatedStats\bin\Debug\net472\UncreatedStats.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
@@ -99,8 +102,5 @@
     <PackageReference Include="Lib.Harmony" Version="2.0.4" />
     <PackageReference Include="MySql.Data" Version="8.0.25" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\UncreatedStats\UncreatedStats.csproj" />
   </ItemGroup>
 </Project>

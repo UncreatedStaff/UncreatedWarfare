@@ -241,12 +241,12 @@ namespace Uncreated.Warfare.Revives
             {
                 if (DeathInfo.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DeathInfo info))
                 {
-                    UCWarfare.I.GetKillerInfo(out item, out info.distance, out info.killerName, out info.killerTeam, out info.kitName, parameters.cause, killer, parameters.player);
+                    UCWarfare.I.GetKillerInfo(out item, out info.distance, out info.killerName, out info.killerTeam, out info.kitName, out info.vehicle, parameters.cause, killer, parameters.player);
                     info.item = item;
                 }
                 else
                 {
-                    UCWarfare.I.GetKillerInfo(out item, out float distance, out FPlayerName names, out ulong killerTeam, out string kitname, parameters.cause, killer, parameters.player);
+                    UCWarfare.I.GetKillerInfo(out item, out float distance, out FPlayerName names, out ulong killerTeam, out string kitname, out ushort turretvehicle, parameters.cause, killer, parameters.player);
                     DeathInfo.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID,
                         new DeathInfo()
                         {
@@ -254,7 +254,8 @@ namespace Uncreated.Warfare.Revives
                             item = item,
                             killerName = names,
                             killerTeam = killerTeam,
-                            kitName = kitname
+                            kitName = kitname,
+                            vehicle = turretvehicle
                         });
                 }
                 if (killer.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide

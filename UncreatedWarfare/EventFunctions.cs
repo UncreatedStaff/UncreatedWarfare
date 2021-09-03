@@ -745,7 +745,7 @@ namespace Uncreated.Warfare
             {
                 if (player.transportConnection.TryGetIPv4Address(out uint address))
                 {
-                    int duration = Data.DatabaseManager.IPBanCheck(player.playerID.steamID.m_SteamID, address);
+                    int duration = Data.DatabaseManager.IPBanCheck(player.playerID.steamID.m_SteamID, address, player.playerID.hwid);
                     if (duration != 0)
                     {
                         isValid = false;

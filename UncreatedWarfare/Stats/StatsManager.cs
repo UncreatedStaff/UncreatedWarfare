@@ -10,11 +10,13 @@ namespace Uncreated.Warfare.Stats
         public static readonly string SaveDirectory = Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\";
         public static readonly string StatsDirectory = SaveDirectory + @"Players\";
         public static readonly string WeaponsDirectory = SaveDirectory + @"Weapons\";
+        public static readonly string VehiclesDirectory = SaveDirectory + @"Vehicles\";
         public static readonly string KitsDirectory = SaveDirectory + @"Kits\";
         public static WarfareTeam Team1Stats;
         public static WarfareTeam Team2Stats;
         public static readonly List<WarfareWeapon> Weapons = new List<WarfareWeapon>();
         public static readonly List<WarfareKit> Kits = new List<WarfareKit>();
+        public static readonly List<WarfareVehicle> Vehicles = new List<WarfareVehicle>();
         public static readonly List<WarfareStats> OnlinePlayers = new List<WarfareStats>();
         public static void LoadTeams()
         {
@@ -132,6 +134,54 @@ namespace Uncreated.Warfare.Stats
                 }
             }
         }
+        public static void LoadVehicles()
+        {
+            if (!Directory.Exists(VehiclesDirectory))
+                Directory.CreateDirectory(VehiclesDirectory);
+            string[] vehicles = Directory.GetFiles(VehiclesDirectory);
+            for (int i = 0; i < vehicles.Length; i++)
+            {
+                FileInfo file = new FileInfo(vehicles[i]);
+                if (WarfareVehicle.IO.ReadFrom(file, out WarfareVehicle vehicle) && vehicle != null)
+                {
+                    if (vehicle.DATA_VERSION != WarfareVehicle.CURRENT_DATA_VERSION)
+                    {
+                        vehicle.DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION;
+                        WarfareVehicle.IO.WriteTo(vehicle, file);
+                    }
+                    if (!Vehicles.Exists(x => x.ID == vehicle.ID))
+                        Vehicles.Add(vehicle);
+                }
+                else
+                {
+                    F.LogWarning("Invalid vehicle file: " + file.FullName);
+                }
+            }
+        }
+        public static void LoadKits()
+        {
+            if (!Directory.Exists(KitsDirectory))
+                Directory.CreateDirectory(KitsDirectory);
+            string[] kits = Directory.GetFiles(KitsDirectory);
+            for (int i = 0; i < kits.Length; i++)
+            {
+                FileInfo file = new FileInfo(kits[i]);
+                if (WarfareKit.IO.ReadFrom(file, out WarfareKit kit) && kit != null)
+                {
+                    if (kit.DATA_VERSION != WarfareKit.CURRENT_DATA_VERSION)
+                    {
+                        kit.DATA_VERSION = WarfareKit.CURRENT_DATA_VERSION;
+                        WarfareKit.IO.WriteTo(kit, file);
+                    }
+                    if (!Kits.Exists(x => x.KitID == kit.KitID))
+                        Kits.Add(kit);
+                }
+                else
+                {
+                    F.LogWarning("Invalid kit file: " + file.FullName);
+                }
+            }
+        }
         private static string GetWeaponName(ushort ID, string KitID) => $"{ID}_{KitID.RemoveMany(false, Data.BAD_FILE_NAME_CHARACTERS)}.dat";
         public static bool ModifyWeapon(ushort ID, string KitID, Action<WarfareWeapon> modification, bool save = true)
         {
@@ -162,6 +212,36 @@ namespace Uncreated.Warfare.Stats
             modification.Invoke(weapon);
             Weapons.Add(weapon);
             WarfareWeapon.IO.WriteTo(weapon, dir);
+            return true;
+        }
+        public static bool ModifyVehicle(ushort ID, Action<WarfareVehicle> modification, bool save = true)
+        {
+            string dir = VehiclesDirectory + ID.ToString(Data.Locale) + ".dat";
+            for (int i = 0; i < Vehicles.Count; i++)
+            {
+                if (Vehicles[i].ID == ID)
+                {
+                    modification.Invoke(Vehicles[i]);
+                    if (save) WarfareVehicle.IO.WriteTo(Vehicles[i], dir);
+                    return true;
+                }
+            }
+            if (File.Exists(dir) && WarfareVehicle.IO.ReadFrom(dir, out WarfareVehicle weapon) && weapon != null)
+            {
+                weapon.DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION;
+                modification.Invoke(weapon);
+                Vehicles.Add(weapon);
+                WarfareVehicle.IO.WriteTo(weapon, dir);
+                return true;
+            }
+            weapon = new WarfareVehicle()
+            {
+                DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION,
+                ID = ID
+            };
+            modification.Invoke(weapon);
+            Vehicles.Add(weapon);
+            WarfareVehicle.IO.WriteTo(weapon, dir);
             return true;
         }
         public static bool ModifyStats(ulong Steam64, Action<WarfareStats> modification, bool save = true)

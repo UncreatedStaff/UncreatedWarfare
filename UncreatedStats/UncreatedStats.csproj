@@ -13,9 +13,6 @@
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="UncreatedNetworking">
       <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworking\bin\Debug\net472\UncreatedNetworking.dll</HintPath>
     </Reference>

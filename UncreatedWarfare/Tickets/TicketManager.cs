@@ -145,7 +145,6 @@ namespace Uncreated.Warfare.Tickets
                         }
 
                         UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
-
                         if (vehicleWasEnemy)
                         {
                             if (owner is null)
@@ -155,6 +154,7 @@ namespace Uncreated.Warfare.Tickets
 
                             AwardSquadXP(player, 100f, amount, Mathf.RoundToInt(amount * 0.25f), "xp_" + message, "ofp_vehicle_eliminated", 0.25F);
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
+                            Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
                         }
                         else if (vehicleWasFriendly)
                         {
