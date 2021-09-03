@@ -585,7 +585,7 @@ namespace Uncreated.Warfare.FOBs
             FOBMaxHeightAboveTerrain = 25f;
             RestrictFOBPlacement = true;
             FOBID = 38311;
-            FOBRequiredBuild = 15;
+            FOBRequiredBuild = 16;
             FOBBuildPickupRadius = 80;
             FobLimit = 10;
 

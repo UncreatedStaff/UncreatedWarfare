@@ -175,7 +175,7 @@ namespace Uncreated.Warfare
                 { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
                 { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
                 { "rally_e_obstructed", "<color=#959c8c>This rally point is obstructed, find a more open place to put it.</color>" },
-                { "rally_ui", "<color=#5eff87>RALLY</color>{0}" },
+                { "rally_ui", "<color=#5eff87>RALLY</color> {0}" },
                 { "rally_time_value", " {0:mm\\:ss}" },
 
                 { "time_second", "second" },
