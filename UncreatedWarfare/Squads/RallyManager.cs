@@ -206,7 +206,7 @@ namespace Uncreated.Warfare.Squads
         public void ShowUIForPlayer(UCPlayer player)
         {
             EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, player.Player.channel.owner.transportConnection, true,
-                        F.Translate("rally_ui", player.Steam64, string.Empty
+                        F.Translate("rally_ui", player.Steam64, $"({nearestLocation})"
                         ));
         }
         public void ShowUIForSquad()

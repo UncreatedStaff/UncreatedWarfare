@@ -216,7 +216,7 @@ namespace Uncreated.Warfare.FOBs
                     }
                 }
 
-                yield return new WaitForSeconds(3);
+                yield return new WaitForSeconds(1);
             }
         }
     }

@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Kits
                         ItemAsset asset = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id);
                         float percentage = (float)jar.item.amount / asset.amount;
 
-                        bool notInKit = !kit.HasItemOfID(jar.item.id);
+                        bool notInKit = !kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(jar.item.id, out _);
                         if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
                         {
                             if (notInKit)
