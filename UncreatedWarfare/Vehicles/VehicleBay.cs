@@ -140,16 +140,15 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
-            VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
-
-            for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
-            {
-                if (i >= 0)
+            BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
+            if (reg != null)
+                for (int b = 0; b < reg.drops.Count; b++)
                 {
-                    if (vehicleRegion.drops[i].interactable is InteractableStorage store)
-                        store.despawnWhenDestroyed = true;
+                    if (reg.drops[b].interactable is InteractableStorage storage)
+                    {
+                        storage.despawnWhenDestroyed = true;
+                    }
                 }
-            }
             VehicleManager.askVehicleDestroy(vehicle);
         }
         public static void DeleteAllVehiclesFromWorld()

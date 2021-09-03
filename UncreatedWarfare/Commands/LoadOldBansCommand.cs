@@ -16,8 +16,6 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string> { "uc.loadbans" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (!Dedicator.isDedicated)
-                return;
             if (SteamBlacklist.list.Count == 0)
                 F.LogError(F.Translate("loadbans_NoBansErrorText", 0));
             else

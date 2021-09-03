@@ -20,8 +20,6 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string> { "uc.kick" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (!Dedicator.isDedicated)
-                return;
             if (caller.DisplayName == "Console")
             {
                 if (!Provider.isServer)

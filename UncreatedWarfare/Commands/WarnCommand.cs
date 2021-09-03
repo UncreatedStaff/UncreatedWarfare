@@ -25,8 +25,6 @@ namespace Uncreated.Warfare.Commands
 
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (!Dedicator.isDedicated)
-                return;
             if (caller.DisplayName == "Console")
             {
                 if (!Provider.isServer)

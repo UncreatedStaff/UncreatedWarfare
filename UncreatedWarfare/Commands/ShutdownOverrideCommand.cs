@@ -22,11 +22,6 @@ namespace Uncreated.Warfare.Commands
         {
             if (caller.DisplayName == "Console")
             {
-                if (!Dedicator.isDedicated)
-                {
-                    F.LogError(F.Translate("shutdown_not_server", 0, out _), ConsoleColor.Red);
-                    return;
-                }
                 if (command.Length == 0)
                 {
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, "None specified.");
@@ -104,11 +99,6 @@ namespace Uncreated.Warfare.Commands
             else
             {
                 SteamPlayer player = ((UnturnedPlayer)caller).Player.channel.owner;
-                if (!Dedicator.isDedicated)
-                {
-                    player.SendChat("shutdown_not_server");
-                    return;
-                }
                 if (command.Length == 0)
                 {
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, "None specified.");
