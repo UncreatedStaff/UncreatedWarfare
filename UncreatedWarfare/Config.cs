@@ -52,7 +52,7 @@ namespace Uncreated.Warfare
         public bool EnableMortarWarning;
         public ushort MortarWeapon;
         public float MortarWarningDistance;
-        public float StatsInterval;
+        public int StatsInterval;
         public float AfkCheckInterval;
         public float AMCDamageMultiplier;
         public bool ReplaceEmptyNamesWithID;
@@ -67,6 +67,7 @@ namespace Uncreated.Warfare
         public bool EnableSquads;
         public float LoadoutCost;
         public float MaxVehicleAbandonmentDistance;
+        public bool UsePatchForPlayerCap;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -103,7 +104,7 @@ namespace Uncreated.Warfare
             this.EnableMortarWarning = true;
             this.MortarWeapon = 38328;
             this.MortarWarningDistance = 75f;
-            this.StatsInterval = 60f;
+            this.StatsInterval = 1;
             this.AfkCheckInterval = 450f;
             this.AMCDamageMultiplier = 0.25f;
             this.ReplaceEmptyNamesWithID = true;
@@ -117,6 +118,7 @@ namespace Uncreated.Warfare
             this.EnableSquads = true;
             this.LoadoutCost = 8;
             this.MaxVehicleAbandonmentDistance = 200f;
+            this.UsePatchForPlayerCap = true;
         }
     }
     public class Modules
@@ -260,6 +262,7 @@ namespace Uncreated.Warfare
         public string AdminOnDutyGroup;
         public string InternOffDutyGroup;
         public string InternOnDutyGroup;
+        public string HelperGroup;
         public bool LogTKs;
         public bool LogBans;
         public bool LogKicks;

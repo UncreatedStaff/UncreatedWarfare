@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Rocket.Core;
+﻿using Rocket.Core;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -13,22 +12,20 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Color = UnityEngine.Color;
-using System.Reflection;
 using Uncreated.Players;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Rocket.API;
+using Uncreated.Networking;
 
 namespace Uncreated.Warfare
 {
     public static class F
     {
         public const float SPAWN_HEIGHT_ABOVE_GROUND = 0.5f;
-        public const char INFINITY_SYMBOL = '∞';
         public static readonly List<char> vowels = new List<char> { 'a', 'e', 'i', 'o', 'u' };
         /// <summary>Convert an HTMLColor string to a actual color.</summary>
         /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
@@ -68,19 +65,19 @@ namespace Uncreated.Warfare
                 int hours = DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
                 return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
             }
-            else if (seconds < 2628000) // < 1 month (30.4166667 days) (365/12)
+            else if (seconds < 2628000) // < 1 month (30.416 days) (365/12)
             {
                 uint days = DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out uint hoursOverflow);
                 return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
             }
             else if (seconds < 31536000) // < 1 year
             {
-                uint months = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.4166667m, out uint daysOverflow);
+                uint months = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out uint daysOverflow);
                 return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
             }
             else // > 1 year
             {
-                uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.4166667m, out _), 12, out uint monthOverflow);
+                uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
@@ -88,26 +85,26 @@ namespace Uncreated.Warfare
         {
             if (minutes < 60) // < 1 hour
             {
-                return minutes.ToString(Data.Locale) + Translate("time_minute" + minutes.S(), player);
+                return minutes.ToString(Data.Locale) + ' ' + Translate("time_minute" + minutes.S(), player);
             }
             else if (minutes < 1440) // < 1 day 
             {
                 uint hours = DivideRemainder(minutes, 60, out uint minutesOverflow);
                 return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
             }
-            else if (minutes < 43800) // < 1 month (30.4166667 days)
+            else if (minutes < 43800) // < 1 month (30.416 days)
             {
                 uint days = DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out uint hoursOverflow);
                 return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
             }
             else if (minutes < 525600) // < 1 year
             {
-                uint months = DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out _), 30.4166667m, out uint daysOverflow);
+                uint months = DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out uint daysOverflow);
                 return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
             }
             else // > 1 year
             {
-                uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out _), 30.4166667m, out _), 12, out uint monthOverflow);
+                uint years = DivideRemainder(DivideRemainder(DivideRemainder(DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
@@ -898,38 +895,6 @@ namespace Uncreated.Warfare
             DONT_DISPLAY,
             IN_VEHICLE
         }
-        public static Color GetTeamColor(this SteamPlayer player) => GetTeamColor(player.player.quests.groupID.m_SteamID);
-        public static Color GetTeamColor(this Player player) => GetTeamColor(player.quests.groupID.m_SteamID);
-        public static Color GetTeamColor(this ulong groupID)
-        {
-            if (groupID == TeamManager.Team1ID) return TeamManager.Team1Color;
-            else if (groupID == TeamManager.Team2ID) return TeamManager.Team2Color;
-            else if (groupID == TeamManager.AdminID) return TeamManager.AdminColor;
-            else return TeamManager.NeutralColor;
-        }
-        public static string GetTeamColorHex(this SteamPlayer player) => GetTeamColorHex(player.player.quests.groupID.m_SteamID);
-        public static string GetTeamColorHex(this Player player) => GetTeamColorHex(player.quests.groupID.m_SteamID);
-        public static string GetTeamColorHex(this ulong groupID)
-        {
-            if (groupID == TeamManager.Team1ID) return TeamManager.Team1ColorHex;
-            else if (groupID == TeamManager.Team2ID) return TeamManager.Team2ColorHex;
-            else if (groupID == TeamManager.AdminID) return TeamManager.AdminColorHex;
-            else return TeamManager.NeutralColorHex;
-        }
-        public static string GetTeamNumberColorHex(this ulong team)
-        {
-            if (team == 1) return TeamManager.Team1ColorHex;
-            else if (team == 2) return TeamManager.Team2ColorHex;
-            else if (team == 3) return TeamManager.AdminColorHex;
-            else return TeamManager.NeutralColorHex;
-        }
-        public static Color GetTeamNumberColor(this ulong team)
-        {
-            if (team == 1) return TeamManager.Team1Color;
-            else if (team == 2) return TeamManager.Team2Color;
-            else if (team == 3) return TeamManager.AdminColor;
-            else return TeamManager.NeutralColor;
-        }
         public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
         {
             SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
@@ -941,6 +906,7 @@ namespace Uncreated.Warfare
             }
             else return pl.GetTeam();
         }
+        public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this UnturnedPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
@@ -1521,13 +1487,8 @@ namespace Uncreated.Warfare
             else
             {
                 SteamPlayer pl = PlayerTool.getSteamPlayer(player);
-                if (pl == default) return new FPlayerName()
-                {
-                    CharacterName = player.ToString(Data.Locale),
-                    NickName = player.ToString(Data.Locale),
-                    PlayerName = player.ToString(Data.Locale),
-                    Steam64 = player
-                };
+                if (pl == default)
+                    return Data.DatabaseManager.GetUsernames(player);
                 else return new FPlayerName()
                 {
                     CharacterName = pl.playerID.characterName,
@@ -1560,165 +1521,182 @@ namespace Uncreated.Warfare
             return false;
         }
         public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
-        public static string TranslateSign(string key, ulong player, bool important, params string[] formatting)
+        public static string TranslateSign(string key, ulong player, bool important)
         {
-            string norm = Translate(key, player, formatting);
-            if (!key.StartsWith("sign_") || norm != key) return norm;
-            string kitname = key.Substring(5);
-            if (kitname.StartsWith("vbs_") && ushort.TryParse(kitname.Substring(4), System.Globalization.NumberStyles.Any, Data.Locale, out ushort vehicleid))
+            try
             {
-                if (Vehicles.VehicleBay.VehicleExists(vehicleid, out Vehicles.VehicleData data))
+                if (key == null) return string.Empty;
+                string norm = Translate(key, player);
+                if (!key.StartsWith("sign_") || norm != key) return norm;
+                string kitname = key.Substring(5);
+                if (kitname.StartsWith("vbs_") && ushort.TryParse(kitname.Substring(4), System.Globalization.NumberStyles.Any, Data.Locale, out ushort vehicleid))
                 {
-                    VehicleAsset asset = UCAssetManager.FindVehicleAsset(vehicleid);
-                    if (asset == default) return norm;
-                    if (data.RequiredLevel > 0)
+                    if (Vehicles.VehicleBay.VehicleExists(vehicleid, out Vehicles.VehicleData data))
                     {
-                        UCPlayer ucplayer = UCPlayer.FromID(player);
-                        Rank playerrank = null;
-                        if (ucplayer != null)
+                        VehicleAsset asset = UCAssetManager.FindVehicleAsset(vehicleid);
+                        if (asset == default) return norm;
+                        if (data.RequiredLevel > 0)
                         {
-                            playerrank = ucplayer.XPRank();
-                        }
-                        Rank rank = data.RequiredRank;
-                        if (rank == default) return norm;
-                        string level;
-                        if (player != 0 && rank != null && rank.level > playerrank.level)
-                        {
-                            level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
-                                UCWarfare.GetColorHex("kit_level_unavailable"),
-                            rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
-                        } else if (rank != null)
-                        {
-                            level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
-                                UCWarfare.GetColorHex("kit_level_available"),
-                            rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
-                        } else
-                        {
-                            level = "\n";
-                        }
-                        return Translate("vehiclebay_sign_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), 
-                            level, data.TicketCost.ToString(Data.Locale), UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
-                    }
-                    else
-                    {
-                        return Translate("vehiclebay_sign_no_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), data.TicketCost.ToString(Data.Locale), 
-                            UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
-                    }
-                }
-                else return norm;
-            } 
-            else if (kitname.StartsWith("loadout_") && ushort.TryParse(kitname.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
-            {
-                UCPlayer ucplayer = UCPlayer.FromID(player);
-                if (ucplayer != null)
-                {
-                    ulong team = ucplayer.GetTeam();
-                    List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(player)).ToList();
-
-                    if (loadouts.Count > 0)
-                    {
-                        if (loadoutid > 0 && loadoutid <= loadouts.Count)
-                        {
-                            Kit kit = loadouts[loadoutid - 1];
-
-                            string lang = DecideLanguage(player, kit.SignTexts);
-                            if (!kit.SignTexts.TryGetValue(lang, out string name))
-                                name = kit.DisplayName ?? kit.Name;
-                            bool keepline = false;
-                            foreach (char @char in name)
+                            UCPlayer ucplayer = UCPlayer.FromID(player);
+                            Rank playerrank = null;
+                            if (ucplayer != null)
                             {
-                                if (@char == '\n')
-                                {
-                                    keepline = true;
-                                    break;
-                                }
+                                playerrank = ucplayer.XPRank();
                             }
-                            string cost = Translate("loadout_name_owned", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
-                            if (!keepline) cost = "\n" + cost;
-                            return Translate("sign_kit_request", player,
-                                name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
-                                cost,
-                                kit.Weapons == "" ? " " : Translate("kit_weapons", player, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
-                                ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"))
-                                );
+                            Rank rank = data.RequiredRank;
+                            if (rank == default) return norm;
+                            string level;
+                            if (player != 0 && rank != null && rank.level > playerrank.level)
+                            {
+                                level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
+                                    UCWarfare.GetColorHex("kit_level_unavailable"),
+                                rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                            }
+                            else if (rank != null)
+                            {
+                                level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
+                                    UCWarfare.GetColorHex("kit_level_available"),
+                                rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                            }
+                            else
+                            {
+                                level = "\n";
+                            }
+                            return Translate("vehiclebay_sign_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"),
+                                level, data.TicketCost.ToString(Data.Locale), UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
+                        }
+                        else
+                        {
+                            return Translate("vehiclebay_sign_no_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), data.TicketCost.ToString(Data.Locale),
+                                UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
                         }
                     }
+                    else return norm;
                 }
-                
-                return Translate("sign_kit_request", player,
-                            Translate("loadout_name", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
-                            string.Empty,
-                            ObjectTranslate("kit_price_dollars", player, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
-                            string.Empty
-                            );
-            }
-            else if (KitManager.KitExists(kitname, out Kit kit))
-            {
-                UCPlayer ucplayer = UCPlayer.FromID(player);
-                ulong playerteam = 0;
-                Rank playerrank = null;
-                if (ucplayer != null)
+                else if (kitname.StartsWith("loadout_") && ushort.TryParse(kitname.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
                 {
-                    playerteam = ucplayer.GetTeam();
-                    playerrank = ucplayer.XPRank();
-                }
-                string lang = DecideLanguage(player, kit.SignTexts);
-                if (!kit.SignTexts.TryGetValue(lang, out string name))
-                    name = kit.DisplayName ?? kit.Name;
-                bool keepline = false;
-                foreach (char @char in name)
-                {
-                    if (@char == '\n')
+                    UCPlayer ucplayer = UCPlayer.FromID(player);
+                    if (ucplayer != null)
                     {
-                        keepline = true;
-                        break;
+                        ulong team = ucplayer.GetTeam();
+                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(player)).ToList();
+
+                        if (loadouts.Count > 0)
+                        {
+                            if (loadoutid > 0 && loadoutid <= loadouts.Count)
+                            {
+                                Kit kit = loadouts[loadoutid - 1];
+
+                                string lang = DecideLanguage(player, kit.SignTexts);
+                                if (!kit.SignTexts.TryGetValue(lang, out string name))
+                                    name = kit.DisplayName ?? kit.Name;
+                                bool keepline = false;
+                                foreach (char @char in name)
+                                {
+                                    if (@char == '\n')
+                                    {
+                                        keepline = true;
+                                        break;
+                                    }
+                                }
+                                string cost = Translate("loadout_name_owned", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                                if (!keepline) cost = "\n" + cost;
+                                return Translate("sign_kit_request", player,
+                                    name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                                    cost,
+                                    kit.Weapons == "" ? " " : Translate("kit_weapons", player, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
+                                    ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"))
+                                    );
+                            }
+                        }
                     }
+
+                    return Translate("sign_kit_request", player,
+                                Translate("loadout_name", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                                string.Empty,
+                                ObjectTranslate("kit_price_dollars", player, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
+                                string.Empty
+                                );
                 }
-                name = Translate("kit_name", player, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
-                string weapons = kit.Weapons ?? string.Empty;
-                if (weapons != string.Empty)
-                    weapons = Translate("kit_weapons", player, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
-                string cost;
-                string playercount;
-                if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
+                else if (KitManager.KitExists(kitname, out Kit kit))
                 {
-                    if (kit.AllowedUsers.Contains(player))
-                        cost = ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
-                    else if (kit.PremiumCost == -1)
-                        cost = Translate("kit_price_exclusive", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                    UCPlayer ucplayer = UCPlayer.FromID(player);
+                    ulong playerteam = 0;
+                    Rank playerrank = null;
+                    if (ucplayer != null)
+                    {
+                        playerteam = ucplayer.GetTeam();
+                        playerrank = ucplayer.XPRank();
+                    }
+                    string lang = DecideLanguage(player, kit.SignTexts);
+                    if (!kit.SignTexts.TryGetValue(lang, out string name))
+                        name = kit.DisplayName ?? kit.Name;
+                    bool keepline = false;
+                    foreach (char @char in name)
+                    {
+                        if (@char == '\n')
+                        {
+                            keepline = true;
+                            break;
+                        }
+                    }
+                    name = Translate("kit_name", player, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
+                    string weapons = kit.Weapons ?? string.Empty;
+                    if (weapons != string.Empty)
+                        weapons = Translate("kit_weapons", player, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
+                    string cost;
+                    string playercount;
+                    if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
+                    {
+                        if (kit.AllowedUsers.Contains(player))
+                            cost = ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                        else if (kit.PremiumCost == -1)
+                            cost = Translate("kit_price_exclusive", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                        else
+                            cost = ObjectTranslate("kit_price_dollars", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                    }
+                    else if (kit.RequiredLevel > 0)
+                    {
+                        if (playerrank == null || playerrank.level < kit.RequiredRank.level)
+                        {
+                            cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
+                                kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                        }
+                        else
+                        {
+                            cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
+                                kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                        }
+                    }
                     else
-                        cost = ObjectTranslate("kit_price_dollars", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
-                } else if (kit.RequiredLevel > 0)
-                {
-                    if (playerrank == null || playerrank.level < kit.RequiredRank.level)
                     {
-                        cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"), 
-                            kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
-                    } else
-                    {
-                        cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
-                            kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                        cost = string.Empty;
                     }
-                } else
-                {
-                    cost = string.Empty;
+                    if (!keepline) cost = "\n" + cost;
+                    if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+                    {
+                        playercount = Translate("kit_unlimited", player).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                    }
+                    else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
+                    {
+                        playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                            .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+                    }
+                    else
+                    {
+                        playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                            .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+                    }
+                    return Translate("sign_kit_request", player, name, cost, weapons, playercount);
                 }
-                if (!keepline) cost = "\n" + cost;
-                if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
-                {
-                    playercount = Translate("kit_unlimited", player).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
-                } else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
-                {
-                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
-                } else
-                {
-                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
-                }
-                return Translate("sign_kit_request", player, name, cost, weapons, playercount);
+                else return key;
             }
-            else return key;
+            catch (Exception ex)
+            {
+                LogError("Error translating sign: ");
+                LogError(ex);
+                return ex.GetType().Name;
+            }
         }
         public static string DecideLanguage<TVal>(ulong player, Dictionary<string, TVal> searcher)
         {
@@ -2042,7 +2020,8 @@ namespace Uncreated.Warfare
                     string localizedString = TranslateDeath(player.playerID.steamID.m_SteamID, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
                     if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
                     {
-                        ChatManager.say(player.playerID.steamID, localizedString, UCWarfare.GetColor("death_background"), localizedString.Contains("</"));
+                        ChatManager.say(player.playerID.steamID, localizedString, 
+                            UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), localizedString.Contains("</"));
                     }
                     else
                     {
@@ -2061,7 +2040,8 @@ namespace Uncreated.Warfare
                             LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                            ChatManager.say(player.playerID.steamID, newMessage, UCWarfare.GetColor("death_background"), newMessage.Contains("</"));
+                            ChatManager.say(player.playerID.steamID, newMessage, 
+                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
                                 + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -2079,7 +2059,8 @@ namespace Uncreated.Warfare
                     string localizedString = TranslateLandmineDeath(player.playerID.steamID.m_SteamID, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
                     if (Encoding.UTF8.GetByteCount(localizedString) <= MaxChatSizeAmount)
                     {
-                        ChatManager.say(player.playerID.steamID, localizedString, UCWarfare.GetColor("death_background"), localizedString.Contains("</"));
+                        ChatManager.say(player.playerID.steamID, localizedString, 
+                            UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), localizedString.Contains("</"));
                     }
                     else
                     {
@@ -2098,7 +2079,8 @@ namespace Uncreated.Warfare
                             LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
-                            ChatManager.say(player.playerID.steamID, newMessage, UCWarfare.GetColor("death_background"), newMessage.Contains("</"));
+                            ChatManager.say(player.playerID.steamID, newMessage, 
+                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
                                 + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -2243,7 +2225,6 @@ namespace Uncreated.Warfare
             if (kits.Count() > 0) return kits.ElementAt(0).DisplayName;
             else return kitname;
         }
-        public static float GetDistanceFromClosestObjective(Vector3 position, out Flag objective, bool includeOutOfRotation = false) => Mathf.Sqrt(GetSqrDistanceFromClosestObjective(position, out objective, includeOutOfRotation));
         public static float GetSqrDistanceFromClosestObjective(Vector3 position, out Flag objective, bool includeOutOfRotation = false)
         {
             if (Data.Gamemode is FlagGamemode fg)
@@ -2279,22 +2260,6 @@ namespace Uncreated.Warfare
             {
                 objective = null;
                 return float.NaN;
-            }
-        }
-        /// <summary>Dimensions controlled by <see cref="Stats.Playstyle.GRID_SIZE"/>.</summary>
-        public static Vector2 RoundLocationToGrid(Vector3 position) 
-        {
-            float gridSquareSize = Level.size / Stats.Playstyle.GRID_SIZE;
-            return new Vector2(Mathf.Floor(position.x / gridSquareSize) * gridSquareSize, Mathf.Floor(position.z / gridSquareSize) * gridSquareSize);
-        }
-        public static UncreatedPlayer GetPlayerStats(ulong player)
-        {
-            if (TryGetPlaytimeComponent(player, out PlaytimeComponent c))
-            {
-                return c.UCPlayerStats;
-            } else
-            {
-                return UncreatedPlayer.Load(player);
             }
         }
         public static bool Between<T>(this T number, T highBound, T lowBound, bool inclusiveHigh = true, bool inclusiveLow = false) where T : IComparable
@@ -2460,6 +2425,16 @@ namespace Uncreated.Warfare
 
             return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
         }
+        public static string TranslateBranch(EBranch branch, ulong player)
+        {
+            string branchName = "team";
+            ulong team = GetTeamFromPlayerSteam64ID(player);
+            if (team == 1)
+                branchName += "1_";
+            else if (team == 2)
+                branchName += "2_";
+            return Translate(branchName + branch.ToString().ToLower(), player, out _);
+        }
         public static string GetLayer(Vector3 direction, Vector3 origin, int Raymask)
         {
             if (Physics.Raycast(origin, direction, out RaycastHit hit, 8192f, Raymask))
@@ -2470,5 +2445,41 @@ namespace Uncreated.Warfare
             }
             else return "nullNoHit";
         }
+        public static bool CanStandAtLocation(Vector3 source)
+        {
+            return Physics.OverlapCapsuleNonAlloc(source + new Vector3(0.0f, PlayerStance.RADIUS + 0.01f, 0.0f), source + 
+                new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders, 
+                RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
+        }
+        public static void NetInvoke(this NetCall call) =>
+            call.Invoke(Data.NetClient.connection);
+        public static void NetInvoke<T>(this NetCallRaw<T> call, T arg) =>
+            call.Invoke(Data.NetClient.connection, arg);
+        public static void NetInvoke<T1, T2>(this NetCallRaw<T1, T2> call, T1 arg1, T2 arg2) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2);
+        public static void NetInvoke<T1, T2, T3>(this NetCallRaw<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3);
+        public static void NetInvoke<T1, T2, T3, T4>(this NetCallRaw<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4);
+        public static void NetInvoke<T1>(this NetCall<T1> call, T1 arg1) =>
+            call.Invoke(Data.NetClient.connection, arg1);
+        public static void NetInvoke<T1, T2>(this NetCall<T1, T2> call, T1 arg1, T2 arg2) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2);
+        public static void NetInvoke<T1, T2, T3>(this NetCall<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3);
+        public static void NetInvoke<T1, T2, T3, T4>(this NetCall<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4);
+        public static void NetInvoke<T1, T2, T3, T4, T5>(this NetCall<T1, T2, T3, T4, T5> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5);
+        public static void NetInvoke<T1, T2, T3, T4, T5, T6>(this NetCall<T1, T2, T3, T4, T5, T6> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6);
+        public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7>(this NetCall<T1, T2, T3, T4, T5, T6, T7> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) =>
+            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
 }

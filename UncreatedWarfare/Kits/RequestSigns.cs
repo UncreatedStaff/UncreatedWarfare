@@ -63,7 +63,6 @@ namespace Uncreated.Warfare.Kits
                 if (drop != null && drop.instanceID == ActiveObjects[i].instance_id)
                 {
                     found = ActiveObjects[i];
-                    F.Log(found.instance_id.ToString());
                     return true;
                 }
             }

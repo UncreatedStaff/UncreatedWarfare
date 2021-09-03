@@ -181,6 +181,7 @@ namespace Uncreated.Warfare
                 { "rally_e_alreadywaiting", "<color=#959c8c>You are already waiting on rally deployment. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
                 { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
                 { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
+                { "rally_e_obstructed", "<color=#959c8c>This rally point is obstructed, find a more open place to put it.</color>" },
                 { "rally_ui", "<color=#5eff87>RALLY</color>{0}" },
                 { "rally_time_value", " {0:mm\\:ss}" },
 
@@ -449,6 +450,7 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_delay", "<color=#b3ab9f>This vehicle is delayed for another: <color=#94cfff>{0}</color>.</color>" },
                 { "request_vehicle_e_notinsquad", "<color=#b3ab9f>You must be <color=#cedcde>IN A SQUAD</color> in order to request this vehicle.</color>" },
                 { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
+                { "request_vehicle_e_notinteam", "<color=#a8918a>You must be on the other team to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
                 { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
@@ -626,6 +628,8 @@ namespace Uncreated.Warfare
                 { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
                 { "reload_reloaded_kits", "<color=#e6e3d5>Reloaded all kits and request signs.</color>" },
                 { "reload_reloaded_slots", "<color=#e6e3d5>Reset the slots plugin to max.</color>" },
+                { "reload_reloaded_slots_not_enabled", "<color=#e6e3d5>{0} must be enabled to use this command operation.</color>" },
+                { "reload_reloaded_sql", "<color=#e6e3d5>Reopened the MySql Connection.</color>" },
 
                 //test
                 { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
@@ -893,6 +897,7 @@ namespace Uncreated.Warfare
 
             // Deaths
             new ColorData("death_background", "ffffff"),
+            new ColorData("death_background_teamkill", "ff9999"),
             new ColorData("death_zombie_name_color", "788c5a"),
 
             // Request

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -45,7 +46,7 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    Client.LogPlayerKicked(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
+                                    Invocations.Shared.LogKicked.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
                                 }
                                 F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, 
@@ -81,7 +82,7 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    Client.LogPlayerKicked(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    Invocations.Shared.LogKicked.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
                                 }
                                 F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
@@ -93,6 +94,40 @@ namespace Uncreated.Warfare.Commands
                         }
                     }
                 }
+            }
+        }
+        public static void KickPlayer(ulong Violator, ulong Admin, string Reason)
+        {
+            SteamPlayer violator = PlayerTool.getSteamPlayer(Violator);
+            SteamPlayer admin = PlayerTool.getSteamPlayer(Admin);
+            FPlayerName callerName;
+            if (admin == null)
+                callerName = Data.DatabaseManager.GetUsernames(Admin);
+            else
+                callerName = F.GetPlayerOriginalNames(admin);
+            FPlayerName names;
+            if (violator == null)
+                names = Data.DatabaseManager.GetUsernames(Violator);
+            else
+                names = F.GetPlayerOriginalNames(admin);
+            if (violator == null)
+            {
+                SharedInvocations.PrintText.NetInvoke(DateTime.Now, "KICK: Player not found online", ConsoleColor.Red);
+            }
+            else
+            {
+                Provider.kick(violator.playerID.steamID, Reason);
+                if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
+                {
+                    Invocations.Shared.LogKicked.NetInvoke(Violator, Admin, Reason, DateTime.Now);
+                    Data.DatabaseManager.AddKick(Violator, Admin, Reason);
+                }
+                F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
+                    names.PlayerName, Violator.ToString(Data.Locale),
+                    callerName.PlayerName, Admin.ToString(Data.Locale), Reason), ConsoleColor.Cyan);
+                F.BroadcastToAllExcept(new List<CSteamID> { admin == null ? new CSteamID(Admin) : admin.playerID.steamID }, "kick_kicked_broadcast", names.CharacterName, callerName.CharacterName);
+                if (admin != null)
+                    F.SendChat(admin, "kick_kicked_feedback", names.CharacterName);
             }
         }
     }

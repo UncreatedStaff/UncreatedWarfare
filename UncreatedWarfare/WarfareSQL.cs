@@ -15,7 +15,7 @@ namespace Uncreated.Warfare
         const string DEFAULT_GATEWAY_BEGINNING = "192.168.1.";
         const string LOCAL_IP = "127.0.0.1";
         const string TIME_FORMAT_SQL = "{0:yyyy-MM-dd HH:mm:ss}";
-        public WarfareSQL(MySqlData data) : base(data) 
+        public WarfareSQL(MySqlData data) : base(data)
         {
             DebugLogging |= UCWarfare.Config.Debug;
         }
@@ -80,34 +80,34 @@ namespace Uncreated.Warfare
                 $"INSERT INTO `usernames` " +
                 $"(`Steam64`, `PlayerName`, `CharacterName`, `NickName`) VALUES(@0, @1, @2, @3) " +
                 $"ON DUPLICATE KEY UPDATE " +
-                updates + 
-                $";", 
+                updates +
+                $";",
                 parameters);
         }
-        public int GetXP(ulong Steam64, ulong Team)
+        public int GetXP(ulong Steam64)
         {
             int xp = 0;
             Query(
                 "SELECT `XP` " +
-                "FROM `levels` " +
+                "FROM `points` " +
                 "WHERE `Steam64` = @0 " +
-                "AND `Team` = @1 LIMIT 1;", 
-                new object[] { Steam64, Team },
+                "LIMIT 1;",
+                new object[] { Steam64 },
                 (R) =>
                 {
                     xp = R.GetInt32(0);
                 });
             return xp;
         }
-        public int GetOfficerPoints(ulong Steam64, ulong Team)
+        public int GetOfficerPoints(ulong Steam64)
         {
             int officer_points = 0;
             Query(
                 $"SELECT `OfficerPoints` " +
-                $"FROM `levels` " +
+                $"FROM `points` " +
                 $"WHERE `Steam64` = @0 " +
-                $"AND `Team` = @1 LIMIT 1;",
-                new object[] { Steam64, Team },
+                $"LIMIT 1;",
+                new object[] { Steam64 },
                 (R) =>
                 {
                     officer_points = R.GetInt32(0);
@@ -160,19 +160,19 @@ namespace Uncreated.Warfare
             return teamkills;
         }
         /// <returns>New XP Value</returns>
-        public int AddXP(ulong Steam64, ulong Team, int amount)
+        public int AddXP(ulong Steam64, int amount)
         {
-            int oldBalance = GetXP(Steam64, Team);
+            int oldBalance = GetXP(Steam64);
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
                 NonQuery(
-                    "INSERT INTO `levels` " +
-                    "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
-                    "VALUES(@0, @1, @2, '0') " +
+                    "INSERT INTO `points` " +
+                    "(`Steam64`, `XP`, `OfficerPoints`) " +
+                    "VALUES(@0, @1,'0') " +
                     "ON DUPLICATE KEY UPDATE " +
-                    "`XP` = `XP` + VALUES(`XP`);", 
-                    new object[] { Steam64, Team, amount });
+                    "`XP` = `XP` + VALUES(`XP`);",
+                    new object[] { Steam64, amount });
                 return unchecked(oldBalance + amount);
             } else
             {
@@ -180,39 +180,39 @@ namespace Uncreated.Warfare
                 if (absamount >= oldBalance)
                 {
                     NonQuery(
-                        "INSERT INTO `levels` " +
-                        "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
-                        "VALUES(@0, @1, '0', '0') " +
+                        "INSERT INTO `points` " +
+                        "(`Steam64`, `XP`, `OfficerPoints`) " +
+                        "VALUES(@0, '0', '0') " +
                         "ON DUPLICATE KEY UPDATE " +
                         "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64, Team });
+                        new object[] { Steam64 });
                     return 0;
                 } else
                 {
                     NonQuery(
-                        "UPDATE `levels` SET " +
+                        "UPDATE `points` SET " +
                         "`XP` = `XP` - @2 " +
-                        "WHERE `Steam64` = @0 AND `Team` = @1;",
-                        new object[] { Steam64, Team, absamount });
+                        "WHERE `Steam64` = @0;",
+                        new object[] { Steam64, absamount });
                     return unchecked(oldBalance - absamount);
                 }
             }
         }
         /// <returns>New Officer Points Value</returns>
-        public int AddOfficerPoints(ulong Steam64, ulong Team, int amount)
+        public int AddOfficerPoints(ulong Steam64, int amount)
         {
-            int oldBalance = GetOfficerPoints(Steam64, Team);
+            int oldBalance = GetOfficerPoints(Steam64);
 
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
                 NonQuery(
-                    "INSERT INTO `levels` " +
-                    "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
-                    "VALUES(@0, @1, '0', @2) " +
+                    "INSERT INTO `points` " +
+                    "(`Steam64`, `XP`, `OfficerPoints`) " +
+                    "VALUES(@0, '0', @2) " +
                     "ON DUPLICATE KEY UPDATE " +
                     "`OfficerPoints` = `OfficerPoints` + VALUES(`OfficerPoints`);",
-                    new object[] { Steam64, Team, amount });
+                    new object[] { Steam64, amount });
                 return oldBalance + amount;
             }
             else
@@ -220,21 +220,21 @@ namespace Uncreated.Warfare
                 if (amount >= oldBalance)
                 {
                     NonQuery(
-                        "INSERT INTO `levels` " +
-                        "(`Steam64`, `Team`, `XP`, `OfficerPoints`) " +
-                        "VALUES(@0, @1, '0', '0') " +
+                        "INSERT INTO `points` " +
+                        "(`Steam64`, `XP`, `OfficerPoints`) " +
+                        "VALUES(@0, '0', '0') " +
                         "ON DUPLICATE KEY UPDATE " +
                         "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64, Team });
+                        new object[] { Steam64 });
                     return 0;
                 }
                 else
                 {
                     NonQuery(
-                        "UPDATE `levels` SET " +
+                        "UPDATE `points` SET " +
                         "`OfficerPoints` = `OfficerPoints` - @2 " +
-                        "WHERE `Steam64` = @0 AND `Team` = @1;",
-                        new object[] { Steam64, Team, Math.Abs(amount) });
+                        "WHERE `Steam64` = @0;",
+                        new object[] { Steam64, Math.Abs(amount) });
                     return oldBalance - amount;
                 }
             }
@@ -347,6 +347,12 @@ namespace Uncreated.Warfare
                 }
             }
         }
+        public void AddUnban(ulong Pardoned, ulong Pardoner)
+            => NonQuery(
+                "INSERT INTO `unbans` " +
+                "(`Pardoned`, `Pardoner`, `Timestamp`) " +
+                "VALUES(@0, @1, @2);",
+                new object[] { Pardoned, Pardoner, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public void AddBan(ulong Banned, ulong Banner, uint Duration, string Reason)
             => NonQuery(
                 "INSERT INTO `bans` " +
@@ -377,7 +383,7 @@ namespace Uncreated.Warfare
                 "(`Kicked`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
                 new object[] { Kicked, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public  void AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
+        public void AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
             => NonQuery(
                 "INSERT INTO `teamkills` " +
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
@@ -425,7 +431,7 @@ namespace Uncreated.Warfare
                 $"SELECT * " +
                 $"FROM `ipbans` " +
                 $"WHERE `PackedIP` = @0 " +
-                $"LIMIT 1;", 
+                $"LIMIT 1;",
                 new object[] { packedIP }, R =>
                 {
                     bannedid = R.GetUInt64("Instigator");
@@ -485,6 +491,68 @@ namespace Uncreated.Warfare
                 );
             if (ip == null) return "255.255.255.255";
             else return ip;
+        }
+        public void MigrateLevels()
+        {
+            List<ulong> steamids = new List<ulong>();
+            List<FLevels> lvls = new List<FLevels>();
+            Query($"SELECT * FROM `levels`;", new object[0], R => {
+                ulong id = R.GetUInt64("Steam64");
+                lvls.Add(new FLevels
+                {
+                    Steam64 = id,
+                    ofp = R.GetUInt32("OfficerPoints"),
+                    xp = R.GetUInt32("XP"),
+                    Team = R.GetUInt64("Team")
+                });
+                if (!steamids.Contains(id))
+                    steamids.Add(id);
+            });
+            Dictionary<ulong, uint> XPs = new Dictionary<ulong, uint>();
+            Dictionary<ulong, uint> OFPs = new Dictionary<ulong, uint>();
+            for (int i = 0; i < lvls.Count; i++)
+            {
+                if (XPs.TryGetValue(lvls[i].Steam64, out uint xp))
+                {
+                    if (xp < lvls[i].xp)
+                    {
+                        XPs[lvls[i].Steam64] = lvls[i].xp;
+                    }
+                } else
+                {
+                    XPs.Add(lvls[i].Steam64, lvls[i].xp);
+                }
+                if (OFPs.TryGetValue(lvls[i].Steam64, out uint ofp))
+                {
+                    if (ofp < lvls[i].ofp)
+                    {
+                        OFPs[lvls[i].Steam64] = lvls[i].ofp;
+                    }
+                }
+                else
+                {
+                    OFPs.Add(lvls[i].Steam64, lvls[i].ofp);
+                }
+            }
+            StringBuilder query = new StringBuilder("INSERT INTO `points` (`Steam64`, `XP`, `OfficerPoints`) VALUES ");
+            for (int i = 0; i < steamids.Count; i++)
+            {
+                if (i != 0) query.Append(", ");
+                if (!XPs.TryGetValue(steamids[i], out uint xp))
+                    xp = 0;
+                if (!OFPs.TryGetValue(steamids[i], out uint ofp))
+                    ofp = 0;
+                query.Append($"({steamids[i]}, {xp}, {ofp})");
+            }
+            query.Append(';');
+            NonQuery(query.ToString(), new object[0]);
+        }
+        struct FLevels
+        {
+            public ulong Steam64;
+            public uint xp;
+            public uint ofp;
+            public ulong Team;
         }
         public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
             => F.Log(message, color);

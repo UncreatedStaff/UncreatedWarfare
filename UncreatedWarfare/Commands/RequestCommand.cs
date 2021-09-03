@@ -29,6 +29,7 @@ namespace Uncreated.Warfare.Commands
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
+            ulong team = ucplayer.GetTeam();
             if (command.Length > 0)
             {
                 if (command[0].ToLower() == "save")
@@ -42,7 +43,7 @@ namespace Uncreated.Warfare.Commands
                             if (RequestSigns.AddRequestSign(sign, out RequestSign signadded))
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
-                                if (KitManager.KitExists(signadded.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
+                                if (KitManager.KitExists(signadded.kit_name, out Kit kit)) teamcolor = TeamManager.GetTeamHexColor(kit.Team);
                                 player.Message("request_saved_sign", signadded.kit_name, teamcolor);
                             }
                             else player.Message("request_already_saved"); // sign already registered
@@ -63,7 +64,7 @@ namespace Uncreated.Warfare.Commands
                             if (RequestSigns.SignExists(sign, out RequestSign requestsign))
                             {
                                 string teamcolor = TeamManager.NeutralColorHex;
-                                if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = F.GetTeamNumberColorHex(kit.Team);
+                                if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = TeamManager.GetTeamHexColor(kit.Team);
                                 player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
                                 RequestSigns.RemoveRequestSign(requestsign);
                             }
@@ -89,14 +90,14 @@ namespace Uncreated.Warfare.Commands
                     if (vbsign.bay != default && vbsign.bay.HasLinkedVehicle(out InteractableVehicle veh))
                     {
                         if(veh != default)
-                            RequestVehicle(ucplayer, veh);
+                            RequestVehicle(ucplayer, veh, team);
                     }
                 }
                 if (requestsign.kit_name.StartsWith("loadout_"))
                 {
                     if (ushort.TryParse(requestsign.kit_name.Substring(8), out ushort loadoutNumber))
                     {
-                        ulong team = ucplayer.GetTeam();
+                        byte bteam = ucplayer.Player.GetTeamByte();
                         List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
 
                         if (loadouts.Count != 0)
@@ -104,8 +105,21 @@ namespace Uncreated.Warfare.Commands
                             if (loadoutNumber > 0 && loadoutNumber <= loadouts.Count)
                             {
                                 Kit kit = loadouts[loadoutNumber - 1];
-
                                 GiveKit(ucplayer, kit);
+                                Stats.StatsManager.ModifyKit(kit.Name, x => x.TimesRequested++, true);
+                                Stats.StatsManager.ModifyStats(player.CSteamID.m_SteamID, s =>
+                                {
+                                    Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == bteam);
+                                    if (kitData == default)
+                                    {
+                                        kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = bteam, TimesRequested = 1 };
+                                        s.Kits.Add(kitData);
+                                    }
+                                    else
+                                    {
+                                        kitData.TimesRequested++;
+                                    }
+                                }, false);
                                 return;
                             }
                         }
@@ -145,7 +159,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
+                        int xp = XPManager.GetXP(ucplayer.Player, true);
                         Rank rank = XPManager.GetRank(xp, out _, out _);
                         if ((rank == default || rank.level < kit.RequiredLevel) && !UCWarfare.Config.OverrideKitRequirements)
                         {
@@ -192,7 +206,8 @@ namespace Uncreated.Warfare.Commands
 
             PlayerManager.Save();
         }
-        private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle)
+        private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
+        private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)
         {
             if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
             {
@@ -202,6 +217,11 @@ namespace Uncreated.Warfare.Commands
             else if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
             {
                 ucplayer.Message("request_vehicle_e_alreadyrequested");
+                return;
+            }
+            else if (data.Team != team)
+            {
+                ucplayer.Message("request_vehicle_e_notinteam");
                 return;
             }
             else if (data.RequiresSL && ucplayer.Squad == null)
@@ -255,7 +275,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_delay", F.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
                 return;
             }
-            int xp = XPManager.GetXP(ucplayer.Player, ucplayer.GetTeam(), true);
+            int xp = XPManager.GetXP(ucplayer.Player, true);
             Rank rank = XPManager.GetRank(xp, out _, out _);
             if (rank == default || rank.level < data.RequiredLevel)
             {
@@ -295,11 +315,12 @@ namespace Uncreated.Warfare.Commands
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
                 }
-                
                 foreach (ushort item in data.Items)
                 {
                     ItemManager.dropItem(new Item(item, true), ucplayer.Position, true, true, true);
                 }
+                Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
+                Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
             }
             else
             {

@@ -530,9 +530,9 @@ namespace Uncreated.Warfare.Vehicles
                         if (player != null)
                         {
                             //if (player.Squad != null)
-                            //    await OfficerManager.AddOfficerPoints(player.Player, player.GetTeam(), OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
+                            //    await OfficerManager.AddOfficerPoints(player.Player, OfficerManager.config.Data.TransportPlayerPoints * (count - 2), F.Translate("ofp_transporting_players", player.Steam64));
                             //else
-                            XPManager.AddXP(player.Player, player.GetTeam(), XPManager.config.Data.TransportPlayerXP * (count - 1), F.Translate("xp_transporting_players", player.Steam64));
+                            XPManager.AddXP(player.Player, XPManager.config.Data.TransportPlayerXP * (count - 1), F.Translate("xp_transporting_players", player.Steam64));
                         }
                     }
                 }

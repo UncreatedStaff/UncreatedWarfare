@@ -16,7 +16,6 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Officers
 {
@@ -34,9 +33,9 @@ namespace Uncreated.Warfare.Officers
         {
             if (player.IsTeam1() || player.IsTeam2())
             {
-                int points = GetOfficerPoints(player.Player, player.GetTeam(), true);
+                int points = GetOfficerPoints(player.Player, true);
 
-                if (IsOfficer(player.CSteamID, out var officer) && player.GetTeam() == officer.team)
+                if (IsOfficer(player.CSteamID.m_SteamID, out Officer officer))
                 {
                     player.OfficerRank = GetOfficerRank(officer.officerLevel);
                 }
@@ -45,48 +44,45 @@ namespace Uncreated.Warfare.Officers
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            int op = GetOfficerPoints(player.player, newGroup, true);
+            int op = GetOfficerPoints(player.player, true);
             UpdateUI(player.player, op, out _);
         }
-        public static int GetOfficerPoints(Player player, ulong team, bool important)
+        public static int GetOfficerPoints(Player player, bool important)
         {
-            if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (ucplayer == default || important || ucplayer.cachedOfp == -1)
+            if (ucplayer == default || important || ucplayer.CachedOfp == -1)
             {
-                int newofp = Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team);
+                int newofp = Data.DatabaseManager.GetOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID);
                 if (ucplayer != null)
-                    ucplayer.cachedOfp = newofp;
+                    ucplayer.CachedOfp = newofp;
                 return newofp;
             }
-            else return ucplayer.cachedOfp;
+            else return ucplayer.CachedOfp;
             
         }
-        public static int GetOfficerPoints(ulong player, ulong team, bool important)
+        public static int GetOfficerPoints(ulong player, bool important)
         {
-            if (team < 1 || team > 2) return 0;
             UCPlayer ucplayer = UCPlayer.FromID(player);
-            if (ucplayer == default || important || ucplayer.cachedOfp == -1)
+            if (ucplayer == default || important || ucplayer.CachedOfp == -1)
             {
-                int newofp = Data.DatabaseManager.GetOfficerPoints(player, team);
+                int newofp = Data.DatabaseManager.GetOfficerPoints(player);
                 if (ucplayer != default)
-                    ucplayer.cachedOfp = newofp;
+                    ucplayer.CachedOfp = newofp;
                 return newofp;
             }
-            else return ucplayer.cachedOfp;
+            else return ucplayer.CachedOfp;
         }
-        public static void AddOfficerPoints(Player player, ulong team, int amount, string message ="")
+        public static void AddOfficerPoints(Player player, int amount, string message ="")
         {
-            if (team < 1 || team > 2) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
 
             int oldStars = int.MaxValue;
             if (ucplayer != null)
-                oldStars = GetStars(ucplayer.cachedOfp);
+                oldStars = GetStars(ucplayer.CachedOfp);
 
-            int newBalance = Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, team, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
+            int newBalance = Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
             if (ucplayer != null)
-                ucplayer.cachedOfp = newBalance;
+                ucplayer.CachedOfp = newBalance;
 
             if (message != "" && amount != 0)
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
@@ -125,11 +121,12 @@ namespace Uncreated.Warfare.Officers
                 {
                     player.Message("officer_promoted", newRank.TranslateName(player.Steam64), F.TranslateBranch(branch, player));
 
+                    FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            player.Message("officer_announce_promoted", F.GetPlayerOriginalNames(player.Steam64).CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
                         }
                     }
                 }
@@ -137,26 +134,78 @@ namespace Uncreated.Warfare.Officers
                 {
                     player.Message("officer_demoted", newRank.TranslateName(player.Steam64));
 
+                    FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            player.Message("officer_announce_demoted", F.GetPlayerOriginalNames(player.Steam64).CharacterName);
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName);
                         }
                     }
                 }
             }
             else
             {
-                AddObjectToSave(new Officer(player.CSteamID.m_SteamID, player.GetTeam(), newRank.level, branch));
+                AddObjectToSave(new Officer(player.CSteamID.m_SteamID, newRank.level, branch));
 
                 player.Message("officer_promoted", newRank.TranslateName(player.Steam64), F.TranslateBranch(branch, player));
 
+                FPlayerName names = F.GetPlayerOriginalNames(player);
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
                     if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                     {
-                        player.Message("officer_announce_promoted", F.GetPlayerOriginalNames(player.Steam64).CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                        PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                    }
+                }
+            }
+        }
+        public static void ChangeOfficerRank(ulong player, Rank newRank, EBranch branch)
+        {
+            UCPlayer ucplayer = UCPlayer.FromID(player);
+            if (ObjectExists(o => o.steamID == player, out Officer officer))
+            {
+                if (newRank.level == officer.officerLevel && branch == officer.branch)
+                    return;
+
+                UpdateObjectsWhere(o => o.steamID == player, o => o.officerLevel = newRank.level);
+
+                if (branch != officer.branch || newRank.level >= officer.officerLevel)
+                {
+                    ucplayer?.Message("officer_promoted", newRank.TranslateName(player), F.TranslateBranch(branch, player));
+                    FPlayerName names = F.GetPlayerOriginalNames(player);
+                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                    {
+                        if (PlayerManager.OnlinePlayers[i].Steam64 != player)
+                        {
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                        }
+                    }
+                }
+                else
+                {
+                    ucplayer?.Message("officer_demoted", newRank.TranslateName(player));
+                    FPlayerName names = F.GetPlayerOriginalNames(player);
+                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                    {
+                        if (PlayerManager.OnlinePlayers[i].Steam64 != player)
+                        {
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                AddObjectToSave(new Officer(player, newRank.level, branch));
+
+                ucplayer?.Message("officer_promoted", newRank.TranslateName(player), F.TranslateBranch(branch, player));
+                FPlayerName names = F.GetPlayerOriginalNames(player);
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    if (PlayerManager.OnlinePlayers[i].Steam64 != player)
+                    {
+                        PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
                     }
                 }
             }
@@ -166,18 +215,33 @@ namespace Uncreated.Warfare.Officers
             RemoveWhere(o => o.steamID == player.CSteamID.m_SteamID);
 
             player.Message("officer_discharged", currentRank.TranslateName(player.Steam64));
-
+            FPlayerName names = F.GetPlayerOriginalNames(player);
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                 {
-                    player.Message("officer_announce_discharged", F.GetPlayerOriginalNames(player.Steam64).CharacterName, currentRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64));
+                    PlayerManager.OnlinePlayers[i].Message("officer_announce_discharged", names.CharacterName, currentRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64));
                 }
             }
         }
-        public static bool IsOfficer(CSteamID playerID, out Officer officer)
+        public static void DischargeOfficer(ulong player, Rank currentRank)
         {
-            officer = GetObject(o => o.steamID == playerID.m_SteamID);
+            UCPlayer ucplayer = UCPlayer.FromID(player);
+            RemoveWhere(o => o.steamID == player);
+
+            ucplayer?.Message("officer_discharged", currentRank.TranslateName(player));
+            FPlayerName names = F.GetPlayerOriginalNames(player);
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                if (PlayerManager.OnlinePlayers[i].Steam64 != player)
+                {
+                    PlayerManager.OnlinePlayers[i].Message("officer_announce_discharged", names.CharacterName, currentRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64));
+                }
+            }
+        }
+        public static bool IsOfficer(ulong playerID, out Officer officer)
+        {
+            officer = GetObject(o => o.steamID == playerID);
             return officer != null;
         }
         public static void UpdateUI(Player player, int balance, out int stars)
@@ -242,26 +306,33 @@ namespace Uncreated.Warfare.Officers
 
             return Mathf.RoundToInt(Mathf.Floor(((0.5f * d) - a + Mathf.Sqrt(Mathf.Pow(a - 0.5f * d, 2f) + (2f * d * totalPoints))) / d));
         }
+        public static Rank GetRankFromLevel(int level)
+        {
+            if (level <= 0)
+                if (config.Data.OfficerRanks.Length > 0)
+                    return config.Data.OfficerRanks[0];
+                else return null;
+            if (config.Data.OfficerRanks.Length > level - 1)
+                return config.Data.OfficerRanks[level - 1];
+            return config.Data.OfficerRanks[config.Data.OfficerRanks.Length - 1];
+        }
         protected override string LoadDefaults() => "[]";
     }
 
     public class Officer
     {
         public ulong steamID;
-        public ulong team;
         public int officerLevel;
         public EBranch branch;
-        public Officer(ulong steamID, ulong team, int officerLevel, EBranch branch)
+        public Officer(ulong steamID, int officerLevel, EBranch branch)
         {
             this.steamID = steamID;
-            this.team = team;
             this.officerLevel = officerLevel;
             this.branch = branch;
         }
         public Officer()
         {
             this.steamID = 0;
-            this.team = 0;
             this.officerLevel = 0;
             this.branch = EBranch.DEFAULT;
         }
@@ -287,7 +358,7 @@ namespace Uncreated.Warfare.Officers
         public int PointsIncreasePerStar;
         public float PointsMultiplier;
         public ushort StarsUI;
-        public List<Rank> OfficerRanks;
+        public Rank[] OfficerRanks;
         public char FullBlock;
         public char StarCharacter;
         public override void SetDefaults()
@@ -326,7 +397,7 @@ namespace Uncreated.Warfare.Officers
 
             StarsUI = 36033;
 
-            OfficerRanks = new List<Rank>
+            OfficerRanks = new Rank[]
             {
                 new Rank(1, "Captain", "Cpt.", 50000),
                 new Rank(2, "Major", "Maj.", 60000),

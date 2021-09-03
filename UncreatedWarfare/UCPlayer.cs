@@ -37,14 +37,20 @@ namespace Uncreated.Warfare
         /// <summary>[Unreliable]</summary>
         public Rank XPRank()
         {
-            if (cachedXp == -1)
+            if (CachedXp == -1)
                 RedownloadCachedXP();
             if (_rank == null || isXpDirty)
             {
-                _rank = XPManager.GetRank(cachedXp, out _, out _);
+                _rank = XPManager.GetRank(CachedXp, out _, out _);
                 isXpDirty = _rank == null;
             }
             return _rank;
+        }
+        private bool _otherDonator;
+        /// <summary>Slow, loops through all kits, only use once.</summary>
+        public bool IsDonator
+        {
+            get => _otherDonator || KitManager.ActiveObjects.Exists(x => ((x.IsPremium && x.PremiumCost > 0f) || x.IsLoadout) && x.AllowedUsers.Contains(Steam64));
         }
         private Rank _rank;
         public Vector3 Position
@@ -69,7 +75,7 @@ namespace Uncreated.Warfare
         }
         public bool IsOnline;
         private int _cachedOfp = -1;
-        public int cachedOfp
+        public int CachedOfp
         {
             get => _cachedOfp;
             set
@@ -82,7 +88,7 @@ namespace Uncreated.Warfare
         }
         private int _cachedXp = -1;
         private bool isXpDirty = false;
-        public int cachedXp
+        public int CachedXp
         {
             get => _cachedXp;
             set {
@@ -135,14 +141,13 @@ namespace Uncreated.Warfare
         public ushort LastPingID { get; internal set; }
         public SteamPlayer SteamPlayer { get => Player.channel.owner; }
         public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
-        public ulong GetTeam() => Player.quests.groupID.m_SteamID;
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
         public void RedownloadCachedXP()
         {
-            cachedXp = Data.DatabaseManager.GetXP(Steam64, Player.GetTeam());
+            CachedXp = Data.DatabaseManager.GetXP(Steam64);
         }
-        public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName)
+        public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
         {
             Steam64 = steamID.m_SteamID;
             if (KitManager.KitExists(kitName, out Kit kit))
@@ -164,6 +169,7 @@ namespace Uncreated.Warfare
             IsOnline = true;
             _cachedXp = -1;
             _cachedOfp = -1;
+            _otherDonator = donator;
         }
         public char Icon
         {
@@ -262,7 +268,7 @@ namespace Uncreated.Warfare
                     {
                         BarricadeDrop b = region.drops[i];
                         if (b.GetServersideData().barricade.id == FOBs.FOBManager.config.Data.FOBID &&
-                            b.GetServersideData().group == GetTeam() &&
+                            b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
                             (b.model.position - Position).sqrMagnitude <= 20 * 20)
                             return true;
                     }
@@ -278,7 +284,27 @@ namespace Uncreated.Warfare
 
             return (Position - player.Position).sqrMagnitude < Math.Pow(distance, 2);
         }
-
+        /// <summary>Gets some of the values from the playersave again.</summary>
+        public static void Refresh(ulong Steam64)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
+            if (pl == null) return;
+            else if (PlayerManager.HasSave(Steam64, out PlayerSave save))
+            {
+                if (KitManager.KitExists(save.KitName, out Kit kit))
+                {
+                    pl.KitClass = kit.Class;
+                    pl.Branch = kit.Branch;
+                }
+                else
+                {
+                    pl.KitClass = Kit.EClass.NONE;
+                    pl.Branch = EBranch.DEFAULT;
+                }
+                pl.KitName = save.KitName;
+                pl._otherDonator = save.IsOtherDonator;
+            }
+        }
         public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
     }
 
@@ -298,6 +324,8 @@ namespace Uncreated.Warfare
         public long LastGame;
         [JsonSettable]
         public bool ShouldRespawnOnJoin;
+        [JsonSettable]
+        public bool IsOtherDonator;
         public PlayerSave(ulong Steam64)
         {
             this.Steam64 = Steam64;
@@ -307,6 +335,7 @@ namespace Uncreated.Warfare
             HasQueueSkip = false;
             LastGame = 0;
             ShouldRespawnOnJoin = false;
+            IsOtherDonator = false;
         }
         public PlayerSave()
         {
@@ -317,9 +346,10 @@ namespace Uncreated.Warfare
             HasQueueSkip = false;
             LastGame = 0;
             ShouldRespawnOnJoin = false;
+            IsOtherDonator = false;
         }
         [JsonConstructor]
-        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin)
+        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin, bool IsOtherDonator)
         {
             this.Steam64 = Steam64;
             this.Team = Team;
@@ -328,6 +358,7 @@ namespace Uncreated.Warfare
             this.HasQueueSkip = HasQueueSkip;
             this.LastGame = LastGame;
             this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
+            this.IsOtherDonator = IsOtherDonator;
         }
     }
 }

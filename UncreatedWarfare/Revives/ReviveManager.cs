@@ -131,14 +131,35 @@ namespace Uncreated.Warfare.Revives
             if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
                 r.RevivePlayer();
-                ulong team = medic.GetTeam();
+                byte team = medic.GetTeamByte();
                 ulong tteam = target.GetTeam();
                 if (team == tteam)
                 {
-                    XPManager.AddXP(medic, team, XPManager.config.Data.FriendlyRevivedXP,
+                    XPManager.AddXP(medic, XPManager.config.Data.FriendlyRevivedXP,
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
                     if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats != null)
                         c.stats.revives++;
+
+                    Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
+                    if (KitManager.HasKit(medic, out Kit kit))
+                    {
+                        Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s =>
+                        {
+                            s.Revives++;
+                            Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                            if (kitData == default)
+                            {
+                                kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = team, Revives = 1 };
+                                s.Kits.Add(kitData);
+                            }
+                            else
+                            {
+                                kitData.Revives++;
+                            }
+                        }, false);
+                    }
+                    else
+                        Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s => s.Revives++, false);
                 }
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
                 EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, target.channel.owner.transportConnection);
@@ -194,6 +215,8 @@ namespace Uncreated.Warfare.Revives
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
+            if (!shouldAllow)
+                return;
             if (parameters.player.movement.getVehicle() != null || parameters.cause == EDeathCause.VEHICLE)
                 return;
             shouldAllow = false;
@@ -215,28 +238,59 @@ namespace Uncreated.Warfare.Revives
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             SpawnInjuredMarker(parameters.player.transform.position, team);
             UpdateMedicMarkers(parameters.player.channel.owner.transportConnection, team, parameters.player.transform.position, false);
+            ushort item = 0;
             if (killer != default)
             {
                 if (DeathInfo.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DeathInfo info))
                 {
-                    UCWarfare.I.GetKillerInfo(out info.item, out info.distance, out info.killerName, out info.killerTeam, parameters.cause, killer, parameters.player);
+                    UCWarfare.I.GetKillerInfo(out item, out info.distance, out info.killerName, out info.killerTeam, out info.kitName, parameters.cause, killer, parameters.player);
+                    info.item = item;
                 }
                 else
                 {
-                    UCWarfare.I.GetKillerInfo(out ushort item, out float distance, out FPlayerName names, out ulong killerTeam, parameters.cause, killer, parameters.player);
+                    UCWarfare.I.GetKillerInfo(out item, out float distance, out FPlayerName names, out ulong killerTeam, out string kitname, parameters.cause, killer, parameters.player);
                     DeathInfo.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID,
                         new DeathInfo()
                         {
                             distance = distance,
                             item = item,
                             killerName = names,
-                            killerTeam = killerTeam
+                            killerTeam = killerTeam,
+                            kitName = kitname
                         });
                 }
                 if (killer.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
                 {
-                    if (killer.GetTeam() != team)
+                    byte kteam = killer.GetTeamByte();
+                    if (kteam != team)
+                    {
                         ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
+
+                        Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
+                        if (KitManager.HasKit(killer, out Kit kit))
+                        {
+                            Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s =>
+                            {
+                                s.Downs++;
+                                Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                                if (kitData == default)
+                                {
+                                    kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = kteam, Downs = 1 };
+                                    s.Kits.Add(kitData);
+                                }
+                                else
+                                {
+                                    kitData.Downs++;
+                                }
+                            }, false);
+                            if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset && asset != null)
+                            {
+                                Stats.StatsManager.ModifyWeapon(item, kit.Name, w => w.Downs++, true);
+                            }
+                        }
+                        else
+                            Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
+                    }
                     else
                         ToastMessage.QueueMessage(killer, "", F.Translate("xp_friendly_downed", killer), ToastMessageSeverity.MINIXP);
                 }
@@ -381,24 +435,34 @@ namespace Uncreated.Warfare.Revives
             IEnumerator<UCPlayer> medics = Medics
                 .Where(x => x.GetTeam() == Team)
                 .GetEnumerator();
-            Vector3[] newpositions = DownedPlayers.Keys.Where(x => x != clearedPlayer).Select(x => UCPlayer.FromID(x).Position).ToArray();
+            ulong[] downed = DownedPlayers.Keys.ToArray();
+            List<Vector3> positions = new List<Vector3>();
+            for (int i = 0; i < downed.Length; i++)
+            {
+                if (downed[i] == clearedPlayer) continue;
+                UCPlayer player = UCPlayer.FromID(downed[i]);
+                if (player == null) continue;
+                positions.Add(player.Position);
+            }
+            Vector3[] newpositions = positions.ToArray();
             SpawnInjuredMarkers(medics, newpositions, true, true);
         }
         public void ClearInjuredMarkers(UCPlayer medic)
         {
             EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.InjuredMarker, medic.Player.channel.owner.transportConnection);
         }
-        public void UpdateInjuredMarkers(ulong Team)
+        public Vector3[] GetPositionsOfTeam(ulong Team)
         {
-            IEnumerator<UCPlayer> medics = Medics.Where(x => x.GetTeam() == Team).GetEnumerator();
-            Vector3[] newpositions = DownedPlayers.Keys.Select(x => UCPlayer.FromID(x).Position).ToArray();
-            SpawnInjuredMarkers(medics, newpositions, true, true);
+            ulong[] downed = DownedPlayers.Keys.ToArray();
+            List<Vector3> positions = new List<Vector3>();
+            for (int i = 0; i < downed.Length; i++)
+            {
+                UCPlayer player = UCPlayer.FromID(downed[i]);
+                if (player == null || player.GetTeam() != Team) continue;
+                positions.Add(player.Position);
+            }
+            return positions.ToArray();
         }
-        public Vector3[] GetPositionsOfTeam(ulong Team) =>
-                DownedPlayers
-                .Where(x => x.Value.player.GetTeam() == Team)
-                .Select(x => UCPlayer.FromID(x.Key).Position)
-                .ToArray();
         public void UpdateInjuredMarkers()
         {
             IEnumerator<UCPlayer> medics = Medics.

@@ -21,6 +21,9 @@ using Steamworks;
 using Rocket.Core.Steam;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using System.Linq;
+using Uncreated.Networking;
+using Uncreated.Warfare.Components;
+using System.Reflection;
 
 namespace Uncreated.Warfare
 {
@@ -29,7 +32,8 @@ namespace Uncreated.Warfare
     {
         public static UCWarfare Instance;
         public Coroutine StatsRoutine;
-        public Components.UCAnnouncer Announcer;
+        public UCAnnouncer Announcer;
+        //public NetworkingQueue Queue;
         public static UCWarfare I { get => Instance; }
         public static Config Config { get => Instance.Configuration.Instance; }
         private MySqlData _sqlElsewhere;
@@ -40,7 +44,7 @@ namespace Uncreated.Warfare
                 else return Configuration.Instance.SQL;
             }
         }
-        public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.
+        public bool LoadMySQLDataFromElsewhere = true; // for having sql password defaults without having them in our source code.
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
@@ -52,13 +56,14 @@ namespace Uncreated.Warfare
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
 
-            //F.SetPrivatePlayerCount(Config.MaxPlayerCount);
-            if (Provider.clients.Count >= 24)
+            /* PLAYER COUNT VERIFICATION */
+            if (!Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
             {
                 Provider.maxPlayers = Config.MaxPlayerCount;
+                F.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
             }
-            F.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
 
+            /* PATCHES */
             F.Log("Patching methods...", ConsoleColor.Magenta);
             try
             {
@@ -70,9 +75,11 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
             }
 
+            /* START STATS COROUTINE */
             StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
 
-            if(LoadMySQLDataFromElsewhere)
+            /* DEBUG MYSQL LOADING */
+            if (LoadMySQLDataFromElsewhere)
             {
                 if (!File.Exists(Data.ElseWhereSQLPath))
                 {
@@ -90,7 +97,12 @@ namespace Uncreated.Warfare
                     _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
                 }
             }
+
+            /* DATA CONSTRUCTION */
             Data.LoadVariables();
+
+
+            /* LEVEL SUBSCRIPTIONS */
             if (Level.isLoaded)
             {
                 //StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
@@ -104,10 +116,13 @@ namespace Uncreated.Warfare
                 R.Plugins.OnPluginsLoaded += OnPluginsLoaded;
             }
 
+            /* BASIC CONFIGS */
             Provider.configData.Normal.Players.Lose_Items_PvP = 0;
             Provider.configData.Normal.Players.Lose_Items_PvE = 0;
             Provider.configData.Normal.Players.Lose_Clothes_PvP = false;
             Provider.configData.Normal.Players.Lose_Clothes_PvE = false;
+            Provider.configData.Normal.Barricades.Decay_Time = 0;
+            Provider.configData.Normal.Structures.Decay_Time = 0;
 
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
@@ -124,7 +139,7 @@ namespace Uncreated.Warfare
                 Data.VehicleSpawner = new VehicleSpawner();
                 Data.VehicleSigns = new VehicleSigns();
             }
-            Announcer = gameObject.AddComponent<Components.UCAnnouncer>();
+            Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.RequestSignManager = new RequestSigns();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
@@ -137,13 +152,7 @@ namespace Uncreated.Warfare
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
             Data.Gamemode.OnLevelLoaded();
-            if (Provider.clients.Count > 0)
-            {
-                List<Players.FPlayerName> playersOnline = Provider.clients.Select(x => F.GetPlayerOriginalNames(x)).ToList();
-                Networking.Client.SendPlayerList(playersOnline);
-            }
         }
-
         public static void ReplaceBarricadesAndStructures()
         {
             try
@@ -219,6 +228,7 @@ namespace Uncreated.Warfare
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
             BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
             StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
+            StructureManager.onDamageStructureRequested += EventFunctions.OnStructureDamaged;
             BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
             ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
@@ -257,6 +267,7 @@ namespace Uncreated.Warfare
             BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
             StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
             BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
+            StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
             ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
             PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice;
@@ -302,8 +313,8 @@ namespace Uncreated.Warfare
                     if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
                         p.ShowUIForPlayer(ucplayer);
                 }
-                XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, team, false), out _);
-                Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, team, false), out _);
+                XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, false), out _);
+                Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, false), out _);
             }
         }
         protected override void Unload()
@@ -317,8 +328,8 @@ namespace Uncreated.Warfare
             F.Log("Unloading " + Name, ConsoleColor.Magenta);
             if (Announcer != null)
                 Destroy(Announcer);
-            Data.CancelFlags.Cancel();
-            Data.CancelTcp.Cancel();
+            //if (Queue != null)
+                //Destroy(Queue);
             Data.Gamemode?.Dispose();
             Data.DatabaseManager?.Dispose();
             Data.ReviveManager?.Dispose();
@@ -330,7 +341,21 @@ namespace Uncreated.Warfare
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            //Networking.TCPClient.I?.Dispose();
+            Data.NetClient.Dispose();
+            Logging.OnLog -= F.Log;
+            Logging.OnLogWarning -= F.LogWarning;
+            Logging.OnLogError -= F.LogError;
+            Logging.OnLogException -= F.LogError;
+            try
+            {
+                Patches.InternalPatches.Unpatch();
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Unpatching Error, perhaps Nelson changed something:");
+                F.LogError(ex);
+            }
+            NetFactory.ClearRegistry();
         }
         public static Color GetColor(string key)
         {

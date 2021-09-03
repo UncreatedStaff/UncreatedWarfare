@@ -74,7 +74,8 @@ namespace Uncreated.Warfare.FOBs
 
             IEnumerable<BarricadeDrop> FOBstructures = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.FOBID, FOBManager.config.Data.FOBBuildPickupRadius, player.Position, player.GetTeam(), true);
             FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault());
-
+            StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
+            StatsManager.ModifyTeam(team, t => t.FobsBuilt++, false);
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {
@@ -241,6 +242,8 @@ namespace Uncreated.Warfare.FOBs
                 );
             vehicle.updateVehicle();
             vehicle.updatePhysics();
+            StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.EmplacementsBuilt++, false);
+            StatsManager.ModifyTeam(team, t => t.EmplacementsBuilt++, false);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {
                 BarricadeManager.destroyBarricade(foundationDrop, x, y, ushort.MaxValue);
@@ -284,6 +287,8 @@ namespace Uncreated.Warfare.FOBs
                 "ofp_squad_built_fortification",
                 0.4F
                 );
+            StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FortificationsBuilt++, false);
+            StatsManager.ModifyTeam(team, t => t.FortificationsBuilt++, false);
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);
             if (foundationDrop != null && Regions.tryGetCoordinate(foundationDrop.model.position, out byte x, out byte y))
             {

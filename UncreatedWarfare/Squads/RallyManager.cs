@@ -14,14 +14,14 @@ namespace Uncreated.Warfare.Squads
     public class RallyManager
     {
         private static readonly List<RallyPoint> rallypoints = new List<RallyPoint>();
-
+        public const float TELEPORT_HEIGHT_OFFSET = 2f;
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
             BarricadeData data = drop.GetServersideData();
 
             if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
-                var player = UCPlayer.FromID(data.owner);
+                UCPlayer player = UCPlayer.FromID(data.owner);
                 if (player?.Squad != null)
                 {
                     RegisterNewRallyPoint(data, player.Squad);
@@ -58,6 +58,10 @@ namespace Uncreated.Warfare.Squads
                         if (nearbyEnemiesCount > 0)
                         {
                             player.Message("rally_e_enemies");
+                            shouldAllow = false;
+                        } else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
+                        {
+                            player.Message("rally_e_obstructed");
                             shouldAllow = false;
                         }
                     }
@@ -171,7 +175,6 @@ namespace Uncreated.Warfare.Squads
         public Squad squad;
         public bool IsActive;
         public int timer;
-        private string nearestLocation;
 
         public RallyPoint(BarricadeData structure, BarricadeDrop drop, Squad squad)
         {
@@ -181,10 +184,10 @@ namespace Uncreated.Warfare.Squads
             AwaitingPlayers = new List<UCPlayer>();
             IsActive = true;
             timer = 60;
-
+            /*
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
             Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
-            nearestLocation = $"{((LocationNode)nearerstLocation).name}";
+            nearestLocation = $"{((LocationNode)nearerstLocation).name}";*/
         }
 
         public void UpdateUIForAwaitingPlayers()
@@ -234,13 +237,13 @@ namespace Uncreated.Warfare.Squads
             if (player.Player.life.isDead || player.Player.movement.getVehicle() != null)
                 return;
 
-            player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + 2, structure.point.z), structure.angle_y);
+            player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + RallyManager.TELEPORT_HEIGHT_OFFSET, structure.point.z), structure.angle_y);
 
             player.Message("rally_success");
 
             ShowUIForPlayer(player);
 
-            OfficerManager.AddOfficerPoints(squad.Leader.Player, squad.Leader.GetTeam(), OfficerManager.config.Data.SpawnOnRallyPoints, F.Translate("ofp_rally_used", squad.Leader.Steam64));
+            OfficerManager.AddOfficerPoints(squad.Leader.Player, OfficerManager.config.Data.SpawnOnRallyPoints, F.Translate("ofp_rally_used", squad.Leader.Steam64));
         }
     }
 

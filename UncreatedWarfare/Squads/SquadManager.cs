@@ -227,8 +227,8 @@ namespace Uncreated.Warfare.Squads
         {
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
-                int o = b.cachedOfp.CompareTo(a.cachedOfp); // sort players by their officer status
-                return o == 0 ? b.cachedXp.CompareTo(a.cachedXp) : o;
+                int o = b.CachedOfp.CompareTo(a.CachedOfp); // sort players by their officer status
+                return o == 0 ? b.CachedXp.CompareTo(a.CachedXp) : o;
             });
             squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
             squad.Members.Insert(0, squad.Leader);

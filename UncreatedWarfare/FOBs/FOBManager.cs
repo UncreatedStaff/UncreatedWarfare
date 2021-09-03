@@ -123,7 +123,6 @@ namespace Uncreated.Warfare.FOBs
                     }
                 }
             }
-
             if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null && ctf.State == Gamemodes.EState.ACTIVE)
             // doesnt count destroying fobs after game ends
             {
@@ -142,11 +141,13 @@ namespace Uncreated.Warfare.FOBs
                 {
                     if (ucplayer.GetTeam() == team)
                     {
-                        XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
+                        XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
                     }
                     else
                     {
-                        XP.XPManager.AddXP(ucplayer.Player, ucplayer.GetTeam(), XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player));
+                        XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player));
+                        Stats.StatsManager.ModifyStats(player, x => x.FobsDestroyed++, false);
+                        Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                     }
                 }
                     

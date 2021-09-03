@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Components
     public struct LandmineDataForPostAccess
     {
         public ushort barricadeID;
-        public int barricadeInstId;
+        public uint barricadeInstId;
         public SteamPlayer owner;
         public ulong ownerID;
         public LandmineDataForPostAccess(InteractableTrap trap, BarricadeOwnerDataComponent owner)
@@ -30,10 +30,15 @@ namespace Uncreated.Warfare.Components
                 if (owner != default)
                     this.ownerID = owner.ownerID;
                 else this.ownerID = 0;
-            } else
+            }
+            else
             {
                 this.barricadeID = owner.barricade.id;
-                this.barricadeInstId = trap.GetInstanceID();
+                BarricadeDrop data = BarricadeManager.FindBarricadeByRootTransform(trap.transform);
+                if (data != null)
+                    this.barricadeInstId = data.instanceID;
+                else
+                    this.barricadeInstId = 0;
                 this.owner = owner.owner;
                 this.ownerID = owner.ownerID;
             }
@@ -220,18 +225,17 @@ namespace Uncreated.Warfare.Components
                     {
                         if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
                         {
-                            XP.XPManager.AddXP(FOBowner.Player, FOBowner.Player.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP,
+                            XP.XPManager.AddXP(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP,
                                 F.Translate("xp_deployed_fob", FOBowner));
 
                             if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
                             {
-                                Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, FOBowner.Player.GetTeam(), 
-                                    XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
+                                Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
                             }
                         }
                     }
                     else
-                        Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, fob.Structure.GetServersideData().group.GetTeam(), XP.XPManager.config.Data.FOBDeployedXP);
+                        Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, XP.XPManager.config.Data.FOBDeployedXP);
                 }
                 yield break;
             }

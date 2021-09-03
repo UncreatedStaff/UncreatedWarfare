@@ -27,6 +27,8 @@ using System.Globalization;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes;
 using Steamworks;
+using Uncreated.Networking;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare
 {
@@ -120,11 +122,19 @@ namespace Uncreated.Warfare
         public static CooldownManager Cooldowns;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
-        public static TeamCTF FlagGamemode
+        public static TeamCTF CtfGamemode
         {
             get
             {
                 if (Gamemode is TeamCTF ctf) return ctf;
+                else return null;
+            }
+        }
+        public static Gamemodes.Flags.FlagGamemode FlagGamemode
+        {
+            get
+            {
+                if (Gamemode is Gamemodes.Flags.FlagGamemode fg) return fg;
                 else return null;
             }
         }
@@ -137,8 +147,7 @@ namespace Uncreated.Warfare
         internal static FieldInfo PrivateStance;
         internal static FieldInfo ItemManagerInstanceCount;
         internal static ConsoleInputOutputBase defaultIOHandler;
-        internal static CancellationTokenSource CancelFlags = new CancellationTokenSource();
-        internal static CancellationTokenSource CancelTcp = new CancellationTokenSource();
+        internal static Client NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         public static void LoadColoredConsole()
         {
@@ -157,8 +166,32 @@ namespace Uncreated.Warfare
                 CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
         }
+        public static void ReloadTCP()
+        {
+            if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
+            {
+                if (NetClient != null)
+                {
+                    NetClient.connection.Close();
+                    NetClient.Dispose();
+                }
+                F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
+                NetClient = new Client(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
+                NetClient.AssertConnected();
+                NetClient.connection.OnReceived += ClientReceived;
+                Invocations.Shared.PlayerList.NetInvoke(PlayerManager.GetPlayerList());
+            }
+        }
         public static void LoadVariables()
         {
+            /* INITIALIZE UNCREATED NETWORKING */
+            Logging.OnLog += F.Log;
+            Logging.OnLogWarning += F.LogWarning;
+            Logging.OnLogError += F.LogError;
+            Logging.OnLogException += F.LogError;
+            NetFactory.RegisterNetMethods(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+
+            /* CREATE DIRECTORIES */
             F.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
             F.CheckDir(DataDirectory, out _, true);
@@ -167,6 +200,8 @@ namespace Uncreated.Warfare
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);
+
+            /* LOAD LOCALIZATION ASSETS */
             F.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
@@ -189,7 +224,7 @@ namespace Uncreated.Warfare
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 
-            // Managers
+            /* CONSTRUCT FRAMEWORK */
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             DatabaseManager.Open();
@@ -211,14 +246,7 @@ namespace Uncreated.Warfare
             }
             Gamemode.Init();
             F.Log("Initialized gamemode.", ConsoleColor.Magenta);
-            /*
-            if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
-            {
-                F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
-                Networking.TCPClient.I = new Networking.TCPClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP,
-                    UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                _ = Networking.TCPClient.I.Connect(CancelTcp).ConfigureAwait(false);
-            }*/
+            ReloadTCP();
             if (UCWarfare.Config.Modules.Kits)
             {
                 KitManager = new KitManager();
@@ -232,6 +260,8 @@ namespace Uncreated.Warfare
             {
                 ReviveManager = new ReviveManager();
             }
+
+            /* REFLECT PRIVATE VARIABLES */
             F.Log("Getting client calls...", ConsoleColor.Magenta);
             FieldInfo updateSignInfo;
             FieldInfo sendRegionInfo;
@@ -311,6 +341,8 @@ namespace Uncreated.Warfare
             {
                 F.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
             }
+
+            /* SET UP ROCKET GROUPS */
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
                 R.Permissions.AddGroup(AdminOnDutyGroup);
             if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
@@ -324,6 +356,17 @@ namespace Uncreated.Warfare
                 R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
             else defgroup.Permissions = DefaultPerms;
             R.Permissions.SaveGroup(defgroup);
+
+            /* REGISTER STATS MANAGER */
+            StatsManager.LoadTeams();
+            StatsManager.LoadWeapons();
+            for (int i = 0; i < Provider.clients.Count; i++)
+                StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
+        }
+        private static void ClientReceived(byte[] bytes, IConnection connection, ref bool shouldParse)
+        {
+            if (UCWarfare.Config.Debug)
+                F.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
         }
         private static void DuplicateKeyError(Exception ex)
         {

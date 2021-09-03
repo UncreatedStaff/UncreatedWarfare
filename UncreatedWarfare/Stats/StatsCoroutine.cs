@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Stats
@@ -21,26 +22,41 @@ namespace Uncreated.Warfare.Stats
             {
                 try
                 {
+                    /* PLAYTIME COUNTER */
                     IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
                     while (players.MoveNext())
                     {
-                        UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
-                        if (F.TryGetPlaytimeComponent(player.Player, out PlaytimeComponent c))
+                        byte team = players.Current.GetTeamByte();
+                        if (KitManager.HasKit(players.Current, out Kits.Kit kit))
                         {
-                            UncreatedPlayer stats = c.UCPlayerStats;
-                            if (stats != null)
+                            StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s =>
                             {
-                                stats.warfare_stats.Update(player.SteamPlayer, false);
-                                stats.UpdateSession(WarfareStats.WarfareName, false);
-                                stats.Save();
-                            }
+                                s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval;
+                                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                                if (kitData == default)
+                                {
+                                    kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = team, PlaytimeMinutes = (uint)UCWarfare.Config.StatsInterval };
+                                    s.Kits.Add(kitData);
+                                }
+                                else
+                                {
+                                    kitData.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval;
+                                }
+                            }, false);
                         }
+                        else
+                            StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
+                        /* ON DUTY AWARDER */
+                        UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
                         if (XP.XPManager.config.Data.OnDutyXP > 0 && player.OnDuty())
                         {
-                            XP.XPManager.AddXP(player.Player, player.GetTeam(), XP.XPManager.config.Data.OnDutyXP, F.Translate("xp_on_duty", player));
+                            XP.XPManager.AddXP(player.Player, XP.XPManager.config.Data.OnDutyXP, F.Translate("xp_on_duty", player));
                         }
                     }
                     players.Dispose();
+
+
+                    /* AFK KICKER */
                     int n = Afk.Clamp(counter);
                     if (n == 0)
                         counter = 0;
@@ -61,7 +77,7 @@ namespace Uncreated.Warfare.Stats
                                 }
                                 else if (afk.time == Afk.Clamp(n + 1)) // one cycle left
                                 {
-                                    player.SendChat("afk_warning", F.GetTimeFromSeconds((uint)Mathf.RoundToInt(UCWarfare.Config.StatsInterval), player.playerID.steamID.m_SteamID));
+                                    player.SendChat("afk_warning", F.GetTimeFromMinutes((uint)UCWarfare.Config.StatsInterval, player.playerID.steamID.m_SteamID));
                                 }
                             } else
                             {
@@ -74,21 +90,31 @@ namespace Uncreated.Warfare.Stats
                         }
                     }
                     counter++;
+
+                    /* CALCULATE AVERAGE PLAYERS AND SAVE */
+                    StatsManager.ModifyTeam(1, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
+                    Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team1ID)) / ++t.AveragePlayersCounter, false);
+                    StatsManager.ModifyTeam(2, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
+                    Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team2ID)) / ++t.AveragePlayersCounter, false);
+                    StatsManager.SaveTeams();
                 }
                 catch (Exception ex)
                 {
                     F.LogError("Error in Stats Coroutine:");
                     F.LogError(ex);
                 }
-                yield return new WaitForSeconds(UCWarfare.Config.StatsInterval);
+
+                // stats interval is in minutes here
+                yield return new WaitForSeconds(UCWarfare.Config.StatsInterval * 60f);
             }
         }
     }
+    /// <summary>Used to store data about where and how long a player has been afk.</summary>
     class Afk
     {
         public int time;
         public ulong player;
         public Vector3 lastLocation;
-        public static int Clamp(int input) => input % Mathf.RoundToInt(UCWarfare.Config.AfkCheckInterval / UCWarfare.Config.StatsInterval);
+        public static int Clamp(int input) => input % Mathf.RoundToInt(UCWarfare.Config.AfkCheckInterval / (UCWarfare.Config.StatsInterval * 60f));
     }
 }

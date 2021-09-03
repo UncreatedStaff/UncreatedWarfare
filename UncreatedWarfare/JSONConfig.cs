@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare;
 
 namespace Uncreated
 {
@@ -12,11 +14,12 @@ namespace Uncreated
     {
         readonly string _dir;
         public TData Data { get; private set; }
-        public string directory => _dir;
+        public Type Type = typeof(TData);
+        public string Directory => _dir;
         public Config(string directory, string filename)
         {
-            if(!Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
+            if(!System.IO.Directory.Exists(directory))
+                System.IO.Directory.CreateDirectory(directory);
             this._dir = directory + filename;
 
             if (!File.Exists(this._dir))
@@ -70,6 +73,45 @@ namespace Uncreated
                 throw new JSONSaver<TData>.JSONReadException(r, _dir, ex);
             }
         }
+        public void TryUpgrade()
+        {
+            try
+            {
+                TData defaultConfig = new TData();
+                defaultConfig.SetDefaults();
+                FieldInfo[] fields = Type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+                bool needsSaving = false;
+                for (int i = 0; i < fields.Length; i++)
+                {
+                    try
+                    {
+                        if (fields[i].IsStatic ||  // if the field is static or it contains [JsonIgnore] in its attributes.
+                            fields[i].CustomAttributes.Count(x => x.AttributeType == typeof(JsonIgnoreAttribute) || 
+                            x.AttributeType == typeof(PreventUpgradeAttribute)) > 0) continue;
+                        object currentvalue = fields[i].GetValue(Data);
+                        object defaultvalue = fields[i].GetValue(defaultConfig);
+                        if (currentvalue == defaultvalue) continue;
+                        else if (currentvalue != fields[i].FieldType.getDefaultValue()) continue;
+                        else
+                        {
+                            fields[i].SetValue(Data, defaultvalue);
+                            needsSaving = true;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        F.LogError($"Error upgrading config for field {fields[i].FieldType.Name}::{fields[i].Name} in {Type.Name} config.");
+                        F.LogError(ex);
+                    }
+                }
+                if (needsSaving) Save();
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error upgrading config: " + Type.Name);
+                F.LogError(ex);
+            }
+        }
         public void LoadDefaults()
         {
             StreamWriter file = File.CreateText(_dir);
@@ -102,9 +144,14 @@ namespace Uncreated
     }
     public interface IConfiguration
     {
-        string directory { get; }
+        string Directory { get; }
         void LoadDefaults();
         void Reload();
         void Save();
+    }
+    [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+    sealed class PreventUpgradeAttribute : Attribute
+    {
+        public PreventUpgradeAttribute() { }
     }
 }

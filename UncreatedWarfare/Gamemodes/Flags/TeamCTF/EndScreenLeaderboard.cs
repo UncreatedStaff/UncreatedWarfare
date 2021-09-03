@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -63,7 +64,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             if (ShuttingDown)
             {
-                //await Networking.Client.SendShuttingDown(ShuttingDownPlayer, ShuttingDownMessage);
+                Invocations.Shared.ShuttingDownAfterComplete.NetInvoke();
                 Provider.shutdown(0, ShuttingDownMessage);
             }
             else if (OnLeaderboardExpired != null)
@@ -170,7 +171,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format", player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(SecondsEndGameLength)));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "NextGameCircleForeground", progresschars[CTFUI.FromMax(0, Mathf.RoundToInt(SecondsEndGameLength), progresschars)].ToString());
                 
-                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.ObjectTranslate("player_name_header", player.playerID.steamID.m_SteamID, originalNames.CharacterName, F.GetTeamColorHex(player), (float)stats.onlineCount / warstats.gamepercentagecounter * 100f));
+                EffectManager.sendUIEffectText(UiIdentifier, channel, true, "PlayerGameStatsHeader", F.ObjectTranslate("player_name_header", player.playerID.steamID.m_SteamID, 
+                    originalNames.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()), (float)(stats.onlineCount1 + stats.onlineCount2) / warstats.gamepercentagecounter * 100f));
                 EffectManager.sendUIEffectText(UiIdentifier, channel, true, "WarHeader", F.Translate("war_name_header", player,
                     TeamManager.TranslateName(1, player.playerID.steamID.m_SteamID), TeamManager.Team1ColorHex,
                     TeamManager.TranslateName(2, player.playerID.steamID.m_SteamID), TeamManager.Team2ColorHex));
@@ -338,7 +340,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         //public TimeSpan TimeDriving { get => TimeSpan.FromSeconds(timeDrivingCounter); }
         //private float timeDrivingCounter;
         public int damagedone;
-        public int onlineCount;
+        public int onlineCount1;
+        public int onlineCount2;
         public int revives;
         public PlayerCurrentGameStats(Player player)
         {
@@ -364,7 +367,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.damagedone = 0;
             this.xpgained = 0;
             this.officerpointsgained = 0;
-            this.onlineCount = 0;
+            this.onlineCount1 = 0;
+            this.onlineCount2 = 0;
             this.revives = 0;
         }
         public void AddKill()
@@ -382,7 +386,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void CheckGame()
         {
             if (player != null)
-                onlineCount++;
+            {
+                byte team = player.GetTeamByte();
+                if (team == 1)
+                    onlineCount1++;
+                else if (team == 2)
+                    onlineCount2++;
+            }
         }
         public override string ToString()
             =>
@@ -390,7 +400,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             $"Kills: {kills}\nDeaths: {deaths}\nKills on point: {killsonpoint}\nTime Deployed: {TimeDeployed:g}\n" +
             $"Time On Point: {TimeOnPoint:g}\nCaptures: {captures}\nTeamkills: {teamkills}\nFobs Destroyed: {fobsdestroyed}\n" +
             $"Fobs Placed: {fobsplaced}\nDamage Done: {damagedone}\nXP Gained: {xpgained}\nOfficer Pts Gained: {officerpointsgained}\n" +
-            $"OnlineTime:{(float)onlineCount / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%.";
+            $"OnlineTimeT1:{(float)onlineCount1 / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%." +
+            $"OnlineTimeT2:{(float)onlineCount2 / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%.";
     }
     public struct LongestShot
     {

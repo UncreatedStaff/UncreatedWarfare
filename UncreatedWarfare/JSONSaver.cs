@@ -96,7 +96,7 @@ namespace Uncreated
                 try
                 {
                     string json = r.ReadToEnd();
-                    var list = JsonConvert.DeserializeObject<List<T>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
+                    List<T> list = JsonConvert.DeserializeObject<List<T>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
 
                     r.Close();
                     r.Dispose();
@@ -117,6 +117,7 @@ namespace Uncreated
         protected static T GetObject(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).FirstOrDefault(predicate);
         protected static bool ObjectExists(Func<T, bool> match, out T item, bool readFile = false)
         {
+            if (readFile) Reload();
             item = GetObject(match);
             return item != null;
         }

@@ -36,13 +36,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (Player player in newPlayers)
                     AddPlayerOnFlag(player, Rotation[i]);
             }
+            if (TimeToTicket())
+                EvaluateTickets();
             if (ttc)
             {
                 EvaluatePoints();
                 OnEvaluate();
             }
-            if (TimeToTicket())
-                EvaluateTickets();
         }
         protected uint TicketCounter = 0;
         public virtual void EvaluateTickets()

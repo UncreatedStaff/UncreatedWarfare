@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Networking;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
@@ -30,7 +31,8 @@ namespace Uncreated.Warfare
             Team2Players = new List<UCPlayer>();
         }
         protected override string LoadDefaults() => "[]";
-        public static bool HasSave(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, true);
+        public static bool HasSave(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, false);
+        public static bool HasSaveRead(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, true);
         public static PlayerSave GetSave(ulong playerID) => GetObject(ks => ks.Steam64 == playerID, true);
         public static new void Save()
         {
@@ -44,8 +46,25 @@ namespace Uncreated.Warfare
                 });
             }
         }
+        public static FPlayerList[] GetPlayerList()
+        {
+            FPlayerList[] rtn = new FPlayerList[OnlinePlayers.Count];
+            for (int i = 0; i < OnlinePlayers.Count; i++)
+            {
+                if (OnlinePlayers == null) continue;
+                rtn[i] = new FPlayerList
+                {
+                    Duty = OnlinePlayers[i].OnDuty(),
+                    Steam64 = OnlinePlayers[i].Steam64,
+                    Name = F.GetPlayerOriginalNames(OnlinePlayers[i]).CharacterName,
+                    Team = OnlinePlayers[i].Player.GetTeamByte()
+                };
+            }
+            return rtn;
+        }
         public static void InvokePlayerConnected(UnturnedPlayer player) => OnPlayerConnected(player);
         public static void InvokePlayerDisconnected(UnturnedPlayer player) => OnPlayerDisconnected(player);
+        public static void AddSave(PlayerSave save) => AddObjectToSave(save);
         private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
             PlayerSave save;
@@ -65,7 +84,8 @@ namespace Uncreated.Warfare
                     save.KitName,
                     rocketplayer.Player,
                     rocketplayer.Player.channel.owner.playerID.characterName,
-                    rocketplayer.Player.channel.owner.playerID.nickName
+                    rocketplayer.Player.channel.owner.playerID.nickName,
+                    save.IsOtherDonator
                 );
 
             OnlinePlayers.Add(player);

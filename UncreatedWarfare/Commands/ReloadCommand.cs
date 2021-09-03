@@ -14,6 +14,7 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using Uncreated;
 using System.Reflection;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -41,12 +42,14 @@ namespace Uncreated.Warfare.Commands
                     ReloadConfig();
                     ReloadKits();
                     ReloadFlags();
-                    //ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload Command");
+                    ReloadTCPServer();
+                    ReloadSQLServer();
 
-                    player?.SendChat("reload_reloaded_all");
+                    if (isConsole) F.Log(F.Translate("reload_reloaded_all", 0, out _));
+                    else player.SendChat("reload_reloaded_all");
                 }
                 else
-                    player?.Player.SendChat("no_permissions");
+                    player.Player.SendChat("no_permissions");
             }
             else
             {
@@ -56,7 +59,8 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (isConsole) F.Log(F.Translate("reload_reloaded_config", 0, out _));
                         else player.SendChat("reload_reloaded_config");
-                        ReloadConfig();
+                        if (command.Length > 1 && command[1].ToLower() == "all") ReloadAllConfigFiles();
+                        else ReloadConfig();
                     }
                     else
                         player.Player.SendChat("no_permissions");
@@ -85,9 +89,19 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.tcp") || player.HasPermission("uc.reload.all"))
                     {
-                        //ReloadTCPServer(isConsole ? 0 : player.CSteamID.m_SteamID, "Reload command.");
+                        ReloadTCPServer();
                         if (isConsole) F.Log(F.Translate("reload_reloaded_tcp", 0, out _));
                         else player.SendChat("reload_reloaded_tcp");
+                    }
+                    else
+                        player.Player.SendChat("no_permissions");
+                } else if (cmd == "sql")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.sql") || player.HasPermission("uc.reload.all"))
+                    {
+                        ReloadSQLServer();
+                        if (isConsole) F.Log(F.Translate("reload_reloaded_sql", 0, out _));
+                        else player.SendChat("reload_reloaded_sql");
                     }
                     else
                         player.Player.SendChat("no_permissions");
@@ -118,7 +132,13 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.slots") || player.HasPermission("uc.reload.all"))
                     {
-                        if (Provider.clients.Count >= 24)
+                        if (!UCWarfare.Config.UsePatchForPlayerCap)
+                        {
+                            if (isConsole) F.Log(F.Translate("reload_reloaded_slots_not_enabled", 0, out _, nameof(Config.UsePatchForPlayerCap)));
+                            else player.SendChat("reload_reloaded_slots_not_enabled", nameof(Config.UsePatchForPlayerCap));
+                            return;
+                        }
+                        else if (Provider.clients.Count >= 24)
                         {
                             Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
                         }
@@ -138,6 +158,8 @@ namespace Uncreated.Warfare.Commands
                 TicketManager.config.Reload();
                 XPManager.config.Reload();
                 OfficerManager.config.Reload();
+
+                Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
                 FOBManager.config.Reload();
 
                 UCWarfare.Instance.Configuration.Load();
@@ -225,12 +247,22 @@ namespace Uncreated.Warfare.Commands
                     }
                     catch (Exception) { }
                 }
+                Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
             }
             catch (Exception ex)
             {
                 F.LogError("Failed to find all objects in type " + typeof(Data).Name);
                 F.LogError(ex);
             }
+        }
+        internal static void ReloadTCPServer()
+        {
+            Data.ReloadTCP();
+        }
+        internal static void ReloadSQLServer()
+        {
+            Data.DatabaseManager.Close();
+            Data.DatabaseManager.Open();
         }
     }
 }

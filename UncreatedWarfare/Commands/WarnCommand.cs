@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -56,7 +57,7 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                 {
                                     Data.DatabaseManager.AddWarning(player.playerID.steamID.m_SteamID, 0, reason);
-                                    Client.LogPlayerWarned(player.playerID.steamID.m_SteamID, Provider.server.m_SteamID, reason, DateTime.Now);
+                                    Invocations.Shared.LogWarned.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                 }
                                 F.SendChat(player.playerID.steamID, "warn_warned_private_operator", reason);
                                 ToastMessage.QueueMessage(player, F.Translate("warn_warned_private_operator", player, out _, reason),  ToastMessageSeverity.WARNING);
@@ -95,7 +96,7 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                 {
                                     Data.DatabaseManager.AddWarning(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
-                                    Client.LogPlayerWarned(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    Invocations.Shared.LogWarned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 }
                                 F.SendChat(player, "warn_warned_feedback", name.CharacterName);
                                 ToastMessage.QueueMessage(steamplayer, 
@@ -108,6 +109,41 @@ namespace Uncreated.Warfare.Commands
                         }
                     }
                 }
+            }
+        }
+        public static void WarnPlayer(ulong Violator, ulong Admin, string Reason)
+        {
+            SteamPlayer violator = PlayerTool.getSteamPlayer(Violator);
+            SteamPlayer admin = PlayerTool.getSteamPlayer(Admin);
+            FPlayerName callerName;
+            if (admin == null)
+                callerName = Data.DatabaseManager.GetUsernames(Admin);
+            else
+                callerName = F.GetPlayerOriginalNames(admin);
+            FPlayerName names;
+            if (violator == null)
+                names = Data.DatabaseManager.GetUsernames(Violator);
+            else
+                names = F.GetPlayerOriginalNames(admin);
+            if (violator != null)
+            {
+                F.Log(F.Translate("warn_warned_console" + (admin == null ? "_operator" : string.Empty), 0, out _, names.PlayerName,
+                Violator.ToString(), callerName.PlayerName,
+                Admin.ToString(), Reason),
+                ConsoleColor.Cyan);
+                if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
+                {
+                    Data.DatabaseManager.AddWarning(Violator, Admin, Reason);
+                    Invocations.Shared.LogWarned.NetInvoke(Violator, Admin, Reason, DateTime.Now);
+                }
+                if (admin != null)
+                    F.SendChat(admin, "warn_warned_feedback", names.CharacterName);
+                ToastMessage.QueueMessage(violator,
+                    F.Translate("warn_warned_private" + (admin == null ? "_operator" : string.Empty), Admin, out _, callerName.CharacterName, Reason),
+                    ToastMessageSeverity.WARNING);
+                F.SendChat(violator, "warn_warned_private" + (admin == null ? "_operator" : string.Empty), callerName.CharacterName, Reason);
+                F.BroadcastToAllExcept(new List<CSteamID> { violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID },
+                    "warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);
             }
         }
     }

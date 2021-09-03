@@ -13,6 +13,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -51,6 +52,7 @@ namespace Uncreated.Warfare
 
             XPManager.OnGroupChanged(player, oldGroup, newGroup);
             OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
+            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
         }
         internal static void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
         {
@@ -246,6 +248,7 @@ namespace Uncreated.Warfare
                 }
             }
         }
+
         internal static void OnPostHealedPlayer(Player instigator, Player target)
         {
             Data.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
@@ -253,7 +256,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
-            if (Provider.clients.Count >= 24)
+            if (!UCWarfare.Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
             {
                 Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
             }
@@ -297,7 +300,6 @@ namespace Uncreated.Warfare
                 Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
                 OfficerManager.OnPlayerJoined(ucplayer);
                 XPManager.OnPlayerJoined(ucplayer);
-                Client.SendPlayerJoined(names);
                 Data.DatabaseManager.CheckUpdateUsernames(names);
                 bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Data.DatabaseManager.RegisterLogin(player.Player);
@@ -312,7 +314,7 @@ namespace Uncreated.Warfare
                     else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(ucplayer, unarmed);
                     else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
                 }
-                pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStats.WarfareName);
+                pt.UCPlayerStats.LogIn(player.Player.channel.owner, names, WarfareStatsOld.WarfareName);
                 F.Broadcast("player_connected", names.CharacterName);
                 if (!UCWarfare.Config.AllowCosmetics)
                 {
@@ -331,6 +333,15 @@ namespace Uncreated.Warfare
                 Data.ReviveManager.OnPlayerConnected(player);
                 //PlayerManager.PickGroupAfterJoin(ucplayer);
                 TicketManager.OnPlayerJoined(ucplayer);
+                Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
+                {
+                    Duty = ucplayer.OnDuty(),
+                    Name = names.CharacterName,
+                    Steam64 = ucplayer.Steam64,
+                    Team = F.GetTeamByte(player)
+                });
+                StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
+                StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
             }
             catch (Exception ex)
             {
@@ -361,7 +372,7 @@ namespace Uncreated.Warfare
             {
                 ulong id = client.playerID.steamID.m_SteamID;
                 Data.DatabaseManager.AddBattleyeKick(id, reason);
-                Client.LogPlayerBattleyeKicked(id, reason, DateTime.Now);
+                Invocations.Shared.LogBattleyeKicked.NetInvoke(id, reason, DateTime.Now);
             }
         }
         internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
@@ -385,9 +396,36 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
+            if (TeamManager.IsInAnyMainOrAMCOrLobby(barricadeTransform.position))
+            {
+                shouldAllow = false;
+            } 
+            else
+            {
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
+                if (drop != null && (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.BARRICADE, out Structures.Structure s) && s.transform == barricadeTransform))
+                {
+                    shouldAllow = false;
+                }
+            }
             if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeOwnerDataComponent t))
             {
                 t.lastDamaged = instigatorSteamID.m_SteamID;
+            }
+        }
+        internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        {
+            if (TeamManager.IsInAnyMainOrAMCOrLobby(structureTransform.position))
+            {
+                shouldAllow = false;
+            }
+            else
+            {
+                StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
+                if (drop != null && (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure s) && s.transform == structureTransform))
+                {
+                    shouldAllow = false;
+                }
             }
         }
         internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
@@ -614,7 +652,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
-            if (Provider.clients.Count - 1 < 24)
+            if (!UCWarfare.Config.UsePatchForPlayerCap && Provider.clients.Count - 1 < 24)
             {
                 Provider.maxPlayers = 24;
             }
@@ -638,7 +676,7 @@ namespace Uncreated.Warfare
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
                 if (gotptcomp)
-                    c.UCPlayerStats.UpdateSession(WarfareStats.WarfareName);
+                    c.UCPlayerStats.UpdateSession(WarfareStatsOld.WarfareName);
                 //Client.SendPlayerLeft(names);
                 Data.Gamemode.OnPlayerLeft(id);
                 F.Broadcast("player_disconnected", names.CharacterName);
@@ -674,6 +712,8 @@ namespace Uncreated.Warfare
                     UnityEngine.Object.Destroy(c);
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
                 }
+                Invocations.Shared.PlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
+                StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
             }
             catch (Exception ex)
             {
@@ -741,7 +781,7 @@ namespace Uncreated.Warfare
                 if (team == 1) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
                 else if (team == 2) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
 
-                int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, team, true);
+                int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, true);
                 // int stars = 0;
                 // was not being used so i commented it
                 Rank rank = null;

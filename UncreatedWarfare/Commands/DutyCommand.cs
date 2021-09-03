@@ -8,6 +8,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
+using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -47,10 +48,10 @@ namespace Uncreated.Warfare.Commands
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             player.Player.look.sendFreecamAllowed(true);
-            player.Player.look.sendSpecStatsAllowed(true);
             player.Player.look.sendWorkzoneAllowed(true);
             player.SendChat("duty_on_feedback");
             F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
+            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
         {
@@ -68,21 +69,19 @@ namespace Uncreated.Warfare.Commands
             if (player.Player != null && player.Player.look != null)
             {
                 player.Player.look.sendFreecamAllowed(false);
-                player.Player.look.sendSpecStatsAllowed(false);
                 player.Player.look.sendWorkzoneAllowed(false);
                 player.SendChat("duty_off_feedback");
             }
+            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         }
         public static void InternOffToOn(UnturnedPlayer player, FPlayerName names)
         {
             F.Log(F.Translate("duty_intern_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
-            player.Player.look.sendFreecamAllowed(true);
-            player.Player.look.sendSpecStatsAllowed(true);
-            player.Player.look.sendWorkzoneAllowed(true);
             player.SendChat("duty_on_feedback");
             F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
+            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
         {
@@ -99,11 +98,9 @@ namespace Uncreated.Warfare.Commands
             }
             if (player.Player != null && player.Player.look != null)
             {
-                player.Player.look.sendFreecamAllowed(false);
-                player.Player.look.sendSpecStatsAllowed(false);
-                player.Player.look.sendWorkzoneAllowed(false);
                 player.SendChat("duty_off_feedback");
             }
+            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         }
     }
 }

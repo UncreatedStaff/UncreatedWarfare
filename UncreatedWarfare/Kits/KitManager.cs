@@ -5,12 +5,9 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Stats;
+using Uncreated.Networking.Encoding;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.XP;
-using static Uncreated.Warfare.UCWarfare;
 using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.Kits
@@ -65,6 +62,7 @@ namespace Uncreated.Warfare.Kits
             else return "[]";
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(new Kit(kitName, items, clothes));
+        public static void CreateKit(Kit kit) => AddObjectToSave(kit);
         public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public static void DeleteAllKits() => RemoveAllObjectsFromSave();
         public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
@@ -510,6 +508,100 @@ namespace Uncreated.Warfare.Kits
             PILOT, //16
             SPEC_OPS // 17
         }
+
+        public static Kit ReadKit(ByteReader R)
+        {
+            List<KitItem> items = new List<KitItem>();
+            List<KitClothing> clothes = new List<KitClothing>();
+            Kit kit = new Kit(R.ReadString(), items, clothes);
+            ushort itemCount = R.ReadUInt16();
+            ushort clothesCount = R.ReadUInt16();
+            ushort allowedUsersCount = R.ReadUInt16();
+            for (int i = 0; i < itemCount; i++)
+            {
+                items.Add(new KitItem()
+                {
+                    ID = R.ReadUInt16(),
+                    amount = R.ReadUInt8(),
+                    quality = R.ReadUInt8(),
+                    page = R.ReadUInt8(),
+                    x = R.ReadUInt8(),
+                    y = R.ReadUInt8(),
+                    rotation = R.ReadUInt8(),
+                    metadata = Convert.ToBase64String(R.ReadBlock(R.ReadUInt16()))
+                });
+            }
+            for (int i = 0; i < clothesCount; i++)
+            {
+                clothes.Add(new KitClothing()
+                {
+                    ID = R.ReadUInt16(),
+                    quality = R.ReadUInt8(),
+                    type = R.ReadEnum<KitClothing.EClothingType>(),
+                    state = Convert.ToBase64String(R.ReadBlock(R.ReadUInt16()))
+                });
+            }
+            for (int i = 0; i < allowedUsersCount; i++)
+                kit.AllowedUsers.Add(R.ReadUInt64());
+            kit.Branch = R.ReadEnum<EBranch>();
+            kit.Class = R.ReadEnum<EClass>();
+            kit.Cooldown = R.ReadFloat();
+            kit.Cost = R.ReadUInt16();
+            kit.IsPremium = R.ReadBool();
+            kit.IsLoadout = R.ReadBool();
+            kit.PremiumCost = R.ReadFloat();
+            kit.RequiredLevel = R.ReadUInt16();
+            kit.ShouldClearInventory = R.ReadBool();
+            kit.Team = R.ReadUInt64();
+            kit.TeamLimit = R.ReadFloat();
+            kit.TicketCost = R.ReadUInt16();
+            return kit;
+        }
+        public static void WriteKit(ByteWriter W, Kit kit)
+        {
+            W.Write(kit.Name);
+            W.Write((ushort)kit.Items.Count);
+            W.Write((ushort)kit.Clothes.Count);
+            W.Write((ushort)kit.AllowedUsers.Count);
+            for (int i = 0; i < kit.Items.Count; i++)
+            {
+                KitItem item = kit.Items[i];
+                W.Write(item.ID);
+                W.Write(item.amount);
+                W.Write(item.quality);
+                W.Write(item.page);
+                W.Write(item.x);
+                W.Write(item.y);
+                W.Write(item.rotation);
+                byte[] meta = Convert.FromBase64String(item.metadata);
+                W.Write((ushort)meta.Length);
+                W.Write(meta);
+            }
+            for (int i = 0; i < kit.Clothes.Count; i++)
+            {
+                KitClothing clothing = kit.Clothes[i];
+                W.Write(clothing.ID);
+                W.Write(clothing.quality);
+                W.Write(clothing.type);
+                byte[] state = Convert.FromBase64String(clothing.state);
+                W.Write((ushort)state.Length);
+                W.Write(state);
+            }
+            for (int i = 0; i < kit.AllowedUsers.Count; i++)
+                W.Write(kit.AllowedUsers[i]);
+            W.Write(kit.Branch);
+            W.Write(kit.Class);
+            W.Write(kit.Cooldown);
+            W.Write(kit.Cost);
+            W.Write(kit.IsPremium);
+            W.Write(kit.IsLoadout);
+            W.Write(kit.PremiumCost);
+            W.Write(kit.RequiredLevel);
+            W.Write(kit.ShouldClearInventory);
+            W.Write(kit.Team);
+            W.Write(kit.TeamLimit);
+            W.Write(kit.TicketCost);
+        }
     }
     public class KitItem
     {
@@ -533,6 +625,7 @@ namespace Uncreated.Warfare.Kits
             this.amount = amount;
             this.page = page;
         }
+        public KitItem() { }
     }
     public class KitClothing
     {
@@ -548,6 +641,7 @@ namespace Uncreated.Warfare.Kits
             this.state = state;
             this.type = type;
         }
+        public KitClothing() { }
         public enum EClothingType
         {
             SHIRT,
