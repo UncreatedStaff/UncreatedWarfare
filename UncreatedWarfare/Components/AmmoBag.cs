@@ -22,16 +22,15 @@ namespace Uncreated.Warfare.FOBs
             ResuppliedPlayers = new Dictionary<ulong, int>();
             uses = 0;
         }
-
         public void ResupplyPlayer(UCPlayer player, Kit kit)
         {
             KitManager.ResupplyKit(player, kit, true);
 
             uses++;
 
-            var owner = UCPlayer.FromID(data.owner);
+            UCPlayer owner = UCPlayer.FromID(data.owner);
             if (owner != null && owner.Steam64 != player.Steam64)
-                XP.XPManager.AddXP(owner.Player, owner.GetTeam(), XP.XPManager.config.Data.RessupplyFriendlyXP, F.Translate("xp_resupplied_teammate", owner));
+                XP.XPManager.AddXP(owner.Player, XP.XPManager.config.Data.RessupplyFriendlyXP, F.Translate("xp_resupplied_teammate", owner));
 
             if (uses >= FOBManager.config.Data.AmmoBagMaxUses && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {

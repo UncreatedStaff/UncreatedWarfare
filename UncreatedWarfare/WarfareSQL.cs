@@ -210,7 +210,7 @@ namespace Uncreated.Warfare
                 NonQuery(
                     "INSERT INTO `points` " +
                     "(`Steam64`, `XP`, `OfficerPoints`) " +
-                    "VALUES(@0, '0', @2) " +
+                    "VALUES(@0, '0', @1) " +
                     "ON DUPLICATE KEY UPDATE " +
                     "`OfficerPoints` = `OfficerPoints` + VALUES(`OfficerPoints`);",
                     new object[] { Steam64, amount });
@@ -233,7 +233,7 @@ namespace Uncreated.Warfare
                 {
                     NonQuery(
                         "UPDATE `points` SET " +
-                        "`OfficerPoints` = `OfficerPoints` - @2 " +
+                        "`OfficerPoints` = `OfficerPoints` - @1 " +
                         "WHERE `Steam64` = @0;",
                         new object[] { Steam64, Math.Abs(amount) });
                     return oldBalance - amount;
@@ -427,18 +427,20 @@ namespace Uncreated.Warfare
             ulong bannedid = 0;
             string oldids = string.Empty;
             int durationref = 0;
+            string oldhwids = string.Empty;
             DateTime bantime = DateTime.Now;
             Query(
                 $"SELECT * " +
                 $"FROM `ipbans` " +
-                $"WHERE `PackedIP` = @0 " +
+                $"WHERE `PackedIP` = @0 OR `HWID` = @1 " +
                 $"LIMIT 1;",
-                new object[] { packedIP }, R =>
+                new object[] { packedIP, Convert.ToBase64String(hwid) }, R =>
                 {
                     bannedid = R.GetUInt64("Instigator");
                     oldids = R.GetString("OtherIDs");
                     durationref = R.GetInt32("DurationMinutes");
                     bantime = R.GetDateTime("InitialBanDate");
+                    oldhwids = R.GetString("OtherHWIDs");
                 });
             if (bannedid == 0) return 0;
             if (durationref != -1 && bantime.AddMinutes(durationref) <= DateTime.Now) return 0;
@@ -450,11 +452,27 @@ namespace Uncreated.Warfare
                 newids[i] = ids[i];
             newids[ids.Length] = idstr;
             string newidsstr = string.Join(",", newids);
+            string newhwidsstr;
+            if (hwid != null && hwid.Count(b => b == 0) != hwid.Length)
+            {
+                string hwidstr = Convert.ToBase64String(hwid);
+                string[] hwids = oldhwids.Split(',');
+                if (hwids.Contains(hwidstr) || hwids.Length > 9) return durationref;
+                string[] newhwids = new string[hwids.Length + 1];
+                for (int i = 0; i < hwids.Length; i++)
+                    newhwids[i] = hwids[i];
+                newhwids[hwids.Length] = idstr;
+                newhwidsstr = string.Join(",", newids);
+            } else
+            {
+                newhwidsstr = string.Empty;
+            }
+            
             NonQuery(
                 $"UPDATE `ipbans` " +
-                $"SET `OtherIDs` = @1 " +
+                $"SET `OtherIDs` = @1, `OtherHWIDs` = @2 " +
                 $"WHERE `PackedIP` = @0;",
-                new object[] { packedIP, newidsstr }
+                new object[] { packedIP, newidsstr, newhwidsstr }
                 );
             return durationref;
         }
@@ -537,18 +555,15 @@ namespace Uncreated.Warfare
                     OFPs.Add(lvls[i].Steam64, lvls[i].ofp);
                 }
             }
-            StringBuilder query = new StringBuilder("INSERT INTO `points` (`Steam64`, `XP`, `OfficerPoints`) VALUES ");
+
             for (int i = 0; i < steamids.Count; i++)
             {
-                if (i != 0) query.Append(", ");
                 if (!XPs.TryGetValue(steamids[i], out uint xp))
                     xp = 0;
                 if (!OFPs.TryGetValue(steamids[i], out uint ofp))
                     ofp = 0;
-                query.Append($"({steamids[i]}, {xp}, {ofp})");
+                NonQuery("INSERT INTO `points` (`Steam64`, `OfficerPoints`, `XP`) VALUES (@0, @1, @2);", new object[] { steamids[i], ofp, xp });
             }
-            query.Append(';');
-            NonQuery(query.ToString(), new object[0]);
         }
         struct FLevels
         {

@@ -57,7 +57,7 @@ namespace Uncreated.Warfare.Commands
                                             else
                                             {
                                                 uint packaged = Parser.getUInt32FromIP(ip);
-                                                Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
+                                                Data.DatabaseManager.AddIPBan(result, packaged, ip, new byte[20], -1, reason);
                                             }
                                         }
                                         FPlayerName names = Data.DatabaseManager.GetUsernames(result);
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Commands
                                             else
                                             {
                                                 uint packaged = Parser.getUInt32FromIP(ip);
-                                                Data.DatabaseManager.AddIPBan(result, packaged, ip, (int)duration, reason);
+                                                Data.DatabaseManager.AddIPBan(result, packaged, ip, new byte[20], (int)duration, reason);
                                             }
                                         }
                                         FPlayerName names = Data.DatabaseManager.GetUsernames(result);
@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, 0, SteamBlacklist.PERMANENT / 60u, reason);
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, 0UL, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
-                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, steamplayer.playerID.hwid, -1, reason);
                                     }
                                     F.Log(F.Translate("ip_ban_permanent_console_operator", 0, out _, name, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     F.Broadcast("ban_permanent_broadcast_operator", steamplayer.playerID.playerName);
@@ -140,7 +140,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, 0, SteamBlacklist.PERMANENT / 60u, reason);
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, 0UL, reason, result, DateTime.Now);
-                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, steamplayer.playerID.hwid, (int)result, reason);
                                     }
                                     F.Log(F.Translate("ip_ban_console_operator", 0, out _, name, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
                                     foreach (SteamPlayer player in Provider.clients)
@@ -195,7 +195,7 @@ namespace Uncreated.Warfare.Commands
                                                 else
                                                 {
                                                     uint packaged = Parser.getUInt32FromIP(ip);
-                                                    Data.DatabaseManager.AddIPBan(result, packaged, ip, -1, reason);
+                                                    Data.DatabaseManager.AddIPBan(result, packaged, ip, new byte[20], -1, reason);
                                                 }
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
@@ -226,7 +226,7 @@ namespace Uncreated.Warfare.Commands
                                                 else
                                                 {
                                                     uint packaged = Parser.getUInt32FromIP(ip);
-                                                    Data.DatabaseManager.AddIPBan(result, packaged, ip, (int)duration, reason);
+                                                    Data.DatabaseManager.AddIPBan(result, packaged, ip, new byte[20], (int)duration, reason);
                                                 }
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
@@ -276,7 +276,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, SteamBlacklist.PERMANENT / 60u, reason);
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, SteamBlacklist.PERMANENT / 60u, DateTime.Now);
-                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, -1, reason);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, steamplayer.playerID.hwid, -1, reason);
                                     }
                                     F.Log(F.Translate("ip_ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
@@ -295,7 +295,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         Data.DatabaseManager.AddBan(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, result, reason);
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, result, DateTime.Now);
-                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, (int)result, reason);
+                                        Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, steamplayer.playerID.hwid, (int)result, reason);
                                     }
                                     string timeLocalized = F.GetTimeFromMinutes(result, 0);
                                     F.Log(F.Translate("ip_ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
@@ -350,7 +350,7 @@ namespace Uncreated.Warfare.Commands
                     else
                     {
                         uint packaged = Parser.getUInt32FromIP(ip);
-                        Data.DatabaseManager.AddIPBan(Violator, packaged, ip, -1, Reason);
+                        Data.DatabaseManager.AddIPBan(Violator, packaged, ip, new byte[20], -1, Reason);
                     }
                 }
                 F.Log(F.Translate(translate2, 0, out _, names.PlayerName, Violator.ToString(Data.Locale), callerName.PlayerName,
@@ -369,7 +369,7 @@ namespace Uncreated.Warfare.Commands
                     Data.DatabaseManager.AddBan(Violator, Admin, DurationMins, Reason);
                     Invocations.Shared.LogBanned.NetInvoke(Violator, Admin, Reason, DurationMins, DateTime.Now);
                     string ipstr = Parser.getIPFromUInt32(ip);
-                    Data.DatabaseManager.AddIPBan(Violator, ip, ipstr, (int)DurationMins, Reason);
+                    Data.DatabaseManager.AddIPBan(Violator, ip, ipstr, violator.playerID.hwid, (int)DurationMins, Reason);
                 }
                 string timeLocalized = F.GetTimeFromMinutes(DurationMins, 0);
                 F.Log(F.Translate("ip_ban_console" + (Admin == 0 ? "_operator" : string.Empty), 0, out _, names.PlayerName, Violator.ToString(Data.Locale),
