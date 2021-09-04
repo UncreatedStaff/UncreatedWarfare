@@ -37,6 +37,8 @@ namespace Uncreated.Warfare
                 Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => s.Teamkills++, false);
                 StatsManager.ModifyTeam(team, t => t.Teamkills++, false);
+                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c))
+                    c.stats.teamkills++;
                 if (Configuration.Instance.AdminLoggerSettings.LogTKs)
                     Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID,
                         parameters.dead.channel.owner.playerID.steamID.m_SteamID,
@@ -95,6 +97,8 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnEnemyKilled(parameters);
                 Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c))
+                    c.stats.AddKill();
                 bool atk = false;
                 bool def = false;
                 if (Data.Gamemode is TeamCTF ctf)
@@ -243,6 +247,8 @@ namespace Uncreated.Warfare
                 TicketManager.OnPlayerSuicide(parameters);
                 Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
+                if (F.TryGetPlaytimeComponent(parameters.dead, out PlaytimeComponent c))
+                    c.stats.AddDeath();
                 if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
                 {
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
@@ -343,7 +349,20 @@ namespace Uncreated.Warfare
             Data.Gamemode?.OnPlayerDeath(parameters);
             if (team == 1 || team == 2)
             {
+                if (Data.Gamemode is TeamCTF ctf)
+                {
+                    if (team == 1)
+                    {
+                        ctf.GameStats.casualtiesT1++;
+                    }
+                    else
+                    {
+                        ctf.GameStats.casualtiesT2++;
+                    }
+                }
                 TicketManager.OnPlayerDeath(parameters);
+                if (F.TryGetPlaytimeComponent(parameters.dead, out PlaytimeComponent c))
+                    c.stats.AddDeath();
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
                 if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
@@ -366,29 +385,18 @@ namespace Uncreated.Warfare
                     ItemJar secondary = parameters.dead.inventory.items[(int)InventoryGroup.Secondary].items.FirstOrDefault();
                     if (primary != null)
                         StatsManager.ModifyWeapon(primary.item.id, kit.Name, x => x.Deaths++, true);
-                    if (secondary != null && primary.item.id != secondary.item.id) // prevents 2 of the same gun from counting twice
+                    if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice
                         StatsManager.ModifyWeapon(secondary.item.id, kit.Name, x => x.Deaths++, true);
                     StatsManager.ModifyKit(kit.Name, k => k.Deaths++, true);
                 }
                 else
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s => s.Deaths++, false);
-                if (Data.Gamemode is TeamCTF ctf)
-                {
-                    if (team == 1)
-                    {
-                        ctf.GameStats.casualtiesT1++;
-                    }
-                    else
-                    {
-                        ctf.GameStats.casualtiesT2++;
-                    }
-                }
             }
             OnPlayerDeathGlobal?.Invoke(parameters);
         }
         private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
-            var ucplayer = UCPlayer.FromUnturnedPlayer(dead);
+            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(dead);
             if (ucplayer != null)
                 ucplayer.LifeCounter++;
 

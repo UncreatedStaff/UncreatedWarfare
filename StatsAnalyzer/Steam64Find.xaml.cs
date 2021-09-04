@@ -38,7 +38,7 @@ namespace StatsAnalyzer
                     {
                         file = await folder.GetFileAsync(filename);
                     }
-                    catch (System.IO.FileNotFoundException)
+                    catch (FileNotFoundException)
                     {
                         file = null;
                     }
@@ -46,19 +46,24 @@ namespace StatsAnalyzer
                 {
                     ErrorText.Text = "No stats file at \"" + folder != null ? folder.Path : "null" + filename + "\".";
                     args.Cancel = true;
-                } 
-                else if (WarfareStats.IO.ReadFrom(file.Path, out WarfareStats stats))
-                {
-                    ErrorText.Text = string.Empty;
-                    StatsPage.I.CurrentMode = EMode.SINGLE;
-                    StatsPage.I.CurrentSingleOrA = stats;
-                    StatsPage.I.CurrentB = null;
-                    sender.Hide();
                 }
                 else
                 {
-                    ErrorText.Text = "Unable to find player.";
-                    args.Cancel = true;
+                    WarfareStats stats = await WarfareStats.IO.ReadFrom(file);
+                    if (StatsPage.I.CurrentSingleOrA == null)
+                    {
+                        ErrorText.Text = "Unable to find player.";
+                        args.Cancel = true;
+                    }
+                    else
+                    {
+                        ErrorText.Text = string.Empty;
+                        StatsPage.I.CurrentSingleOrA = stats;
+                        StatsPage.I.CurrentMode = EMode.SINGLE;
+                        StatsPage.I.CurrentB = null;
+                        await StatsPage.I.Update();
+                        sender.Hide();
+                    }
                 }
             }
             else

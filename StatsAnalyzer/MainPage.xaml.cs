@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Stats;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -23,24 +25,76 @@ namespace StatsAnalyzer
         public static readonly string StatsDirectory = SaveDirectory + @"Players\";
         public static readonly string WeaponsDirectory = SaveDirectory + @"Weapons\";
         public static readonly string KitsDirectory = SaveDirectory + @"Kits\";
+        public Settings Settings;
         public static StatsPage I;
         public EMode CurrentMode;
         public WarfareStats CurrentSingleOrA;
         public WarfareStats CurrentB;
+        public DatabaseManager SQL;
+
+        public Steam64Find S64Search = new Steam64Find();
+        public SettingsDialog SettingsDialog = new SettingsDialog();
         public StatsPage()
         {
             InitializeComponent();
             I = this;
+            LoadSettings().GetAwaiter().GetResult();
+            if (this.Settings.SQL.Database.Length != 0 && this.Settings.SQL.Username.Length != 0 && this.Settings.SQL.Password.Length != 0)
+            {
+                this.SQL = new DatabaseManager(Settings.SQL, true);
+                this.SQL.Open().GetAwaiter().GetResult();
+            }
         }
-
+        public async Task LoadSettings()
+        {
+            StorageFolder folder = ApplicationData.Current.LocalFolder;
+            StorageFile file = null;
+            if (folder != null)
+                try
+                {
+                    file = await folder.GetFileAsync("settings.dat");
+                }
+                catch (FileNotFoundException)
+                {
+                    file = null;
+                }
+            if (file == null)
+            {
+                await Settings.IO.WriteTo(Settings.Default, folder, "settings.dat");
+                try
+                {
+                    file = await folder.GetFileAsync("settings.dat");
+                }
+                catch (FileNotFoundException)
+                {
+                    return;
+                }
+            }
+            Settings = await Settings.IO.ReadFrom(file);
+            if (Settings.DATA_VERSION != Settings.CURRENT_DATA_VERSION)
+            {
+                Settings.DATA_VERSION = Settings.CURRENT_DATA_VERSION;
+                await Settings.IO.WriteTo(Settings.Default, folder, "settings.dat");
+            }
+        }
+        public async Task SaveSettings()
+        {
+            StorageFolder folder = ApplicationData.Current.LocalFolder;
+            if (folder != null)
+                await Settings.IO.WriteTo(Settings, folder, "settings.dat");
+        }
         private void ClickApplication_Exit(object sender, RoutedEventArgs e)
         {
             Application.Current.Exit();
         }
+        private async void ClickApplication_Settings(object sender, RoutedEventArgs e)
+        {
+            SettingsDialog.Load();
+            await SettingsDialog.ShowAsync();
+        }
         private async void ClickSearch_Find(object sender, RoutedEventArgs e)
         {
-            Steam64Find find = new Steam64Find();
-            await find.ShowAsync();
+            await S64Search.ShowAsync();
         }
         private void ClickSearch_Compare(object sender, RoutedEventArgs e)
         {
@@ -49,6 +103,19 @@ namespace StatsAnalyzer
         private void Click_Query(object sender, RoutedEventArgs e)
         {
 
+        }
+        public async Task Update()
+        {
+            if (CurrentMode == EMode.SINGLE)
+            {
+                if (CurrentSingleOrA == null)
+                {
+                    Debug.WriteLine("Current is null");
+                    return;
+                }
+                await SingleStatPage.Load(CurrentSingleOrA);
+                SingleStatPage.Visibility = Visibility.Visible;
+            }
         }
     }
     public enum EMode : byte

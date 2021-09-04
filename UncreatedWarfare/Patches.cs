@@ -34,7 +34,6 @@ namespace Uncreated.Warfare
         public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
         public static event BatteryStealingDelegate OnBatterySteal_Global;
         public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
-        public static event InventoryItemAdded OnItemAddedToInventory_Global;
         public static event PlayerGesture OnPlayerGesture_Global;
         public static event PlayerMarker OnPlayerMarker_Global;
 
@@ -203,7 +202,7 @@ namespace Uncreated.Warfare
                 callingPlayer.lastChat = Time.realtimeSinceStartup;
                 EChatMode mode = (EChatMode)(flags & sbyte.MaxValue);
                 bool fromUnityEvent = (flags & 128) > 0;
-                if (text.Length < 2 || Dedicator.isDedicated & fromUnityEvent && !Provider.configData.UnityEvents.Allow_Client_Messages)
+                if (text.Length < 2 || true & fromUnityEvent && !Provider.configData.UnityEvents.Allow_Client_Messages)
                     return false;
                 text = text.Trim();
                 if (text.Length < 2)
@@ -869,7 +868,7 @@ namespace Uncreated.Warfare
                         float f = UnityEngine.Random.Range(0.0f, 6.283185f);
                         ushort newID = SpawnTableTool.resolve(__instance.asset.dropsTableId);
                         if (newID != 0)
-                            ItemManager.dropItem(new Item(newID, EItemOrigin.NATURE), __instance.transform.position + new Vector3(Mathf.Sin(f) * 3f, 1f, Mathf.Cos(f) * 3f), false, Dedicator.isDedicated, true);
+                            ItemManager.dropItem(new Item(newID, EItemOrigin.NATURE), __instance.transform.position + new Vector3(Mathf.Sin(f) * 3f, 1f, Mathf.Cos(f) * 3f), false, true, true);
                     }
                 }
                 VehicleManager.sendVehicleExploded(__instance);
