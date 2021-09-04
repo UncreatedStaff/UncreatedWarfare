@@ -146,7 +146,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_notsquadleader");
                     }
-                    else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements)
+                    else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements && !(kit.Class == Kit.EClass.CREWMAN || kit.Class == Kit.EClass.PILOT))
                     {
                         player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
                     }

@@ -131,18 +131,39 @@ namespace Uncreated.Warfare.FOBs
         }
         public void RepairVehicle(InteractableVehicle vehicle)
         {
-            if (vehicle.health >= vehicle.asset.health)
+            if (vehicle.health < vehicle.asset.health)
+            {
+                ushort amount = 25;
+                ushort newHealth = (ushort)(vehicle.health + amount);
+                if (vehicle.health + amount >= vehicle.asset.health)
+                {
+                    newHealth = vehicle.asset.health;
+                }
+
+                VehicleManager.sendVehicleHealth(vehicle, newHealth);
+                EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
+                vehicle.updateVehicle();
+            }
+            else
+            {
+                RefuelVehicle(vehicle);
+            }
+        }
+
+        public void RefuelVehicle(InteractableVehicle vehicle)
+        {
+            if (vehicle.fuel >= vehicle.asset.fuel)
                 return;
 
-            ushort amount = 25;
-            ushort newHealth = (ushort)(vehicle.health + amount);
-            if (vehicle.health + amount >= vehicle.asset.health)
+            ushort amount = 90;
+            ushort newFuel = (ushort)(vehicle.fuel + amount);
+            if (vehicle.fuel + amount >= vehicle.asset.fuel)
             {
-                newHealth = vehicle.asset.health;
+                newFuel = vehicle.asset.fuel;
             }
 
-            VehicleManager.sendVehicleHealth(vehicle, newHealth);
-            EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
+            VehicleManager.sendVehicleFuel(vehicle, newFuel);
+            EffectManager.sendEffect(38316, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
     }
@@ -166,7 +187,7 @@ namespace Uncreated.Warfare.FOBs
 
                 for (int i = 0; i < nearby.Count; i++)
                 {
-                    if (nearby[i].health >= nearby[i].asset.health)
+                    if (nearby[i].health >= nearby[i].asset.health && nearby[i].fuel >= nearby[i].asset.fuel)
                     {
                         if (parent.VehiclesRepairing.ContainsKey(nearby[i].instanceID))
                             parent.VehiclesRepairing.Remove(nearby[i].instanceID);
@@ -216,7 +237,7 @@ namespace Uncreated.Warfare.FOBs
                     }
                 }
 
-                yield return new WaitForSeconds(1);
+                yield return new WaitForSeconds(1.5F);
             }
         }
     }
