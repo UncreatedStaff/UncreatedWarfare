@@ -162,7 +162,14 @@ namespace Uncreated.Warfare.FOBs
 
             Barricade barricade = new Barricade(FOBManager.config.Data.RepairStationID);
             Quaternion quarternion = Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2);
-            BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
+            Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, quarternion, foundation.owner, foundation.group);
+            BarricadeDrop ammoCrate = BarricadeManager.FindBarricadeByRootTransform(transform);
+            if ((ammoCrate?.interactable is InteractableStorage storage))
+            {
+                for (int i = 0; i < 3; i++)
+                    storage.items.tryAddItem(new Item(BuildID, true));
+            }
+
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             player.SendChat("repairstation_built");
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);

@@ -145,18 +145,31 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
+
+        public void RefuelVehicle(InteractableVehicle vehicle)
+        {
+            if (vehicle.fuel >= vehicle.asset.fuel)
+                return;
+
+            ushort amount = 180;
+
+            vehicle.askFillFuel(amount);
+
+            EffectManager.sendEffect(38316, EffectManager.SMALL, vehicle.transform.position);
+            vehicle.updateVehicle();
+        }
     }
 
     public class RepairStationComponent : MonoBehaviour
     {
         public RepairStation parent;
+        int counter = 0;
 
         public void Initialize(RepairStation repairStation)
         {
             parent = repairStation;
             StartCoroutine(RepaitStationLoop());
         }
-
         private IEnumerator<WaitForSeconds> RepaitStationLoop()
         {
             while (parent.IsActive)
@@ -166,7 +179,7 @@ namespace Uncreated.Warfare.FOBs
 
                 for (int i = 0; i < nearby.Count; i++)
                 {
-                    if (nearby[i].health >= nearby[i].asset.health)
+                    if (nearby[i].health >= nearby[i].asset.health && nearby[i].fuel >= nearby[i].asset.fuel)
                     {
                         if (parent.VehiclesRepairing.ContainsKey(nearby[i].instanceID))
                             parent.VehiclesRepairing.Remove(nearby[i].instanceID);
@@ -179,10 +192,17 @@ namespace Uncreated.Warfare.FOBs
 
                             if (ticks > 0)
                             {
-                                parent.RepairVehicle(nearby[i]);
-                                ticks--;
+                                if (nearby[i].health < nearby[i].asset.health)
+                                {
+                                    parent.RepairVehicle(nearby[i]);
+                                    ticks--;
+                                }
+                                else if (counter == 0 && !nearby[i].isEngineOn)
+                                {
+                                    parent.RefuelVehicle(nearby[i]);
+                                    ticks--;
+                                }
                             }
-
                             if (ticks <= 0)
                             {
                                 parent.VehiclesRepairing.Remove(nearby[i].instanceID);
@@ -216,7 +236,12 @@ namespace Uncreated.Warfare.FOBs
                     }
                 }
 
-                yield return new WaitForSeconds(1);
+                counter++;
+
+                if (counter >= 3)
+                    counter = 0;
+
+                yield return new WaitForSeconds(1.5F);
             }
         }
     }
