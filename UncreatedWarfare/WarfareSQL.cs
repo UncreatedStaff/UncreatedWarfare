@@ -192,7 +192,7 @@ namespace Uncreated.Warfare
                 {
                     NonQuery(
                         "UPDATE `points` SET " +
-                        "`XP` = `XP` - @2 " +
+                        "`XP` = `XP` - @1 " +
                         "WHERE `Steam64` = @0;",
                         new object[] { Steam64, absamount });
                     return unchecked(oldBalance - absamount);

@@ -293,4 +293,35 @@ namespace Uncreated.Warfare.Stats
             return T;
         }
     }
+    public class WarfareVehicle
+    {
+        public readonly static RawByteIO<WarfareVehicle> IO = new RawByteIO<WarfareVehicle>(Read, Write, null, 22);
+        public const uint CURRENT_DATA_VERSION = 1;
+        public uint DATA_VERSION;
+        public ushort ID;
+        public uint TimesRequested;
+        public uint TimesDestroyed;
+        public uint KillsWithGunner;
+
+        public static void Write(ByteWriter W, WarfareVehicle V)
+        {
+            W.Write(V.DATA_VERSION);
+            W.Write(V.ID);
+            W.Write(V.TimesRequested);
+            W.Write(V.TimesDestroyed);
+            W.Write(V.KillsWithGunner);
+        }
+        public static WarfareVehicle Read(ByteReader R)
+        {
+            WarfareVehicle V = new WarfareVehicle() { DATA_VERSION = R.ReadUInt32() };
+            V.ID = R.ReadUInt16();
+            if (V.DATA_VERSION > 0)
+            {
+                V.TimesRequested = R.ReadUInt32();
+                V.TimesDestroyed = R.ReadUInt32();
+                V.KillsWithGunner = R.ReadUInt32();
+            }
+            return V;
+        }
+    }
 }

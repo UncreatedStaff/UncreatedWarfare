@@ -47,6 +47,7 @@
 
   <Capabilities>
     <rescap:Capability Name="broadFileSystemAccess" />
+    <Capability Name="privateNetworkClientServer" />
     <uap:Capability Name="removableStorage"/>
     <Capability Name="internetClient" />
   </Capabilities>

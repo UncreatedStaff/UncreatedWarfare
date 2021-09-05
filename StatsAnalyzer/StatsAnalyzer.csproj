@@ -119,6 +119,13 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DatabaseManager.cs" />
+    <Compile Include="SettingsDialog.xaml.cs">
+      <DependentUpon>SettingsDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="SingleStats.xaml.cs">
+      <DependentUpon>SingleStats.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Steam64Find.xaml.cs">
       <DependentUpon>Steam64Find.xaml</DependentUpon>
     </Compile>
@@ -148,6 +155,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="SettingsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SingleStats.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Steam64Find.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -160,6 +175,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.2.12</Version>
+    </PackageReference>
+    <PackageReference Include="MySql.Data">
+      <Version>8.0.25</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

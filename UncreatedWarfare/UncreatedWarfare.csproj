@@ -3,9 +3,8 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-    <Copyright>None</Copyright>
     <OutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins\</OutputPath>
-    <Version>3.21.1.0</Version>
+	<Version>3.21.2.1</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -72,10 +71,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\Downloads\UncreatedNetworking.dll</HintPath>
-    </Reference>
-    <Reference Include="UncreatedStats">
-      <HintPath>..\..\..\..\Downloads\UncreatedStats.dll</HintPath>
+      <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworking\bin\Debug\net472\UncreatedNetworking.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
@@ -102,5 +98,8 @@
     <PackageReference Include="Lib.Harmony" Version="2.0.4" />
     <PackageReference Include="MySql.Data" Version="8.0.25" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UncreatedStats\UncreatedStats.csproj" />
   </ItemGroup>
 </Project>
