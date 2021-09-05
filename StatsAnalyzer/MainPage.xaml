@@ -12,25 +12,27 @@
         <Grid.Background>
             <AcrylicBrush TintColor="#CC33343A"/>
         </Grid.Background>
-        <StackPanel Orientation="Horizontal" Height="32" VerticalAlignment="Top" Background="#FF333333">
-            <Button x:Name="button" Content="Application" Width="118" ScrollViewer.VerticalScrollBarVisibility="Disabled" Background="#FF333333">
-                <Button.Flyout>
-                    <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
-                        <MenuFlyoutItem Text="Settings" Click="ClickApplication_Settings"/>
-                        <MenuFlyoutItem Text="Exit" Click="ClickApplication_Exit"/>
-                    </MenuFlyout>
-                </Button.Flyout>
-            </Button>
-            <Button x:Name="button_Copy" Content="Search" Width="121" Background="#FF333333">
-                <Button.Flyout>
-                    <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
-                        <MenuFlyoutItem Text="Find" Click="ClickSearch_Find"/>
-                        <MenuFlyoutItem Text="Compare" Click="ClickSearch_Compare"/>
-                    </MenuFlyout>
-                </Button.Flyout>
-            </Button>
-            <Button x:Name="button_Copy1" Content="Query" Width="121" Click="Click_Query" Background="#FF333333"/>
+        <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal" Height="32" VerticalAlignment="Top" Background="#FF333333">
+                <Button x:Name="button" Content="Application" Width="118" ScrollViewer.VerticalScrollBarVisibility="Disabled" Background="#FF333333">
+                    <Button.Flyout>
+                        <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
+                            <MenuFlyoutItem Text="Settings" Click="ClickApplication_Settings"/>
+                            <MenuFlyoutItem Text="Exit" Click="ClickApplication_Exit"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="button_Copy" Content="Search" Width="121" Background="#FF333333">
+                    <Button.Flyout>
+                        <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
+                            <MenuFlyoutItem Text="Find" Click="ClickSearch_Find"/>
+                            <MenuFlyoutItem Text="Compare" Click="ClickSearch_Compare"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="button_Copy1" Content="Query" Width="121" Click="Click_Query" Background="#FF333333"/>
+            </StackPanel>
+            <local:SingleStats x:Name="SingleStatPage" HorizontalAlignment="Stretch" Margin="10,10,10,10" VerticalAlignment="Stretch" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18" Visibility="Collapsed"/>
         </StackPanel>
-        <local:SingleStats x:Name="SingleStatPage" HorizontalAlignment="Left" Margin="10,37,0,0" VerticalAlignment="Top" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18" Height="1033" Width="950" Visibility="Collapsed"/>
     </Grid>
 </Page>

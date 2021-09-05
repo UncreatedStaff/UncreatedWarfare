@@ -109,7 +109,7 @@ namespace Uncreated.Warfare.Networking
                 }
                 else
                 {
-                    PlayerManager.AddSave(new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false));
+                    PlayerManager.AddSave(new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false, false));
                 }
             }
         }

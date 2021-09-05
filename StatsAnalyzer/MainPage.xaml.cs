@@ -36,23 +36,36 @@ namespace StatsAnalyzer
         public SettingsDialog SettingsDialog = new SettingsDialog();
         public StatsPage()
         {
-            InitializeComponent();
+            InitializeComponent(); 
             I = this;
-            LoadSettings().GetAwaiter().GetResult();
-            if (this.Settings.SQL.Database.Length != 0 && this.Settings.SQL.Username.Length != 0 && this.Settings.SQL.Password.Length != 0)
-            {
-                this.SQL = new DatabaseManager(Settings.SQL, true);
-                this.SQL.Open().GetAwaiter().GetResult();
-            }
+            this.Loaded += StatsPage_Loaded;
         }
+
+        private async void StatsPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            await LoadSettings();
+            if (Settings.SQL.Database.Length != 0 && Settings.SQL.Username.Length != 0 && Settings.SQL.Password.Length != 0)
+            {
+                SQL = new DatabaseManager(Settings.SQL, true);
+                await SQL.Open();
+            }
+            if (Settings.LastSteam64 != 0)
+                S64Search.TextBoxText = Settings.LastSteam64.ToString(Locale);
+        }
+
         public async Task LoadSettings()
         {
+
             StorageFolder folder = ApplicationData.Current.LocalFolder;
             StorageFile file = null;
             if (folder != null)
                 try
                 {
                     file = await folder.GetFileAsync("settings.dat");
+#if false //reset settings
+                    await Settings.IO.WriteTo(Settings.Default, folder, "settings.dat");
+                    return;
+#endif
                 }
                 catch (FileNotFoundException)
                 {
@@ -61,7 +74,7 @@ namespace StatsAnalyzer
             if (file == null)
             {
                 await Settings.IO.WriteTo(Settings.Default, folder, "settings.dat");
-                try
+                try 
                 {
                     file = await folder.GetFileAsync("settings.dat");
                 }
@@ -72,11 +85,11 @@ namespace StatsAnalyzer
             }
             Settings = await Settings.IO.ReadFrom(file);
             if (Settings.DATA_VERSION != Settings.CURRENT_DATA_VERSION)
-            {
+            { 
                 Settings.DATA_VERSION = Settings.CURRENT_DATA_VERSION;
-                await Settings.IO.WriteTo(Settings.Default, folder, "settings.dat");
+                await Settings.IO.WriteTo(Settings, folder, "settings.dat");
             }
-        }
+        } 
         public async Task SaveSettings()
         {
             StorageFolder folder = ApplicationData.Current.LocalFolder;
@@ -106,6 +119,7 @@ namespace StatsAnalyzer
         }
         public async Task Update()
         {
+            Debug.WriteLine("Updating UI");
             if (CurrentMode == EMode.SINGLE)
             {
                 if (CurrentSingleOrA == null)

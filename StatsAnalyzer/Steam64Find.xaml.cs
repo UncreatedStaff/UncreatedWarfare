@@ -25,7 +25,7 @@ namespace StatsAnalyzer
         {
             this.InitializeComponent();
         }
-
+        public string TextBoxText { get => Steam64TextBox.Text; set => Steam64TextBox.Text = value; }
         private async void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
         {
             if (Steam64TextBox.Text.StartsWith("765") && ulong.TryParse(Steam64TextBox.Text, System.Globalization.NumberStyles.Any, StatsPage.Locale, out ulong Steam64))
@@ -46,14 +46,16 @@ namespace StatsAnalyzer
                 {
                     ErrorText.Text = "No stats file at \"" + folder != null ? folder.Path : "null" + filename + "\".";
                     args.Cancel = true;
+                    return;
                 }
                 else
                 {
                     WarfareStats stats = await WarfareStats.IO.ReadFrom(file);
-                    if (StatsPage.I.CurrentSingleOrA == null)
+                    if (stats == null)
                     {
                         ErrorText.Text = "Unable to find player.";
                         args.Cancel = true;
+                        return;
                     }
                     else
                     {
@@ -61,6 +63,8 @@ namespace StatsAnalyzer
                         StatsPage.I.CurrentSingleOrA = stats;
                         StatsPage.I.CurrentMode = EMode.SINGLE;
                         StatsPage.I.CurrentB = null;
+                        StatsPage.I.Settings.LastSteam64 = Steam64;
+                        await StatsPage.I.SaveSettings();
                         await StatsPage.I.Update();
                         sender.Hide();
                     }
@@ -70,6 +74,7 @@ namespace StatsAnalyzer
             {
                 ErrorText.Text = "Couldn't parse a Steam64 ID.";
                 args.Cancel = true;
+                return;
             }
         }
 

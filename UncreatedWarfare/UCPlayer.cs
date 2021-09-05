@@ -320,6 +320,8 @@ namespace Uncreated.Warfare
         public bool ShouldRespawnOnJoin;
         [JsonSettable]
         public bool IsOtherDonator;
+        [JsonSettable]
+        public bool DisableNametags;
         public PlayerSave(ulong Steam64)
         {
             this.Steam64 = Steam64;
@@ -330,6 +332,7 @@ namespace Uncreated.Warfare
             LastGame = 0;
             ShouldRespawnOnJoin = false;
             IsOtherDonator = false;
+            DisableNametags = false;
         }
         public PlayerSave()
         {
@@ -341,9 +344,10 @@ namespace Uncreated.Warfare
             LastGame = 0;
             ShouldRespawnOnJoin = false;
             IsOtherDonator = false;
+            DisableNametags = false;
         }
         [JsonConstructor]
-        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin, bool IsOtherDonator)
+        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin, bool IsOtherDonator, bool DisableNametags)
         {
             this.Steam64 = Steam64;
             this.Team = Team;
@@ -353,6 +357,7 @@ namespace Uncreated.Warfare
             this.LastGame = LastGame;
             this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
             this.IsOtherDonator = IsOtherDonator;
+            this.DisableNametags = DisableNametags;
         }
     }
 }

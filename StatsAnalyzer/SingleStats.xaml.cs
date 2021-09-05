@@ -59,6 +59,7 @@ namespace StatsAnalyzer
         }
         public async Task Load(WarfareStats stats)
         {
+            pnlKits.Children.Clear();
             lblSteam64.Text = stats.Steam64.ToString(StatsPage.Locale);
             FPlayerName names = await StatsPage.I.SQL.GetUsernames(stats.Steam64);
             lblPlayerName.Text = names.PlayerName;
@@ -82,6 +83,13 @@ namespace StatsAnalyzer
             lblFOBsDestroyed.Text = stats.FobsDestroyed.ToString(StatsPage.Locale);
             lblEmplacementsBuilt.Text = stats.EmplacementsBuilt.ToString(StatsPage.Locale);
             lblFortificationsBuilt.Text = stats.FortificationsBuilt.ToString(StatsPage.Locale);
+            lblTotalPlaytime.Text = stats.PlaytimeMinutes.ToString(StatsPage.Locale);
+            foreach (WarfareStats.KitData data in stats.Kits)
+            {
+                KitData dataCtrl = new KitData();
+                dataCtrl.Load(data, stats.Steam64);
+                pnlKits.Children.Add(dataCtrl);
+            }
         }
     }
 }

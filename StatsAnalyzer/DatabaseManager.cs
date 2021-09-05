@@ -234,14 +234,16 @@ namespace StatsAnalyzer
     }
     public class Settings
     {
-        public static readonly RawByteIO<Settings> IO = new RawByteIO<Settings>(Read, Write, null, 16);
-        public const uint CURRENT_DATA_VERSION = 1;
+        public static readonly RawByteIO<Settings> IO = new RawByteIO<Settings>(Read, Write, null, 24);
+        public const uint CURRENT_DATA_VERSION = 2;
         public uint DATA_VERSION;
         public MySqlData SQL;
+        public ulong LastSteam64;
         public static void Write(ByteWriter W, Settings S)
         {
             W.Write(S.DATA_VERSION);
             MySqlData.Write(W, S.SQL);
+            W.Write(S.LastSteam64);
         }
         public static Settings Read(ByteReader R)
         {
@@ -249,6 +251,10 @@ namespace StatsAnalyzer
             if (S.DATA_VERSION > 0)
             {
                 S.SQL = MySqlData.Read(R);
+                if (S.DATA_VERSION > 1)
+                {
+                    S.LastSteam64 = R.ReadUInt64();
+                }
             }
             return S;
         }
@@ -263,7 +269,8 @@ namespace StatsAnalyzer
                 Port = 3306,
                 Password = string.Empty,
                 Username = string.Empty
-            }
+            },
+            LastSteam64 = 0
         };
     }
 

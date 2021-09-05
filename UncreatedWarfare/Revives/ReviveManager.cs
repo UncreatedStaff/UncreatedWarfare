@@ -170,11 +170,6 @@ namespace Uncreated.Warfare.Revives
             {
                 if (target.TryGetComponent(out Reviver r))
                     r.RevivePlayer();
-                /*
-                ulong team = target.GetTeam();
-                EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
-                EffectManager.askEffectClearByID(Squads.SquadManager.config.Data.MedicMarker, target.channel.owner.transportConnection);
-                ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, team);*/
             }
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
@@ -204,9 +199,9 @@ namespace Uncreated.Warfare.Revives
             }
             else
             {
-                float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
+                float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                 parameters = p;
-                parameters.damage *= (UCWarfare.Config.InjuredDamageMultiplier / 10) * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
+                parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
                 if (UCWarfare.Config.Debug)
                     F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
             }
@@ -271,7 +266,7 @@ namespace Uncreated.Warfare.Revives
                             Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s =>
                             {
                                 s.Downs++;
-                                Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
+                                Stats.WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == kteam);
                                 if (kitData == default)
                                 {
                                     kitData = new Stats.WarfareStats.KitData() { KitID = kit.Name, Team = kteam, Downs = 1 };

@@ -42,7 +42,7 @@ namespace StatsAnalyzer
             await StatsPage.I.SaveSettings();
             if (reloadSQL)
             {
-                await StatsPage.I.SQL.DisposeAsync();
+                await StatsPage.I.SQL?.DisposeAsync();
                 StatsPage.I.SQL = new DatabaseManager(StatsPage.I.Settings.SQL, true);
                 await StatsPage.I.SQL.Open();
             }

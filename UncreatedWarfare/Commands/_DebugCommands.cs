@@ -13,6 +13,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -33,7 +34,7 @@ namespace Uncreated.Warfare.Commands
         private readonly Type type = typeof(_DebugCommand);
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            Player player = caller.DisplayName == "Console" ? Provider.clients.FirstOrDefault()?.player : (caller as UnturnedPlayer).Player;
+            Player player = caller.DisplayName == "Console" ? null : (caller as UnturnedPlayer).Player;
             bool isConsole = caller.DisplayName == "Console";
             if (command.Length > 0)
             {
@@ -229,9 +230,9 @@ namespace Uncreated.Warfare.Commands
                 }
             }
         }
-#pragma warning disable IDE1006 // Naming Styles
-#pragma warning disable IDE0060 // Remove unused parameter
-#pragma warning disable IDE0051 // Remove unused private members
+#pragma warning disable IDE1006
+#pragma warning disable IDE0060
+#pragma warning disable IDE0051
         private void zone(string[] command, Player player)
         {
             if (player == default)
@@ -727,8 +728,101 @@ namespace Uncreated.Warfare.Commands
                 F.Log($"{OfficerManager.config.Data.OfficerRanks[i].name}, {OfficerManager.config.Data.OfficerRanks[i].level}, {OfficerManager.config.Data.OfficerRanks[i].XP}");
             }
         }
+        private void consolidateKits(string[] command, Player player)
+        {
+            if (player != null)
+            {
+                player.SendChat("This command can only be called from console.");
+                return;
+            }
+            string[] files = Directory.GetFiles(StatsManager.StatsDirectory, "*.dat");
+            List<WarfareStats.KitData> kits = new List<WarfareStats.KitData>();
+            Console.WriteLine(string.Empty);
+            int i = 0;
+            ConsoleColor temp = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            for (; i < files.Length; i++)
+            {
+                Console.CursorLeft = 0;
+                Console.Write(((float)i / files.Length * 100f).ToString(Data.Locale) + "% Complete");
+                FileInfo info = new FileInfo(files[i]);
+                if (WarfareStats.IO.ReadFrom(info, out WarfareStats stats))
+                {
+                    kits.Clear();
+                    FieldInfo[] fields = typeof(WarfareStats).GetFields(BindingFlags.Instance | BindingFlags.Public);
+                    for (int f = 0; f < fields.Length; f++)
+                    {
+                        object val = fields[f].GetValue(stats);
+                        if (val == null)
+                            Console.WriteLine(fields[f].Name + ": null");
+                        if (val is List<WarfareStats.KitData> list)
+                        {
+                            Console.WriteLine("KITS: ");
+                            for (int k = 0; k < list.Count; k++)
+                            {
+                                FieldInfo[] fields2 = typeof(WarfareStats).GetFields(BindingFlags.Instance | BindingFlags.Public);
+                                for (int f2 = 0; f2 < fields.Length; f2++)
+                                {
+                                    object val2 = fields2[f2].GetValue(stats);
+                                    if (val2 == null)
+                                        Console.WriteLine(fields[f2].Name + ": null");
+                                    Console.WriteLine(fields2[f2].Name + ": " + val2.ToString());
+                                }
+                                Console.WriteLine(" ");
+                            }
+                            continue;
+                        }
+                        Console.WriteLine(fields[f].Name + ": " + val.ToString());
+                    }
+                    Console.WriteLine(" Kits:" + stats.Kits.Count);
+                    for (int k = 0; k < stats.Kits.Count; k++)
+                    {
+                        WarfareStats.KitData existing = kits.FirstOrDefault(kit => kit.KitID == stats.Kits[k].KitID && kit.Team == stats.Kits[k].Team);
+                        if (existing == default)
+                        {
+                            kits.Add(stats.Kits[k]);
+                            Console.WriteLine("new, " + stats.Kits[k].KitID + " T: " + stats.Kits[k].Team);
+                        }
+                        else
+                        {
+                            existing.Kills += stats.Kits[k].Kills;
+                            existing.Deaths += stats.Kits[k].Deaths;
+                            existing.Downs += stats.Kits[k].Downs;
+                            existing.PlaytimeMinutes += stats.Kits[k].PlaytimeMinutes;
+                            existing.AverageGunKillDistance = ((existing.AverageGunKillDistance * existing.AverageGunKillDistanceCounter) + stats.Kits[k].AverageGunKillDistance) / (existing.AverageGunKillDistanceCounter + stats.Kits[k].AverageGunKillDistanceCounter);
+                            existing.AverageGunKillDistanceCounter += stats.Kits[k].AverageGunKillDistanceCounter;
+                            existing.Revives += stats.Kits[k].Revives;
+                            existing.TimesRequested += stats.Kits[k].TimesRequested;
+                            Console.WriteLine("existing");
+                        }
+                    }
+                    stats.Kits = kits;
+                    Console.WriteLine(info.Name);
+                    Console.WriteLine("delete it");
+                    System.Threading.Thread.Sleep(10000);
+                    WarfareStats.IO.WriteTo(stats, info);
+                }
+            }
+            kits.Clear();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.CursorLeft = 0;
+            Console.WriteLine("Consolidation of kits complete, " + i.ToString(Data.Locale) + " files affected.");
+            Console.WriteLine();
+            Console.ForegroundColor = temp;
+        }
+        private void togglenametags(string[] commands, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            if (PlayerManager.HasSave(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
+                save.DisableNametags = !save.DisableNametags;
+            player.SendChat("You must rejoin for these changes to take affect.");
+        }
     }
-#pragma warning restore IDE0051 // Remove unused private members
-#pragma warning restore IDE0060 // Remove unused parameter
-#pragma warning restore IDE1006 // Naming Styles
+#pragma warning restore IDE0051
+#pragma warning restore IDE0060
+#pragma warning restore IDE1006
 }
