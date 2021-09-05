@@ -85,6 +85,38 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
+        public static void RefillMainStorages()
+        {
+            var repairStations = UCBarricadeManager.GetBarricadesByID(config.Data.RepairStationID).ToList();
+            var ammoCrates = UCBarricadeManager.GetBarricadesByID(config.Data.AmmoCrateID).ToList();
+
+            for (int i = 0; i < repairStations.Count; i++)
+            {
+                if (F.IsInMain(repairStations[i].model.transform.position))
+                {
+                    ushort BuildID = 0;
+                    if (repairStations[i].GetServersideData().group == 1)
+                        BuildID = config.Data.Team1BuildID;
+                    else if (repairStations[i].GetServersideData().group == 2)
+                        BuildID = config.Data.Team2BuildID;
+
+                    UCBarricadeManager.TryAddItemToStorage(repairStations[i], BuildID);
+                }
+            }
+            for (int i = 0; i < ammoCrates.Count; i++)
+            {
+                if (F.IsInMain(ammoCrates[i].model.transform.position))
+                {
+                    ushort AmmoID = 0;
+                    if (ammoCrates[i].GetServersideData().group == 1)
+                        AmmoID = config.Data.Team1AmmoID;
+                    else if (ammoCrates[i].GetServersideData().group == 2)
+                        AmmoID = config.Data.Team2AmmoID;
+
+                    UCBarricadeManager.TryAddItemToStorage(ammoCrates[i], AmmoID);
+                }
+            }
+        }
         public static void UpdateBuildUIForFOB(BarricadeDrop fob)
         {
             var data = fob.GetServersideData();
@@ -155,6 +187,9 @@ namespace Uncreated.Warfare.FOBs
             {
                 RecalculateNearbyPlayers(Team2FOBs[i], (int)counter);
             }
+
+            if (counter % 60 == 0)
+                RefillMainStorages();
         }
 
         public static void RecalculateNearbyPlayers(FOB fob, int counter = -1)
@@ -585,7 +620,7 @@ namespace Uncreated.Warfare.FOBs
             FOBMaxHeightAboveTerrain = 25f;
             RestrictFOBPlacement = true;
             FOBID = 38311;
-            FOBRequiredBuild = 16;
+            FOBRequiredBuild = 15;
             FOBBuildPickupRadius = 80;
             FobLimit = 10;
 

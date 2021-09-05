@@ -131,23 +131,19 @@ namespace Uncreated.Warfare.FOBs
         }
         public void RepairVehicle(InteractableVehicle vehicle)
         {
-            if (vehicle.health < vehicle.asset.health)
-            {
-                ushort amount = 25;
-                ushort newHealth = (ushort)(vehicle.health + amount);
-                if (vehicle.health + amount >= vehicle.asset.health)
-                {
-                    newHealth = vehicle.asset.health;
-                }
+            if (vehicle.health >= vehicle.asset.health)
+                return;
 
-                VehicleManager.sendVehicleHealth(vehicle, newHealth);
-                EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
-                vehicle.updateVehicle();
-            }
-            else
+            ushort amount = 25;
+            ushort newHealth = (ushort)(vehicle.health + amount);
+            if (vehicle.health + amount >= vehicle.asset.health)
             {
-                RefuelVehicle(vehicle);
+                newHealth = vehicle.asset.health;
             }
+
+            VehicleManager.sendVehicleHealth(vehicle, newHealth);
+            EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
+            vehicle.updateVehicle();
         }
 
         public void RefuelVehicle(InteractableVehicle vehicle)
@@ -155,14 +151,10 @@ namespace Uncreated.Warfare.FOBs
             if (vehicle.fuel >= vehicle.asset.fuel)
                 return;
 
-            ushort amount = 90;
-            ushort newFuel = (ushort)(vehicle.fuel + amount);
-            if (vehicle.fuel + amount >= vehicle.asset.fuel)
-            {
-                newFuel = vehicle.asset.fuel;
-            }
+            ushort amount = 180;
 
-            VehicleManager.sendVehicleFuel(vehicle, newFuel);
+            vehicle.askFillFuel(amount);
+
             EffectManager.sendEffect(38316, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
@@ -171,13 +163,13 @@ namespace Uncreated.Warfare.FOBs
     public class RepairStationComponent : MonoBehaviour
     {
         public RepairStation parent;
+        int counter = 0;
 
         public void Initialize(RepairStation repairStation)
         {
             parent = repairStation;
             StartCoroutine(RepaitStationLoop());
         }
-
         private IEnumerator<WaitForSeconds> RepaitStationLoop()
         {
             while (parent.IsActive)
@@ -200,10 +192,17 @@ namespace Uncreated.Warfare.FOBs
 
                             if (ticks > 0)
                             {
-                                parent.RepairVehicle(nearby[i]);
-                                ticks--;
+                                if (nearby[i].health < nearby[i].asset.health)
+                                {
+                                    parent.RepairVehicle(nearby[i]);
+                                    ticks--;
+                                }
+                                else if (counter == 0 && !nearby[i].isEngineOn)
+                                {
+                                    parent.RefuelVehicle(nearby[i]);
+                                    ticks--;
+                                }
                             }
-
                             if (ticks <= 0)
                             {
                                 parent.VehiclesRepairing.Remove(nearby[i].instanceID);
@@ -236,6 +235,11 @@ namespace Uncreated.Warfare.FOBs
                         }
                     }
                 }
+
+                counter++;
+
+                if (counter >= 3)
+                    counter = 0;
 
                 yield return new WaitForSeconds(1.5F);
             }

@@ -45,6 +45,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 EvaluatePoints();
                 OnEvaluate();
             }
+
+            TicketCounter++;
+            if (TicketCounter >= 60)
+                TicketCounter = 0;
         }
         protected uint TicketCounter = 0;
         public virtual void EvaluateTickets()

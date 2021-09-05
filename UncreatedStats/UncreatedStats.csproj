@@ -14,7 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworking\bin\Debug\net472\UncreatedNetworking.dll</HintPath>
+      <HintPath>..\..\..\..\Downloads\UncreatedNetworking.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

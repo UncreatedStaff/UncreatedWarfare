@@ -164,10 +164,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     TicketManager.UpdateUITeam1();
                 if (Team2Bleed < 0)
                     TicketManager.UpdateUITeam2();
-
-                TicketCounter++;
-                if (TicketCounter > 60)
-                    TicketCounter = 0;
             }
         }
         public override void DeclareWin(ulong winner)

@@ -11,6 +11,13 @@ namespace Uncreated.Warfare
 {
     public static class UCBarricadeManager
     {
+        public static void TryAddItemToStorage(BarricadeDrop drop, ushort itemID)
+        {
+            if ((drop?.interactable is InteractableStorage storage))
+            {
+                storage.items.tryAddItem(new Item(itemID, true));
+            }
+        }
         public static InteractableSign GetSignFromLook(UnturnedPlayer player)
         {
             Transform look = player.Player.look.aim;
@@ -124,6 +131,28 @@ namespace Uncreated.Warfare
                     for (int i = 0; i < region.drops.Count; i++)
                     {
                         if (region.drops[i].GetServersideData().barricade.id == FOBManager.config.Data.FOBID && (!(team == 1 || team == 2) || region.drops[i].GetServersideData().group == group))
+                        {
+                            list.Add(region.drops[i]);
+                        }
+                    }
+                }
+            }
+
+            return list;
+        }
+        public static IEnumerable<BarricadeDrop> GetBarricadesByID(ushort ID)
+        {
+            List<BarricadeDrop> list = new List<BarricadeDrop>();
+
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == null) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().barricade.id == ID)
                         {
                             list.Add(region.drops[i]);
                         }
