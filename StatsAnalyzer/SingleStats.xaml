@@ -7,97 +7,97 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    d:DesignHeight="950"
-    d:DesignWidth="1033">
+    d:DesignHeight="600" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" d:DesignWidth="1219" >
 
-    <Grid>
-        <StackPanel>
-            <TextBlock x:Name="lblSteam64" Text="" Margin="10,10,10,5" Foreground="#FFFF8080" FontFamily="Consolas" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding TitleSize, ElementName=SinglePlayerStats}"/>
-            <TextBlock Text="Usernames:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
-            <StackPanel Orientation="Horizontal">
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock Text="Player Name:" FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Character Name:" FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Nick Name:" FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+    <ScrollViewer x:Name="scrollViewer" VerticalScrollBarVisibility="Visible" HorizontalScrollMode="Disabled" IsHorizontalScrollChainingEnabled="False" Width="{Binding Width, ElementName=SinglePlayerStats}">
+        <Grid x:Name="grid" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock x:Name="lblSteam64" Text="" Margin="10,10,10,5" Foreground="#FFFF8080" FontFamily="Consolas" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding TitleSize, ElementName=SinglePlayerStats}"/>
+                <TextBlock Text="Usernames:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock Text="Player Name:" FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Character Name:" FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Nick Name:" FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock x:Name="lblPlayerName" Text="" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblCharacterName" Text="" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblNickName" Text="" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
                 </StackPanel>
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock x:Name="lblPlayerName" Text="" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblCharacterName" Text="" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblNickName" Text="" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                <TextBlock Text="Stats:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock Text="Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Deaths: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Attack Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Defence Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock x:Name="lblTotalKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblTotalDeaths" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblAttackKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblDefenceKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock Text="Wins: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Losses: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Captures: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Flags Lost: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock x:Name="lblWins" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblLosses" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblFlagCaptures" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblFlagLosses" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock Text="Teamkills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Downs: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Revives: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Playtime: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock x:Name="lblTotalTeamkills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblTotalDowns" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblTotalRevives" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblTotalPlaytime" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
                 </StackPanel>
+                <TextBlock Text="Vehicles:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock Text="Requested: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Destroyed: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock x:Name="lblVehiclesRequested" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblVehiclesDestroyed" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Text="Building:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock Text="FOBs Built: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="FOBs Destroyed: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock x:Name="lblFOBsBuilt" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblFOBsDestroyed" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock Text="Emplacements Built: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Fortifications Built: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Padding="5,0,0,0">
+                        <TextBlock x:Name="lblEmplacementsBuilt" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblFortificationsBuilt" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                </StackPanel>
+                <Grid x:Name="pnlKits" Padding="4,4,4,4" Margin="5,5,5,5" RowSpacing="5" ColumnSpacing="5"/>
             </StackPanel>
-            <TextBlock Text="Stats:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
-            <StackPanel Orientation="Horizontal">
-                <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-                    <TextBlock Text="Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Deaths: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Attack Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1" HorizontalAlignment="Left"/>
-                    <TextBlock Text="Defence Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1" HorizontalAlignment="Left"/>
-                </StackPanel>
-                <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-                    <TextBlock x:Name="lblTotalKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblTotalDeaths" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblAttackKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblDefenceKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                </StackPanel>
-                <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-                    <TextBlock Text="Wins: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Losses: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Captures: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Flags Lost: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                </StackPanel>
-                <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-                    <TextBlock x:Name="lblWins" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblLosses" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblFlagCaptures" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblFlagLosses" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                </StackPanel>
-                <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-                    <TextBlock Text="Teamkills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Downs: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Revives: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Playtime: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                </StackPanel>
-                <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-                    <TextBlock x:Name="lblTotalTeamkills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblTotalDowns" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblTotalRevives" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblTotalPlaytime" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                </StackPanel>
-            </StackPanel>
-            <TextBlock Text="Vehicles:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
-            <StackPanel Orientation="Horizontal">
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock Text="Requested: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Destroyed: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                </StackPanel>
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock x:Name="lblVehiclesRequested" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblVehiclesDestroyed" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                </StackPanel>
-            </StackPanel>
-            <TextBlock Text="Building:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
-            <StackPanel Orientation="Horizontal">
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock Text="FOBs Built: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="FOBs Destroyed: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                </StackPanel>
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock x:Name="lblFOBsBuilt" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblFOBsDestroyed" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                </StackPanel>
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock Text="Emplacements Built: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                    <TextBlock Text="Fortifications Built: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
-                </StackPanel>
-                <StackPanel Padding="5,0,0,0">
-                    <TextBlock x:Name="lblEmplacementsBuilt" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                    <TextBlock x:Name="lblFortificationsBuilt" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
-                </StackPanel>
-            </StackPanel>
-            <StackPanel x:Name="pnlKits" Orientation="Horizontal" Padding="10,10,10,10" Margin="10,10,10,10" ScrollViewer.HorizontalScrollBarVisibility="Visible" ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                
-            </StackPanel>
-        </StackPanel>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
+
 </UserControl>

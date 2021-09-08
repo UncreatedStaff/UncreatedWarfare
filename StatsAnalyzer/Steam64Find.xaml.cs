@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Stats;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -26,58 +27,21 @@ namespace StatsAnalyzer
             this.InitializeComponent();
         }
         public string TextBoxText { get => Steam64TextBox.Text; set => Steam64TextBox.Text = value; }
+        public delegate Task ClickedCallback(Steam64Find box, ContentDialogButtonClickEventArgs args);
+        public ClickedCallback OkCallback { get; set; }
+
         private async void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
         {
-            if (Steam64TextBox.Text.StartsWith("765") && ulong.TryParse(Steam64TextBox.Text, System.Globalization.NumberStyles.Any, StatsPage.Locale, out ulong Steam64))
+            try
             {
-                string filename = Steam64.ToString(StatsPage.Locale) + ".dat";
-                StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(StatsPage.StatsDirectory);
-                StorageFile file = null;
-                if (folder != null)
-                    try
-                    {
-                        file = await folder.GetFileAsync(filename);
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        file = null;
-                    }
-                if (file == null)
-                {
-                    ErrorText.Text = "No stats file at \"" + folder != null ? folder.Path : "null" + filename + "\".";
-                    args.Cancel = true;
-                    return;
-                }
-                else
-                {
-                    WarfareStats stats = await WarfareStats.IO.ReadFrom(file);
-                    if (stats == null)
-                    {
-                        ErrorText.Text = "Unable to find player.";
-                        args.Cancel = true;
-                        return;
-                    }
-                    else
-                    {
-                        ErrorText.Text = string.Empty;
-                        StatsPage.I.CurrentSingleOrA = stats;
-                        StatsPage.I.CurrentMode = EMode.SINGLE;
-                        StatsPage.I.CurrentB = null;
-                        StatsPage.I.Settings.LastSteam64 = Steam64;
-                        await StatsPage.I.SaveSettings();
-                        await StatsPage.I.Update();
-                        sender.Hide();
-                    }
-                }
+                await OkCallback.Invoke(this, args);
             }
-            else
+            catch (UnauthorizedAccessException)
             {
-                ErrorText.Text = "Couldn't parse a Steam64 ID.";
-                args.Cancel = true;
-                return;
+                await StatsPage.I.FSWarn.ShowAsync();
             }
         }
-
+        public string Error { get => ErrorText.Text; set => ErrorText.Text = value; }
         private void ContentDialog_SecondaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
         {
             sender.Hide();

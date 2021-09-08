@@ -1,4 +1,4 @@
-﻿<Page
+﻿<Page x:Name="page"
     x:Class="StatsAnalyzer.StatsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,15 +6,15 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" SizeChanged="page_SizeChanged">
 
     <Grid x:Name="grid">
         <Grid.Background>
             <AcrylicBrush TintColor="#CC33343A"/>
         </Grid.Background>
-        <StackPanel Orientation="Vertical">
-            <StackPanel Orientation="Horizontal" Height="32" VerticalAlignment="Top" Background="#FF333333">
-                <Button x:Name="button" Content="Application" Width="118" ScrollViewer.VerticalScrollBarVisibility="Disabled" Background="#FF333333">
+        <StackPanel x:Name="container" Orientation="Vertical">
+            <StackPanel x:Name="NavBar" Orientation="Horizontal" Height="32" VerticalAlignment="Top" Background="#FF333333">
+                <Button x:Name="btnApplication" Content="Application" Width="118" ScrollViewer.VerticalScrollBarVisibility="Disabled" Background="#FF333333">
                     <Button.Flyout>
                         <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
                             <MenuFlyoutItem Text="Settings" Click="ClickApplication_Settings"/>
@@ -22,7 +22,7 @@
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button x:Name="button_Copy" Content="Search" Width="121" Background="#FF333333">
+                <Button x:Name="btnSearch" Content="Search" Width="121" Background="#FF333333">
                     <Button.Flyout>
                         <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
                             <MenuFlyoutItem Text="Find" Click="ClickSearch_Find"/>
@@ -30,9 +30,23 @@
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button x:Name="button_Copy1" Content="Query" Width="121" Click="Click_Query" Background="#FF333333"/>
+                <Button x:Name="btnNetwork" Content="Request" Width="121" Background="#FF333333">
+                    <Button.Flyout>
+                        <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
+                            <MenuFlyoutItem Text="Steam64" Click="ClickRequest_Player"/>
+                            <MenuFlyoutItem Text="Username" Click="ClickRequest_PlayerName"/>
+                            <MenuFlyoutItem Text="Kit" Click="ClickRequest_Kit"/>
+                            <MenuFlyoutItem Text="Team" Click="ClickRequest_Team"/>
+                            <MenuFlyoutItem Text="Vehicle" Click="ClickRequest_Vehicle"/>
+                            <MenuFlyoutItem Text="Weapon" Click="ClickRequest_Weapon"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="btnQuery" Content="Query" Width="121" Click="Click_Query" Background="#FF333333"/>
             </StackPanel>
-            <local:SingleStats x:Name="SingleStatPage" HorizontalAlignment="Stretch" Margin="10,10,10,10" VerticalAlignment="Stretch" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18" Visibility="Collapsed"/>
+            <local:SingleStats x:Name="SingleStatPage" HorizontalAlignment="Stretch" Margin="10,10,10,10" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18" Visibility="Collapsed" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
+            <local:SingleKit x:Name="SingleKitPage" ScrollViewer.VerticalScrollBarVisibility="Disabled" Visibility="Collapsed" Margin="10,10,10,10" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18"/>
+            <local:TeamComparison x:Name="TeamComparePage" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
         </StackPanel>
     </Grid>
 </Page>

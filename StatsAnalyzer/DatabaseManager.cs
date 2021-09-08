@@ -6,7 +6,9 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
 
@@ -15,22 +17,6 @@ namespace StatsAnalyzer
     public sealed class DatabaseManager : MySqlDatabase
     {
         public DatabaseManager(MySqlData data, bool debug) : base(data) { DebugLogging = debug; }
-        public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
-        {
-            Debug.WriteLine("INF: " + message);
-        }
-        public override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
-        {
-            Debug.WriteLine("ERR: " + message);
-        }
-        public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
-        {
-            Debug.WriteLine("ERR: " + ex.GetType().Name + "\n" + ex.ToString());
-        }
-        public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
-        {
-            Debug.WriteLine("WRN: " + message);
-        }
         public async Task<FPlayerName> GetUsernames(ulong Steam64)
         {
             FPlayerName? name = null;
@@ -48,202 +34,78 @@ namespace StatsAnalyzer
             string tname = Steam64.ToString(StatsPage.Locale);
             return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
         }
-    }
-    public abstract class MySqlDatabase : IDisposable
-    {
-        public MySqlConnection SQL;
-        public bool DebugLogging = false;
-        protected MySqlData _login;
-        protected DbDataReader CurrentReader;
-        private bool _openSuccess;
-        public MySqlDatabase(MySqlData data)
+        public async Task<List<FPlayerName>> UsernameSearch(string input, CancellationToken token)
         {
-            _login = data;
-            SQL = new MySqlConnection(_login.ConnectionString);
-        }
-        public void Dispose()
-        {
-            Close().GetAwaiter().GetResult();
-            SQL.Dispose();
-            GC.SuppressFinalize(this);
-        }
-        public async Task DisposeAsync()
-        {
-            await Close();
-            SQL.Dispose();
-            GC.SuppressFinalize(this);
-        }
-        public abstract void Log(string message, ConsoleColor color = ConsoleColor.Gray);
-        public abstract void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow);
-        public abstract void LogError(string message, ConsoleColor color = ConsoleColor.Red);
-        public abstract void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red);
-        public async Task<bool> Open()
-        {
-            try
+            DateTime start = DateTime.Now;
+            string search = $"%{input}%";
+            List<FPlayerName> OUT = new List<FPlayerName>();
+            await Query($"SELECT * FROM `usernames` WHERE `PlayerName` LIKE @0 ORDER BY LENGTH(`PlayerName`);", new object[1] { search }, R =>
             {
-                await SQL.OpenAsync();
-                if (DebugLogging) Log(nameof(Open) + ": Opened Connection.", ConsoleColor.DarkGray);
-                _openSuccess = true;
-                return true;
-            }
-            catch (MySqlException ex)
-            {
-                _openSuccess = false;
-                switch (ex.Number)
+                OUT.Add(new FPlayerName
                 {
-                    case 0:
-                    case 1042:
-                        LogWarning($"MySQL Connection Error: Could not find a host called '{_login.Host}'", ConsoleColor.Yellow);
-                        return false;
-                    case 1045:
-                        LogWarning($"MySQL Connection Error: Host was found, but login was incorrect.", ConsoleColor.Yellow);
-                        return false;
-                    default:
-                        LogError($"MySQL Connection Error Code: {ex.Number} - {ex.Message}", ConsoleColor.Yellow);
-                        LogError(ex);
-                        return false;
-                }
-            }
-        }
-        public async Task<bool> Close()
-        {
-            _openSuccess = false;
-            try
+                    PlayerName = R.GetString("PlayerName"),
+                    CharacterName = R.GetString("CharacterName"),
+                    NickName = R.GetString("NickName"),
+                    Steam64 = R.GetUInt64("Steam64")
+                });
+            }, token);
+            if (OUT.Count == 0 && !token.IsCancellationRequested)
             {
-                while (CurrentReader != null && !CurrentReader.IsClosed)
+                await Query($"SELECT * FROM `usernames` WHERE `CharacterName` LIKE @0 ORDER BY LENGTH(`CharacterName`);", new object[1] { search }, R =>
                 {
-                    await Task.Delay(1);
-                }
-                await SQL.CloseAsync();
-                if (DebugLogging) Log(nameof(Close) + ": Closed Connection.", ConsoleColor.DarkGray);
-                return true;
-            }
-            catch (MySqlException ex)
-            {
-                LogError("Failed to close MySql Connection synchronously: ");
-                LogError(ex);
-                return false;
-            }
-        }
-        public async Task Query(string query, object[] parameters, Action<MySqlDataReader> ReadLoopAction)
-        {
-            if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
-            using (MySqlCommand Q = new MySqlCommand(query, SQL))
-            {
-                try
-                {
-                    for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
-                    if (DebugLogging) Log(nameof(Query) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                    using (CurrentReader = await Q.ExecuteReaderAsync())
+                    OUT.Add(new FPlayerName
                     {
-                        if (CurrentReader is MySqlDataReader R)
+                        PlayerName = R.GetString("PlayerName"),
+                        CharacterName = R.GetString("CharacterName"),
+                        NickName = R.GetString("NickName"),
+                        Steam64 = R.GetUInt64("Steam64")
+                    });
+                }, token);
+                if (OUT.Count == 0 && !token.IsCancellationRequested)
+                {
+                    await Query($"SELECT * FROM `usernames` WHERE `NickName` LIKE @0 ORDER BY LENGTH(`NickName`);", new object[1] { search }, R =>
+                    {
+                        OUT.Add(new FPlayerName
                         {
-                            while (R.Read())
-                            {
-                                ReadLoopAction.Invoke(R);
-                            }
-                        }
-                        CurrentReader.Close();
-                        CurrentReader.Dispose();
-                        Q.Dispose();
-                        CurrentReader = null;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", Q.Parameters)}");
-                    LogError(ex);
+                            PlayerName = R.GetString("PlayerName"),
+                            CharacterName = R.GetString("CharacterName"),
+                            NickName = R.GetString("NickName"),
+                            Steam64 = R.GetUInt64("Steam64")
+                        });
+                    }, token);
                 }
             }
+            Log($"Username search took {(DateTime.Now - start).TotalMilliseconds} ms on term \"{search}\" and found {OUT.Count} results.");
+            return OUT;
         }
-        public async Task<T> Scalar<T>(string query, object[] parameters, Func<object, T> converter)
-        {
-            if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
-            using (MySqlCommand Q = new MySqlCommand(query, SQL))
-            {
-                try
-                {
-                    for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
-                    if (DebugLogging) Log(nameof(Scalar) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                    object res = await Q.ExecuteScalarAsync();
-                    Q.Dispose();
-                    if (res == null) return default;
-                    else return converter.Invoke(res);
-                }
-                catch (Exception ex)
-                {
-                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", Q.Parameters)}");
-                    LogError(ex);
-                    return default;
-                }
-            }
-        }
-        public async Task NonQuery(string command, object[] parameters)
-        {
-            if (command == null) throw new ArgumentNullException(nameof(command));
-            if (!_openSuccess) throw new Exception("Not connected");
-            using (MySqlCommand Q = new MySqlCommand(command, SQL))
-            {
-                for (int i = 0; i < parameters.Length; i++) Q.Parameters.AddWithValue('@' + i.ToString(), parameters[i]);
-                if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
-                try
-                {
-                    await Q.ExecuteNonQueryAsync();
-                }
-                catch (Exception ex)
-                {
-                    LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", Q.Parameters)}");
-                    LogError(ex);
-                }
-            }
-        }
+        public override void Log(string message, ConsoleColor color = ConsoleColor.Gray) =>
+            Debug.WriteLine("INF: " + message);
+        public override void LogError(string message, ConsoleColor color = ConsoleColor.Red) =>
+            Debug.WriteLine("ERR: " + message);
+        public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red) =>
+            Debug.WriteLine("ERR: " + ex.GetType().Name + "\n" + ex.ToString());
+        public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow) =>
+            Debug.WriteLine("WRN: " + message);
     }
 
-    public struct MySqlData
-    {
-        public string Host;
-        public string Database;
-        public string Password;
-        public string Username;
-        public ushort Port;
-        public string CharSet;
-        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
-        public static void Write(ByteWriter W, MySqlData S)
-        {
-            W.Write(S.Host);
-            W.Write(S.Database);
-            W.Write(S.Password);
-            W.Write(S.Username);
-            W.Write(S.Port);
-            W.Write(S.CharSet);
-        }
-        public static MySqlData Read(ByteReader R)
-        {
-            return new MySqlData()
-            {
-                Host = R.ReadString(),
-                Database = R.ReadString(),
-                Password = R.ReadString(),
-                Username = R.ReadString(),
-                Port = R.ReadUInt16(),
-                CharSet = R.ReadString()
-            };
-        }
-    }
     public class Settings
     {
-        public static readonly RawByteIO<Settings> IO = new RawByteIO<Settings>(Read, Write, null, 24);
-        public const uint CURRENT_DATA_VERSION = 2;
+        public static readonly RawByteIO<Settings> IO = new RawByteIO<Settings>(Read, Write, null, 30);
+        public const uint CURRENT_DATA_VERSION = 3;
         public uint DATA_VERSION;
         public MySqlData SQL;
         public ulong LastSteam64;
+        public string TCPServerIP;
+        public string Identity;
+        public ushort TCPServerPort;
         public static void Write(ByteWriter W, Settings S)
         {
             W.Write(S.DATA_VERSION);
             MySqlData.Write(W, S.SQL);
             W.Write(S.LastSteam64);
+            W.Write(S.TCPServerIP);
+            W.Write(S.TCPServerPort); 
+            W.Write(S.Identity); 
         }
         public static Settings Read(ByteReader R)
         {
@@ -254,6 +116,25 @@ namespace StatsAnalyzer
                 if (S.DATA_VERSION > 1)
                 {
                     S.LastSteam64 = R.ReadUInt64();
+                    if (S.DATA_VERSION > 2)
+                    {
+                        S.TCPServerIP = R.ReadString();
+                        S.TCPServerPort = R.ReadUInt16();
+                        S.Identity = R.ReadString();
+                    } 
+                    else
+                    {
+                        S.TCPServerIP = Default.TCPServerIP;
+                        S.TCPServerPort = Default.TCPServerPort;
+                        S.Identity = Default.Identity;
+                    }
+                } 
+                else
+                {
+                    S.LastSteam64 = Default.LastSteam64;
+                    S.TCPServerIP = Default.TCPServerIP;
+                    S.TCPServerPort = Default.TCPServerPort;
+                    S.Identity = Default.Identity;
                 }
             }
             return S;
@@ -270,7 +151,10 @@ namespace StatsAnalyzer
                 Password = string.Empty,
                 Username = string.Empty
             },
-            LastSteam64 = 0
+            LastSteam64 = 0,
+            Identity = string.Empty,
+            TCPServerIP = "127.0.0.1",
+            TCPServerPort = 31902
         };
     }
 

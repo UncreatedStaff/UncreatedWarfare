@@ -969,7 +969,7 @@ namespace Uncreated.Warfare
                 bool wideSpread)
             {
                 FOBs.FOBManager.OnItemDropped(item, point);
-            }
+            }/*
             static bool oldhud = false;
             [HarmonyPatch(typeof(Provider), nameof(Provider.accept),
                 typeof(SteamPlayerID), typeof(bool), typeof(bool), typeof(byte), typeof(byte), typeof(byte), typeof(Color), typeof(Color),
@@ -1039,7 +1039,7 @@ namespace Uncreated.Warfare
             {
                 if (oldhud != Provider.modeConfigData.Gameplay.Group_HUD)
                     Provider.modeConfigData.Gameplay.Group_HUD = oldhud;
-            }
+            }*/
         }
     }
 }

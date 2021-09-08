@@ -1,4 +1,4 @@
-﻿<UserControl
+﻿<UserControl x:Name="userControl"
     x:Class="StatsAnalyzer.KitData"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,9 +7,10 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     d:DesignHeight="120"
-    d:DesignWidth="240">
+    d:DesignWidth="260" 
+    Background="#19FFFFFF">
 
-    <Grid Background="#19FFFFFF">
+    <Grid Background="{Binding Background, ElementName=userControl}">
         <StackPanel Orientation="Vertical">
             <TextBlock x:Name="lblKitName" Text="usrif1" Margin="10,10,10,5" Foreground="#FFFF8080" FontFamily="Consolas" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding TitleSize, ElementName=SinglePlayerStats}"/>
             <TextBlock Text="Stats:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>

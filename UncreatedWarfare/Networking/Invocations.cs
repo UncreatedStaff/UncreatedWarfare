@@ -1,8 +1,10 @@
 ﻿using Rocket.API;
 using Rocket.API.Serialisation;
 using Rocket.Core;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Networking;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
@@ -28,6 +30,7 @@ namespace Uncreated.Warfare.Networking
             internal static readonly NetCall<ulong, string, DateTime> LogBattleyeKicked = new NetCall<ulong, string, DateTime>(1005);
 
             internal static readonly NetCall<ulong, ulong, string, string, DateTime> LogTeamkilled = new NetCall<ulong, ulong, string, string, DateTime>(1006);
+
 
 
             internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellBan = new NetCall<ulong, ulong, string, uint, DateTime>(1007);
@@ -112,6 +115,51 @@ namespace Uncreated.Warfare.Networking
                     PlayerManager.AddSave(new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false, false));
                 }
             }
+
+            internal static readonly NetCall<ushort, EAssetType> RequestAssetName = new NetCall<ushort, EAssetType>(1025);
+            [NetCall(ENetCall.FROM_SERVER, 1025)]
+            internal static void ReceiveRequestAssetName(in IConnection connection, ushort id, EAssetType type)
+            {
+                switch (type)
+                {
+                    default:
+                    case EAssetType.NONE:
+                        SendAssetName.Invoke(connection, id, type, string.Empty);
+                        return;
+                    case EAssetType.ITEM:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ItemAsset iasset ? iasset.itemName : string.Empty);
+                        return;
+                    case EAssetType.VEHICLE:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is VehicleAsset vasset ? vasset.vehicleName : string.Empty);
+                        return;
+                    case EAssetType.OBJECT:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ObjectAsset oasset ? oasset.objectName : string.Empty);
+                        return;
+                    case EAssetType.ANIMAL:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is AnimalAsset aasset ? aasset.animalName : string.Empty);
+                        return;
+                    case EAssetType.EFFECT:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is EffectAsset easset ? easset.GUID.ToString() : string.Empty);
+                        return;
+                    case EAssetType.MYTHIC:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is MythicAsset masset ? masset.GUID.ToString() : string.Empty);
+                        return;
+                    case EAssetType.NPC:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ObjectNPCAsset npcasset ? npcasset.objectName : string.Empty);
+                        return;
+                    case EAssetType.RESOURCE:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ResourceAsset rasset ? rasset.resourceName : string.Empty);
+                        return;
+                    case EAssetType.SKIN:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is SkinAsset sasset ? sasset.GUID.ToString() : string.Empty);
+                        return;
+                    case EAssetType.SPAWN:
+                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is SpawnAsset spasset ? spasset.GUID.ToString() : string.Empty);
+                        return;
+                }
+            }
+            internal static readonly NetCall<ushort, EAssetType, string> SendAssetName = new NetCall<ushort, EAssetType, string>(1026);
+
         }
         /// <summary>1100 - 1199</summary>
         public static class Warfare
@@ -281,6 +329,25 @@ namespace Uncreated.Warfare.Networking
 
 
             internal static readonly NetCall<ulong, ushort, string, DateTime> LogFriendlyVehicleKill = new NetCall<ulong, ushort, string, DateTime>(1112);
+
+            internal static readonly NetCall<string> RequestKitClass = new NetCall<string>(1113);
+            [NetCall(ENetCall.FROM_SERVER, 1113)]
+            internal static void ReceiveRequestKitClass(in IConnection connection, string kitID)
+            {
+                if (KitManager.KitExists(kitID, out Kit kit))
+                {
+                    string signtext = kit.Name;
+                    if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out signtext))
+                        if (kit.SignTexts.Count > 0)
+                            signtext = kit.SignTexts.Values.ElementAt(0);
+
+                    SendKitClass.Invoke(connection, kitID, kit.Class, signtext);
+                } else
+                {
+                    SendKitClass.Invoke(connection, kitID, Kit.EClass.NONE, kit.Name);
+                }
+            }
+            internal static readonly NetCall<string, Kit.EClass, string> SendKitClass = new NetCall<string, Kit.EClass, string>(1114);
         }
     }
 }

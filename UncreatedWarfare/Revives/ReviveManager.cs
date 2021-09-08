@@ -221,7 +221,7 @@ namespace Uncreated.Warfare.Revives
             parameters.player.life.serverModifyHealth(UCWarfare.Config.InjuredLifeTimeSeconds * bleedsPerSecond - parameters.player.life.health);
             parameters.player.life.serverSetBleeding(true);
             ulong team = parameters.player.GetTeam();
-            parameters.player.movement.sendPluginSpeedMultiplier(0.1f);
+            parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
             parameters.player.movement.sendPluginJumpMultiplier(0);
             EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI),
                 parameters.player.channel.owner.transportConnection, true, F.Translate("injured_ui_header", parameters.player),

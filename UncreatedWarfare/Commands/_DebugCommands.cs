@@ -749,39 +749,12 @@ namespace Uncreated.Warfare.Commands
                 if (WarfareStats.IO.ReadFrom(info, out WarfareStats stats))
                 {
                     kits.Clear();
-                    FieldInfo[] fields = typeof(WarfareStats).GetFields(BindingFlags.Instance | BindingFlags.Public);
-                    for (int f = 0; f < fields.Length; f++)
-                    {
-                        object val = fields[f].GetValue(stats);
-                        if (val == null)
-                            Console.WriteLine(fields[f].Name + ": null");
-                        if (val is List<WarfareStats.KitData> list)
-                        {
-                            Console.WriteLine("KITS: ");
-                            for (int k = 0; k < list.Count; k++)
-                            {
-                                FieldInfo[] fields2 = typeof(WarfareStats).GetFields(BindingFlags.Instance | BindingFlags.Public);
-                                for (int f2 = 0; f2 < fields.Length; f2++)
-                                {
-                                    object val2 = fields2[f2].GetValue(stats);
-                                    if (val2 == null)
-                                        Console.WriteLine(fields[f2].Name + ": null");
-                                    Console.WriteLine(fields2[f2].Name + ": " + val2.ToString());
-                                }
-                                Console.WriteLine(" ");
-                            }
-                            continue;
-                        }
-                        Console.WriteLine(fields[f].Name + ": " + val.ToString());
-                    }
-                    Console.WriteLine(" Kits:" + stats.Kits.Count);
                     for (int k = 0; k < stats.Kits.Count; k++)
                     {
                         WarfareStats.KitData existing = kits.FirstOrDefault(kit => kit.KitID == stats.Kits[k].KitID && kit.Team == stats.Kits[k].Team);
                         if (existing == default)
                         {
                             kits.Add(stats.Kits[k]);
-                            Console.WriteLine("new, " + stats.Kits[k].KitID + " T: " + stats.Kits[k].Team);
                         }
                         else
                         {
@@ -793,13 +766,9 @@ namespace Uncreated.Warfare.Commands
                             existing.AverageGunKillDistanceCounter += stats.Kits[k].AverageGunKillDistanceCounter;
                             existing.Revives += stats.Kits[k].Revives;
                             existing.TimesRequested += stats.Kits[k].TimesRequested;
-                            Console.WriteLine("existing");
                         }
                     }
                     stats.Kits = kits;
-                    Console.WriteLine(info.Name);
-                    Console.WriteLine("delete it");
-                    System.Threading.Thread.Sleep(10000);
                     WarfareStats.IO.WriteTo(stats, info);
                 }
             }

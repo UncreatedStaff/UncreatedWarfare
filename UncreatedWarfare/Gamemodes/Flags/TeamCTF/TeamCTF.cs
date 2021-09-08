@@ -338,8 +338,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 OnFlagCaptured.Invoke(flag, capturedTeam, lostTeam);
             TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
             Stats.StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
-            if (flag.IsObj(lostTeam))
-                Stats.StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
+            Stats.StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
             List<string> kits = new List<string>();
             if (capturedTeam == 1)
             {

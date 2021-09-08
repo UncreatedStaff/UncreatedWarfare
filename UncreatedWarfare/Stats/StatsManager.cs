@@ -68,14 +68,16 @@ namespace Uncreated.Warfare.Stats
             );
             WarfareTeam.IO.ReadFrom(SaveDirectory + "team1.dat", out Team1Stats);
             WarfareTeam.IO.ReadFrom(SaveDirectory + "team2.dat", out Team2Stats);
-            if (Team1Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION)
+            if (Team1Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION || Team1Stats.Team != 1)
             {
                 Team1Stats.DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION;
+                Team1Stats.Team = 1;
                 WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
             }
-            if (Team2Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION)
+            if (Team2Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION || Team2Stats.Team != 2)
             {
                 Team2Stats.DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION;
+                Team2Stats.Team = 2;
                 WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
             }
         }

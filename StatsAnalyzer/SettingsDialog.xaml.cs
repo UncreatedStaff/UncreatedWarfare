@@ -23,7 +23,6 @@ namespace StatsAnalyzer
         {
             this.InitializeComponent();
         }
-
         private async void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
         {
             bool reloadSQL =
@@ -33,18 +32,29 @@ namespace StatsAnalyzer
                 StatsPage.I.Settings.SQL.Password != txtPassword.Text ||
                 StatsPage.I.Settings.SQL.CharSet != txtCharset.Text ||
                 StatsPage.I.Settings.SQL.Port.ToString() != txtPort.Text;
+            bool reloadTCP =
+                StatsPage.I.Settings.Identity != txtIdentity.Text ||
+                StatsPage.I.Settings.TCPServerIP != txtTCPIP.Text ||
+                StatsPage.I.Settings.TCPServerPort.ToString() != txtTCPPort.Text;
             StatsPage.I.Settings.SQL.Host = txtIPAddress.Text;
             _ = ushort.TryParse(txtPort.Text, System.Globalization.NumberStyles.Any, StatsPage.Locale, out StatsPage.I.Settings.SQL.Port);
             StatsPage.I.Settings.SQL.Database = txtDatabase.Text;
             StatsPage.I.Settings.SQL.Username = txtUsername.Text;
             StatsPage.I.Settings.SQL.Password = txtPassword.Text;
             StatsPage.I.Settings.SQL.CharSet = txtCharset.Text;
+            StatsPage.I.Settings.Identity = txtIdentity.Text;
+            StatsPage.I.Settings.TCPServerIP = txtTCPIP.Text;
+            _ = ushort.TryParse(txtTCPPort.Text, System.Globalization.NumberStyles.Any, StatsPage.Locale, out StatsPage.I.Settings.TCPServerPort);
             await StatsPage.I.SaveSettings();
             if (reloadSQL)
             {
                 await StatsPage.I.SQL?.DisposeAsync();
                 StatsPage.I.SQL = new DatabaseManager(StatsPage.I.Settings.SQL, true);
                 await StatsPage.I.SQL.Open();
+            }
+            if (reloadTCP)
+            {
+                StatsPage.I.ReloadTCP();
             }
         }
         private void ContentDialog_SecondaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
@@ -59,6 +69,9 @@ namespace StatsAnalyzer
             txtUsername.Text = StatsPage.I.Settings.SQL.Username;
             txtPassword.Text = StatsPage.I.Settings.SQL.Password;
             txtCharset.Text = StatsPage.I.Settings.SQL.CharSet;
+            txtIdentity.Text = StatsPage.I.Settings.Identity;
+            txtTCPIP.Text = StatsPage.I.Settings.TCPServerIP;
+            txtTCPPort.Text = StatsPage.I.Settings.TCPServerPort.ToString();
         }
     }
 }

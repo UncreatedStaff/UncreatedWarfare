@@ -20,12 +20,14 @@ namespace StatsAnalyzer
 {
     public sealed partial class KitData : UserControl
     {
+        public string KitName;
         public KitData()
         {
             this.InitializeComponent();
         }
         public void Load(WarfareStats.KitData data, ulong owner)
         {
+            KitName = data.KitID;
             lblAverageGunKilDistance.Text = data.AverageGunKillDistance.ToString("N2");
             lblDowns.Text = data.Downs.ToString(StatsPage.Locale);
             lblTotalKills.Text = data.Kills.ToString(StatsPage.Locale);
@@ -40,7 +42,7 @@ namespace StatsAnalyzer
                 lblKitName.Text = data.KitID + ", Team: " + data.Team;
             }
             lblRequestCount.Text = data.TimesRequested.ToString(StatsPage.Locale);
-            lblPlaytime.Text = data.PlaytimeMinutes.ToString(StatsPage.Locale);
+            lblPlaytime.Text = F.GetTimeFromMinutes(data.PlaytimeMinutes);
         }
     }
 }
