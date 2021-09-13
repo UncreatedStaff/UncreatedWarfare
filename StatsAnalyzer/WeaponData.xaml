@@ -1,0 +1,51 @@
+﻿<UserControl
+    x:Class="StatsAnalyzer.WeaponData"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:StatsAnalyzer"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignHeight="134.286"
+    d:DesignWidth="290.286">
+
+    <Grid Background="{Binding Background, ElementName=userControl}">
+        <StackPanel Orientation="Vertical">
+            <TextBlock x:Name="lblWeaponName" Text="usrif1 - Rifleman 1" Margin="10,10,10,0" Foreground="#FFFF8080" FontFamily="Consolas" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding TitleSize, ElementName=SinglePlayerStats}"/>
+            <TextBlock x:Name="lblKitName" Text="M4A1 (31606)" Margin="10,3,10,5" Foreground="#FFFF8080" FontFamily="Consolas" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding TitleSize, ElementName=SinglePlayerStats}"/>
+            <TextBlock Text="Stats:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SinglePlayerStats}"/>
+            <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock Text="Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Deaths: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Avg Dist: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock x:Name="lblTotalKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblTotalDeaths" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblAverageGunKilDistance" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock Text="Downs: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Skull Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Body Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock x:Name="lblDowns" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblSkullKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblBodyKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock Text="Arm Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                        <TextBlock Text="Leg Kills: " FontSize="{Binding Header3Size, ElementName=SinglePlayerStats}" Margin="5,1,3,1"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Margin="5,0,0,0">
+                        <TextBlock x:Name="lblArmKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                        <TextBlock x:Name="lblLegKills" Text="0" FontSize="{Binding ValueSize, ElementName=SinglePlayerStats}" FontFamily="Consolas" Foreground="#FFFF8080" Margin="0,2,0,1" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

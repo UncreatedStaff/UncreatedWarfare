@@ -22,14 +22,6 @@
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button x:Name="btnSearch" Content="Search" Width="121" Background="#FF333333">
-                    <Button.Flyout>
-                        <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
-                            <MenuFlyoutItem Text="Find" Click="ClickSearch_Find"/>
-                            <MenuFlyoutItem Text="Compare" Click="ClickSearch_Compare"/>
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
                 <Button x:Name="btnNetwork" Content="Request" Width="121" Background="#FF333333">
                     <Button.Flyout>
                         <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
@@ -46,7 +38,9 @@
             </StackPanel>
             <local:SingleStats x:Name="SingleStatPage" HorizontalAlignment="Stretch" Margin="10,10,10,10" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18" Visibility="Collapsed" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
             <local:SingleKit x:Name="SingleKitPage" ScrollViewer.VerticalScrollBarVisibility="Disabled" Visibility="Collapsed" Margin="10,10,10,10" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18"/>
+            <local:SingleWeapon x:Name="SingleWeaponPage" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18"/>
             <local:TeamComparison x:Name="TeamComparePage" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
+            <local:WeaponList x:Name="WeaponList" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
         </StackPanel>
     </Grid>
 </Page>

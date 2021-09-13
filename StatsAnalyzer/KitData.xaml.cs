@@ -37,7 +37,8 @@ namespace StatsAnalyzer
             if (ids.Length > 1 && ulong.TryParse(ids[0], System.Globalization.NumberStyles.Any, StatsPage.Locale, out ulong Steam64) && Steam64 == owner)
             {
                 lblKitName.Text = "Loadout " + string.Join('_', ids.Skip(1)) + ", Team: " + data.Team;
-            } else
+            } 
+            else
             {
                 lblKitName.Text = data.KitID + ", Team: " + data.Team;
             }

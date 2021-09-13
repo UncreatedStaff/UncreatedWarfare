@@ -361,7 +361,7 @@ namespace Uncreated.Warfare
             for (int i = 0; i < Provider.clients.Count; i++)
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
         }
-        private static void ClientReceived(byte[] bytes, IConnection connection, ref bool shouldParse)
+        private static void ClientReceived(byte[] bytes, IConnection connection)
         {
             if (UCWarfare.Config.Debug)
                 F.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);

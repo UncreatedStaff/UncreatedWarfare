@@ -1,4 +1,5 @@
-﻿using Rocket.API;
+﻿using Newtonsoft.Json;
+using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -779,16 +780,94 @@ namespace Uncreated.Warfare.Commands
             Console.WriteLine();
             Console.ForegroundColor = temp;
         }
-        private void togglenametags(string[] commands, Player player)
+        private void playersave(string[] command, Player player)
         {
-            if (player == default)
+            if (command.Length != 4)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                if (player == null) F.LogWarning("Syntax: /test playersave <Steam64> <Property> <Value>.");
+                else player.SendChat("Syntax: /test playersave <Steam64> <Property> <Value>.");
                 return;
             }
-            if (PlayerManager.HasSave(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave save))
-                save.DisableNametags = !save.DisableNametags;
-            player.SendChat("You must rejoin for these changes to take affect.");
+            if (ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong Steam64))
+            {
+                if (PlayerManager.HasSave(Steam64, out PlayerSave save))
+                {
+                    PlayerManager.SetProperty(save, command[2], command[3], out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
+                    if (!allowedToChange) // error - invalid argument value
+                    {
+                        if (player == null) F.LogWarning($"Couldn't change {command[2].ToUpper()} to {command[3]}, not allowed.");
+                        else player.SendChat($"Couldn't change {command[2].ToUpper()} to {command[3]}, not allowed.");
+                        return;
+                    }
+                    if (!parsed) // error - invalid argument value
+                    {
+                        if (player == null) F.LogWarning($"Couldn't change {command[2].ToUpper()} to {command[3]}, invalid type.");
+                        else player.SendChat($"Couldn't change {command[2].ToUpper()} to {command[3]}, invalid type.");
+                        return;
+                    }
+                    if (!foundproperty || !set) // error - invalid property name
+                    {
+                        if (player == null) F.LogWarning($"There is no property in [PlayerSave] called {command[2].ToUpper()}.");
+                        else player.SendChat($"There is no property in PlayerSave called {command[2].ToUpper()}.");
+                        return;
+                    }
+                    Players.FPlayerName names = Data.DatabaseManager.GetUsernames(Steam64);
+                    if (player == null) F.Log($"Changed {command[2].ToUpper()} in player {names.PlayerName} to {command[3]}.");
+                    else player.SendChat($"Changed {command[2].ToUpper()} in player {names.PlayerName} to {command[3]}.");
+                }
+                else
+                {
+                    if (player == null) F.LogWarning("Couldn't find a save by that ID.");
+                    else player.SendChat("Couldn't find a save by that ID.");
+                }
+            } else
+            {
+                if (player == null) F.LogWarning("Couldn't parse argument [Steam64] as a [UInt64].");
+                else player.SendChat("Couldn't parse to Steam64.");
+            }
+        }
+        private void migratesaves(string[] command, Player player)
+        {
+            string dir = Data.KitsStorage + "playersaves.json";
+            if (!File.Exists(dir))
+            {
+                if (player == null) F.LogWarning("No playersaves to append.");
+                else player.SendChat("No playersaves to append.");
+            }
+            else
+            {
+                StreamReader r = File.OpenText(dir);
+                try
+                {
+                    string json = r.ReadToEnd();
+                    List<PlayerSave> list = JsonConvert.DeserializeObject<List<PlayerSave>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
+
+                    r.Close();
+                    r.Dispose();
+                    int i = 0;
+                    for (; i < list.Count; i++)
+                    {
+                        if (!PlayerManager.ActiveObjects.Exists(x => x.Steam64 == list[i].Steam64))
+                        {
+                            PlayerManager.ActiveObjects.Add(list[i]);
+                        }
+                    }
+                    PlayerManager.Write();
+                    if (player == null) F.Log(i + " playersaves appended.");
+                    else player.SendChat(i + " playersaves appended.");
+                }
+                catch (Exception ex)
+                {
+                    if (r != default)
+                    {
+                        r.Close();
+                        r.Dispose();
+                    }
+                    if (player == null) F.LogError(ex.GetType().Name + " exception during execution.");
+                    else player.SendChat(ex.GetType().Name + " exception during execution.");
+                    throw;
+                }
+            }
         }
     }
 #pragma warning restore IDE0051

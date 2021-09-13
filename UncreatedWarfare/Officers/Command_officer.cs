@@ -47,7 +47,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             OfficerManager.ChangeOfficerRank(target, rank, branch);
                             player.OfficerRank = rank;
-                            PlayerManager.Save();
+                            PlayerManager.ApplyToOnline();
                             XPManager.UpdateUI(target.Player, target.CachedXp, out _);
                         }
                         else
@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         OfficerManager.DischargeOfficer(target, target.OfficerRank);
                         player.OfficerRank = null;
-                        PlayerManager.Save();
+                        PlayerManager.ApplyToOnline();
                         XPManager.UpdateUI(target.Player, target.CachedXp, out _);
                     }
                     else

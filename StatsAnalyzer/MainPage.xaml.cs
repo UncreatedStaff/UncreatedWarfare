@@ -17,6 +17,7 @@ using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
+using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 namespace StatsAnalyzer
 {
@@ -36,7 +37,62 @@ namespace StatsAnalyzer
         public WarfareTeam CurrentTeam1;
         public WarfareTeam CurrentTeam2;
         public DatabaseManager SQL;
+        public MessageBox Messager = new MessageBox();
         public Client NetClient;
+        public List<ImageCache> ImageCache = new List<ImageCache>();
+        ~StatsPage()
+        {
+            SQL.Dispose();
+            NetClient.Dispose();
+        }
+        public void AddCache(ImageCache cache)
+        {
+            if (ImageCache.Count > 30) // keep list < 30
+            {
+                ImageCache.RemoveAt(0);
+            }
+            ImageCache.Add(cache);
+        }
+        public async void SendMessage(string title, string message)
+        {
+            Messager.Title = title;
+            Messager.Message = message;
+            Messager.PrimaryButtonText = string.Empty;
+            await Messager.ShowAsync();
+        }
+        internal static NetCall SendNoServer = new NetCall(2014);
+        [NetCall(ENetCall.FROM_SERVER, 2014)]
+        internal static void ReceiveNoServer(in IConnection connection)
+        {
+            CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => {
+                I.SendMessage("Not Connected", "The intermediary server has no connection to Uncreated Warfare.");
+            }).AsTask().ConfigureAwait(false);
+        }
+        public void ClearCache() => ImageCache.Clear();
+        public bool IsCached(ushort ID, bool Vehicle, out Image Image)
+        {
+            for (int i = 0; i < ImageCache.Count; i++)
+            {
+                if (ImageCache[i].ID == ID && ImageCache[i].Vehicle == Vehicle)
+                {
+                    Image = ImageCache[i].Image;
+                    return true;
+                }
+            }
+            Image = null;
+            return false;
+        }
+        public bool IsCached(ushort ID, bool Vehicle)
+        {
+            for (int i = 0; i < ImageCache.Count; i++)
+            {
+                if (ImageCache[i].ID == ID && ImageCache[i].Vehicle == Vehicle)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
         public Steam64Find S64Search = new Steam64Find();
         public NoAccessToFileSystem FSWarn = new NoAccessToFileSystem();
         public UsernameSearch UsernameFind = new UsernameSearch();
@@ -66,14 +122,21 @@ namespace StatsAnalyzer
             };
         public StatsPage()
         {
-            InitializeComponent(); 
+            InitializeComponent();
+            this.Unloaded += StatsPage_Unloaded;
             I = this;
             Loaded += StatsPage_Loaded;
-            Logging.OnLog += (M, C) => Debug.WriteLine("INF: " + M);
-            Logging.OnLogWarning += (M, C) => Debug.WriteLine("WRN: " + M);
-            Logging.OnLogError += (M, C) => Debug.WriteLine("ERR: " + M);
-            Logging.OnLogException += (M, C) => Debug.WriteLine("EXC: " + M.ToString());
+            Logging.OnLog += (M, C) => Debug.WriteLine(" -==- INF: " + M);
+            Logging.OnLogWarning += (M, C) => Debug.WriteLine(" -==- WRN: " + M);
+            Logging.OnLogError += (M, C) => Debug.WriteLine(" -==- ERR: " + M);
+            Logging.OnLogException += (M, C) => Debug.WriteLine(" -==- EXC: " + M.ToString());
             NetFactory.RegisterNetMethods(System.Reflection.Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+        }
+
+        private void StatsPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            SQL.Dispose();
+            NetClient.Dispose();
         }
         public void ReloadTCP()
         {
@@ -86,9 +149,8 @@ namespace StatsAnalyzer
             NetClient = new Client(Settings.TCPServerIP, Settings.TCPServerPort, Settings.Identity);
             NetClient.AssertConnected();
             NetClient.connection.OnReceived += ClientReceived;
-
         }
-        private void ClientReceived(byte[] bytes, IConnection connection, ref bool Parse)
+        private void ClientReceived(byte[] bytes, IConnection connection)
         {
             Debug.WriteLine("Received " + bytes.Length + " bytes over " + connection.Identity);
         }
@@ -191,38 +253,43 @@ namespace StatsAnalyzer
         }
         private void ClickRequest_Vehicle(object sender, RoutedEventArgs e)
         {
-
+            RequestVehicleData.Invoke(NetClient.connection, 140, true);
         }
         private void ClickRequest_Weapon(object sender, RoutedEventArgs e)
         {
-            
+            RequestAllWeapons.Invoke(NetClient.connection, 31308);
+            //RequestWeaponData.Invoke(NetClient.connection, 31301, "rurif3", true);
+        }
+        public async Task UpdateWeaponList(WarfareWeapon[] weapons, string weaponname, string[] kitnames)
+        {
+            CurrentMode = EMode.SINGLE;
+            SingleKitPage.Visibility = Visibility.Collapsed;
+            TeamComparePage.Visibility = Visibility.Collapsed;
+            SingleWeaponPage.Visibility = Visibility.Collapsed;
+            SingleStatPage.Visibility = Visibility.Collapsed;
+            WeaponList.Load(weapons, weaponname, kitnames);
+            WeaponList.Visibility = Visibility.Visible;
+            await Task.Yield();
         }
         public async Task UpdateSinglePlayer(WarfareStats stats, bool isOnline)
         {
             CurrentMode = EMode.SINGLE;
-            SingleStatPage.Visibility = Visibility.Visible;
-            await SingleStatPage.Load(stats, isOnline);
             SingleKitPage.Visibility = Visibility.Collapsed;
-            if (CurrentMode == EMode.SINGLE)
-            {
-                if (CurrentSingleOrA == null)
-                {
-                    Debug.WriteLine("Current is null");
-                    return;
-                }
-                SingleKitPage.Visibility = Visibility.Collapsed;
-                TeamComparePage.Visibility = Visibility.Collapsed;
-                await SingleStatPage.Load(CurrentSingleOrA);
-                SingleStatPage.Visibility = Visibility.Visible;
-            }
+            TeamComparePage.Visibility = Visibility.Collapsed;
+            SingleWeaponPage.Visibility = Visibility.Collapsed;
+            WeaponList.Visibility = Visibility.Collapsed;
+            await SingleStatPage.Load(stats, isOnline);
+            SingleStatPage.Visibility = Visibility.Visible;
         }
         public async Task UpdateKit(WarfareKit kit, string signtext, EClass @class)
         {
             CurrentMode = EMode.KIT;
             SingleStatPage.Visibility = Visibility.Collapsed;
             TeamComparePage.Visibility = Visibility.Collapsed;
+            SingleWeaponPage.Visibility = Visibility.Collapsed;
+            WeaponList.Visibility = Visibility.Collapsed;
             SingleKitPage.Load(kit, signtext, @class);
-            SingleKitPage.Visibility= Visibility.Visible;
+            SingleKitPage.Visibility = Visibility.Visible;
             await Task.Yield();
         }
         public async Task UpdateTeams(WarfareTeam team1, WarfareTeam team2)
@@ -231,10 +298,27 @@ namespace StatsAnalyzer
             CurrentKitA = null;
             SingleStatPage.Visibility = Visibility.Collapsed;
             SingleKitPage.Visibility = Visibility.Collapsed;
+            SingleWeaponPage.Visibility = Visibility.Collapsed;
+            WeaponList.Visibility = Visibility.Collapsed;
             TeamComparePage.Visibility = Visibility.Visible;
             TeamComparePage.Load(team1, team2);
+            if (team2.Wins == 0) team2.Wins = team1.Losses;
+            if (team1.Wins == 0) team1.Wins = team2.Losses;
+            if (team2.Losses == 0) team2.Losses = team1.Wins;
+            if (team1.Losses == 0) team1.Losses = team2.Wins;
             CurrentTeam1 = team1;
             CurrentTeam2 = team2;
+            await Task.Yield();
+        }
+        public async Task UpdateWeapon(WarfareWeapon weapon, string name, string kitname, BitmapImage image)
+        {
+            CurrentMode = EMode.TEAMS;
+            SingleStatPage.Visibility = Visibility.Collapsed;
+            SingleKitPage.Visibility = Visibility.Collapsed;
+            TeamComparePage.Visibility = Visibility.Collapsed;
+            WeaponList.Visibility = Visibility.Collapsed;
+            SingleWeaponPage.Visibility = Visibility.Visible;
+            SingleWeaponPage.Load(weapon, name, kitname, image);
             await Task.Yield();
         }
         public async Task Steam64SearchOK(Steam64Find sender, ContentDialogButtonClickEventArgs args)
@@ -242,7 +326,7 @@ namespace StatsAnalyzer
             if (sender.TextBoxText.StartsWith("765") && ulong.TryParse(sender.TextBoxText, System.Globalization.NumberStyles.Any, StatsPage.Locale, out ulong Steam64))
             {
                 string filename = Steam64.ToString(Locale) + ".dat";
-                StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(StatsPage.StatsDirectory);
+                StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(StatsDirectory);
                 StorageFile file = null;
                 if (folder != null)
                     try
@@ -307,14 +391,11 @@ namespace StatsAnalyzer
         internal static readonly NetCall<ulong> RequestPlayerData = new NetCall<ulong>(2000);
         internal static readonly NetCall<string> RequestKitData = new NetCall<string>(2002);
         internal static readonly NetCall<byte> RequestTeamData = new NetCall<byte>(2004);
-        internal static readonly NetCall<ushort, string> RequestWeaponData = new NetCall<ushort, string>(2006);
-        internal static readonly NetCall<ushort> RequestVehicleData = new NetCall<ushort>(2008);
+        internal static readonly NetCall<ushort, string, bool> RequestWeaponData = new NetCall<ushort, string, bool>(2015);
+        internal static readonly NetCall<ushort, bool> RequestVehicleData = new NetCall<ushort, bool>(2016);
         internal static readonly NetCall RequestKitList = new NetCall(2010);
         internal static readonly NetCall RequestTeamsData = new NetCall(2012);
-
-
-
-
+        internal static readonly NetCall<ushort> RequestAllWeapons = new NetCall<ushort>(2020);
 
 
         internal static readonly NetCallRaw<string[]> SendKitList =
@@ -370,6 +451,18 @@ namespace StatsAnalyzer
             this.Icon = Icon;
             this.MarkerEffect = MarkerEffect;
             this.SquadLeaderMarkerEffect = SquadLeaderMarkerEffect;
+        }
+    }
+    public struct ImageCache
+    {
+        public ushort ID;
+        public bool Vehicle;
+        public Image Image;
+        public ImageCache(ushort ID, bool Vehicle, Image Image)
+        {
+            this.ID = ID;
+            this.Vehicle = Vehicle;
+            this.Image = Image;
         }
     }
 }

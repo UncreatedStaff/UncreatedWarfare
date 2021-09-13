@@ -216,7 +216,7 @@ namespace Uncreated.Warfare.Squads
             if (RallyManager.HasRally(squad, out var rally))
                 rally.ShowUIForSquad();
 
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public static void SortMembers(Squad squad)
         {
@@ -270,7 +270,7 @@ namespace Uncreated.Warfare.Squads
                         KitManager.TryGiveUnarmedKit(squad.Leader);
                 }
 
-                PlayerManager.Save();
+                PlayerManager.ApplyToOnline();
 
                 return;
             }
@@ -289,7 +289,7 @@ namespace Uncreated.Warfare.Squads
             if (RallyManager.HasRally(squad, out RallyPoint rally2))
                 rally2.ClearUIForPlayer(player);
 
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public static void DisbandSquad(Squad squad)
         {
@@ -312,7 +312,7 @@ namespace Uncreated.Warfare.Squads
                 RallyManager.TryDeleteRallyPoint(rally.structure.instanceID);
             }
 
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public static void RenameSquad(Squad squad, string newName)
         {
@@ -321,7 +321,7 @@ namespace Uncreated.Warfare.Squads
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
 
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public static void KickPlayerFromSquad(UCPlayer player, ref Squad squad)
         {
@@ -347,7 +347,7 @@ namespace Uncreated.Warfare.Squads
             if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ClearUIForPlayer(player);
 
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
         {

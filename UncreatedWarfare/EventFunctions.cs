@@ -316,11 +316,11 @@ namespace Uncreated.Warfare
                         }
                         save.ShouldRespawnOnJoin = false;
 
-                        PlayerManager.Save();
+                        PlayerManager.ApplyToOnline();
                     }
                 }
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-                if (KitManager.KitExists(ucplayer.KitName, out var kit))
+                if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
                 {
                     if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
                     {

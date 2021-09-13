@@ -128,6 +128,9 @@
     <Compile Include="KitSearchDialog.xaml.cs">
       <DependentUpon>KitSearchDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MessageBox.xaml.cs">
+      <DependentUpon>MessageBox.xaml</DependentUpon>
+    </Compile>
     <Compile Include="NoAccessToFileSystem.xaml.cs">
       <DependentUpon>NoAccessToFileSystem.xaml</DependentUpon>
     </Compile>
@@ -143,6 +146,9 @@
     <Compile Include="SingleStats.xaml.cs">
       <DependentUpon>SingleStats.xaml</DependentUpon>
     </Compile>
+    <Compile Include="SingleWeapon.xaml.cs">
+      <DependentUpon>SingleWeapon.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Steam64Find.xaml.cs">
       <DependentUpon>Steam64Find.xaml</DependentUpon>
     </Compile>
@@ -157,6 +163,12 @@
       <DependentUpon>UsernameSearch.xaml</DependentUpon>
     </Compile>
     <Compile Include="WarfareStats.cs" />
+    <Compile Include="WeaponData.xaml.cs">
+      <DependentUpon>WeaponData.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="WeaponList.xaml.cs">
+      <DependentUpon>WeaponList.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -238,6 +250,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="MessageBox.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="NoAccessToFileSystem.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -258,6 +274,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="SingleWeapon.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Steam64Find.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -271,6 +291,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UsernameSearch.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="WeaponData.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="WeaponList.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -289,7 +317,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assets\UncreatedWarfare.otf" />
+    <Content Include="Assets\Fonts\UncreatedWarfare.otf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>

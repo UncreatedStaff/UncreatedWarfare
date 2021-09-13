@@ -85,7 +85,7 @@ namespace Uncreated.Warfare.Gamemodes
             GameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = GameID;
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public virtual void Dispose()
         {

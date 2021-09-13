@@ -4,7 +4,10 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Networking.Encoding;
+using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
@@ -128,7 +131,7 @@ namespace Uncreated.Warfare
         {
             KitName = kit.Name;
             KitClass = kit.Class;
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         public ushort LastPingID { get; internal set; }
         public SteamPlayer SteamPlayer { get => Player.channel.owner; }
@@ -304,6 +307,8 @@ namespace Uncreated.Warfare
 
     public class PlayerSave
     {
+        public const uint CURRENT_DATA_VERSION = 1;
+        public uint DATA_VERSION;
         [JsonSettable]
         public readonly ulong Steam64;
         [JsonSettable]
@@ -320,8 +325,6 @@ namespace Uncreated.Warfare
         public bool ShouldRespawnOnJoin;
         [JsonSettable]
         public bool IsOtherDonator;
-        [JsonSettable]
-        public bool DisableNametags;
         public PlayerSave(ulong Steam64)
         {
             this.Steam64 = Steam64;
@@ -332,7 +335,6 @@ namespace Uncreated.Warfare
             LastGame = 0;
             ShouldRespawnOnJoin = false;
             IsOtherDonator = false;
-            DisableNametags = false;
         }
         public PlayerSave()
         {
@@ -344,10 +346,9 @@ namespace Uncreated.Warfare
             LastGame = 0;
             ShouldRespawnOnJoin = false;
             IsOtherDonator = false;
-            DisableNametags = false;
         }
         [JsonConstructor]
-        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin, bool IsOtherDonator, bool DisableNametags)
+        public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin, bool IsOtherDonator)
         {
             this.Steam64 = Steam64;
             this.Team = Team;
@@ -357,7 +358,92 @@ namespace Uncreated.Warfare
             this.LastGame = LastGame;
             this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
             this.IsOtherDonator = IsOtherDonator;
-            this.DisableNametags = DisableNametags;
+        }
+        public static void Write(ByteWriter W, PlayerSave S)
+        {
+            W.Write(S.DATA_VERSION);
+            W.Write(S.Steam64);
+            W.Write((byte)S.Team);
+            W.Write(S.KitName ?? string.Empty);
+            W.Write(S.SquadName ?? string.Empty);
+            W.Write(S.HasQueueSkip);
+            W.Write(S.LastGame);
+            W.Write(S.ShouldRespawnOnJoin);
+            W.Write(S.IsOtherDonator);
+        }
+        public static PlayerSave Read(ByteReader R)
+        {
+            uint DATA_VERSION = R.ReadUInt32();
+            PlayerSave S = new PlayerSave(R.ReadUInt64()) { DATA_VERSION = DATA_VERSION };
+            if (DATA_VERSION > 0)
+            {
+                S.Team = R.ReadUInt8();
+                S.KitName = R.ReadString();
+                S.SquadName = R.ReadString();
+                S.HasQueueSkip = R.ReadBool();
+                S.LastGame = R.ReadInt32();
+                S.ShouldRespawnOnJoin = R.ReadBool();
+                S.IsOtherDonator = R.ReadBool();
+            } else
+            {
+                S.Team = 0;
+                S.KitName = string.Empty;
+                S.SquadName = string.Empty;
+                S.HasQueueSkip = false;
+                S.LastGame = 0;
+                S.ShouldRespawnOnJoin = false;
+                S.IsOtherDonator = false;
+            }
+            return S;
+        }
+        public static void WriteList(ByteWriter W, List<PlayerSave> SL)
+        {
+            W.Write(SL.Count);
+            for (int i = 0; i < SL.Count; i++)
+            {
+                PlayerSave S = SL[i];
+                W.Write(S.DATA_VERSION);
+                W.Write(S.Steam64);
+                W.Write((byte)S.Team);
+                W.Write(S.KitName ?? string.Empty);
+                W.Write(S.SquadName ?? string.Empty);
+                W.Write(S.HasQueueSkip);
+                W.Write(S.LastGame);
+                W.Write(S.ShouldRespawnOnJoin);
+                W.Write(S.IsOtherDonator);
+            }
+        }
+        public static List<PlayerSave> ReadList(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            List<PlayerSave> saves = new List<PlayerSave>(length);
+            for (int i = 0; i < length; i++)
+            {
+                uint DATA_VERSION = R.ReadUInt32();
+                PlayerSave S = new PlayerSave(R.ReadUInt64()) { DATA_VERSION = DATA_VERSION };
+                if (DATA_VERSION > 0)
+                {
+                    S.Team = R.ReadUInt8();
+                    S.KitName = R.ReadString();
+                    S.SquadName = R.ReadString();
+                    S.HasQueueSkip = R.ReadBool();
+                    S.LastGame = R.ReadInt32();
+                    S.ShouldRespawnOnJoin = R.ReadBool();
+                    S.IsOtherDonator = R.ReadBool();
+                }
+                else
+                {
+                    S.Team = 0;
+                    S.KitName = string.Empty;
+                    S.SquadName = string.Empty;
+                    S.HasQueueSkip = false;
+                    S.LastGame = 0;
+                    S.ShouldRespawnOnJoin = false;
+                    S.IsOtherDonator = false;
+                }
+                saves.Add(S);
+            }
+            return saves;
         }
     }
 }

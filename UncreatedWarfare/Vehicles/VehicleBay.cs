@@ -65,16 +65,9 @@ namespace Uncreated.Warfare.Vehicles
                     {
                         foreach (VBarricade vb in vehicleData.Metadata.Barricades)
                         {
-                            Barricade barricade;
-                            if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
-                            {
-                                barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
-                            }
-                            else
-                            {
-                                barricade = new Barricade(vb.BarricadeID)
-                                { state = Convert.FromBase64String(vb.State) };
-                            }
+                            Barricade barricade = Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset
+                                ? new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset)
+                                : new Barricade(vb.BarricadeID) { state = Convert.FromBase64String(vb.State) };
                             Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
                             BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
                         }

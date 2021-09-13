@@ -67,6 +67,7 @@ namespace Uncreated.Warfare
         public float LoadoutCost;
         public float MaxVehicleAbandonmentDistance;
         public bool UsePatchForPlayerCap;
+        public bool DisableBackups;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -118,6 +119,7 @@ namespace Uncreated.Warfare
             this.LoadoutCost = 8;
             this.MaxVehicleAbandonmentDistance = 200f;
             this.UsePatchForPlayerCap = true;
+            this.DisableBackups = false;
         }
     }
     public class Modules

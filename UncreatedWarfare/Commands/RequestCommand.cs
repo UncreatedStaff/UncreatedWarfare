@@ -202,7 +202,7 @@ namespace Uncreated.Warfare.Commands
             }
             CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.Data.RequestKitCooldown);
 
-            PlayerManager.Save();
+            PlayerManager.ApplyToOnline();
         }
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)

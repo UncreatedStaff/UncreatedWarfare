@@ -91,13 +91,14 @@ namespace StatsAnalyzer
     public class Settings
     {
         public static readonly RawByteIO<Settings> IO = new RawByteIO<Settings>(Read, Write, null, 30);
-        public const uint CURRENT_DATA_VERSION = 3;
+        public const uint CURRENT_DATA_VERSION = 4;
         public uint DATA_VERSION;
         public MySqlData SQL;
         public ulong LastSteam64;
         public string TCPServerIP;
         public string Identity;
         public ushort TCPServerPort;
+        public bool UseIcons;
         public static void Write(ByteWriter W, Settings S)
         {
             W.Write(S.DATA_VERSION);
@@ -105,7 +106,8 @@ namespace StatsAnalyzer
             W.Write(S.LastSteam64);
             W.Write(S.TCPServerIP);
             W.Write(S.TCPServerPort); 
-            W.Write(S.Identity); 
+            W.Write(S.Identity);
+            W.Write(S.UseIcons);
         }
         public static Settings Read(ByteReader R)
         {
@@ -121,12 +123,20 @@ namespace StatsAnalyzer
                         S.TCPServerIP = R.ReadString();
                         S.TCPServerPort = R.ReadUInt16();
                         S.Identity = R.ReadString();
+                        if (S.DATA_VERSION > 3)
+                        {
+                            S.UseIcons = R.ReadBool();
+                        } else
+                        {
+                            S.UseIcons = false;
+                        }
                     } 
                     else
                     {
                         S.TCPServerIP = Default.TCPServerIP;
                         S.TCPServerPort = Default.TCPServerPort;
                         S.Identity = Default.Identity;
+                        S.UseIcons = false;
                     }
                 } 
                 else
@@ -135,6 +145,7 @@ namespace StatsAnalyzer
                     S.TCPServerIP = Default.TCPServerIP;
                     S.TCPServerPort = Default.TCPServerPort;
                     S.Identity = Default.Identity;
+                    S.UseIcons = false;
                 }
             }
             return S;
@@ -154,7 +165,8 @@ namespace StatsAnalyzer
             LastSteam64 = 0,
             Identity = string.Empty,
             TCPServerIP = "127.0.0.1",
-            TCPServerPort = 31902
+            TCPServerPort = 31902,
+            UseIcons = true
         };
     }
 

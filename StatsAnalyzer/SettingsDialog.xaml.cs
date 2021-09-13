@@ -44,6 +44,7 @@ namespace StatsAnalyzer
             StatsPage.I.Settings.SQL.CharSet = txtCharset.Text;
             StatsPage.I.Settings.Identity = txtIdentity.Text;
             StatsPage.I.Settings.TCPServerIP = txtTCPIP.Text;
+            StatsPage.I.Settings.UseIcons = chkEnableIcons.IsChecked ?? false;
             _ = ushort.TryParse(txtTCPPort.Text, System.Globalization.NumberStyles.Any, StatsPage.Locale, out StatsPage.I.Settings.TCPServerPort);
             await StatsPage.I.SaveSettings();
             if (reloadSQL)
@@ -72,6 +73,7 @@ namespace StatsAnalyzer
             txtIdentity.Text = StatsPage.I.Settings.Identity;
             txtTCPIP.Text = StatsPage.I.Settings.TCPServerIP;
             txtTCPPort.Text = StatsPage.I.Settings.TCPServerPort.ToString();
+            chkEnableIcons.IsChecked = StatsPage.I.Settings.UseIcons;
         }
     }
 }

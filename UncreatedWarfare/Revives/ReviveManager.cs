@@ -108,7 +108,7 @@ namespace Uncreated.Warfare.Revives
                 if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
                 {
                     save.ShouldRespawnOnJoin = true;
-                    PlayerManager.Save();
+                    PlayerManager.ApplyToOnline();
                 }
                 player.player.life.askDamage(byte.MaxValue, Vector3.up, p.cause, p.limb, p.killer, out _, p.trackKill, p.ragdollEffect, false, true);
                 // player will be removed from list in OnDeath

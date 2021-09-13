@@ -1,13 +1,17 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Uncreated.Networking;
+using Uncreated.Networking.Encoding;
+using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Stats
 {
     public static class StatsManager
     {
-        public static readonly string SaveDirectory = Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\";
+        public static readonly string SaveDirectory = Data.DataDirectory + @"Stats\";
         public static readonly string StatsDirectory = SaveDirectory + @"Players\";
         public static readonly string WeaponsDirectory = SaveDirectory + @"Weapons\";
         public static readonly string VehiclesDirectory = SaveDirectory + @"Vehicles\";
@@ -15,9 +19,14 @@ namespace Uncreated.Warfare.Stats
         public static WarfareTeam Team1Stats;
         public static WarfareTeam Team2Stats;
         public static readonly List<WarfareWeapon> Weapons = new List<WarfareWeapon>();
+        private static int weaponCounter = 0;
         public static readonly List<WarfareKit> Kits = new List<WarfareKit>();
+        private static int kitCounter = 0;
         public static readonly List<WarfareVehicle> Vehicles = new List<WarfareVehicle>();
+        private static int vehicleCounter = 0;
         public static readonly List<WarfareStats> OnlinePlayers = new List<WarfareStats>();
+        private static int teamBackupCounter = 0;
+        private static int minsCounter = 0;
         public static void LoadTeams()
         {
             WarfareTeam.IO.InitializeTo(
@@ -80,6 +89,36 @@ namespace Uncreated.Warfare.Stats
                 Team2Stats.Team = 2;
                 WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
             }
+        }
+        const int TICK_SPEED_MINS = 5;
+        public static void BackupTick()
+        {
+            if (minsCounter > TICK_SPEED_MINS)
+                minsCounter = 0;
+            if (minsCounter != TICK_SPEED_MINS) return;
+            if (weaponCounter >= Weapons.Count)
+                weaponCounter = 0;
+            if (vehicleCounter >= Vehicles.Count)
+                vehicleCounter = 0;
+            if (kitCounter >= Kits.Count)
+                kitCounter = 0;
+            if (teamBackupCounter > 60)
+                teamBackupCounter = 0;
+            if (Weapons.Count > 0)
+                BackupWeapon.NetInvoke(Weapons[0]);
+            if (Vehicles.Count > 0)
+                BackupVehicle.NetInvoke(Vehicles[0]);
+            if (Kits.Count > 0)
+                BackupKit.NetInvoke(Kits[0]);
+            if (teamBackupCounter == 30)
+                BackupTeam.NetInvoke(Team1Stats);
+            else if (teamBackupCounter == 60)
+                BackupTeam.NetInvoke(Team2Stats);
+            weaponCounter++;
+            vehicleCounter++;
+            kitCounter++;
+            teamBackupCounter++;
+            minsCounter++;
         }
         public static void ModifyTeam(byte team, Action<WarfareTeam> modification, bool save = true)
         {
@@ -307,6 +346,8 @@ namespace Uncreated.Warfare.Stats
         }
         public static void RegisterPlayer(ulong Steam64)
         {
+            if (!Directory.Exists(StatsDirectory))
+                Directory.CreateDirectory(StatsDirectory);
             string dir = StatsDirectory + Steam64.ToString(Data.Locale) + ".dat";
             if (!OnlinePlayers.Exists(x => x.Steam64 == Steam64))
             {
@@ -362,7 +403,199 @@ namespace Uncreated.Warfare.Stats
             WarfareStats stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == Steam64);
             if (stats == default) return;
             WarfareStats.IO.WriteTo(stats, StatsDirectory + Steam64.ToString(Data.Locale) + ".dat");
+            BackupStats.NetInvoke(stats);
             OnlinePlayers.Remove(stats);
         }
+
+
+        // net calls
+        internal static readonly NetCall<ulong> RequestPlayerData = new NetCall<ulong>(2000);
+
+        [NetCall(ENetCall.FROM_SERVER, 2000)]
+        internal static void ReceiveRequestPlayerData(in IConnection connection, ulong Player)
+        {
+            bool online = Provider.clients.Exists(x => x.playerID.steamID.m_SteamID == Player);
+            string dir = StatsDirectory + Player.ToString() + ".dat";
+            if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats))
+            {
+                SendPlayerData.Invoke(connection, stats, online);
+            }
+        }
+        internal static readonly NetCallRaw<WarfareStats, bool> SendPlayerData =
+            new NetCallRaw<WarfareStats, bool>(2001, WarfareStats.Read, R => R.ReadBool(), WarfareStats.Write, (W, B) => W.Write(B));
+
+        internal static readonly NetCall<string> RequestKitData = new NetCall<string>(2002);
+
+        [NetCall(ENetCall.FROM_SERVER, 2002)]
+        internal static void ReceiveRequestKitData(in IConnection connection, string KitID)
+        {
+            Kit.EClass @class = Kit.EClass.NONE;
+            string sname = KitID;
+            if (KitManager.KitExists(KitID, out Kit GameKit))
+            {
+                @class = GameKit.Class;
+                if (!GameKit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out sname))
+                    if (GameKit.SignTexts.Count > 0)
+                        sname = GameKit.SignTexts.Values.ElementAt(0);
+            }
+            string dir = KitsDirectory + KitID + ".dat";
+            if (WarfareKit.IO.ReadFrom(dir, out WarfareKit kit))
+            {
+                SendKitData.Invoke(connection, kit, sname, (byte)@class);
+            }
+        }
+
+
+        internal static readonly NetCallRaw<WarfareKit, string, byte> SendKitData =
+            new NetCallRaw<WarfareKit, string, byte>(2003, WarfareKit.Read, R => R.ReadString(),
+                R => R.ReadUInt8(), WarfareKit.Write, (W, S) => W.Write(S), (W, E) => W.Write(E));
+
+        internal static readonly NetCall<byte> RequestTeamData = new NetCall<byte>(2004);
+
+        [NetCall(ENetCall.FROM_SERVER, 2004)]
+        internal static void ReceiveRequestTeamData(in IConnection connection, byte team)
+        {
+            if (team == 1)
+                SendTeamData.Invoke(connection, Team1Stats);
+            else if (team == 2)
+                SendTeamData.Invoke(connection, Team2Stats);
+        }
+
+        internal static readonly NetCallRaw<WarfareTeam> SendTeamData =
+            new NetCallRaw<WarfareTeam>(2005, WarfareTeam.Read, WarfareTeam.Write);
+
+        internal static readonly NetCall<ushort, string> RequestWeaponData = new NetCall<ushort, string>(2006);
+
+        [NetCall(ENetCall.FROM_SERVER, 2006)]
+        internal static void ReceiveRequestWeaponData(in IConnection connection, ushort weaponid, string KitID)
+        {
+            string dir = WeaponsDirectory + GetWeaponName(weaponid, KitID);
+            if (WarfareWeapon.IO.ReadFrom(dir, out WarfareWeapon weapon))
+            {
+                string name = Assets.find(EAssetType.ITEM, weaponid) is ItemAsset asset ? asset.itemName : weaponid.ToString();
+                string kitname;
+                if (KitManager.KitExists(KitID, out Kit kit))
+                {
+                    if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out kitname))
+                        if (kit.SignTexts.Count > 0)
+                            kitname = kit.SignTexts.Values.ElementAt(0);
+                }
+                else
+                    kitname = KitID;
+                SendWeaponData.Invoke(connection, weapon, name, kitname);
+            }
+        }
+
+        internal static readonly NetCallRaw<WarfareWeapon, string, string> SendWeaponData =
+            new NetCallRaw<WarfareWeapon, string, string>(2007, WarfareWeapon.Read, R => R.ReadString(), R => R.ReadString(), WarfareWeapon.Write, (W, S) => W.Write(S), (W, S) => W.Write(S));
+
+        internal static readonly NetCall<ushort> RequestVehicleData = new NetCall<ushort>(2008);
+
+        [NetCall(ENetCall.FROM_SERVER, 2008)]
+        internal static void ReceiveRequestVehicleData(in IConnection connection, ushort vehicleID)
+        {
+            string dir = VehiclesDirectory + vehicleID.ToString() + ".dat";
+            string name = Assets.find(EAssetType.VEHICLE, vehicleID) is VehicleAsset asset ? asset.vehicleName : vehicleID.ToString(); 
+            if (WarfareVehicle.IO.ReadFrom(dir, out WarfareVehicle vehicle))
+                SendVehicleData.Invoke(connection, vehicle, name);
+        }
+        internal static readonly NetCallRaw<WarfareVehicle, string> SendVehicleData =
+            new NetCallRaw<WarfareVehicle, string>(2009, WarfareVehicle.Read, R => R.ReadString(), WarfareVehicle.Write, (W, S) => W.Write(S));
+
+        internal static readonly NetCall RequestKitList = new NetCall(2010);
+
+        [NetCall(ENetCall.FROM_SERVER, 2010)]
+        internal static void ReceiveRequestKitList(in IConnection connection) => 
+            SendKitList.Invoke(connection, KitManager.ActiveObjects.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
+
+        internal static readonly NetCallRaw<string[]> SendKitList = new NetCallRaw<string[]>(2011, ReadStrArray, WriteStrArray);
+
+        internal static readonly NetCall RequestTeamsData = new NetCall(2012);
+
+        [NetCall(ENetCall.FROM_SERVER, 2012)]
+        internal static void ReceiveRequestTeamData(in IConnection connection) =>
+            SendTeams.Invoke(connection, Team1Stats, Team2Stats);
+
+        internal static NetCallRaw<WarfareTeam, WarfareTeam> SendTeams = new NetCallRaw<WarfareTeam, WarfareTeam>(2013, WarfareTeam.Read, WarfareTeam.Read, WarfareTeam.Write, WarfareTeam.Write);
+
+        internal static NetCall<ushort> RequestAllWeapons = new NetCall<ushort>(2020);
+        internal static NetCallRaw<WarfareWeapon[], string, string[]> SendWeapons =
+            new NetCallRaw<WarfareWeapon[], string, string[]>(2019, ReadWeaponArray, R => R.ReadString(), ReadStringArray, WriteWeaponArray, (W, S) => W.Write(S), WriteStringArray);
+
+        [NetCall(ENetCall.FROM_SERVER, 2020)]
+        internal static void ReceiveWeaponRequest(in IConnection connection, ushort weapon)
+        {
+            if (!Directory.Exists(WeaponsDirectory)) SendWeapons.NetInvoke(new WarfareWeapon[0], string.Empty, new string[0]);
+            string[] files = Directory.GetFiles(WeaponsDirectory, $"{weapon}*.dat");
+            List<WarfareWeapon> weapons = new List<WarfareWeapon>();
+            List<string> kitnames = new List<string>();
+            for (int i = 0; i < files.Length; i++)
+            {
+                if (WarfareWeapon.IO.ReadFrom(files[i], out WarfareWeapon w))
+                {
+                    weapons.Add(w);
+                    string kitname = w.KitID;
+                    if (KitManager.KitExists(w.KitID, out Kit kit))
+                        if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out kitname))
+                            if (kit.SignTexts.Count > 0)
+                                kitname = kit.SignTexts.Values.ElementAt(0);
+                    kitnames.Add(kitname);
+                }
+            }
+            SendWeapons.NetInvoke(weapons.ToArray(), Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.Locale), kitnames.ToArray());
+        }
+
+        public static string[] ReadStrArray(ByteReader R)
+        {
+            int length = R.ReadUInt16();
+            string[] strings = new string[length];
+            for (int i = 0; i < length; i++)
+                strings[i] = R.ReadString();
+            return strings;
+        }
+        public static void WriteStrArray(ByteWriter W, string[] SA)
+        {
+            W.Write((ushort)SA.Length);
+            for (int i = 0; i < SA.Length; i++)
+                W.Write(SA[i]);
+        }
+        public static WarfareWeapon[] ReadWeaponArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            WarfareWeapon[] weapons = new WarfareWeapon[length];
+            for (int i = 0; i < length; i++)
+            {
+                weapons[i] = WarfareWeapon.Read(R);
+            }
+            return weapons;
+        }
+        public static void WriteWeaponArray(ByteWriter W, WarfareWeapon[] A)
+        {
+            W.Write(A.Length);
+            for (int i = 0; i < A.Length; i++)
+            {
+                WarfareWeapon.Write(W, A[i]);
+            }
+        }
+        public static string[] ReadStringArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            string[] rtn = new string[length];
+            for (int i = 0; i < length; i++)
+                rtn[i] = R.ReadString();
+            return rtn;
+        }
+        public static void WriteStringArray(ByteWriter W, string[] A)
+        {
+            W.Write(A.Length);
+            for (int i = 0; i < A.Length; i++)
+                W.Write(A[i]);
+        }
+
+        internal static readonly NetCallRaw<WarfareStats> BackupStats = new NetCallRaw<WarfareStats>(2090, WarfareStats.Read, WarfareStats.Write);
+        internal static readonly NetCallRaw<WarfareTeam> BackupTeam = new NetCallRaw<WarfareTeam>(2091, WarfareTeam.Read, WarfareTeam.Write);
+        internal static readonly NetCallRaw<WarfareWeapon> BackupWeapon = new NetCallRaw<WarfareWeapon>(2092, WarfareWeapon.Read, WarfareWeapon.Write);
+        internal static readonly NetCallRaw<WarfareVehicle> BackupVehicle = new NetCallRaw<WarfareVehicle>(2093, WarfareVehicle.Read, WarfareVehicle.Write);
+        internal static readonly NetCallRaw<WarfareKit> BackupKit = new NetCallRaw<WarfareKit>(2094, WarfareKit.Read, WarfareKit.Write);
     }
 }

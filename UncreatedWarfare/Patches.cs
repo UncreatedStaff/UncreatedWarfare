@@ -445,11 +445,9 @@ namespace Uncreated.Warfare
             /// </summary>
             [HarmonyPatch(typeof(BarricadeManager), "SendRegion")]
             [HarmonyPrefix]
-            static bool SendRegion(SteamPlayer client, byte x, byte y, ushort plant, float sortOrder)
+            static bool SendRegion(SteamPlayer client, BarricadeRegion region, byte x, byte y, NetId parentNetId, float sortOrder)
             {
                 if (!UCWarfare.Config.Patches.SendRegion) return true;
-                if (!BarricadeManager.tryGetRegion(x, y, plant, out BarricadeRegion region))
-                    return false;
                 if (region.drops.Count > 0)
                 {
                     byte packet = 0;
@@ -469,7 +467,7 @@ namespace Uncreated.Warfare
                         {
                             writer.WriteUInt8(x);
                             writer.WriteUInt8(y);
-                            writer.WriteUInt16(plant);
+                            writer.WriteNetId(parentNetId);
                             writer.WriteUInt8(packet);
                             writer.WriteUInt16((ushort)(count - index));
                             writer.WriteFloat(sortOrder);
@@ -545,7 +543,7 @@ namespace Uncreated.Warfare
                                 writer.WriteUInt8(serversideData.angle_x);
                                 writer.WriteUInt8(serversideData.angle_y);
                                 writer.WriteUInt8(serversideData.angle_z);
-                                writer.WriteUInt8((byte)Mathf.RoundToInt(serversideData.barricade.health / (float)serversideData.barricade.asset.health * 100f));
+                                writer.WriteUInt8((byte)Mathf.RoundToInt((float)((double)serversideData.barricade.health / (double)serversideData.barricade.asset.health * 100.0)));
                                 writer.WriteUInt64(serversideData.owner);
                                 writer.WriteUInt64(serversideData.group);
                                 writer.WriteNetId(drop.GetNetId());
@@ -559,7 +557,7 @@ namespace Uncreated.Warfare
                     {
                         writer.WriteUInt8(x);
                         writer.WriteUInt8(y);
-                        writer.WriteUInt16(plant);
+                        writer.WriteNetId(NetId.INVALID);
                         writer.WriteUInt8(0);
                         writer.WriteUInt16(0);
                     });

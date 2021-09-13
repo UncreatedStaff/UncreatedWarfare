@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Commands
             //InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
-            
+
             if (vehicle != null)
             {
                 if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData))
@@ -155,9 +155,9 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.barricade.id))
                 {
-                    if (drop.model.TryGetComponent<AmmoBagComponent>(out var ammobag))
+                    if (drop.model.TryGetComponent(out AmmoBagComponent ammobag))
                     {
-                        if (ammobag.ResuppliedPlayers.TryGetValue(player.Steam64, out var lifeIndex) && lifeIndex == player.LifeCounter)
+                        if (ammobag.ResuppliedPlayers.TryGetValue(player.Steam64, out int lifeIndex) && lifeIndex == player.LifeCounter)
                         {
                             player.Message("ammo_bag_already_resupplied");
                             return;

@@ -170,8 +170,14 @@ namespace Uncreated.Warfare.Kits
             player.KitName = kit.Name;
             player.KitClass = kit.Class;
             
-            PlayerManager.UpdateObjectsWhere(x => x.Steam64 == player.Steam64, x => { x.KitName = kit.Name; });
-
+            for (int i = 0; i < PlayerManager.ActiveObjects.Count; i++)
+            {
+                if (PlayerManager.ActiveObjects[i].Steam64 == player.Steam64)
+                {
+                    PlayerManager.ActiveObjects[i].KitName = kit.Name;
+                    break;
+                }
+            }
             if (kit.IsPremium && kit.Cooldown > 0)
             {
                 CooldownManager.StartCooldown(player, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);

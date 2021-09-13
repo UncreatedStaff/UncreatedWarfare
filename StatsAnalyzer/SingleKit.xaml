@@ -19,7 +19,7 @@
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Class: " Margin="10,0,2,5" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding Header2Size, ElementName=SingleKitCtrl}"/>
                 <TextBlock x:Name="lblKitClass" Text="RIFLEMAN" Margin="5,2,10,5" Foreground="#FFFF8080" FontFamily="Consolas" FontWeight="Bold" FontStyle="Normal" FontSize="{Binding Header2Size, ElementName=SingleKitCtrl}"/>
-                <TextBlock x:Name="lblClassIcon" Text="¡" Margin="5,2,10,5" Foreground="#FFFF8080" FontFamily="Assets/UncreatedWarfare.otf#Uncreated Warfare Icons" FontSize="{Binding Header2Size, ElementName=SingleKitCtrl}"/>
+                <TextBlock x:Name="lblClassIcon" Text="A" Margin="5,2,10,5" Foreground="#FFFF8080" FontFamily="Assets/Fonts/UncreatedWarfare.otf#Uncreated Warfare Icons" FontSize="{Binding Header2Size, ElementName=SingleKitCtrl}" FontWeight="Normal"/>
             </StackPanel>
             <TextBlock Text="Stats:" Margin="10,0,10,1" FontWeight="Bold" FontSize="{Binding Header2Size, ElementName=SingleKit}"/>
             <StackPanel Orientation="Vertical">

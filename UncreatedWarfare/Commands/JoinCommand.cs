@@ -77,7 +77,7 @@ namespace Uncreated.Warfare.Commands
                     if (player.CharacterName.StartsWith(restrictedNamePrefix, StringComparison.OrdinalIgnoreCase))
                     {
                         player.Player.quests.leaveGroup(true);
-                        PlayerManager.Save();
+                        PlayerManager.ApplyToOnline();
                         player.SendChat("join_e_badname", restrictedNamePrefix);
                         UCInventoryManager.ClearInventory(player);
                         return;
@@ -106,7 +106,7 @@ namespace Uncreated.Warfare.Commands
 
                     if (player.Squad != null)
                         Squads.SquadManager.LeaveSquad(player, player.Squad);
-                    PlayerManager.Save();
+                    PlayerManager.ApplyToOnline();
                 }
                 else
                     player.SendChat("join_correctusage");

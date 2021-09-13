@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Kits
                                     ucplayer.Branch = kit.Branch;
                                     Reply(ucplayer, "branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                                 }
-                                PlayerManager.Save();
+                                PlayerManager.ApplyToOnline();
                                 return;
                             }
                             else
@@ -211,7 +211,7 @@ namespace Uncreated.Warfare.Kits
                             Reply(ucplayer, "branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                         }
 
-                        PlayerManager.Save();
+                        PlayerManager.ApplyToOnline();
                     }
                     else // error
                     {

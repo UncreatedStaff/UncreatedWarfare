@@ -47,6 +47,8 @@ namespace Uncreated.Warfare
         protected override void Load()
         {
             Instance = this;
+            if (Config.UsePatchForPlayerCap)
+                Provider.maxPlayers = 24;
             Data.LoadColoredConsole();
             F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);

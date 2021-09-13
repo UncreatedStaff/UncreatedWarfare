@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Networking.Encoding;
+using Windows.Storage.Streams;
+using Windows.UI.Xaml.Media.Imaging;
 
 namespace StatsAnalyzer
 {
@@ -56,6 +60,26 @@ namespace StatsAnalyzer
         public static string S(this int number) => number == 1 ? "" : "s";
         public static string S(this float number) => number == 1 ? "" : "s";
         public static string S(this uint number) => number == 1 ? "" : "s";
-
+        public static byte[] ReadByteArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            return R.ReadBlock(length);
+        }
+        public static void WriteByteArray(ByteWriter W, byte[] A)
+        {
+            W.Write(A.Length);
+            W.Write(A);
+        }
+        public static async Task<BitmapImage> DecodeImage(byte[] png)
+        {
+            BitmapImage image = new BitmapImage();
+            using (InMemoryRandomAccessStream stream = new InMemoryRandomAccessStream())
+            {
+                await stream.WriteAsync(png.AsBuffer());
+                stream.Seek(0);
+                await image.SetSourceAsync(stream);
+            }
+            return image;
+        }
     }
 }
