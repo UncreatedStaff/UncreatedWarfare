@@ -1213,6 +1213,12 @@ namespace Uncreated.Warfare
                 return h.point.y + above;
             else return defaultY; */
         }
+        public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
+        {
+            if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.GROUND | RayMasks.GROUND2 | RayMasks.LARGE | RayMasks.MEDIUM))
+                return h.point.y + above;
+            else return defaultY;
+        }
         public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
         {
             if (source == null) return null;
@@ -1607,11 +1613,29 @@ namespace Uncreated.Warfare
                                 }
                                 string cost = Translate("loadout_name_owned", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                                 if (!keepline) cost = "\n" + cost;
+
+                                string playercount = "";
+
+                                if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+                                {
+                                    playercount = Translate("kit_unlimited", player).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                                }
+                                else if (kit.IsClassLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
+                                {
+                                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+                                }
+                                else
+                                {
+                                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+                                }
+
                                 return Translate("sign_kit_request", player,
                                     name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
                                     cost,
                                     kit.Weapons == "" ? " " : Translate("kit_weapons", player, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
-                                    ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"))
+                                    playercount
                                     );
                             }
                         }

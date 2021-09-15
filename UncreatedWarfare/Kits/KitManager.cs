@@ -507,6 +507,20 @@ namespace Uncreated.Warfare.Kits
                 return false;
             return currentPlayers + 1 > allowedPlayers;
         }
+        public bool IsClassLimited(out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
+        {
+            ulong Team = team == 1 || team == 2 ? team : this.Team;
+            currentPlayers = 0;
+            allowedPlayers = 24;
+            if (!requireCounts && (IsPremium || TeamLimit >= 1f))
+                return false;
+            IEnumerable<UCPlayer> friendlyPlayers = Team == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(k => k.GetTeam() == Team);
+            allowedPlayers = (int)Math.Ceiling(TeamLimit * friendlyPlayers.Count());
+            currentPlayers = friendlyPlayers.Count(k => k.KitClass == Class);
+            if (IsPremium || TeamLimit >= 1f)
+                return false;
+            return currentPlayers + 1 > allowedPlayers;
+        }
         public enum EClothingType : byte
         {
             SHIRT,

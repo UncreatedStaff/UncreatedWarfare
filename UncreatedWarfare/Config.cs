@@ -117,7 +117,7 @@ namespace Uncreated.Warfare
             this.TimeBetweenTp = 0.1f;
             this.EnableSquads = true;
             this.LoadoutCost = 8;
-            this.MaxVehicleAbandonmentDistance = 200f;
+            this.MaxVehicleAbandonmentDistance = 50f;
             this.UsePatchForPlayerCap = true;
             this.DisableBackups = false;
         }

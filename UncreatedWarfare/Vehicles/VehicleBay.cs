@@ -18,6 +18,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
+            VehicleManager.onExitVehicleRequested += OnVehicleExitRequested;
         }
 
         protected override string LoadDefaults() => "[]";
@@ -151,7 +152,25 @@ namespace Uncreated.Warfare.Vehicles
                 DeleteVehicle(VehicleManager.vehicles[i]);
             }
         }
+        private void OnVehicleExitRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
+        {
+            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
 
+            if (F.GetHeightAt2DPoint(nelsonplayer.transform.position.x, nelsonplayer.transform.position.y) > UCWarfare.Config.MaxVehicleAbandonmentDistance)
+            {
+                player.SendChat("vehicle_too_high");
+                shouldAllow = false;
+                return;
+            }
+
+            if (KitManager.KitExists(player.KitName, out var kit))
+            {
+                if (kit.Class == Kit.EClass.LAT || kit.Class == Kit.EClass.HAT)
+                {
+                    player.Player.equipment.dequip();
+                }
+            }
+        }
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
             try
@@ -430,6 +449,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             VehicleManager.onEnterVehicleRequested -= OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
+            VehicleManager.onExitVehicleRequested -= OnVehicleExitRequested;
         }
 
         public enum EVehicleProperty

@@ -13,8 +13,8 @@
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Libraries\UncreatedNetworking.dll</HintPath>
+    <Reference Include="UncreatedNetworkingUWPPort">
+      <HintPath>..\..\..\..\Downloads\UncreatedNetworkingUWPPort.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
