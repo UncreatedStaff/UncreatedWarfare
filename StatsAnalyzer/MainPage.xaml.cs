@@ -2,23 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Stats;
 using Windows.ApplicationModel.Core;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
-using Windows.UI.Xaml.Navigation;
 namespace StatsAnalyzer
 {
     public sealed partial class StatsPage : Page
@@ -45,14 +36,6 @@ namespace StatsAnalyzer
             SQL.Dispose();
             NetClient.Dispose();
         }
-        public void AddCache(ImageCache cache)
-        {
-            if (ImageCache.Count > 30) // keep list < 30
-            {
-                ImageCache.RemoveAt(0);
-            }
-            ImageCache.Add(cache);
-        }
         public async void SendMessage(string title, string message)
         {
             Messager.Title = title;
@@ -69,7 +52,7 @@ namespace StatsAnalyzer
             }).AsTask().ConfigureAwait(false);
         }
         public void ClearCache() => ImageCache.Clear();
-        public bool IsCached(ushort ID, bool Vehicle, out Image Image)
+        public bool IsCached(ushort ID, bool Vehicle, out BitmapImage Image)
         {
             for (int i = 0; i < ImageCache.Count; i++)
             {
@@ -93,10 +76,41 @@ namespace StatsAnalyzer
             }
             return false;
         }
+        public void Cache(ushort ID, bool Vehicle, BitmapImage Image)
+        {
+            for (int i = 0; i < ImageCache.Count; i++)
+            {
+                if (ImageCache[i].ID == ID && ImageCache[i].Vehicle == Vehicle)
+                {
+                    ImageCache[i] = new ImageCache(ID, Vehicle, Image);
+                    return;
+                }
+            }
+            if (ImageCache.Count > 50)
+            {
+                ImageCache.RemoveAt(0);
+            }
+            ImageCache.Add(new ImageCache(ID, Vehicle, Image));
+        }
         public Steam64Find S64Search = new Steam64Find();
         public NoAccessToFileSystem FSWarn = new NoAccessToFileSystem();
         public UsernameSearch UsernameFind = new UsernameSearch();
         public SettingsDialog SettingsDialog = new SettingsDialog();
+        public IDSearch IDSearchDialog = new IDSearch()
+        {
+            OnOK = OnIDSearchOK
+        };
+        private static void OnIDSearchOK(ushort id, IDSearch search, ContentDialogButtonClickEventArgs args)
+        {
+            if (search.IsVehicle)
+            {
+                RequestVehicleData.Invoke(I.NetClient.connection, id, I.IsCached(id, true));
+            }
+            else
+            {
+                RequestAllWeapons.Invoke(I.NetClient.connection, id);
+            }
+        }
         public string[] KitList = new string[0];
         public KitSearchDialog KitSearch = new KitSearchDialog();
         public Dictionary<EClass, ClassConfig> Classes = new Dictionary<EClass, ClassConfig>
@@ -251,14 +265,15 @@ namespace StatsAnalyzer
         {
             RequestTeamsData.Invoke(NetClient.connection);
         }
-        private void ClickRequest_Vehicle(object sender, RoutedEventArgs e)
+        private async void ClickRequest_Vehicle(object sender, RoutedEventArgs e)
         {
-            RequestVehicleData.Invoke(NetClient.connection, 140, true);
+            IDSearchDialog.IsVehicle = true;
+            await IDSearchDialog.ShowAsync();
         }
-        private void ClickRequest_Weapon(object sender, RoutedEventArgs e)
+        private async void ClickRequest_Weapon(object sender, RoutedEventArgs e)
         {
-            RequestAllWeapons.Invoke(NetClient.connection, 31308);
-            //RequestWeaponData.Invoke(NetClient.connection, 31301, "rurif3", true);
+            IDSearchDialog.IsVehicle = false;
+            await IDSearchDialog.ShowAsync();
         }
         public async Task UpdateWeaponList(WarfareWeapon[] weapons, string weaponname, string[] kitnames)
         {
@@ -428,6 +443,9 @@ namespace StatsAnalyzer
             SingleStatPage.Height = e.NewSize.Height - NavBar.Height - SingleStatPage.Margin.Top - SingleStatPage.Margin.Bottom;
             SingleKitPage.Height = e.NewSize.Height - NavBar.Height - SingleKitPage.Margin.Top - SingleKitPage.Margin.Bottom;
             TeamComparePage.Height = e.NewSize.Height - NavBar.Height - TeamComparePage.Margin.Top - TeamComparePage.Margin.Bottom;
+            SingleWeaponPage.Height = e.NewSize.Height - NavBar.Height - SingleWeaponPage.Margin.Top - SingleWeaponPage.Margin.Bottom;
+            WeaponList.Height = e.NewSize.Height - NavBar.Height - WeaponList.Margin.Top - WeaponList.Margin.Bottom;
+            WeaponList.Width = e.NewSize.Width - WeaponList.Margin.Left - WeaponList.Margin.Right;
         }
     }
     public enum EMode : byte
@@ -457,8 +475,8 @@ namespace StatsAnalyzer
     {
         public ushort ID;
         public bool Vehicle;
-        public Image Image;
-        public ImageCache(ushort ID, bool Vehicle, Image Image)
+        public BitmapImage Image;
+        public ImageCache(ushort ID, bool Vehicle, BitmapImage Image)
         {
             this.ID = ID;
             this.Vehicle = Vehicle;

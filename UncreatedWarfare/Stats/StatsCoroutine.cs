@@ -96,8 +96,7 @@ namespace Uncreated.Warfare.Stats
                     Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team2ID)) / ++t.AveragePlayersCounter, false);
                     StatsManager.SaveTeams();
                     /* TICK STAT BACKUP */
-                    if (!UCWarfare.Config.DisableBackups)
-                        StatsManager.BackupTick();
+                    StatsManager.BackupTick();
                 }
                 catch (Exception ex)
                 {

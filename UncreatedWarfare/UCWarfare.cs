@@ -35,7 +35,7 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default))) return _sqlElsewhere;
+                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default(MySqlData)))) return _sqlElsewhere;
                 else return Configuration.Instance.SQL;
             }
         }

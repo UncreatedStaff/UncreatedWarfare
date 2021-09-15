@@ -29,10 +29,10 @@ namespace StatsAnalyzer
             internal static readonly NetCallRaw<WarfareWeapon, string> SendWeaponData =
                 new NetCallRaw<WarfareWeapon, string>(2007, WarfareWeapon.Read, R => R.ReadString(), WarfareWeapon.Write, (W, S) => W.Write(S));
 
+            
 
             internal static readonly NetCallRaw<WarfareVehicle, string> SendVehicleData =
                 new NetCallRaw<WarfareVehicle, string>(2009, WarfareVehicle.Read, R => R.ReadString(), WarfareVehicle.Write, (W, S) => W.Write(S));
-
 
         }
     }

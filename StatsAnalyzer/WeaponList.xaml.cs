@@ -49,8 +49,11 @@ namespace StatsAnalyzer
                 Debug.WriteLine($"Desync between weapons ({weapons.Length}) and kitnames ({kitnames.Length}).");
                 return;
             }
+            pnlGrid.Children.Clear();
             int columns = Math.Min(weapons.Length, COLUMN_COUNT);
             int rows = (weapons.Length / COLUMN_COUNT) + 1;
+            pnlGrid.ColumnDefinitions.Clear();
+            pnlGrid.RowDefinitions.Clear();
             for (int i = 0; i < columns; i++)
                 pnlGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             for (int i = 0; i < rows; i++)
@@ -119,7 +122,7 @@ namespace StatsAnalyzer
         private void KitPointerReleased(object sender, PointerRoutedEventArgs e)
         {
             if (sender is WeaponData data && data.KitID != null)
-                StatsPage.RequestWeaponData.Invoke(StatsPage.I.NetClient.connection, data.Weapon, data.KitID, StatsPage.I.IsCached(data.Weapon, false));
+                StatsPage.RequestWeaponData.Invoke(StatsPage.I.NetClient.connection, data.Weapon, data.KitID, !StatsPage.I.IsCached(data.Weapon, false));
         }
     }
 }

@@ -57,6 +57,13 @@ namespace StatsAnalyzer
         }
         public void Load(WarfareWeapon weapon, string name, string kitname, BitmapImage image)
         {
+            if (image == null)
+            {
+                if (!StatsPage.I.IsCached(weapon.ID, false, out image))
+                    image = null;
+            }
+            else 
+                StatsPage.I.Cache(weapon.ID, false, image);
             if (image != null)
             {
                 imgBorder.Width = image.PixelWidth / 8;

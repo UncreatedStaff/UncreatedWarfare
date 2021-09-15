@@ -121,6 +121,9 @@
     </Compile>
     <Compile Include="DatabaseManager.cs" />
     <Compile Include="F.cs" />
+    <Compile Include="IDSearch.xaml.cs">
+      <DependentUpon>IDSearch.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Invocations.cs" />
     <Compile Include="KitData.xaml.cs">
       <DependentUpon>KitData.xaml</DependentUpon>
@@ -242,6 +245,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="IDSearch.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="KitData.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
