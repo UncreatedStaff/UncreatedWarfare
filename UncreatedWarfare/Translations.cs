@@ -414,6 +414,7 @@ namespace Uncreated.Warfare
                 { "vehicle_owner_not_in_vehicle", "Wait for the owner {0} to get in." },
                 { "vehicle_owner_not_in_vehicle_squad", "Wait for the owner {0} to get in, or join the squad {1}." },
                 { "vehicle_no_kit", "You can not get in a vehicle without a kit." },
+                { "vehicle_too_high", "<color=#ff684a>Vehicle is too high off the ground!</color>" },
                 { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to main this vehicle." },
                 { "vehicle_need_another_person_with_kit", "You must have another <color=#cedcde>{0}</color> in this vehicle before you can enter the gunner's seat." },
                 { "vehicle_need_driver", "Your vehicle needs a DRIVER before you can switch to the gunner's seat." },
