@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Stats
                 WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
             }
         }
-        const int TICK_SPEED_MINS = 5;
+        const int TICK_SPEED_MINS = 4;
         public static void BackupTick()
         {
             if (minsCounter > TICK_SPEED_MINS)
@@ -508,7 +508,7 @@ namespace Uncreated.Warfare.Stats
         internal static void ReceiveRequestKitList(in IConnection connection) => 
             SendKitList.Invoke(connection, KitManager.ActiveObjects.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
-        internal static readonly NetCallRaw<string[]> SendKitList = new NetCallRaw<string[]>(2011, ReadStrArray, WriteStrArray);
+        internal static readonly NetCallRaw<string[]> SendKitList = new NetCallRaw<string[]>(2011, ReadStringArray, WriteStringArray);
 
         internal static readonly NetCall RequestTeamsData = new NetCall(2012);
 
@@ -516,10 +516,10 @@ namespace Uncreated.Warfare.Stats
         internal static void ReceiveRequestTeamData(in IConnection connection) =>
             SendTeams.Invoke(connection, Team1Stats, Team2Stats);
 
-        internal static NetCallRaw<WarfareTeam, WarfareTeam> SendTeams = new NetCallRaw<WarfareTeam, WarfareTeam>(2013, WarfareTeam.Read, WarfareTeam.Read, WarfareTeam.Write, WarfareTeam.Write);
+        internal static readonly NetCallRaw<WarfareTeam, WarfareTeam> SendTeams = new NetCallRaw<WarfareTeam, WarfareTeam>(2013, WarfareTeam.Read, WarfareTeam.Read, WarfareTeam.Write, WarfareTeam.Write);
 
-        internal static NetCall<ushort> RequestAllWeapons = new NetCall<ushort>(2020);
-        internal static NetCallRaw<WarfareWeapon[], string, string[]> SendWeapons =
+        internal static readonly NetCall<ushort> RequestAllWeapons = new NetCall<ushort>(2020);
+        internal static readonly NetCallRaw<WarfareWeapon[], string, string[]> SendWeapons =
             new NetCallRaw<WarfareWeapon[], string, string[]>(2019, ReadWeaponArray, R => R.ReadString(), ReadStringArray, WriteWeaponArray, (W, S) => W.Write(S), WriteStringArray);
 
         [NetCall(ENetCall.FROM_SERVER, 2020)]
@@ -545,20 +545,86 @@ namespace Uncreated.Warfare.Stats
             SendWeapons.NetInvoke(weapons.ToArray(), Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.Locale), kitnames.ToArray());
         }
 
-        public static string[] ReadStrArray(ByteReader R)
+        internal static readonly NetCall RequestEveryWeapon = new NetCall(2025);
+        internal static readonly NetCall RequestEveryPlayer = new NetCall(2026);
+        internal static readonly NetCall RequestEveryKit = new NetCall(2027);
+        internal static readonly NetCall RequestEveryVehicle = new NetCall(2028);
+
+        [NetCall(ENetCall.FROM_SERVER, 2025)]
+        internal static void ReceiveRequestEveryWeapon(in IConnection connection)
         {
-            int length = R.ReadUInt16();
-            string[] strings = new string[length];
-            for (int i = 0; i < length; i++)
-                strings[i] = R.ReadString();
-            return strings;
+            string[] weaponnames = new string[Weapons.Count];
+            for (int i = 0; i < weaponnames.Length; i++)
+            {
+                weaponnames[i] = Assets.find(EAssetType.ITEM, Weapons[i].ID) is ItemAsset asset ? asset.itemName : Weapons[i].ID.ToString();
+            }
+            SendEveryWeapon.NetInvoke(Weapons.ToArray(), weaponnames);
         }
-        public static void WriteStrArray(ByteWriter W, string[] SA)
+        [NetCall(ENetCall.FROM_SERVER, 2026)]
+        internal static void ReceiveRequestEveryPlayer(in IConnection connection)
         {
-            W.Write((ushort)SA.Length);
-            for (int i = 0; i < SA.Length; i++)
-                W.Write(SA[i]);
+            if (!Directory.Exists(StatsDirectory))
+                Directory.CreateDirectory(StatsDirectory);
+            string[] stats = Directory.GetFiles(StatsDirectory);
+            List<WarfareStats> rtn = new List<WarfareStats>();
+            for (int i = 0; i < stats.Length; i++)
+            {
+                FileInfo file = new FileInfo(stats[i]);
+                if (WarfareStats.IO.ReadFrom(file, out WarfareStats stat) && stat != null)
+                {
+                    rtn.Add(stat);
+                }
+                else
+                {
+                    F.LogWarning("Invalid vehicle file: " + file.FullName);
+                }
+            }
+            SendEveryPlayer.NetInvoke(rtn.ToArray());
         }
+        [NetCall(ENetCall.FROM_SERVER, 2027)]
+        internal static void ReceiveRequestEveryKit(in IConnection connection)
+        {
+            string[] kitnames = new string[Kits.Count];
+            byte[] classes = new byte[Kits.Count];
+            for (int i = 0; i < kitnames.Length; i++)
+            {
+                if (KitManager.KitExists(Kits[i].KitID, out Kit GameKit))
+                {
+                    classes[i] = (byte)GameKit.Class;
+                    kitnames[i] = Kits[i].KitID;
+                    if (!GameKit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out kitnames[i]))
+                        if (GameKit.SignTexts.Count > 0)
+                            kitnames[i] = GameKit.SignTexts.Values.ElementAt(0);
+                }
+            }
+            SendEveryKit.NetInvoke(Kits.ToArray(), kitnames, classes);
+        }
+        [NetCall(ENetCall.FROM_SERVER, 2028)]
+        internal static void ReceiveRequestEveryVehicle(in IConnection connection)
+        {
+            string[] vehiclenames = new string[Vehicles.Count];
+            for (int i = 0; i < vehiclenames.Length; i++)
+            {
+                vehiclenames[i] = Assets.find(EAssetType.VEHICLE, Weapons[i].ID) is VehicleAsset asset ? asset.vehicleName : Vehicles[i].ID.ToString();
+            }
+            SendEveryVehicle.NetInvoke(Vehicles.ToArray(), vehiclenames);
+        }
+
+        internal static readonly NetCallRaw<WarfareWeapon[], string[]> SendEveryWeapon =
+            new NetCallRaw<WarfareWeapon[], string[]>(2021, ReadWeaponArray, ReadStringArray,
+                WriteWeaponArray, WriteStringArray);
+
+        internal static readonly NetCallRaw<WarfareStats[]> SendEveryPlayer =
+            new NetCallRaw<WarfareStats[]>(2022, ReadStatArray, WriteStatArray);
+
+        internal static readonly NetCallRaw<WarfareKit[], string[], byte[]> SendEveryKit =
+            new NetCallRaw<WarfareKit[], string[], byte[]>(2023, ReadKitArray, ReadStringArray, ReadByteArray,
+                WriteKitArray, WriteStringArray, WriteByteArray);
+
+        internal static readonly NetCallRaw<WarfareVehicle[], string[]> SendEveryVehicle =
+            new NetCallRaw<WarfareVehicle[], string[]>(2024, ReadVehicleArray, ReadStringArray,
+                WriteVehicleArray, WriteStringArray);
+
         public static WarfareWeapon[] ReadWeaponArray(ByteReader R)
         {
             int length = R.ReadInt32();
@@ -577,6 +643,60 @@ namespace Uncreated.Warfare.Stats
                 WarfareWeapon.Write(W, A[i]);
             }
         }
+        public static WarfareStats[] ReadStatArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            WarfareStats[] stats = new WarfareStats[length];
+            for (int i = 0; i < length; i++)
+            {
+                stats[i] = WarfareStats.Read(R);
+            }
+            return stats;
+        }
+        public static void WriteStatArray(ByteWriter W, WarfareStats[] A)
+        {
+            W.Write(A.Length);
+            for (int i = 0; i < A.Length; i++)
+            {
+                WarfareStats.Write(W, A[i]);
+            }
+        }
+        public static WarfareVehicle[] ReadVehicleArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            WarfareVehicle[] vehicles = new WarfareVehicle[length];
+            for (int i = 0; i < length; i++)
+            {
+                vehicles[i] = WarfareVehicle.Read(R);
+            }
+            return vehicles;
+        }
+        public static void WriteVehicleArray(ByteWriter W, WarfareVehicle[] A)
+        {
+            W.Write(A.Length);
+            for (int i = 0; i < A.Length; i++)
+            {
+                WarfareVehicle.Write(W, A[i]);
+            }
+        }
+        public static WarfareKit[] ReadKitArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            WarfareKit[] kits = new WarfareKit[length];
+            for (int i = 0; i < length; i++)
+            {
+                kits[i] = WarfareKit.Read(R);
+            }
+            return kits;
+        }
+        public static void WriteKitArray(ByteWriter W, WarfareKit[] A)
+        {
+            W.Write(A.Length);
+            for (int i = 0; i < A.Length; i++)
+            {
+                WarfareKit.Write(W, A[i]);
+            }
+        }
         public static string[] ReadStringArray(ByteReader R)
         {
             int length = R.ReadInt32();
@@ -590,6 +710,16 @@ namespace Uncreated.Warfare.Stats
             W.Write(A.Length);
             for (int i = 0; i < A.Length; i++)
                 W.Write(A[i]);
+        }
+        public static byte[] ReadByteArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            return R.ReadBlock(length);
+        }
+        public static void WriteByteArray(ByteWriter W, byte[] B)
+        {
+            W.Write(B.Length);
+            W.Write(B);
         }
 
         internal static readonly NetCallRaw<WarfareStats> BackupStats = new NetCallRaw<WarfareStats>(2090, WarfareStats.Read, WarfareStats.Write);
