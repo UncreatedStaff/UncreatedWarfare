@@ -56,7 +56,7 @@ namespace Uncreated.Warfare.Vehicles
             try
             {
                 instanceID = 0;
-                if (VehicleBay.VehicleExists(vehicleID, out VehicleData vehicleData))
+                if (VehicleExists(vehicleID, out VehicleData vehicleData))
                 {
                     InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
                     if (vehicle == null) return null;
@@ -152,22 +152,22 @@ namespace Uncreated.Warfare.Vehicles
                 DeleteVehicle(VehicleManager.vehicles[i]);
             }
         }
-        private void OnVehicleExitRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
+        private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
 
-            if (F.GetHeightAt2DPoint(nelsonplayer.transform.position.x, nelsonplayer.transform.position.y) > UCWarfare.Config.MaxVehicleAbandonmentDistance)
+            if (vehicle.transform.position.y - F.GetHeightAt2DPoint(player.transform.position.x, player.transform.position.y) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
                 player.SendChat("vehicle_too_high");
                 shouldAllow = false;
                 return;
             }
 
-            if (KitManager.KitExists(player.KitName, out var kit))
+            if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
             {
                 if (kit.Class == Kit.EClass.LAT || kit.Class == Kit.EClass.HAT)
                 {
-                    player.Player.equipment.dequip();
+                    ucplayer.Player.equipment.dequip();
                 }
             }
         }
@@ -210,13 +210,14 @@ namespace Uncreated.Warfare.Vehicles
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
-
+                
                 UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+                /*
                 if (owner == null)
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
-                }
+                }*/
 
                 bool IsPlayerOwner = vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil;
 

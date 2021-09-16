@@ -35,8 +35,7 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default(MySqlData)))) return _sqlElsewhere;
-                else return Configuration.Instance.SQL;
+                return LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default(MySqlData))) ? _sqlElsewhere : Configuration.Instance.SQL;
             }
         }
         public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.

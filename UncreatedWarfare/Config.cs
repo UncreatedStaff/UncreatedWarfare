@@ -68,6 +68,7 @@ namespace Uncreated.Warfare
         public float MaxVehicleAbandonmentDistance;
         public bool UsePatchForPlayerCap;
         public bool DisableBackups;
+        public float MaxVehicleHeightToLeave;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -117,9 +118,10 @@ namespace Uncreated.Warfare
             this.TimeBetweenTp = 0.1f;
             this.EnableSquads = true;
             this.LoadoutCost = 8;
-            this.MaxVehicleAbandonmentDistance = 50f;
+            this.MaxVehicleAbandonmentDistance = 300f;
             this.UsePatchForPlayerCap = true;
             this.DisableBackups = false;
+            this.MaxVehicleHeightToLeave = 50f;
         }
     }
     public class Modules
