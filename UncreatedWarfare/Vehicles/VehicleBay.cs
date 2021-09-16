@@ -212,11 +212,6 @@ namespace Uncreated.Warfare.Vehicles
                 }
 
                 UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
-                if (owner == null)
-                {
-                    EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
-                    return;
-                }
 
                 bool IsPlayerOwner = vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil;
 

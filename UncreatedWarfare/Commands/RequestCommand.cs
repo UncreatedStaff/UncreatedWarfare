@@ -138,7 +138,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_notallowed");
                     }
-                    else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
+                    else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
                     {
                         ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
                     }

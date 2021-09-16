@@ -322,7 +322,7 @@ namespace Uncreated.Warfare
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
                 if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
                 {
-                    if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
+                    if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
                     {
                         if (!KitManager.TryGiveRiflemanKit(ucplayer))
                             KitManager.TryGiveUnarmedKit(ucplayer);
