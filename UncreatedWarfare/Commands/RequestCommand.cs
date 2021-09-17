@@ -102,6 +102,13 @@ namespace Uncreated.Warfare.Commands
                             if (loadoutNumber > 0 && loadoutNumber <= loadouts.Count)
                             {
                                 Kit kit = loadouts[loadoutNumber - 1];
+
+                                if (kit.IsClassLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
+                                {
+                                    ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
+                                    return;
+                                }
+
                                 GiveKit(ucplayer, kit);
                                 Stats.StatsManager.ModifyKit(kit.Name, x => x.TimesRequested++, true);
                                 Stats.StatsManager.ModifyStats(player.CSteamID.m_SteamID, s =>
@@ -138,7 +145,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_notallowed");
                     }
-                    else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
+                    else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
                     {
                         ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
                     }

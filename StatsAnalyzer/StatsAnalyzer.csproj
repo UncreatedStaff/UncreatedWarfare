@@ -319,11 +319,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="UncreatedNetworkingUWPPort">
-      <HintPath>..\..\UncreatedNetworkDiscordBot\UncreatedNetworkingUWPPort\bin\Debug\UncreatedNetworkingUWPPort.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Assets\Fonts\UncreatedWarfare.otf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
