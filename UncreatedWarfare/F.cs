@@ -1215,7 +1215,7 @@ namespace Uncreated.Warfare
         }
         public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
         {
-            if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.GROUND | RayMasks.GROUND2 | RayMasks.LARGE | RayMasks.MEDIUM))
+            if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
                 return h.point.y + above;
             else return defaultY;
         }

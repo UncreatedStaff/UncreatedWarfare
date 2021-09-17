@@ -155,8 +155,8 @@ namespace Uncreated.Warfare.Vehicles
         private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-
-            if (vehicle.transform.position.y - F.GetHeightAt2DPoint(player.transform.position.x, player.transform.position.y) > UCWarfare.Config.MaxVehicleHeightToLeave)
+            if (FOBManager.config.Data.Emplacements.Exists(x => x.vehicleID == vehicle.id)) return;
+            if (pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
                 player.SendChat("vehicle_too_high");
                 shouldAllow = false;
