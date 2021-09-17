@@ -173,8 +173,44 @@ namespace Uncreated.Warfare.Squads
                 LeaveSquad(player, squad);
         }
 
-        public static Squad CreateSquad(string name, UCPlayer leader, ulong team, EBranch branch)
+        public static string FindUnusedSquadName(ulong team)
         {
+            var friendlySquads = Squads.Where(s => s.Team == team).ToList();
+
+            string[] names =
+            {
+                "ALPHA",
+                "BRAVO",
+                "CHARLIE",
+                "DELTA",
+                "ECHO",
+                "FOXTROT",
+                "GOLF",
+                "HOTEL"
+            };
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                for (int j = 0; j < friendlySquads.Count; j++)
+                {
+                    if (names[i] == friendlySquads[j].Name)
+                    {
+                        break;
+                    }
+                    else if (j == friendlySquads.Count - 1)
+                    {
+                        return names[i];
+                    }
+                }
+            }
+
+            return names[0];
+        }
+
+        public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
+        {
+            string name = FindUnusedSquadName(team);
+
             Squad squad = new Squad(name.ToUpper(), leader, team, branch);
             SortMembers(squad);
             Squads.Add(squad);

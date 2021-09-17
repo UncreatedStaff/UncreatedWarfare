@@ -542,8 +542,14 @@ namespace Uncreated.Warfare
                 ClearPlayerMarkerForSquad(ucplayer);
                 return;
             }
-            if (ucplayer.KitClass != Kit.EClass.NONE)
-                overrideText = F.GetPlayerOriginalNames(player).NickName;
+            if (!ucplayer.IsSquadLeader())
+            {
+                allowed = false;
+                ucplayer.Message("range_notsquadleader");
+                return;
+            }
+
+            overrideText = ucplayer.Squad.Name.ToUpper();
             Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
             PlaceMarker(ucplayer, effectposition, false, false);
         }

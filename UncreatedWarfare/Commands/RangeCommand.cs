@@ -16,11 +16,11 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
+            if (player.Squad != null)
             {
-                if (player.Player.quests.isMarkerPlaced)
+                if (player.Squad.Leader.Player.quests.isMarkerPlaced)
                 {
-                    int distance = Mathf.RoundToInt((player.Position - player.Player.quests.markerPosition).magnitude / 10) * 10;
+                    int distance = Mathf.RoundToInt((player.Position - player.Squad.Leader.Player.quests.markerPosition).magnitude / 10) * 10;
 
                     player.Message("range", distance.ToString(Data.Locale));
                 }
@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Commands
                 }
             }
             else
-                player.Message("range_notsquadleader");
+                player.Message("range_notinsquad");
         }
     }
 }

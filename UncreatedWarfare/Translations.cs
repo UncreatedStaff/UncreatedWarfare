@@ -118,9 +118,10 @@ namespace Uncreated.Warfare
                 { "kits_notonduty", "<color=#a6918a>You must be on duty to execute that command.</color>" },
 
                 // Range
-                { "range", "<color=#9e9c99>The range to your marker is: <color=#8aff9f>{0}m</color></color>" },
-                { "range_nomarker", "<color=#9e9c99>Place a marker first.</color>" },
-                { "range_notsquadleader", "<color=#9e9c99>You must be a <color=#cedcde>SQUAD LEADER</color>.</color>" },
+                { "range", "<color=#9e9c99>The range to your squad's marker is: <color=#8aff9f>{0}m</color></color>" },
+                { "range_nomarker", "<color=#9e9c99>You squad has no marker.</color>" },
+                { "range_notsquadleader", "<color=#9e9c99>Only <color=#cedcde>SQUAD LEADERS</color> can place markers.</color>" },
+                { "range_notinsquad", "<color=#9e9c99>You must JOIN A SQUAD in order to do /range.</color>" },
 
                 // Squads
                 { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },

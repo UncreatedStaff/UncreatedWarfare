@@ -32,11 +32,6 @@ namespace Uncreated.Warfare.Squads
             string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
             if (command.Length >= 1 && op == "create")
             {
-                if (command.Length < 2)
-                {
-                    player.SendChat("correct_usage", "/squad create <squad name>");
-                    return;
-                }
                 if (SquadManager.Squads.Count(x => x.Team == team) >= 8)
                 {
                     player.SendChat("squad_too_many");
@@ -44,20 +39,24 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (!SquadManager.IsInAnySquad(player.CSteamID, out _, out _))
                 {
-                    string newname = name;
-                    ProfanityFilter.filterOutCurseWords(ref newname, '*');
-                    if (name != newname || name.Length > SquadManager.config.Data.MaxSquadNameLength)
-                    {
-                        player.SendChat("squad_no_no_words", name);
-                    }
-                    else if (!SquadManager.FindSquad(name, team, out Squad squad))
-                    {
-                        squad = SquadManager.CreateSquad(name, player, team, player.Branch);
+                    var squad = SquadManager.CreateSquad(player, team, player.Branch);
 
-                        player.SendChat("squad_created", squad.Name);
-                    }
-                    else
-                        player.SendChat("squad_e_exist", squad.Name);
+                    player.SendChat("squad_created", squad.Name);
+
+                    //string newname = name;
+                    //ProfanityFilter.filterOutCurseWords(ref newname, '*');
+                    //if (name != newname || name.Length > SquadManager.config.Data.MaxSquadNameLength)
+                    //{
+                    //    player.SendChat("squad_no_no_words", name);
+                    //}
+                    //else if (!SquadManager.FindSquad(name, team, out Squad squad))
+                    //{
+                    //    squad = SquadManager.CreateSquad(player, team, player.Branch);
+
+                    //    player.SendChat("squad_created", squad.Name);
+                    //}
+                    //else
+                    //    player.SendChat("squad_e_exist", squad.Name);
                 }
                 else
                     player.SendChat("squad_e_insquad");
