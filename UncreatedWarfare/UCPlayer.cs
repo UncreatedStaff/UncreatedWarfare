@@ -235,19 +235,26 @@ namespace Uncreated.Warfare
         }
         public int NearbyMemberBonus(int amount, float distance)
         {
-            if (Player.life.isDead || Player.transform is null)
-                return amount;
-
-            if (Squad is null)
-                return amount;
-
-            int count = 0;
-            for (int i = 0; i < Squad.Members.Count; i++)
+            try
             {
-                if (Squad.Members[i].Player.transform != null && Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
-                    count++;
+                if (Player.life.isDead || Player.transform is null)
+                    return amount;
+                if (Squad is null)
+                    return amount;
+
+                int count = 0;
+                for (int i = 0; i < Squad.Members.Count; i++)
+                {
+                    if (Squad.Members[i].Player.transform != null && Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
+                        count++;
+                }
+                return (int)Math.Round(amount * (1 + ((float)count / 10)));
             }
-            return (int)Math.Round(amount * (1 + ((float)count / 10)));
+            catch
+            {
+                return amount;
+            }
+
         }
 
         public bool IsNearFOB()

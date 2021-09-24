@@ -967,77 +967,7 @@ namespace Uncreated.Warfare
                 bool wideSpread)
             {
                 FOBs.FOBManager.OnItemDropped(item, point);
-            }/*
-            static bool oldhud = false;
-            [HarmonyPatch(typeof(Provider), nameof(Provider.accept),
-                typeof(SteamPlayerID), typeof(bool), typeof(bool), typeof(byte), typeof(byte), typeof(byte), typeof(Color), typeof(Color),
-                typeof(Color), typeof(bool), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int),
-                typeof(int[]), typeof(string[]), typeof(string[]), typeof(EPlayerSkillset), typeof(string), typeof(CSteamID))]
-            [HarmonyPrefix]
-            static void SetHUD(
-                SteamPlayerID playerID,
-                bool isPro,
-                bool isAdmin,
-                byte face,
-                byte hair,
-                byte beard,
-                Color skin,
-                Color color,
-                Color markerColor,
-                bool hand,
-                int shirtItem,
-                int pantsItem,
-                int hatItem,
-                int backpackItem,
-                int vestItem,
-                int maskItem,
-                int glassesItem,
-                int[] skinItems,
-                string[] skinTags,
-                string[] skinDynamicProps,
-                EPlayerSkillset skillset,
-                string language,
-                CSteamID lobbyID)
-            {
-                if (PlayerManager.HasSave(playerID.steamID.m_SteamID, out PlayerSave save) && save.DisableNametags != Provider.modeConfigData.Gameplay.Group_HUD)
-                {
-                    oldhud = Provider.modeConfigData.Gameplay.Group_HUD;
-                    Provider.modeConfigData.Gameplay.Group_HUD = !Provider.modeConfigData.Gameplay.Group_HUD;
-                }
             }
-            [HarmonyPatch(typeof(Provider), nameof(Provider.accept), 
-                typeof(SteamPlayerID), typeof(bool), typeof(bool), typeof(byte), typeof(byte), typeof(byte), typeof(Color), typeof(Color),
-                typeof(Color), typeof(bool), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int), typeof(int),
-                typeof(int[]), typeof(string[]), typeof(string[]), typeof(EPlayerSkillset), typeof(string), typeof(CSteamID))]
-            [HarmonyPostfix]
-            static void UnSetHUD(
-                SteamPlayerID playerID,
-                bool isPro,
-                bool isAdmin,
-                byte face,
-                byte hair,
-                byte beard,
-                Color skin,
-                Color color,
-                Color markerColor,
-                bool hand,
-                int shirtItem,
-                int pantsItem,
-                int hatItem,
-                int backpackItem,
-                int vestItem,
-                int maskItem,
-                int glassesItem,
-                int[] skinItems,
-                string[] skinTags,
-                string[] skinDynamicProps,
-                EPlayerSkillset skillset,
-                string language,
-                CSteamID lobbyID)
-            {
-                if (oldhud != Provider.modeConfigData.Gameplay.Group_HUD)
-                    Provider.modeConfigData.Gameplay.Group_HUD = oldhud;
-            }*/
         }
     }
 }
