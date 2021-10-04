@@ -5,6 +5,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
@@ -30,8 +31,6 @@ namespace Uncreated.Warfare.Networking
             internal static readonly NetCall<ulong, string, DateTime> LogBattleyeKicked = new NetCall<ulong, string, DateTime>(1005);
 
             internal static readonly NetCall<ulong, ulong, string, string, DateTime> LogTeamkilled = new NetCall<ulong, ulong, string, string, DateTime>(1006);
-
-
 
             internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellBan = new NetCall<ulong, ulong, string, uint, DateTime>(1007);
             [NetCall(ENetCall.FROM_SERVER, 1007)]
@@ -159,6 +158,46 @@ namespace Uncreated.Warfare.Networking
                 }
             }
             internal static readonly NetCall<ushort, EAssetType, string> SendAssetName = new NetCall<ushort, EAssetType, string>(1026);
+
+
+
+            internal static readonly NetCall RequestFullLog = new NetCall(1029);
+            [NetCall(ENetCall.FROM_SERVER, 1029)]
+            internal static void ReceiveRequestFullLog(in IConnection connection)
+            {
+                SendFullLog.Invoke(connection, Data.Logs.ToArray(), 0);
+                F.Log(Data.Logs.Count.ToString());
+            }
+            internal static readonly NetCallRaw<Log, byte> SendLogMessage =
+                new NetCallRaw<Log, byte>(1030, Log.Read, R => R.ReadUInt8(), Log.Write, (W, B) => W.Write(B));
+            internal static readonly NetCallRaw<Log[], byte> SendFullLog =
+                new NetCallRaw<Log[], byte>(1031, Log.ReadMany, R => R.ReadUInt8(), Log.WriteMany, (W, B) => W.Write(B));
+            internal static readonly NetCall<string> SendCommand = new NetCall<string>(1032);
+            [NetCall(ENetCall.FROM_SERVER, 1032)]
+            internal static void ReceiveCommand(in IConnection connection, string command)
+            {
+                if (Thread.CurrentThread == ThreadUtil.gameThread)
+                    RunCommand(command);
+                else
+                    UCWarfare.I.RunOnMainThread.Enqueue(() => RunCommand(command));
+            }
+            private static void RunCommand(string command)
+            {
+                F.Log(command, ConsoleColor.White);
+                bool shouldExecuteCommand = true;
+                try
+                {
+                    CommandWindow.onCommandWindowInputted?.Invoke(command, ref shouldExecuteCommand);
+                }
+                catch (Exception ex)
+                {
+                    F.LogError("Plugin threw an exception from onCommandWindowInputted:");
+                    F.LogError(ex);
+                }
+                if (!shouldExecuteCommand || Commander.execute(Steamworks.CSteamID.Nil, command))
+                    return;
+                F.LogError($"Unable to match \"{command}\" with any built-in commands");
+            }
 
         }
         /// <summary>1100 - 1199</summary>
@@ -340,7 +379,7 @@ namespace Uncreated.Warfare.Networking
                     if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out signtext))
                         if (kit.SignTexts.Count > 0)
                             signtext = kit.SignTexts.Values.ElementAt(0);
-
+                
                     SendKitClass.Invoke(connection, kitID, kit.Class, signtext);
                 } else
                 {

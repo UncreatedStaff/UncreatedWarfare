@@ -131,6 +131,8 @@
     <Compile Include="KitSearchDialog.xaml.cs">
       <DependentUpon>KitSearchDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="LogItem.cs" />
+    <Compile Include="LogStack.cs" />
     <Compile Include="MessageBox.xaml.cs">
       <DependentUpon>MessageBox.xaml</DependentUpon>
     </Compile>

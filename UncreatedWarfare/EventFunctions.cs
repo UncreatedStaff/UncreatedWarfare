@@ -102,15 +102,6 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
-            if (Data.OwnerComponents != null)
-            {
-                int c = Data.OwnerComponents.FindIndex(x => x != null && x.transform != default && data != default && x.transform.position == data.point);
-                if (c != -1)
-                {
-                    UnityEngine.Object.Destroy(Data.OwnerComponents[c]);
-                    Data.OwnerComponents.RemoveAt(c);
-                }
-            }
             FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
             RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
             RepairManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
@@ -130,11 +121,12 @@ namespace Uncreated.Warfare
             BarricadeData data = drop.GetServersideData();
 
             if (UCWarfare.Config.Debug)
-                F.Log("Placed barricade: " + data.barricade.asset.itemName + ", " + data.point.ToString(), ConsoleColor.DarkGray);
-
-            BarricadeOwnerDataComponent c = drop.model.gameObject.AddComponent<BarricadeOwnerDataComponent>();
-            c.SetData(data, region, drop.model);
-            Data.OwnerComponents.Add(c);
+                F.Log($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}", ConsoleColor.DarkGray);
+            BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
+            owner.Owner = data.owner;
+            SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
+            owner.Player = player?.player;
+            owner.BarricadeID = data.barricade.id;
             RallyManager.OnBarricadePlaced(drop, region);
 
             RepairManager.OnBarricadePlaced(drop, region);
@@ -161,36 +153,11 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<FOBBaseComponent>().Initialize(drop, data);
             }
         }
-        internal static void OnLandmineExploded(InteractableTrap trap, Collider collider, BarricadeOwnerDataComponent owner)
-        {
-            try
-            {
-                if (owner == default || owner.owner == default)
-                {
-                    if (owner == default || owner.ownerID == 0) return;
-                    FPlayerName usernames = Data.DatabaseManager.GetUsernames(owner.ownerID);
-                    if (UCWarfare.Config.Debug)
-                        F.Log(usernames.PlayerName + "'s landmine exploded", ConsoleColor.DarkGray);
-                }
-                else
-                {
-                    if (F.TryGetPlaytimeComponent(owner.owner.player, out PlaytimeComponent c))
-                        c.LastLandmineExploded = new LandmineDataForPostAccess(trap, owner);
-                    if (UCWarfare.Config.Debug)
-                        F.Log(F.GetPlayerOriginalNames(owner.owner).PlayerName + "'s landmine exploded", ConsoleColor.DarkGray);
-                }
-            }
-            catch (Exception ex)
-            {
-                F.LogError("Exception in LandmineExploded:");
-                F.LogError(ex);
-            }
-        }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
             try
             {
-                ThrowableOwnerDataComponent t = throwable.AddComponent<ThrowableOwnerDataComponent>();
+                ThrowableOwner t = throwable.AddComponent<ThrowableOwner>();
                 PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
                 t.Set(useable, throwable, c);
                 if (UCWarfare.Config.Debug)
@@ -207,7 +174,7 @@ namespace Uncreated.Warfare
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
-            Patches.InternalPatches.lastProjected = projectile;
+            Patches.DeathsPatches.lastProjected = projectile;
             if (F.TryGetPlaytimeComponent(gun.player, out PlaytimeComponent c))
             {
                 c.lastProjected = gun.equippedGunAsset.id;
@@ -447,9 +414,9 @@ namespace Uncreated.Warfare
                     shouldAllow = false;
                 }
             }
-            if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeOwnerDataComponent t))
+            if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c))
             {
-                t.lastDamaged = instigatorSteamID.m_SteamID;
+                c.LastDamager = instigatorSteamID.m_SteamID;
             }
         }
         internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
@@ -723,33 +690,6 @@ namespace Uncreated.Warfare
                 //Client.SendPlayerLeft(names);
                 Data.Gamemode.OnPlayerLeft(id);
                 F.Broadcast("player_disconnected", names.CharacterName);
-                if (UCWarfare.Config.RemoveLandminesOnDisconnect)
-                {
-                    try
-                    {
-                        IEnumerator<BarricadeOwnerDataComponent> ownedTraps = Data.OwnerComponents.Where(x => x != null && x.ownerID == player.CSteamID.m_SteamID
-                            && x.barricade?.asset?.type == EItemType.TRAP).GetEnumerator();
-                        while (ownedTraps.MoveNext())
-                        {
-                            BarricadeOwnerDataComponent comp = ownedTraps.Current;
-                            if (comp == null) continue;
-                            BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(comp.barricadeTransform);
-                            if (drop != null && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                            {
-                                BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                                F.Log($"Removed {player.DisplayName}'s {comp.barricade.asset.itemName} at {x}, {y}", ConsoleColor.Green);
-                            }
-                            Data.OwnerComponents.Remove(comp);
-                            UnityEngine.Object.Destroy(comp);
-                        }
-                        ownedTraps.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        F.LogError($"Error removing disconnecting player {names.PlayerName}'s landmines:");
-                        F.LogError(ex);
-                    }
-                }
                 if (gotptcomp)
                 {
                     UnityEngine.Object.Destroy(c);

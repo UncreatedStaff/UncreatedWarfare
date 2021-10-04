@@ -26,6 +26,7 @@ namespace Uncreated.Warfare.Commands
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null || ucplayer == null) return;
             ulong team = ucplayer.GetTeam();
             if (command.Length > 0)
             {

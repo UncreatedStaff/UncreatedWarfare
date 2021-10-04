@@ -2,7 +2,7 @@
 using UnityEngine;
 namespace Uncreated.Warfare.Components
 {
-    public class VehicleDamageOwnerComponent : MonoBehaviour
+    public class VehicleComponent : MonoBehaviour
     {
         public CSteamID owner;
         public ushort item;

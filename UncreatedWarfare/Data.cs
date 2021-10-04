@@ -5,7 +5,9 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
+using System.Text;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -29,6 +31,7 @@ namespace Uncreated.Warfare
 {
     public static class Data
     {
+        public const int MAX_LOGS = 1000;
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
         {
@@ -98,7 +101,6 @@ namespace Uncreated.Warfare
         public static Dictionary<ulong, string> Languages;
         public static Dictionary<string, LanguageAliasSet> LanguageAliases;
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
-        public static List<BarricadeOwnerDataComponent> OwnerComponents = new List<BarricadeOwnerDataComponent>();
         public static KitManager KitManager;
         public static VehicleSpawner VehicleSpawner;
         public static VehicleBay VehicleBay;
@@ -118,6 +120,7 @@ namespace Uncreated.Warfare
         public static CooldownManager Cooldowns;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
+        public static List<Log> Logs;
         public static TeamCTF CtfGamemode
         {
             get
@@ -360,6 +363,38 @@ namespace Uncreated.Warfare
             StatsManager.LoadVehicles();
             for (int i = 0; i < Provider.clients.Count; i++)
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
+        }
+        public static List<Log> ReadRocketLog()
+        {
+            List<Log> logs = new List<Log>();
+            string path = Path.Combine(Rocket.Core.Environment.LogsDirectory, Rocket.Core.Environment.LogFile);
+            if (!File.Exists(path))
+                return logs;
+            using (FileStream str = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                byte[] bytes = new byte[str.Length];
+                str.Read(bytes, 0, bytes.Length);
+                string file = Encoding.UTF8.GetString(bytes);
+                string[] lines = file.Split('\n');
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (logs.Count >= MAX_LOGS)
+                    {
+                        logs.RemoveRange(MAX_LOGS - 1, logs.Count - MAX_LOGS - 1);
+                    }
+                    logs.Insert(0, new Log(lines[i]));
+                }
+            }
+            return logs;
+        }
+        public static void AddLog(Log log)
+        {
+            if (Logs.Count > MAX_LOGS)
+            {
+                Logs.RemoveRange(MAX_LOGS - 1, Logs.Count - MAX_LOGS + 1);
+            }
+            else if (Logs.Count == MAX_LOGS) Logs.RemoveAt(MAX_LOGS - 1);
+            Logs.Insert(0, log);
         }
         private static void ClientReceived(byte[] bytes, IConnection connection)
         {

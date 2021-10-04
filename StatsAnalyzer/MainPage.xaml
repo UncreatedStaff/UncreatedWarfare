@@ -9,14 +9,30 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" SizeChanged="page_SizeChanged">
 
     <Grid x:Name="grid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition x:Name="consolecol" Width="0.5*"/>
+        </Grid.ColumnDefinitions>
         <Grid.Background>
             <AcrylicBrush TintColor="#CC33343A"/>
         </Grid.Background>
-        <StackPanel x:Name="container" Orientation="Vertical">
+        <local:LogStack x:Name="logStack" Grid.Column="1" VerticalAlignment="Bottom" >
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ListView Grid.Column="0" x:Name="log" Background="#FF000004" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SelectionChanged="log_SelectionChanged" VerticalContentAlignment="Bottom"/>
+                <ScrollBar x:Name="logScroller" Grid.Column="1" ValueChanged="ScrollBar_ValueChanged" IndicatorMode="MouseIndicator" ViewportSize="1080"/>
+            </Grid>
+            <TextBox x:Name="consoleInput" VerticalAlignment="Bottom" KeyDown="consoleInput_KeyDown"/>
+        </local:LogStack>
+        <StackPanel x:Name="container" Orientation="Vertical" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
             <StackPanel x:Name="NavBar" Orientation="Horizontal" Height="32" VerticalAlignment="Top" Background="#FF333333">
                 <Button x:Name="btnApplication" Content="Application" Width="118" ScrollViewer.VerticalScrollBarVisibility="Disabled" Background="#FF333333">
                     <Button.Flyout>
                         <MenuFlyout ShowMode="TransientWithDismissOnPointerMoveAway" ShouldConstrainToRootBounds="True">
+                            <MenuFlyoutItem Text="Refresh Console" Click="ClickApplication_RefreshConsole"/>
                             <MenuFlyoutItem Text="Settings" Click="ClickApplication_Settings"/>
                             <MenuFlyoutItem Text="Exit" Click="ClickApplication_Exit"/>
                         </MenuFlyout>

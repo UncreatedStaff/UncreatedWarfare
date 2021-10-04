@@ -25,10 +25,23 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void EventLoopAction()
         {
+            for (int i = 0; i < Provider.clients.Count; i++)
+            {
+                SteamPlayer current = Provider.clients[i];
+                try
+                {
+                    _ = current.player.transform;
+                }
+                catch (NullReferenceException)
+                {
+                    F.Log($"Kicking {F.GetPlayerOriginalNames(current).PlayerName} ({current.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                    Provider.kick(current.playerID.steamID,
+                        $"Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{UCWarfare.Config.DiscordInviteCode}).");
+                }
+            }
             bool ttc = TimeToCheck();
 
             FOBManager.OnGameTick(TicketCounter);
-
             for (int i = 0; i < Rotation.Count; i++)
             {
                 if (Rotation[i] == null) continue;

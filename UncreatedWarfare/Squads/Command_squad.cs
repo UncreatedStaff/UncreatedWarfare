@@ -39,24 +39,9 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (!SquadManager.IsInAnySquad(player.CSteamID, out _, out _))
                 {
-                    var squad = SquadManager.CreateSquad(player, team, player.Branch);
+                    Squad squad = SquadManager.CreateSquad(player, team, player.Branch);
 
                     player.SendChat("squad_created", squad.Name);
-
-                    //string newname = name;
-                    //ProfanityFilter.filterOutCurseWords(ref newname, '*');
-                    //if (name != newname || name.Length > SquadManager.config.Data.MaxSquadNameLength)
-                    //{
-                    //    player.SendChat("squad_no_no_words", name);
-                    //}
-                    //else if (!SquadManager.FindSquad(name, team, out Squad squad))
-                    //{
-                    //    squad = SquadManager.CreateSquad(player, team, player.Branch);
-
-                    //    player.SendChat("squad_created", squad.Name);
-                    //}
-                    //else
-                    //    player.SendChat("squad_e_exist", squad.Name);
                 }
                 else
                     player.SendChat("squad_e_insquad");
@@ -123,7 +108,7 @@ namespace Uncreated.Warfare.Squads
                     player.SendChat("correct_usage", "/squad kick <player name>");
                     return;
                 }
-                if (SquadManager.IsInAnySquad(player.CSteamID, out var squad, out _) && squad?.Leader.CSteamID == player.CSteamID)
+                if (SquadManager.IsInAnySquad(player.CSteamID, out Squad squad, out _) && squad?.Leader.CSteamID == player.CSteamID)
                 {
                     UCPlayer target = UCPlayer.FromName(name);
                     if (target != null)
@@ -145,7 +130,7 @@ namespace Uncreated.Warfare.Squads
             {
                 if (op == "leave")
                 {
-                    if (SquadManager.IsInAnySquad(player.CSteamID, out var squad, out _))
+                    if (SquadManager.IsInAnySquad(player.CSteamID, out Squad squad, out _))
                     {
                         SquadManager.LeaveSquad(player, squad);
                     }

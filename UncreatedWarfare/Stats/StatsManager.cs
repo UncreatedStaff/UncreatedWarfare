@@ -90,12 +90,16 @@ namespace Uncreated.Warfare.Stats
                 WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
             }
         }
-        const int TICK_SPEED_MINS = 4;
+        const int TICK_SPEED_MINS = 5;
         public static void BackupTick()
         {
-            if (minsCounter > TICK_SPEED_MINS)
+            if (minsCounter > TICK_SPEED_MINS - 1)
                 minsCounter = 0;
-            if (minsCounter != TICK_SPEED_MINS) return;
+            if (minsCounter != TICK_SPEED_MINS - 1)
+            {
+                minsCounter++;
+                return;
+            }
             if (weaponCounter >= Weapons.Count)
                 weaponCounter = 0;
             if (vehicleCounter >= Vehicles.Count)
@@ -105,15 +109,39 @@ namespace Uncreated.Warfare.Stats
             if (teamBackupCounter > 60)
                 teamBackupCounter = 0;
             if (Weapons.Count > 0)
-                BackupWeapon.NetInvoke(Weapons[0]);
+            {
+                BackupWeapon.NetInvoke(Weapons[weaponCounter]);
+                if (UCWarfare.Config.Debug)
+                    F.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ? 
+                        (asset.itemName + " - " + Weapons[weaponCounter].KitID) : 
+                        (Weapons[weaponCounter].ID.ToString() + " - " + Weapons[weaponCounter].KitID)));
+            }
             if (Vehicles.Count > 0)
-                BackupVehicle.NetInvoke(Vehicles[0]);
+            {
+                BackupVehicle.NetInvoke(Vehicles[vehicleCounter]);
+                if (UCWarfare.Config.Debug)
+                    F.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[vehicleCounter].ID) is VehicleAsset asset ?
+                        asset.vehicleName :
+                        Vehicles[vehicleCounter].ID.ToString()));
+            }
             if (Kits.Count > 0)
-                BackupKit.NetInvoke(Kits[0]);
+            {
+                BackupKit.NetInvoke(Kits[kitCounter]);
+                if (UCWarfare.Config.Debug)
+                    F.Log("[KITS] Backed up: " + Kits[kitCounter].KitID);
+            }
             if (teamBackupCounter == 30)
+            {
                 BackupTeam.NetInvoke(Team1Stats);
+                if (UCWarfare.Config.Debug)
+                    F.Log("[TEAMS] Backed up: TEAM 1");
+            }
             else if (teamBackupCounter == 60)
+            {
                 BackupTeam.NetInvoke(Team2Stats);
+                if (UCWarfare.Config.Debug)
+                    F.Log("[TEAMS] Backed up: TEAM 2");
+            }
             weaponCounter++;
             vehicleCounter++;
             kitCounter++;

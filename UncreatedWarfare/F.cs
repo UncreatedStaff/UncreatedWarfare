@@ -2071,7 +2071,7 @@ namespace Uncreated.Warfare
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
                             ChatManager.say(player.playerID.steamID, newMessage,
-                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
+                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
                                 + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -2110,7 +2110,7 @@ namespace Uncreated.Warfare
                         }
                         if (Encoding.UTF8.GetByteCount(newMessage) <= MaxChatSizeAmount)
                             ChatManager.say(player.playerID.steamID, newMessage,
-                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
+                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
                         else
                             LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
                                 + MaxChatSizeAmount.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");

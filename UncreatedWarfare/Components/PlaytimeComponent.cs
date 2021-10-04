@@ -8,35 +8,33 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Components
 {
-    public struct LandmineDataForPostAccess
+    public struct LandmineData
     {
+        public static LandmineData Nil = new LandmineData(null, null);
         public ushort barricadeID;
-        public uint barricadeInstId;
-        public SteamPlayer owner;
+        public Player owner;
         public ulong ownerID;
-        public LandmineDataForPostAccess(InteractableTrap trap, BarricadeOwnerDataComponent owner)
+        public int instanceID;
+        public LandmineData(InteractableTrap trap, BarricadeComponent owner)
         {
-            if (trap == default || owner == default)
+            if (trap == null || owner == null)
             {
                 barricadeID = 0;
-                barricadeInstId = 0;
                 this.owner = null;
-                if (owner != default)
-                    this.ownerID = owner.ownerID;
+                if (owner != null)
+                    this.ownerID = owner.Owner;
                 else this.ownerID = 0;
+                instanceID = 0;
             }
             else
             {
-                this.barricadeID = owner.barricade.id;
-                BarricadeDrop data = BarricadeManager.FindBarricadeByRootTransform(trap.transform);
-                if (data != null)
-                    this.barricadeInstId = data.instanceID;
-                else
-                    this.barricadeInstId = 0;
-                this.owner = owner.owner;
-                this.ownerID = owner.ownerID;
+                this.instanceID = trap.GetInstanceID();
+                this.barricadeID = owner.BarricadeID;
+                this.owner = owner.Player;
+                this.ownerID = owner.Owner;
             }
         }
+        
     }
     public class PlaytimeComponent : MonoBehaviour
     {
@@ -45,9 +43,9 @@ namespace Uncreated.Warfare.Components
         public Player player;
         public ushort lastShot;
         public ushort lastProjected;
-        public List<ThrowableOwnerDataComponent> thrown;
-        public LandmineDataForPostAccess LastLandmineTriggered;
-        public LandmineDataForPostAccess LastLandmineExploded;
+        public List<ThrowableOwner> thrown;
+        public LandmineData LastLandmineTriggered;
+        public LandmineData LastLandmineExploded;
         public ushort lastExplodedVehicle;
         public ushort lastRoadkilled;
         private Coroutine _currentTeleportRequest;
@@ -110,7 +108,7 @@ namespace Uncreated.Warfare.Components
             this.player = player;
             CurrentTimeSeconds = 0.0f;
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
-            this.thrown = new List<ThrowableOwnerDataComponent>();
+            this.thrown = new List<ThrowableOwner>();
             toastMessageOpen = 0;
             toastMessages = new Queue<ToastMessage>();
             F.Log("Started tracking playtime of " + player.name);

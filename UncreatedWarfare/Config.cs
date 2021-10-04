@@ -42,7 +42,6 @@ namespace Uncreated.Warfare
         public bool AllowCosmetics;
         public bool ModifySkillLevels;
         public bool AllowBatteryStealing;
-        public bool RemoveLandminesOnDisconnect;
         public string ActiveGamemode;
         public string DiscordInviteCode;
         public float InjuredLifeTimeSeconds;
@@ -95,7 +94,6 @@ namespace Uncreated.Warfare
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;
             this.AllowBatteryStealing = false;
-            this.RemoveLandminesOnDisconnect = false;
             this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
             this.InjuredLifeTimeSeconds = 90f;

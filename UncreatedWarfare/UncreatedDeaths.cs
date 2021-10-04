@@ -412,16 +412,17 @@ namespace Uncreated.Warfare
                 ulong placerTeam;
                 ulong triggererTeam;
                 ushort landmineID;
-                LandmineDataForPostAccess landmine;
+                LandmineData landmine;
                 string landmineName;
                 if (placer == null)
                 {
+                    F.Log("placer is null");
                     placer = dead.Player.channel.owner;
                     placerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                     foundPlacer = false;
                     landmineID = 0;
                     landmineName = "Unknown";
-                    landmine = default;
+                    landmine = LandmineData.Nil;
                     placerTeam = 0;
                     triggererTeam = 0;
                     triggererName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
@@ -435,10 +436,9 @@ namespace Uncreated.Warfare
                     foundPlacer = true;
                     if (F.TryGetPlaytimeComponent(placer.player, out PlaytimeComponent c))
                     {
-                        if (c.LastLandmineExploded.Equals(default)
-                            || c.LastLandmineExploded.Equals(default) || c.LastLandmineExploded.owner == null)
+                        if (c.LastLandmineExploded.Equals(default(LandmineData)) || c.LastLandmineExploded.owner == null)
                         {
-                            landmine = default;
+                            landmine = LandmineData.Nil;
                             landmineID = 0;
                         }
                         else
@@ -450,25 +450,25 @@ namespace Uncreated.Warfare
                     else
                     {
                         landmineID = 0;
-                        landmine = default;
+                        landmine = LandmineData.Nil;
                     }
+                    F.Log("Landmine: " + $"{landmine.ownerID}, {landmine.instanceID}, {landmine.barricadeID}");
                     if (landmineID != 0)
                     {
                         if (Assets.find(EAssetType.ITEM, landmineID) is ItemAsset asset) landmineName = asset.itemName;
                         else landmineName = landmineID.ToString(Data.Locale);
                     }
                     else landmineName = "Unknown";
-                    if (!landmine.Equals(default))
+                    if (landmine.instanceID != 0)
                     {
-                        KeyValuePair<ulong, PlaytimeComponent> pt = Data.PlaytimeComponents.FirstOrDefault(
+                        PlaytimeComponent pt = Data.PlaytimeComponents.Values.FirstOrDefault(
                             x =>
-                            x.Value != default &&
-                            !x.Value.LastLandmineTriggered.Equals(default) &&
-                            x.Value.LastLandmineTriggered.owner != default &&
-                            landmine.barricadeInstId == x.Value.LastLandmineTriggered.barricadeInstId);
-                        if (!pt.Equals(default(KeyValuePair<ulong, PlaytimeComponent>)))
+                            x != null &&
+                            !x.LastLandmineTriggered.Equals(default(LandmineData)) &&
+                            landmine.instanceID == x.LastLandmineTriggered.instanceID);
+                        if (pt != null)
                         {
-                            triggerer = pt.Value.player;
+                            triggerer = pt.player;
                             triggererTeam = F.GetTeam(triggerer);
                             triggererName = F.GetPlayerOriginalNames(triggerer);
                             foundTriggerer = true;
@@ -488,6 +488,7 @@ namespace Uncreated.Warfare
                         triggererName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                         foundTriggerer = false;
                     }
+                    F.Log($"Triggerer: {(foundTriggerer ? "not found" : triggererName.PlayerName)}");
                 }
                 string key = "LANDMINE";
                 string itemkey = landmineID.ToString(Data.Locale);
@@ -507,6 +508,7 @@ namespace Uncreated.Warfare
                 {
                     key += "_UNKNOWNKILLER";
                 }
+                F.Log(key);
                 if (foundPlacer && foundTriggerer)
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
@@ -1082,16 +1084,16 @@ namespace Uncreated.Warfare
                     item = c.lastShot;
                 else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
                 {
-                    ThrowableOwnerDataComponent g = c.thrown.FirstOrDefault(x => x.asset.isExplosive);
+                    ThrowableOwner g = c.thrown.FirstOrDefault(x => Assets.find(EAssetType.ITEM, x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
                     if (g != default)
                     {
-                        item = g.asset.id;
+                        item = g.ThrowableID;
                         if (Config.Debug)
                             F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }
                     else if (c.thrown[0] != null)
                     {
-                        item = c.thrown[0].asset.id;
+                        item = c.thrown[0].ThrowableID;
                         if (Config.Debug)
                             F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }

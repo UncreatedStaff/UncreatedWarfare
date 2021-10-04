@@ -462,28 +462,31 @@ namespace Uncreated.Warfare.Commands
         }
         private void ExamineTrap(UnityEngine.Transform i, Player player, bool sendurl)
         {
-            if (i.TryGetComponent(out Components.BarricadeOwnerDataComponent data))
+            if (i.TryGetComponent(out Components.BarricadeComponent data))
             {
-                if (data.ownerID == default || data.ownerID == 0)
+                if (data.Owner == 0)
                 {
                     player.SendChat("structure_examine_not_examinable");
                     return;
                 }
-                string teamname = TeamManager.TranslateName(data.group, player);
+                SteamPlayer owner = PlayerTool.getSteamPlayer(data.Owner);
+                ulong team = owner == null ? (PlayerManager.HasSave(data.Owner, out PlayerSave save) ? save.Team : 0) : owner.GetTeam();
+                string teamname = TeamManager.TranslateName(team, player);
                 if (sendurl)
                 {
                     player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                        Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                        F.GetPlayerOriginalNames(data.ownerID).CharacterName, teamname), data.ownerID);
+                        Assets.find(EAssetType.ITEM, data.BarricadeID) is ItemAsset asset ? asset.itemName : data.BarricadeID.ToString(Data.Locale),
+                        F.GetPlayerOriginalNames(data.Owner).CharacterName, teamname), data.Owner);
                 }
                 else
                 {
+                    Players.FPlayerName ownerName = F.GetPlayerOriginalNames(data.Owner);
                     player.SendChat("structure_last_owner_chat",
-                        Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                        F.GetPlayerOriginalNames(data.ownerID).CharacterName,
-                        data.owner == null ? data.ownerID.ToString(Data.Locale) : F.GetPlayerOriginalNames(data.owner).PlayerName,
-                        TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.ownerID)),
-                        teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
+                        Assets.find(EAssetType.ITEM, data.BarricadeID) is ItemAsset asset ? asset.itemName : data.BarricadeID.ToString(Data.Locale),
+                        ownerName.CharacterName,
+                        ownerName.PlayerName,
+                        TeamManager.GetTeamHexColor(team),
+                        teamname, TeamManager.GetTeamHexColor(team));
                 }
             }
             else

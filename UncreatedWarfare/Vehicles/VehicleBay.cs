@@ -239,7 +239,7 @@ namespace Uncreated.Warfare.Vehicles
                                 }
                             }
 
-                            if (!isOwnerInVehicle)
+                            if (!isOwnerInVehicle && isOwnerOnline)
                             {
                                 float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
 
@@ -307,7 +307,7 @@ namespace Uncreated.Warfare.Vehicles
             try
             {
                 if (vehicle == null) return;
-                if (!VehicleExists(vehicle.id, out var vehicleData))
+                if (!VehicleExists(vehicle.id, out VehicleData vehicleData))
                     return;
 
                 if (FOBManager.config.Data.Emplacements.Exists(i => i.vehicleID == vehicle.id))
@@ -316,7 +316,7 @@ namespace Uncreated.Warfare.Vehicles
                 UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
                 if (player == null)
                     return;
-                if (!KitManager.HasKit(player, out var kit))
+                if (!KitManager.HasKit(player, out Kit kit))
                 {
                     player.SendChat("vehicle_no_kit");
                     shouldAllow = false;
@@ -325,7 +325,7 @@ namespace Uncreated.Warfare.Vehicles
 
                 UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
 
-                bool isOwnerOnline = owner != default;
+                bool isOwnerOnline = owner != null;
 
                 bool IsInOwnerSquad = isOwnerOnline && owner.Squad != null && owner.Squad.Members.Contains(player);
 
@@ -345,7 +345,7 @@ namespace Uncreated.Warfare.Vehicles
                         }
                     }
 
-                    if (!isOwnerInVehicle)
+                    if (!isOwnerInVehicle && isOwnerOnline)
                     {
                         float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
 

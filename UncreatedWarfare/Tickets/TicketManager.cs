@@ -102,7 +102,7 @@ namespace Uncreated.Warfare.Tickets
                 {
                     AddTeam2Tickets(-1 * data.TicketCost);
                 }
-                if (vehicle.transform.gameObject.TryGetComponent(out VehicleDamageOwnerComponent vc))
+                if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
                     if (XPManager.config.Data.VehicleDestroyedXP.ContainsKey(data.Type))
                     {

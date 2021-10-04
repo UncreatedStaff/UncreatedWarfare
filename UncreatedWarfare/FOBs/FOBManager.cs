@@ -224,7 +224,7 @@ namespace Uncreated.Warfare.FOBs
                 }
                 else
                 {
-                    if ((fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(9, 2))
+                    if (!PlayerManager.OnlinePlayers[j].Player.life.isDead && (fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(9, 2))
                     {
                         if (!fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
                         {
@@ -278,7 +278,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (data.barricade.id == config.Data.FOBID)
             {
-                TryDeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeOwnerDataComponent o) ? o.lastDamaged : 0);
+                TryDeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeComponent o) ? o.LastDamager : 0);
             }
             else if (data.barricade.id == config.Data.AmmoCrateID)
             {
@@ -548,11 +548,10 @@ namespace Uncreated.Warfare.FOBs
             this.Structure = Structure;
             DateCreated = new DateTime(DateTime.Now.Ticks);
             ClosestLocation =
-                LevelNodes.nodes
+                (LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
-                .Cast<LocationNode>()
                 .Aggregate((n1, n2) =>
-                    (n1.point - Structure.model.position).sqrMagnitude <= (n2.point - Structure.model.position).sqrMagnitude ? n1 : n2)
+                    (n1.point - Structure.model.position).sqrMagnitude <= (n2.point - Structure.model.position).sqrMagnitude ? n1 : n2) as LocationNode)
                 .name;
             nearbyPlayers = new List<UCPlayer>();
             nearbyEnemies = new List<UCPlayer>();

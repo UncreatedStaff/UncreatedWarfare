@@ -7,8 +7,10 @@ using Uncreated.Networking;
 using Uncreated.Warfare.Stats;
 using Windows.ApplicationModel.Core;
 using Windows.Storage;
+using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media.Imaging;
 namespace StatsAnalyzer
 {
@@ -31,8 +33,13 @@ namespace StatsAnalyzer
         public MessageBox Messager = new MessageBox();
         public Client NetClient;
         public List<ImageCache> ImageCache = new List<ImageCache>();
+        public double ConsoleInputHeight { get => consoleInput.ActualHeight; }
+        internal void AddLog(LogItem item) => log.Items.Add(item);
+        public Windows.UI.Xaml.Controls.Primitives.ScrollBar ScrollBar => logScroller;
         ~StatsPage()
         {
+            LogStack.SetConsoleLogging.Invoke(NetClient.connection, false);
+            System.Threading.Thread.Sleep(1000);
             SQL.Dispose();
             NetClient.Dispose();
         }
@@ -136,17 +143,17 @@ namespace StatsAnalyzer
             };
         public StatsPage()
         {
+            I = this;
             InitializeComponent();
             this.Unloaded += StatsPage_Unloaded;
-            I = this;
             Loaded += StatsPage_Loaded;
             Logging.OnLog += (M, C) => Debug.WriteLine(" -==- INF: " + M);
             Logging.OnLogWarning += (M, C) => Debug.WriteLine(" -==- WRN: " + M);
             Logging.OnLogError += (M, C) => Debug.WriteLine(" -==- ERR: " + M);
             Logging.OnLogException += (M, C) => Debug.WriteLine(" -==- EXC: " + M.ToString());
             NetFactory.RegisterNetMethods(System.Reflection.Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+            logStack.Init();
         }
-
         private void StatsPage_Unloaded(object sender, RoutedEventArgs e)
         {
             SQL.Dispose();
@@ -229,6 +236,10 @@ namespace StatsAnalyzer
         private void ClickApplication_Exit(object sender, RoutedEventArgs e)
         {
             Application.Current.Exit();
+        }
+        private void ClickApplication_RefreshConsole(object sender, RoutedEventArgs e)
+        {
+            LogStack.SetConsoleLogging.Invoke(NetClient.connection, true);
         }
         private async void ClickApplication_Settings(object sender, RoutedEventArgs e)
         {
@@ -446,6 +457,37 @@ namespace StatsAnalyzer
             SingleWeaponPage.Height = e.NewSize.Height - NavBar.Height - SingleWeaponPage.Margin.Top - SingleWeaponPage.Margin.Bottom;
             WeaponList.Height = e.NewSize.Height - NavBar.Height - WeaponList.Margin.Top - WeaponList.Margin.Bottom;
             WeaponList.Width = e.NewSize.Width - WeaponList.Margin.Left - WeaponList.Margin.Right;
+            logStack.CalculateLogCount();
+        }
+
+        private void log_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ListView box && box.SelectedIndex > 0 && box.Items[box.SelectedIndex] is LogItem i)
+            {
+                LogItem.LogItem_PointerPressed(i, null);
+                if (box.SelectedItems.Count > 0)
+                    (box.SelectedItems[0] as LogItem).IsSelected = false;
+            }
+        }
+        private void ScrollBar_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            if (LogStack.ignoreScroll) return;
+            double pct = 1 - e.NewValue / ScrollBar.Maximum;
+            logStack.ArtificialScroll(pct);
+        }
+
+        private void consoleInput_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == VirtualKey.Enter && sender is TextBox box)
+            {
+                e.Handled = true;
+                string command = box.Text;
+                box.Text = string.Empty;
+                if (NetClient.connection.IsActive)
+                    LogStack.SendCommand.Invoke(NetClient.connection, command);
+                else 
+                    ReceiveNoServer(null);
+            }
         }
     }
     public enum EMode : byte

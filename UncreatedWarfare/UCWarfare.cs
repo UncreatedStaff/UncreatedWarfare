@@ -5,6 +5,7 @@ using Rocket.Unturned;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Uncreated.Networking;
 using Uncreated.SQL;
@@ -43,9 +44,11 @@ namespace Uncreated.Warfare
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
         private bool InitialLoadEventSubscription;
+        public Queue<System.Action> RunOnMainThread = new Queue<System.Action>();
         protected override void Load()
         {
             Instance = this;
+            Data.Logs = Data.ReadRocketLog();
             if (Config.UsePatchForPlayerCap)
                 Provider.maxPlayers = 24;
             Data.LoadColoredConsole();
@@ -63,7 +66,7 @@ namespace Uncreated.Warfare
             F.Log("Patching methods...", ConsoleColor.Magenta);
             try
             {
-                Patches.InternalPatches.DoPatching();
+                Patches.DoPatching();
             }
             catch (Exception ex)
             {
@@ -209,7 +212,6 @@ namespace Uncreated.Warfare
             UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
             UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
             UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
-            Patches.InternalPatches.OnLandmineExplode += EventFunctions.OnLandmineExploded;
             PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
             BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
@@ -247,7 +249,6 @@ namespace Uncreated.Warfare
             UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
             UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
             UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
-            Patches.InternalPatches.OnLandmineExplode -= EventFunctions.OnLandmineExploded;
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
@@ -315,6 +316,23 @@ namespace Uncreated.Warfare
                 Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, false), out _);
             }
         }
+
+        [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "MonoBehaviour")]
+        private void Update()
+        {
+            while (RunOnMainThread.Count > 0)
+            {
+                try
+                {
+                    RunOnMainThread.Dequeue().Invoke();
+                }
+                catch (Exception ex)
+                {
+                    F.LogError("Error running on main thread:");
+                    F.LogError(ex);
+                }
+            }
+        }
         protected override void Unload()
         {
             if (StatsRoutine != null)
@@ -346,7 +364,7 @@ namespace Uncreated.Warfare
             Logging.OnLogException -= F.LogError;
             try
             {
-                Patches.InternalPatches.Unpatch();
+                Patches.Unpatch();
             }
             catch (Exception ex)
             {

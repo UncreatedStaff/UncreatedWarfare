@@ -13,6 +13,17 @@ namespace Uncreated.Warfare.Squads
     {
         public static Config<SquadConfigData> config;
         public static List<Squad> Squads;
+        public static readonly string[] NAMES =
+            {
+                "ALPHA",
+                "BRAVO",
+                "CHARLIE",
+                "DELTA",
+                "ECHO",
+                "FOXTROT",
+                "GOLF",
+                "HOTEL"
+            };
 
         public SquadManager()
         {
@@ -169,42 +180,29 @@ namespace Uncreated.Warfare.Squads
         }
         public static void InvokePlayerLeft(UCPlayer player)
         {
-            if (IsInAnySquad(player.CSteamID, out var squad, out _))
+            if (IsInAnySquad(player.CSteamID, out Squad squad, out _))
                 LeaveSquad(player, squad);
         }
 
         public static string FindUnusedSquadName(ulong team)
         {
-            var friendlySquads = Squads.Where(s => s.Team == team).ToList();
-
-            string[] names =
+            Squad[] friendlySquads = Squads.Where(s => s.Team == team).ToArray();
+            for (int i = 0; i < NAMES.Length; i++)
             {
-                "ALPHA",
-                "BRAVO",
-                "CHARLIE",
-                "DELTA",
-                "ECHO",
-                "FOXTROT",
-                "GOLF",
-                "HOTEL"
-            };
-
-            for (int i = 0; i < names.Length; i++)
-            {
-                for (int j = 0; j < friendlySquads.Count; j++)
+                for (int j = 0; j < friendlySquads.Length; j++)
                 {
-                    if (names[i] == friendlySquads[j].Name)
+                    if (NAMES[i] == friendlySquads[j].Name)
                     {
                         break;
                     }
-                    else if (j == friendlySquads.Count - 1)
+                    else if (j == friendlySquads.Length - 1)
                     {
-                        return names[i];
+                        return NAMES[i];
                     }
                 }
             }
 
-            return names[0];
+            return NAMES[0];
         }
 
         public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
@@ -232,7 +230,7 @@ namespace Uncreated.Warfare.Squads
         public static bool IsInSquad(CSteamID playerID, Squad targetSquad) => targetSquad.Members.Exists(p => p.Steam64 == playerID.m_SteamID);
         public static void JoinSquad(UCPlayer player, ref Squad squad)
         {
-            foreach (var p in squad.Members)
+            foreach (UCPlayer p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
                     p.Message("squad_player_joined", player.Player.channel.owner.playerID.nickName);
@@ -249,7 +247,7 @@ namespace Uncreated.Warfare.Squads
             UpdateUISquad(squad);
             UpdateUIMemberCount(squad.Team);
 
-            if (RallyManager.HasRally(squad, out var rally))
+            if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ShowUIForSquad();
 
             PlayerManager.ApplyToOnline();
@@ -273,7 +271,7 @@ namespace Uncreated.Warfare.Squads
             if (!willNeedNewLeader) SortMembers(squad);
             player.Squad = null;
 
-            foreach (var p in squad.Members)
+            foreach (UCPlayer p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
                     p.Message("squad_player_left", player.Player.channel.owner.playerID.nickName);
@@ -365,12 +363,12 @@ namespace Uncreated.Warfare.Squads
                 return;
 
             if (squad.Members.RemoveAll(p => p.CSteamID.m_SteamID == player.CSteamID.m_SteamID) > 0)
-                player?.Message("squad_kicked");
+                player?.Message("squad_kicked", squad.Name);
             SortMembers(squad);
             foreach (UCPlayer p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
-                    p.Message("squad_player_kicked", player.Player.channel.owner.playerID.nickName);
+                    p.Message("squad_player_kicked", F.GetPlayerOriginalNames(player).NickName);
 
             }
 
@@ -392,7 +390,7 @@ namespace Uncreated.Warfare.Squads
 
             squad.Leader = newLeader;
 
-            foreach (var p in squad.Members)
+            foreach (UCPlayer p in squad.Members)
             {
                 if (p.CSteamID != squad.Leader.CSteamID)
                     p.Message("squad_player_promoted", newLeader.Player.channel.owner.playerID.nickName);
