@@ -31,6 +31,11 @@ namespace StatsAnalyzer
 
         private void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
         {
+            if (StatsPage.I.NetClient == null)
+            {
+                StatsPage.I.SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             if (selected.HasValue)
             {
                 StatsPage.RequestPlayerData.Invoke(StatsPage.I.NetClient.connection, selected.Value.Steam64);
@@ -93,6 +98,11 @@ namespace StatsAnalyzer
                 Debug.WriteLine("3");
                 searchCancel.Dispose();
                 searchCancel = new CancellationTokenSource();
+                if (StatsPage.I.SQL == null)
+                {
+                    sender.ItemsSource = new string[1] { "No MySQL Connection" };
+                    return;
+                }
                 List<FPlayerName> suitableItems = await StatsPage.I.SQL.UsernameSearch(text, searchCancel.Token);
                 sender.ItemsSource = suitableItems;
                 selected = null;

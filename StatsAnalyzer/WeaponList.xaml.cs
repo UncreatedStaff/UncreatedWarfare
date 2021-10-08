@@ -121,6 +121,11 @@ namespace StatsAnalyzer
         }
         private void KitPointerReleased(object sender, PointerRoutedEventArgs e)
         {
+            if (StatsPage.I.NetClient == null)
+            {
+                StatsPage.I.SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             if (sender is WeaponData data && data.KitID != null)
                 StatsPage.RequestWeaponData.Invoke(StatsPage.I.NetClient.connection, data.Weapon, data.KitID, !StatsPage.I.IsCached(data.Weapon, false));
         }

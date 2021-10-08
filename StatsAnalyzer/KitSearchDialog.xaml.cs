@@ -32,6 +32,11 @@ namespace StatsAnalyzer
                 return;
             }
 
+            if (StatsPage.I.NetClient == null)
+            {
+                StatsPage.I.SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             StatsPage.RequestKitData.Invoke(StatsPage.I.NetClient.connection, searchBox.Text.ToLower());
             this.Hide();
         }

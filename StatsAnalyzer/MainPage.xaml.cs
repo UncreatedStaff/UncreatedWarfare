@@ -38,12 +38,15 @@ namespace StatsAnalyzer
         public Windows.UI.Xaml.Controls.Primitives.ScrollBar ScrollBar => logScroller;
         ~StatsPage()
         {
-            LogStack.SetConsoleLogging.Invoke(NetClient.connection, false);
-            System.Threading.Thread.Sleep(1000);
+            if (NetClient != null)
+            {
+                LogStack.SetConsoleLogging.Invoke(NetClient.connection, false);
+                System.Threading.Thread.Sleep(1000);
+                NetClient.Dispose();
+            }
             SQL.Dispose();
-            NetClient.Dispose();
         }
-        public async void SendMessage(string title, string message)
+        public async Task SendMessage(string title, string message)
         {
             Messager.Title = title;
             Messager.Message = message;
@@ -54,8 +57,8 @@ namespace StatsAnalyzer
         [NetCall(ENetCall.FROM_SERVER, 2014)]
         internal static void ReceiveNoServer(in IConnection connection)
         {
-            CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => {
-                I.SendMessage("Not Connected", "The intermediary server has no connection to Uncreated Warfare.");
+            _ = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => {
+                I.SendMessage("Not Connected", "The intermediary server has no connection to Uncreated Warfare.").GetAwaiter().GetResult();
             }).AsTask().ConfigureAwait(false);
         }
         public void ClearCache() => ImageCache.Clear();
@@ -109,6 +112,11 @@ namespace StatsAnalyzer
         };
         private static void OnIDSearchOK(ushort id, IDSearch search, ContentDialogButtonClickEventArgs args)
         {
+            if (I.NetClient == null)
+            {
+                I.SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             if (search.IsVehicle)
             {
                 RequestVehicleData.Invoke(I.NetClient.connection, id, I.IsCached(id, true));
@@ -161,15 +169,22 @@ namespace StatsAnalyzer
         }
         public void ReloadTCP()
         {
-            if (NetClient != null)
+            try
             {
-                NetClient.connection.Close();
-                NetClient.Dispose();
+                if (NetClient != null)
+                {
+                    NetClient.connection.Close();
+                    NetClient.Dispose();
+                }
+                Debug.WriteLine("Attempting a connection to a TCP server.");
+                NetClient = new Client(Settings.TCPServerIP, Settings.TCPServerPort, Settings.Identity);
+                NetClient.AssertConnected();
+                NetClient.connection.OnReceived += ClientReceived;
             }
-            Debug.WriteLine("Attempting a connection to a TCP server.");
-            NetClient = new Client(Settings.TCPServerIP, Settings.TCPServerPort, Settings.Identity);
-            NetClient.AssertConnected();
-            NetClient.connection.OnReceived += ClientReceived;
+            catch (Exception ex)
+            {
+                SendMessage("Error starting TCP: " + ex.GetType().Name, ex.Message + '\n' + ex.StackTrace).ConfigureAwait(false);
+            }
         }
         private void ClientReceived(byte[] bytes, IConnection connection)
         {
@@ -177,17 +192,40 @@ namespace StatsAnalyzer
         }
         private async void StatsPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await LoadSettings();
-            if (Settings.SQL.Database.Length != 0 && Settings.SQL.Username.Length != 0 && Settings.SQL.Password.Length != 0)
+            try
             {
-                SQL = new DatabaseManager(Settings.SQL, true);
-                await SQL.Open();
+                await LoadSettings();
+                if (Settings.LastSteam64 != 0)
+                    S64Search.TextBoxText = Settings.LastSteam64.ToString(Locale);
             }
-            if (Settings.LastSteam64 != 0)
-                S64Search.TextBoxText = Settings.LastSteam64.ToString(Locale);
-            if (Settings.Identity.Length > 0)
+            catch
             {
-                ReloadTCP();
+                StorageFolder folder = ApplicationData.Current.LocalFolder;
+                if (folder != null)
+                    await Settings.IO.WriteTo(Settings.Default, folder, "settings.dat");
+            }
+            try
+            {
+                if (Settings.SQL.Database.Length != 0 && Settings.SQL.Username.Length != 0 && Settings.SQL.Password.Length != 0)
+                {
+                    SQL = new DatabaseManager(Settings.SQL, true);
+                    await SQL.Open();
+                }
+            }
+            catch (Exception ex)
+            {
+                await SendMessage("Error opening SQL: " + ex.GetType().Name, ex.Message + '\n' + ex.StackTrace);
+            }
+            try
+            {
+                if (Settings.Identity.Length > 0)
+                {
+                    ReloadTCP();
+                }
+            }
+            catch (Exception ex)
+            {
+                await SendMessage("Error starting TCP: " + ex.GetType().Name, ex.Message + '\n' + ex.StackTrace);
             }
         }
 
@@ -239,6 +277,11 @@ namespace StatsAnalyzer
         }
         private void ClickApplication_RefreshConsole(object sender, RoutedEventArgs e)
         {
+            if (NetClient == null)
+            {
+                SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             LogStack.SetConsoleLogging.Invoke(NetClient.connection, true);
         }
         private async void ClickApplication_Settings(object sender, RoutedEventArgs e)
@@ -274,6 +317,11 @@ namespace StatsAnalyzer
         }
         private void ClickRequest_Team(object sender, RoutedEventArgs e)
         {
+            if (NetClient == null)
+            {
+                SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             RequestTeamsData.Invoke(NetClient.connection);
         }
         private async void ClickRequest_Vehicle(object sender, RoutedEventArgs e)
@@ -293,6 +341,7 @@ namespace StatsAnalyzer
             TeamComparePage.Visibility = Visibility.Collapsed;
             SingleWeaponPage.Visibility = Visibility.Collapsed;
             SingleStatPage.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Collapsed;
             WeaponList.Load(weapons, weaponname, kitnames);
             WeaponList.Visibility = Visibility.Visible;
             await Task.Yield();
@@ -301,9 +350,11 @@ namespace StatsAnalyzer
         {
             CurrentMode = EMode.SINGLE;
             SingleKitPage.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Collapsed;
             TeamComparePage.Visibility = Visibility.Collapsed;
             SingleWeaponPage.Visibility = Visibility.Collapsed;
             WeaponList.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Collapsed;
             await SingleStatPage.Load(stats, isOnline);
             SingleStatPage.Visibility = Visibility.Visible;
         }
@@ -314,6 +365,7 @@ namespace StatsAnalyzer
             TeamComparePage.Visibility = Visibility.Collapsed;
             SingleWeaponPage.Visibility = Visibility.Collapsed;
             WeaponList.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Collapsed;
             SingleKitPage.Load(kit, signtext, @class);
             SingleKitPage.Visibility = Visibility.Visible;
             await Task.Yield();
@@ -326,6 +378,7 @@ namespace StatsAnalyzer
             SingleKitPage.Visibility = Visibility.Collapsed;
             SingleWeaponPage.Visibility = Visibility.Collapsed;
             WeaponList.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Collapsed;
             TeamComparePage.Visibility = Visibility.Visible;
             TeamComparePage.Load(team1, team2);
             if (team2.Wins == 0) team2.Wins = team1.Losses;
@@ -343,8 +396,21 @@ namespace StatsAnalyzer
             SingleKitPage.Visibility = Visibility.Collapsed;
             TeamComparePage.Visibility = Visibility.Collapsed;
             WeaponList.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Collapsed;
             SingleWeaponPage.Visibility = Visibility.Visible;
             SingleWeaponPage.Load(weapon, name, kitname, image);
+            await Task.Yield();
+        }
+        public async Task UpdateVehicle(WarfareVehicle vehicle, string name, BitmapImage image)
+        {
+            CurrentMode = EMode.VEHICLE;
+            SingleStatPage.Visibility = Visibility.Collapsed;
+            SingleKitPage.Visibility = Visibility.Collapsed;
+            TeamComparePage.Visibility = Visibility.Collapsed;
+            WeaponList.Visibility = Visibility.Collapsed;
+            SingleWeaponPage.Visibility = Visibility.Collapsed;
+            SingleVehicle.Visibility = Visibility.Visible;
+            SingleVehicle.Load(vehicle, name, image);
             await Task.Yield();
         }
         public async Task Steam64SearchOK(Steam64Find sender, ContentDialogButtonClickEventArgs args)
@@ -399,6 +465,11 @@ namespace StatsAnalyzer
         {
             if (sender.TextBoxText.StartsWith("765") && ulong.TryParse(sender.TextBoxText, System.Globalization.NumberStyles.Any, Locale, out ulong Steam64))
             {
+                if (NetClient == null)
+                {
+                    await SendMessage("NO CONNECTION", "Not connected to TCP Server.");
+                    return;
+                }
                 RequestPlayerData.Invoke(NetClient.connection, Steam64);
                 Settings.LastSteam64 = Steam64;
                 await SaveSettings();
@@ -483,6 +554,11 @@ namespace StatsAnalyzer
                 e.Handled = true;
                 string command = box.Text;
                 box.Text = string.Empty;
+                if (NetClient == null)
+                {
+                    SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                    return;
+                }
                 if (NetClient.connection.IsActive)
                     LogStack.SendCommand.Invoke(NetClient.connection, command);
                 else 

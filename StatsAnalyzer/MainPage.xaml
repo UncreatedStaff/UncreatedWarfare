@@ -11,12 +11,14 @@
     <Grid x:Name="grid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
+            <ColumnDefinition Width="4"/>
             <ColumnDefinition x:Name="consolecol" Width="0.5*"/>
         </Grid.ColumnDefinitions>
         <Grid.Background>
             <AcrylicBrush TintColor="#CC33343A"/>
         </Grid.Background>
-        <local:LogStack x:Name="logStack" Grid.Column="1" VerticalAlignment="Bottom" >
+        <Rectangle Grid.Column="1" Fill="Black" />
+        <local:LogStack x:Name="logStack" Grid.Column="2" VerticalAlignment="Bottom" >
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -27,7 +29,7 @@
             </Grid>
             <TextBox x:Name="consoleInput" VerticalAlignment="Bottom" KeyDown="consoleInput_KeyDown"/>
         </local:LogStack>
-        <StackPanel x:Name="container" Orientation="Vertical" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+        <StackPanel x:Name="container" Orientation="Vertical" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="1">
             <StackPanel x:Name="NavBar" Orientation="Horizontal" Height="32" VerticalAlignment="Top" Background="#FF333333">
                 <Button x:Name="btnApplication" Content="Application" Width="118" ScrollViewer.VerticalScrollBarVisibility="Disabled" Background="#FF333333">
                     <Button.Flyout>
@@ -57,6 +59,7 @@
             <local:SingleWeapon x:Name="SingleWeaponPage" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top" TitleSize="48" Header2Size="32" Header3Size="18" ValueSize="18"/>
             <local:TeamComparison x:Name="TeamComparePage" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
             <local:WeaponList x:Name="WeaponList" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
+            <local:SingleVehicle x:Name="SingleVehicle" Visibility="Collapsed" Margin="10,10,10,10" ScrollViewer.VerticalScrollBarVisibility="Visible" VerticalContentAlignment="Top"/>
         </StackPanel>
     </Grid>
 </Page>

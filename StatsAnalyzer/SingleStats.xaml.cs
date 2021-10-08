@@ -132,6 +132,11 @@ namespace StatsAnalyzer
         }
         private void KitPointerReleased(object sender, PointerRoutedEventArgs e)
         {
+            if (StatsPage.I.NetClient == null)
+            {
+                StatsPage.I.SendMessage("NO CONNECTION", "Not connected to TCP Server.").ConfigureAwait(false);
+                return;
+            }
             if (sender is KitData data && data.KitName != null)
                 StatsPage.RequestKitData.Invoke(StatsPage.I.NetClient.connection, data.KitName);
         }

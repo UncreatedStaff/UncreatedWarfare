@@ -24,9 +24,6 @@ namespace StatsAnalyzer
         [NetCall(ENetCall.FROM_SERVER, 1030)]
         internal static void ReceiveLog(in IConnection conneciton, Log log, byte server)
         {
-            Debug.WriteLine(log.Message);
-            if (!FilterLog(log.Message)) return;
-            Debug.WriteLine(log.Message);
             if (I == null) return;
             CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => {
                 I.Logs.Insert(0, log);

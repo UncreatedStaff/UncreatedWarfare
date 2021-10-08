@@ -11,7 +11,7 @@
   <Identity
     Name="b4eb3fcd-e8f2-4034-ace0-000bbe1cd393"
     Publisher="CN=danny"
-    Version="1.0.0.0" />
+    Version="1.0.10.0" />
 
   <mp:PhoneIdentity PhoneProductId="b4eb3fcd-e8f2-4034-ace0-000bbe1cd393" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
@@ -43,6 +43,9 @@
         </uap:DefaultTile >
         <uap:SplashScreen Image="Assets\SplashScreen.png"  BackgroundColor="#9cb6a4"/>
         <uap:LockScreen BadgeLogo="Assets\BadgeLogo.png" Notification="badgeAndTileText"/>
+        <uap:InitialRotationPreference>
+          <uap:Rotation Preference="landscape"/>
+          <uap:Rotation Preference="landscapeFlipped"/></uap:InitialRotationPreference>
       </uap:VisualElements>
     </Application>
   </Applications>

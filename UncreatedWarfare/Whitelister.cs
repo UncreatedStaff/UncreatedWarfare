@@ -21,7 +21,6 @@ namespace Uncreated.Warfare
             StructureDrop.OnSalvageRequested_Global += OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested += OnEditSignRequest;
-            BarricadeManager.onDeployBarricadeRequested += OnBarricadePlaceRequested;
             BarricadeManager.onDamageBarricadeRequested += OnBarricadeDamageRequested;
             StructureManager.onDamageStructureRequested += OnStructureDamageRequested;
             Reload();
@@ -143,7 +142,7 @@ namespace Uncreated.Warfare
                 player.Message("whitelist_noeditsign");
             }
         }
-        private void OnBarricadePlaceRequested(
+        internal void OnBarricadePlaceRequested(
             Barricade barricade,
             ItemBarricadeAsset asset,
             Transform hit,
@@ -159,14 +158,12 @@ namespace Uncreated.Warfare
             {
                 UCPlayer player = UCPlayer.FromID(owner);
                 if (player == null || player.Player == null || F.OnDuty(player)) return;
-                if (player == null || TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+                if (TeamManager.IsInAnyMain(point))
                 {
                     shouldAllow = false;
                     player.Message("whitelist_noplace");
                     return;
                 }
-                if (player == null || player.Player == null || F.OnDuty(player)) return;
-                if (player.OnDuty()) return;
                 if (KitManager.HasKit(player.CSteamID, out Kit kit))
                 {
                     if (kit.Items.Exists(k => k.ID == barricade.id))
@@ -242,7 +239,6 @@ namespace Uncreated.Warfare
             StructureDrop.OnSalvageRequested_Global -= OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested -= OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested -= OnEditSignRequest;
-            BarricadeManager.onDeployBarricadeRequested -= OnBarricadePlaceRequested;
         }
     }
     public class WhitelistItem

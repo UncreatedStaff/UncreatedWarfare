@@ -196,46 +196,47 @@ namespace Uncreated.Warfare
         internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x,
             ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
         {
-            if (hit != null && hit.TryGetComponent<InteractableVehicle>(out _))
+            try
             {
-                if (!UCWarfare.Config.AdminLoggerSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
+                if (!shouldAllow) return;
+                UCPlayer player = UCPlayer.FromID(owner);
+                if (hit != null && hit.TryGetComponent<InteractableVehicle>(out _))
                 {
-                    UCPlayer player = UCPlayer.FromID(owner);
-                    if (player != null && player.OffDuty())
+                    if (!UCWarfare.Config.AdminLoggerSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
                     {
-                        shouldAllow = false;
-                        player.SendChat("no_placement_on_vehicle", asset.itemName, asset.itemName.An());
-                        return;
+                        if (player != null && player.OffDuty())
+                        {
+                            shouldAllow = false;
+                            player.SendChat("no_placement_on_vehicle", asset.itemName, asset.itemName.An());
+                            return;
+                        }
                     }
                 }
-            }
-            if (shouldAllow)
-            {
                 RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
+                if (!shouldAllow) return;
                 if (barricade.id == FOBManager.config.Data.FOBBaseID && FOBManager.config.Data.RestrictFOBPlacement)
                 {
                     if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                     {
                         shouldAllow = false;
-                        UCPlayer player = UCPlayer.FromID(owner);
-                        player.SendChat("no_placement_fobs_underwater");
+                        player?.SendChat("no_placement_fobs_underwater");
+                        return;
                     }
                     else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
                     {
                         shouldAllow = false;
-                        UCPlayer player = UCPlayer.FromID(owner);
-                        player.SendChat("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                        player?.SendChat("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                        return;
                     }
                     else if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
                     {
                         shouldAllow = false;
-                        UCPlayer player = UCPlayer.FromID(owner);
-                        player.SendChat("no_placement_fobs_too_near_base");
+                        player?.SendChat("no_placement_fobs_too_near_base");
+                        return;
                     }
                 }
                 else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.id))
                 {
-                    UCPlayer player = UCPlayer.FromID(owner);
                     if (player != null && player.OffDuty() && player.KitClass != Kit.EClass.RIFLEMAN)
                     {
                         shouldAllow = false;
@@ -243,6 +244,32 @@ namespace Uncreated.Warfare
                         return;
                     }
                 }
+                ulong team = group.GetTeam();
+                Data.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
+                if (!shouldAllow) return;
+                if (team == 1)
+                {
+                    if (player != null && !player.OnDuty() && TeamManager.Team2AMC.IsInside(point))
+                    {
+                        shouldAllow = false;
+                        player.Message("whitelist_noplace");
+                        return;
+                    }
+                }
+                else if (team == 2)
+                {
+                    if (player != null && !player.OnDuty() && TeamManager.Team1AMC.IsInside(point))
+                    {
+                        shouldAllow = false;
+                        player.Message("whitelist_noplace");
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                F.LogError("Error in OnBarricadeTryPlaced:");
+                F.LogError(ex);
             }
         }
 
