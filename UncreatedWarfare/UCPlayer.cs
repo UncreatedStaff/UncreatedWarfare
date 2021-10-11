@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -32,6 +33,7 @@ namespace Uncreated.Warfare
         public string CharacterName;
         public string NickName;
         public Rank OfficerRank;
+        public ITransportConnection connection { get { return Player?.channel.owner.transportConnection; } }
         public Coroutine StorageCoroutine;
         /// <summary>[Unreliable]</summary>
         public Rank XPRank()

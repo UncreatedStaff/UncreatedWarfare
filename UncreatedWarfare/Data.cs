@@ -101,6 +101,7 @@ namespace Uncreated.Warfare
         public static Dictionary<ulong, string> Languages;
         public static Dictionary<string, LanguageAliasSet> LanguageAliases;
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
+        public static JoinManager JoinManager;
         public static KitManager KitManager;
         public static VehicleSpawner VehicleSpawner;
         public static VehicleBay VehicleBay;
@@ -235,6 +236,7 @@ namespace Uncreated.Warfare
             XPManager = new XPManager();
             OfficerManager = new OfficerManager();
             Cooldowns = new CooldownManager();
+            JoinManager = UCWarfare.I.gameObject.AddComponent<JoinManager>();
 
             F.Log("Searching for gamemode: " + UCWarfare.Config.ActiveGamemode, ConsoleColor.Magenta);
             Gamemode = Gamemode.FindGamemode(UCWarfare.Config.ActiveGamemode, GAME_MODES);

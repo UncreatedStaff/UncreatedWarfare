@@ -66,16 +66,11 @@ namespace Uncreated.Warfare
                 { "no_permissions", "<color=#ff8c69>You do not have permission to use this command.</color>" },
 
                 // join
-                { "join_s", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
-                { "join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
-                { "joined_standby", "<color=#d1c5b0>Joining team...</color>" },
-                { "join_e_alreadyonteam", "<color=#a8a194>You are already on that team.</color>" },
-                { "join_e_notinlobby", "<color=#a8a194>You must be in the <color=#fce5bb>lobby</color> to switch teams. Do <color=#fce5bb>/deploy lobby</color>.</color>" },
-                { "join_correctusage", "<color=#a8a194>Do <color=#fce5bb>/join us</color> or <color=#fce5bb>/join ru</color> to join a team.</color>" },
-                { "join_e_groupnoexist", "<color=#a8a194>That group is not set up correctly. Contact an admin to fix it.</color>" },
-                { "join_e_teamfull", "<color=#a8a194>That group is full! Contact an admin to remove the server's group limit.</color>" },
-                { "join_e_autobalance", "<color=#a8a194>That group currently has too many players. Please try again later.</color>" },
-                { "join_e_badname", "<color=#a8a194>You have left your team. Please <b>rejoin</b> to confirm your team switch.</color>" },
+                { "teams_join_success", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
+                { "teams_join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
+                { "teams_e_notinlobby", "<color=#a8a194>You must be in the <color=#fce5bb>lobby</color> to switch teams. Do <color=#fce5bb>/deploy lobby</color>.</color>" },
+                { "teams_join_e_groupnoexist", "<color=#a8a194>The team you tried to join is not set up correctly. Contact an admin to fix it.</color>" },
+                { "teams_join_e_teamfull", "<color=#a8a194>The group you tried to join is full! Contact an admin to remove the server's group limit.</color>" },
                 { "join_player_joined_console", "\"{0}\" ({1}) joined team \"{2}\" from \"{3}\"." },
 
                 // Lang

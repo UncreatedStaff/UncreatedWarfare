@@ -297,10 +297,14 @@ namespace Uncreated.Warfare
             {
                 // reset the player to spawn if they have joined in a different game as they last played in.
 
+                UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
                 if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                 {
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
+                        Data.JoinManager.OnPlayerConnected(ucplayer, true);
+
                         if (player.Player.life.isDead)
                             player.Player.life.ReceiveRespawnRequest(false);
                         else
@@ -312,8 +316,12 @@ namespace Uncreated.Warfare
 
                         PlayerManager.ApplyToOnline();
                     }
+                    else
+                    {
+                        Data.JoinManager.OnPlayerConnected(ucplayer, false);
+                    }
                 }
-                UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
                 if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
                 {
                     if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
@@ -699,6 +707,7 @@ namespace Uncreated.Warfare
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            Data.JoinManager.OnPlayerDisconnected(ucplayer);
             string kit = ucplayer.KitName;
             try
             {
