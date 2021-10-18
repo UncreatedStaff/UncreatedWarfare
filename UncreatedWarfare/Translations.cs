@@ -1,8 +1,8 @@
 ﻿using SDG.Unturned;
 using System.Collections.Generic;
+using Uncreated.Warfare;
 using Uncreated.Warfare.Kits;
 using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
-using Kit = Uncreated.Warfare.Kits.Kit;
 
 namespace Uncreated.Warfare
 {
@@ -921,103 +921,71 @@ namespace Uncreated.Warfare
             new ColorData("no_stars", "737373"),
             new ColorData("star_color", "ffd683"),
         };
-        public static readonly List<MySqlTableData> DefaultMySQLTableData = new List<MySqlTableData>
-        {
-            new MySqlTableData("discord_accounts", "discord_accounts", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("DiscordID","DiscordID")
-            }),
-            new MySqlTableData("usernames", "usernames", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("PlayerName","PlayerName"),
-                new MySqlColumnData("CharacterName","CharacterName"),
-                new MySqlColumnData("NickName","NickName")
-            }),
-            new MySqlTableData("logindata", "logindata", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("IP","IP"),
-                new MySqlColumnData("LastLoggedIn","LastLoggedIn")
-            }),
-            new MySqlTableData("levels", "levels", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64", "Steam64"),
-                new MySqlColumnData("Team", "Team"),
-                new MySqlColumnData("OfficerPoints", "OfficerPoints"),
-                new MySqlColumnData("XP", "XP")
-            }),
-            new MySqlTableData("playerstats", "playerstats", new List<MySqlColumnData> {
-                new MySqlColumnData("Steam64","Steam64"),
-                new MySqlColumnData("Team","Team"),
-                new MySqlColumnData("Username","Username"),
-                new MySqlColumnData("Kills","Kills"),
-                new MySqlColumnData("Deaths","Deaths"),
-                new MySqlColumnData("Teamkills","Teamkills")
-            })
-        };
         public static List<Kit> DefaultKits = new List<Kit>
         {
-            new Kit("default",
+            KitEx.Construct("default",
                 new List<KitItem> { },
                 new List<KitClothing> {
-                new KitClothing(184, 100, "", KitClothing.EClothingType.SHIRT),
-                new KitClothing(2, 100, "", KitClothing.EClothingType.PANTS),
-                new KitClothing(185, 100, "", KitClothing.EClothingType.MASK)
-            })
+                new KitClothing(184, 100, "", EClothingType.SHIRT),
+                new KitClothing(2, 100, "", EClothingType.PANTS),
+                new KitClothing(185, 100, "", EClothingType.MASK)
+            }, (k) =>
             {
-                ShouldClearInventory = true,
-                RequiredLevel = 0,
-                Cost = 0,
-                Team = 0,
-                Class = Kit.EClass.UNARMED,
-                Branch = EBranch.DEFAULT,
-                SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "<color=#{0}>Default Kit</color>\n<color=#{2}>{1}</color>" },
-                    { "ru-ru", "<color=#{0}>Комплект по умолчанию</color>\n<color=#{2}>{1}</color>" }
-                }
-            },
-            new Kit("usunarmed",
+                k.ShouldClearInventory = true;
+                k.RequiredLevel = 0;
+                k.Cost = 0;
+                k.Team = 0;
+                k.Class = EClass.UNARMED;
+                k.Branch = EBranch.DEFAULT;
+                k.SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "Default Kit" },
+                    { "ru-ru", "Комплект по умолчанию" }
+                };
+            }),
+            KitEx.Construct("usunarmed",
                 new List<KitItem> { },
                 new List<KitClothing> {
-                new KitClothing(30710, 100, "", KitClothing.EClothingType.SHIRT),
-                new KitClothing(30711, 100, "", KitClothing.EClothingType.PANTS),
-                new KitClothing(30715, 100, "", KitClothing.EClothingType.HAT),
-                new KitClothing(30718, 100, "", KitClothing.EClothingType.BACKPACK),
-                new KitClothing(31251, 100, "", KitClothing.EClothingType.GLASSES)
-            })
+                new KitClothing(30710, 100, "", EClothingType.SHIRT),
+                new KitClothing(30711, 100, "", EClothingType.PANTS),
+                new KitClothing(30715, 100, "", EClothingType.HAT),
+                new KitClothing(30718, 100, "", EClothingType.BACKPACK),
+                new KitClothing(31251, 100, "", EClothingType.GLASSES)
+            }, (k) =>
             {
-                ShouldClearInventory = true,
-                RequiredLevel = 0,
-                Cost = 0,
-                Team = 1,
-                Class = Kit.EClass.UNARMED,
-                Branch = EBranch.DEFAULT,
-                SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" },
-                    { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" }
-                }
-            },
-            new Kit("ruunarmed",
+                k.ShouldClearInventory = true;
+                k.RequiredLevel = 0;
+                k.Cost = 0;
+                k.Team = 1;
+                k.Class = EClass.UNARMED;
+                k.Branch = EBranch.DEFAULT;
+                k.SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "Unarmed" },
+                    { "ru-ru", "Безоружный" }
+                };
+            }),
+            KitEx.Construct("ruunarmed",
                 new List<KitItem> { },
                 new List<KitClothing> {
-                new KitClothing(30700, 100, "", KitClothing.EClothingType.SHIRT),
-                new KitClothing(30701, 100, "", KitClothing.EClothingType.PANTS),
-                new KitClothing(31123, 100, "", KitClothing.EClothingType.VEST),
-                new KitClothing(30704, 100, "", KitClothing.EClothingType.HAT),
-                new KitClothing(434, 100, "", KitClothing.EClothingType.MASK),
-                new KitClothing(31156, 100, "", KitClothing.EClothingType.BACKPACK)
-            })
+                new KitClothing(30700, 100, "", EClothingType.SHIRT),
+                new KitClothing(30701, 100, "", EClothingType.PANTS),
+                new KitClothing(31123, 100, "", EClothingType.VEST),
+                new KitClothing(30704, 100, "", EClothingType.HAT),
+                new KitClothing(434, 100, "", EClothingType.MASK),
+                new KitClothing(31156, 100, "", EClothingType.BACKPACK)
+            }, (k) =>
             {
-                ShouldClearInventory = true,
-                RequiredLevel = 0,
-                Cost = 0,
-                Team = 2,
-                Class = Kit.EClass.UNARMED,
-                Branch = EBranch.DEFAULT,
-                SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "<color=#{0}>Unarmed</color>\n<color=#{2}>{1}</color>" } ,
-                    { "ru-ru", "<color=#{0}>Безоружный</color>\n<color=#{2}>{1}</color>" }
-                }
-            },
-            new Kit("usrif1",
+                k.ShouldClearInventory = true;
+                k.RequiredLevel = 0;
+                k.Cost = 0;
+                k.Team = 2;
+                k.Class = EClass.UNARMED;
+                k.Branch = EBranch.DEFAULT;
+                k.SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "Unarmed" } ,
+                    { "ru-ru", "Безоружный" }
+                };
+            }),
+            KitEx.Construct("usrif1",
                 new List<KitItem> {
                 new KitItem(81, 0, 0, 0, 100, "", 1, 3),
                 new KitItem(394, 0, 2, 0, 100, "", 1, 2),
@@ -1034,25 +1002,25 @@ namespace Uncreated.Warfare
                 new KitItem(32326, 0, 0, 0, 100, "6HoAAO56AABveh4BAWRkZGRk", 1, 0)
             },
                 new List<KitClothing> {
-                new KitClothing(30710, 100, "", KitClothing.EClothingType.SHIRT),
-                new KitClothing(30711, 100, "", KitClothing.EClothingType.PANTS),
-                new KitClothing(30715, 100, "", KitClothing.EClothingType.HAT),
-                new KitClothing(30718, 100, "", KitClothing.EClothingType.BACKPACK),
-                new KitClothing(31251, 100, "", KitClothing.EClothingType.GLASSES)
-            })
+                new KitClothing(30710, 100, "", EClothingType.SHIRT),
+                new KitClothing(30711, 100, "", EClothingType.PANTS),
+                new KitClothing(30715, 100, "", EClothingType.HAT),
+                new KitClothing(30718, 100, "", EClothingType.BACKPACK),
+                new KitClothing(31251, 100, "", EClothingType.GLASSES)
+            }, (k) =>
             {
-                ShouldClearInventory = true,
-                RequiredLevel = 0,
-                Cost = 0,
-                Team = 1,
-                Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = EBranch.INFANTRY,
-                SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "<color=#{0}>Rifleman 1</color>\n<color=#{2}>{1}</color>" },
-                    { "ru-ru", "<color=#{0}>Стрелок 1</color>\n<color=#{2}>{1}</color>" }
-                }
-            },
-            new Kit("rurif1",
+                k.ShouldClearInventory = true;
+                k.RequiredLevel = 0;
+                k.Cost = 0;
+                k.Team = 1;
+                k.Class = EClass.AUTOMATIC_RIFLEMAN;
+                k.Branch = EBranch.INFANTRY;
+                k.SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "Rifleman 1" },
+                    { "ru-ru", "Стрелок 1" }
+                };
+            }),
+            KitEx.Construct("rurif1",
                 new List<KitItem> {
                 new KitItem(81, 0, 0, 0, 100, "", 1, 3),
                 new KitItem(394, 0, 2, 0, 100, "", 1, 2),
@@ -1074,26 +1042,26 @@ namespace Uncreated.Warfare
                 new KitItem(31437, 0, 0, 0, 100, "AAAAAAAAAADOeggBAWRkZGRk", 1, 1)
             },
                 new List<KitClothing> {
-                new KitClothing(30700, 100, "", KitClothing.EClothingType.SHIRT),
-                new KitClothing(30701, 100, "", KitClothing.EClothingType.PANTS),
-                new KitClothing(31123, 100, "", KitClothing.EClothingType.VEST),
-                new KitClothing(30704, 100, "", KitClothing.EClothingType.HAT),
-                new KitClothing(434, 100, "", KitClothing.EClothingType.MASK),
-                new KitClothing(31156, 100, "", KitClothing.EClothingType.BACKPACK)
-            })
+                new KitClothing(30700, 100, "", EClothingType.SHIRT),
+                new KitClothing(30701, 100, "", EClothingType.PANTS),
+                new KitClothing(31123, 100, "", EClothingType.VEST),
+                new KitClothing(30704, 100, "", EClothingType.HAT),
+                new KitClothing(434, 100, "", EClothingType.MASK),
+                new KitClothing(31156, 100, "", EClothingType.BACKPACK)
+            }, (k) =>
             {
-                ShouldClearInventory = true,
-                RequiredLevel = 0,
-                Cost = 0,
-                Team = 2,
-                Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = EBranch.INFANTRY,
-                SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "<color=#{0}>Rifleman 1</color>\n<color=#{2}>{1}</color>" },
-                    { "ru-ru", "<color=#{0}>Стрелок 1</color>\n<color=#{2}>{1}</color>" }
-                }
-            },
-            new Kit("africa1",
+                k.ShouldClearInventory = true;
+                k.RequiredLevel = 0;
+                k.Cost = 0;
+                k.Team = 2;
+                k.Class = EClass.AUTOMATIC_RIFLEMAN;
+                k.Branch = EBranch.INFANTRY;
+                k.SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "Rifleman 1" },
+                    { "ru-ru", "Стрелок 1" }
+                };
+            }),
+            KitEx.Construct("africa1",
                 new List<KitItem> {
                 new KitItem(81, 3, 0, 0, 100, "", 1, 3),
                 new KitItem(333, 6, 0, 0, 100, "", 1, 3),
@@ -1118,27 +1086,27 @@ namespace Uncreated.Warfare
                 new KitItem(38333, 6, 1, 0, 100, "vpW/lQAAAAAAAAABAWRkZGRk", 1, 3)
             },
                 new List<KitClothing> {
-                new KitClothing(30960, 100, "", KitClothing.EClothingType.SHIRT),
-                new KitClothing(30961, 100, "", KitClothing.EClothingType.PANTS),
-                new KitClothing(30962, 100, "", KitClothing.EClothingType.VEST),
-                new KitClothing(30965, 100, "", KitClothing.EClothingType.HAT),
-                new KitClothing(31221, 100, "", KitClothing.EClothingType.MASK),
-                new KitClothing(30970, 100, "", KitClothing.EClothingType.BACKPACK)
-            })
+                new KitClothing(30960, 100, "", EClothingType.SHIRT),
+                new KitClothing(30961, 100, "", EClothingType.PANTS),
+                new KitClothing(30962, 100, "", EClothingType.VEST),
+                new KitClothing(30965, 100, "", EClothingType.HAT),
+                new KitClothing(31221, 100, "", EClothingType.MASK),
+                new KitClothing(30970, 100, "", EClothingType.BACKPACK)
+            }, (k) =>
             {
-                ShouldClearInventory = true,
-                RequiredLevel = 0,
-                Cost = 0,
-                IsPremium = true,
-                PremiumCost = 6.00f,
-                Team = 2,
-                Class = Kit.EClass.AUTOMATIC_RIFLEMAN,
-                Branch = EBranch.INFANTRY,
-                SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "<color=#{0}>Africa 1</color>\n<color=#{2}>{1}</color>" },
-                    { "ru-ru", "<color=#{0}>Африка 1</color>\n<color=#{2}>{1}</color>" }
-                }
-            }
+                k.ShouldClearInventory = true;
+                k.RequiredLevel = 0;
+                k.Cost = 0;
+                k.IsPremium = true;
+                k.PremiumCost = 6.00f;
+                k.Team = 2;
+                k.Class = EClass.AUTOMATIC_RIFLEMAN;
+                k.Branch = EBranch.INFANTRY;
+                k.SignTexts = new Dictionary<string, string> {
+                    { DefaultLanguage, "Africa 1" },
+                    { "ru-ru", "Африка 1" }
+                };
+            })
         };
         public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
         {

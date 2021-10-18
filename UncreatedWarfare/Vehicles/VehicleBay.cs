@@ -165,7 +165,7 @@ namespace Uncreated.Warfare.Vehicles
 
             if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
             {
-                if (kit.Class == Kit.EClass.LAT || kit.Class == Kit.EClass.HAT)
+                if (kit.Class == EClass.LAT || kit.Class == EClass.HAT)
                 {
                     ucplayer.Player.equipment.dequip();
                 }
@@ -260,7 +260,7 @@ namespace Uncreated.Warfare.Vehicles
                     }
                 }
 
-                if (vehicleData.RequiredClass != Kit.EClass.NONE && vehicleData.CrewSeats.Count > 0) // if the vehicle requires a CREWMAN kit
+                if (vehicleData.RequiredClass != EClass.NONE && vehicleData.CrewSeats.Count > 0) // if the vehicle requires a CREWMAN kit
                 {
                     if (kit.Class != vehicleData.RequiredClass)
                     {
@@ -366,7 +366,7 @@ namespace Uncreated.Warfare.Vehicles
 
                 if (vehicleData.CrewSeats.Count > 0)
                 {
-                    if (vehicleData.RequiredClass != Kit.EClass.NONE) // if the vehicle requires a CREWMAN kit
+                    if (vehicleData.RequiredClass != EClass.NONE) // if the vehicle requires a CREWMAN kit
                     {
                         if (vehicleData.CrewSeats.Contains(toSeatIndex))
                         {
@@ -483,7 +483,7 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public EBranch RequiredBranch;
         [JsonSettable]
-        public Kit.EClass RequiredClass;
+        public EClass RequiredClass;
         [JsonSettable]
         public byte RearmCost;
         [JsonSettable]
@@ -519,7 +519,7 @@ namespace Uncreated.Warfare.Vehicles
             TicketCost = 0;
             Cooldown = 0;
             RequiredBranch = EBranch.DEFAULT;
-            RequiredClass = Kit.EClass.NONE;
+            RequiredClass = EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;
             Type = EVehicleType.NONE;
@@ -540,7 +540,7 @@ namespace Uncreated.Warfare.Vehicles
             TicketCost = 0;
             Cooldown = 0;
             RequiredBranch = EBranch.DEFAULT;
-            RequiredClass = Kit.EClass.NONE;
+            RequiredClass = EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;
             Type = EVehicleType.NONE;
@@ -568,7 +568,7 @@ namespace Uncreated.Warfare.Vehicles
                 List<VBarricade> barricades = new List<VBarricade>();
                 for (int i = 0; i < vehicleRegion.drops.Count; i++)
                 {
-                    BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
+                    SDG.Unturned.BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
                     barricades.Add(new VBarricade(bdata.barricade.id, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
                         bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
                 }

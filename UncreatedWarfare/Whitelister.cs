@@ -39,7 +39,7 @@ namespace Uncreated.Warfare
                 shouldAllow = false;
             }
         }
-        private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
+        private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, SDG.Unturned.ItemData itemData, ref bool shouldAllow)
         {
             UCPlayer player = UCPlayer.FromPlayer(P);
 
@@ -108,7 +108,7 @@ namespace Uncreated.Warfare
             if (player.OnDuty())
                 return;
 
-            BarricadeData data = barricade.GetServersideData();
+            SDG.Unturned.BarricadeData data = barricade.GetServersideData();
             if (IsWhitelisted(data.barricade.id, out _))
                 return;
 
@@ -126,7 +126,7 @@ namespace Uncreated.Warfare
             UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
             if (player.OnDuty())
                 return;
-            StructureData data = structure.GetServersideData();
+            SDG.Unturned.StructureData data = structure.GetServersideData();
             if (IsWhitelisted(data.structure.id, out _))
                 return;
 

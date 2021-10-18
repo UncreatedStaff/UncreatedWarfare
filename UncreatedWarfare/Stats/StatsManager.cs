@@ -457,7 +457,7 @@ namespace Uncreated.Warfare.Stats
         [NetCall(ENetCall.FROM_SERVER, 2002)]
         internal static void ReceiveRequestKitData(in IConnection connection, string KitID)
         {
-            Kit.EClass @class = Kit.EClass.NONE;
+            EClass @class = EClass.NONE;
             string sname = KitID;
             if (KitManager.KitExists(KitID, out Kit GameKit))
             {

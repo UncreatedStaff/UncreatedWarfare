@@ -29,9 +29,9 @@ namespace Uncreated.Warfare
             Patcher.UnpatchAll("net.uncreated.warfare");
         }
         public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);
-        public delegate void BarricadeDestroyedEventArgs(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
-        public delegate void StructureDestroyedEventArgs(StructureData data, StructureDrop drop, uint instanceID);
-        public delegate void BarricadeHealthEventArgs(BarricadeData data);
+        public delegate void BarricadeDestroyedEventArgs(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
+        public delegate void StructureDestroyedEventArgs(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID);
+        public delegate void BarricadeHealthEventArgs(SDG.Unturned.BarricadeData data);
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
@@ -63,7 +63,7 @@ namespace Uncreated.Warfare
                 string[] splits = value.Split('\n');
                 for (int i = 0; i < splits.Length; i++)
                 {
-                    Uncreated.Networking.Log log = new Uncreated.Networking.Log(splits[i], Console.ForegroundColor);
+                    Log log = new Log(splits[i], Console.ForegroundColor);
                     Data.AddLog(log);
                     if (Data.NetClient != null && Data.NetClient.connection.IsActive && 
                         value != $"No invoker found for {Networking.Invocations.Shared.SendLogMessage.ID}.")

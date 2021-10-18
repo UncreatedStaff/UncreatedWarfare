@@ -16,19 +16,19 @@ namespace Uncreated.Warfare.Kits
                 }
                 foreach (KitClothing clothing in kit.Clothes)
                 {
-                    if (clothing.type == KitClothing.EClothingType.SHIRT)
+                    if (clothing.type == EClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == KitClothing.EClothingType.PANTS)
+                    if (clothing.type == EClothingType.PANTS)
                         player.Player.clothing.askWearPants(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == KitClothing.EClothingType.VEST)
+                    if (clothing.type == EClothingType.VEST)
                         player.Player.clothing.askWearVest(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == KitClothing.EClothingType.HAT)
+                    if (clothing.type == EClothingType.HAT)
                         player.Player.clothing.askWearHat(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == KitClothing.EClothingType.MASK)
+                    if (clothing.type == EClothingType.MASK)
                         player.Player.clothing.askWearMask(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == KitClothing.EClothingType.BACKPACK)
+                    if (clothing.type == EClothingType.BACKPACK)
                         player.Player.clothing.askWearBackpack(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == KitClothing.EClothingType.GLASSES)
+                    if (clothing.type == EClothingType.GLASSES)
                         player.Player.clothing.askWearGlasses(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
                 }
 

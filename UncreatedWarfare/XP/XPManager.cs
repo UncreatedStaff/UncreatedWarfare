@@ -187,70 +187,37 @@ namespace Uncreated.Warfare.XP
             return config.Data.Ranks.Last();
         }
     }
-    public class Rank
+    public static class RankEx
     {
-        [JsonSettable]
-        public readonly int level;
-        public readonly string name;
-        public readonly Dictionary<string, string> name_translations;
-        public readonly Dictionary<string, string> abbreviation_translations;
-        [JsonSettable]
-        public readonly string abbreviation;
-        public readonly int XP;
-        [JsonConstructor]
-        public Rank(int level, string name, Dictionary<string, string> name_translations, string abbreviation, Dictionary<string, string> abbreviation_translations, int xp)
-        {
-            this.level = level;
-            this.name = name;
-            this.name_translations = name_translations;
-            this.abbreviation = abbreviation;
-            this.abbreviation_translations = abbreviation_translations;
-            this.XP = xp;
-        }
-        public Rank(int level, string name, string abbreviation, int xp)
-        {
-            this.level = level;
-            this.name = name;
-            this.name_translations = new Dictionary<string, string>
-            {
-                { JSONMethods.DefaultLanguage, name }
-            };
-            this.abbreviation_translations = new Dictionary<string, string>
-            {
-                { JSONMethods.DefaultLanguage, abbreviation }
-            };
-            this.abbreviation = abbreviation;
-            this.XP = xp;
-        }
-        public string TranslateName(ulong player)
+        public static string TranslateName(this Rank rank, ulong player)
         {
             if (player == 0)
             {
-                if (name_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
+                if (rank.name_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
                 {
                     return newname;
                 }
-                else if (name_translations.Count > 0)
+                else if (rank.name_translations.Count > 0)
                 {
-                    return name_translations.ElementAt(0).Value;
+                    return rank.name_translations.ElementAt(0).Value;
                 }
-                else return name;
+                else return rank.name;
             }
             else
             {
                 if (Data.Languages.TryGetValue(player, out string lang))
                 {
-                    if (!name_translations.TryGetValue(lang, out string newname))
+                    if (!rank.name_translations.TryGetValue(lang, out string newname))
                     {
-                        if (name_translations.TryGetValue(JSONMethods.DefaultLanguage, out newname))
+                        if (rank.name_translations.TryGetValue(JSONMethods.DefaultLanguage, out newname))
                         {
                             return newname;
                         }
-                        else if (name_translations.Count > 0)
+                        else if (rank.name_translations.Count > 0)
                         {
-                            return name_translations.ElementAt(0).Value;
+                            return rank.name_translations.ElementAt(0).Value;
                         }
-                        else return name;
+                        else return rank.name;
                     }
                     else
                     {
@@ -259,47 +226,47 @@ namespace Uncreated.Warfare.XP
                 }
                 else
                 {
-                    if (name_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
+                    if (rank.name_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
                     {
                         return newname;
                     }
-                    else if (name_translations.Count > 0)
+                    else if (rank.name_translations.Count > 0)
                     {
-                        return name_translations.ElementAt(0).Value;
+                        return rank.name_translations.ElementAt(0).Value;
                     }
-                    else return name;
+                    else return rank.name;
                 }
             }
         }
-        public string TranslateAbbreviation(ulong player)
+        public static string TranslateAbbreviation(this Rank rank, ulong player)
         {
             if (player == 0)
             {
-                if (abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
+                if (rank.abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
                 {
                     return newname;
                 }
-                else if (abbreviation_translations.Count > 0)
+                else if (rank.abbreviation_translations.Count > 0)
                 {
-                    return abbreviation_translations.ElementAt(0).Value;
+                    return rank.abbreviation_translations.ElementAt(0).Value;
                 }
-                else return abbreviation;
+                else return rank.abbreviation;
             }
             else
             {
                 if (Data.Languages.TryGetValue(player, out string lang))
                 {
-                    if (!abbreviation_translations.TryGetValue(lang, out string newname))
+                    if (!rank.abbreviation_translations.TryGetValue(lang, out string newname))
                     {
-                        if (abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out newname))
+                        if (rank.abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out newname))
                         {
                             return newname;
                         }
-                        else if (abbreviation_translations.Count > 0)
+                        else if (rank.abbreviation_translations.Count > 0)
                         {
-                            return abbreviation_translations.ElementAt(0).Value;
+                            return rank.abbreviation_translations.ElementAt(0).Value;
                         }
-                        else return abbreviation;
+                        else return rank.abbreviation;
                     }
                     else
                     {
@@ -308,40 +275,17 @@ namespace Uncreated.Warfare.XP
                 }
                 else
                 {
-                    if (abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
+                    if (rank.abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out string newname))
                     {
                         return newname;
                     }
-                    else if (abbreviation_translations.Count > 0)
+                    else if (rank.abbreviation_translations.Count > 0)
                     {
-                        return abbreviation_translations.ElementAt(0).Value;
+                        return rank.abbreviation_translations.ElementAt(0).Value;
                     }
-                    else return abbreviation;
+                    else return rank.abbreviation;
                 }
             }
-        }
-        public static Rank Read(ByteReader R) =>
-            new Rank(R.ReadInt32(), R.ReadString(), R.ReadString(), R.ReadInt32());
-        public static void Write(ByteWriter W, Rank R)
-        {
-            W.Write(R.level);
-            W.Write(R.name);
-            W.Write(R.abbreviation);
-            W.Write(R.XP);
-        }
-        public static Rank[] ReadMany(ByteReader R)
-        {
-            byte count = R.ReadUInt8();
-            Rank[] ranks = new Rank[count];
-            for (int i = 0; i < count; i++)
-                ranks[i] = Read(R);
-            return ranks;
-        }
-        public static void WriteMany(ByteWriter W, Rank[] R)
-        {
-            W.Write((byte)R.Length);
-            for (int i = 0; i < R.Length; i++)
-                Write(W, R[i]);
         }
     }
 

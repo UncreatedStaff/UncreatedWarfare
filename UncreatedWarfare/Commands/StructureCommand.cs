@@ -150,7 +150,7 @@ namespace Uncreated.Warfare.Commands
                                             string itemname;
                                             if (structure is Interactable2SalvageStructure str)
                                             {
-                                                StructureData data = drop.GetServersideData();
+                                                SDG.Unturned.StructureData data = drop.GetServersideData();
                                                 if (data != default) itemname = Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset iasset ? iasset.itemName : data.structure.id.ToString(Data.Locale);
                                                 else itemname = str.name;
                                             }
@@ -159,7 +159,7 @@ namespace Uncreated.Warfare.Commands
                                                 BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(bar.transform);
                                                 if (bdrop != null)
                                                 {
-                                                    BarricadeData data = bdrop.GetServersideData();
+                                                    SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
                                                     if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
                                                     else itemname = bar.name;
                                                 }
@@ -185,7 +185,7 @@ namespace Uncreated.Warfare.Commands
                                     else
                                     {
                                         string itemname;
-                                        BarricadeData data = bdrop.GetServersideData();
+                                        SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
                                         if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
                                         else itemname = barricade2.name;
                                         player.SendChat("structure_unsaved_already",
@@ -217,7 +217,7 @@ namespace Uncreated.Warfare.Commands
                                     else
                                     {
                                         string itemname;
-                                        BarricadeData data = bdrop.GetServersideData();
+                                        SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
                                         if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
                                         else itemname = barricade.name;
                                         player.SendChat("structure_unsaved_already",
@@ -327,7 +327,7 @@ namespace Uncreated.Warfare.Commands
             BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
             if (bdrop != null && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
             {
-                BarricadeData data = bdrop.GetServersideData();
+                SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
                 player.SendChat("structure_popped",
                     Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale));
                 BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
@@ -342,7 +342,7 @@ namespace Uncreated.Warfare.Commands
             StructureDrop sdrop = StructureManager.FindStructureByRootTransform(i.transform);
             if (sdrop != null && Regions.tryGetCoordinate(sdrop.model.position, out byte x, out byte y))
             {
-                StructureData data = sdrop.GetServersideData();
+                SDG.Unturned.StructureData data = sdrop.GetServersideData();
                 player.SendChat("structure_popped",
                     Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale));
                 StructureManager.destroyStructure(sdrop, x, y, UnityEngine.Vector3.down);
@@ -401,7 +401,7 @@ namespace Uncreated.Warfare.Commands
             BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
             if (bdrop != null)
             {
-                BarricadeData data = bdrop.GetServersideData();
+                SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
                 if (data.owner == default || data.owner == 0)
                 {
                     player.SendChat("structure_examine_not_examinable");
@@ -433,7 +433,7 @@ namespace Uncreated.Warfare.Commands
             StructureDrop sdrop = StructureManager.FindStructureByRootTransform(i.transform);
             if (sdrop != null)
             {
-                StructureData data = sdrop.GetServersideData();
+                SDG.Unturned.StructureData data = sdrop.GetServersideData();
                 if (data.owner == default || data.owner == 0)
                 {
                     player.SendChat("structure_examine_not_examinable");

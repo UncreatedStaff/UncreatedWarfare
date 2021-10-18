@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
             ulong team = player.GetTeam();
-            BarricadeData foundation = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
+            SDG.Unturned.BarricadeData foundation = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look);
             if (foundation == null)
             {
                 player.SendChat("build_error_noteam");

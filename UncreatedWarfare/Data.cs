@@ -220,7 +220,6 @@ namespace Uncreated.Warfare
 
             Colors = JSONMethods.LoadColors(out ColorsHex);
             Localization = JSONMethods.LoadTranslations(out DeathLocalization, out LimbLocalization);
-            TableData = JSONMethods.LoadTables();
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 

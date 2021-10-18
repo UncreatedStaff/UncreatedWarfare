@@ -2,3 +2,6 @@
 
 # IDE0011: Add braces
 dotnet_diagnostic.IDE0011.severity = none
+
+# IDE0017: Simplify object initialization
+dotnet_style_object_initializer = false

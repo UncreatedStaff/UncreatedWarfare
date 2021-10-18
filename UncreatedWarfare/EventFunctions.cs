@@ -20,7 +20,6 @@ using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Item = SDG.Unturned.Item;
-using Kit = Uncreated.Warfare.Kits.Kit;
 
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare
@@ -51,7 +50,7 @@ namespace Uncreated.Warfare
             OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
             Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
         }
-        internal static void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
+        internal static void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
         {
             Data.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
         }
@@ -100,7 +99,7 @@ namespace Uncreated.Warfare
                 itemstemp.Remove(item);
             }
         }
-        internal static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        internal static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
             RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
@@ -118,7 +117,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
-            BarricadeData data = drop.GetServersideData();
+            SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (UCWarfare.Config.Debug)
                 F.Log($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}", ConsoleColor.DarkGray);
@@ -237,7 +236,7 @@ namespace Uncreated.Warfare
                 }
                 else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.id))
                 {
-                    if (player != null && player.OffDuty() && player.KitClass != Kit.EClass.RIFLEMAN)
+                    if (player != null && player.OffDuty() && player.KitClass != EClass.RIFLEMAN)
                     {
                         shouldAllow = false;
                         player.SendChat("ammo_not_rifleman");

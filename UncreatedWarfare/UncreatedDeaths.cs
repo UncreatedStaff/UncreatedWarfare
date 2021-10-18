@@ -249,7 +249,7 @@ namespace Uncreated.Warfare
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
                 if (F.TryGetPlaytimeComponent(parameters.dead, out PlaytimeComponent c))
                     c.stats.AddDeath();
-                if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
+                if (KitManager.HasKit(parameters.dead, out Kit kit))
                 {
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
                     {
@@ -365,7 +365,7 @@ namespace Uncreated.Warfare
                     c.stats.AddDeath();
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
-                if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
+                if (KitManager.HasKit(parameters.dead, out Kit kit))
                 {
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
                     {

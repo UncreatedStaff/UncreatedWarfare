@@ -83,7 +83,7 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
             [HarmonyPrefix]
             static void OnItemDropRemovedPrefix(
-                ref ItemData __state,
+                ref SDG.Unturned.ItemData __state,
                 in ServerInvocationContext context,
                 byte x,
                 byte y,
@@ -98,7 +98,7 @@ namespace Uncreated.Warfare
                 ItemRegion region = ItemManager.regions[x, y];
                 for (ushort index = 0; index < region.items.Count; ++index)
                 {
-                    ItemData itemData = region.items[index];
+                    SDG.Unturned.ItemData itemData = region.items[index];
                     if (itemData.instanceID == instanceID)
                     {
                         __state = itemData;
@@ -109,7 +109,7 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
             [HarmonyPostfix]
             static void OnItemDropRemovedPostfix(
-                ItemData __state,
+                SDG.Unturned.ItemData __state,
                 in ServerInvocationContext context,
                 byte x,
                 byte y,
@@ -172,7 +172,7 @@ namespace Uncreated.Warfare
                             for (; index < count; ++index)
                             {
                                 BarricadeDrop drop = region.drops[index];
-                                BarricadeData serversideData = drop.GetServersideData();
+                                SDG.Unturned.BarricadeData serversideData = drop.GetServersideData();
                                 InteractableStorage interactable = drop.interactable as InteractableStorage;
                                 writer.WriteUInt16(serversideData.barricade.id);
                                 if (interactable != null)
