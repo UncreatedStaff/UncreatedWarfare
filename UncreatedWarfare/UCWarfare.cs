@@ -13,6 +13,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -153,6 +154,7 @@ namespace Uncreated.Warfare
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
             Data.Gamemode.OnLevelLoaded();
+            Invocations.ReceiveAllItemInfosRequest(Data.NetClient.connection);
         }
         public static void ReplaceBarricadesAndStructures()
         {
@@ -204,7 +206,6 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-            //if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData += Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
             Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
             BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
@@ -242,7 +243,6 @@ namespace Uncreated.Warfare
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-            //if (Networking.TCPClient.I != null) Networking.TCPClient.I.OnReceivedData -= Networking.Client.ProcessResponse;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
             BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
             Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;

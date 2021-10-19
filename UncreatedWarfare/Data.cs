@@ -179,9 +179,12 @@ namespace Uncreated.Warfare
                 NetClient = new Client(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
                 NetClient.AssertConnected();
                 NetClient.connection.OnReceived += ClientReceived;
+                NetClient.connection.OnAutoSent += ClientSent;
                 Invocations.Shared.PlayerList.NetInvoke(PlayerManager.GetPlayerList());
             }
         }
+
+
         public static void LoadVariables()
         {
             /* INITIALIZE UNCREATED NETWORKING */
@@ -401,6 +404,11 @@ namespace Uncreated.Warfare
         {
             if (UCWarfare.Config.Debug)
                 F.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
+        }
+        private static void ClientSent(byte[] bytes, IConnection connection, ref bool Allow)
+        {
+            if (UCWarfare.Config.Debug)
+                F.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
         }
         private static void DuplicateKeyError(Exception ex)
         {

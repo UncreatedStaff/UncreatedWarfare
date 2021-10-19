@@ -60,6 +60,7 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void ConsolePatch(string value)
             {
+                if (value.StartsWith("Sent over TCP server on")) return;
                 string[] splits = value.Split('\n');
                 for (int i = 0; i < splits.Length; i++)
                 {
