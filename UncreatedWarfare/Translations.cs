@@ -68,7 +68,7 @@ namespace Uncreated.Warfare
                 // join
                 { "teams_join_success", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
                 { "teams_join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
-                { "teams_e_notinlobby", "<color=#a8a194>You must be in the <color=#fce5bb>lobby</color> to switch teams. Do <color=#fce5bb>/deploy lobby</color>.</color>" },
+                { "teams_e_notinmain", "<color=#a8a194>You must be in <color=#fce5bb>Main</color> to switch teams." },
                 { "teams_join_e_groupnoexist", "<color=#a8a194>The team you tried to join is not set up correctly. Contact an admin to fix it.</color>" },
                 { "teams_join_e_teamfull", "<color=#a8a194>The group you tried to join is full! Contact an admin to remove the server's group limit.</color>" },
                 { "join_player_joined_console", "\"{0}\" ({1}) joined team \"{2}\" from \"{3}\"." },
@@ -486,6 +486,7 @@ namespace Uncreated.Warfare
                 { "whitelist_nokit", "<color=#ff8c69>Get a kit first before you can pick up items.</color> " },
                 { "whitelist_nosalvage", "<color=#ff8c69>You are not allowed to salvage that.</color> " },
                 { "whitelist_noplace", "<color=#ff8c69>You are not allowed to place that.</color> " },
+                { "whitelist_toomanyplaced", "<color=#ff8c69>You cannot place more than {0} of those.</color> " },
                 { "whitelist_noeditsign", "<color=#ff8c69>You are not allowed to edit that sign.</color> " },
                 
                 //vehiclebay

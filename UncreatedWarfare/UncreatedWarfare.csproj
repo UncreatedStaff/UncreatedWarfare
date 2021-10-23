@@ -3,7 +3,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-    <OutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins\</OutputPath>
+    <OutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins\</OutputPath>
 	<Version>3.21.2.3</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
@@ -74,7 +74,7 @@
       <HintPath>..\..\..\..\Desktop\C#\UncreatedNetworking.dll</HintPath>
     </Reference>
     <Reference Include="UncreatedStats">
-      <HintPath>..\..\..\..\Downloads\UncreatedStats.dll</HintPath>
+      <HintPath>..\..\..\..\Desktop\C#\UncreatedStats.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
@@ -101,8 +101,5 @@
     <PackageReference Include="Lib.Harmony" Version="2.0.4" />
     <PackageReference Include="MySql.Data" Version="8.0.25" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\UncreatedStats\UncreatedStats.csproj" />
   </ItemGroup>
 </Project>

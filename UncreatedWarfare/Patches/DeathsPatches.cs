@@ -82,6 +82,13 @@ namespace Uncreated.Warfare
 
                             // triggerer
                             Player player = DamageTool.getPlayer(other.transform) ?? other.GetComponent<Player>();
+
+                            if (owner != null && player != null && player.quests.groupID.m_SteamID == F.GetTeamFromPlayerSteam64ID(owner.Owner))
+                            {
+                                F.Log("Landmine was triggered by a friendly and so it didnt explode");
+                                return false;
+                            }
+
                             if (owner != null && player != null && player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                             {
                                 c.LastLandmineTriggered = new LandmineData(__instance, owner);
