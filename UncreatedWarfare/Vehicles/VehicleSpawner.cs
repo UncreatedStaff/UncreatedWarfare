@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.Vehicles
                 spawn.StartVehicleRespawnTimer();
             }
         }
-        internal void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
             {
@@ -49,7 +49,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-        internal void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
+        internal void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
         {
             if (data.structure.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)
             {
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Vehicles
                 spawn.SpawnVehicle();
             }
         }
-        public static void CreateSpawn(BarricadeDrop drop, BarricadeData data, ushort vehicleID)
+        public static void CreateSpawn(BarricadeDrop drop, SDG.Unturned.BarricadeData data, ushort vehicleID)
         {
             VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.BARRICADE);
             spawn.Initialize();
@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Vehicles
             StructureSaver.AddStructure(drop, data, out _);
             spawn.SpawnVehicle();
         }
-        public static void CreateSpawn(StructureDrop drop, StructureData data, ushort vehicleID)
+        public static void CreateSpawn(StructureDrop drop, SDG.Unturned.StructureData data, ushort vehicleID)
         {
             VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.STRUCTURE);
             spawn.Initialize();
@@ -171,11 +171,11 @@ namespace Uncreated.Warfare.Vehicles
         [JsonIgnore]
         public BarricadeDrop BarricadeDrop { get; private set; }
         [JsonIgnore]
-        public BarricadeData BarricadeData { get; private set; }
+        public SDG.Unturned.BarricadeData BarricadeData { get; private set; }
         [JsonIgnore]
         public StructureDrop StructureDrop { get; private set; }
         [JsonIgnore]
-        public StructureData StructureData { get; private set; }
+        public SDG.Unturned.StructureData StructureData { get; private set; }
         [JsonIgnore]
         public bool IsActive;
         [JsonIgnore]

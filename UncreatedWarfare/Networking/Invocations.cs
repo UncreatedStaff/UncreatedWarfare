@@ -347,7 +347,7 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
                 }
             }
-            internal static readonly NetCallRaw<Kit> CreateKit = new NetCallRaw<Kit>(1109, Kit.ReadKit, Kit.WriteKit);
+            internal static readonly NetCallRaw<Kit> CreateKit = new NetCallRaw<Kit>(1109, Kit.Read, Kit.Write);
             [NetCall(ENetCall.FROM_SERVER, 1109)]
             internal static void ReceiveCreateKit(in IConnection connection, Kit kit) => KitManager.CreateKit(kit);
 
@@ -383,10 +383,92 @@ namespace Uncreated.Warfare.Networking
                     SendKitClass.Invoke(connection, kitID, kit.Class, signtext);
                 } else
                 {
-                    SendKitClass.Invoke(connection, kitID, Kit.EClass.NONE, kit.Name);
+                    SendKitClass.Invoke(connection, kitID, EClass.NONE, kit.Name);
                 }
             }
-            internal static readonly NetCall<string, Kit.EClass, string> SendKitClass = new NetCall<string, Kit.EClass, string>(1114);
+            internal static readonly NetCall<string, EClass, string> SendKitClass = new NetCall<string, EClass, string>(1114);
+        }
+
+        internal static readonly NetCall<string> RequestKit = new NetCall<string>(1115);
+        [NetCall(ENetCall.FROM_SERVER, 1115)]
+        internal static void ReceiveKitRequest(in IConnection connection, string kitID)
+        {
+            if (KitManager.KitExists(kitID, out Kit kit))
+            {
+                ReceiveKit.Invoke(connection, kit);
+            }
+            else
+            {
+                ReceiveKit.Invoke(connection, null);
+            }
+        }
+        internal static readonly NetCallRaw<string[]> RequestKits = new NetCallRaw<string[]>(1116, F.ReadStringArray, F.WriteStringArray);
+        [NetCall(ENetCall.FROM_SERVER, 1116)]
+        internal static void ReceiveKitsRequest(in IConnection connection, string[] kitIDs)
+        {
+            Kit[] kits = new Kit[kitIDs.Length];
+            for (int i = 0; i < kitIDs.Length; i++)
+            {
+                if (KitManager.KitExists(kitIDs[i], out Kit kit))
+                {
+                    kits[i] = kit;
+                }
+                else
+                {
+                    kits[i] = null;
+                }
+            }
+            ReceiveKits.Invoke(connection, kits);
+        }
+        internal static readonly NetCallRaw<Kit> ReceiveKit = new NetCallRaw<Kit>(1117, Kit.Read, Kit.Write);
+        internal static readonly NetCallRaw<Kit[]> ReceiveKits = new NetCallRaw<Kit[]>(1118, Kit.ReadMany, Kit.WriteMany);
+
+        internal static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(1119);
+        [NetCall(ENetCall.FROM_SERVER, 1119)]
+        internal static void ReceiveItemInfoRequest(in IConnection connection, ushort item)
+        {
+            if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset)
+                SendItemInfo.Invoke(connection, ItemData.FromAsset(asset));
+            else 
+                SendItemInfo.Invoke(connection, null);
+        }
+        internal static readonly NetCallRaw<ItemData> SendItemInfo = new NetCallRaw<ItemData>(1120, ItemData.Read, ItemData.Write);
+
+        internal static readonly NetCall<ushort[]> RequestItemInfos = new NetCall<ushort[]>(1121);
+        [NetCall(ENetCall.FROM_SERVER, 1121)]
+        internal static void ReceiveItemInfosRequest(in IConnection connection, ushort[] items)
+        {
+            ItemData[] rtn = new ItemData[items.Length];
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (Assets.find(EAssetType.ITEM, items[i]) is ItemAsset asset)
+                    rtn[i] = ItemData.FromAsset(asset);
+            }
+            SendItemInfos.Invoke(connection, rtn);
+        }
+        internal static readonly NetCallRaw<ItemData[]> SendItemInfos = new NetCallRaw<ItemData[]>(1122, ItemData.ReadMany, ItemData.WriteMany);
+
+        internal static readonly NetCall RequestAllItemInfos = new NetCall(1123);
+
+        [NetCall(ENetCall.FROM_SERVER, 1123)]
+        internal static void ReceiveAllItemInfosRequest(in IConnection connection)
+        {
+            Asset[] assets = Assets.find(EAssetType.ITEM);
+            ItemData[] rtn = new ItemData[assets.Length];
+            for (int i = 0; i < assets.Length; i++)
+            {
+                try
+                {
+                    if (assets[i] is ItemAsset asset) rtn[i] = ItemData.FromAsset(asset);
+                }
+                catch (Exception ex)
+                {
+                    F.LogError($"Error converting asset of type {assets[i].GetType().FullName} to ItemData ({assets[i].name}).");
+                    F.LogError(ex);
+                    rtn[i] = null;
+                }
+            }
+            SendItemInfos.Invoke(connection, rtn);
         }
     }
 }

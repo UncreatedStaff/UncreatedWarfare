@@ -224,7 +224,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
@@ -248,7 +248,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
@@ -262,7 +262,7 @@ namespace Uncreated.Warfare.Kits
         /// <summary>Spawns the sign if it is not already placed.</summary>
         public void SpawnCheck(bool save)
         {
-            BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+            SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (drop == null || data == null)
             {
                 this.barricadetransform = BarricadeManager.dropNonPlantedBarricade(

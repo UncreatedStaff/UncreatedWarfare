@@ -55,7 +55,7 @@ namespace Uncreated.Warfare
             }
             return null;
         }
-        public static StructureData GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop drop)
+        public static SDG.Unturned.StructureData GetStructureDataFromLook(UnturnedPlayer player, out SDG.Unturned.StructureDrop drop)
         {
             Transform structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
             if (structureTransform == null)
@@ -68,8 +68,8 @@ namespace Uncreated.Warfare
                 return null;
             return drop.GetServersideData();
         }
-        public static BarricadeData GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
-        public static BarricadeData GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop drop)
+        public static SDG.Unturned.BarricadeData GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
+        public static SDG.Unturned.BarricadeData GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop drop)
         {
             Transform barricadeTransform = GetBarricadeTransformFromLook(look);
             if (barricadeTransform == null)
@@ -308,10 +308,10 @@ namespace Uncreated.Warfare
                     lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
             return lists;
         }
-        public static List<ItemData> GetNearbyItems(ushort id, float range, Vector3 origin)
+        public static List<SDG.Unturned.ItemData> GetNearbyItems(ushort id, float range, Vector3 origin)
         {
             float sqrRange = range * range;
-            List<ItemData> list = new List<ItemData>();
+            List<SDG.Unturned.ItemData> list = new List<SDG.Unturned.ItemData>();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -366,7 +366,7 @@ namespace Uncreated.Warfare
         }
         public static InteractableVehicle GetVehicleFromLook(PlayerLook look) => GetInteractableFromLook<InteractableVehicle>(look, RayMasks.VEHICLE);
 
-        public static BarricadeDrop GetDropFromBarricadeData(BarricadeData data)
+        public static BarricadeDrop GetDropFromBarricadeData(SDG.Unturned.BarricadeData data)
         {
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             return barricadeRegions.SelectMany(brd => brd.drops).Where(d => d.instanceID == data.instanceID).FirstOrDefault();

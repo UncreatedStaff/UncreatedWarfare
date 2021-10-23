@@ -150,11 +150,11 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
                     }
-                    else if (kit.Class == Kit.EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
+                    else if (kit.Class == EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
                     {
                         ucplayer.Message("request_kit_e_notsquadleader");
                     }
-                    else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements && !(kit.Class == Kit.EClass.CREWMAN || kit.Class == Kit.EClass.PILOT))
+                    else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements && !(kit.Class == EClass.CREWMAN || kit.Class == EClass.PILOT))
                     {
                         player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
                     }
@@ -240,7 +240,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_nokit");
                 return;
             }
-            else if (data.RequiredClass != Kit.EClass.NONE && kit.Class != data.RequiredClass)
+            else if (data.RequiredClass != EClass.NONE && kit.Class != data.RequiredClass)
             {
                 Kit requiredKit = KitManager.GetKitsWhere(k => k.Class == data.RequiredClass).FirstOrDefault();
                 string @class;

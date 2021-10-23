@@ -12,10 +12,10 @@ namespace Uncreated.Warfare.Components
     public class FOBBaseComponent : MonoBehaviour
     {
         public BarricadeDrop drop;
-        public BarricadeData data;
+        public SDG.Unturned.BarricadeData data;
         public List<UCPlayer> nearbyPlayers;
 
-        public void Initialize(BarricadeDrop drop, BarricadeData data)
+        public void Initialize(BarricadeDrop drop, SDG.Unturned.BarricadeData data)
         {
             this.drop = drop;
             this.data = data;

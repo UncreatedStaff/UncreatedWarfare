@@ -64,11 +64,21 @@ namespace StatsAnalyzer
             lblSteam64.Text = stats.Steam64.ToString(StatsPage.Locale) + (online ? " - ONLINE" : string.Empty);
             try
             {
-                FPlayerName names = await StatsPage.I.SQL.GetUsernames(stats.Steam64);
-                lblPlayerName.Text = names.PlayerName;
-                lblCharacterName.Text = names.CharacterName;
-                lblNickName.Text = names.NickName;
-            } catch
+                if (StatsPage.I.SQL != null)
+                {
+                    FPlayerName names = await StatsPage.I.SQL.GetUsernames(stats.Steam64);
+                    lblPlayerName.Text = names.PlayerName;
+                    lblCharacterName.Text = names.CharacterName;
+                    lblNickName.Text = names.NickName;
+                } 
+                else
+                {
+                    lblPlayerName.Text = "No SQL Connection";
+                    lblCharacterName.Text = "No SQL Connection";
+                    lblNickName.Text = "No SQL Connection";
+                }
+            } 
+            catch
             {
                 lblPlayerName.Text = "Not connected.";
                 lblCharacterName.Text = "Not connected.";

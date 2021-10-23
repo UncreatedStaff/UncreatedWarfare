@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
-            BarricadeData data = drop.GetServersideData();
+            SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
@@ -27,7 +27,7 @@ namespace Uncreated.Warfare.FOBs
                     RegisterNewRepairStation(data, drop);
             }
         }
-        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == FOBManager.config.Data.RepairStationID)
             {
@@ -60,7 +60,7 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
-        public static void RegisterNewRepairStation(BarricadeData data, BarricadeDrop drop)
+        public static void RegisterNewRepairStation(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
         {
             if (!stations.Exists(r => r.structure.instanceID == data.instanceID))
             {
@@ -96,9 +96,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public struct RBarricade
         {
-            public BarricadeData data;
+            public SDG.Unturned.BarricadeData data;
             public BarricadeDrop drop;
-            public RBarricade(BarricadeData data, BarricadeDrop drop)
+            public RBarricade(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
             {
                 this.data = data;
                 this.drop = drop;
@@ -108,13 +108,13 @@ namespace Uncreated.Warfare.FOBs
 
     public class RepairStation
     {
-        public BarricadeData structure; // physical barricade structure of the rallypoint
+        public SDG.Unturned.BarricadeData structure; // physical barricade structure of the rallypoint
         public BarricadeDrop drop;
         public InteractableStorage storage;
         public Dictionary<uint, int> VehiclesRepairing;
         public bool IsActive;
 
-        public RepairStation(BarricadeData structure, BarricadeDrop drop)
+        public RepairStation(SDG.Unturned.BarricadeData structure, BarricadeDrop drop)
         {
             this.structure = structure;
             this.drop = drop;

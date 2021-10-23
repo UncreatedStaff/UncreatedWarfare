@@ -300,7 +300,7 @@ namespace Uncreated.Warfare.Squads
 
                 if (Provider.clients.Exists(sp => sp.playerID.steamID == player.CSteamID))
                 {
-                    if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
+                    if (squad.Leader.KitClass == EClass.SQUADLEADER)
                         KitManager.TryGiveUnarmedKit(squad.Leader);
                 }
 
@@ -385,7 +385,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
         {
-            if (squad.Leader.KitClass == Kit.EClass.SQUADLEADER)
+            if (squad.Leader.KitClass == EClass.SQUADLEADER)
                 KitManager.TryGiveUnarmedKit(squad.Leader);
 
             squad.Leader = newLeader;
@@ -472,7 +472,7 @@ namespace Uncreated.Warfare.Squads
         public ushort squadLTUI;
         public int SquadDisconnectTime;
         public char lockCharacter;
-        public Dictionary<Kit.EClass, ClassConfig> Classes;
+        public Dictionary<EClass, ClassConfig> Classes;
         public ushort EmptyMarker;
         public ushort SquadLeaderEmptyMarker;
         public ushort MortarMarker;
@@ -500,26 +500,26 @@ namespace Uncreated.Warfare.Squads
             SquadDisconnectTime = 120;
             MaxSquadNameLength = 16;
             lockCharacter = '²';
-            Classes = new Dictionary<Kit.EClass, ClassConfig>
+            Classes = new Dictionary<EClass, ClassConfig>
             {
-                { Kit.EClass.NONE, new ClassConfig('±', 36101, 36131) },
-                { Kit.EClass.UNARMED, new ClassConfig('±', 36101, 36131) },
-                { Kit.EClass.SQUADLEADER, new ClassConfig('¦', 36102, 36132) },
-                { Kit.EClass.RIFLEMAN, new ClassConfig('¡', 36103, 36133) },
-                { Kit.EClass.MEDIC, new ClassConfig('¢', 36104, 36134) },
-                { Kit.EClass.BREACHER, new ClassConfig('¤', 36105, 36135) },
-                { Kit.EClass.AUTOMATIC_RIFLEMAN, new ClassConfig('¥', 36106, 36136) },
-                { Kit.EClass.GRENADIER, new ClassConfig('¬', 36107, 36137) },
-                { Kit.EClass.MACHINE_GUNNER, new ClassConfig('«', 36108, 36138) },
-                { Kit.EClass.LAT, new ClassConfig('®', 36109, 36139) },
-                { Kit.EClass.HAT, new ClassConfig('¯', 36110, 36140) },
-                { Kit.EClass.MARKSMAN, new ClassConfig('¨', 36111, 36141) },
-                { Kit.EClass.SNIPER, new ClassConfig('£', 36112, 36142) },
-                { Kit.EClass.AP_RIFLEMAN, new ClassConfig('©', 36113, 36143) },
-                { Kit.EClass.COMBAT_ENGINEER, new ClassConfig('ª', 36114, 36144) },
-                { Kit.EClass.CREWMAN, new ClassConfig('§', 36115, 36145) },
-                { Kit.EClass.PILOT, new ClassConfig('°', 36116, 36146) },
-                { Kit.EClass.SPEC_OPS, new ClassConfig('À', 36117, 36147) },
+                { EClass.NONE, new ClassConfig('±', 36101, 36131) },
+                { EClass.UNARMED, new ClassConfig('±', 36101, 36131) },
+                { EClass.SQUADLEADER, new ClassConfig('¦', 36102, 36132) },
+                { EClass.RIFLEMAN, new ClassConfig('¡', 36103, 36133) },
+                { EClass.MEDIC, new ClassConfig('¢', 36104, 36134) },
+                { EClass.BREACHER, new ClassConfig('¤', 36105, 36135) },
+                { EClass.AUTOMATIC_RIFLEMAN, new ClassConfig('¥', 36106, 36136) },
+                { EClass.GRENADIER, new ClassConfig('¬', 36107, 36137) },
+                { EClass.MACHINE_GUNNER, new ClassConfig('«', 36108, 36138) },
+                { EClass.LAT, new ClassConfig('®', 36109, 36139) },
+                { EClass.HAT, new ClassConfig('¯', 36110, 36140) },
+                { EClass.MARKSMAN, new ClassConfig('¨', 36111, 36141) },
+                { EClass.SNIPER, new ClassConfig('£', 36112, 36142) },
+                { EClass.AP_RIFLEMAN, new ClassConfig('©', 36113, 36143) },
+                { EClass.COMBAT_ENGINEER, new ClassConfig('ª', 36114, 36144) },
+                { EClass.CREWMAN, new ClassConfig('§', 36115, 36145) },
+                { EClass.PILOT, new ClassConfig('°', 36116, 36146) },
+                { EClass.SPEC_OPS, new ClassConfig('À', 36117, 36147) },
             };
         }
 

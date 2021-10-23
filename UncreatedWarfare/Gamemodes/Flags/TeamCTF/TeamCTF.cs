@@ -345,7 +345,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
                 {
                     Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
-                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kits.Kit kit) && !kits.Contains(kit.Name))
+                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
                     {
                         Stats.StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
                         kits.Add(kit.Name);
@@ -363,7 +363,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
                 {
                     Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
-                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kits.Kit kit) && !kits.Contains(kit.Name))
+                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
                     {
                         Stats.StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
                         kits.Add(kit.Name);

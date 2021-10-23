@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.Squads
         public const float TELEPORT_HEIGHT_OFFSET = 2f;
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
-            BarricadeData data = drop.GetServersideData();
+            SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
@@ -76,7 +76,7 @@ namespace Uncreated.Warfare.Squads
                 }
             }
         }
-        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
             {
@@ -114,7 +114,7 @@ namespace Uncreated.Warfare.Squads
                 }
             }
         }
-        public static void RegisterNewRallyPoint(BarricadeData data, Squad squad)
+        public static void RegisterNewRallyPoint(SDG.Unturned.BarricadeData data, Squad squad)
         {
             if (!rallypoints.Exists(r => r.structure.instanceID == data.instanceID))
             {
@@ -167,14 +167,14 @@ namespace Uncreated.Warfare.Squads
 
     public class RallyPoint
     {
-        public BarricadeData structure; // physical barricade structure of the rallypoint
+        public SDG.Unturned.BarricadeData structure; // physical barricade structure of the rallypoint
         public BarricadeDrop drop;
         public List<UCPlayer> AwaitingPlayers; // list of players currently waiting to teleport to the rally
         public Squad squad;
         public bool IsActive;
         public int timer;
         public string nearestLocation;
-        public RallyPoint(BarricadeData structure, BarricadeDrop drop, Squad squad)
+        public RallyPoint(SDG.Unturned.BarricadeData structure, BarricadeDrop drop, Squad squad)
         {
             this.structure = structure;
             this.drop = drop;

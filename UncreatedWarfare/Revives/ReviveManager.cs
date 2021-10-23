@@ -25,7 +25,7 @@ namespace Uncreated.Warfare.Revives
             DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
             DeathInfo = new Dictionary<ulong, DeathInfo>();
             Medics = PlayerManager.OnlinePlayers.Where(x => x.KitName != null && x.KitName != string.Empty
-            && KitManager.KitExists(x.KitName, out Kit kit) && kit.Class == Kit.EClass.MEDIC).ToList();
+            && KitManager.KitExists(x.KitName, out Kit kit) && kit.Class == EClass.MEDIC).ToList();
             UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
             PlayerLife.OnRevived_Global += OnPlayerRespawned;
             UseableConsumeable.onPerformingAid += UseableConsumeable_onPerformingAid;
@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Revives
             }
             if (!DownedPlayers.ContainsKey(downed.channel.owner.playerID.steamID.m_SteamID)) // if not injured
                 return;
-            if (medic.KitClass != Kit.EClass.MEDIC)
+            if (medic.KitClass != EClass.MEDIC)
             {
                 medic.Message("heal_e_notmedic");
                 shouldAllow = false;
@@ -89,7 +89,7 @@ namespace Uncreated.Warfare.Revives
                 StanceUpdatedLocal(player.Player.channel.owner);
             };
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            if (KitManager.KitExists(ucplayer.KitName, out Kit kit) && kit.Class == Kit.EClass.MEDIC)
+            if (KitManager.KitExists(ucplayer.KitName, out Kit kit) && kit.Class == EClass.MEDIC)
                 Medics.Add(ucplayer);
             DownedPlayers.Remove(player.CSteamID.m_SteamID);
             DeathInfo.Remove(player.CSteamID.m_SteamID);

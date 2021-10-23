@@ -632,60 +632,6 @@ namespace Uncreated.Warfare
             }
 
         }
-        public static Dictionary<string, MySqlTableLang> LoadTables()
-        {
-            if (!File.Exists(Data.DataDirectory + "tables.json"))
-            {
-                using (StreamWriter TextWriter = File.CreateText(Data.DataDirectory + "tables.json"))
-                {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
-                    {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-                        Serializer.Serialize(JsonWriter, DefaultMySQLTableData);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
-                    }
-                }
-                Dictionary<string, MySqlTableLang> NewDefaultTables = new Dictionary<string, MySqlTableLang>();
-                foreach (MySqlTableData table in DefaultMySQLTableData)
-                {
-                    Dictionary<string, string> columns = new Dictionary<string, string>();
-                    foreach (MySqlColumnData column in table.Columns)
-                        columns.Add(column.key, column.name);
-                    NewDefaultTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
-                }
-                return NewDefaultTables;
-            }
-            List<MySqlTableData> Tables;
-            using (StreamReader Reader = File.OpenText(Data.DataDirectory + "tables.json"))
-            {
-                Tables = JsonConvert.DeserializeObject<List<MySqlTableData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
-            }
-            if (Tables == null)
-            {
-                Dictionary<string, MySqlTableLang> NewDefaultTables = new Dictionary<string, MySqlTableLang>();
-                foreach (MySqlTableData table in DefaultMySQLTableData)
-                {
-                    Dictionary<string, string> columns = new Dictionary<string, string>();
-                    foreach (MySqlColumnData column in table.Columns)
-                        columns.Add(column.key, column.name);
-                    NewDefaultTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
-                }
-                return NewDefaultTables;
-            }
-            Dictionary<string, MySqlTableLang> NewTables = new Dictionary<string, MySqlTableLang>();
-            foreach (MySqlTableData table in Tables)
-            {
-                Dictionary<string, string> columns = new Dictionary<string, string>();
-                foreach (MySqlColumnData column in table.Columns)
-                    columns.Add(column.key, column.name);
-                NewTables.Add(table.key, new MySqlTableLang(table.TableName, columns));
-            }
-            return NewTables;
-        }
         public static Dictionary<ulong, string> LoadLanguagePreferences()
         {
             if (!File.Exists(Data.LangStorage + "preferences.json"))

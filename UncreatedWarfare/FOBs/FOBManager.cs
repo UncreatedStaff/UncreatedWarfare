@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
-        public static void OnItemRemoved(ItemData itemData)
+        public static void OnItemRemoved(SDG.Unturned.ItemData itemData)
         {
             if (itemData.item.id == config.Data.Team1BuildID || itemData.item.id == config.Data.Team2BuildID)
             {
@@ -129,7 +129,7 @@ namespace Uncreated.Warfare.FOBs
             else
                 return;
 
-            List<ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, config.Data.FOBBuildPickupRadius, fob.model.position);
+            List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, config.Data.FOBBuildPickupRadius, fob.model.position);
 
             List<UCPlayer> nearbyPlayers = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == data.group && !p.Player.life.isDead && (p.Position - fob.model.position).sqrMagnitude < Math.Pow(config.Data.FOBBuildPickupRadius, 2)).ToList();
 
@@ -274,7 +274,7 @@ namespace Uncreated.Warfare.FOBs
             UpdateUIForTeam(fob.Structure.GetServersideData().group);
         }
 
-        public static void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             if (data.barricade.id == config.Data.FOBID)
             {

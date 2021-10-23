@@ -619,9 +619,4 @@ namespace Uncreated
             }
         }
     }
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-    public class JsonSettable : Attribute
-    {
-        public JsonSettable() { }
-    }
 }

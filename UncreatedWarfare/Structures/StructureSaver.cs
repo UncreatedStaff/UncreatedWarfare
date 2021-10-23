@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Structures
                     F.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
             }
         }
-        public static bool AddStructure(StructureDrop drop, StructureData data, out Structure structureadded)
+        public static bool AddStructure(StructureDrop drop, SDG.Unturned.StructureData data, out Structure structureadded)
         {
             if (data == default || drop == default)
             {
@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.Structures
                 return false;
             }
         }
-        public static bool AddStructure(BarricadeDrop drop, BarricadeData data, out Structure structureadded)
+        public static bool AddStructure(BarricadeDrop drop, SDG.Unturned.BarricadeData data, out Structure structureadded)
         {
             if (data == default || drop == default)
             {
@@ -171,7 +171,7 @@ namespace Uncreated.Warfare.Structures
         {
             if (type == EStructType.BARRICADE)
             {
-                BarricadeData data = F.GetBarricadeFromInstID(instance_id, out _);
+                SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out _);
                 if (data == default)
                 {
                     ItemBarricadeAsset asset = Asset as ItemBarricadeAsset;
@@ -209,7 +209,7 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                StructureData data = F.GetStructureFromInstID(instance_id, out _);
+                SDG.Unturned.StructureData data = F.GetStructureFromInstID(instance_id, out _);
                 if (data == default)
                 {
                     ItemStructureAsset asset = Asset as ItemStructureAsset;
@@ -253,7 +253,7 @@ namespace Uncreated.Warfare.Structures
                 else exists = true;
             }
         }
-        public Structure(StructureDrop drop, StructureData data)
+        public Structure(StructureDrop drop, SDG.Unturned.StructureData data)
         {
             this.id = data.structure.id;
             this._metadata = new byte[0];
@@ -264,7 +264,7 @@ namespace Uncreated.Warfare.Structures
             this.instance_id = data.instanceID;
             this.type = EStructType.STRUCTURE;
         }
-        public Structure(BarricadeDrop drop, BarricadeData data)
+        public Structure(BarricadeDrop drop, SDG.Unturned.BarricadeData data)
         {
             this.id = data.barricade.id;
             this._metadata = data.barricade.state;

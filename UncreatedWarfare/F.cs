@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Uncreated.Networking;
+using Uncreated.Networking.Encoding;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -48,6 +49,20 @@ namespace Uncreated.Warfare
             for (int i = startIndex; i < (length == -1 ? array.Length : length); i++)
                 temp += (i == startIndex ? "" : deliminator) + array[i];
             return temp;
+        }
+        public static string[] ReadStringArray(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            string[] rtn = new string[length];
+            for (int i = 0; i < length; i++)
+                rtn[i] = R.ReadString();
+            return rtn;
+        }
+        public static void WriteStringArray(ByteWriter W, string[] A)
+        {
+            W.Write(A.Length);
+            for (int i = 0; i < A.Length; i++)
+                W.Write(A[i]);
         }
         public static string GetTimeFromSeconds(this uint seconds, ulong player)
         {
@@ -1687,15 +1702,16 @@ namespace Uncreated.Warfare
                     }
                     else if (kit.RequiredLevel > 0)
                     {
-                        if (playerrank == null || playerrank.level < kit.RequiredRank.level)
+                        Rank reqrank = kit.RequiredRank();
+                        if (playerrank == null || playerrank.level < reqrank.level)
                         {
                             cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
-                                kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                                reqrank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
                         }
                         else
                         {
                             cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
-                                kit.RequiredRank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                                reqrank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
                         }
                     }
                     else
@@ -2306,7 +2322,7 @@ namespace Uncreated.Warfare
             if (player == default || url == default) return;
             player.player.sendBrowserRequest(message, url);
         }
-        public static BarricadeData GetBarricadeFromInstID(uint instanceID, out BarricadeDrop drop)
+        public static SDG.Unturned.BarricadeData GetBarricadeFromInstID(uint instanceID, out BarricadeDrop drop)
         {
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -2369,7 +2385,7 @@ namespace Uncreated.Warfare
             }
             return default;
         }
-        public static StructureData GetStructureFromInstID(uint instanceID, out StructureDrop drop)
+        public static SDG.Unturned.StructureData GetStructureFromInstID(uint instanceID, out StructureDrop drop)
         {
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {

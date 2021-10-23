@@ -24,7 +24,7 @@ namespace Uncreated.Warfare
         public string Id => Steam64.ToString();
         public string DisplayName => Player.channel.owner.playerID.playerName;
         public bool IsAdmin => Player.channel.owner.isAdmin;
-        public Kit.EClass KitClass;
+        public EClass KitClass;
         public EBranch Branch;
         public string KitName;
         public Squad Squad;
@@ -154,7 +154,7 @@ namespace Uncreated.Warfare
             }
             else
             {
-                KitClass = Kit.EClass.NONE;
+                KitClass = EClass.NONE;
                 Branch = EBranch.DEFAULT;
             }
             KitName = kitName;
@@ -176,7 +176,7 @@ namespace Uncreated.Warfare
             {
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.Icon;
-                else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
+                else if (SquadManager.config.Data.Classes.TryGetValue(EClass.NONE, out config))
                     return config.Icon;
                 else return '±';
             }
@@ -188,7 +188,7 @@ namespace Uncreated.Warfare
             {
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.MarkerEffect;
-                else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
+                else if (SquadManager.config.Data.Classes.TryGetValue(EClass.NONE, out config))
                     return config.MarkerEffect;
                 else return 0;
             }
@@ -199,7 +199,7 @@ namespace Uncreated.Warfare
             {
                 if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.SquadLeaderMarkerEffect;
-                else if (SquadManager.config.Data.Classes.TryGetValue(Kit.EClass.NONE, out config))
+                else if (SquadManager.config.Data.Classes.TryGetValue(EClass.NONE, out config))
                     return config.SquadLeaderMarkerEffect;
                 else return 0;
             }
@@ -304,7 +304,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    pl.KitClass = Kit.EClass.NONE;
+                    pl.KitClass = EClass.NONE;
                     pl.Branch = EBranch.DEFAULT;
                 }
                 pl.KitName = save.KitName;

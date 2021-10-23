@@ -214,7 +214,7 @@ namespace Uncreated.Warfare.Kits
                     player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
                 return;
             }
-            BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop barricadeDrop);
+            SDG.Unturned.BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop barricadeDrop);
 
             if (barricade != null)
             {
@@ -349,7 +349,7 @@ namespace Uncreated.Warfare.Kits
             }
             else // check for structure
             {
-                StructureData structure = UCBarricadeManager.GetStructureDataFromLook(player, out StructureDrop structureDrop);
+                SDG.Unturned.StructureData structure = UCBarricadeManager.GetStructureDataFromLook(player, out StructureDrop structureDrop);
                 if (structure != default)
                 {
                     if (structure.structure.id == UCWarfare.Config.VehicleBaySettings.VehicleSpawnerID)

@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-        internal void OnBarricadeDestroyed(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             for (int i = 0; i < ActiveObjects.Count; i++)
             {

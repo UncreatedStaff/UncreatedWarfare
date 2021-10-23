@@ -11,11 +11,11 @@ namespace Uncreated.Warfare.FOBs
 {
     public class AmmoBagComponent : MonoBehaviour
     {
-        public BarricadeData data;
+        public SDG.Unturned.BarricadeData data;
         public BarricadeDrop drop;
         public Dictionary<ulong, int> ResuppliedPlayers;
         public int uses;
-        public void Initialize(BarricadeData data, BarricadeDrop drop)
+        public void Initialize(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
         {
             this.data = data;
             this.drop = drop;

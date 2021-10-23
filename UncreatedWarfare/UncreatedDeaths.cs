@@ -249,7 +249,7 @@ namespace Uncreated.Warfare
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
                 if (F.TryGetPlaytimeComponent(parameters.dead, out PlaytimeComponent c))
                     c.stats.AddDeath();
-                if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
+                if (KitManager.HasKit(parameters.dead, out Kit kit))
                 {
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
                     {
@@ -365,7 +365,7 @@ namespace Uncreated.Warfare
                     c.stats.AddDeath();
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
-                if (KitManager.HasKit(parameters.dead, out Kits.Kit kit))
+                if (KitManager.HasKit(parameters.dead, out Kit kit))
                 {
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s =>
                     {
@@ -879,7 +879,7 @@ namespace Uncreated.Warfare
                         {
                             item = info.item;
                             distance = info.distance;
-                            if (KitManager.HasKit(killer, out Kits.Kit kit))
+                            if (KitManager.HasKit(killer, out Kit kit))
                                 kitname = kit.Name;
                             else kitname = killerTeam == 0 ? string.Empty : (killerTeam == 1 ? TeamManager.Team1UnarmedKit : (killerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty));
                             turretOwner = info.vehicle;
@@ -1060,7 +1060,7 @@ namespace Uncreated.Warfare
                 killernames = F.GetPlayerOriginalNames(killer);
                 distance = Vector3.Distance(killer.player.transform.position, dead.transform.position);
                 KillerTeam = killer.GetTeam();
-                kitname = KillerTeam == 0 ? string.Empty : (KillerTeam == 1 ? TeamManager.Team1UnarmedKit : (KillerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty));
+                kitname = !KitManager.HasKit(killer, out Kit kit) ? (KillerTeam == 0 ? string.Empty : (KillerTeam == 1 ? TeamManager.Team1UnarmedKit : (KillerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty))) : kit.Name;
                 if (cause == EDeathCause.GUN || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH)
                 {
                     InteractableVehicle veh = killer.player.movement.getVehicle();
