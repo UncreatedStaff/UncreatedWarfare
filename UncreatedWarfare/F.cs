@@ -909,7 +909,8 @@ namespace Uncreated.Warfare
             BLANK,
             NOT_OWNED,
             DONT_DISPLAY,
-            IN_VEHICLE
+            IN_VEHICLE,
+            LOCKED
         }
         public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
         {

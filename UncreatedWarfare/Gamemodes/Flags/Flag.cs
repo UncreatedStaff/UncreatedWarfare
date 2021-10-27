@@ -326,8 +326,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (team == 1) CapT1();
             else if (team == 2) CapT2();
         }
-        public bool T1Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam1.ID == ID; }
-        public bool T2Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam2.ID == ID; }
+        public bool T1Obj
+        {
+            get
+            {
+                if (Manager is TeamCTF.TeamCTF ctf)
+                {
+                    return ctf.ObjectiveTeam1.ID == ID;
+                }
+                else if (Manager is Invasion.Invasion invasion && invasion.ObjectiveTeam1 != null)
+                {
+                    return invasion.ObjectiveTeam1.ID == ID;
+                }
+                return false;
+            }
+        }
+        public bool T2Obj
+        {
+            get
+            {
+                if (Manager is TeamCTF.TeamCTF ctf)
+                {
+                    return ctf.ObjectiveTeam2.ID == ID;
+                }
+                else if (Manager is Invasion.Invasion invasion && invasion.ObjectiveTeam2 != null)
+                {
+                    return invasion.ObjectiveTeam2.ID == ID;
+                }
+                return false;
+            }
+        }
         public bool IsObj(ulong team)
         {
             if (team == 1) return T1Obj;
