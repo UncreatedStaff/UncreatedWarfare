@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
@@ -22,17 +23,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public delegate Task ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
     public delegate Task FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
     public delegate Task FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-    public class TeamCTF : TicketGamemode
+    public class TeamCTF : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
         // vars
         protected Config<TeamCTFData> _config;
         public TeamCTFData Config { get => _config.Data; }
-        public int ObjectiveT1Index;
-        public int ObjectiveT2Index;
+        protected int _objectiveT1Index;
+        protected int _objectiveT2Index;
+        public int ObjectiveT1Index { get => _objectiveT1Index; }
+        public int ObjectiveT2Index { get => _objectiveT2Index; }
         public List<ulong> InAMC = new List<ulong>();
-        public Flag ObjectiveTeam1 { get => Rotation[ObjectiveT1Index]; }
-        public Flag ObjectiveTeam2 { get => Rotation[ObjectiveT2Index]; }
+        public Flag ObjectiveTeam1 { get => Rotation[_objectiveT1Index]; }
+        public Flag ObjectiveTeam2 { get => Rotation[_objectiveT2Index]; }
         public override string DisplayName => "Military RP";
         public override bool EnableAMC => true;
         public override bool PersistStructures => false;
@@ -45,17 +48,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public VehicleBay VehicleBay;
         public VehicleSigns VehicleSigns;
         public FOBManager FOBManager;
-        public BuildManager BuildManager;
         public RequestSigns RequestSignManager;
         public KitManager KitManager;
         public ReviveManager ReviveManager;
-        public static SquadManager SquadManager;
+        public SquadManager SquadManager;
         public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
-
         // leaderboard
-        private EndScreenLeaderboard EndScreen;
-        public bool isScreenUp = false;
-        public WarStatsTracker GameStats;
+        private EndScreenLeaderboard _endScreen;
+        public EndScreenLeaderboard EndScreen { get => _endScreen; }
+        private bool _isScreenUp = false;
+        public bool isScreenUp { get => _isScreenUp; }
+        private WarStatsTracker _gameStats;
+        public WarStatsTracker GameStats { get => _gameStats; }
 
 
         // events
@@ -123,11 +127,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             base.Init();
             FOBManager = new FOBManager();
-            BuildManager = new BuildManager();
             SquadManager = new SquadManager();
             KitManager = new KitManager();
             ReviveManager = new ReviveManager();
-            GameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
+            _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
         }
         protected override bool TimeToCheck()
         {
@@ -238,25 +241,25 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             InvokeOnTeamWin(winner);
             if (Config.ShowLeaderboard)
             {
-                EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
-                EndScreen.winner = winner;
-                EndScreen.Gamemode = this;
-                EndScreen.warstats = GameStats;
-                EndScreen.OnLeaderboardExpired += OnShouldStartNewGame;
-                EndScreen.ShuttingDown = shutdownAfterGame;
-                EndScreen.ShuttingDownMessage = shutdownMessage;
-                EndScreen.ShuttingDownPlayer = shutdownPlayer;
-                isScreenUp = true;
-                EndScreen.EndGame(Config.ProgressChars);
+                _endScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
+                _endScreen.winner = winner;
+                _endScreen.Gamemode = this;
+                _endScreen.warstats = GameStats;
+                _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
+                _endScreen.ShuttingDown = shutdownAfterGame;
+                _endScreen.ShuttingDownMessage = shutdownMessage;
+                _endScreen.ShuttingDownPlayer = shutdownPlayer;
+                _isScreenUp = true;
+                _endScreen.EndGame(Config.ProgressChars);
             }
             else OnShouldStartNewGame();
         }
         private void OnShouldStartNewGame()
         {
-            if (EndScreen != default)
-                EndScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
-            Destroy(EndScreen);
-            isScreenUp = false;
+            if (_endScreen != default)
+                _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
+            Destroy(_endScreen);
+            _isScreenUp = false;
             StartNextGame();
         }
         public void ReloadConfig()
@@ -294,8 +297,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 F.LogWarning("Invalid pathing value, no flags will be loaded. Expect errors.");
             }
-            ObjectiveT1Index = 0;
-            ObjectiveT2Index = Rotation.Count - 1;
+            _objectiveT1Index = 0;
+            _objectiveT2Index = Rotation.Count - 1;
             if (Config.DiscoveryForesight < 1)
             {
                 F.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
@@ -499,16 +502,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if (NewOwner == 1)
             {
-                if (ObjectiveT1Index >= Rotation.Count - 1) // if t1 just capped the last flag
+                if (_objectiveT1Index >= Rotation.Count - 1) // if t1 just capped the last flag
                 {
                     DeclareWin(NewOwner);
-                    ObjectiveT1Index = Rotation.Count - 1;
+                    _objectiveT1Index = Rotation.Count - 1;
                     return;
                 }
                 else
                 {
-                    ObjectiveT1Index = flag.index + 1;
-                    InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
+                    _objectiveT1Index = flag.index + 1;
+                    InvokeOnObjectiveChanged(flag, Rotation[_objectiveT1Index], NewOwner, flag.index, _objectiveT1Index);
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                     {
@@ -519,17 +522,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             else if (NewOwner == 2)
             {
-                if (ObjectiveT2Index < 1) // if t2 just capped the last flag
+                if (_objectiveT2Index < 1) // if t2 just capped the last flag
                 {
                     DeclareWin(NewOwner);
-                    ObjectiveT2Index = 0;
+                    _objectiveT2Index = 0;
                     return;
                 }
                 else
                 {
 
-                    ObjectiveT2Index = flag.index - 1;
-                    InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
+                    _objectiveT2Index = flag.index - 1;
+                    InvokeOnObjectiveChanged(flag, Rotation[_objectiveT2Index], NewOwner, flag.index, _objectiveT2Index);
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                     {
@@ -540,8 +543,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             if (OldOwner == 1)
             {
-                int oldindex = ObjectiveT1Index;
-                ObjectiveT1Index = flag.index;
+                int oldindex = _objectiveT1Index;
+                _objectiveT1Index = flag.index;
                 if (oldindex != flag.index)
                 {
                     InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
@@ -550,8 +553,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             else if (OldOwner == 2)
             {
-                int oldindex = ObjectiveT2Index;
-                ObjectiveT2Index = flag.index;
+                int oldindex = _objectiveT2Index;
+                _objectiveT2Index = flag.index;
                 if (oldindex != flag.index)
                 {
                     InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
@@ -642,10 +645,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         KitManager.TryGiveUnarmedKit(player);
                 }
             }
-            if (Data.TryMode(out TeamCTF ctf))
-            {
-                ctf.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
-            }
+            ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
             ulong team = player.GetTeam();
             FPlayerName names = F.GetPlayerOriginalNames(player);
             if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)

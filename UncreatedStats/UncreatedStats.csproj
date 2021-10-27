@@ -14,10 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\Desktop\C#\UncreatedNetworking.dll</HintPath>
-    </Reference>
-    <Reference Include="UncreatedNetworkingUWPPort">
-      <HintPath>..\..\..\..\Desktop\C#\UncreatedNetworkingUWPPort.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

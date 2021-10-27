@@ -12,7 +12,7 @@ using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.FOBs
 {
-    public class BuildManager
+    public static class BuildManager
     {
         public static bool TryBuildFOB(SDG.Unturned.BarricadeData foundation, UnturnedPlayer player)
         {

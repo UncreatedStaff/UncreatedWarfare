@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -326,8 +327,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (team == 1) CapT1();
             else if (team == 2) CapT2();
         }
-        public bool T1Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam1.ID == ID; }
-        public bool T2Obj { get => Manager is TeamCTF.TeamCTF ctf && ctf.ObjectiveTeam2.ID == ID; }
+        public bool T1Obj { get => Manager is IFlagTeamObjectiveGamemode ctf && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.ID == ID; }
+        public bool T2Obj { get => Manager is IFlagTeamObjectiveGamemode ctf && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.ID == ID; }
         public bool IsObj(ulong team)
         {
             if (team == 1) return T1Obj;

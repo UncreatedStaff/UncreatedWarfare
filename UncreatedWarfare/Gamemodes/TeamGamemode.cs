@@ -30,7 +30,6 @@ namespace Uncreated.Warfare.Gamemodes
             if (UseJoinUI)
             {
                 JoinManager = gameObject.AddComponent<JoinManager>();
-                JoinManager.Initialize();
             }
             base.Init();
         }
