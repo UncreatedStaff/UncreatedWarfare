@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public ulong ShuttingDownPlayer = 0;
         const float updateTimeFrequency = 1f;
         public WarStatsTracker warstats;
-        internal TeamCTF Gamemode;
+        internal TicketGamemode Gamemode;
         public ulong winner;
         public CancellationTokenSource CancelToken = new CancellationTokenSource();
         //List<KeyValuePair<Player, char>> topsquadplayers;
@@ -138,7 +138,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.player.life.serverModifyVirus(100);
                 player.player.life.serverModifyStamina(100);
                 player.player.movement.sendPluginJumpMultiplier(0f);
-                Gamemode.ReviveManager.RevivePlayer(player.player);
+
+                if (Gamemode is TeamCTF teamctf)
+                    teamctf.ReviveManager.RevivePlayer(player.player);
+                else if (Gamemode is Invasion.Invasion invasion)
+                    invasion.ReviveManager.RevivePlayer(player.player);
 
                 if (!player.player.life.isDead)
                 {
