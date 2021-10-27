@@ -818,7 +818,7 @@ namespace Uncreated.Warfare
                 bool itemIsVehicle = cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL;
                 if (killer == null)
                 {
-                    if (cause != EDeathCause.ZOMBIE && Data.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
+                    if (cause != EDeathCause.ZOMBIE && Data.TryMode(out TeamCTF ctf) && ctf.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
                     {
                         item = info.item;
                         distance = info.distance;
@@ -852,7 +852,7 @@ namespace Uncreated.Warfare
                         if (cause == EDeathCause.ZOMBIE)
                         {
                             killerName = new FPlayerName() { CharacterName = "zombie", PlayerName = "zombie", NickName = "zombie", Steam64 = 0 };
-                            killerTeam = TeamManager.ZombieTeamID;
+                            killerTeam = TeamManager.ZOMBIE_TEAM_ID;
                             translateName = true;
                         }
                         else
@@ -873,7 +873,7 @@ namespace Uncreated.Warfare
                     foundKiller = true;
                     try
                     {
-                        if (!Data.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
+                        if (!Data.TryMode(out TeamCTF ctf) || !ctf.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
                             GetKillerInfo(out item, out distance, out _, out _, out kitname, out turretOwner, cause, killer, dead.Player);
                         else
                         {

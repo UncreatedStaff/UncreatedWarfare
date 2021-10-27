@@ -3,6 +3,8 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
 using System.Text;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
@@ -78,7 +80,7 @@ namespace Uncreated.Warfare.Commands
             else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" ||
                 operation == "struct" || operation == "barricades" || operation == "barricade")
             {
-                UCWarfare.ReplaceBarricadesAndStructures();
+                Data.Gamemode.ReplaceBarricadesAndStructures();
                 if (isConsole) F.LogError(F.Translate("clear_structures_cleared", 0, out _));
                 else player.SendChat("clear_structures_cleared");
             }
@@ -91,26 +93,34 @@ namespace Uncreated.Warfare.Commands
         }
         public static void WipeVehiclesAndRespawn()
         {
-            List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
-            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+            Data.TryMode(out TeamCTF ctf);
+            if (ctf != null)
             {
-                if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out InteractableVehicle veh))
+                List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                 {
-                    VehicleBarricadeRegion reg = BarricadeManager.findRegionFromVehicle(veh);
-                    for (int s = 0; s < reg.drops.Count; s++)
+                    if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out InteractableVehicle veh))
                     {
-                        if (reg.drops[s].interactable is InteractableStorage storage)
+                        VehicleBarricadeRegion reg = BarricadeManager.findRegionFromVehicle(veh);
+                        for (int s = 0; s < reg.drops.Count; s++)
                         {
-                            storage.despawnWhenDestroyed = true;
+                            if (reg.drops[s].interactable is InteractableStorage storage)
+                            {
+                                storage.despawnWhenDestroyed = true;
+                            }
                         }
+                        spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
                     }
-                    spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
-                }
 
+                }
+                VehicleManager.askVehicleDestroyAll();
+                for (int i = 0; i < spawnsToReset.Count; i++)
+                    spawnsToReset[i].SpawnVehicle();
+            } 
+            else
+            {
+                VehicleManager.askVehicleDestroyAll();
             }
-            VehicleManager.askVehicleDestroyAll();
-            for (int i = 0; i < spawnsToReset.Count; i++)
-                spawnsToReset[i].SpawnVehicle();
         }
         public static void ClearItems()
         {

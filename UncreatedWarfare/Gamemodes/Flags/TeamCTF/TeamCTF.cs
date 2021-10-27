@@ -8,7 +8,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
@@ -19,7 +22,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public delegate Task ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
     public delegate Task FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
     public delegate Task FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-    public class TeamCTF : FlagGamemode
+    public class TeamCTF : TicketGamemode
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
         // vars
@@ -30,6 +33,24 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public List<ulong> InAMC = new List<ulong>();
         public Flag ObjectiveTeam1 { get => Rotation[ObjectiveT1Index]; }
         public Flag ObjectiveTeam2 { get => Rotation[ObjectiveT2Index]; }
+        public override string DisplayName => "Military RP";
+        public override bool EnableAMC => true;
+        public override bool PersistStructures => false;
+        public override bool ShowOFPUI => true;
+        public override bool ShowXPUI => true;
+        public override bool TransmitMicWhileNotActive => true;
+        public override bool UseJoinUI => true;
+        public override bool UseWhitelist => true;
+        public VehicleSpawner VehicleSpawner;
+        public VehicleBay VehicleBay;
+        public VehicleSigns VehicleSigns;
+        public FOBManager FOBManager;
+        public BuildManager BuildManager;
+        public RequestSigns RequestSignManager;
+        public KitManager KitManager;
+        public ReviveManager ReviveManager;
+        public static SquadManager SquadManager;
+        public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
 
         // leaderboard
         private EndScreenLeaderboard EndScreen;
@@ -44,6 +65,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public event VoidDelegate OnNewGameStarting;
         public TeamCTF() : base(nameof(TeamCTF), 1f)
         {
+            EventHandlers.Gamemode = this;
             _config = new Config<TeamCTFData>(Data.FlagStorage, "config.json");
             SetTiming(Config.PlayerCheckSpeedSeconds);
         }
@@ -99,6 +121,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void Init()
         {
+            base.Init();
+            FOBManager = new FOBManager();
+            BuildManager = new BuildManager();
+            SquadManager = new SquadManager();
+            KitManager = new KitManager();
+            ReviveManager = new ReviveManager();
             GameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
         }
         protected override bool TimeToCheck()
@@ -127,12 +155,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 return false;
             }
         }
-        public override void EvaluateTickets()
+        protected override void EvaluateTickets()
         {
             if (State == EState.ACTIVE)
             {
-                TicketManager.GetTeamBleed(TeamManager.Team1ID, out int Team1Bleed, out _);
-                TicketManager.GetTeamBleed(TeamManager.Team2ID, out int Team2Bleed, out _);
+                TicketManager.GetTeamBleed(1, out int Team1Bleed, out _);
+                TicketManager.GetTeamBleed(2, out int Team2Bleed, out _);
 
                 if (TicketCounter % 60 == 0)
                 {
@@ -198,13 +226,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
             this.State = EState.FINISHED;
-            UCWarfare.ReplaceBarricadesAndStructures();
+            ReplaceBarricadesAndStructures();
             Commands.ClearCommand.WipeVehiclesAndRespawn();
             Commands.ClearCommand.ClearItems();
             TicketManager.OnRoundWin(winner);
-            StartCoroutine(EndGame2(winner));
+            StartCoroutine(EndGameCoroutine(winner));
         }
-        private IEnumerator<WaitForSeconds> EndGame2(ulong winner)
+        private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
         {
             yield return new WaitForSeconds(Config.end_delay);
             InvokeOnTeamWin(winner);
@@ -212,6 +240,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
                 EndScreen.winner = winner;
+                EndScreen.Gamemode = this;
                 EndScreen.warstats = GameStats;
                 EndScreen.OnLeaderboardExpired += OnShouldStartNewGame;
                 EndScreen.ShuttingDown = shutdownAfterGame;
@@ -239,7 +268,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             F.Log("Loading new game.", ConsoleColor.Cyan);
             base.StartNextGame(onLoad); // set game id
             LoadRotation();
-            State = EState.ACTIVE;
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
             InvokeOnNewGameStarting(onLoad);
@@ -571,7 +599,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
         }
-        protected override void FlagPointsChanged(int NewPoints, int OldPoints, Flag flag)
+        protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
         {
             if (NewPoints == 0)
                 flag.SetOwner(0);
@@ -604,22 +632,63 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     ?? Rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
             CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
         }
-        public override void OnPlayerJoined(SteamPlayer player)
+        public override void OnPlayerJoined(UCPlayer player)
         {
-            GameStats.AddPlayer(player.player);
+            if (KitManager.KitExists(player.KitName, out Kit kit))
+            {
+                if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
+                {
+                    if (!KitManager.TryGiveRiflemanKit(player))
+                        KitManager.TryGiveUnarmedKit(player);
+                }
+            }
+            if (Data.TryMode(out TeamCTF ctf))
+            {
+                ctf.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
+            }
+            ulong team = player.GetTeam();
+            FPlayerName names = F.GetPlayerOriginalNames(player);
+            if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
+            {
+                if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+                    KitManager.GiveKit(player, unarmed);
+                else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
+                else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+            }
+            ReviveManager.OnPlayerConnected(player);
+            if (!AllowCosmetics)
+            {
+                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
+                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
+                player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
+            }
+            if (UCWarfare.Config.ModifySkillLevels)
+            {
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
+                player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
+            }
+            GameStats.AddPlayer(player.Player);
             if (isScreenUp && EndScreen != null && Config.ShowLeaderboard)
             {
-                EndScreen.SendScreenToPlayer(player, Config.ProgressChars);
+                EndScreen.SendScreenToPlayer(player.Player.channel.owner, Config.ProgressChars);
             }
             else
             {
-                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
+            StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
+            StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         }
-        public override void OnPlayerLeft(ulong player)
+        public override void OnPlayerLeft(UCPlayer player)
         {
             foreach (Flag flag in Rotation)
                 flag.RecalcCappers(true);
+            StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            ReviveManager.OnPlayerDisconnected(player.Player.channel.owner);
+            StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
         }
         public override void Dispose()
         {
@@ -628,11 +697,48 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
                 SendUIParameters.Nil.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection); // clear all capturing uis
             }
+            SquadManager?.Dispose();
+            VehicleSpawner?.Dispose();
+            ReviveManager?.Dispose();
+            KitManager?.Dispose();
             base.Dispose();
         }
+        public override void OnLevelLoaded()
+        {
+            VehicleBay = new VehicleBay();
+            VehicleSpawner = new VehicleSpawner();
+            VehicleSigns = new VehicleSigns();
+            RequestSignManager = new RequestSigns();
+            base.OnLevelLoaded();
+            FOBManager.LoadFobs();
+            RepairManager.LoadRepairStations();
+            RallyManager.WipeAllRallies();
+            VehicleSigns.InitAllSigns();
+        }
+        protected override void EventLoopAction()
+        {
+            base.EventLoopAction();
+            FOBManager.OnGameTick(TicketCounter);
+        }
+
+
+        public override void Subscribe()
+        {
+            UseableConsumeable.onPerformedAid += EventHandlers.OnPostHealedPlayer;
+            Patches.BarricadeDestroyedHandler += EventHandlers.OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler += EventHandlers.OnStructureDestroyed;
+            PlayerInput.onPluginKeyTick += EventHandlers.OnPluginKeyPressed;
+            base.Subscribe();
+        }
+        public override void Unsubscribe()
+        {
+            UseableConsumeable.onPerformedAid -= EventHandlers.OnPostHealedPlayer;
+            Patches.BarricadeDestroyedHandler -= EventHandlers.OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler -= EventHandlers.OnStructureDestroyed;
+            PlayerInput.onPluginKeyTick -= EventHandlers.OnPluginKeyPressed;
+            base.Unsubscribe();
+        }
     }
-
-
     public class TeamCTFData : ConfigData
     {
         public float PlayerCheckSpeedSeconds;

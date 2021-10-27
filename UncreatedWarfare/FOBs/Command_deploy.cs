@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
@@ -18,7 +19,12 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            if (Data.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                player.SendChat("command_e_gamemode");
+                return;
+            }
+            if (ctf.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
             {
                 player.Message("deploy_e_injured");
                 return;

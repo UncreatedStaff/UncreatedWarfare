@@ -12,14 +12,9 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.XP
 {
-    public class XPManager
+    public static class XPManager
     {
-        public static Config<XPData> config;
-
-        public XPManager()
-        {
-            config = new Config<XPData>(Data.XPStorage, "config.json");
-        }
+        public static Config<XPData> config = new Config<XPData>(Data.XPStorage, "config.json");
         public static void OnPlayerJoined(UCPlayer player)
         {
             F.Log(player.CharacterName);

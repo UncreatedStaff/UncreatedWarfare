@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Teams
 {
@@ -19,13 +20,18 @@ namespace Uncreated.Warfare.Teams
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
+            if (!Data.TryMode(out TeamGamemode teamgm))
+            {
+                player.SendChat("command_e_gamemode");
+                return;
+            }
             if (!(player.GetTeam() == 1 || player.GetTeam() == 2) && !player.Player.IsInMain())
             {
                 player.SendChat("teams_e_notinmain");
                 return;
             }
 
-            Data.JoinManager.JoinLobby(player, true);
+            teamgm.JoinManager.JoinLobby(player, true);
             
         }
     }

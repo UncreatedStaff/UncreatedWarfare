@@ -16,6 +16,11 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
+            if (!Data.Gamemode.UseWhitelist)
+            {
+                player.SendChat("command_e_gamemode");
+                return;
+            }
             if (arguments.Length == 2)
             {
                 if (arguments[0].ToLower() == "add")
@@ -25,13 +30,13 @@ namespace Uncreated.Warfare.Commands
                         if (!Whitelister.IsWhitelisted(itemID, out _))
                         {
                             Whitelister.AddItem(itemID);
-                            player.Message("whitelist_added", arguments[1]);
+                            player.SendChat("whitelist_added", arguments[1]);
                         }
                         else
-                            player.Message("whitelist_e_exist", arguments[1]);
+                            player.SendChat("whitelist_e_exist", arguments[1]);
                     }
                     else
-                        player.Message("whitelist_e_invalidid", arguments[1]);
+                        player.SendChat("whitelist_e_invalidid", arguments[1]);
                 }
                 else if (arguments[0].ToLower() == "remove")
                 {
@@ -40,16 +45,16 @@ namespace Uncreated.Warfare.Commands
                         if (Whitelister.IsWhitelisted(itemID, out _))
                         {
                             Whitelister.RemoveItem(itemID);
-                            player.Message("whitelist_removed", arguments[1]);
+                            player.SendChat("whitelist_removed", arguments[1]);
                         }
                         else
-                            player.Message("whitelist_e_noexist", arguments[1]);
+                            player.SendChat("whitelist_e_noexist", arguments[1]);
                     }
                     else
-                        player.Message("whitelist_e_invalidid", arguments[1]);
+                        player.SendChat("whitelist_e_invalidid", arguments[1]);
                 }
                 else
-                    player.Message("correct_usage", "/whitelist <add|remove|set>");
+                    player.SendChat("correct_usage", "/whitelist <add|remove|set>");
             }
             else if (arguments.Length == 4)
             {
@@ -64,25 +69,25 @@ namespace Uncreated.Warfare.Commands
                                 if (Whitelister.IsWhitelisted(itemID, out _))
                                 {
                                     Whitelister.SetAmount(itemID, amount);
-                                    player.Message("whitelist_removed", arguments[2]);
+                                    player.SendChat("whitelist_removed", arguments[2]);
                                 }
                                 else
-                                    player.Message("whitelist_e_noexist", arguments[2]);
+                                    player.SendChat("whitelist_e_noexist", arguments[2]);
                             }
                             else
-                                player.Message("whitelist_e_invalidamount", arguments[3]);
+                                player.SendChat("whitelist_e_invalidamount", arguments[3]);
                         }
                         else
-                            player.Message("whitelist_e_invalidid", arguments[2]);
+                            player.SendChat("whitelist_e_invalidid", arguments[2]);
                     }
                     else
-                        player.Message("correct_usage", "/whitelist set <amount|salvagable> <value>");
+                        player.SendChat("correct_usage", "/whitelist set <amount|salvagable> <value>");
                 }
                 else
-                    player.Message("correct_usage", "/whitelist <add|remove|set>");
+                    player.SendChat("correct_usage", "/whitelist <add|remove|set>");
             }
             else
-                player.Message("correct_usage", "/whitelist <add|remove|set>");
+                player.SendChat("correct_usage", "/whitelist <add|remove|set>");
         }
     }
 }

@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.XP;
 using Item = SDG.Unturned.Item;
@@ -160,13 +162,16 @@ namespace Uncreated.Warfare.Kits
             }
             string oldkit = player.KitName;
 
-            if (player.KitClass == EClass.MEDIC && kit.Class != EClass.MEDIC)
+            if (Data.TryMode(out TeamCTF g))
             {
-                Data.ReviveManager.DeregisterMedic(player);
-            }
-            else if (kit.Class == EClass.MEDIC)
-            {
-                Data.ReviveManager.RegisterMedic(player);
+                if (player.KitClass == EClass.MEDIC && kit.Class != EClass.MEDIC)
+                {
+                    g.ReviveManager.DeregisterMedic(player);
+                }
+                else if (kit.Class == EClass.MEDIC)
+                {
+                    g.ReviveManager.RegisterMedic(player);
+                }
             }
             player.KitName = kit.Name;
             player.KitClass = kit.Class;

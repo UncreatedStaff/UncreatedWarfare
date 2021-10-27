@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 
@@ -20,6 +21,11 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                player.Message("command_e_gamemode");
+                return;
+            }
             SDG.Unturned.BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop drop);
             //InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);

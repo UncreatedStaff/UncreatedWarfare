@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
@@ -15,7 +16,20 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                if (player.Squad.Leader.Player.quests.isMarkerPlaced)
+                {
+                    int distance = Mathf.RoundToInt((player.Position - player.Squad.Leader.Player.quests.markerPosition).magnitude / 10) * 10;
 
+                    player.Message("range", distance.ToString(Data.Locale));
+                }
+                else
+                {
+                    player.Message("range_nomarker");
+                }
+                return;
+            }
             if (player.Squad != null)
             {
                 if (player.Squad.Leader.Player.quests.isMarkerPlaced)

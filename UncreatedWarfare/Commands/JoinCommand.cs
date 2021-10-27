@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 
@@ -19,7 +20,11 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
-            // TODO
+            if (!Data.TryMode(out TeamGamemode gm))
+            {
+                player.Message("command_e_gamemode");
+                return;
+            }
             if (command.Length == 1)
             {
                 string imput = command[0].ToLower();

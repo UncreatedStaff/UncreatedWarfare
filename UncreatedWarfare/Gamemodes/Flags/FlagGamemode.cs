@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Structures;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
-    public abstract class FlagGamemode : Gamemode
+    public abstract class FlagGamemode : TeamGamemode
     {
         public List<Flag> Rotation = new List<Flag>();
         public List<Flag> AllFlags = new List<Flag>();
@@ -15,13 +18,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected int _counter;
         protected int _counter2;
         protected abstract bool TimeToCheck();
-        protected abstract bool TimeToTicket();
         public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
         { }
         public override void Init()
         {
-            this.State = EState.PAUSED;
             base.Init();
+            this.State = EState.PAUSED;
         }
         protected override void EventLoopAction()
         {
@@ -41,7 +43,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             bool ttc = TimeToCheck();
 
-            FOBManager.OnGameTick(TicketCounter);
             for (int i = 0; i < Rotation.Count; i++)
             {
                 if (Rotation[i] == null) continue;
@@ -51,21 +52,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (Player player in newPlayers)
                     AddPlayerOnFlag(player, Rotation[i]);
             }
-            if (TimeToTicket())
-                EvaluateTickets();
             if (ttc)
             {
                 EvaluatePoints();
                 OnEvaluate();
             }
-
-            TicketCounter++;
-            if (TicketCounter >= 60)
-                TicketCounter = 0;
         }
         protected uint TicketCounter = 0;
-        public virtual void EvaluateTickets()
-        { }
         public virtual void OnEvaluate()
         { }
         public void LoadAllFlags()
@@ -141,7 +134,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected abstract void PlayerEnteredFlagRadius(Flag flag, Player player);
         protected abstract void PlayerLeftFlagRadius(Flag flag, Player player);
         protected abstract void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag);
-        protected abstract void FlagPointsChanged(int NewPoints, int OldPoints, Flag flag);
+        protected abstract void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag);
         public override void OnLevelLoaded()
         {
             LoadAllFlags();
@@ -150,11 +143,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void Dispose()
         {
-            base.Dispose();
             ResetFlags();
             OnFlag.Clear();
             Rotation.Clear();
             _counter = 0;
+            base.Dispose();
         }
     }
 }

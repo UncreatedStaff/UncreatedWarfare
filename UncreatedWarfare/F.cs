@@ -13,6 +13,7 @@ using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
@@ -912,6 +913,12 @@ namespace Uncreated.Warfare
         }
         public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
         {
+            if (!(Data.Gamemode is TeamGamemode))
+            {
+                SteamPlayer pl2 = PlayerTool.getSteamPlayer(s64);
+                if (pl2 == null) return 0;
+                else return pl2.player.quests.groupID.m_SteamID;
+            }
             SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
             if (pl == default)
             {
@@ -927,6 +934,7 @@ namespace Uncreated.Warfare
         public static ulong GetTeam(this UnturnedPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this ulong groupID)
         {
+            if (!(Data.Gamemode is TeamGamemode)) return groupID;
             if (groupID == TeamManager.Team1ID) return 1;
             else if (groupID == TeamManager.Team2ID) return 2;
             else if (groupID == TeamManager.AdminID) return 3;
@@ -937,6 +945,7 @@ namespace Uncreated.Warfare
         public static byte GetTeamByte(this UnturnedPlayer player) => GetTeamByte(player.Player.quests.groupID.m_SteamID);
         public static byte GetTeamByte(this ulong groupID)
         {
+            if (!(Data.Gamemode is TeamGamemode)) return groupID > byte.MaxValue ? byte.MaxValue : (byte)groupID;
             if (groupID == TeamManager.Team1ID) return 1;
             else if (groupID == TeamManager.Team2ID) return 2;
             else if (groupID == TeamManager.AdminID) return 3;
@@ -965,12 +974,12 @@ namespace Uncreated.Warfare
                     case EFlagStatus.CAPTURING:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1_words")}>{Translate("ui_capturing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_1_words")}>{Translate("ui_capturing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("capturing_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("capturing_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2_words")}>{Translate("ui_capturing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("capturing_team_2_words")}>{Translate("ui_capturing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("capturing_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("capturing_team_2_bkgr"));
                         break;
@@ -988,84 +997,84 @@ namespace Uncreated.Warfare
                     case EFlagStatus.IN_VEHICLE:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("in_vehicle_team_1_words")}>{Translate("ui_in_vehicle", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("in_vehicle_team_1_words")}>{Translate("ui_in_vehicle", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("in_vehicle_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("in_vehicle_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("in_vehicle_team_2_words")}>{Translate("ui_in_vehicle", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("in_vehicle_team_2_words")}>{Translate("ui_in_vehicle", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("in_vehicle_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("in_vehicle_team_2_bkgr"));
                         break;
                     case EFlagStatus.LOSING:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("losing_team_1_words")}>{Translate("ui_losing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_1_words")}>{Translate("ui_losing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("losing_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("losing_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("losing_team_2_words")}>{Translate("ui_losing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("losing_team_2_words")}>{Translate("ui_losing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("losing_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("losing_team_2_bkgr"));
                         break;
                     case EFlagStatus.SECURED:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("secured_team_1_words")}>{Translate("ui_secured", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_1_words")}>{Translate("ui_secured", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("secured_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("secured_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("secured_team_2_words")}>{Translate("ui_secured", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("secured_team_2_words")}>{Translate("ui_secured", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("secured_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("secured_team_2_bkgr"));
                         break;
                     case EFlagStatus.CONTESTED:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("contested_team_1_words")}>{Translate("ui_contested", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_1_words")}>{Translate("ui_contested", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("contested_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("contested_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("contested_team_2_words")}>{Translate("ui_contested", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("contested_team_2_words")}>{Translate("ui_contested", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("contested_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("contested_team_2_bkgr"));
                         break;
                     case EFlagStatus.NOT_OBJECTIVE:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("nocap_team_1_words")}>{Translate("ui_nocap", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_1_words")}>{Translate("ui_nocap", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("nocap_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("nocap_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("nocap_team_2_words")}>{Translate("ui_nocap", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("nocap_team_2_words")}>{Translate("ui_nocap", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("nocap_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("nocap_team_2_bkgr"));
                         break;
                     case EFlagStatus.CLEARING:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("clearing_team_1_words")}>{Translate("ui_clearing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_1_words")}>{Translate("ui_clearing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("clearing_team_1")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("clearing_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("clearing_team_2_words")}>{Translate("ui_clearing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("clearing_team_2_words")}>{Translate("ui_clearing", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("clearing_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("clearing_team_2_bkgr"));
                         break;
                     case EFlagStatus.NOT_OWNED:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("notowned_team_1_words")}>{Translate("ui_notowned", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_1_words")}>{Translate("ui_notowned", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("notowned_team_1_bkgr"));
                         else if (team == 2)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
-                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2_words")}>{Translate("ui_notowned", playerID)}{(pts ? $" ({circleAmount}/{Flag.MaxPoints})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("notowned_team_2_words")}>{Translate("ui_notowned", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
                                 $"<color=#{UCWarfare.GetColorHex("notowned_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("notowned_team_2_bkgr"));
                         break;
@@ -1102,6 +1111,7 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
+            if (!(Data.Gamemode is TeamGamemode)) return TeamManager.LobbySpawn;
             ulong team = player.GetTeam();
             if (team == 1)
             {
@@ -1115,6 +1125,11 @@ namespace Uncreated.Warfare
         }
         public static Vector3 GetBaseSpawn(this Player player, out ulong team)
         {
+            if (!(Data.Gamemode is TeamGamemode))
+            {
+                team = player.quests.groupID.m_SteamID;
+                return TeamManager.LobbySpawn;
+            }
             team = player.GetTeam();
             if (team == 1)
             {
@@ -1129,16 +1144,28 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
         {
             team = playerID.GetTeamFromPlayerSteam64ID();
+            if (!(Data.Gamemode is TeamGamemode))
+            {
+                return TeamManager.LobbySpawn;
+            }
             return team.GetBaseSpawnFromTeam();
         }
         public static Vector3 GetBaseSpawnFromTeam(this ulong team)
         {
+            if (!(Data.Gamemode is TeamGamemode))
+            {
+                return TeamManager.LobbySpawn;
+            }
             if (team == 1) return TeamManager.Team1Main.Center3D;
             else if (team == 2) return TeamManager.Team2Main.Center3D;
             else return TeamManager.LobbySpawn;
         }
         public static float GetBaseAngle(this ulong team)
         {
+            if (!(Data.Gamemode is TeamGamemode))
+            {
+                return TeamManager.LobbySpawnAngle;
+            }
             if (team == 1) return TeamManager.Team1SpawnAngle;
             else if (team == 2) return TeamManager.Team2SpawnAngle;
             else return TeamManager.LobbySpawnAngle;
@@ -1524,6 +1551,7 @@ namespace Uncreated.Warfare
         public static bool TryGetPlayerOriginalNamesFromS64(ulong player, out FPlayerName originalNames) => Data.OriginalNames.TryGetValue(player, out originalNames);
         public static bool IsInMain(this Player player)
         {
+            if (!(Data.Gamemode is TeamGamemode)) return false;
             ulong team = player.GetTeam();
             if (team == 1) return TeamManager.Team1Main.IsInside(player.transform.position);
             else if (team == 2) return TeamManager.Team2Main.IsInside(player.transform.position);
@@ -1531,6 +1559,7 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(Vector3 point)
         {
+            if (!(Data.Gamemode is TeamGamemode)) return false;
             return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
         }
         public static bool IsOnFlag(this Player player) => Data.Gamemode is FlagGamemode fg && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
@@ -2049,7 +2078,8 @@ namespace Uncreated.Warfare
         }
         public static string ColorizeName(string innerText, ulong team)
         {
-            if (team == TeamManager.ZombieTeamID) return $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>";
+            if (!(Data.Gamemode is TeamGamemode)) return innerText;
+            if (team == TeamManager.ZOMBIE_TEAM_ID) return $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>";
             else if (team == TeamManager.Team1ID) return $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>";
             else if (team == TeamManager.Team2ID) return $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>";
             else if (team == TeamManager.AdminID) return $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>";

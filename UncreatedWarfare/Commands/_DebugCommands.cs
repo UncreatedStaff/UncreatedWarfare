@@ -105,7 +105,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                flag.CapT1(Flag.MaxPoints - flag.Points - 1);
+                                flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
                             }
                         }
                         else if (team == 2)
@@ -116,7 +116,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                flag.CapT2(Flag.MaxPoints - flag.Points - 2);
+                                flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
                             }
                         }
                         else player.SendChat("gamemode_flag_not_on_cap_team");

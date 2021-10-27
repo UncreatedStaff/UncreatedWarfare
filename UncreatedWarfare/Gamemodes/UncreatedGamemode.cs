@@ -2,23 +2,40 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes
 {
     public delegate Task TeamWinDelegate(ulong team);
-    public abstract class Gamemode : MonoBehaviour
+    public abstract class Gamemode : MonoBehaviour, IDisposable
     {
         public readonly string Name;
         private float EventLoopSpeed;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
+        public OfficerManager OfficerManager;
+        public PlayerManager LogoutSaver;
+        public StructureSaver StructureManager;
+        public Whitelister Whitelister;
+        public CooldownManager Cooldowns;
+        public virtual bool PersistStructures { get => false; }
+        public virtual bool UseWhitelist { get => true; }
         public EState State;
         protected string shutdownMessage = string.Empty;
         protected bool shutdownAfterGame = false;
         protected ulong shutdownPlayer = 0;
         public Coroutine EventLoopCoroutine;
         public bool isPendingCancel;
+        public abstract string DisplayName { get; }
+        public virtual bool TransmitMicWhileNotActive { get => true; }
+        public virtual bool ShowXPUI { get => true; }
+        public virtual bool ShowOFPUI { get => true; }
+        public virtual bool AllowCosmetics { get => true; }
 
         public long GameID;
         public Gamemode(string Name, float EventLoopSpeed)
@@ -33,7 +50,7 @@ namespace Uncreated.Warfare.Gamemodes
             this.EventLoopSpeed = NewSpeed;
             this.useEventLoop = NewSpeed > 0;
         }
-        public void Cancel()
+        public void CancelCoroutine()
         {
             isPendingCancel = true;
             if (EventLoopCoroutine == null)
@@ -41,7 +58,14 @@ namespace Uncreated.Warfare.Gamemodes
             StopCoroutine(EventLoopCoroutine);
         }
         public virtual void Init()
-        { }
+        {
+            LogoutSaver = new PlayerManager();
+            OfficerManager = new OfficerManager();
+            Cooldowns = new CooldownManager();
+            if (UseWhitelist)
+                Whitelister = new Whitelister();
+            Subscribe();
+        }
         protected void InvokeOnTeamWin(ulong winner)
         {
             if (OnTeamWin != null)
@@ -82,25 +106,27 @@ namespace Uncreated.Warfare.Gamemodes
         public abstract void DeclareWin(ulong winner);
         public virtual void StartNextGame(bool onLoad = false)
         {
+            State = EState.ACTIVE;
             GameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = GameID;
             PlayerManager.ApplyToOnline();
         }
-        public virtual void Dispose()
-        {
-            Cancel();
-        }
         public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
-        public virtual void OnPlayerJoined(SteamPlayer player)
+        public virtual void OnPlayerJoined(UCPlayer player)
         { }
-        public virtual void OnPlayerLeft(ulong player)
+        public virtual void OnPlayerLeft(UCPlayer player)
         { }
         public virtual void OnPlayerDeath(UCWarfare.DeathEventArgs args)
         { }
         public virtual void OnLevelLoaded()
         {
+            if (!PersistStructures)
+            {
+                StructureManager = new StructureSaver();
+            }
+            ReplaceBarricadesAndStructures();
             if (useEventLoop)
             {
                 EventLoopCoroutine = StartCoroutine(EventLoop());
@@ -124,6 +150,59 @@ namespace Uncreated.Warfare.Gamemodes
                 F.LogWarning("Exception when finding gamemode: \"" + name + '\"');
                 F.LogError(ex, ConsoleColor.Yellow);
                 return null;
+            }
+        }
+        public virtual void Subscribe()
+        { }
+        public virtual void Unsubscribe()
+        { }
+        public virtual void Dispose()
+        {
+            Unsubscribe();
+            CancelCoroutine();
+            Whitelister?.Dispose();
+        }
+        public void ReplaceBarricadesAndStructures()
+        {
+            try
+            {
+                for (byte x = 0; x < Regions.WORLD_SIZE; x++)
+                {
+                    for (byte y = 0; y < Regions.WORLD_SIZE; y++)
+                    {
+                        try
+                        {
+                            for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            {
+                                uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
+                                if (PersistStructures || (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _)))
+                                {
+                                    if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
+                                        storage.despawnWhenDestroyed = true;
+                                    BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
+                                }
+                            }
+                            for (int i = SDG.Unturned.StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            {
+                                uint instid = SDG.Unturned.StructureManager.regions[x, y].drops[i].instanceID;
+                                if (PersistStructures || !StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _))
+                                    SDG.Unturned.StructureManager.destroyStructure(SDG.Unturned.StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            F.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
+                            F.LogError(ex);
+                        }
+                    }
+                }
+                RequestSigns.DropAllSigns();
+                StructureSaver.DropAllStructures();
+            }
+            catch (Exception ex)
+            {
+                F.LogError($"Failed to clear barricades/structures:");
+                F.LogError(ex);
             }
         }
     }

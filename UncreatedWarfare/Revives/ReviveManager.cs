@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
 using UnityEngine;
@@ -81,18 +83,17 @@ namespace Uncreated.Warfare.Revives
             obj.player.movement.sendPluginJumpMultiplier(1.0f);
         }
 
-        internal void OnPlayerConnected(UnturnedPlayer player)
+        internal void OnPlayerConnected(UCPlayer ucplayer)
         {
-            player.Player.equipment.onEquipRequested += OnEquipRequested;
-            player.Player.stance.onStanceUpdated += delegate
+            ucplayer.Player.equipment.onEquipRequested += OnEquipRequested;
+            ucplayer.Player.stance.onStanceUpdated += delegate
             {
-                StanceUpdatedLocal(player.Player.channel.owner);
+                StanceUpdatedLocal(ucplayer.Player.channel.owner);
             };
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             if (KitManager.KitExists(ucplayer.KitName, out Kit kit) && kit.Class == EClass.MEDIC)
                 Medics.Add(ucplayer);
-            DownedPlayers.Remove(player.CSteamID.m_SteamID);
-            DeathInfo.Remove(player.CSteamID.m_SteamID);
+            DownedPlayers.Remove(ucplayer.CSteamID.m_SteamID);
+            DeathInfo.Remove(ucplayer.CSteamID.m_SteamID);
         }
         /// <summary>Pre-destroy</summary>
         internal void OnPlayerDisconnected(SteamPlayer player)
@@ -128,7 +129,7 @@ namespace Uncreated.Warfare.Revives
         {
             if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
-                r.RevivePlayer();
+                r.RevivePlayer(null);
                 byte team = medic.GetTeamByte();
                 ulong tteam = target.GetTeam();
                 if (team == tteam)
@@ -304,7 +305,7 @@ namespace Uncreated.Warfare.Revives
             {
                 if (player.Player.transform.TryGetComponent(out Reviver reviver))
                 {
-                    reviver.FinishKillingPlayer(this, true);
+                    reviver.FinishKillingPlayer(true);
                 }
                 else
                 {
@@ -352,7 +353,7 @@ namespace Uncreated.Warfare.Revives
             {
                 if (paramaters.player.transform.TryGetComponent(out Reviver reviver))
                 {
-                    reviver.FinishKillingPlayer(this);
+                    reviver.FinishKillingPlayer();
                 }
             }
             foreach (SteamPlayer player in Provider.clients)
@@ -555,33 +556,38 @@ namespace Uncreated.Warfare.Revives
                     stance = null;
                 }
             }
-            public void RevivePlayer() => RevivePlayer(Data.ReviveManager);
-            public void RevivePlayer(ReviveManager reviveManager, bool remove = true)
+            public void RevivePlayer(TeamCTF g = null, bool remove = true)
             {
-                Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
-                Player.Player.movement.sendPluginJumpMultiplier(1.0f);
-                Player.Player.life.serverSetBleeding(false);
-                CancelStance();
-                if (remove)
+                if (g == null) Data.TryMode(out g);
+                if (g != null)
                 {
-                    reviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
-                    reviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
+                    Player.Player.movement.sendPluginJumpMultiplier(1.0f);
+                    Player.Player.life.serverSetBleeding(false);
+                    CancelStance();
+                    if (remove)
+                    {
+                        g.ReviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
+                        g.ReviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    }
                 }
             }
-            public void FinishKillingPlayer(bool isDead = false) => FinishKillingPlayer(Data.ReviveManager, isDead);
-            public void FinishKillingPlayer(ReviveManager reviveManager, bool isDead = false)
+            public void FinishKillingPlayer(bool isDead = false)
             {
-                this.RevivePlayer(reviveManager, false);
-                if (!isDead)
+                if (Data.TryMode(out TeamCTF g))
                 {
-                    DamagePlayerParameters parameters = reviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
-                    parameters.damage = 100.0f;
-                    parameters.respectArmor = false;
-                    parameters.applyGlobalArmorMultiplier = false;
-                    DamageTool.damagePlayer(parameters, out _);
+                    this.RevivePlayer(g, false);
+                    if (!isDead)
+                    {
+                        DamagePlayerParameters parameters = g.ReviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
+                        parameters.damage = 100.0f;
+                        parameters.respectArmor = false;
+                        parameters.applyGlobalArmorMultiplier = false;
+                        DamageTool.damagePlayer(parameters, out _);
+                    }
+                    g.ReviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    g.ReviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                 }
-                reviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
-                reviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
             }
         }
     }

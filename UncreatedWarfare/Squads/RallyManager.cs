@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Squads
 {
-    public class RallyManager
+    public static class RallyManager
     {
         private static readonly List<RallyPoint> rallypoints = new List<RallyPoint>();
         public const float TELEPORT_HEIGHT_OFFSET = 2f;
@@ -154,7 +154,6 @@ namespace Uncreated.Warfare.Squads
             rallypoint = rallypoints.Find(r => r.squad == squad);
             return rallypoint != null;
         }
-
         public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
         {
             IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);

@@ -134,75 +134,19 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
-            Data.StructureManager = new StructureSaver();
             if (Config.Modules.VehicleSpawning)
             {
-                Data.VehicleBay = new VehicleBay();
-                Data.VehicleSpawner = new VehicleSpawner();
-                Data.VehicleSigns = new VehicleSigns();
             }
             Announcer = gameObject.AddComponent<UCAnnouncer>();
-            Data.RequestSignManager = new RequestSigns();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
-            Data.TeamManager = new TeamManager();
             F.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
-            ReplaceBarricadesAndStructures();
-            Data.VehicleSpawner.OnLevelLoaded();
-            FOBManager.LoadFobs();
-            RepairManager.LoadRepairStations();
-            RallyManager.WipeAllRallies();
-            VehicleSigns.InitAllSigns();
             Data.Gamemode.OnLevelLoaded();
-            Invocations.ReceiveAllItemInfosRequest(Data.NetClient.connection);
-        }
-        public static void ReplaceBarricadesAndStructures()
-        {
-            try
-            {
-                for (byte x = 0; x < Regions.WORLD_SIZE; x++)
-                {
-                    for (byte y = 0; y < Regions.WORLD_SIZE; y++)
-                    {
-                        try
-                        {
-                            for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
-                            {
-                                uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
-                                if (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _))
-                                {
-                                    if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
-                                        storage.despawnWhenDestroyed = true;
-                                    BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
-                                }
-                            }
-                            for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
-                            {
-                                uint instid = StructureManager.regions[x, y].drops[i].instanceID;
-                                if (!StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _) && !RequestSigns.SignExists(instid, out _))
-                                    StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            F.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
-                            F.LogError(ex);
-                        }
-                    }
-                }
-                RequestSigns.DropAllSigns();
-                StructureSaver.DropAllStructures();
-            }
-            catch (Exception ex)
-            {
-                F.LogError($"Failed to clear barricades/structures:");
-                F.LogError(ex);
-            }
         }
         private void SubscribeToEvents()
         {
+            Data.Gamemode.Subscribe();
             U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
-            UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
@@ -215,8 +159,6 @@ namespace Uncreated.Warfare
             UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
             PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
             BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
-            Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
-            Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
@@ -224,7 +166,6 @@ namespace Uncreated.Warfare
             Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
             Patches.OnPlayerMarker_Global += EventFunctions.OnPlayerMarkedPosOnMap;
             DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
-            PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
             EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
             BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
@@ -237,9 +178,9 @@ namespace Uncreated.Warfare
         }
         private void UnsubscribeFromEvents()
         {
+            Data.Gamemode.Unsubscribe();
             Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
-            UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
             U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
             Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
@@ -251,8 +192,6 @@ namespace Uncreated.Warfare
             UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
-            Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
-            Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
             Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
@@ -260,7 +199,6 @@ namespace Uncreated.Warfare
             Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
             Patches.OnPlayerMarker_Global -= EventFunctions.OnPlayerMarkedPosOnMap;
             DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
-            PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
             EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
             BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
             BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
@@ -348,10 +286,6 @@ namespace Uncreated.Warfare
             //Destroy(Queue);
             Data.Gamemode?.Dispose();
             Data.DatabaseManager?.Dispose();
-            Data.ReviveManager?.Dispose();
-            Data.Whitelister?.Dispose();
-            Data.SquadManager?.Dispose();
-            Data.VehicleSpawner?.Dispose();
             F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             F.Log("Unsubscribing from events...", ConsoleColor.Magenta);

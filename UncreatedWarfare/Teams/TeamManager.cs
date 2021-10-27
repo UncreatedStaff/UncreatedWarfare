@@ -13,15 +13,14 @@ namespace Uncreated.Warfare.Teams
     public class TeamManager
     {
         //private static TeamConfig _data;
-        private static Config<TeamConfig> _data;
-        public const ulong ZombieTeamID = ulong.MaxValue;
+        private static readonly Config<TeamConfig> _data = new Config<TeamConfig>(Data.TeamStorage, "teams.json");
+        public const ulong ZOMBIE_TEAM_ID = ulong.MaxValue;
 
         public static ushort Team1Tickets;
         public static ushort Team2Tickets;
 
         public TeamManager()
         {
-            _data = new Config<TeamConfig>(Data.TeamStorage, "teams.json");
             if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _))
                 F.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(_data.Data.team2unarmedkit, out _))
@@ -192,7 +191,7 @@ namespace Uncreated.Warfare.Teams
             if (team == 1) uncolorized = F.Translate("team_1", player);
             else if (team == 2) uncolorized = F.Translate("team_2", player);
             else if (team == 3) uncolorized = F.Translate("team_3", player);
-            else if (team == ZombieTeamID) uncolorized = F.Translate("zombie", player);
+            else if (team == ZOMBIE_TEAM_ID) uncolorized = F.Translate("zombie", player);
             else if (team == 0) uncolorized = F.Translate("neutral", player);
             else uncolorized = team.ToString(Data.Locale);
             if (!colorize) return uncolorized;
@@ -215,7 +214,7 @@ namespace Uncreated.Warfare.Teams
                     return Team2ColorHex;
                 case 3:
                     return AdminColorHex;
-                case ZombieTeamID:
+                case ZOMBIE_TEAM_ID:
                     return UCWarfare.GetColorHex("death_zombie_name_color");
                 default:
                     return NeutralColorHex;
@@ -231,7 +230,7 @@ namespace Uncreated.Warfare.Teams
                     return Team2Color;
                 case 3:
                     return AdminColor;
-                case ZombieTeamID:
+                case ZOMBIE_TEAM_ID:
                     return UCWarfare.GetColor("death_zombie_name_color");
                 default:
                     return NeutralColor;

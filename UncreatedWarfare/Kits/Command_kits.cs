@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Commands
@@ -18,6 +19,11 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                player.SendChat("command_e_gamemode");
+                return;
+            }
             List<Kit> kits = KitManager.GetAccessibleKits(player.Steam64).ToList();
 
             if (kits.Count > 0)
