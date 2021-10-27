@@ -7,7 +7,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IWarstatsGamemode
+    public interface IWarstatsGamemode : IGamemode
     {
         EndScreenLeaderboard EndScreen { get; }
         bool isScreenUp { get; }

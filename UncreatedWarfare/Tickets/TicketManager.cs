@@ -6,6 +6,7 @@ using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
@@ -294,11 +295,11 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFlagTick()
         {
-            if (Data.Gamemode is TeamCTF gamemode)
+            if (Data.Is(out IFlagRotation fg))
             {
-                for (int i = 0; i < gamemode.Rotation.Count; i++)
+                for (int i = 0; i < fg.Rotation.Count; i++)
                 {
-                    Flag flag = gamemode.Rotation[i];
+                    Flag flag = fg.Rotation[i];
                     if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
                     {
                         for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
@@ -437,7 +438,7 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void GetTeamBleed(ulong team, out int bleed, out string message)
         {
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
                 int friendlyCount = fg.Rotation.Where(f => f.Owner == team).Count();
                 int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();

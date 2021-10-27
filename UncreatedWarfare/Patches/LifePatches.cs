@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare
 {
@@ -36,7 +37,7 @@ namespace Uncreated.Warfare
             static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding, ref uint ___lastRegenerate)
             {
                 if (!UCWarfare.Config.Patches.simulatePlayerLife) return true;
-                if (!Data.TryMode(out TeamCTF ctf)) return true;
+                if (!Data.Is(out IRevives r)) return true;
                 if (Provider.isServer)
                 {
                     if (Level.info.type == ELevelType.SURVIVAL)
@@ -45,7 +46,7 @@ namespace Uncreated.Warfare
                         {
                             if (simulation - ___lastBleed > Provider.modeConfigData.Players.Bleed_Damage_Ticks)
                             {
-                                if (ctf.ReviveManager != null && ctf.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
+                                if (r.ReviveManager != null && r.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
                                 {
                                     ____isBleeding = false;
                                     ___lastRegenerate = simulation; // reset last regeneration to stop it from regenerating hp since it thinks the player isnt bleeding.
@@ -65,7 +66,7 @@ namespace Uncreated.Warfare
             static void SimulatePlayerLifePost(uint simulation, PlayerLife __instance, ref uint ___lastBleed, ref bool ____isBleeding)
             {
                 if (!UCWarfare.Config.Patches.simulatePlayerLife) return;
-                if (!Data.TryMode(out TeamCTF ctf)) return;
+                if (!Data.Is(out IRevives r)) return;
                 if (Provider.isServer)
                 {
                     if (Level.info.type == ELevelType.SURVIVAL)
@@ -74,11 +75,11 @@ namespace Uncreated.Warfare
                         {
                             if (simulation - ___lastBleed > Provider.modeConfigData.Players.Bleed_Damage_Ticks)
                             {
-                                if (ctf.ReviveManager != null && ctf.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
+                                if (r.ReviveManager != null && r.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
                                 {
                                     ___lastBleed = simulation;
                                     ____isBleeding = true;
-                                    DamagePlayerParameters p = ctf.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID];
+                                    DamagePlayerParameters p = r.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID];
                                     __instance.askDamage(1, p.direction, p.cause, p.limb, p.killer, out EPlayerKill _, canCauseBleeding: false, bypassSafezone: true);
                                 }
                             }

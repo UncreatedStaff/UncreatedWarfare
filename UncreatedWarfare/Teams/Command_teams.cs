@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Teams
 {
@@ -20,7 +21,7 @@ namespace Uncreated.Warfare.Teams
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            if (!Data.TryMode(out TeamGamemode teamgm))
+            if (!Data.Is(out ITeams teamgm) && teamgm.UseJoinUI)
             {
                 player.SendChat("command_e_gamemode");
                 return;

@@ -12,7 +12,9 @@ using System.Reflection;
 using System.Text;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.XP;
@@ -86,7 +88,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "quickcap")
                 {
-                    if (Data.Gamemode is FlagGamemode fg)
+                    if (Data.Is(out IFlagRotation fg))
                     {
                         Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
                         if (flag == default)
@@ -160,7 +162,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "savemanyzones")
                 {
-                    if (Data.Gamemode is FlagGamemode fg)
+                    if (Data.Is(out IFlagRotation fg))
                     {
                         if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
                             times = 1U;
@@ -180,7 +182,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (command[0] == "savemanygraphs")
                 {
-                    if (Data.Gamemode is FlagGamemode fg)
+                    if (Data.Is(out IFlagRotation fg))
                     {
                         if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
                             times = 1U;
@@ -241,7 +243,7 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(F.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
                 Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default(Flag))
@@ -285,9 +287,9 @@ namespace Uncreated.Warfare.Commands
             Zone zone;
             string zoneName;
             string zoneColor;
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
-                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default)
                 {
                     List<Zone> zones = Data.ExtraZones.Values.ToList();
@@ -300,7 +302,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale),
                             player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                            fg.AllFlags.Count.ToString(Data.Locale));
+                            fg.LoadedFlags.Count.ToString(Data.Locale));
                         return;
                     }
                     else
@@ -407,7 +409,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 arg = sb.ToString().ToLower();
             }
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
                 Flag flag;
                 if (fg is TeamCTF ctf)
@@ -417,10 +419,17 @@ namespace Uncreated.Warfare.Commands
                     else if (arg == "obj2" && ctf.ObjectiveTeam2 != null)
                         flag = ctf.ObjectiveTeam2;
                     else
-                        flag = fg.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
+                        flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
+                }
+                else if (fg is Invasion inv)
+                {
+                    if (arg == "obj")
+                        flag = (inv.ObjectiveTeam1 ?? inv.ObjectiveTeam2) ?? fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
+                    else
+                        flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
                 }
                 else
-                    flag = fg.AllFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
+                    flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
                 if (flag == default)
                 {
                     Dictionary<int, Zone> eZones = Data.ExtraZones;
@@ -472,7 +481,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void zonearea(string[] command, Player player)
         {
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
                 bool all = false;
                 bool extra = false;
@@ -506,7 +515,7 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
                 List<Zone> zones = new List<Zone>();
-                foreach (Flag flag in all ? fg.AllFlags : fg.Rotation)
+                foreach (Flag flag in all ? fg.LoadedFlags : fg.Rotation)
                     zones.Add(flag.ZoneData);
                 if (extra)
                 {
@@ -530,14 +539,14 @@ namespace Uncreated.Warfare.Commands
             Zone zone;
             string zoneName;
             string zoneColor;
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
-                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default)
                 {
                     player.SendChat("test_zone_test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
                         player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                        fg.AllFlags.Count.ToString(Data.Locale));
+                        fg.LoadedFlags.Count.ToString(Data.Locale));
                     return;
                 }
                 else
@@ -595,9 +604,9 @@ namespace Uncreated.Warfare.Commands
             Zone zone;
             string zoneName;
             string zoneColor;
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
-                Flag flag = fg.AllFlags.FirstOrDefault(f => f.PlayerInRange(player));
+                Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(player));
                 if (flag == default)
                 {
                     List<Zone> zones = Data.ExtraZones.Values.ToList();
@@ -610,7 +619,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         player.SendChat("test_zone_test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
                             player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                            fg.AllFlags.Count.ToString(Data.Locale));
+                            fg.LoadedFlags.Count.ToString(Data.Locale));
                         return;
                     }
                     else
@@ -680,22 +689,22 @@ namespace Uncreated.Warfare.Commands
         }
         private void game(string[] command, Player player)
         {
-            if (Data.Gamemode is TeamCTF ctf)
+            if (Data.Is(out IFlagRotation fg))
             {
                 StringBuilder flags = new StringBuilder();
-                for (int f = 0; f < ctf.Rotation.Count; f++)
+                for (int f = 0; f < fg.Rotation.Count; f++)
                 {
                     if (f == 0) flags.Append('\n');
-                    flags.Append(ctf.Rotation[f].Name).Append("\nOwner: ").Append(ctf.Rotation[f].Owner).Append(" Players: \n1: ")
-                        .Append(string.Join(",", ctf.Rotation[f].PlayersOnFlagTeam1.Select(x => F.GetPlayerOriginalNames(x).PlayerName))).Append("\n2: ")
-                        .Append(string.Join(",", ctf.Rotation[f].PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
-                        .Append("\nPoints: ").Append(ctf.Rotation[f].Points).Append(" State: ").Append(ctf.Rotation[f].LastDeltaPoints).Append('\n');
+                    flags.Append(fg.Rotation[f].Name).Append("\nOwner: ").Append(fg.Rotation[f].Owner).Append(" Players: \n1: ")
+                        .Append(string.Join(",", fg.Rotation[f].PlayersOnFlagTeam1.Select(x => F.GetPlayerOriginalNames(x).PlayerName))).Append("\n2: ")
+                        .Append(string.Join(",", fg.Rotation[f].PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
+                        .Append("\nPoints: ").Append(fg.Rotation[f].Points).Append(" State: ").Append(fg.Rotation[f].LastDeltaPoints).Append('\n');
                 }
                 F.Log(
-                    $"Game {ctf.GameID}: " +
+                    $"Game {fg.GameID}: " +
                     $"Tickets: 1: {Tickets.TicketManager.Team1Tickets}, 2: {Tickets.TicketManager.Team2Tickets}\n" +
                     $"Starting Tickets: 1: {Tickets.TicketManager._Team1previousTickets}, 2: {Tickets.TicketManager._Team2previousTickets}\n" +
-                    $"{ctf.Rotation.Count} Flags: {flags}Players:\n" +
+                    $"{fg.Rotation.Count} Flags: {flags}Players:\n" +
                     $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (F.TryGetPlaytimeComponent(x.player, out PlaytimeComponent c) ? F.GetTimeFromSeconds((uint)Mathf.RoundToInt(c.CurrentTimeSeconds), 0) : "unknown pt")))}"// ends with \n
                     );
             }

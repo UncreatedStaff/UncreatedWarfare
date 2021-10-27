@@ -5,6 +5,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
@@ -26,7 +27,7 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
-            if (!Data.TryMode(out TeamGamemode gm))
+            if (!Data.Is(out ITeams gm))
             {
                 player.Message("command_e_gamemode");
                 return;

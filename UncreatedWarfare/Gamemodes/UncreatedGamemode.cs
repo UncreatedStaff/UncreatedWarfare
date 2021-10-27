@@ -5,27 +5,26 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.XP;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes
 {
     public delegate Task TeamWinDelegate(ulong team);
-    public abstract class Gamemode : MonoBehaviour, IDisposable
+    public abstract class Gamemode : MonoBehaviour, IDisposable, IGamemode
     {
-        public readonly string Name;
+        protected readonly string _name;
+        public string Name { get => _name; }
         private float EventLoopSpeed;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
         public OfficerManager OfficerManager;
         public PlayerManager LogoutSaver;
-        public StructureSaver StructureManager;
         public Whitelister Whitelister;
         public CooldownManager Cooldowns;
-        public virtual bool PersistStructures { get => false; }
         public virtual bool UseWhitelist { get => true; }
-        public EState State;
+        protected EState _state;
+        public EState State { get => _state; }
         protected string shutdownMessage = string.Empty;
         protected bool shutdownAfterGame = false;
         protected ulong shutdownPlayer = 0;
@@ -37,13 +36,14 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual bool ShowOFPUI { get => true; }
         public virtual bool AllowCosmetics { get => true; }
 
-        public long GameID;
+        protected long _gameID;
+        public long GameID { get => _gameID; }
         public Gamemode(string Name, float EventLoopSpeed)
         {
-            this.Name = Name;
+            this._name = Name;
             this.EventLoopSpeed = EventLoopSpeed;
             this.useEventLoop = EventLoopSpeed > 0;
-            this.State = EState.LOADING;
+            this._state = EState.LOADING;
         }
         protected void SetTiming(float NewSpeed)
         {
@@ -106,10 +106,10 @@ namespace Uncreated.Warfare.Gamemodes
         public abstract void DeclareWin(ulong winner);
         public virtual void StartNextGame(bool onLoad = false)
         {
-            State = EState.ACTIVE;
-            GameID = DateTime.Now.Ticks;
+            _state = EState.ACTIVE;
+            _gameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
-                if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = GameID;
+                if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
         }
         public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
@@ -122,10 +122,6 @@ namespace Uncreated.Warfare.Gamemodes
         { }
         public virtual void OnLevelLoaded()
         {
-            if (!PersistStructures)
-            {
-                StructureManager = new StructureSaver();
-            }
             ReplaceBarricadesAndStructures();
             if (useEventLoop)
             {
@@ -166,6 +162,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             try
             {
+                bool isStruct = this is IStructureSaving;
                 for (byte x = 0; x < Regions.WORLD_SIZE; x++)
                 {
                     for (byte y = 0; y < Regions.WORLD_SIZE; y++)
@@ -175,18 +172,18 @@ namespace Uncreated.Warfare.Gamemodes
                             for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
                             {
                                 uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
-                                if (PersistStructures || (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _)))
+                                if (isStruct || (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _)))
                                 {
                                     if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
                                         storage.despawnWhenDestroyed = true;
                                     BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
                                 }
                             }
-                            for (int i = SDG.Unturned.StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
                             {
-                                uint instid = SDG.Unturned.StructureManager.regions[x, y].drops[i].instanceID;
-                                if (PersistStructures || !StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _))
-                                    SDG.Unturned.StructureManager.destroyStructure(SDG.Unturned.StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
+                                uint instid = StructureManager.regions[x, y].drops[i].instanceID;
+                                if (isStruct || !StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _))
+                                    StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
                             }
                         }
                         catch (Exception ex)

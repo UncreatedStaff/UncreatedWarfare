@@ -3,6 +3,7 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.FOBs
@@ -18,7 +19,7 @@ namespace Uncreated.Warfare.FOBs
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
-            if (!Data.TryMode(out TeamCTF ctf))
+            if (!Data.Is(out IFOBs ctf))
             {
                 player.SendChat("command_e_gamemode");
                 return;

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Structure = Uncreated.Warfare.Structures.Structure;
 
 namespace Uncreated.Warfare.Commands
@@ -25,7 +26,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (action == "save")
                 {
-                    if (Data.Gamemode.PersistStructures)
+                    if (Data.Gamemode is IStructureSaving)
                     {
                         player.Message("command_e_gamemode");
                         return;
@@ -131,7 +132,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (action == "remove")
                 {
-                    if (Data.Gamemode.PersistStructures)
+                    if (Data.Gamemode is IStructureSaving)
                     {
                         player.Message("command_e_gamemode");
                         return;

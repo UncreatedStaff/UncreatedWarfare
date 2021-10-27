@@ -18,10 +18,12 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {
-    public class Invasion : TicketGamemode
+    public class Invasion : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IAttackDefence
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
 
@@ -29,45 +31,45 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         private readonly Config<InvasionData> _config;
         public InvasionData Config { get => _config.Data; }
 
-        public WarStatsTracker GameStats;
-        private EndScreenLeaderboard EndScreen;
-        public bool isScreenUp = false;
+        protected WarStatsTracker _gameStats;
+        public WarStatsTracker GameStats { get => _gameStats; }
+        protected EndScreenLeaderboard _endScreen;
+        public EndScreenLeaderboard EndScreen { get => _endScreen; }
+        protected bool _isScreenUp = false;
+        public bool isScreenUp { get => _isScreenUp; }
 
-        public ulong AttackTeam;
-        public ulong DefendTeam;
+        protected ulong _attackTeam;
+        public ulong AttackingTeam { get => _attackTeam; }
+        protected ulong _defendTeam;
+        public ulong DefendingTeam { get => _defendTeam; }
 
-        public int ObjectiveT1Index;
-        public int ObjectiveT2Index;
-        public Flag ObjectiveTeam1
-        {
-            get
-            {
-                if (ObjectiveT1Index != -1)
-                    return Rotation[ObjectiveT1Index];
-                else
-                    return null;
-            }
-        }
-        public Flag ObjectiveTeam2
-        {
-            get
-            {
-                if (ObjectiveT2Index != -1)
-                    return Rotation[ObjectiveT2Index];
-                else
-                    return null;
-            }
-        }
+        protected int _objectiveT1Index;
+        protected int _objectiveT2Index;
+        public int ObjectiveT1Index { get => _objectiveT1Index; }
+        public int ObjectiveT2Index { get => _objectiveT2Index; }
+        public List<ulong> InAMC = new List<ulong>();
+        public Flag ObjectiveTeam1 { get => _objectiveT1Index < 0 || _objectiveT1Index >= _rotation.Count ? null : _rotation[_objectiveT1Index]; }
+        public Flag ObjectiveTeam2 { get => _objectiveT2Index < 0 || _objectiveT2Index >= _rotation.Count ? null : _rotation[_objectiveT2Index]; }
 
-        public VehicleSpawner VehicleSpawner;
-        public VehicleBay VehicleBay;
-        public VehicleSigns VehicleSigns;
-        public FOBManager FOBManager;
-        public BuildManager BuildManager;
-        public RequestSigns RequestSignManager;
-        public KitManager KitManager;
-        public ReviveManager ReviveManager;
-        public SquadManager SquadManager;
+        protected VehicleSpawner _vehicleSpawner;
+        public VehicleSpawner VehicleSpawner { get => _vehicleSpawner; }
+        protected VehicleBay _vehicleBay;
+        public VehicleBay VehicleBay { get => _vehicleBay; }
+        protected VehicleSigns _vehicleSigns;
+        public VehicleSigns VehicleSigns { get => _vehicleSigns; }
+        protected FOBManager _FOBManager;
+        public FOBManager FOBManager { get => _FOBManager; }
+        protected RequestSigns _requestSigns;
+        public RequestSigns RequestSigns { get => _requestSigns; }
+        protected KitManager _kitManager;
+        public KitManager KitManager { get => _kitManager; }
+        protected ReviveManager _reviveManager;
+        public ReviveManager ReviveManager { get => _reviveManager; }
+        protected SquadManager _squadManager;
+        public SquadManager SquadManager { get => _squadManager; }
+        protected StructureSaver _structureSaver;
+        public StructureSaver StructureSaver { get => _structureSaver; }
+
         public Invasion(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
         {
             _config = new Config<InvasionData>(Data.FlagStorage, "invasion.json");
@@ -75,23 +77,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public override void Init()
         {
             base.Init();
-            FOBManager = new FOBManager();
-            BuildManager = new BuildManager();
-            SquadManager = new SquadManager();
-            KitManager = new KitManager();
-            ReviveManager = new ReviveManager();
-            GameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
+            _FOBManager = new FOBManager();
+            _squadManager = new SquadManager();
+            _kitManager = new KitManager();
+            _reviveManager = new ReviveManager();
+            _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
         }
         public override void StartNextGame(bool onLoad = false)
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
             base.StartNextGame(onLoad); // set game id
 
-            AttackTeam = (ulong)UnityEngine.Random.Range(1, 3);
-            if (AttackTeam == 1)
-                DefendTeam = 2;
-            else if (AttackTeam == 2)
-                DefendTeam = 1;
+            _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
+            if (_attackTeam == 1)
+                _defendTeam = 2;
+            else if (_attackTeam == 2)
+                _defendTeam = 1;
 
             LoadRotation();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
@@ -122,16 +123,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     {
                         for (int i = NewFlagObj.index; i < NewFlagObj.index + UCWarfare.Config.FlagSettings.DiscoveryForesight; i++)
                         {
-                            if (i >= Rotation.Count || i < 0) break;
-                            Rotation[i].Discover(1);
+                            if (i >= _rotation.Count || i < 0) break;
+                            _rotation[i].Discover(1);
                         }
                     }
                     else if (Team == 2)
                     {
                         for (int i = NewFlagObj.index; i > NewFlagObj.index - UCWarfare.Config.FlagSettings.DiscoveryForesight; i--)
                         {
-                            if (i >= Rotation.Count || i < 0) break;
-                            Rotation[i].Discover(2);
+                            if (i >= _rotation.Count || i < 0) break;
+                            _rotation[i].Discover(2);
                         }
                     }
                 }
@@ -140,35 +141,35 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         private void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
             TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-            Stats.StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
-            Stats.StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
+            StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
+            StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
             List<string> kits = new List<string>();
             if (capturedTeam == 1)
             {
                 for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
                 {
-                    Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
-                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
+                    StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                    if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
                     {
-                        Stats.StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
+                        StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
                         kits.Add(kit.Name);
                     }
                 }
                 if (flag.IsObj(2))
                     for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-                        Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                        StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
             }
             else if (capturedTeam == 2)
             {
                 if (flag.IsObj(1))
                     for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
-                        Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                        StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
                 for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
                 {
-                    Stats.StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
-                    if (Kits.KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
+                    StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                    if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
                     {
-                        Stats.StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
+                        StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
                         kits.Add(kit.Name);
                     }
                 }
@@ -209,7 +210,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                         Stats.StatsManager.ModifyStats(played.id, s => s.Losses++, false);
                 }
             }
-            this.State = EState.FINISHED;
+            this._state = EState.FINISHED;
             ReplaceBarricadesAndStructures();
             Commands.ClearCommand.WipeVehiclesAndRespawn();
             Commands.ClearCommand.ClearItems();
@@ -222,16 +223,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             InvokeOnTeamWin(winner);
             if (Config.ShowLeaderboard)
             {
-                EndScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
-                EndScreen.winner = winner;
-                EndScreen.Gamemode = this;
-                EndScreen.warstats = GameStats;
-                EndScreen.OnLeaderboardExpired += OnShouldStartNewGame;
-                EndScreen.ShuttingDown = shutdownAfterGame;
-                EndScreen.ShuttingDownMessage = shutdownMessage;
-                EndScreen.ShuttingDownPlayer = shutdownPlayer;
-                isScreenUp = true;
-                EndScreen.EndGame(Config.ProgressChars);
+                _endScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
+                _endScreen.winner = winner;
+                _endScreen.Gamemode = this;
+                _endScreen.warstats = GameStats;
+                _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
+                _endScreen.ShuttingDown = shutdownAfterGame;
+                _endScreen.ShuttingDownMessage = shutdownMessage;
+                _endScreen.ShuttingDownPlayer = shutdownPlayer;
+                _isScreenUp = true;
+                _endScreen.EndGame(Config.ProgressChars);
             }
             else OnShouldStartNewGame();
         }
@@ -240,40 +241,40 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             if (EndScreen != default)
                 EndScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
             Destroy(EndScreen);
-            isScreenUp = false;
+            _isScreenUp = false;
             StartNextGame();
         }
         public override void LoadRotation()
         {
-            if (AllFlags == null) return;
+            if (_allFlags == null) return;
             ResetFlags();
-            OnFlag.Clear();
+            _onFlag.Clear();
             if (Config.PathingMode == ObjectivePathing.EPathingMode.AUTODISTANCE)
             {
                 Config.PathingData.Set();
-                Rotation = ObjectivePathing.CreateAutoPath(AllFlags);
+                _rotation = ObjectivePathing.CreateAutoPath(_allFlags);
             }
             else if (Config.PathingMode == ObjectivePathing.EPathingMode.LEVELS)
             {
-                Rotation = ObjectivePathing.CreatePathUsingLevels(AllFlags, Config.MaxFlagsPerLevel);
+                _rotation = ObjectivePathing.CreatePathUsingLevels(_allFlags, Config.MaxFlagsPerLevel);
             }
             else if (Config.PathingMode == ObjectivePathing.EPathingMode.ADJACENCIES)
             {
-                Rotation = ObjectivePathing.PathWithAdjacents(AllFlags, Config.team1adjacencies, Config.team2adjacencies);
+                _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.team1adjacencies, Config.team2adjacencies);
             }
             else
             {
                 F.LogWarning("Invalid pathing value, no flags will be loaded. Expect errors.");
             }
-            if (AttackTeam == 1)
+            if (_attackTeam == 1)
             {
-                ObjectiveT1Index = 0;
-                ObjectiveT2Index = -1;
+                _objectiveT1Index = 0;
+                _objectiveT2Index = -1;
             }
-            else if (AttackTeam == 2)
+            else if (_attackTeam == 2)
             {
-                ObjectiveT2Index = Rotation.Count - 1;
-                ObjectiveT1Index = -1;
+                _objectiveT2Index = _rotation.Count - 1;
+                _objectiveT1Index = -1;
             }
             if (Config.DiscoveryForesight < 1)
             {
@@ -281,38 +282,35 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             else
             {
-                foreach (var flag in Rotation)
+                for (int i = 0; i < _rotation.Count; i++)
                 {
-                    flag.Discover(DefendTeam);
+                    _rotation[i].Discover(_defendTeam);
                 }
-
-
-                if (AttackTeam == 1)
+                if (_attackTeam == 1)
                 {
                     for (int i = 0; i < Config.DiscoveryForesight; i++)
                     {
-                        if (i >= Rotation.Count || i < 0) break;
-                        Rotation[i].Discover(1);
+                        if (i >= _rotation.Count || i < 0) break;
+                        _rotation[i].Discover(1);
                     }
                 }
-                else if (AttackTeam == 2)
+                else if (_attackTeam == 2)
                 {
-                    for (int i = Rotation.Count - 1; i > Rotation.Count - 1 - Config.DiscoveryForesight; i--)
+                    for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.DiscoveryForesight; i--)
                     {
-                        if (i >= Rotation.Count || i < 0) break;
-                        Rotation[i].Discover(2);
+                        if (i >= _rotation.Count || i < 0) break;
+                        _rotation[i].Discover(2);
                     }
                 }
-                
             }
-            foreach (Flag flag in Rotation)
+            foreach (Flag flag in _rotation)
             {
                 InitFlag(flag); //subscribe to abstract events.
             }
             foreach (SteamPlayer client in Provider.clients)
             {
                 InvasionUI.ClearListUI(client.transportConnection, Config.FlagUICount);
-                InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
             PrintFlagRotation();
             EvaluatePoints();
@@ -320,30 +318,29 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public override void InitFlag(Flag flag)
         {
             base.InitFlag(flag);
-
-            flag.SetOwnerNoEventInvocation(DefendTeam);
+            flag.SetOwnerNoEventInvocation(_defendTeam);
         }
         protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {
             if (NewOwner == 1)
             {
-                if (ObjectiveT1Index >= Rotation.Count - 1) // if t1 just capped the last flag
+                if (ObjectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
                 {
                     DeclareWin(NewOwner);
-                    ObjectiveT1Index = Rotation.Count - 1;
+                    _objectiveT1Index = _rotation.Count - 1;
                     return;
                 }
                 else
                 {
-                    if (AttackTeam == 1)
+                    if (_attackTeam == 1)
                     {
-                        ObjectiveT1Index = flag.index + 1;
+                        _objectiveT1Index = flag.index + 1;
                     }
                     else
                     {
-                        ObjectiveT1Index = -1;
+                        _objectiveT1Index = -1;
                     }
-                    InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
+                    InvokeOnObjectiveChanged(flag, _rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                     {
@@ -357,21 +354,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 if (ObjectiveT2Index < 1) // if t2 just capped the last flag
                 {
                     DeclareWin(NewOwner);
-                    ObjectiveT2Index = 0;
+                    _objectiveT2Index = 0;
                     return;
                 }
                 else
                 {
 
-                    if (AttackTeam == 2)
+                    if (_attackTeam == 2)
                     {
-                        ObjectiveT2Index = flag.index - 1;
+                        _objectiveT2Index = flag.index - 1;
                     }
                     else
                     {
-                        ObjectiveT2Index = -1;
+                        _objectiveT2Index = -1;
                     }
-                    InvokeOnObjectiveChanged(flag, Rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
+                    InvokeOnObjectiveChanged(flag, _rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                     {
@@ -383,20 +380,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             if (OldOwner == 1)
             {
                 int oldindex = ObjectiveT1Index;
-                ObjectiveT1Index = flag.index;
+                _objectiveT1Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
                     InvokeOnFlagNeutralized(flag, 2, 1);
                 }
             }
             else if (OldOwner == 2)
             {
                 int oldindex = ObjectiveT2Index;
-                ObjectiveT2Index = flag.index;
+                _objectiveT2Index = flag.index;
                 if (oldindex != flag.index)
                 {
-                    InvokeOnObjectiveChanged(Rotation[oldindex], flag, 0, oldindex, flag.index);
+                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
                     InvokeOnFlagNeutralized(flag, 1, 2);
                 }
             }
@@ -426,7 +423,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
                         flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
-                    CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                    CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
                 }
             }
             else
@@ -437,7 +434,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), Teams.TeamManager.TranslateName(NewOwner, client.playerID.steamID.m_SteamID),
                         Teams.TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
-                    CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                    CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
                 }
             }
         }
@@ -524,10 +521,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
             CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
-            if (OnFlag.ContainsKey(player.playerID.steamID.m_SteamID))
-                CTFUI.RefreshStaticUI(newteam, Rotation.FirstOrDefault(x => x.ID == OnFlag[player.playerID.steamID.m_SteamID])
-                    ?? Rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
-            CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+            if (_onFlag.ContainsKey(player.playerID.steamID.m_SteamID))
+                CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.playerID.steamID.m_SteamID])
+                    ?? _rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
+            CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
         }
         protected override bool TimeToCheck()
         {
@@ -567,7 +564,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                         KitManager.TryGiveUnarmedKit(player);
                 }
             }
-            ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
+            _reviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
 
             ulong team = player.GetTeam();
             FPlayerName names = F.GetPlayerOriginalNames(player);
@@ -578,7 +575,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
                 else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
             }
-            ReviveManager.OnPlayerConnected(player);
+            _reviveManager.OnPlayerConnected(player);
             if (!AllowCosmetics)
             {
                 player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -600,17 +597,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             else
             {
-                CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam(), Rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         }
         public override void OnPlayerLeft(UCPlayer player)
         {
-            foreach (Flag flag in Rotation)
+            foreach (Flag flag in _rotation)
                 flag.RecalcCappers(true);
             StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            ReviveManager.OnPlayerDisconnected(player.Player.channel.owner);
+            _reviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
         }
         public override void Dispose()
@@ -620,18 +617,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
                 SendUIParameters.Nil.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection); // clear all capturing uis
             }
-            SquadManager?.Dispose();
-            VehicleSpawner?.Dispose();
-            ReviveManager?.Dispose();
-            KitManager?.Dispose();
+            _squadManager?.Dispose();
+            _vehicleSpawner?.Dispose();
+            _reviveManager?.Dispose();
+            _kitManager?.Dispose();
             base.Dispose();
         }
         public override void OnLevelLoaded()
         {
-            VehicleBay = new VehicleBay();
-            VehicleSpawner = new VehicleSpawner();
-            VehicleSigns = new VehicleSigns();
-            RequestSignManager = new RequestSigns();
+            _vehicleBay = new VehicleBay();
+            _vehicleSpawner = new VehicleSpawner();
+            _vehicleSigns = new VehicleSigns();
+            _requestSigns = new RequestSigns();
+            _structureSaver = new StructureSaver();
             base.OnLevelLoaded();
             FOBManager.LoadFobs();
             RepairManager.LoadRepairStations();
@@ -642,24 +640,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             base.EventLoopAction();
             FOBManager.OnGameTick(TicketCounter);
-        }
-
-
-        public override void Subscribe()
-        {
-            UseableConsumeable.onPerformedAid += EventHandlers.OnPostHealedPlayer;
-            Patches.BarricadeDestroyedHandler += EventHandlers.OnBarricadeDestroyed;
-            Patches.StructureDestroyedHandler += EventHandlers.OnStructureDestroyed;
-            PlayerInput.onPluginKeyTick += EventHandlers.OnPluginKeyPressed;
-            base.Subscribe();
-        }
-        public override void Unsubscribe()
-        {
-            UseableConsumeable.onPerformedAid -= EventHandlers.OnPostHealedPlayer;
-            Patches.BarricadeDestroyedHandler -= EventHandlers.OnBarricadeDestroyed;
-            Patches.StructureDestroyedHandler -= EventHandlers.OnStructureDestroyed;
-            PlayerInput.onPluginKeyTick -= EventHandlers.OnPluginKeyPressed;
-            base.Unsubscribe();
         }
     }
 

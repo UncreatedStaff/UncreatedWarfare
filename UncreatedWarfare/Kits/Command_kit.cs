@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -41,7 +42,7 @@ namespace Uncreated.Warfare.Kits
                 player = caller as UnturnedPlayer;
                 ucplayer = UCPlayer.FromIRocketPlayer(caller);
             }
-            if (!Data.TryMode(out TeamCTF ctf))
+            if (!Data.Is(out IKitRequests ctf))
             {
                 if (ucplayer == null)
                     F.LogWarning(F.Translate("command_e_gamemode", 0));

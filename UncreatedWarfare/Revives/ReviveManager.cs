@@ -8,6 +8,7 @@ using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.XP;
 using UnityEngine;
@@ -175,7 +176,7 @@ namespace Uncreated.Warfare.Revives
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
-            if (Data.Gamemode.State != Gamemodes.EState.ACTIVE)
+            if (Data.Gamemode.State != EState.ACTIVE)
             {
                 shouldAllow = false;
                 return;
@@ -556,10 +557,10 @@ namespace Uncreated.Warfare.Revives
                     stance = null;
                 }
             }
-            public void RevivePlayer(TeamCTF g = null, bool remove = true)
+            public void RevivePlayer(IRevives g = default, bool remove = true)
             {
-                if (g == null) Data.TryMode(out g);
-                if (g != null)
+                if (g == default) Data.Is(out g);
+                if (g != default)
                 {
                     Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
                     Player.Player.movement.sendPluginJumpMultiplier(1.0f);
@@ -574,7 +575,7 @@ namespace Uncreated.Warfare.Revives
             }
             public void FinishKillingPlayer(bool isDead = false)
             {
-                if (Data.TryMode(out TeamCTF g))
+                if (Data.Is(out IRevives g))
                 {
                     this.RevivePlayer(g, false);
                     if (!isDead)

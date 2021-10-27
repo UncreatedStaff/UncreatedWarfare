@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
@@ -93,8 +94,7 @@ namespace Uncreated.Warfare.Commands
         }
         public static void WipeVehiclesAndRespawn()
         {
-            Data.TryMode(out TeamCTF ctf);
-            if (ctf != null)
+            if (Data.Is(out IVehicles ctf))
             {
                 List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)

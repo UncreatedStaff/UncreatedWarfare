@@ -11,7 +11,9 @@ using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Squads;
@@ -174,6 +176,10 @@ namespace Uncreated.Warfare
             BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
             ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
+            UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
+            Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
+            PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
             PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice;
         }
         private void UnsubscribeFromEvents()
@@ -207,6 +213,10 @@ namespace Uncreated.Warfare
             StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
             ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
+            UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
+            Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
+            Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
+            PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
             PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice;
             if (!InitialLoadEventSubscription)
             {
@@ -235,10 +245,18 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            if (Data.Gamemode is TeamCTF ctf)
+            if (Data.Is(out TeamCTF ctf))
             {
                 CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation,
                     ctf.Config.FlagUICount, ctf.Config.AttackIcon, ctf.Config.DefendIcon);
+            }
+            else if (Data.Is(out Invasion inv))
+            {
+                InvasionUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), inv.Rotation,
+                    inv.Config.FlagUICount, inv.Config.AttackIcon, inv.Config.DefendIcon);
+            }
+            if (Data.Is<ISquads>(out _))
+            {
                 ulong team = player.GetTeam();
                 UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
                 if (ucplayer.Squad == null)
@@ -250,12 +268,13 @@ namespace Uncreated.Warfare
                     if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
                         p.ShowUIForPlayer(ucplayer);
                 }
-                XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, false), out _);
-                Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, false), out _);
             }
+            if (Data.Gamemode.ShowXPUI)
+                XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, false), out _);
+            if (Data.Gamemode.ShowOFPUI)
+                Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, false), out _);
         }
 
-        [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "MonoBehaviour")]
         private void Update()
         {
             while (RunOnMainThread.Count > 0)

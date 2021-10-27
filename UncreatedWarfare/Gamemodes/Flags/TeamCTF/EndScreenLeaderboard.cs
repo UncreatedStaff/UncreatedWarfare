@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Squads;
@@ -139,10 +140,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.player.life.serverModifyStamina(100);
                 player.player.movement.sendPluginJumpMultiplier(0f);
 
-                if (Gamemode is TeamCTF teamctf)
-                    teamctf.ReviveManager.RevivePlayer(player.player);
-                else if (Gamemode is Invasion.Invasion invasion)
-                    invasion.ReviveManager.RevivePlayer(player.player);
+                if (Data.Is(out IRevives r))
+                    r.ReviveManager.RevivePlayer(player.player);
 
                 if (!player.player.life.isDead)
                 {
@@ -378,7 +377,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public void AddKill()
         {
             kills++;
-            if (player != default && Data.Gamemode is FlagGamemode fg && fg.Rotation.Exists(x => x.ZoneData.IsInside(player.transform.position))) killsonpoint++;
+            if (player != default && Data.Is(out IFlagRotation fg) && fg.Rotation.Exists(x => x.ZoneData.IsInside(player.transform.position))) killsonpoint++;
         }
         public void AddDeath() => deaths++;
         public void AddTeamkill() => teamkills++;

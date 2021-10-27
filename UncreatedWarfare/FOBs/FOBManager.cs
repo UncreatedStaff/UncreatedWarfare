@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -402,34 +403,33 @@ namespace Uncreated.Warfare.FOBs
                     }
                 }
             }
-            if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null && ctf.State == Gamemodes.EState.ACTIVE)
+            if (Data.Is(out IWarstatsGamemode w) && w.GameStats != null && w.State == Gamemodes.EState.ACTIVE)
             // doesnt count destroying fobs after game ends
             {
                 if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c) && c.stats != null)
                     c.stats.fobsdestroyed++;
                 if (team == 1)
                 {
-                    ctf.GameStats.fobsDestroyedT2++;
+                    w.GameStats.fobsDestroyedT2++;
                 }
                 else if (team == 2)
                 {
-                    ctf.GameStats.fobsDestroyedT1++;
+                    w.GameStats.fobsDestroyedT1++;
                 }
-                UCPlayer ucplayer = UCPlayer.FromID(player);
-                if (ucplayer != null)
+            }
+            UCPlayer ucplayer = UCPlayer.FromID(player);
+            if (ucplayer != null)
+            {
+                if (ucplayer.GetTeam() == team)
                 {
-                    if (ucplayer.GetTeam() == team)
-                    {
-                        XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
-                    }
-                    else
-                    {
-                        XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player));
-                        Stats.StatsManager.ModifyStats(player, x => x.FobsDestroyed++, false);
-                        Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
-                    }
+                    XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
                 }
-
+                else
+                {
+                    XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player));
+                    Stats.StatsManager.ModifyStats(player, x => x.FobsDestroyed++, false);
+                    Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
+                }
             }
             UpdateUIForTeam(team);
         }

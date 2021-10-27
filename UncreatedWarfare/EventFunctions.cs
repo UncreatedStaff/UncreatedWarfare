@@ -10,6 +10,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
@@ -282,7 +283,7 @@ namespace Uncreated.Warfare
                 // reset the player to spawn if they have joined in a different game as they last played in.
 
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-                bool g = Data.TryMode(out TeamGamemode t);
+                bool g = Data.Is(out ITeams t);
                 if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                 {
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
@@ -352,7 +353,7 @@ namespace Uncreated.Warfare
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
-            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == Gamemodes.EState.ACTIVE) return;
+            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE) return;
             cullingHandler = new PlayerVoice.RelayVoiceCullingHandler((source, target) =>
             {
                 return true;
@@ -486,8 +487,8 @@ namespace Uncreated.Warfare
                 }
             }
 
-            if (shouldAllow && Data.TryMode(out TeamCTF ctf))
-                ctf.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
+            if (shouldAllow && Data.Is(out IRevives rev))
+                rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         }
         internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
         {
@@ -660,7 +661,7 @@ namespace Uncreated.Warfare
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            if (Data.TryMode(out TeamGamemode gm) && gm.UseJoinUI)
+            if (Data.Is(out ITeams gm) && gm.UseJoinUI)
                 gm.JoinManager.OnPlayerDisconnected(ucplayer);
             string kit = ucplayer.KitName;
             try
@@ -795,6 +796,42 @@ namespace Uncreated.Warfare
                 isValid = false;
                 explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
             }
+        }
+
+        internal static void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
+        {
+            if (Data.Is(out IVehicles v))
+                v.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
+        }
+        internal static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
+        {
+            if (Data.Is<IFOBs>(out _))
+            {
+                FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
+                RepairManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            }
+            if (Data.Is<ISquads>(out _))
+                RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            if (Data.Is(out IVehicles v))
+            {
+                v.VehicleSpawner.OnBarricadeDestroyed(data, drop, instanceID, plant);
+                v.VehicleSigns.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            }
+        }
+        internal static void OnPostHealedPlayer(Player instigator, Player target)
+        {
+            if (Data.Is(out IRevives r))
+            {
+                r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
+                r.ReviveManager.OnPlayerHealed(instigator, target);
+            }
+        }
+        internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
+        {
+            if (state == false || key != 2 || player == null) return;
+
+            if (Data.Is(out IRevives r))
+                r.ReviveManager.GiveUp(player);
         }
     }
 #pragma warning restore IDE0060 // Remove unused parameter

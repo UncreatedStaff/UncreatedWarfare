@@ -105,14 +105,14 @@ namespace Uncreated.Warfare
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
         public static List<Log> Logs;
-        public static bool TryMode<T>(out T gamemode) where T : Gamemode
+        public static bool Is<T>(out T gamemode) where T : Gamemodes.Interfaces.IGamemode
         {
             if (Gamemode is T gm)
             {
                 gamemode = gm;
                 return true;
             }
-            gamemode = null;
+            gamemode = default;
             return false;
         }
         internal static ClientInstanceMethod<string> SendChangeText { get; private set; }

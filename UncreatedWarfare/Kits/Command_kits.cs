@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Commands
@@ -19,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            if (!Data.TryMode(out TeamCTF ctf))
+            if (!Data.Is(out IKitRequests ctf))
             {
                 player.SendChat("command_e_gamemode");
                 return;

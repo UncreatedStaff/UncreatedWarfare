@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Structures;
@@ -12,10 +13,12 @@ using Uncreated.Warfare.Tickets;
 namespace Uncreated.Warfare.Gamemodes
 {
     /// <summary>Gamemode with 2 teams</summary>
-    public abstract class TeamGamemode : Gamemode
+    public abstract class TeamGamemode : Gamemode, ITeams
     {
-        public TeamManager TeamManager;
-        public JoinManager JoinManager;
+        protected TeamManager _teamManager;
+        public TeamManager TeamManager { get => _teamManager; }
+        protected JoinManager _joinManager;
+        public JoinManager JoinManager { get => _joinManager; }
 
         public virtual bool UseJoinUI { get => true; }
         public virtual bool EnableAMC { get => true; }
@@ -29,19 +32,19 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (UseJoinUI)
             {
-                JoinManager = gameObject.AddComponent<JoinManager>();
+                _joinManager = gameObject.AddComponent<JoinManager>();
             }
             base.Init();
         }
         public override void OnLevelLoaded()
         {
-            TeamManager = new TeamManager();
+            _teamManager = new TeamManager();
             base.OnLevelLoaded();
         }
         public override void Dispose()
         {
             base.Dispose();
-            JoinManager?.Dispose();
+            _joinManager?.Dispose();
         }
 
     }

@@ -8,6 +8,7 @@ using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Stats;
@@ -101,20 +102,23 @@ namespace Uncreated.Warfare
                     c.stats.AddKill();
                 bool atk = false;
                 bool def = false;
-                if (Data.Gamemode is TeamCTF ctf)
+                if (Data.Is(out IWarstatsGamemode ws))
                 {
-                    if (parameters.cause == EDeathCause.GUN && (ctf.GameStats.LongestShot.Player == 0 || ctf.GameStats.LongestShot.Distance < parameters.distance))
+                    if (ws.GameStats != null && parameters.cause == EDeathCause.GUN && (ws.GameStats.LongestShot.Player == 0 || ws.GameStats.LongestShot.Distance < parameters.distance))
                     {
-                        ctf.GameStats.LongestShot.Player = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
-                        ctf.GameStats.LongestShot.Distance = parameters.distance;
-                        ctf.GameStats.LongestShot.Gun = parameters.item;
-                        ctf.GameStats.LongestShot.Team = team;
+                        ws.GameStats.LongestShot.Player = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
+                        ws.GameStats.LongestShot.Distance = parameters.distance;
+                        ws.GameStats.LongestShot.Gun = parameters.item;
+                        ws.GameStats.LongestShot.Team = team;
                     }
+                }
+                if (Data.Is(out IFlagRotation fg))
+                {
                     try
                     {
-                        for (int f = 0; f < ctf.Rotation.Count; f++)
+                        for (int f = 0; f < fg.Rotation.Count; f++)
                         {
-                            Gamemodes.Flags.Flag flag = ctf.Rotation[f];
+                            Gamemodes.Flags.Flag flag = fg.Rotation[f];
                             if (flag.ZoneData.IsInside(parameters.killer.transform.position))
                             {
                                 def = flag.IsContested(out ulong winner) || winner != team;
@@ -818,7 +822,7 @@ namespace Uncreated.Warfare
                 bool itemIsVehicle = cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL;
                 if (killer == null)
                 {
-                    if (cause != EDeathCause.ZOMBIE && Data.TryMode(out TeamCTF ctf) && ctf.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
+                    if (cause != EDeathCause.ZOMBIE && Data.Is(out IRevives r) && r.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
                     {
                         item = info.item;
                         distance = info.distance;
@@ -873,7 +877,7 @@ namespace Uncreated.Warfare
                     foundKiller = true;
                     try
                     {
-                        if (!Data.TryMode(out TeamCTF ctf) || !ctf.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
+                        if (!Data.Is(out IRevives r) || !r.ReviveManager.DeathInfo.TryGetValue(dead.CSteamID.m_SteamID, out DeathInfo info))
                             GetKillerInfo(out item, out distance, out _, out _, out kitname, out turretOwner, cause, killer, dead.Player);
                         else
                         {

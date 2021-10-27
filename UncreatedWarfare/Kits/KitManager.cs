@@ -9,6 +9,7 @@ using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.XP;
 using Item = SDG.Unturned.Item;
@@ -162,7 +163,7 @@ namespace Uncreated.Warfare.Kits
             }
             string oldkit = player.KitName;
 
-            if (Data.TryMode(out TeamCTF g))
+            if (Data.Is(out IRevives g))
             {
                 if (player.KitClass == EClass.MEDIC && kit.Class != EClass.MEDIC)
                 {

@@ -16,6 +16,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.XP;
@@ -1563,10 +1564,10 @@ namespace Uncreated.Warfare
             if (!(Data.Gamemode is TeamGamemode)) return false;
             return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
         }
-        public static bool IsOnFlag(this Player player) => Data.Gamemode is FlagGamemode fg && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
+        public static bool IsOnFlag(this Player player) => Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
         public static bool IsOnFlag(this Player player, out Flag flag)
         {
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
                 if (fg.OnFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int id))
                 {
@@ -2305,12 +2306,12 @@ namespace Uncreated.Warfare
         }
         public static float GetSqrDistanceFromClosestObjective(Vector3 position, out Flag objective, bool includeOutOfRotation = false)
         {
-            if (Data.Gamemode is FlagGamemode fg)
+            if (Data.Is(out IFlagRotation fg))
             {
                 Vector2 position2d = new Vector2(position.x, position.z);
                 Flag closestFlag = default;
                 float? closestSqrDistance = default;
-                foreach (Flag flag in includeOutOfRotation ? fg.AllFlags : fg.Rotation)
+                foreach (Flag flag in includeOutOfRotation ? fg.LoadedFlags : fg.Rotation)
                 {
                     float distance = (flag.Position2D - position2d).sqrMagnitude;
                     if (!closestSqrDistance.HasValue)

@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -14,19 +15,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public static int FromMax(int cap, int max, string progresschars) => Math.Abs(cap) >= max ? progresschars.Length - 1 : ((progresschars.Length - 1) / max) * Math.Abs(cap);
         public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
         {
-            if (!Data.TryMode(out Invasion gamemode))
+            if (!Data.Is(out IAttackDefence gamemode))
                 return SendUIParameters.Nil;
 
             if (flag.LastDeltaPoints == 0)
             {
                 if (flag.HasBeenCapturedT1 || flag.HasBeenCapturedT2)
                 {
-                    if (team == gamemode.AttackTeam)
+                    if (team == gamemode.AttackingTeam)
                     {
                         // send "secured" text
                         return SendUIParameters.Nil;
                     }
-                    else if (team == gamemode.DefendTeam)
+                    else if (team == gamemode.DefendingTeam)
                     {
                         // send "locked" text
                         return SendUIParameters.Nil;
@@ -181,7 +182,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public static void SendFlagListUI(ITransportConnection player, ulong playerid, ulong team, List<Flag> Rotation, int ListUiCount, char AttackIcon, char DefendIcon)
         {
-            if (!Data.TryMode(out Invasion gamemode))
+            if (!Data.Is(out IAttackDefence gamemode))
                 return;
 
             ClearListUI(player, ListUiCount);
@@ -202,7 +203,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                             Flag flag = Rotation[index];
                             string objective = string.Empty;
 
-                            if ((gamemode.AttackTeam == 1 && flag.HasBeenCapturedT1) || (gamemode.AttackTeam == 2 && flag.HasBeenCapturedT2))
+                            if ((gamemode.AttackingTeam == 1 && flag.HasBeenCapturedT1) || (gamemode.AttackingTeam == 2 && flag.HasBeenCapturedT2))
                             {
                                 // send locked UI
 
