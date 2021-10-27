@@ -4,6 +4,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
@@ -25,6 +26,11 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;
+            if (!Data.TryMode(out TeamGamemode gm))
+            {
+                player.Message("command_e_gamemode");
+                return;
+            }
             if (command.Length == 0)
             {
                 if (player.HasPermission("uc.group.current"))

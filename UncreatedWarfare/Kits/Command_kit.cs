@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -40,7 +41,14 @@ namespace Uncreated.Warfare.Kits
                 player = caller as UnturnedPlayer;
                 ucplayer = UCPlayer.FromIRocketPlayer(caller);
             }
-
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                if (ucplayer == null)
+                    F.LogWarning(F.Translate("command_e_gamemode", 0));
+                else
+                    player.SendChat("command_e_gamemode");
+                return;
+            }
             string property;
             string kitName;
             string newValue;

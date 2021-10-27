@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Teams
 {
-    public class JoinManager : MonoBehaviour
+    public class JoinManager : MonoBehaviour, IDisposable
     {
         private List<LobbyPlayer> LobbyPlayers;
         private List<LobbyPlayer> Team1Players;
@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Teams
         {
             if (fromLobby)
             {
-                var lobbyPlayer = new LobbyPlayer(player, 0, true);
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0, true);
                 LobbyPlayers.Add(lobbyPlayer);
                 ShowUI(lobbyPlayer, false);
             }
@@ -299,6 +299,11 @@ namespace Uncreated.Warfare.Teams
             LobbyPlayers.Remove(player);
             player.IsInLobby = false;
             CloseUI(player);
+        }
+
+        public void Dispose()
+        {
+            EffectManager.onEffectButtonClicked -= OnButtonClicked;
         }
 
         public class LobbyPlayer

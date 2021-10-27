@@ -8,6 +8,7 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
@@ -49,10 +50,6 @@ namespace Uncreated.Warfare
             XPManager.OnGroupChanged(player, oldGroup, newGroup);
             OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
             Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
-        }
-        internal static void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
-        {
-            Data.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
         internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
@@ -98,14 +95,6 @@ namespace Uncreated.Warfare
                 }
                 itemstemp.Remove(item);
             }
-        }
-        internal static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
-        {
-            FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
-            RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
-            RepairManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
-            Data.VehicleSpawner.OnBarricadeDestroyed(data, drop, instanceID, plant);
-            Data.VehicleSigns.OnBarricadeDestroyed(data, drop, instanceID, plant);
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
         {
@@ -227,7 +216,7 @@ namespace Uncreated.Warfare
                         player?.SendChat("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                         return;
                     }
-                    else if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
+                    else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
                     {
                         shouldAllow = false;
                         player?.SendChat("no_placement_fobs_too_near_base");
@@ -243,9 +232,10 @@ namespace Uncreated.Warfare
                         return;
                     }
                 }
+                if (Data.Gamemode.UseWhitelist)
+                    Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
+                if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
                 ulong team = group.GetTeam();
-                Data.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
-                if (!shouldAllow) return;
                 if (team == 1)
                 {
                     if (player != null && !player.OnDuty() && TeamManager.Team2AMC.IsInside(point))
@@ -272,11 +262,6 @@ namespace Uncreated.Warfare
             }
         }
 
-        internal static void OnPostHealedPlayer(Player instigator, Player target)
-        {
-            Data.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
-            Data.ReviveManager.OnPlayerHealed(instigator, target);
-        }
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
             if (!UCWarfare.Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
@@ -297,39 +282,31 @@ namespace Uncreated.Warfare
                 // reset the player to spawn if they have joined in a different game as they last played in.
 
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-
+                bool g = Data.TryMode(out TeamGamemode t);
                 if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                 {
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
-                        Data.JoinManager.OnPlayerConnected(ucplayer, true);
+                        if (g && t.UseJoinUI)
+                            t.JoinManager.OnPlayerConnected(ucplayer, true);
 
                         if (player.Player.life.isDead)
                             player.Player.life.ReceiveRespawnRequest(false);
                         else
                         {
                             player.Player.life.sendRevive();
-                            player.Player.teleportToLocation(player.Player.GetBaseSpawn(out ulong t), t.GetBaseAngle());
+                            player.Player.teleportToLocation(player.Player.GetBaseSpawn(out ulong s), s.GetBaseAngle());
                         }
                         save.ShouldRespawnOnJoin = false;
 
                         PlayerManager.ApplyToOnline();
                     }
-                    else
+                    else if (g && t.UseJoinUI)
                     {
-                        Data.JoinManager.OnPlayerConnected(ucplayer, false);
+                        t.JoinManager.OnPlayerConnected(ucplayer, false);
                     }
                 }
 
-                if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
-                {
-                    if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
-                    {
-                        if (!KitManager.TryGiveRiflemanKit(ucplayer))
-                            KitManager.TryGiveUnarmedKit(ucplayer);
-                    }
-                }
-                Data.ReviveManager.DownedPlayers.Remove(player.CSteamID.m_SteamID);
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
@@ -344,35 +321,20 @@ namespace Uncreated.Warfare
                 Data.DatabaseManager.CheckUpdateUsernames(names);
                 bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Data.DatabaseManager.RegisterLogin(player.Player);
-                Data.Gamemode.OnPlayerJoined(player.Player.channel.owner);
-                ulong team = player.GetTeam();
-                ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                    UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
-                if ((ucplayer.KitName == null || ucplayer.KitName == string.Empty) && team > 0 && team < 3)
+
+
+                Data.Gamemode.OnPlayerJoined(ucplayer);
+                if (Data.Gamemode is TeamGamemode)
                 {
-                    if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
-                        KitManager.GiveKit(ucplayer, unarmed);
-                    else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(ucplayer, unarmed);
-                    else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                    ulong team = player.GetTeam();
+                    ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
+                } else
+                {
+                    ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), ToastMessageSeverity.INFO);
                 }
                 F.Broadcast("player_connected", names.CharacterName);
-                if (!UCWarfare.Config.AllowCosmetics)
-                {
-                    player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
-                    player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
-                    player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
-                }
-                if (UCWarfare.Config.ModifySkillLevels)
-                {
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
-                    player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
-                }
-                Data.ReviveManager.OnPlayerConnected(player);
-                //PlayerManager.PickGroupAfterJoin(ucplayer);
-                TicketManager.OnPlayerJoined(ucplayer);
                 Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
                 {
                     Duty = ucplayer.OnDuty(),
@@ -380,8 +342,6 @@ namespace Uncreated.Warfare
                     Steam64 = ucplayer.Steam64,
                     Team = F.GetTeamByte(player)
                 });
-                StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-                StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
             }
             catch (Exception ex)
             {
@@ -436,7 +396,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
-            if (TeamManager.IsInAnyMainOrAMCOrLobby(barricadeTransform.position))
+            if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(barricadeTransform.position))
             {
                 shouldAllow = false;
             }
@@ -455,7 +415,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
-            if (TeamManager.IsInAnyMainOrAMCOrLobby(structureTransform.position))
+            if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(structureTransform.position))
             {
                 shouldAllow = false;
             }
@@ -467,11 +427,6 @@ namespace Uncreated.Warfare
                     shouldAllow = false;
                 }
             }
-        }
-        internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
-        {
-            if (state == false || key != 2 || player == null) return;
-            Data.ReviveManager.GiveUp(player);
         }
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
         {
@@ -505,7 +460,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
-            if (parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
+            if (Data.Gamemode is TeamGamemode gm && gm.EnableAMC && parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
             {
                 Player killer = PlayerTool.getPlayer(parameters.killer);
                 if (killer != null)
@@ -531,8 +486,8 @@ namespace Uncreated.Warfare
                 }
             }
 
-            if (shouldAllow)
-                Data.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
+            if (shouldAllow && Data.TryMode(out TeamCTF ctf))
+                ctf.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         }
         internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
         {
@@ -702,15 +657,15 @@ namespace Uncreated.Warfare
             {
                 Provider.maxPlayers = 24;
             }
-            Data.ReviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Data.JoinManager.OnPlayerDisconnected(ucplayer);
+            if (Data.TryMode(out TeamGamemode gm) && gm.UseJoinUI)
+                gm.JoinManager.OnPlayerDisconnected(ucplayer);
             string kit = ucplayer.KitName;
             try
             {
-                StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                Data.Gamemode.OnPlayerLeft(ucplayer);
                 FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
                 if (player.OnDuty())
                 {
@@ -722,8 +677,6 @@ namespace Uncreated.Warfare
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.CSteamID, out bool gotptcomp);
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
-                //Client.SendPlayerLeft(names);
-                Data.Gamemode.OnPlayerLeft(id);
                 F.Broadcast("player_disconnected", names.CharacterName);
                 if (gotptcomp)
                 {
@@ -731,7 +684,6 @@ namespace Uncreated.Warfare
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
                 }
                 Invocations.Shared.PlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
-                StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
             }
             catch (Exception ex)
             {
@@ -793,39 +745,47 @@ namespace Uncreated.Warfare
                 {
                     team = save.Team;
                 }
-                string globalPrefix = "";
-                string teamPrefix = "";
-
-                // add team tags to global prefix
-                if (team == 1) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
-                else if (team == 2) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
-
-                int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, true);
-                // int stars = 0;
-                // was not being used so i commented it
-                Rank rank = null;
-                /*
-                if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
+                if (Data.Gamemode is TeamGamemode)
                 {
-                    rank = OfficerManager.GetOfficerRank(officer.officerLevel);
-                    int officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
-                    stars = OfficerManager.GetStars(officerPoints);
-                }
+                    string globalPrefix = "";
+                    string teamPrefix = "";
+
+                    // add team tags to global prefix
+                    if (team == 1) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
+                    else if (team == 2) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
+
+                    int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, true);
+                    // int stars = 0;
+                    // was not being used so i commented it
+                    Rank rank = null;
+                    /*
+                    if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
+                    {
+                        rank = OfficerManager.GetOfficerRank(officer.officerLevel);
+                        int officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
+                        stars = OfficerManager.GetStars(officerPoints);
+                    }
+                    else
+                    {*/
+                    rank = XPManager.GetRank(xp, out _, out _);
+                    //}
+
+                    if (team == 1 || team == 2)
+                    {
+                        globalPrefix += rank.abbreviation;
+                        teamPrefix += rank.abbreviation;
+
+                        globalPrefix += " ";
+                        teamPrefix += " ";
+
+                        player.playerID.characterName = globalPrefix + (player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName);
+                        player.playerID.nickName = teamPrefix + (player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName);
+                    }
+                } 
                 else
-                {*/
-                rank = XPManager.GetRank(xp, out _, out _);
-                //}
-
-                if (team == 1 || team == 2)
                 {
-                    globalPrefix += rank.abbreviation;
-                    teamPrefix += rank.abbreviation;
-
-                    globalPrefix += " ";
-                    teamPrefix += " ";
-
-                    player.playerID.characterName = globalPrefix + (player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName);
-                    player.playerID.nickName = teamPrefix + (player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName);
+                    player.playerID.characterName = player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName;
+                    player.playerID.nickName = player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName;
                 }
             }
             catch (Exception ex)

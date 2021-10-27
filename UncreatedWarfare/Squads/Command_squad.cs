@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Squads
 {
@@ -16,6 +17,11 @@ namespace Uncreated.Warfare.Squads
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                player.SendChat("command_e_gamemode");
+                return;
+            }
             if (!UCWarfare.Config.EnableSquads)
             {
                 player.SendChat("squads_disabled");

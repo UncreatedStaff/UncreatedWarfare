@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -25,6 +26,11 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                player.Message("command_e_gamemode");
+                return;
+            }
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
             if (player == null || ucplayer == null) return;
             ulong team = ucplayer.GetTeam();

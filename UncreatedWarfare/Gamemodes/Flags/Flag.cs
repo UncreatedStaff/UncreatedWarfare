@@ -14,11 +14,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     public class Flag : IDisposable
     {
         public int index = -1;
-        public const int MaxPoints = 64;
+        public const float MAX_POINTS = 64;
         public Zone ZoneData { get; private set; }
         public Dictionary<int, float> Adjacencies;
         public FlagGamemode Manager { get; private set; }
         public int Level { get => _level; }
+        public static float CaptureMultiplier = 1.0f;
         private readonly int _level;
         public int ObjectivePlayerCount
         {
@@ -196,17 +197,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             NewPlayers = PlayersOnFlag.Where(p => !OldPlayers.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
             return OldPlayers.Where(p => !PlayersOnFlag.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
         }
-        private int _points;
-        public int LastDeltaPoints { get; protected set; }
-        public int Points
+        private float _points;
+        public float LastDeltaPoints { get; protected set; }
+        public float Points
         {
             get => _points;
         }
-        public void SetPoints(int value)
+        public void SetPoints(float value)
         {
-            int OldPoints = _points;
-            if (value > MaxPoints) _points = MaxPoints;
-            else if (value < -MaxPoints) _points = -MaxPoints;
+            float OldPoints = _points;
+            if (value > MAX_POINTS) _points = MAX_POINTS;
+            else if (value < -MAX_POINTS) _points = -MAX_POINTS;
             else _points = value;
             if (OldPoints != _points)
             {
@@ -216,7 +217,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public event PlayerDelegate OnPlayerEntered;
         public event PlayerDelegate OnPlayerLeft;
-        public delegate void PointsChangedDelegate(int NewPoints, int OldPoints, Flag flag);
+        public delegate void PointsChangedDelegate(float NewPoints, float OldPoints, Flag flag);
         public delegate void PlayerDelegate(Flag flag, Player player);
         public event PointsChangedDelegate OnPointsChanged;
         public delegate void OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
@@ -278,30 +279,45 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             PlayersOnFlag.Remove(player);
         }
         public bool IsNeutral() => _points == 0;
-        public void CapT1(int amount)
+        public void CapT1(float amount)
         {
-            SetPoints(Points + amount);
-            if (Points >= MaxPoints)
-                SetOwner(1);
+            amount *= CaptureMultiplier;
+            float amt = Points + amount;
+            if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
+                amt = 0;
+            if (amt >= MAX_POINTS)
+                CapT1();
+            else if (amt <= -MAX_POINTS)
+                CapT2();
+            else
+                SetPoints(amt);
         }
         public void CapT1()
         {
-            SetPoints(MaxPoints);
+            SetPoints(MAX_POINTS);
             SetOwner(1);
         }
-        public void CapT2(int amount)
+        public void CapT2(float amount)
         {
-            SetPoints(Points - amount);
-            if (Points <= -MaxPoints)
-                SetOwner(2);
+            amount *= CaptureMultiplier;
+            float amt = Points - amount;
+            if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
+                amt = 0;
+            if (amt >= MAX_POINTS)
+                CapT1();
+            else if (amt <= -MAX_POINTS)
+                CapT2();
+            else
+                SetPoints(amt);
         }
         public void CapT2()
         {
-            SetPoints(-MaxPoints);
+            SetPoints(-MAX_POINTS);
             SetOwner(2);
         }
-        public void Cap(ulong team, int amount)
+        public void Cap(ulong team, float amount)
         {
+            amount *= CaptureMultiplier;
             if (team == 1) CapT1(amount);
             else if (team == 2) CapT2(amount);
         }

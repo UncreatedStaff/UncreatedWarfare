@@ -129,20 +129,17 @@ namespace Uncreated.Warfare.Vehicles
             if (!StructureSaver.StructureExists(this.instance_id, EStructType.BARRICADE, out save))
             {
                 BarricadeDrop drop = F.GetBarriadeBySerializedTransform(bay_transform);
-                if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out save))
+                if (drop == null)
                 {
-                    if (drop != default)
+                    F.LogWarning("Failed to link sign to the correct instance id.");
+                } 
+                else if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out save))
+                {
+                    if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structure))
                     {
-                        if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structure))
-                        {
-                            save = structure;
-                            this.instance_id = structure.instance_id;
-                            structure.SpawnCheck();
-                        }
-                    }
-                    else
-                    {
-                        F.LogWarning("Failed to link sign to the correct instance id.");
+                        save = structure;
+                        this.instance_id = structure.instance_id;
+                        structure.SpawnCheck();
                     }
                 }
                 else
@@ -153,7 +150,11 @@ namespace Uncreated.Warfare.Vehicles
             if (!VehicleSpawner.IsRegistered(this.bay_instance_id, out bay, this.bay_type))
             {
                 BarricadeDrop drop = F.GetBarriadeBySerializedTransform(bay_transform);
-                if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out save))
+                if (drop == null)
+                {
+                    F.LogWarning("Failed to link sign to the correct instance id.");
+                }
+                else if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out save))
                 {
                     F.LogWarning("Failed to link sign to the correct instance id.");
                 }
@@ -220,16 +221,16 @@ namespace Uncreated.Warfare.Vehicles
 
         public void InvokeUpdate(SteamPlayer player)
         {
-            F.GetBarricadeFromInstID(save.instance_id, out BarricadeDrop drop);
+            F.GetBarricadeFromInstID(this.instance_id, out BarricadeDrop drop);
             if (drop != default && drop.model != default)
-                if (drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
+                if (drop.model.TryGetComponent(out InteractableSign sign) && sign != null && sign.transform != null && Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
                     F.InvokeSignUpdateFor(player, sign, placeholder_text);
         }
         public void InvokeUpdate()
         {
-            F.GetBarricadeFromInstID(save.instance_id, out BarricadeDrop drop);
+            F.GetBarricadeFromInstID(this.instance_id, out BarricadeDrop drop);
             if (drop != default && drop.model != default)
-                if (drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
+                if (drop.model.TryGetComponent(out InteractableSign sign) && sign != null && sign.transform != null && Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
                     F.InvokeSignUpdateForAllKits(sign, x, y, placeholder_text);
         }
     }

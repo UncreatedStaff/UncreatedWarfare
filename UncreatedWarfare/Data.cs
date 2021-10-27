@@ -13,6 +13,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
@@ -35,7 +36,7 @@ namespace Uncreated.Warfare
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
         {
-            { "TeamCTF", typeof(TeamCTF) }
+            { "TeamCTF", typeof(TeamCTF) }, { "Invasion", typeof(Invasion) }
         };
         public const string DataDirectory = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
@@ -101,42 +102,18 @@ namespace Uncreated.Warfare
         public static Dictionary<ulong, string> Languages;
         public static Dictionary<string, LanguageAliasSet> LanguageAliases;
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
-        public static JoinManager JoinManager;
-        public static KitManager KitManager;
-        public static VehicleSpawner VehicleSpawner;
-        public static VehicleBay VehicleBay;
-        public static VehicleSigns VehicleSigns;
-        public static FOBManager FOBManager;
-        public static BuildManager BuildManager;
-        public static TeamManager TeamManager;
-        public static ReviveManager ReviveManager;
-        public static TicketManager TicketManager;
-        public static XPManager XPManager;
-        public static OfficerManager OfficerManager;
-        public static PlayerManager LogoutSaver;
-        public static RequestSigns RequestSignManager;
-        public static StructureSaver StructureManager;
-        public static Whitelister Whitelister;
-        public static SquadManager SquadManager;
-        public static CooldownManager Cooldowns;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
         public static List<Log> Logs;
-        public static TeamCTF CtfGamemode
+        public static bool TryMode<T>(out T gamemode) where T : Gamemode
         {
-            get
+            if (Gamemode is T gm)
             {
-                if (Gamemode is TeamCTF ctf) return ctf;
-                else return null;
+                gamemode = gm;
+                return true;
             }
-        }
-        public static Gamemodes.Flags.FlagGamemode FlagGamemode
-        {
-            get
-            {
-                if (Gamemode is Gamemodes.Flags.FlagGamemode fg) return fg;
-                else return null;
-            }
+            gamemode = null;
+            return false;
         }
         internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
@@ -230,15 +207,7 @@ namespace Uncreated.Warfare
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             DatabaseManager.Open();
-            LogoutSaver = new PlayerManager();
-            Whitelister = new Whitelister();
-            SquadManager = new SquadManager();
             CommandWindow.shouldLogDeaths = false;
-            TicketManager = new TicketManager();
-            XPManager = new XPManager();
-            OfficerManager = new OfficerManager();
-            Cooldowns = new CooldownManager();
-            JoinManager = UCWarfare.I.gameObject.AddComponent<JoinManager>();
 
             F.Log("Searching for gamemode: " + UCWarfare.Config.ActiveGamemode, ConsoleColor.Magenta);
             Gamemode = Gamemode.FindGamemode(UCWarfare.Config.ActiveGamemode, GAME_MODES);
@@ -250,20 +219,7 @@ namespace Uncreated.Warfare
             Gamemode.Init();
             F.Log("Initialized gamemode.", ConsoleColor.Magenta);
             ReloadTCP();
-            if (UCWarfare.Config.Modules.Kits)
-            {
-                KitManager = new KitManager();
-            }
-            if (UCWarfare.Config.Modules.FOBs)
-            {
-                FOBManager = new FOBManager();
-                BuildManager = new BuildManager();
-            }
-            if (UCWarfare.Config.Modules.Revives)
-            {
-                ReviveManager = new ReviveManager();
-            }
-
+            
             /* REFLECT PRIVATE VARIABLES */
             F.Log("Getting client calls...", ConsoleColor.Magenta);
             FieldInfo updateSignInfo;
@@ -403,12 +359,22 @@ namespace Uncreated.Warfare
         private static void ClientReceived(byte[] bytes, IConnection connection)
         {
             if (UCWarfare.Config.Debug)
+            {
                 F.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
+            }
         }
         private static void ClientSent(byte[] bytes, IConnection connection, ref bool Allow)
         {
             if (UCWarfare.Config.Debug)
-                F.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
+            {
+                try
+                {
+                    ushort id = BitConverter.ToUInt16(bytes, 0);
+                    if (id != Invocations.Shared.SendLogMessage.ID)
+                        F.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
+                } 
+                catch { }
+            }
         }
         private static void DuplicateKeyError(Exception ex)
         {

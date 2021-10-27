@@ -1,6 +1,7 @@
 ﻿
 using Rocket.API;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Commands
@@ -16,6 +17,11 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            if (!Data.TryMode(out TeamCTF ctf))
+            {
+                player.SendChat("command_e_gamemode");
+                return;
+            }
             if (!UCWarfare.Config.EnableSquads)
             {
                 player.SendChat("squads_disabled");

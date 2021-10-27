@@ -26,6 +26,7 @@ namespace Uncreated.Warfare
                 { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
                 { "notowned", "This point is owned by the enemies. Get more players to capture it." },
                 { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
+                { "server_desc", "<color=#9cb6a4>Uncreated Warfare</color> {0}." },
                 { "team_1", "USA" },
                 { "team_2", "Russia" },
                 { "team_3", "Admins" },
@@ -43,6 +44,7 @@ namespace Uncreated.Warfare
                 { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
                 { "player_connected", "<color=#e6e3d5><color=#ffff1a>{0}</color> joined the server!</color>" },
                 { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
+                { "command_e_gamemode", "<color=#ffa238>This command is not enabled in this gamemode.</color>" },
 
                 // group
                 { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</i></color>" },

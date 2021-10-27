@@ -13,12 +13,11 @@ namespace Uncreated.Warfare.Officers
 {
     public class OfficerManager : JSONSaver<Officer>
     {
-        public static Config<OfficerConfigData> config;
+        public static Config<OfficerConfigData> config = new Config<OfficerConfigData>(Data.OfficerStorage, "config.json");
 
         public OfficerManager()
             : base(Data.OfficerStorage + "officers.json")
         {
-            config = new Config<OfficerConfigData>(Data.OfficerStorage, "config.json");
             Reload();
         }
         public static void OnPlayerJoined(UCPlayer player)

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs
 {
-    public class RepairManager
+    public static class RepairManager
     {
         private static readonly List<RepairStation> stations = new List<RepairStation>();
 
