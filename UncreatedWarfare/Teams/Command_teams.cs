@@ -25,13 +25,13 @@ namespace Uncreated.Warfare.Teams
                 player.SendChat("command_e_gamemode");
                 return;
             }
-            if (!player.Player.IsInMain())
+            if (!(player.GetTeam() == 1 || player.GetTeam() == 2) && !player.Player.IsInMain())
             {
-                player.SendChat("teams_e_notinlobby");
+                player.SendChat("teams_e_notinmain");
                 return;
             }
 
-            teamgm.JoinManager.ShowUI(player, true);
+            teamgm.JoinManager.JoinLobby(player, true);
             
         }
     }

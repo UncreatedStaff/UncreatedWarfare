@@ -166,13 +166,27 @@ namespace Uncreated.Warfare
                 }
                 if (KitManager.HasKit(player.CSteamID, out Kit kit))
                 {
-                    if (kit.Items.Exists(k => k.ID == barricade.id))
+                    if (IsWhitelisted(barricade.id, out _))
                     {
                         return;
                     }
-                    else if (IsWhitelisted(barricade.id, out _))
+                    else
                     {
-                        return;
+                        int allowedCount = kit.Items.Where(k => k.ID == barricade.id).Count();
+
+                        if (allowedCount > 0)
+                        {
+                            int placedCount = UCBarricadeManager.GetBarricadesWhere(b => b.GetServersideData().barricade.id == barricade.id && b.GetServersideData().owner == player.Steam64).Count;
+
+                            if (placedCount >= allowedCount)
+                            {
+                                shouldAllow = false;
+                                player.Message("whitelist_toomanyplaced", allowedCount.ToString());
+                                return;
+                            }
+                            else
+                                return;
+                        }
                     }
                 }
 
