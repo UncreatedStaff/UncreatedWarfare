@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
-    public class EndScreenLeaderboard : MonoBehaviour
+    public class EndScreenLeaderboard : MonoBehaviour, ILeaderboard
     {
         public const float SecondsEndGameLength = 30f;
         public const short UiIdentifier = 10000;

@@ -56,6 +56,7 @@ namespace Uncreated.Warfare.XP
         }
         public static void AddXP(Player player, int amount, string message = "")
         {
+            if (!Data.TrackStats) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
 
             Rank oldRank = null;
@@ -71,7 +72,7 @@ namespace Uncreated.Warfare.XP
                 ucplayer.CachedXp = newBalance;
             }
 
-            if (message != "" && amount != 0)
+            if (message != "" && amount != 0 && !(Data.Gamemode is IImplementsLeaderboard lb && lb.isScreenUp))
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
 
             UpdateUI(player, newBalance, out Rank rank);

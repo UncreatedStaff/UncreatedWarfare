@@ -13,7 +13,7 @@ using Uncreated.Warfare.Tickets;
 namespace Uncreated.Warfare.Gamemodes
 {
     /// <summary>Gamemode with 2 teams</summary>
-    public abstract class TeamGamemode : Gamemode, ITeams
+    public abstract class TeamGamemode : Gamemode, ITeams//, IStructureSaving, IFOBs, IKitRequests, IRevives, ISquads, IImplementsLeaderboard
     {
         protected TeamManager _teamManager;
         public TeamManager TeamManager { get => _teamManager; }

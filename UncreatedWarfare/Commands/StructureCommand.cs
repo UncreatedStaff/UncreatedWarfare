@@ -26,7 +26,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (action == "save")
                 {
-                    if (Data.Gamemode is IStructureSaving)
+                    if (!(Data.Gamemode is IStructureSaving))
                     {
                         player.Message("command_e_gamemode");
                         return;
@@ -132,7 +132,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (action == "remove")
                 {
-                    if (Data.Gamemode is IStructureSaving)
+                    if (!(Data.Gamemode is IStructureSaving))
                     {
                         player.Message("command_e_gamemode");
                         return;

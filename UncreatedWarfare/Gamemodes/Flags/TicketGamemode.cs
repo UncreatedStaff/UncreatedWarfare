@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,6 +29,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             base.EventLoopAction();
         }
         protected abstract void EvaluateTickets();
+        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        {
+            TicketManager.OnGroupChanged(player, oldteam, newteam);
+            base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+        }
         public override void OnPlayerJoined(UCPlayer player)
         {
             TicketManager.OnPlayerJoined(player);

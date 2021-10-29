@@ -243,6 +243,7 @@ namespace Uncreated.Warfare
         }
         public void AddKill(ulong Steam64, ulong Team, int amount = 1)
         {
+            if (!Data.TrackStats) return;
             if (amount == 0) return;
             if (amount > 0)
             {
@@ -279,6 +280,7 @@ namespace Uncreated.Warfare
         }
         public void AddDeath(ulong Steam64, ulong Team, int amount = 1)
         {
+            if (!Data.TrackStats) return;
             if (amount == 0) return;
             if (amount > 0)
             {
@@ -315,6 +317,7 @@ namespace Uncreated.Warfare
         }
         public void AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
         {
+            if (!Data.TrackStats) return;
             if (amount == 0) return;
             if (amount > 0)
             {

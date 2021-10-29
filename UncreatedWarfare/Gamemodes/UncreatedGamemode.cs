@@ -173,7 +173,7 @@ namespace Uncreated.Warfare.Gamemodes
                             for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
                             {
                                 uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
-                                if (isStruct || (!StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) && !RequestSigns.SignExists(instid, out _)))
+                                if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
                                 {
                                     if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
                                         storage.despawnWhenDestroyed = true;
@@ -183,7 +183,7 @@ namespace Uncreated.Warfare.Gamemodes
                             for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
                             {
                                 uint instid = StructureManager.regions[x, y].drops[i].instanceID;
-                                if (isStruct || !StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _))
+                                if (!(isStruct && StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _)))
                                     StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
                             }
                         }

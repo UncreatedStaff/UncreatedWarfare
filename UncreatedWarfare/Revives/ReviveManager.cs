@@ -181,6 +181,11 @@ namespace Uncreated.Warfare.Revives
                 shouldAllow = false;
                 return;
             }
+            if (Data.Gamemode is ITeams)
+            {
+                if (Teams.TeamManager.LobbyZone != null && Teams.TeamManager.LobbyZone.IsInside(parameters.player.transform.position))
+                    return;
+            }
             if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
             {
                 SteamPlayer killer = PlayerTool.getSteamPlayer(parameters.killer);

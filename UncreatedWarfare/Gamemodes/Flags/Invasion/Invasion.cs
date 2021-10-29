@@ -23,7 +23,7 @@ using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {
-    public class Invasion : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IAttackDefence
+    public class Invasion : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IAttackDefence, IImplementsLeaderboard, IStructureSaving
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
 
@@ -34,10 +34,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         protected WarStatsTracker _gameStats;
         public WarStatsTracker GameStats { get => _gameStats; }
         protected EndScreenLeaderboard _endScreen;
-        public EndScreenLeaderboard EndScreen { get => _endScreen; }
+        EndScreenLeaderboard IWarstatsGamemode.Leaderboard { get => _endScreen; }
+        ILeaderboard IImplementsLeaderboard.Leaderboard { get => _endScreen; }
         protected bool _isScreenUp = false;
         public bool isScreenUp { get => _isScreenUp; }
-
         protected ulong _attackTeam;
         public ulong AttackingTeam { get => _attackTeam; }
         protected ulong _defendTeam;
@@ -82,6 +82,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             _kitManager = new KitManager();
             _reviveManager = new ReviveManager();
             _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
+        }
+        public override void OnLevelLoaded()
+        {
+            _vehicleBay = new VehicleBay();
+            _vehicleSpawner = new VehicleSpawner();
+            _vehicleSigns = new VehicleSigns();
+            _requestSigns = new RequestSigns();
+            _structureSaver = new StructureSaver();
+            base.OnLevelLoaded();
+            FOBManager.LoadFobs();
+            RepairManager.LoadRepairStations();
+            RallyManager.WipeAllRallies();
+            VehicleSigns.InitAllSigns();
         }
         public override void StartNextGame(bool onLoad = false)
         {
@@ -238,9 +251,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         private void OnShouldStartNewGame()
         {
-            if (EndScreen != default)
-                EndScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
-            Destroy(EndScreen);
+            if (_endScreen != default)
+                _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
+            Destroy(_endScreen);
             _isScreenUp = false;
             StartNextGame();
         }
@@ -432,7 +445,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 {
                     ulong team = client.GetTeam();
                     client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), Teams.TeamManager.TranslateName(NewOwner, client.playerID.steamID.m_SteamID),
-                        Teams.TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                        TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
                     CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
                 }
@@ -591,9 +604,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
             }
             GameStats.AddPlayer(player.Player);
-            if (isScreenUp && EndScreen != null && Config.ShowLeaderboard)
+            if (isScreenUp && _endScreen != null && Config.ShowLeaderboard)
             {
-                EndScreen.SendScreenToPlayer(player.Player.channel.owner, Config.ProgressChars);
+                _endScreen.SendScreenToPlayer(player.Player.channel.owner, Config.ProgressChars);
             }
             else
             {
@@ -622,19 +635,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
             base.Dispose();
-        }
-        public override void OnLevelLoaded()
-        {
-            _vehicleBay = new VehicleBay();
-            _vehicleSpawner = new VehicleSpawner();
-            _vehicleSigns = new VehicleSigns();
-            _requestSigns = new RequestSigns();
-            _structureSaver = new StructureSaver();
-            base.OnLevelLoaded();
-            FOBManager.LoadFobsFromMap();
-            RepairManager.LoadRepairStations();
-            RallyManager.WipeAllRallies();
-            VehicleSigns.InitAllSigns();
         }
         protected override void EventLoopAction()
         {

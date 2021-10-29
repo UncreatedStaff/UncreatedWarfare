@@ -15,6 +15,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
@@ -36,57 +37,57 @@ namespace Uncreated.Warfare
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
         {
-            { "TeamCTF", typeof(TeamCTF) }, { "Invasion", typeof(Invasion) }
+            { "TeamCTF", typeof(TeamCTF) }, { "Invasion", typeof(Invasion) }, { "TDM", typeof(TeamDeathmatch) }
         };
-        public const string DataDirectory = @"Plugins\UncreatedWarfare\";
+        public const string DATA_DIRECTORY = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
-        private static readonly string _flagStorage = DataDirectory + @"Maps\{0}\Flags\";
+        private static readonly string _flagStorage = DATA_DIRECTORY + @"Maps\{0}\Flags\";
         private static string _flagStorageTemp;
         public static string FlagStorage
         {
             get
             {
-                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Flags\";
+                if (Provider.map == default) return DATA_DIRECTORY + @"Maps\Unloaded\Flags\";
                 if (_flagStorageTemp == default)
                     _flagStorageTemp = string.Format(_flagStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _flagStorageTemp;
             }
         }
-        private static readonly string _structuresStorage = DataDirectory + @"Maps\{0}\Structures\";
+        private static readonly string _structuresStorage = DATA_DIRECTORY + @"Maps\{0}\Structures\";
         private static string _structStorageTemp = null;
         public static string StructureStorage
         {
             get
             {
-                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Structures\";
+                if (Provider.map == default) return DATA_DIRECTORY + @"Maps\Unloaded\Structures\";
                 if (_structStorageTemp == default)
                     _structStorageTemp = string.Format(_structuresStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _structStorageTemp;
             }
         }
-        public static readonly string TeamStorage = DataDirectory + @"Teams\";
-        public static readonly string TicketStorage = DataDirectory + @"Tickets\";
-        public static readonly string XPStorage = DataDirectory + @"XP\";
-        public static readonly string OfficerStorage = DataDirectory + @"Officers\";
-        public static readonly string CooldownStorage = DataDirectory + @"Cooldowns\";
-        public static readonly string SquadStorage = DataDirectory + @"Squads\";
-        public static readonly string KitsStorage = DataDirectory + @"Kits\";
-        public static readonly string SQLStorage = DataDirectory + @"SQL\";
-        private static readonly string _vehicleStorage = DataDirectory + @"Maps\{0}\Vehicles\";
+        public static readonly string TeamStorage = DATA_DIRECTORY + @"Teams\";
+        public static readonly string TicketStorage = DATA_DIRECTORY + @"Tickets\";
+        public static readonly string XPStorage = DATA_DIRECTORY + @"XP\";
+        public static readonly string OfficerStorage = DATA_DIRECTORY + @"Officers\";
+        public static readonly string CooldownStorage = DATA_DIRECTORY + @"Cooldowns\";
+        public static readonly string SquadStorage = DATA_DIRECTORY + @"Squads\";
+        public static readonly string KitsStorage = DATA_DIRECTORY + @"Kits\";
+        public static readonly string SQLStorage = DATA_DIRECTORY + @"SQL\";
+        private static readonly string _vehicleStorage = DATA_DIRECTORY + @"Maps\{0}\Vehicles\";
         private static string _vehicleStorageTemp;
         public static string VehicleStorage
         {
             get
             {
-                if (Provider.map == default) return DataDirectory + @"Maps\Unloaded\Vehicles\";
+                if (Provider.map == default) return DATA_DIRECTORY + @"Maps\Unloaded\Vehicles\";
                 if (_vehicleStorageTemp == default)
                     _vehicleStorageTemp = string.Format(_vehicleStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
                 return _vehicleStorageTemp;
             }
         }
-        public static readonly string FOBStorage = DataDirectory + @"FOBs\";
-        public static readonly string LangStorage = DataDirectory + @"Lang\";
+        public static readonly string FOBStorage = DATA_DIRECTORY + @"FOBs\";
+        public static readonly string LangStorage = DATA_DIRECTORY + @"Lang\";
         public static readonly string ElseWhereSQLPath = @"C:\sql.json";
         public static readonly CultureInfo Locale = new CultureInfo("en-US");
         public static Dictionary<string, Color> Colors;
@@ -105,6 +106,7 @@ namespace Uncreated.Warfare
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
         public static List<Log> Logs;
+        public static bool TrackStats = true;
         public static bool Is<T>(out T gamemode) where T : Gamemodes.Interfaces.IGamemode
         {
             if (Gamemode is T gm)
@@ -176,7 +178,7 @@ namespace Uncreated.Warfare
             /* CREATE DIRECTORIES */
             F.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
-            F.CheckDir(DataDirectory, out _, true);
+            F.CheckDir(DATA_DIRECTORY, out _, true);
             F.CheckDir(LangStorage, out _, true);
             F.CheckDir(KitsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
@@ -504,7 +506,8 @@ namespace Uncreated.Warfare
                     new Permission("uc.rally"),
                     new Permission("uc.group"),
                     new Permission("uc.group.current"),
-                    new Permission("uc.rally")
+                    new Permission("uc.rally"),
+                    new Permission("uc.teams")
                 };
         }
     }
