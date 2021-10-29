@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Components
     public class UCAnnouncer : MonoBehaviour
     {
         public Coroutine coroutine;
-        public Config<MessagerConfig> config = new Config<MessagerConfig>(Data.DataDirectory, "autobroadcast.json");
+        public Config<MessagerConfig> config = new Config<MessagerConfig>(Data.DATA_DIRECTORY, "autobroadcast.json");
         private bool stop = false;
         private Dictionary<string, Dictionary<string, TranslationData>> Messages;
         private List<string> allKeys = new List<string>();

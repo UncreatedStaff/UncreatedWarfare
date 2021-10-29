@@ -24,19 +24,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public delegate Task ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
     public delegate Task FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
     public delegate Task FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-    public class TeamCTF : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads
+    public class TeamCTF : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IImplementsLeaderboard, IStructureSaving
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
         // vars
         protected Config<TeamCTFData> _config;
-        public TeamCTFData Config { get => _config.Data; }
+        public TeamCTFData Config => _config.Data;
         protected int _objectiveT1Index;
         protected int _objectiveT2Index;
-        public int ObjectiveT1Index { get => _objectiveT1Index; }
-        public int ObjectiveT2Index { get => _objectiveT2Index; }
+        public int ObjectiveT1Index => _objectiveT1Index;
+        public int ObjectiveT2Index => _objectiveT2Index;
         public List<ulong> InAMC = new List<ulong>();
-        public Flag ObjectiveTeam1 { get => _rotation[_objectiveT1Index]; }
-        public Flag ObjectiveTeam2 { get => _rotation[_objectiveT2Index]; }
+        public Flag ObjectiveTeam1 => _rotation[_objectiveT1Index];
+        public Flag ObjectiveTeam2 => _rotation[_objectiveT2Index];
         public override string DisplayName => "Military RP";
         public override bool EnableAMC => true;
         public override bool ShowOFPUI => true;
@@ -45,31 +45,32 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public override bool UseJoinUI => true;
         public override bool UseWhitelist => true;
         protected VehicleSpawner _vehicleSpawner;
-        public VehicleSpawner VehicleSpawner { get => _vehicleSpawner; }
+        public VehicleSpawner VehicleSpawner => _vehicleSpawner;
         protected VehicleBay _vehicleBay;
-        public VehicleBay VehicleBay { get => _vehicleBay; }
+        public VehicleBay VehicleBay => _vehicleBay;
         protected VehicleSigns _vehicleSigns;
-        public VehicleSigns VehicleSigns { get => _vehicleSigns; }
+        public VehicleSigns VehicleSigns => _vehicleSigns;
         protected FOBManager _FOBManager;
-        public FOBManager FOBManager { get => _FOBManager; }
+        public FOBManager FOBManager => _FOBManager;
         protected RequestSigns _requestSigns;
-        public RequestSigns RequestSigns { get => _requestSigns; }
+        public RequestSigns RequestSigns => _requestSigns;
         protected KitManager _kitManager;
-        public KitManager KitManager { get => _kitManager; }
+        public KitManager KitManager => _kitManager;
         protected ReviveManager _reviveManager;
-        public ReviveManager ReviveManager { get => _reviveManager; }
+        public ReviveManager ReviveManager => _reviveManager;
         protected SquadManager _squadManager;
-        public SquadManager SquadManager { get => _squadManager; }
+        public SquadManager SquadManager => _squadManager;
         protected StructureSaver _structureSaver;
-        public StructureSaver StructureSaver { get => _structureSaver; }
+        public StructureSaver StructureSaver => _structureSaver;
         public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
         // leaderboard
         private EndScreenLeaderboard _endScreen;
-        public EndScreenLeaderboard EndScreen { get => _endScreen; }
+        EndScreenLeaderboard IWarstatsGamemode.Leaderboard => _endScreen;
+        ILeaderboard IImplementsLeaderboard.Leaderboard => _endScreen;
         private bool _isScreenUp = false;
-        public bool isScreenUp { get => _isScreenUp; }
+        public bool isScreenUp => _isScreenUp;
         private WarStatsTracker _gameStats;
-        public WarStatsTracker GameStats { get => _gameStats; }
+        public WarStatsTracker GameStats => _gameStats;
 
 
         // events
@@ -81,6 +82,28 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             _config = new Config<TeamCTFData>(Data.FlagStorage, "config.json");
             SetTiming(Config.PlayerCheckSpeedSeconds);
+        }
+        public override void Init()
+        {
+            base.Init();
+            _FOBManager = new FOBManager();
+            _squadManager = new SquadManager();
+            _kitManager = new KitManager();
+            _reviveManager = new ReviveManager();
+            _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
+        }
+        public override void OnLevelLoaded()
+        {
+            _vehicleBay = new VehicleBay();
+            _vehicleSpawner = new VehicleSpawner();
+            _vehicleSigns = new VehicleSigns();
+            _requestSigns = new RequestSigns();
+            _structureSaver = new StructureSaver();
+            FOBManager.LoadFobs();
+            RepairManager.LoadRepairStations();
+            RallyManager.WipeAllRallies();
+            VehicleSigns.InitAllSigns();
+            base.OnLevelLoaded();
         }
         public override void OnEvaluate()
         {
@@ -131,20 +154,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             InAMC.Remove(args.dead.channel.owner.playerID.steamID.m_SteamID);
             EventFunctions.RemoveDamageMessageTicks(args.dead.channel.owner.playerID.steamID.m_SteamID);
-        }
-        public override void Init()
-        {
-            base.Init();
-            _FOBManager = new FOBManager();
-            _squadManager = new SquadManager();
-            _kitManager = new KitManager();
-            _reviveManager = new ReviveManager();
-            _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
-            _vehicleBay = new VehicleBay();
-            _vehicleSpawner = new VehicleSpawner();
-            _vehicleSigns = new VehicleSigns();
-            _requestSigns = new RequestSigns();
-            _structureSaver = new StructureSaver();
         }
         protected override bool TimeToCheck()
         {
@@ -685,9 +694,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
             }
             GameStats.AddPlayer(player.Player);
-            if (isScreenUp && EndScreen != null && Config.ShowLeaderboard)
+            if (isScreenUp && _endScreen != null && Config.ShowLeaderboard)
             {
-                EndScreen.SendScreenToPlayer(player.Player.channel.owner, Config.ProgressChars);
+                _endScreen.SendScreenToPlayer(player.Player.channel.owner, Config.ProgressChars);
             }
             else
             {
@@ -716,14 +725,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
             base.Dispose();
-        }
-        public override void OnLevelLoaded()
-        {
-            FOBManager.LoadFobs();
-            RepairManager.LoadRepairStations();
-            RallyManager.WipeAllRallies();
-            VehicleSigns.InitAllSigns();
-            base.OnLevelLoaded();
         }
         protected override void EventLoopAction()
         {

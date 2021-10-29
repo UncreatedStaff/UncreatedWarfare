@@ -64,10 +64,12 @@ namespace Uncreated.Warfare.Commands
                 {
                     c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
                 }
+#if false
                 else if (command[0].ToLower() == "lobby")
                 {
                     c.TeleportDelayed(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#bb80d1>lobby</color>");
                 }
+#endif
                 else
                 {
                     if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))

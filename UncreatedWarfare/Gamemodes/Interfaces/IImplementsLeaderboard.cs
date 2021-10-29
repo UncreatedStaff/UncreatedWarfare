@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IWarstatsGamemode : IGamemode
+    public interface IImplementsLeaderboard
     {
-        EndScreenLeaderboard Leaderboard { get; }
         bool isScreenUp { get; }
-        WarStatsTracker GameStats { get; }
+        ILeaderboard Leaderboard { get; }
+    }
+    public interface ILeaderboard
+    {
+
     }
 }

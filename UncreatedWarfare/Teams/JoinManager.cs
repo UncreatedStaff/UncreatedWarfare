@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Teams
         }
         public bool IsInLobby(UCPlayer player)
         {
-            foreach (var lobbyPlayer in LobbyPlayers)
+            foreach (LobbyPlayer lobbyPlayer in LobbyPlayers)
             {
                 if (lobbyPlayer.IsInLobby && lobbyPlayer.Player == player)
                 {
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Teams
                 ShowUI(lobbyPlayer, false);
             }
 
-            foreach (var p in LobbyPlayers)
+            foreach (LobbyPlayer p in LobbyPlayers)
                 UpdateUITeams(p, p.Team);
         }
 
@@ -88,16 +88,16 @@ namespace Uncreated.Warfare.Teams
             Team1Players.RemoveAll(p => p.Player.Steam64 == player.Steam64);
             Team2Players.RemoveAll(p => p.Player.Steam64 == player.Steam64);
 
-            foreach (var p in LobbyPlayers)
+            foreach (LobbyPlayer p in LobbyPlayers)
                 UpdateUITeams(p, p.Team);
         }
         public void JoinLobby(UCPlayer player, bool showX)
         {
-            var lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
+            LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
             lobbyPlayer.IsInLobby = true;
             ShowUI(lobbyPlayer, showX);
 
-            foreach (var p in LobbyPlayers)
+            foreach (LobbyPlayer p in LobbyPlayers)
                 if (p.Player != player)
                     UpdateUITeams(p, p.Team);
         }
@@ -107,7 +107,7 @@ namespace Uncreated.Warfare.Teams
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
 
-            EffectManager.sendUIEffect(29000, 29000, player.Player.connection, true);
+            EffectManager.sendUIEffect(36036, 29000, player.Player.connection, true);
 
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper().Colorize(TeamManager.Team1ColorHex));
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper().Colorize(TeamManager.Team2ColorHex));
@@ -244,7 +244,7 @@ namespace Uncreated.Warfare.Teams
                     if (!Team1Players.Contains(lobbyPlayer))
                         Team1Players.Add(lobbyPlayer);
                     Team2Players.Remove(lobbyPlayer);
-                    foreach (var p in LobbyPlayers)
+                    foreach (LobbyPlayer p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 
                     EffectManager.sendUIEffectText(29000, lobbyPlayer.Player.connection, true, "Team1Select", "JOINED");
@@ -333,9 +333,9 @@ namespace Uncreated.Warfare.Teams
             player.Team = player.Player.GetTeam();
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
-            EffectManager.askEffectClearByID(29000, player.Player.connection);
+            EffectManager.askEffectClearByID(36036, player.Player.connection);
 
-            foreach (var p in LobbyPlayers)
+            foreach (LobbyPlayer p in LobbyPlayers)
                 UpdateUITeams(p, p.Team);
         }
 

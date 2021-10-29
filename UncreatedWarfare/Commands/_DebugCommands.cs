@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -877,6 +878,46 @@ namespace Uncreated.Warfare.Commands
                     throw;
                 }
             }
+        }
+        private void gamemode(string[] command, Player player)
+        {
+            if (command.Length != 1)
+            {
+                if (player == null) F.LogWarning("Syntax: /test gamemode <GamemodeName>");
+                else player.SendChat("Syntax: <i>/test gamemode <GamemodeName>.</i>");
+            }
+            Gamemode newGamemode = Gamemode.FindGamemode(command[0], Data.GAME_MODES);
+            if (newGamemode != null)
+            {
+                if (Data.Gamemode != null)
+                    Data.Gamemode.Dispose();
+                Data.Gamemode = newGamemode;
+                Data.Gamemode.Init();
+                Data.Gamemode.OnLevelLoaded();
+                for (int i = 0; i < Provider.clients.Count; i++)
+                {
+                    if (Provider.clients[i].player.life.isDead)
+                    {
+                        Provider.clients[i].player.life.ReceiveRespawnRequest(false);
+                    }
+                    else
+                    {
+                        Provider.clients[i].player.teleportToLocation(F.GetBaseSpawn(Provider.clients[i], out ulong playerteam), F.GetBaseAngle(playerteam));
+                    }
+                }
+                F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+            } 
+            else
+            {
+                if (player == null) F.LogWarning("Failed to find gamemode: \"" + command[0] + "\"");
+                else player.SendChat("Failed to find gamemode: \"<i>" + command[0] + "</i>\"");
+            }
+        }
+        private void trackstats(string[] command, Player player)
+        {
+            Data.TrackStats = !Data.TrackStats;
+            if (player == null) F.LogWarning("Stat tracking " + (Data.TrackStats ? "enabled." : "disabled."));
+            else player.SendChat("Stat tracking " + (Data.TrackStats ? "<b>enabled</b>." : "<b>disabled</b>."));
         }
     }
 #pragma warning restore IDE0051

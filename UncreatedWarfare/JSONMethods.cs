@@ -324,9 +324,9 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
         {
-            if (!File.Exists(Data.DataDirectory + "chat_colors.json"))
+            if (!File.Exists(Data.DATA_DIRECTORY + "chat_colors.json"))
             {
-                using (StreamWriter TextWriter = File.CreateText(Data.DataDirectory + "chat_colors.json"))
+                using (StreamWriter TextWriter = File.CreateText(Data.DATA_DIRECTORY + "chat_colors.json"))
                 {
                     using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
                     {
@@ -348,7 +348,7 @@ namespace Uncreated.Warfare
                 return NewDefaults;
             }
             List<ColorData> Colors;
-            using (StreamReader Reader = File.OpenText(Data.DataDirectory + "chat_colors.json"))
+            using (StreamReader Reader = File.OpenText(Data.DATA_DIRECTORY + "chat_colors.json"))
             {
                 Colors = JsonConvert.DeserializeObject<List<ColorData>>(Reader.ReadToEnd());
                 Reader.Close();

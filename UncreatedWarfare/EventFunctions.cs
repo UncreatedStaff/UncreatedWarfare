@@ -748,7 +748,8 @@ namespace Uncreated.Warfare
                 {
                     team = save.Team;
                 }
-                if (Data.Gamemode is TeamGamemode)
+#if false // <--- set to true and below to true to enable name prefixes.
+                if (Data.Gamemode is ITeams && Data.Gamemode.ShowXPUI)
                 {
                     string globalPrefix = "";
                     string teamPrefix = "";
@@ -790,6 +791,10 @@ namespace Uncreated.Warfare
                     player.playerID.characterName = player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName;
                     player.playerID.nickName = player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName;
                 }
+#else
+                player.playerID.characterName = player.playerID.characterName.Length == 0 ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName;
+                player.playerID.nickName = player.playerID.nickName.Length == 0 ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName;
+#endif
             }
             catch (Exception ex)
             {
