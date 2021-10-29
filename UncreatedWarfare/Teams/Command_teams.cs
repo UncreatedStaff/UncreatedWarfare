@@ -26,7 +26,12 @@ namespace Uncreated.Warfare.Teams
                 player.SendChat("command_e_gamemode");
                 return;
             }
-            if (!(player.GetTeam() == 1 || player.GetTeam() == 2) && !player.Player.IsInMain())
+            if (CooldownManager.HasCooldown(player, ECooldownType.CHANGE_TEAMS, out var cooldown))
+            {
+                player.SendChat("teams_e_cooldown");
+                return;
+            }
+            if ((player.GetTeam() == 1 || player.GetTeam() == 2) && !player.Player.IsInMain())
             {
                 player.SendChat("teams_e_notinmain");
                 return;

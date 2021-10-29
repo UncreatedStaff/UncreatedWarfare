@@ -14,7 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Libraries\UncreatedNetworking.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
