@@ -293,7 +293,7 @@ namespace Uncreated.Warfare
         }
         public bool IsInLobby()
         {
-            return Data.Gamemode is TeamGamemode teammode && teammode.JoinManager.IsInLobby(this);
+            return Data.Gamemode is Gamemodes.Interfaces.ITeams teammode && teammode.JoinManager.IsInLobby(this);
         }
 
         /// <summary>Gets some of the values from the playersave again.</summary>
