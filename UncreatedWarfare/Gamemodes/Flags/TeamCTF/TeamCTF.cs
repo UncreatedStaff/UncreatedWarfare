@@ -660,7 +660,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
-        public override void OnPlayerJoined(UCPlayer player)
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
         {
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
@@ -706,7 +706,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-            base.OnPlayerJoined(player);
+            base.OnPlayerJoined(player, wasAlreadyOnline);
         }
         public override void OnPlayerLeft(UCPlayer player)
         {

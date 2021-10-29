@@ -118,7 +118,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
-        public virtual void OnPlayerJoined(UCPlayer player)
+        public virtual void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
         { }
         public virtual void OnPlayerLeft(UCPlayer player)
         { }

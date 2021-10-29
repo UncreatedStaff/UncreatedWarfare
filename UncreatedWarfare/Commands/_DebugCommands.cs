@@ -911,12 +911,13 @@ namespace Uncreated.Warfare.Commands
                         {
                             Provider.clients[i].player.teleportToLocation(F.GetBaseSpawn(Provider.clients[i], out ulong playerteam), F.GetBaseAngle(playerteam));
                         }
+                        Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
                     }
                 }
                 else
                 {
-                    if (player == null) F.LogWarning("Failed to find gamemode: \"" + command[1] + "\"");
-                    else player.SendChat("Failed to find gamemode: \"<i>" + command[1] + "</i>\"");
+                    if (player == null) F.LogWarning("Failed to find gamemode: \"" + command[1] + "\".");
+                    else player.SendChat("Failed to find gamemode: \"<i>" + command[1] + "</i>\".");
                 }
             }
             catch (Exception ex)
