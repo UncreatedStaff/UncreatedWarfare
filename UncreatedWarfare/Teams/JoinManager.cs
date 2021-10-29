@@ -39,16 +39,26 @@ namespace Uncreated.Warfare.Teams
         }
         public void OnPlayerConnected(UCPlayer player, bool isNewPlayer, bool isNewGame)
         {
+            bool isDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0;
+            bool isDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0;
+
             if (isNewPlayer)
             {
                 player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0, true);
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
+                lobbyPlayer.IsInLobby = true;
+                lobbyPlayer.IsDonatorT1 = isDonatorT1;
+                lobbyPlayer.IsDonatorT2 = isDonatorT2;
                 LobbyPlayers.Add(lobbyPlayer);
                 ShowUI(lobbyPlayer, false);
             }
             else if (isNewGame)
             {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, player.GetTeam(), false);
+                
+
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, player.GetTeam());
+                lobbyPlayer.IsDonatorT1 = isDonatorT1;
+                lobbyPlayer.IsDonatorT2 = isDonatorT2;
 
                 if (!(player.GetTeam() == 1 || player.GetTeam() == 2) || IsTeamFull(lobbyPlayer, lobbyPlayer.Team))
                 {
@@ -72,7 +82,10 @@ namespace Uncreated.Warfare.Teams
             }
             else if (player.GetTeam() == 0)
             {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0, true);
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
+                lobbyPlayer.IsInLobby = true;
+                lobbyPlayer.IsDonatorT1 = isDonatorT1;
+                lobbyPlayer.IsDonatorT2 = isDonatorT2;
                 player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
                 LobbyPlayers.Add(lobbyPlayer);
                 ShowUI(lobbyPlayer, false);
@@ -168,14 +181,14 @@ namespace Uncreated.Warfare.Teams
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", Team1Players.Count.ToString());
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", Team2Players.Count.ToString());
 
-            if (IsTeamFull(player, 1))
+            if (!player.Player.OnDuty() && !player.IsDonatorT1 && IsTeamFull(player, 1))
             {
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Select", "<color=#bf6363>FULL</color>");
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Select", "CLICK TO JOIN");
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team1Button", false);
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team2Button", true);
             }
-            else if (IsTeamFull(player, 2))
+            else if (!player.Player.OnDuty() && !player.IsDonatorT2 && IsTeamFull(player, 2))
             {
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Select", "<color=#bf6363>FULL</color>");
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Select", "CLICK TO JOIN");
@@ -225,7 +238,6 @@ namespace Uncreated.Warfare.Teams
             {
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "GameStarting", false);
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Confirm", true);
-
             }
         }
 
@@ -421,12 +433,16 @@ namespace Uncreated.Warfare.Teams
             public readonly UCPlayer Player;
             public ulong Team;
             public bool IsInLobby;
+            public bool IsDonatorT1;
+            public bool IsDonatorT2;
 
-            public LobbyPlayer(UCPlayer player, ulong team, bool isInLobby)
+            public LobbyPlayer(UCPlayer player, ulong team)
             {
                 Player = player;
                 Team = team;
-                IsInLobby = isInLobby;
+                IsInLobby = true;
+                IsDonatorT1 = false;
+                IsDonatorT2 = false;
             }
         }
     }

@@ -228,6 +228,7 @@ namespace Uncreated.Warfare
                 { "deploy_c_damaged", "<color=#ffa238>You were damaged while trying to teleport!</color>" },
                 { "deploy_c_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
                 { "deploy_c_enemiesNearby", "<color=#ffa238>You no longer deploy to that FOB - there are enemies nearby.</color>" },
+                { "deploy_c_notactive", "<color=#ffa238>The point you were deploying to is no longer active.</color>" },
                 { "deploy_c_dead", "<color=#ffa238>You died and can no longer deploy!</color>" },
                 { "deploy_e_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
                 { "deploy_e_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to deploy again.</color>" },

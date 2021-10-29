@@ -81,7 +81,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         }
         public override void OnLevelLoaded()
         {
-            FOBManager.LoadFobs();
+            FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
