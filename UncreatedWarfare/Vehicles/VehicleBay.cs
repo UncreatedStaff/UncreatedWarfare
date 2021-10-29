@@ -188,6 +188,12 @@ namespace Uncreated.Warfare.Vehicles
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
+                if (Data.Gamemode.State == Gamemodes.EState.STAGING)
+                {
+                    player.SendChat("vehicle_staging");
+                    shouldAllow = false;
+                    return;
+                }
                 if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
                 {
                     shouldAllow = false;

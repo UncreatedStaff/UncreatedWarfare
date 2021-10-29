@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.FOBs
         public static Config<FOBConfig> config;
         public static readonly List<FOB> Team1FOBs = new List<FOB>();
         public static readonly List<FOB> Team2FOBs = new List<FOB>();
-        public static readonly List<SpecialFOB> SpecialFOBs= new List<SpecialFOB>();
+        public static readonly List<SpecialFOB> SpecialFOBs = new List<SpecialFOB>();
 
 
         public static event PlayerEnteredFOBRadiusHandler OnPlayerEnteredFOBRadius;
@@ -184,17 +184,21 @@ namespace Uncreated.Warfare.FOBs
         {
             for (int i = 0; i < Team1FOBs.Count; i++)
             {
-                RecalculateNearbyPlayers(Team1FOBs[i], (int)counter);
+                Tick(Team1FOBs[i], (int)counter);
             }
             for (int i = 0; i < Team2FOBs.Count; i++)
             {
-                RecalculateNearbyPlayers(Team2FOBs[i], (int)counter);
+                Tick(Team2FOBs[i], (int)counter);
+            }
+            for (int i = 0; i < SpecialFOBs.Count; i++)
+            {
+                Tick(SpecialFOBs[i], (int)counter);
             }
 
             if (counter % 60 == 0)
                 RefillMainStorages();
         }
-        public static void RecalculateNearbyPlayers(FOB fob, int counter = -1)
+        public static void Tick(FOB fob, int counter = -1)
         {
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
             {
@@ -242,6 +246,16 @@ namespace Uncreated.Warfare.FOBs
                             OnEnemyLeftFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
                         }
                     }
+                }
+            }
+        }
+        public static void Tick(SpecialFOB special, int counter = -1)
+        {
+            if (special.DisappearAroundEnemies && counter % 5 == 0)
+            {
+                if (Provider.clients.Where(p => p.GetTeam() != special.Team && (p.player.transform.position - special.point).sqrMagnitude < Math.Pow(20, 2)).Count() > 0)
+                {
+                    DeleteSpecialFOB(special.Name, special.Team);
                 }
             }
         }
@@ -374,9 +388,9 @@ namespace Uncreated.Warfare.FOBs
 
             UpdateUIForTeam(team);
         }
-        public static void RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor)
+        public static void RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor, bool disappearAroundEnemies)
         {
-            SpecialFOBs.Add(new SpecialFOB(name, point, team, UIcolor));
+            SpecialFOBs.Add(new SpecialFOB(name, point, team, UIcolor, disappearAroundEnemies));
 
             UpdateUIForTeam(team);
         }
@@ -521,13 +535,15 @@ namespace Uncreated.Warfare.FOBs
             }
 
             int start = 0;
-            for (int i = start; i < config.Data.FobLimit; i++)
+            for (int i = start; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
             {
-                string name = $"<color={SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
-                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
-                player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
-
-                start++;
+                if (SpecialFOBs[i].IsActive)
+                {
+                    string name = $"<color={SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
+                    EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
+                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
+                    start++;
+                }
             }
             for (int i = start; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
             {
@@ -585,8 +601,9 @@ namespace Uncreated.Warfare.FOBs
         public ulong Team;
         public string UIColor;
         public bool IsActive;
+        public bool DisappearAroundEnemies;
 
-        public SpecialFOB(string name, Vector3 point, ulong team, string color)
+        public SpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
         {
             Name = name;
             ClosestLocation =
@@ -598,6 +615,7 @@ namespace Uncreated.Warfare.FOBs
             Team = team;
             UIColor = color;
             IsActive = true;
+            DisappearAroundEnemies = disappearAroundEnemies;
         }
     }
 
