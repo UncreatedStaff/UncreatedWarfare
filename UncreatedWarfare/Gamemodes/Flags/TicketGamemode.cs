@@ -39,5 +39,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             TicketManager.OnPlayerJoined(player);
             base.OnPlayerJoined(player);
         }
+        public override void Dispose()
+        {
+            TicketManager?.Dispose();
+            base.Dispose();
+        }
     }
 }

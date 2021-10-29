@@ -89,18 +89,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
             _kitManager = new KitManager();
+            _vehicleBay = new VehicleBay();
             _reviveManager = new ReviveManager();
             _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
         }
         public override void OnLevelLoaded()
         {
-            _vehicleBay = new VehicleBay();
+            _structureSaver = new StructureSaver();
             _vehicleSpawner = new VehicleSpawner();
             _vehicleSigns = new VehicleSigns();
             _requestSigns = new RequestSigns();
-            _structureSaver = new StructureSaver();
             FOBManager.LoadFobs();
             RepairManager.LoadRepairStations();
+            VehicleSpawner.OnLevelLoaded();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
             base.OnLevelLoaded();
@@ -657,6 +658,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.playerID.steamID.m_SteamID])
                     ?? _rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
             CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+            base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public override void OnPlayerJoined(UCPlayer player)
         {
@@ -704,6 +706,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+            base.OnPlayerJoined(player);
         }
         public override void OnPlayerLeft(UCPlayer player)
         {
@@ -712,6 +715,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             _reviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
+            base.OnPlayerLeft(player);
         }
         public override void Dispose()
         {
@@ -719,11 +723,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
                 SendUIParameters.Nil.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection); // clear all capturing uis
+                if (F.TryGetPlaytimeComponent(player.player, out Components.PlaytimeComponent c))
+                    c.stats = null;
             }
             _squadManager?.Dispose();
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            Destroy(_gameStats);
             base.Dispose();
         }
         protected override void EventLoopAction()

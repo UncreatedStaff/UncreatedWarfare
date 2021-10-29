@@ -7,6 +7,7 @@ using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
+using Rocket.Unturned.Player;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -61,6 +62,8 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void Init()
         {
             LogoutSaver = new PlayerManager();
+            for (int i = 0; i < Provider.clients.Count; i++)
+                PlayerManager.InvokePlayerConnected(UnturnedPlayer.FromSteamPlayer(Provider.clients[i]));
             OfficerManager = new OfficerManager();
             Cooldowns = new CooldownManager();
             if (UseWhitelist)
@@ -124,6 +127,7 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void OnLevelLoaded()
         {
             ReplaceBarricadesAndStructures();
+            StartNextGame(true);
             if (useEventLoop)
             {
                 EventLoopCoroutine = StartCoroutine(EventLoop());

@@ -157,7 +157,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                         KitManager.ResupplyKit(ucplayer, kit);
                 }
                 player.player.setAllPluginWidgetFlags(EPluginWidgetFlags.None);
-                CTFUI.ClearListUI(player.transportConnection, (Data.Gamemode as TeamCTF).Config.FlagUICount);
+                if (Data.Gamemode is TeamCTF ctf)
+                {
+                    CTFUI.ClearListUI(player.transportConnection, ctf.Config.FlagUICount);
+                }
+                else if (Data.Gamemode is Invasion.Invasion inv)
+                {
+                    Invasion.InvasionUI.ClearListUI(player.transportConnection, inv.Config.FlagUICount);
+                }
                 KeyValuePair<ulong, PlayerCurrentGameStats> statsvalue = warstats.playerstats.FirstOrDefault(x => x.Key == player.playerID.steamID.m_SteamID);
                 PlayerCurrentGameStats stats;
                 if (statsvalue.Equals(default(KeyValuePair<ulong, PlayerCurrentGameStats>)))
@@ -387,6 +394,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public void Update(float dt)
         {
+            if (player == null) return;
             if (player.IsOnFlag())
             {
                 AddToTimeOnPoint(dt);

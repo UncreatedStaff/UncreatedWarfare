@@ -117,12 +117,8 @@ namespace Uncreated.Warfare.Components
         {
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
-            if (stats == null)
-            {
-                F.LogWarning("stats is null " + player.name);
-                return;
-            }
-            stats.Update(dt);
+            if (stats != null)
+                stats.Update(dt);
         }
         /// <summary>Start a delayed teleport on the player.</summary>
         /// <returns>True if there were no requests pending, false if there were.</returns>

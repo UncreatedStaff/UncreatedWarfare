@@ -1056,6 +1056,18 @@ namespace Uncreated.Warfare
                                 $"<color=#{UCWarfare.GetColorHex("nocap_team_2")}>" +
                                 $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("nocap_team_2_bkgr"));
                         break;
+                    case EFlagStatus.LOCKED:
+                        if (team == 1)
+                            EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("locked_team_1_words")}>{Translate("ui_locked", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("locked_team_1")}>" +
+                                $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("locked_team_1_bkgr"));
+                        else if (team == 2)
+                            EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
+                                $"<color=#{UCWarfare.GetColorHex("locked_team_2_words")}>{Translate("ui_locked", playerID)}{(pts ? $" ({circleAmount}/{Flag.MAX_POINTS})" : "")}</color>",
+                                $"<color=#{UCWarfare.GetColorHex("locked_team_2")}>" +
+                                $"{progresschars[CTFUI.FromMax(circleAmount, progresschars)]}</color>", UCWarfare.GetColorHex("locked_team_2_bkgr"));
+                        break;
                     case EFlagStatus.CLEARING:
                         if (team == 1)
                             EffectManager.sendUIEffect(uiid, key, PlayerConnection, true,
@@ -1113,7 +1125,7 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
-            if (!(Data.Gamemode is TeamGamemode)) return TeamManager.LobbySpawn;
+            if (!(Data.Gamemode is ITeams)) return TeamManager.LobbySpawn;
             ulong team = player.GetTeam();
             if (team == 1)
             {
@@ -1127,7 +1139,7 @@ namespace Uncreated.Warfare
         }
         public static Vector3 GetBaseSpawn(this Player player, out ulong team)
         {
-            if (!(Data.Gamemode is TeamGamemode))
+            if (!(Data.Gamemode is ITeams))
             {
                 team = player.quests.groupID.m_SteamID;
                 return TeamManager.LobbySpawn;
@@ -1146,7 +1158,7 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
         {
             team = playerID.GetTeamFromPlayerSteam64ID();
-            if (!(Data.Gamemode is TeamGamemode))
+            if (!(Data.Gamemode is ITeams))
             {
                 return TeamManager.LobbySpawn;
             }
@@ -1154,7 +1166,7 @@ namespace Uncreated.Warfare
         }
         public static Vector3 GetBaseSpawnFromTeam(this ulong team)
         {
-            if (!(Data.Gamemode is TeamGamemode))
+            if (!(Data.Gamemode is ITeams))
             {
                 return TeamManager.LobbySpawn;
             }
@@ -1164,7 +1176,7 @@ namespace Uncreated.Warfare
         }
         public static float GetBaseAngle(this ulong team)
         {
-            if (!(Data.Gamemode is TeamGamemode))
+            if (!(Data.Gamemode is ITeams))
             {
                 return TeamManager.LobbySpawnAngle;
             }
@@ -1564,11 +1576,25 @@ namespace Uncreated.Warfare
             if (!(Data.Gamemode is TeamGamemode)) return false;
             return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
         }
-        public static bool IsOnFlag(this Player player) => Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
+        public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
         public static bool IsOnFlag(this Player player, out Flag flag)
         {
-            if (Data.Is(out IFlagRotation fg))
+            if (player != null && Data.Is(out IFlagRotation fg))
             {
+                if (fg.OnFlag == null)
+                {
+                    F.LogError("onflag null");
+                    if (fg.Rotation == null) F.LogError("rot null");
+                    flag = null;
+                    return false;
+                }
+                else if (fg.Rotation == null)
+                {
+                    F.LogError("rot null");
+                    if (fg.OnFlag == null) F.LogError("onflag null");
+                    flag = null;
+                    return false;
+                }
                 if (fg.OnFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int id))
                 {
                     flag = fg.Rotation.Find(x => x.ID == id);

@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public virtual void PrintFlagRotation()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(_rotation.Count.ToString(Data.Locale) + " flags:\n");
             for (int i = 0; i < _rotation.Count; i++)
             {
                 sb.Append(i.ToString(Data.Locale) + ") " + _rotation[i].Name + '\n');
@@ -142,7 +142,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public override void OnLevelLoaded()
         {
             LoadAllFlags();
-            StartNextGame(true);
             base.OnLevelLoaded();
         }
         public override void Dispose()
@@ -150,7 +149,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             ResetFlags();
             _onFlag.Clear();
             _rotation.Clear();
+            _allFlags.Clear();
             _counter = 0;
+            _counter2 = 0;
             base.Dispose();
         }
     }

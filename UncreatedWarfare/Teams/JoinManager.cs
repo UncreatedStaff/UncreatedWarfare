@@ -98,8 +98,7 @@ namespace Uncreated.Warfare.Teams
             ShowUI(lobbyPlayer, showX);
 
             foreach (LobbyPlayer p in LobbyPlayers)
-                if (p.Player != player)
-                    UpdateUITeams(p, p.Team);
+                UpdateUITeams(p, p.Team);
         }
 
         public void ShowUI(LobbyPlayer player, bool showX)
@@ -147,7 +146,7 @@ namespace Uncreated.Warfare.Teams
             {
                 string name = Team1Players[i].Player.CharacterName;
                 if (Team1Players[i].IsInLobby)
-                    name.Colorize("9F9F9F");
+                    name = name.Colorize("9F9F9F");
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (i + 1), name);
             }
 
@@ -155,7 +154,7 @@ namespace Uncreated.Warfare.Teams
             {
                 string name = Team2Players[i].Player.CharacterName;
                 if (Team2Players[i].IsInLobby)
-                    name.Colorize("9F9F9F");
+                    name = name.Colorize("9F9F9F");
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (i + 1), name);
             }
         }
@@ -164,7 +163,7 @@ namespace Uncreated.Warfare.Teams
         {
             if (!player.IsInLobby) return;
 
-            F.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
+            //F.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
 
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", Team1Players.Count.ToString());
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", Team2Players.Count.ToString());

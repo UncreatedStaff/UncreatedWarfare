@@ -20,11 +20,6 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-            if (!Data.Is(out IFOBs fobs))
-            {
-                player.SendChat("command_e_gamemode");
-                return;
-            }
             if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
             {
                 player.Message("deploy_e_injured");
@@ -72,6 +67,11 @@ namespace Uncreated.Warfare.Commands
 #endif
                 else
                 {
+                    if (!Data.Is(out IFOBs fobs))
+                    {
+                        player.SendChat("command_e_gamemode");
+                        return;
+                    }
                     if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
                     {
                         player.Message("deploy_e_cooldown", cooldown.ToString());

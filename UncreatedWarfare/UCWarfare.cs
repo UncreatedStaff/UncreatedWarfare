@@ -253,7 +253,7 @@ namespace Uncreated.Warfare
             else if (Data.Is(out Invasion inv))
             {
                 InvasionUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), inv.Rotation,
-                    inv.Config.FlagUICount, inv.Config.AttackIcon, inv.Config.DefendIcon);
+                    inv.Config.FlagUICount, inv.Config.AttackIcon, inv.Config.DefendIcon, inv.AttackingTeam, inv.Config.LockedIcon);
             }
             if (Data.Is<ISquads>(out _))
             {

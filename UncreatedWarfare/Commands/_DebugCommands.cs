@@ -881,36 +881,56 @@ namespace Uncreated.Warfare.Commands
         }
         private void gamemode(string[] command, Player player)
         {
-            if (command.Length != 1)
+            if (command.Length != 2)
             {
                 if (player == null) F.LogWarning("Syntax: /test gamemode <GamemodeName>");
-                else player.SendChat("Syntax: <i>/test gamemode <GamemodeName>.</i>");
+                else player.SendChat("Syntax:  <i>/test gamemode <GamemodeName>.</i>");
+                return;
             }
-            Gamemode newGamemode = Gamemode.FindGamemode(command[0], Data.GAME_MODES);
-            if (newGamemode != null)
+            Gamemode newGamemode = Gamemode.FindGamemode(command[1], Data.GAME_MODES);
+            try
             {
-                if (Data.Gamemode != null)
-                    Data.Gamemode.Dispose();
-                Data.Gamemode = newGamemode;
-                Data.Gamemode.Init();
-                Data.Gamemode.OnLevelLoaded();
-                for (int i = 0; i < Provider.clients.Count; i++)
+                if (newGamemode != null)
                 {
-                    if (Provider.clients[i].player.life.isDead)
+                    if (Data.Gamemode != null)
                     {
-                        Provider.clients[i].player.life.ReceiveRespawnRequest(false);
+                        Data.Gamemode.Dispose();
+                        UnityEngine.Object.Destroy(Data.Gamemode);
                     }
-                    else
+                    Data.Gamemode = newGamemode;
+                    Data.Gamemode.Init();
+                    Data.Gamemode.OnLevelLoaded();
+                    F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+                    for (int i = 0; i < Provider.clients.Count; i++)
                     {
-                        Provider.clients[i].player.teleportToLocation(F.GetBaseSpawn(Provider.clients[i], out ulong playerteam), F.GetBaseAngle(playerteam));
+                        if (Provider.clients[i].player.life.isDead)
+                        {
+                            Provider.clients[i].player.life.ReceiveRespawnRequest(false);
+                        }
+                        else
+                        {
+                            Provider.clients[i].player.teleportToLocation(F.GetBaseSpawn(Provider.clients[i], out ulong playerteam), F.GetBaseAngle(playerteam));
+                        }
                     }
                 }
-                F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
-            } 
-            else
+                else
+                {
+                    if (player == null) F.LogWarning("Failed to find gamemode: \"" + command[1] + "\"");
+                    else player.SendChat("Failed to find gamemode: \"<i>" + command[1] + "</i>\"");
+                }
+            }
+            catch (Exception ex)
             {
-                if (player == null) F.LogWarning("Failed to find gamemode: \"" + command[0] + "\"");
-                else player.SendChat("Failed to find gamemode: \"<i>" + command[0] + "</i>\"");
+                if (Data.Gamemode != null)
+                {
+                    Data.Gamemode.Dispose();
+                    UnityEngine.Object.Destroy(Data.Gamemode);
+                }
+                Data.Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
+                Data.Gamemode.Init();
+                Data.Gamemode.OnLevelLoaded();
+                F.LogError(ex);
+                throw;
             }
         }
         private void trackstats(string[] command, Player player)

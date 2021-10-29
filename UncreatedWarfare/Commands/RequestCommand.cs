@@ -94,9 +94,21 @@ namespace Uncreated.Warfare.Commands
                     }
                     if (vbsign.bay != default && vbsign.bay.HasLinkedVehicle(out InteractableVehicle veh))
                     {
-                        if (veh != default)
-                            RequestVehicle(ucplayer, veh, team);
+                        if (Data.Gamemode is IVehicles)
+                        {
+                            if (veh != default)
+                                RequestVehicle(ucplayer, veh, team);
+                        } else
+                        {
+                            ucplayer.SendChat("command_e_gamemode");
+                            return;
+                        }
                     }
+                }
+                if (!(Data.Gamemode is IKitRequests))
+                {
+                    ucplayer.SendChat("command_e_gamemode");
+                    return;
                 }
                 if (requestsign.kit_name.StartsWith("loadout_"))
                 {
@@ -186,7 +198,15 @@ namespace Uncreated.Warfare.Commands
             }
             else if (vehicle != null)
             {
-                RequestVehicle(ucplayer, vehicle);
+                if (Data.Gamemode is IVehicles)
+                {
+                    RequestVehicle(ucplayer, vehicle);
+                }
+                else
+                {
+                    ucplayer.SendChat("command_e_gamemode");
+                    return;
+                }
             }
             else
             {

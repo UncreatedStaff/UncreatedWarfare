@@ -13,161 +13,201 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
     {
         public static int FromMax(int cap, string progresschars) => Math.Abs(cap) >= Mathf.RoundToInt(Flag.MAX_POINTS) ? progresschars.Length - 1 : ((progresschars.Length - 1) / Mathf.RoundToInt(Flag.MAX_POINTS)) * Math.Abs(cap);
         public static int FromMax(int cap, int max, string progresschars) => Math.Abs(cap) >= max ? progresschars.Length - 1 : ((progresschars.Length - 1) / max) * Math.Abs(cap);
-        public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
+        //public static Invasion Gamemode = null;
+        public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle, ulong atkTeam, bool canDefContest)
         {
-            if (!Data.Is(out IAttackDefence gamemode))
-                return SendUIParameters.Nil;
-
             if (flag.LastDeltaPoints == 0)
             {
-                if (flag.HasBeenCapturedT1 || flag.HasBeenCapturedT2)
+                if (flag.IsContested(out ulong winner))
                 {
-                    if (team == gamemode.AttackingTeam)
+                    if (canDefContest)
                     {
-                        // send "secured" text
-                        return SendUIParameters.Nil;
+                        return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CONTESTED, "contested", UCWarfare.GetColor($"contested_team_{team}_chat"),
+                            Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
                     }
-                    else if (team == gamemode.DefendingTeam)
+                    else if (team == atkTeam)
                     {
-                        // send "locked" text
-                        return SendUIParameters.Nil;
-                    }
-                    else
-                        return SendUIParameters.Nil;
-                }
-                else if (flag.IsContested(out _))
-                {
-                    return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CONTESTED, "contested", UCWarfare.GetColor($"contested_team_{team}_chat"),
-                        Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
-                }
-                else
-                {
-                    if (flag.IsObj(team))
                         return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor($"capturing_team_{team}_chat"),
                             Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
-                    else
-                        return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"nocap_team_{team}_chat"),
-                            Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
-                }
-            }
-            else if (flag.LastDeltaPoints > 0)
-            {
-                if (team == 1)
-                {
-                    if (flag.Points > 0)
-                    {
-                        if (flag.Points < Flag.MAX_POINTS)
-                        {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_1_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                        }
-                        else
-                        {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                        }
                     }
                     else
                     {
-                        if (flag.Points > -Flag.MAX_POINTS)
-                        {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_1_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                        }
-                        else
-                        {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_1_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                        }
+                        return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor($"losing_team_{team}_chat"),
+                            Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
                     }
                 }
                 else
                 {
-                    if (flag.Points < 0)
+                    if (winner == team)
                     {
-                        if (flag.Points > -Flag.MAX_POINTS)
+                        if ((team == atkTeam && flag.IsFull(atkTeam)) || flag.IsFull(team))
                         {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor($"capturing_team_{team}_chat"),
+                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
+                        }
+                        else if (team == atkTeam)
+                        {
+                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor($"capturing_team_{team}_chat"),
+                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor($"losing_team_{team}_chat"),
+                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
                         }
                     }
                     else
                     {
-                        if (flag.Points < Flag.MAX_POINTS)
+                        if (team == atkTeam)
                         {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (canDefContest)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CONTESTED, "contested", UCWarfare.GetColor($"contested_team_{team}_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor($"capturing_team_{team}_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
+                            }
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_2_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (canDefContest)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CONTESTED, "contested", UCWarfare.GetColor($"contested_team_{team}_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor($"losing_team_{team}_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                     }
                 }
             }
             else
             {
-                if (team == 2)
+                if (atkTeam == team)
                 {
-                    if (flag.Points < 0)
+                    if (team == 1)
                     {
-                        if (flag.Points > -Flag.MAX_POINTS)
+                        if (flag.Points > 0)
                         {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_2_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points < Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_1_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points > -Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_1_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor("nocap_team_1_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
-                    }
+                    } 
                     else
                     {
-                        if (flag.Points < Flag.MAX_POINTS)
+                        if (flag.Points < 0)
                         {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_2_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points > -Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor("capturing_team_2_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_2_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points < Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CLEARING, "clearing", UCWarfare.GetColor("clearing_team_2_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor("nocap_team_2_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                     }
                 }
                 else
                 {
-                    if (flag.Points > 0)
+                    if (team == 1)
                     {
-                        if (flag.Points < Flag.MAX_POINTS)
+                        if (flag.Points < 0)
                         {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points > -Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.LOCKED, "locked", UCWarfare.GetColor("locked_team_1_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points < Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_1_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                     }
                     else
                     {
-                        if (flag.Points > -Flag.MAX_POINTS)
+                        if (flag.Points < 0)
                         {
-                            return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_1_chat"),
-                                Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points > -Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor("secured_team_2_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                         else
                         {
-                            return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor("notowned_team_1_chat"),
-                                Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            if (flag.Points < Flag.MAX_POINTS)
+                            {
+                                return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.LOSING, "losing", UCWarfare.GetColor("losing_team_2_chat"),
+                                    Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
+                            else
+                            {
+                                return new SendUIParameters(team, F.EFlagStatus.LOCKED, "locked", UCWarfare.GetColor("locked_team_2_chat"),
+                                    Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                            }
                         }
                     }
                 }
@@ -180,11 +220,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
                 }
         }
-        public static void SendFlagListUI(ITransportConnection player, ulong playerid, ulong team, List<Flag> Rotation, int ListUiCount, char AttackIcon, char DefendIcon)
+        public static void SendFlagListUI(ITransportConnection player, ulong playerid, ulong team, List<Flag> Rotation, int ListUiCount, char AttackIcon, char DefendIcon, ulong atkteam, char LockIcon)
         {
-            if (!Data.Is(out IAttackDefence gamemode))
-                return;
-
             ClearListUI(player, ListUiCount);
             if (team == 1 || team == 2)
             {
@@ -203,26 +240,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                             Flag flag = Rotation[index];
                             string objective = string.Empty;
 
-                            if ((gamemode.AttackingTeam == 1 && flag.HasBeenCapturedT1) || (gamemode.AttackingTeam == 2 && flag.HasBeenCapturedT2))
+                            if (flag.Owner == atkteam)
                             {
                                 // send locked UI
 
-                                objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>Ø</color>";
+                                objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{LockIcon}</color>";
                             }
                             else
                             {
-                                if (flag.T1Obj)
+                                if (flag.IsObj(atkteam))
                                 {
-                                    if (team == 1)
+                                    if (team == atkteam)
                                         objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{AttackIcon}</color>";
-                                    else if (team == 2 && flag.Owner == 2)
-                                        objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{DefendIcon}</color>";
-                                }
-                                if (flag.T2Obj)
-                                {
-                                    if (team == 2)
-                                        objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{AttackIcon}</color>";
-                                    else if (team == 1 && flag.Owner == 1)
+                                    else
                                         objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{DefendIcon}</color>";
                                 }
                             }
@@ -237,6 +267,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             else if (team == 3)
             {
+                ulong defteam = TeamManager.Other(atkteam);
                 for (int i = 0; i < ListUiCount; i++)
                 {
                     if (Rotation.Count <= i)
@@ -250,12 +281,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                         {
                             Flag flag = Rotation[i];
                             string objective = string.Empty;
-                            if (flag.T1Obj)
+                            if (flag.IsObj(atkteam))
                             {
-                                objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{AttackIcon}</color>";
-                                if (flag.Owner == 2)
-                                    objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{DefendIcon}</color>";
+                                objective = $"<color=#{UCWarfare.GetColorHex($"team_{atkteam}_color")}>{AttackIcon}</color> <color=#{UCWarfare.GetColorHex($"team_{defteam}_color")}>{DefendIcon}</color>";
                             }
+                            if (flag.Owner == atkteam)
+                                objective = $"<color=#{UCWarfare.GetColorHex($"team_{defteam}_color")}>{LockIcon}</color>";
                             if (flag.T2Obj)
                             {
                                 objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{AttackIcon}</color>";
@@ -273,31 +304,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 }
             }
         }
-        public static SendUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle)
+        public static SendUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle, ulong atkTeam, bool canDefContest)
         {
             if (team != 1 && team != 2) return SendUIParameters.Nil;
-            if (flag.IsAnObj)
+            if (flag.IsObj(atkTeam))
             {
-                return ComputeUI(team, flag, inVehicle); // if flag is objective send capturing ui.
+                return ComputeUI(team, flag, inVehicle, atkTeam, canDefContest); // if flag is objective send capturing ui.
             }
             else
             {
-                if (flag.HasBeenCapturedT1 || flag.HasBeenCapturedT2)
+                if (flag.Owner == team)
                 {
-                    // send locked UI
-                    return SendUIParameters.Nil;
+                    return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor($"secured_team_{team}_chat"),
+                        Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                }
+                else if (flag.Owner == TeamManager.Other(team))
+                {
+                    if (flag.Owner == TeamManager.Other(atkTeam))
+                    {
+                        return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"nocap_team_{team}_chat"),
+                            Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                    }
+                    else
+                    {
+                        return new SendUIParameters(team, F.EFlagStatus.LOCKED, "locked", UCWarfare.GetColor($"locked_team_{team}_chat"),
+                            Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
+                    }
                 }
                 else
-                {
-                    if (flag.Owner == team)
-                        return new SendUIParameters(team, F.EFlagStatus.SECURED, "secured", UCWarfare.GetColor($"secured_team_{team}_chat"),
-                            Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                    else if (flag.Owner == TeamManager.Other(team))
-                        return new SendUIParameters(team, F.EFlagStatus.NOT_OWNED, "notowned", UCWarfare.GetColor($"notowned_team_{team}_chat"),
-                            Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                    else return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"notowned_team_{team}_chat"),
-                            Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
-                }
+                    return new SendUIParameters(team, F.EFlagStatus.NOT_OBJECTIVE, "nocap", UCWarfare.GetColor($"notowned_team_{team}_chat"),
+                        Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);
             }
         }
     }
