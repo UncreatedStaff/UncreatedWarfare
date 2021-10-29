@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.Gamemodes
         public class InsurgencyConfig : ConfigData
         {
 
-
+            public InsurgencyConfig() => SetDefaults();
             public override void SetDefaults()
             {
                 

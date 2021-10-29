@@ -189,14 +189,12 @@ namespace Uncreated.Warfare.Vehicles
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
-                if (Data.Gamemode.State == Gamemodes.EState.STAGING)
+                if (Data.Gamemode.State == Gamemodes.EState.STAGING &&
+                    Data.Is(out IStagingPhase invasion) && Data.Is(out IAttackDefence atk) && player.GetTeam() == atk.AttackingTeam)
                 {
-                    if (Data.Is(out Invasion invasion) && player.GetTeam() == invasion.AttackingTeam)
-                    {
-                        player.SendChat("vehicle_staging");
-                        shouldAllow = false;
-                        return;
-                    }
+                    player.SendChat("vehicle_staging");
+                    shouldAllow = false;
+                    return;
                 }
                 if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
                 {

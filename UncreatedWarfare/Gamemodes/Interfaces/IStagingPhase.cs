@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IStagingPhase
+    public interface IStagingPhase : IGamemode
     {
         int StagingPhaseSeconds { get; set; }
 
