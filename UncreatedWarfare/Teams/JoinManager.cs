@@ -26,27 +26,60 @@ namespace Uncreated.Warfare.Teams
 
             EffectManager.onEffectButtonClicked += OnButtonClicked;
         }
-        public void OnPlayerConnected(UCPlayer player, bool playerConnected)
+        public bool IsInLobby(UCPlayer player)
         {
-            if (playerConnected)
+            foreach (var lobbyPlayer in LobbyPlayers)
             {
+                if (lobbyPlayer.IsInLobby && lobbyPlayer.Player == player)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public void OnPlayerConnected(UCPlayer player, bool isNewPlayer, bool isNewGame)
+        {
+            if (isNewPlayer)
+            {
+                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
                 LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0, true);
                 LobbyPlayers.Add(lobbyPlayer);
                 ShowUI(lobbyPlayer, false);
             }
-            else
+            else if (isNewGame)
             {
-                var lobbyPlayer = new LobbyPlayer(player, player.GetTeam(), false);
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, player.GetTeam(), false);
 
-                LobbyPlayers.Add(lobbyPlayer);
-                if (lobbyPlayer.Team == 1)
-                    Team1Players.Add(lobbyPlayer);
-                else if (lobbyPlayer.Team == 2)
-                    Team2Players.Add(lobbyPlayer);
+                if (!(player.GetTeam() == 1 || player.GetTeam() == 2) || IsTeamFull(lobbyPlayer, lobbyPlayer.Team))
+                {
+                    player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+                    lobbyPlayer.Team = 0;
+                    lobbyPlayer.IsInLobby = true;
+                    LobbyPlayers.Add(lobbyPlayer);
+                    ShowUI(lobbyPlayer, false);
+                }
+                else
+                {
+                    player.Player.teleportToLocationUnsafe(player.Player.GetBaseSpawn(out ulong team), F.GetBaseAngle(team));
 
-                foreach (var p in LobbyPlayers)
-                    UpdateUITeams(p, p.Team);
+                    LobbyPlayers.Add(lobbyPlayer);
+                    if (lobbyPlayer.Team == 1)
+                        Team1Players.Add(lobbyPlayer);
+                    else if (lobbyPlayer.Team == 2)
+                        Team2Players.Add(lobbyPlayer);
+                }
+                
             }
+            else if (player.GetTeam() == 0)
+            {
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0, true);
+                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+                LobbyPlayers.Add(lobbyPlayer);
+                ShowUI(lobbyPlayer, false);
+            }
+
+            foreach (var p in LobbyPlayers)
+                UpdateUITeams(p, p.Team);
         }
 
         public void OnPlayerDisconnected(UCPlayer player)
@@ -283,13 +316,15 @@ namespace Uncreated.Warfare.Teams
             if (KitManager.KitExists(TeamManager.GetUnarmedFromS64ID(player.Steam64), out var kit))
                 KitManager.GiveKit(player, kit);
 
-            player.SendChat("join_s", TeamManager.TranslateName(newTeam, player.CSteamID, true));
+            player.SendChat("teams_join_success", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-            new List<CSteamID>(1) { player.CSteamID }.BroadcastToAllExcept("join_announce", names.CharacterName, teamName);
+            //new List<CSteamID>(1) { player.CSteamID }.BroadcastToAllExcept("teams_join_announce", names.CharacterName, teamName);
 
             if (player.Squad != null)
                 Squads.SquadManager.LeaveSquad(player, player.Squad);
             PlayerManager.ApplyToOnline();
+
+            CooldownManager.StartCooldown(player, ECooldownType.CHANGE_TEAMS, TeamManager.TeamSwitchCooldown);
         }
 
         public void CloseUI(LobbyPlayer player)
@@ -319,22 +354,30 @@ namespace Uncreated.Warfare.Teams
 
             if (team == 1)
             {
-                if (player.Team == 2)
+                if (player.Team == 2) // if player is on the opposing team
                 {
                     return (float)(Team1Count + 1) / (Team2Count - 1) - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
-                else
+                else if (player.Team == 1) // if player is already on the specified team
+                {
+                    return (float)(Team1Count) / Team2Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                }
+                else // if player has not joined a team yet
                 {
                     return (float)(Team1Count + 1) / Team2Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
             }
             else if (team == 2)
             {
-                if (player.Team == 1)
+                if (player.Team == 1) // if player is on the opposing team
                 {
                     return (float)(Team2Count + 1) / (Team1Count - 1) - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
-                else
+                else if (player.Team == 2) // if player is already on the specified team
+                {
+                    return (float)(Team2Count) / Team1Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                }
+                else // if player has not joined a team yet
                 {
                     return (float)(Team2Count + 1) / Team1Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }

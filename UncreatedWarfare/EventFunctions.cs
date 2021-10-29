@@ -284,28 +284,30 @@ namespace Uncreated.Warfare
 
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
                 bool g = Data.Is(out ITeams t);
+                bool isNewGame = false;
+                bool isNewPlayer = true;
                 if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                 {
+                    isNewPlayer = false;
+
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
-                        if (g && t.UseJoinUI)
-                            t.JoinManager.OnPlayerConnected(ucplayer, true);
+                        isNewGame = true;
 
-                        if (player.Player.life.isDead)
-                            player.Player.life.ReceiveRespawnRequest(false);
-                        else
-                        {
-                            player.Player.life.sendRevive();
-                            player.Player.teleportToLocation(player.Player.GetBaseSpawn(out ulong s), s.GetBaseAngle());
-                        }
                         save.ShouldRespawnOnJoin = false;
 
                         PlayerManager.ApplyToOnline();
                     }
-                    else if (g && t.UseJoinUI)
-                    {
-                        t.JoinManager.OnPlayerConnected(ucplayer, false);
-                    }
+                }
+
+                if (player.Player.life.isDead)
+                    player.Player.life.ReceiveRespawnRequest(false);
+                else
+                    player.Player.life.sendRevive();
+
+                if (g && t.UseJoinUI)
+                {
+                    t.JoinManager.OnPlayerConnected(ucplayer, isNewPlayer, isNewGame);
                 }
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
