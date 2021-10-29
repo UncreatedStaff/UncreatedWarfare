@@ -25,6 +25,7 @@ namespace Uncreated.Warfare
                 { "secured", "This point is secure for now. Keep up the defense." },
                 { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
                 { "notowned", "This point is owned by the enemies. Get more players to capture it." },
+                { "locked", "This point has already been captured, try to protect the objective to win." },
                 { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
                 { "server_desc", "<color=#9cb6a4>Uncreated Warfare</color> {0}." },
                 { "team_1", "USA" },
@@ -39,6 +40,7 @@ namespace Uncreated.Warfare
                 { "ui_secured", "SECURED" },
                 { "ui_nocap", "NOT OBJECTIVE" },
                 { "ui_notowned", "TAKEN" },
+                { "ui_locked", "LOCKED" },
                 { "ui_in_vehicle", "IN VEHICLE" },
                 { "team_win", "<color=#{1}>{0}</color> won the game!" },
                 { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
@@ -70,7 +72,7 @@ namespace Uncreated.Warfare
 
                 // join
                 { "teams_join_success", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
-                { "teams_join_announceteams_join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
+                { "teams_join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
                 { "teams_e_notinmain", "<color=#a8a194>You must be in <color=#fce5bb>Main</color> to switch teams." },
                 { "teams_e_cooldown", "<color=#a8a194>You can switch teams in: <color=#fce5bb>{0}</color> seconds." },
                 { "teams_join_e_groupnoexist", "<color=#a8a194>The team you tried to join is not set up correctly. Contact an admin to fix it.</color>" },
@@ -794,6 +796,7 @@ namespace Uncreated.Warfare
             new ColorData("uncreated", "9cb6a4"),
             new ColorData("attack_icon_color", "ffca61"),
             new ColorData("defend_icon_color", "ba70cc"),
+            new ColorData("locked_icon_color", "bfbfbf"),
             new ColorData("undiscovered_flag", "696969"),
             new ColorData("team_count_ui_color_team_1", "ffffff"),
             new ColorData("team_count_ui_color_team_2", "ffffff"),
@@ -814,6 +817,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1", "00ff00"),
             new ColorData("nocap_team_1", "ff8c69"),
             new ColorData("notowned_team_1", "ff8c69"),
+            new ColorData("locked_team_1", "ff8c69"),
             new ColorData("in_vehicle_team_1", "ff8c69"),
 
             // Team 1 Background Circle
@@ -824,6 +828,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1_bkgr", "006600"),
             new ColorData("nocap_team_1_bkgr", "660000"),
             new ColorData("notowned_team_1_bkgr", "660000"),
+            new ColorData("locked_team_1_bkgr", "660000"),
             new ColorData("in_vehicle_team_1_bkgr", "660000"),
 
             // Team 1 Words
@@ -834,6 +839,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1_words", "00ff00"),
             new ColorData("nocap_team_1_words", "ff8c69"),
             new ColorData("notowned_team_1_words", "ff8c69"),
+            new ColorData("locked_team_1_words", "ff8c69"),
             new ColorData("in_vehicle_team_1_words", "ff8c69"),
 
             // Team 2 Circle
@@ -844,6 +850,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2", "00ff00"),
             new ColorData("nocap_team_2", "ff8c69"),
             new ColorData("notowned_team_2", "ff8c69"),
+            new ColorData("locked_team_2", "ff8c69"),
             new ColorData("in_vehicle_team_2", "ff8c69"),
 
             // Team 2 Background Circle
@@ -854,6 +861,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2_bkgr", "006600"),
             new ColorData("nocap_team_2_bkgr", "660000"),
             new ColorData("notowned_team_2_bkgr", "660000"),
+            new ColorData("locked_team_2_bkgr", "660000"),
             new ColorData("in_vehicle_team_2_bkgr", "660000"),
 
             // Team 2 Words
@@ -864,6 +872,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2_words", "00ff00"),
             new ColorData("nocap_team_2_words", "ff8c69"),
             new ColorData("notowned_team_2_words", "ff8c69"),
+            new ColorData("locked_team_2_words", "ff8c69"),
             new ColorData("in_vehicle_team_2_words", "ff8c69"),
 
             // Flag Chats
@@ -880,6 +889,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_1_chat", "e6e3d5"),
             new ColorData("nocap_team_1_chat", "e6e3d5"),
             new ColorData("notowned_team_1_chat", "e6e3d5"),
+            new ColorData("locked_team_1_chat", "e6e3d5"),
             new ColorData("in_vehicle_team_1_chat", "e6e3d5"),
 
             // Team 2 Chat
@@ -890,6 +900,7 @@ namespace Uncreated.Warfare
             new ColorData("secured_team_2_chat", "e6e3d5"),
             new ColorData("nocap_team_2_chat", "e6e3d5"),
             new ColorData("notowned_team_2_chat", "e6e3d5"),
+            new ColorData("locked_team_2_chat", "e6e3d5"),
             new ColorData("in_vehicle_team_2_chat", "e6e3d5"),
 
             // Other Flag Chats

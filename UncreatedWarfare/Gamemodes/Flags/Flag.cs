@@ -14,11 +14,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     public class DiscoveredEventArgs : EventArgs { public ulong Team; }
     public class Flag : IDisposable
     {
+        public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
         public int index = -1;
         public const float MAX_POINTS = 64;
-        public Zone ZoneData { get; private set; }
+        public Zone ZoneData { get; protected set; }
         public Dictionary<int, float> Adjacencies;
-        public FlagGamemode Manager { get; private set; }
+        public FlagGamemode Manager { get; protected set; }
         public int Level { get => _level; }
         public static float CaptureMultiplier = 1.0f;
         private readonly int _level;
@@ -132,6 +133,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             _points = 0;
             HasBeenCapturedT1 = false;
             HasBeenCapturedT2 = false;
+            EvaluatePointsOverride = null;
             Hide(1);
             Hide(2);
             if (OnReset != null)
@@ -168,6 +170,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public List<Player> PlayersOnFlagTeam1;
         public List<Player> PlayersOnVehicleTeam1;
         public int Team1TotalPlayers;
+        public EvaluatePointsDelegate EvaluatePointsOverride = null;
         public int Team1TotalCappers;
         public List<Player> PlayersOnFlagTeam2;
         public int Team2TotalPlayers;
@@ -204,13 +207,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             get => _points;
         }
-        public void SetPoints(float value)
+        public void SetPoints(float value, bool skipEvent = false)
         {
             float OldPoints = _points;
             if (value > MAX_POINTS) _points = MAX_POINTS;
             else if (value < -MAX_POINTS) _points = -MAX_POINTS;
             else _points = value;
-            if (OldPoints != _points)
+            if (!skipEvent && OldPoints != _points)
             {
                 LastDeltaPoints = _points - OldPoints;
                 OnPointsChanged?.Invoke(_points, OldPoints, this);
@@ -315,6 +318,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             SetPoints(-MAX_POINTS);
             SetOwner(2);
+        }
+        public bool IsFull(ulong team)
+        {
+            if (team == 1) return Points >= MAX_POINTS;
+            else if (team == 2) return Points <= -MAX_POINTS;
+            else return false;
         }
         public void Cap(ulong team, float amount)
         {
@@ -458,6 +467,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
+            if (EvaluatePointsOverride != null)
+            {
+                EvaluatePointsOverride(this, overrideInactiveCheck);
+                return;
+            }
             if (Manager.State == EState.ACTIVE || overrideInactiveCheck)
             {
                 if (IsAnObj)

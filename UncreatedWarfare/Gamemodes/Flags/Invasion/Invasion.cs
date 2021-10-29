@@ -70,9 +70,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         protected StructureSaver _structureSaver;
         public StructureSaver StructureSaver { get => _structureSaver; }
 
-        public Invasion(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
+        public Invasion() : base(nameof(Invasion), 0.25f)
         {
             _config = new Config<InvasionData>(Data.FlagStorage, "invasion.json");
+            SetTiming(Config.PlayerCheckSpeedSeconds);
         }
         public override void Init()
         {
@@ -80,21 +81,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
             _kitManager = new KitManager();
+            _vehicleBay = new VehicleBay();
             _reviveManager = new ReviveManager();
             _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
         }
         public override void OnLevelLoaded()
         {
-            _vehicleBay = new VehicleBay();
+            _structureSaver = new StructureSaver();
             _vehicleSpawner = new VehicleSpawner();
             _vehicleSigns = new VehicleSigns();
             _requestSigns = new RequestSigns();
-            _structureSaver = new StructureSaver();
-            base.OnLevelLoaded();
             FOBManager.LoadFobsFromMap();
+            VehicleSpawner.OnLevelLoaded();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
+            base.OnLevelLoaded();
         }
         public override void StartNextGame(bool onLoad = false)
         {
@@ -323,7 +325,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             foreach (SteamPlayer client in Provider.clients)
             {
                 InvasionUI.ClearListUI(client.transportConnection, Config.FlagUICount);
-                InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
             }
             PrintFlagRotation();
             EvaluatePoints();
@@ -331,28 +333,23 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public override void InitFlag(Flag flag)
         {
             base.InitFlag(flag);
+            flag.EvaluatePointsOverride = FlagCheck;
             flag.SetOwnerNoEventInvocation(_defendTeam);
+            flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true);
         }
         protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {
             if (NewOwner == 1)
             {
-                if (ObjectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
+                if (_attackTeam == 1 && _objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
                 {
-                    DeclareWin(NewOwner);
-                    _objectiveT1Index = _rotation.Count - 1;
+                    DeclareWin(1);
+                    _objectiveT1Index = 0;
                     return;
                 }
-                else
+                else if (_attackTeam == 1)
                 {
-                    if (_attackTeam == 1)
-                    {
-                        _objectiveT1Index = flag.index + 1;
-                    }
-                    else
-                    {
-                        _objectiveT1Index = -1;
-                    }
+                    _objectiveT1Index = flag.index + 1;
                     InvokeOnObjectiveChanged(flag, _rotation[ObjectiveT1Index], NewOwner, flag.index, ObjectiveT1Index);
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
@@ -366,21 +363,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             {
                 if (ObjectiveT2Index < 1) // if t2 just capped the last flag
                 {
-                    DeclareWin(NewOwner);
-                    _objectiveT2Index = 0;
+                    DeclareWin(2);
+                    _objectiveT2Index = _rotation.Count - 1;
                     return;
                 }
-                else
+                else if (_attackTeam == 2)
                 {
-
-                    if (_attackTeam == 2)
-                    {
-                        _objectiveT2Index = flag.index - 1;
-                    }
-                    else
-                    {
-                        _objectiveT2Index = -1;
-                    }
+                    _objectiveT2Index = flag.index - 1;
                     InvokeOnObjectiveChanged(flag, _rotation[ObjectiveT2Index], NewOwner, flag.index, ObjectiveT2Index);
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
@@ -390,24 +379,30 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     }
                 }
             }
-            if (OldOwner == 1)
+            else
             {
-                int oldindex = ObjectiveT1Index;
-                _objectiveT1Index = flag.index;
-                if (oldindex != flag.index)
+                if (OldOwner == _defendTeam)
                 {
-                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
-                    InvokeOnFlagNeutralized(flag, 2, 1);
-                }
-            }
-            else if (OldOwner == 2)
-            {
-                int oldindex = ObjectiveT2Index;
-                _objectiveT2Index = flag.index;
-                if (oldindex != flag.index)
-                {
-                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
-                    InvokeOnFlagNeutralized(flag, 1, 2);
+                    if (OldOwner == 1)
+                    {
+                        int oldindex = ObjectiveT1Index;
+                        _objectiveT1Index = flag.index;
+                        if (oldindex != flag.index)
+                        {
+                            //InvokeOnObjectiveChanged(flag, flag, 0, oldindex, flag.index);
+                            InvokeOnFlagNeutralized(flag, 2, 1);
+                        }
+                    }
+                    else if (OldOwner == 2)
+                    {
+                        int oldindex = ObjectiveT2Index;
+                        _objectiveT2Index = flag.index;
+                        if (oldindex != flag.index)
+                        {
+                            //InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                            InvokeOnFlagNeutralized(flag, 1, 2);
+                        }
+                    }
                 }
             }
             SendUIParameters t1 = SendUIParameters.Nil;
@@ -415,13 +410,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             SendUIParameters t1v = SendUIParameters.Nil;
             SendUIParameters t2v = SendUIParameters.Nil;
             if (flag.Team1TotalCappers > 0)
-                t1 = CTFUI.RefreshStaticUI(1, flag, false);
+                t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-                t1v = CTFUI.RefreshStaticUI(1, flag, true);
+                t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team2TotalCappers > 0)
-                t2 = CTFUI.RefreshStaticUI(2, flag, false);
+                t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-                t2v = CTFUI.RefreshStaticUI(2, flag, true);
+                t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team1TotalPlayers > 0)
                 foreach (Player player in flag.PlayersOnFlagTeam1)
                     (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
@@ -436,7 +431,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
                         flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
-                    CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                    InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, 
+                        Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
                 }
             }
             else
@@ -447,11 +443,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), Teams.TeamManager.TranslateName(NewOwner, client.playerID.steamID.m_SteamID),
                         TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
-                    CTFUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                    InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, team, _rotation, Config.FlagUICount, 
+                        Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
                 }
             }
         }
-        protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag) => throw new NotImplementedException();
+        protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
+        {
+            if (NewPoints == 0)
+                flag.SetOwner(0);
+            SendUIParameters t1 = SendUIParameters.Nil;
+            SendUIParameters t2 = SendUIParameters.Nil;
+            SendUIParameters t1v = SendUIParameters.Nil;
+            SendUIParameters t2v = SendUIParameters.Nil;
+            if (flag.Team1TotalCappers > 0)
+                t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam, !Config.DisableDefendingContest);
+            if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
+                t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam, !Config.DisableDefendingContest);
+            if (flag.Team2TotalCappers > 0)
+                t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam, !Config.DisableDefendingContest);
+            if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
+                t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam, !Config.DisableDefendingContest);
+            foreach (Player player in flag.PlayersOnFlag)
+            {
+                byte team = player.GetTeamByte();
+                if (team == 1)
+                    (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
+                else if (team == 2)
+                    (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
+            }
+        }
         protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
         {
             ulong team = player.GetTeam();
@@ -463,13 +484,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             SendUIParameters t1v = SendUIParameters.Nil;
             SendUIParameters t2v = SendUIParameters.Nil;
             if (flag.Team1TotalCappers > 0)
-                t1 = InvasionUI.RefreshStaticUI(1, flag, false);
+                t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-                t1v = InvasionUI.RefreshStaticUI(1, flag, true);
+                t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team2TotalCappers > 0)
-                t2 = InvasionUI.RefreshStaticUI(2, flag, false);
+                t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-                t2v = InvasionUI.RefreshStaticUI(2, flag, true);
+                t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam, !Config.DisableDefendingContest);
             foreach (Player capper in flag.PlayersOnFlag)
             {
                 ulong t = capper.GetTeam();
@@ -504,13 +525,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             SendUIParameters t1v = SendUIParameters.Nil;
             SendUIParameters t2v = SendUIParameters.Nil;
             if (flag.Team1TotalCappers > 0)
-                t1 = InvasionUI.RefreshStaticUI(1, flag, false);
+                t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-                t1v = InvasionUI.RefreshStaticUI(1, flag, true);
+                t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team2TotalCappers > 0)
-                t2 = InvasionUI.RefreshStaticUI(2, flag, false);
+                t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam, !Config.DisableDefendingContest);
             if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-                t2v = InvasionUI.RefreshStaticUI(2, flag, true);
+                t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam, !Config.DisableDefendingContest);
             foreach (Player capper in flag.PlayersOnFlag)
             {
                 ulong t = capper.GetTeam();
@@ -533,11 +554,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
         public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
+            InvasionUI.ClearListUI(player.transportConnection, Config.FlagUICount);
             if (_onFlag.ContainsKey(player.playerID.steamID.m_SteamID))
-                CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.playerID.steamID.m_SteamID])
-                    ?? _rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
-            CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.playerID.steamID.m_SteamID])
+                    ?? _rotation[0], player.player.movement.getVehicle() != null, AttackingTeam, !Config.DisableDefendingContest)
+                    .SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, 
+                    Config.ProgressChars, player, player.transportConnection);
+            InvasionUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
+            base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         protected override bool TimeToCheck()
         {
@@ -565,8 +589,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 return false;
             }
         }
-        protected override void EvaluateTickets() => throw new NotImplementedException();
+        protected override void EvaluateTickets()
+        {
 
+        }
         public override void OnPlayerJoined(UCPlayer player)
         {
             if (KitManager.KitExists(player.KitName, out Kit kit))
@@ -610,10 +636,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             else
             {
-                CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                InvasionUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, 
+                    player.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+            base.OnPlayerJoined(player);
         }
         public override void OnPlayerLeft(UCPlayer player)
         {
@@ -622,19 +650,54 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             _reviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
+            base.OnPlayerLeft(player);
         }
         public override void Dispose()
         {
             foreach (SteamPlayer player in Provider.clients)
             {
-                CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
+                InvasionUI.ClearListUI(player.transportConnection, Config.FlagUICount);
                 SendUIParameters.Nil.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection); // clear all capturing uis
+                if (F.TryGetPlaytimeComponent(player.player, out Components.PlaytimeComponent c))
+                    c.stats = null;
             }
             _squadManager?.Dispose();
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            Destroy(_gameStats);
             base.Dispose();
+        }
+        private void FlagCheck(Flag flag, bool overrideInactiveCheck = false)
+        {
+            if (State == EState.ACTIVE || overrideInactiveCheck)
+            {
+                if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1.ID : ObjectiveTeam2.ID))
+                {
+                    bool atkOnFlag = (AttackingTeam == 1ul && flag.Team1TotalCappers > 0) || (AttackingTeam == 2ul && flag.Team2TotalCappers > 0);
+                    if (!flag.IsContested(out ulong winner))
+                    {
+                        if (winner == AttackingTeam || Config.DisableDefendingContest && atkOnFlag)
+                        {
+                            flag.Cap(AttackingTeam, 1f);
+                        } 
+                        else if (atkOnFlag)
+                        {
+                            // invoke points updated method to show contested.
+                            flag.SetPoints(flag.Points);
+                        }
+                    }
+                    else if (!Config.DisableDefendingContest)
+                    {
+                        // invoke points updated method to show contested.
+                        flag.SetPoints(flag.Points);
+                    }
+                    else
+                    {
+                        flag.Cap(AttackingTeam, 1f);
+                    }
+                }
+            }
         }
         protected override void EventLoopAction()
         {
@@ -663,8 +726,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public int RequiredPlayerDifferenceToCapture;
         public string ProgressChars;
         public char PlayerIcon;
+        public bool DisableDefendingContest;
         public char AttackIcon;
         public char DefendIcon;
+        public char LockedIcon;
         public bool ShowLeaderboard;
         public TeamCTFData.AutoObjectiveData PathingData;
         public int end_delay;
@@ -691,6 +756,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             this.ShowPointsOnUI = true;
             this.FlagCounterMax = 1;
             this.HideUnknownFlags = true;
+            this.DisableDefendingContest = false;
             this.DiscoveryForesight = 2;
             this.AllowPlayersToCaptureInVehicle = false;
             this.RequiredPlayerDifferenceToCapture = 2;
@@ -698,6 +764,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             this.PlayerIcon = '³';
             this.AttackIcon = 'µ';
             this.DefendIcon = '´';
+            this.LockedIcon = 'Ø';
             this.ShowLeaderboard = true;
             this.PathingData = new TeamCTFData.AutoObjectiveData();
             this.end_delay = 15;

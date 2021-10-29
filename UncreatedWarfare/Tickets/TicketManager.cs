@@ -18,9 +18,9 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets
 {
-    public class TicketManager
+    public class TicketManager : IDisposable
     {
-        public static Config<TicketData> config;
+        public static Config<TicketData> config = new Config<TicketData>(Data.TicketStorage, "config.json");
 
         public static int Team1Tickets;
         public static int Team2Tickets;
@@ -30,8 +30,6 @@ namespace Uncreated.Warfare.Tickets
         internal static int _Team2previousTickets;
         public TicketManager()
         {
-            config = new Config<TicketData>(Data.TicketStorage, "config.json");
-
             TimeSinceMatchStart = DateTime.Now;
 
             _previousWinner = 0;

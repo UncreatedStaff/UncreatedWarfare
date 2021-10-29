@@ -45,6 +45,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             base.Dispose();
             _joinManager?.Dispose();
+            Destroy(_joinManager);
         }
 
     }
