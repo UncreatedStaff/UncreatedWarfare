@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -190,9 +191,12 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 if (Data.Gamemode.State == Gamemodes.EState.STAGING)
                 {
-                    player.SendChat("vehicle_staging");
-                    shouldAllow = false;
-                    return;
+                    if (Data.Is(out Invasion invasion) && player.GetTeam() == invasion.AttackingTeam)
+                    {
+                        player.SendChat("vehicle_staging");
+                        shouldAllow = false;
+                        return;
+                    }
                 }
                 if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
                 {

@@ -213,6 +213,7 @@ namespace Uncreated.Warfare.Gamemodes
         ACTIVE,
         PAUSED,
         FINISHED,
-        LOADING
+        LOADING,
+        STAGING
     }
 }

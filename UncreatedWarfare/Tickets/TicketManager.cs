@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Networking;
@@ -206,21 +207,38 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
+            if (Data.Is(out Invasion invasion))
             {
-                Team1Tickets += config.Data.TicketsFlagCaptured;
-                flag.HasBeenCapturedT1 = true;
+                if (capturedTeam == 1)
+                {
+                    Team1Tickets += invasion.Config.TicketsFlagCaptured;
+                    flag.HasBeenCapturedT1 = true;
+                }
+                else if (capturedTeam == 2)
+                {
+                    Team1Tickets += invasion.Config.TicketsFlagCaptured;
+                    flag.HasBeenCapturedT2 = true;
+                }
             }
-            else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
+            else
             {
-                Team2Tickets += config.Data.TicketsFlagCaptured;
-                flag.HasBeenCapturedT2 = true;
-            }
+                if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
+                {
+                    Team1Tickets += config.Data.TicketsFlagCaptured;
+                    flag.HasBeenCapturedT1 = true;
+                }
+                else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
+                {
+                    Team2Tickets += config.Data.TicketsFlagCaptured;
+                    flag.HasBeenCapturedT2 = true;
+                }
 
-            if (lostTeam == 1)
-                Team1Tickets += config.Data.TicketsFlagLost;
-            if (lostTeam == 2)
-                Team2Tickets += config.Data.TicketsFlagLost;
+                if (lostTeam == 1)
+                    Team1Tickets += config.Data.TicketsFlagLost;
+                if (lostTeam == 2)
+                    Team2Tickets += config.Data.TicketsFlagLost;
+            }
+            
 
             UpdateUITeam1();
             UpdateUITeam2();
@@ -347,24 +365,27 @@ namespace Uncreated.Warfare.Tickets
         {
             TimeSinceMatchStart = DateTime.Now;
 
-            int subtractAmount = config.Data.TicketHandicapDifference / 2;
-
-            if (_Team1previousTickets >= 170 && _Team2previousTickets >= 170)
+            if (Data.Is(out Invasion invasion))
             {
-                if (_previousWinner == 1)
+                int attack = invasion.Config.AttackStartingTickets;
+                int defence = invasion.Config.AttackStartingTickets + (invasion.Rotation.Count * invasion.Config.TicketsFlagCaptured);
+
+                if (invasion.AttackingTeam == 1)
                 {
-                    _Team1previousTickets -= subtractAmount;
-                    _Team2previousTickets += subtractAmount;
+                    Team1Tickets = attack;
+                    Team2Tickets = defence;
                 }
-                else if (_previousWinner == 2)
+                else if (invasion.AttackingTeam == 2)
                 {
-                    _Team1previousTickets += subtractAmount;
-                    _Team2previousTickets -= subtractAmount;
+                    Team2Tickets = attack;
+                    Team1Tickets = defence;
                 }
             }
-
-            Team1Tickets = _Team1previousTickets;
-            Team2Tickets = _Team2previousTickets;
+            else
+            {
+                Team1Tickets = config.Data.StartingTickets;
+                Team2Tickets = config.Data.StartingTickets;
+            }
 
             UpdateUITeam1();
             UpdateUITeam2();

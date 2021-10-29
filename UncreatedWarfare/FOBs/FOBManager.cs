@@ -253,7 +253,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (special.DisappearAroundEnemies && counter % 5 == 0)
             {
-                if (Provider.clients.Where(p => p.GetTeam() != special.Team && (p.player.transform.position - special.point).sqrMagnitude < Math.Pow(20, 2)).Count() > 0)
+                if (Provider.clients.Where(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(20, 2)).Count() > 0)
                 {
                     DeleteSpecialFOB(special.Name, special.Team);
                 }
@@ -528,8 +528,7 @@ namespace Uncreated.Warfare.FOBs
             else return;
 
 
-            int i = 0;
-            for (; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
+            for (int i = 0; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
             {
                 EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
             }
@@ -537,24 +536,21 @@ namespace Uncreated.Warfare.FOBs
             int start = 0;
             for (int i = start; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
             {
-                if (SpecialFOBs[i].IsActive)
+                if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == player.GetTeam())
                 {
                     string name = $"<color={SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
                     EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
-                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
+                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, SpecialFOBs[i].ClosestLocation));
                     start++;
                 }
             }
             for (int i = start; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
             {
-                EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
                 string name = FOBList[i].nearbyEnemies.Count == 0 ? $"<color=#54e3ff>{FOBList[i].Name}</color>" : $"<color=#ff8754>{FOBList[i].Name}</color>";
 
                 EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
                 player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
             }
-            for (; i < config.Data.FobLimit; i++)
-                EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
         }
         public static void UpdateUIAll()
         {
@@ -599,7 +595,7 @@ namespace Uncreated.Warfare.FOBs
     public class SpecialFOB
     {
         public string Name;
-        public Vector3 point;
+        public Vector3 Point;
         public string ClosestLocation;
         public ulong Team;
         public string UIColor;
@@ -616,6 +612,7 @@ namespace Uncreated.Warfare.FOBs
                     (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)
                 .name;
             Team = team;
+            Point = point;
             UIColor = color;
             IsActive = true;
             DisappearAroundEnemies = disappearAroundEnemies;

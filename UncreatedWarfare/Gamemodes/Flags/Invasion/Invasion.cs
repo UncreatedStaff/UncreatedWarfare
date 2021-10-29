@@ -114,7 +114,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
 
-            StartStagingPhase(120);
+            StartStagingPhase(Config.StagingPhaseSeconds);
 
             InvokeOnNewGameStarting(onLoad);
         }
@@ -718,11 +718,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
             Flag firstFlag = null;
             if (DefendingTeam == 1)
-                firstFlag = Rotation.First();
-            else if (DefendingTeam == 2)
                 firstFlag = Rotation.Last();
+            else if (DefendingTeam == 2)
+                firstFlag = Rotation.First();
 
-            FOBManager.RegisterNewSpecialFOB("VCP", firstFlag.ZoneData.Center, DefendingTeam, "#5482ff", true);
+            FOBManager.RegisterNewSpecialFOB("VCP", firstFlag.ZoneData.Center3DAbove, DefendingTeam, "#5482ff", true);
 
             StartCoroutine(StagingPhaseLoop());
         }
@@ -737,7 +737,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     yield break;
                 }
 
-                // update UI
+                UpdateStagingUIForAll();
 
                 yield return new WaitForSeconds(1);
                 StagingPhaseSeconds -= 1;
@@ -746,14 +746,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
-            EffectManager.sendUIEffect(36036, 29000, player.connection, true);
+            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
 
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(29000, player.connection, true, "TOP", "BRIEFING PHASE");
+                EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
             else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(29000, player.connection, true, "TOP", "PREPARATION PHASE");
+                EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "PREPARATION PHASE");
 
-            EffectManager.sendUIEffectText(29000, player.connection, true, "BOTTOM", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
+            EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
         }
         public void UpdateStagingUIForAll()
         {
@@ -764,7 +764,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         private void EndStagingPhase()
         {
             foreach (var player in PlayerManager.OnlinePlayers)
-                EffectManager.askEffectClearByID(29000, player.connection);
+                EffectManager.askEffectClearByID(29001, player.connection);
 
             // clear UI
             // remove main barricades
@@ -806,6 +806,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public float team1spawnangle;
         public float team2spawnangle;
         public float lobbyspawnangle;
+        public int TicketsFlagCaptured;
+        public int AttackStartingTickets;
+        public int StagingPhaseSeconds;
         public Dictionary<int, float> team1adjacencies;
         public Dictionary<int, float> team2adjacencies;
         public InvasionData() => SetDefaults();
@@ -839,6 +842,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             this.team1spawnangle = 0f;
             this.team2spawnangle = 0f;
             this.lobbyspawnangle = 0f;
+            this.TicketsFlagCaptured = 150;
+            this.AttackStartingTickets = 250;
+            this.StagingPhaseSeconds = 150;
             this.team1adjacencies = new Dictionary<int, float>();
             this.team2adjacencies = new Dictionary<int, float>();
             this.xpSecondInterval = 10;

@@ -102,7 +102,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        c.TeleportDelayed(special.point, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{special.Name}</color>", special);
+                        c.TeleportDelayed(special.Point, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{special.Name}</color>", special);
                     }
                 }
                 else if (command[0].ToLower() == "main")
