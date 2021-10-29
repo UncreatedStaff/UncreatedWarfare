@@ -66,7 +66,7 @@ namespace Uncreated.Warfare
                 {
                     Log log = new Log(splits[i], Console.ForegroundColor);
                     Data.AddLog(log);
-                    if (Data.NetClient != null && Data.NetClient.connection.IsActive && 
+                    if (Data.NetClient != null && Data.NetClient.connection != null && Data.NetClient.connection.IsActive && 
                         value != $"No invoker found for {Networking.Invocations.Shared.SendLogMessage.ID}.")
                     {
                         Networking.Invocations.Shared.SendLogMessage.Invoke(Data.NetClient.connection, log, 0);

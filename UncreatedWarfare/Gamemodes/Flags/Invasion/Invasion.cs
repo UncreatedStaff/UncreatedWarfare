@@ -599,7 +599,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
 
         }
-        public override void OnPlayerJoined(UCPlayer player)
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
         {
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
@@ -647,7 +647,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-            base.OnPlayerJoined(player);
+            base.OnPlayerJoined(player, wasAlreadyOnline);
         }
         public override void OnPlayerLeft(UCPlayer player)
         {

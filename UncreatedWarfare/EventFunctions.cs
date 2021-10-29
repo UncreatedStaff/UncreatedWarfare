@@ -326,7 +326,7 @@ namespace Uncreated.Warfare
                 Data.DatabaseManager.RegisterLogin(player.Player);
 
 
-                Data.Gamemode.OnPlayerJoined(ucplayer);
+                Data.Gamemode.OnPlayerJoined(ucplayer, false);
                 if (Data.Gamemode is TeamGamemode)
                 {
                     ulong team = player.GetTeam();
