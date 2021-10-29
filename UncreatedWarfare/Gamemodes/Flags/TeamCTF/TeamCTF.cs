@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             _vehicleSigns = new VehicleSigns();
             _requestSigns = new RequestSigns();
             _structureSaver = new StructureSaver();
-            FOBManager.LoadFobs();
+            FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
