@@ -226,7 +226,6 @@ namespace Uncreated.Warfare.Teams
             {
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "GameStarting", false);
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Confirm", true);
-
             }
         }
 

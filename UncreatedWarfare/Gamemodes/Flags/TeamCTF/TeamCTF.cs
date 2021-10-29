@@ -719,7 +719,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void OnLevelLoaded()
         {
-            FOBManager.LoadFobs();
+            FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();

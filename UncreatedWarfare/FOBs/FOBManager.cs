@@ -16,8 +16,10 @@ namespace Uncreated.Warfare.FOBs
     public class FOBManager
     {
         public static Config<FOBConfig> config;
-        internal static readonly List<FOB> Team1FOBs = new List<FOB>();
-        internal static readonly List<FOB> Team2FOBs = new List<FOB>();
+        public static readonly List<FOB> Team1FOBs = new List<FOB>();
+        public static readonly List<FOB> Team2FOBs = new List<FOB>();
+        public static readonly List<SpecialFOB> SpecialFOBs= new List<SpecialFOB>();
+
 
         public static event PlayerEnteredFOBRadiusHandler OnPlayerEnteredFOBRadius;
         public static event PlayerLeftFOBRadiusHandler OnPlayerLeftFOBRadius;
@@ -192,7 +194,6 @@ namespace Uncreated.Warfare.FOBs
             if (counter % 60 == 0)
                 RefillMainStorages();
         }
-
         public static void RecalculateNearbyPlayers(FOB fob, int counter = -1)
         {
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
@@ -279,7 +280,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (data.barricade.id == config.Data.FOBID)
             {
-                TryDeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeComponent o) ? o.LastDamager : 0);
+                DeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeComponent o) ? o.LastDamager : 0);
             }
             else if (data.barricade.id == config.Data.AmmoCrateID)
             {
@@ -308,7 +309,7 @@ namespace Uncreated.Warfare.FOBs
             }
         }
 
-        public static void LoadFobs()
+        public static void LoadFobsFromMap()
         {
             GetRegionBarricadeLists(
                 out List<BarricadeDrop> Team1FOBBarricades,
@@ -373,8 +374,14 @@ namespace Uncreated.Warfare.FOBs
 
             UpdateUIForTeam(team);
         }
+        public static void RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor)
+        {
+            SpecialFOBs.Add(new SpecialFOB(name, point, team, UIcolor));
 
-        public static void TryDeleteFOB(uint instanceID, ulong team, ulong player)
+            UpdateUIForTeam(team);
+        }
+
+        public static void DeleteFOB(uint instanceID, ulong team, ulong player)
         {
             FOB removed;
             if (team == 1)
@@ -397,7 +404,7 @@ namespace Uncreated.Warfare.FOBs
                 IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
                 while (pts.MoveNext())
                 {
-                    if (pts.Current.PendingFOB != null && pts.Current.PendingFOB.Number == removed.Number)
+                    if (pts.Current.PendingFOB is FOB fob && fob.Number == removed.Number)
                     {
                         pts.Current.CancelTeleport();
                     }
@@ -433,19 +440,24 @@ namespace Uncreated.Warfare.FOBs
             }
             UpdateUIForTeam(team);
         }
-
-        public static List<FOB> GetAvailableFobs(UnturnedPlayer player)
+        public static void DeleteSpecialFOB(string name, ulong team)
         {
-            if (TeamManager.IsTeam1(player))
+            SpecialFOB removed = SpecialFOBs.FirstOrDefault(x => x.Name == name && x.Team == team);
+            SpecialFOBs.Remove(removed);
+
+            if (removed != null)
             {
-                return Team1FOBs;
-            }
-            else if (TeamManager.IsTeam2(player))
-            {
-                return Team2FOBs;
+                IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
+                while (pts.MoveNext())
+                {
+                    if (pts.Current.PendingFOB is SpecialFOB special)
+                    {
+                        pts.Current.CancelTeleport();
+                    }
+                }
             }
 
-            return new List<FOB>();
+            UpdateUIForTeam(team);
         }
 
         public static void GetRegionBarricadeLists(
@@ -467,8 +479,12 @@ namespace Uncreated.Warfare.FOBs
                 ).ToList();
         }
 
-        public static bool FindFOBByName(string name, ulong team, out FOB fob)
+        public static bool FindFOBByName(string name, ulong team, out object fob)
         {
+            fob = SpecialFOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && f.Team == team);
+            if (fob != null)
+                return true;
+
             if (team == 1)
             {
                 fob = Team1FOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -496,24 +512,29 @@ namespace Uncreated.Warfare.FOBs
                 FOBList = Team2FOBs;
             }
             else return;
+
+
+
             for (int i = FOBList.Count; i < config.Data.FobLimit; i++)
             {
                 EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
             }
-            for (int i = 0; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
-            {
-                try
-                {
-                    string name = FOBList[i].nearbyEnemies.Count == 0 ? $"<color=#54e3ff>{FOBList[i].Name}</color>" : $"<color=#ff8754>{FOBList[i].Name}</color>";
 
-                    EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
-                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
-                }
-                catch (Exception ex)
-                {
-                    F.LogError("Error in FOB UI: ");
-                    F.LogError(ex);
-                }
+            int start = 0;
+            for (int i = start; i < config.Data.FobLimit; i++)
+            {
+                string name = $"<color={SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
+                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
+                player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
+
+                start++;
+            }
+            for (int i = start; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
+            {
+                string name = FOBList[i].nearbyEnemies.Count == 0 ? $"<color=#54e3ff>{FOBList[i].Name}</color>" : $"<color=#ff8754>{FOBList[i].Name}</color>";
+
+                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
+                player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
             }
         }
         public static void UpdateUIAll()
@@ -537,7 +558,6 @@ namespace Uncreated.Warfare.FOBs
         public string Name;
         public int Number;
         public BarricadeDrop Structure;
-        public DateTime DateCreated;
         public string ClosestLocation;
         public List<UCPlayer> nearbyPlayers;
         public List<UCPlayer> nearbyEnemies;
@@ -546,7 +566,6 @@ namespace Uncreated.Warfare.FOBs
             this.Name = Name;
             Number = number;
             this.Structure = Structure;
-            DateCreated = new DateTime(DateTime.Now.Ticks);
             ClosestLocation =
                 (LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
@@ -555,6 +574,30 @@ namespace Uncreated.Warfare.FOBs
                 .name;
             nearbyPlayers = new List<UCPlayer>();
             nearbyEnemies = new List<UCPlayer>();
+        }
+    }
+
+    public class SpecialFOB
+    {
+        public string Name;
+        public Vector3 point;
+        public string ClosestLocation;
+        public ulong Team;
+        public string UIColor;
+        public bool IsActive;
+
+        public SpecialFOB(string name, Vector3 point, ulong team, string color)
+        {
+            Name = name;
+            ClosestLocation =
+                (LevelNodes.nodes
+                .Where(n => n.type == ENodeType.LOCATION)
+                .Aggregate((n1, n2) =>
+                    (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)
+                .name;
+            Team = team;
+            UIColor = color;
+            IsActive = true;
         }
     }
 

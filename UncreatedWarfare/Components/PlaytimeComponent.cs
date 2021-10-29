@@ -49,7 +49,6 @@ namespace Uncreated.Warfare.Components
         public ushort lastExplodedVehicle;
         public ushort lastRoadkilled;
         private Coroutine _currentTeleportRequest;
-        private FOB _pendingFob;
         public Vehicles.VehicleSpawn currentlylinking;
         public void QueueMessage(ToastMessage message)
         {
@@ -126,13 +125,13 @@ namespace Uncreated.Warfare.Components
         }
         /// <summary>Start a delayed teleport on the player.</summary>
         /// <returns>True if there were no requests pending, false if there were.</returns>
-        public bool TeleportDelayed(Vector3 position, float angle, float seconds, bool shouldCancelOnMove = false, bool shouldCancelOnDamage = false, bool shouldMessagePlayer = false, string locationName = "", FOB fob = null)
+        public bool TeleportDelayed(Vector3 position, float angle, float seconds, bool shouldCancelOnMove = false, bool shouldCancelOnDamage = false, bool shouldMessagePlayer = false, string locationName = "", object deployable = null)
         {
             if (_currentTeleportRequest == default)
             {
                 if (shouldMessagePlayer)
                     player.Message("deploy_standby", locationName, seconds.ToString(Data.Locale));
-                _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(position, angle, seconds, shouldCancelOnMove, shouldCancelOnDamage, shouldMessagePlayer, locationName, fob));
+                _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(position, angle, seconds, shouldCancelOnMove, shouldCancelOnDamage, shouldMessagePlayer, locationName, deployable));
                 return true;
             }
             else
@@ -147,10 +146,10 @@ namespace Uncreated.Warfare.Components
                 _currentTeleportRequest = default;
             }
         }
-        public FOB PendingFOB { get => _pendingFob; }
-        private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 position, float angle, float seconds, bool shouldCancelOnMove, bool shouldCancelOnDamage, bool shouldMessagePlayer, string locationName, FOB fob)
+        public object PendingFOB;
+        private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 position, float angle, float seconds, bool shouldCancelOnMove, bool shouldCancelOnDamage, bool shouldMessagePlayer, string locationName, object deployable)
         {
-            _pendingFob = fob;
+            PendingFOB = deployable;
             byte originalhealth = player.life.health;
             Vector3 originalPosition = new Vector3(player.transform.position.x, player.transform.position.y, player.transform.position.z);
 
@@ -183,21 +182,35 @@ namespace Uncreated.Warfare.Components
                         CancelTeleport();
                         yield break;
                     }
-                    if (fob != null && fob.nearbyEnemies.Count != 0)
+                    if (deployable is FOB fob)
                     {
-                        if (shouldMessagePlayer)
-                            player.Message("deploy_c_enemiesNearby");
+                        if (fob.nearbyEnemies.Count != 0)
+                        {
+                            if (shouldMessagePlayer)
+                                player.Message("deploy_c_enemiesNearby");
 
-                        CancelTeleport();
-                        yield break;
+                            CancelTeleport();
+                            yield break;
+                        }
+                        if (fob.Structure.GetServersideData().barricade.isDead)
+                        {
+                            if (shouldMessagePlayer)
+                                player.Message("deploy_c_fobdead");
+
+                            CancelTeleport();
+                            yield break;
+                        }
                     }
-                    if (fob != null && fob.Structure.GetServersideData().barricade.isDead)
+                    if (deployable is SpecialFOB special)
                     {
-                        if (shouldMessagePlayer)
-                            player.Message("deploy_c_fobdead");
+                        if (!special.IsActive)
+                        {
+                            if (shouldMessagePlayer)
+                                player.Message("deploy_c_notactive");
 
-                        CancelTeleport();
-                        yield break;
+                            CancelTeleport();
+                            yield break;
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -220,7 +233,7 @@ namespace Uncreated.Warfare.Components
                     player.Message("deploy_s", locationName);
                 CooldownManager.StartCooldown(UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
 
-                if (fob != null)
+                if (deployable is FOB fob)
                 {
                     UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.GetServersideData().owner);
                     if (FOBowner != null)

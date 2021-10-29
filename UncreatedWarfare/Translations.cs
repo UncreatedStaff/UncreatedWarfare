@@ -69,7 +69,7 @@ namespace Uncreated.Warfare
 
                 // join
                 { "teams_join_success", "<color=#d1c5b0>You have successfully joined {0}! Welcome to the battlefield.</color>" },
-                { "teams_join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
+                { "teams_join_announceteams_join_announce", "<color=#d1c5b0>{0} joined {1}!</color>" },
                 { "teams_e_notinmain", "<color=#a8a194>You must be in <color=#fce5bb>Main</color> to switch teams." },
                 { "teams_e_cooldown", "<color=#a8a194>You can switch teams in: <color=#fce5bb>{0}</color>" },
                 { "teams_join_e_groupnoexist", "<color=#a8a194>The team you tried to join is not set up correctly. Contact an admin to fix it.</color>" },
@@ -225,6 +225,7 @@ namespace Uncreated.Warfare
                 { "deploy_c_damaged", "<color=#ffa238>You were damaged while trying to teleport!</color>" },
                 { "deploy_c_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
                 { "deploy_c_enemiesNearby", "<color=#ffa238>You no longer deploy to that FOB - there are enemies nearby.</color>" },
+                { "deploy_c_notactive", "<color=#ffa238>The point you were deploying to is no longer active.</color>" },
                 { "deploy_c_dead", "<color=#ffa238>You died and can no longer deploy!</color>" },
                 { "deploy_e_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
                 { "deploy_e_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to deploy again.</color>" },

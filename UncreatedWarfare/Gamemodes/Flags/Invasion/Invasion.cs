@@ -631,7 +631,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             _requestSigns = new RequestSigns();
             _structureSaver = new StructureSaver();
             base.OnLevelLoaded();
-            FOBManager.LoadFobs();
+            FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
