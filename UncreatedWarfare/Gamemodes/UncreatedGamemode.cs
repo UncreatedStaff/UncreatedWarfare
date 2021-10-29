@@ -35,6 +35,7 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual bool ShowXPUI { get => true; }
         public virtual bool ShowOFPUI { get => true; }
         public virtual bool AllowCosmetics { get => true; }
+        public virtual float Weight { get => 1.0f; }
 
         protected long _gameID;
         public long GameID { get => _gameID; }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using Uncreated.Networking.Encoding;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Vehicles;
 
@@ -92,9 +93,9 @@ namespace Uncreated.Warfare.XP
             for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
                 Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
             // update the color of the ranks on all the request signs in case the player unlocked a new rank.
-            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
-                c.stats.AddXP(amount);
+                ex.AddXP(amount);
             }
         }
         public static void UpdateUI(Player nelsonplayer, int balance, out Rank rank)

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
@@ -89,9 +90,9 @@ namespace Uncreated.Warfare.Officers
                 F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
             }
 
-            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
-                c.stats.AddOfficerPoints(amount);
+                ex.AddOfficerPoints(amount);
             }
         }
         public static Rank GetOfficerRank(int officerRankLevel)

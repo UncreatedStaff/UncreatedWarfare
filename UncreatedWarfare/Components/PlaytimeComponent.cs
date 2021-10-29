@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Components
     public class PlaytimeComponent : MonoBehaviour
     {
         public float CurrentTimeSeconds;
-        public PlayerCurrentGameStats stats;
+        public Gamemodes.Interfaces.IStats stats;
         public Player player;
         public ushort lastShot;
         public ushort lastProjected;
@@ -122,13 +122,7 @@ namespace Uncreated.Warfare.Components
                 F.LogWarning("stats is null " + player.name);
                 return;
             }
-            if (player.IsOnFlag())
-            {
-                stats.AddToTimeOnPoint(dt);
-                stats.AddToTimeDeployed(dt);
-            }
-            else if (!player.IsInMain())
-                stats.AddToTimeDeployed(dt);
+            stats.Update(dt);
         }
         /// <summary>Start a delayed teleport on the player.</summary>
         /// <returns>True if there were no requests pending, false if there were.</returns>

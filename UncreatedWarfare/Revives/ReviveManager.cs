@@ -137,8 +137,8 @@ namespace Uncreated.Warfare.Revives
                 {
                     XPManager.AddXP(medic, XPManager.config.Data.FriendlyRevivedXP,
                         F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
-                    if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats != null)
-                        c.stats.revives++;
+                    if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IRevivesStats r2)
+                        r2.AddRevive();
 
                     Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
                     if (KitManager.HasKit(medic, out Kit kit))
@@ -517,9 +517,9 @@ namespace Uncreated.Warfare.Revives
 #pragma warning restore IDE0051
             private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
             {
-                if (F.TryGetPlaytimeComponent(killerid, out Components.PlaytimeComponent c) && c.stats != null)
+                if (F.TryGetPlaytimeComponent(killerid, out Components.PlaytimeComponent c) && c.stats != null && c.stats is IPVPModeStats pvp)
                 {
-                    c.stats.damagedone += damage;
+                    pvp.AddDamage(damage);
                 }
             }
 

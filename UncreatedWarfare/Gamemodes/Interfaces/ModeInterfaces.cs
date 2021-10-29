@@ -6,9 +6,14 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IAttackDefence : IGamemode
+    public interface IAttackDefence : ITeams
     {
         ulong AttackingTeam { get; }
         ulong DefendingTeam { get; }
+    }
+    public interface ITeamScore : ITeams
+    {
+        int Team1Score { get; }
+        int Team2Score { get; }
     }
 }

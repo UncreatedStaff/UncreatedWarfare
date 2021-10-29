@@ -333,8 +333,8 @@ namespace Uncreated.Warfare.FOBs
             ulong team = Structure.GetServersideData().group.GetTeam();
             if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
             {
-                if (F.TryGetPlaytimeComponent(Structure.GetServersideData().owner, out PlaytimeComponent c) && c.stats != null)
-                    c.stats.fobsplaced++;
+                if (F.TryGetPlaytimeComponent(Structure.GetServersideData().owner, out PlaytimeComponent c) && c.stats is IFOBStats f)
+                    f.AddFOBPlaced();
                 if (team == 1)
                 {
                     ctf.GameStats.fobsPlacedT1++;
@@ -406,8 +406,8 @@ namespace Uncreated.Warfare.FOBs
             if (Data.Is(out IWarstatsGamemode w) && w.GameStats != null && w.State == Gamemodes.EState.ACTIVE)
             // doesnt count destroying fobs after game ends
             {
-                if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c) && c.stats != null)
-                    c.stats.fobsdestroyed++;
+                if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c) && c.stats is IFOBStats f)
+                    f.AddFOBDestroyed();
                 if (team == 1)
                 {
                     w.GameStats.fobsDestroyedT2++;

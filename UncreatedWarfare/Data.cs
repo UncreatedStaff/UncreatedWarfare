@@ -128,7 +128,6 @@ namespace Uncreated.Warfare
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         public static void LoadColoredConsole()
         {
-            //CommandWindow.Log("Loading Colored Console Method");
             try
             {
                 FieldInfo defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -160,7 +159,10 @@ namespace Uncreated.Warfare
                 Invocations.Shared.PlayerList.NetInvoke(PlayerManager.GetPlayerList());
             }
         }
+        public static void LoadRandomGamemode()
+        {
 
+        }
 
         public static void LoadVariables()
         {

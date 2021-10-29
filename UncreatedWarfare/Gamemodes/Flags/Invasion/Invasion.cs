@@ -344,8 +344,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                     {
-                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats != null)
-                            c.stats.captures++;
+                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                            fg.AddCapture();
                     }
                 }
             }
@@ -372,8 +372,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                     {
-                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats != null)
-                            c.stats.captures++;
+                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                            fg.AddCapture();
                     }
                 }
             }

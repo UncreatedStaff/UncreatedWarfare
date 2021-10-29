@@ -140,6 +140,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             _kitManager = new KitManager();
             _reviveManager = new ReviveManager();
             _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
+            _vehicleBay = new VehicleBay();
+            _vehicleSpawner = new VehicleSpawner();
+            _vehicleSigns = new VehicleSigns();
+            _requestSigns = new RequestSigns();
+            _structureSaver = new StructureSaver();
         }
         protected override bool TimeToCheck()
         {
@@ -524,8 +529,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                     {
-                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats != null)
-                            c.stats.captures++;
+                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                            fg.AddCapture();
                     }
                 }
             }
@@ -545,8 +550,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                     {
-                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats != null)
-                            c.stats.captures++;
+                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                            fg.AddCapture();
                     }
                 }
             }
@@ -714,16 +719,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void OnLevelLoaded()
         {
-            _vehicleBay = new VehicleBay();
-            _vehicleSpawner = new VehicleSpawner();
-            _vehicleSigns = new VehicleSigns();
-            _requestSigns = new RequestSigns();
-            _structureSaver = new StructureSaver();
-            base.OnLevelLoaded();
             FOBManager.LoadFobs();
             RepairManager.LoadRepairStations();
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
+            base.OnLevelLoaded();
         }
         protected override void EventLoopAction()
         {

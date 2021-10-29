@@ -322,9 +322,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
         }
     }
-    public class PlayerCurrentGameStats
+    public class PlayerCurrentGameStats : IStats, ITeamPVPModeStats, IExperienceStats, IFlagStats, IFOBStats
     {
         public Player player;
+        public Player Player { get => player; set => player = value; }
+        public ulong Steam64 => id;
         public readonly ulong id;
         public int kills;
         public int deaths;
@@ -335,6 +337,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public TimeSpan TimeDeployed { get => TimeSpan.FromSeconds(timeDeployedCounter); }
         private float timeDeployedCounter;
         public TimeSpan TimeOnPoint { get => TimeSpan.FromSeconds(timeOnPointCounter); }
+        public int Kills => kills;
+        public int Deaths => deaths;
+        public int Teamkills => teamkills;
+        public int XPGained => xpgained;
+        public int OFPGained => officerpointsgained;
+        public int Captures => captures;
+        public int DamageDone => damagedone;
+        public int FOBsDestroyed => fobsdestroyed;
+        public int FOBsPlaced => fobsplaced;
         private float timeOnPointCounter;
         public int captures;
         public int teamkills;
@@ -374,6 +385,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.onlineCount2 = 0;
             this.revives = 0;
         }
+        public void Update(float dt)
+        {
+            if (player.IsOnFlag())
+            {
+                AddToTimeOnPoint(dt);
+                AddToTimeDeployed(dt);
+            }
+            else if (!player.IsInMain())
+                AddToTimeDeployed(dt);
+        }
         public void AddKill()
         {
             kills++;
@@ -381,10 +402,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public void AddDeath() => deaths++;
         public void AddTeamkill() => teamkills++;
+        public void AddCapture() => captures++;
         public void AddXP(int amount) => xpgained += amount;
         public void AddOfficerPoints(int amount) => officerpointsgained += amount;
         public void AddToTimeDeployed(float amount) => timeDeployedCounter += amount;
         public void AddToTimeOnPoint(float amount) => timeOnPointCounter += amount;
+        public void AddDamage(int amount) => damagedone += amount;
+        public void AddFOBDestroyed() => fobsdestroyed++;
+        public void AddFOBPlaced() => fobsplaced++;
         //public void AddToTimeDriving(float amount) => timeDrivingCounter += amount;
         public void CheckGame()
         {
@@ -605,42 +630,42 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 int totalxpgaina = 0;
                 for (int i = 0; i < a.Members.Count; i++)
                 {
-                    if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                        totalxpgaina += c.stats.xpgained;
+                    if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
+                        totalxpgaina += ex.XPGained;
                 }
                 int totalxpgainb = 0;
                 for (int i = 0; i < b.Members.Count; i++)
                 {
-                    if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                        totalxpgainb += c.stats.xpgained;
+                    if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
+                        totalxpgainb += ex.XPGained;
                 }
                 if (totalxpgaina == totalxpgainb)
                 {
                     int totalopgaina = 0;
                     for (int i = 0; i < a.Members.Count; i++)
                     {
-                        if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                            totalopgaina += c.stats.officerpointsgained;
+                        if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
+                            totalopgaina += ex.OFPGained;
                     }
                     int totalopgainb = 0;
                     for (int i = 0; i < b.Members.Count; i++)
                     {
-                        if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                            totalopgainb += c.stats.officerpointsgained;
+                        if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
+                            totalopgainb += ex.OFPGained;
                     }
                     if (totalxpgaina == totalxpgainb)
                     {
                         int totalkillsa = 0;
                         for (int i = 0; i < a.Members.Count; i++)
                         {
-                            if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                                totalkillsa += c.stats.kills;
+                            if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IPVPModeStats pvp)
+                                totalkillsa += pvp.Kills;
                         }
                         int totalkillsb = 0;
                         for (int i = 0; i < b.Members.Count; i++)
                         {
-                            if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                                totalkillsb += c.stats.kills;
+                            if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IPVPModeStats pvp)
+                                totalkillsb += pvp.Kills;
                         }
                         return totalkillsa.CompareTo(totalkillsb);
                     }
@@ -658,10 +683,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 else
                 {
                     int axp = 0, bxp = 0;
-                    if (a.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent ca))
-                        axp = ca.stats.xpgained;
-                    if (b.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent cb))
-                        bxp = cb.stats.xpgained;
+                    if (a.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent ca) && ca.stats is IExperienceStats ex)
+                        axp = ex.XPGained;
+                    if (b.Player.TryGetPlaytimeComponent(out ca) && ca.stats is IExperienceStats ex2)
+                        bxp = ex2.XPGained;
                     return axp.CompareTo(bxp);
                 }
             });

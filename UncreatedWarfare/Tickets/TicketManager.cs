@@ -190,18 +190,18 @@ namespace Uncreated.Warfare.Tickets
             {
                 UCPlayer player = players[i];
 
-                if (F.TryGetPlaytimeComponent(player.CSteamID, out var component))
+                if (F.TryGetPlaytimeComponent(player.CSteamID, out PlaytimeComponent component) && component.stats is IExperienceStats exp)
                 {
-                    if (component.stats.xpgained > 0)
-                        XPManager.AddXP(player.Player, Mathf.RoundToInt(component.stats.xpgained * winMultiplier), F.Translate("xp_victory", player.Steam64));
+                    if (exp.XPGained > 0)
+                        XPManager.AddXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), F.Translate("xp_victory", player.Steam64));
 
                     if (handicapMultiplier > 0)
-                        XPManager.AddXP(player.Player, Mathf.RoundToInt(component.stats.xpgained * handicapMultiplier), F.Translate("xp_handicap", player.Steam64));
+                        XPManager.AddXP(player.Player, Mathf.RoundToInt(exp.XPGained * handicapMultiplier), F.Translate("xp_handicap", player.Steam64));
 
                     if (player.IsSquadLeader())
                     {
-                        if (component.stats.officerpointsgained > 0)
-                            OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, Mathf.RoundToInt(component.stats.officerpointsgained * winMultiplier), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
+                        if (exp.OFPGained > 0)
+                            OfficerManager.AddOfficerPoints(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), F.Translate("ofp_squad_victory", player.Squad.Leader.Steam64));
                     }
                 }
             }
