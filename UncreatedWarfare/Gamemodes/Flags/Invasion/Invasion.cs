@@ -114,7 +114,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
 
-            StartStagingPhase(120);
+            StartStagingPhase(Config.StagingPhaseSeconds);
 
             InvokeOnNewGameStarting(onLoad);
         }
@@ -773,7 +773,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             else if (DefendingTeam == 2)
                 firstFlag = Rotation.First();
 
-            FOBManager.RegisterNewSpecialFOB("VCP", firstFlag.ZoneData.Center, DefendingTeam, "#5482ff", true);
+            FOBManager.RegisterNewSpecialFOB("VCP", firstFlag.ZoneData.Center3DAbove, DefendingTeam, "#5482ff", true);
 
             UpdateCoroutine = StartCoroutine(StagingPhaseLoop());
         }
@@ -856,9 +856,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public float team1spawnangle;
         public float team2spawnangle;
         public float lobbyspawnangle;
-        public ushort T1BlockerID = 36058;
-        public ushort T2BlockerID = 36059;
-        public ushort HeaderID = 36066;
+        public ushort T1BlockerID;
+        public ushort T2BlockerID;
+        public ushort HeaderID;
+        public int TicketsFlagCaptured;
+        public int AttackStartingTickets;
+        public int StagingPhaseSeconds;
         public Dictionary<int, float> team1adjacencies;
         public Dictionary<int, float> team2adjacencies;
         public InvasionData() => SetDefaults();
@@ -892,6 +895,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             this.team1spawnangle = 0f;
             this.team2spawnangle = 0f;
             this.lobbyspawnangle = 0f;
+            this.TicketsFlagCaptured = 150;
+            this.AttackStartingTickets = 250;
+            this.StagingPhaseSeconds = 150;
+            this.T1BlockerID = 36058;
+            this.T2BlockerID = 36059;
+            this.HeaderID = 36066;
             this.team1adjacencies = new Dictionary<int, float>();
             this.team2adjacencies = new Dictionary<int, float>();
             this.xpSecondInterval = 10;

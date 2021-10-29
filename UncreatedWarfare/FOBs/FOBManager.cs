@@ -257,7 +257,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (special.DisappearAroundEnemies && counter % 5 == 0)
             {
-                if (Provider.clients.Where(p => p.GetTeam() != special.Team && (p.player.transform.position - special.point).sqrMagnitude < Math.Pow(20, 2)).Count() > 0)
+                if (Provider.clients.Where(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(20, 2)).Count() > 0)
                 {
                     DeleteSpecialFOB(special.Name, special.Team);
                 }
@@ -600,7 +600,7 @@ namespace Uncreated.Warfare.FOBs
     public class SpecialFOB
     {
         public string Name;
-        public Vector3 point;
+        public Vector3 Point;
         public string ClosestLocation;
         public ulong Team;
         public string UIColor;
@@ -617,6 +617,7 @@ namespace Uncreated.Warfare.FOBs
                     (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)
                 .name;
             Team = team;
+            Point = point;
             UIColor = color;
             IsActive = true;
             DisappearAroundEnemies = disappearAroundEnemies;
