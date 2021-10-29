@@ -239,6 +239,7 @@ namespace Uncreated.Warfare
                 { "deploy_e_enemiesnearby", "<color=#ffa238>You cannot deploy to that FOB - there are enemies nearby.</color>" },
                 { "deploy_standby", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. You will arrive in <color=#eeeeee>{1} seconds</color>.</color>" },
                 { "deploy_standby_nomove", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. Stand still for <color=#eeeeee>{1} seconds</color>.</color>" },
+                { "deploy_lobby_removed", "<color=#fae69c>The lobby has been removed, use  <i>/teams</i> to switch teams instead.</color>" },
 
                 // /ammo
                 { "ammo_error_nocrate", "<color=#ffab87>Look at an Ammo Crate, Ammo Bag or Vehicle in order to resupply.</color>" },

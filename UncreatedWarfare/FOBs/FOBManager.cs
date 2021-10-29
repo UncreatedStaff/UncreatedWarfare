@@ -39,6 +39,10 @@ namespace Uncreated.Warfare.FOBs
 
         public static void Dispose()
         {
+            Team1FOBs.Clear();
+            Team2FOBs.Clear();
+            SpecialFOBs.Clear();
+            UpdateUIAll();
             OnPlayerEnteredFOBRadius -= OnEnteredFOBRadius;
             OnPlayerLeftFOBRadius -= OnLeftFOBRadius;
             OnEnemyEnteredFOBRadius -= OnEnemyEnteredFOB;
@@ -332,6 +336,7 @@ namespace Uncreated.Warfare.FOBs
 
             Team1FOBs.Clear();
             Team2FOBs.Clear();
+            SpecialFOBs.Clear();
 
             for (int i = 0; i < Team1FOBs.Count; i++)
             {
@@ -536,11 +541,11 @@ namespace Uncreated.Warfare.FOBs
             int start = 0;
             for (int i = start; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
             {
-                if (SpecialFOBs[i].IsActive)
+                if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == team)
                 {
                     string name = $"<color={SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
                     EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
-                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
+                    player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, SpecialFOBs[i].ClosestLocation));
                     start++;
                 }
             }

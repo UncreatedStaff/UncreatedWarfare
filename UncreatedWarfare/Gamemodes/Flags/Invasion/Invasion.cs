@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public ulong AttackingTeam { get => _attackTeam; }
         protected ulong _defendTeam;
         public ulong DefendingTeam { get => _defendTeam; }
-
+        protected Transform _blockerBarricade = null;
         protected int _objectiveT1Index;
         protected int _objectiveT2Index;
         public int ObjectiveT1Index { get => _objectiveT1Index; }
@@ -103,12 +103,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             F.Log("Loading new game.", ConsoleColor.Cyan);
             base.StartNextGame(onLoad); // set game id
-
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
             if (_attackTeam == 1)
                 _defendTeam = 2;
             else if (_attackTeam == 2)
                 _defendTeam = 1;
+            PlaceBlockerOverAttackerMain();
 
             LoadRotation();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
@@ -557,7 +557,54 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 }
             }
         }
-
+        private void DestroyBlockerBarricade()
+        {
+            if (_blockerBarricade != null && Regions.tryGetCoordinate(_blockerBarricade.position, out byte x, out byte y))
+            {
+                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricade);
+                if (drop != null)
+                {
+                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                }
+                _blockerBarricade = null;
+            }
+        }
+        readonly Vector3 SpawnRotation = new Vector3(270f, 0f, 180f);
+        private string V3TStr(Vector3 v3) => $"({v3.x:N5}, {v3.y:N5}, {v3.z:N5})";
+        private void PlaceBlockerOverAttackerMain()
+        {
+            DestroyBlockerBarricade();
+            if (_attackTeam == 1)
+            {
+                _blockerBarricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.T1BlockerID), 
+                    TeamManager.Team1Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
+                if (_blockerBarricade != null && Regions.tryGetCoordinate(_blockerBarricade.position, out byte x, out byte y))
+                {
+                    BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricade);
+                    if (drop != null)
+                    {
+                        F.Log($"Drop: {V3TStr(drop.model.transform.rotation.eulerAngles)}\n" +
+                            $"Data: {drop.GetServersideData().angle_x}, {drop.GetServersideData().angle_y}, {drop.GetServersideData().angle_z}\n" +
+                            $"Current: {V3TStr(SpawnRotation)}");
+                    }
+                }
+            }
+            else if (_attackTeam == 2)
+            {
+                _blockerBarricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.T2BlockerID), 
+                    TeamManager.Team2Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
+                if (_blockerBarricade != null && Regions.tryGetCoordinate(_blockerBarricade.position, out byte x, out byte y))
+                {
+                    BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricade);
+                    if (drop != null)
+                    {
+                        F.Log($"Drop: {V3TStr(drop.model.transform.rotation.eulerAngles)}\n" +
+                            $"Data: {drop.GetServersideData().angle_x}, {drop.GetServersideData().angle_y}, {drop.GetServersideData().angle_z}\n" +
+                            $"Current: {V3TStr(SpawnRotation)}");
+                    }
+                }
+            }
+        }
         public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
             InvasionUI.ClearListUI(player.transportConnection, Config.FlagUICount);
@@ -660,13 +707,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void Dispose()
         {
+            DestroyBlockerBarricade();
             foreach (SteamPlayer player in Provider.clients)
             {
                 InvasionUI.ClearListUI(player.transportConnection, Config.FlagUICount);
                 SendUIParameters.Nil.SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection); // clear all capturing uis
                 if (F.TryGetPlaytimeComponent(player.player, out Components.PlaytimeComponent c))
                     c.stats = null;
+                EffectManager.askEffectClearByID(Config.HeaderID, player.transportConnection);
             }
+            if (UpdateCoroutine != null)
+                StopCoroutine(UpdateCoroutine);
             _squadManager?.Dispose();
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
@@ -718,17 +769,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
             Flag firstFlag = null;
             if (DefendingTeam == 1)
-                firstFlag = Rotation.First();
-            else if (DefendingTeam == 2)
                 firstFlag = Rotation.Last();
+            else if (DefendingTeam == 2)
+                firstFlag = Rotation.First();
 
             FOBManager.RegisterNewSpecialFOB("VCP", firstFlag.ZoneData.Center, DefendingTeam, "#5482ff", true);
 
-            StartCoroutine(StagingPhaseLoop());
+            UpdateCoroutine = StartCoroutine(StagingPhaseLoop());
         }
-
+        protected Coroutine UpdateCoroutine = null;
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
+            bool first = true;
             while (StagingPhaseSeconds > 0)
             {
                 if (State != EState.STAGING)
@@ -736,40 +788,38 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     EndStagingPhase();
                     yield break;
                 }
-
-                // update UI
-
+                UpdateStagingUIForAll(first);
+                first = false;
                 yield return new WaitForSeconds(1);
-                StagingPhaseSeconds -= 1;
+                StagingPhaseSeconds--;
             }
             EndStagingPhase();
         }
-        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        public void UpdateStagingUI(UCPlayer player, string timeleft, bool first)
         {
-            EffectManager.sendUIEffect(36036, 29000, player.connection, true);
+            if (first)
+            {
+                EffectManager.sendUIEffect(Config.HeaderID, 29100, player.connection, true);
+                if (player.GetTeam() == AttackingTeam)
+                    EffectManager.sendUIEffectText(29100, player.connection, true, "Top", "BRIEFING PHASE");
+                else if (player.GetTeam() == DefendingTeam)
+                    EffectManager.sendUIEffectText(29100, player.connection, true, "Top", "PREPARATION PHASE");
+            }
 
-            if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(29000, player.connection, true, "TOP", "BRIEFING PHASE");
-            else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(29000, player.connection, true, "TOP", "PREPARATION PHASE");
-
-            EffectManager.sendUIEffectText(29000, player.connection, true, "BOTTOM", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
+            EffectManager.sendUIEffectText(29100, player.connection, true, "Bottom", $"{timeleft}");
         }
-        public void UpdateStagingUIForAll()
+        public void UpdateStagingUIForAll(bool first = false)
         {
-            TimeSpan timeLeft = TimeSpan.FromSeconds(StagingPhaseSeconds);
-            foreach (var player in PlayerManager.OnlinePlayers)
-                UpdateStagingUI(player, timeLeft);
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                UpdateStagingUI(player, (StagingPhaseSeconds / 60).ToString(Data.Locale) + ":" + (StagingPhaseSeconds % 60).ToString("D2"), first);
         }
         private void EndStagingPhase()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
-                EffectManager.askEffectClearByID(29000, player.connection);
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
 
-            // clear UI
-            // remove main barricades
-            // remove VCP fob
             _state = EState.ACTIVE;
+            DestroyBlockerBarricade();
         }
     }
 
@@ -806,6 +856,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public float team1spawnangle;
         public float team2spawnangle;
         public float lobbyspawnangle;
+        public ushort T1BlockerID = 36058;
+        public ushort T2BlockerID = 36059;
+        public ushort HeaderID = 36066;
         public Dictionary<int, float> team1adjacencies;
         public Dictionary<int, float> team2adjacencies;
         public InvasionData() => SetDefaults();

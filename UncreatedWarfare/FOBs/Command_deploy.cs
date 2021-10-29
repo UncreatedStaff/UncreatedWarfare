@@ -36,18 +36,23 @@ namespace Uncreated.Warfare.Commands
             {
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.Player, out _);
 
-                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out var deployable))
-                {
-                    player.Message("deploy_e_fobnotfound", command[0]);
-                    return;
-                }
-
+                ulong team = player.GetTeam();
                 bool IsInMain = player.Player.IsInMain();
                 bool IsInLobby = TeamManager.LobbyZone.IsInside(player.Player.transform.position);
                 bool shouldCancelOnMove = !IsInMain;
                 bool shouldCancelOnDamage = !IsInMain;
+                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object deployable))
+                {
+                    if (command[0] == "main")
+                        c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
+                    else if (command[0] == "lobby")
+                        player.SendChat("deploy_lobby_removed");
+                    else 
+                        player.Message("deploy_e_fobnotfound", command[0]);
+                    return;
+                }
 
-                ulong team = player.GetTeam();
+
 
                 if (deployable is FOB FOB)
                 {
