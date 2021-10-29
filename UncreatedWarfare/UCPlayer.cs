@@ -10,6 +10,7 @@ using System.Linq;
 using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -290,6 +291,11 @@ namespace Uncreated.Warfare
 
             return (Position - player.Position).sqrMagnitude < Math.Pow(distance, 2);
         }
+        public bool IsInLobby()
+        {
+            return Data.Gamemode is Gamemodes.Interfaces.ITeams teammode && teammode.JoinManager.IsInLobby(this);
+        }
+
         /// <summary>Gets some of the values from the playersave again.</summary>
         public static void Refresh(ulong Steam64)
         {

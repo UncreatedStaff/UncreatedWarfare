@@ -253,6 +253,7 @@ namespace Uncreated.Warfare
                 { "ammo_not_in_team", "<color=#b3a6a2>You must be on a team to use this feature.</color>" },
                 { "ammo_no_stock", "<color=#b3a6a2>This ammo crate has no ammo. Fill it up with <color=#cedcde>AMMO BOXES</color> in order to resupply.</color>" },
                 { "ammo_not_enough_stock", "<color=#b3a6a2>This Ammo Crate is missing <color=#cedcde>AMMO BOXES</color>. <color=#d1c597>{0}/{1}</color>.</color>" },
+                { "vehicle_staging", "<color=#b3a6a2>You cannot enter this vehicle during the staging phase.</color>" },
                 { "ammo_no_kit", "<color=#b3a6a2>You don't have a kit yet. Go and request one at main.</color>" },
                 { "ammo_crate_has_no_storage", "<color=#b3a6a2>This is an ammo crate according to the server's config, but it has no storage. The admins may have messed something up.</color>" },
                 { "ammo_cooldown", "<color=#b3a6a2>You can not refill your kit for another {0} seconds.</color>" },

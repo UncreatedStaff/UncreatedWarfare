@@ -23,7 +23,7 @@ using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {
-    public class Invasion : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IAttackDefence, IImplementsLeaderboard, IStructureSaving
+    public class Invasion : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IAttackDefence, IImplementsLeaderboard, IStructureSaving, IStagingPhase
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
 
@@ -69,6 +69,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public SquadManager SquadManager { get => _squadManager; }
         protected StructureSaver _structureSaver;
         public StructureSaver StructureSaver { get => _structureSaver; }
+        public int StagingPhaseSeconds { get; set; }
 
         public Invasion() : base(nameof(Invasion), 0.25f)
         {
@@ -112,6 +113,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             LoadRotation();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
+
+            StartStagingPhase(120);
 
             InvokeOnNewGameStarting(onLoad);
         }
@@ -327,8 +330,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 InvasionUI.ClearListUI(client.transportConnection, Config.FlagUICount);
                 InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
             }
+            F.Log("Reached end of load rotation :)");
             PrintFlagRotation();
+            F.Log("Printed flags :)");
             EvaluatePoints();
+            F.Log("Evaluated points :)");
         }
         public override void InitFlag(Flag flag)
         {
@@ -703,6 +709,67 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             base.EventLoopAction();
             FOBManager.OnGameTick(TicketCounter);
+        }
+
+        public void StartStagingPhase(int seconds)
+        {
+            StagingPhaseSeconds = seconds;
+            _state = EState.STAGING;
+
+            Flag firstFlag = null;
+            if (DefendingTeam == 1)
+                firstFlag = Rotation.First();
+            else if (DefendingTeam == 2)
+                firstFlag = Rotation.Last();
+
+            FOBManager.RegisterNewSpecialFOB("VCP", firstFlag.ZoneData.Center, DefendingTeam, "#5482ff", true);
+
+            StartCoroutine(StagingPhaseLoop());
+        }
+
+        public IEnumerator<WaitForSeconds> StagingPhaseLoop()
+        {
+            while (StagingPhaseSeconds > 0)
+            {
+                if (State != EState.STAGING)
+                {
+                    EndStagingPhase();
+                    yield break;
+                }
+
+                // update UI
+
+                yield return new WaitForSeconds(1);
+                StagingPhaseSeconds -= 1;
+            }
+            EndStagingPhase();
+        }
+        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        {
+            EffectManager.sendUIEffect(36036, 29000, player.connection, true);
+
+            if (player.GetTeam() == AttackingTeam)
+                EffectManager.sendUIEffectText(29000, player.connection, true, "TOP", "BRIEFING PHASE");
+            else if (player.GetTeam() == DefendingTeam)
+                EffectManager.sendUIEffectText(29000, player.connection, true, "TOP", "PREPARATION PHASE");
+
+            EffectManager.sendUIEffectText(29000, player.connection, true, "BOTTOM", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
+        }
+        public void UpdateStagingUIForAll()
+        {
+            TimeSpan timeLeft = TimeSpan.FromSeconds(StagingPhaseSeconds);
+            foreach (var player in PlayerManager.OnlinePlayers)
+                UpdateStagingUI(player, timeLeft);
+        }
+        private void EndStagingPhase()
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+                EffectManager.askEffectClearByID(29000, player.connection);
+
+            // clear UI
+            // remove main barricades
+            // remove VCP fob
+            _state = EState.ACTIVE;
         }
     }
 

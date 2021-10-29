@@ -9,46 +9,11 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
     public interface IStagingPhase
     {
-        int Seconds { get; set; }
-
-        bool IsActive { get; set; }
+        int StagingPhaseSeconds { get; set; }
 
         void StartStagingPhase(int seconds);
         IEnumerator<WaitForSeconds> StagingPhaseLoop();
-    }
-
-    public abstract class StagingPhase : MonoBehaviour, IStagingPhase
-    {
-        public int Seconds { get; set; }
-        public bool IsActive { get; set; }
-
-        public virtual void StartStagingPhase(int seconds)
-        {
-            IsActive = true;
-            Seconds = seconds;
-
-            StartCoroutine(StagingPhaseLoop());
-        }
-        public IEnumerator<WaitForSeconds> StagingPhaseLoop()
-        {
-            OnStagingPhaseStarted();
-
-            if (!IsActive)
-                yield break;
-
-            while (Seconds > 0)
-            {
-
-                // update UI
-
-                yield return new WaitForSeconds(1);
-                Seconds -= 1;
-            }
-
-            OnStagingPhaseEnded();
-
-        }
-        public abstract void OnStagingPhaseEnded();
-        public abstract void OnStagingPhaseStarted();
+        void UpdateStagingUI(UCPlayer player, TimeSpan timeLeft);
+        void UpdateStagingUIForAll();
     }
 }
