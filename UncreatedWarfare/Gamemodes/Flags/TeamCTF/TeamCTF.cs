@@ -292,8 +292,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void StartNextGame(bool onLoad = false)
         {
-            F.Log("Loading new game.", ConsoleColor.Cyan);
             base.StartNextGame(onLoad); // set game id
+            F.Log("Loading new game.", ConsoleColor.Cyan);
             LoadRotation();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();

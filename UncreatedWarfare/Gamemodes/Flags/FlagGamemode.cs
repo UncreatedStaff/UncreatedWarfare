@@ -149,7 +149,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             ResetFlags();
             _onFlag.Clear();
             _rotation.Clear();
-            _allFlags.Clear();
             _counter = 0;
             _counter2 = 0;
             base.Dispose();

@@ -35,10 +35,6 @@ namespace Uncreated.Warfare
     {
         public const int MAX_LOGS = 1000;
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-        public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
-        {
-            { "TeamCTF", typeof(TeamCTF) }, { "Invasion", typeof(Invasion) }, { "TDM", typeof(TeamDeathmatch) }
-        };
         public const string DATA_DIRECTORY = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
@@ -212,16 +208,22 @@ namespace Uncreated.Warfare
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             DatabaseManager.Open();
             CommandWindow.shouldLogDeaths = false;
+            Gamemode.ReadGamemodes();
 
-            F.Log("Searching for gamemode: " + UCWarfare.Config.ActiveGamemode, ConsoleColor.Magenta);
-            Gamemode = Gamemode.FindGamemode(UCWarfare.Config.ActiveGamemode, GAME_MODES);
-            if (Gamemode == null)
+            Type nextMode = Gamemode.GetNextGamemode();
+            if (nextMode == null) nextMode = typeof(TeamCTF);
+            Gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
+            if (Gamemode != null)
             {
-                F.LogError("Unable to find gamemode by the name " + UCWarfare.Config.ActiveGamemode + ", defaulting to " + nameof(TeamCTF));
-                Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
+                Gamemode.Init();
+                for (int i = 0; i < Provider.clients.Count; i++)
+                    Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
+                F.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
+                F.Log("Initialized gamemode.", ConsoleColor.Magenta);
+            } else
+            {
+                F.LogError("Failed to Initialize Gamemode");
             }
-            Gamemode.Init();
-            F.Log("Initialized gamemode.", ConsoleColor.Magenta);
             ReloadTCP();
             
             /* REFLECT PRIVATE VARIABLES */

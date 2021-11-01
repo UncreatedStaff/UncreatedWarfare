@@ -15,13 +15,14 @@ namespace Uncreated.Warfare.Gamemodes
 {
     internal class Insurgency : TeamGamemode, ITeams, IFOBs, IVehicles, IKitRequests, IRevives, ISquads, IImplementsLeaderboard, IStructureSaving
     {
-        private readonly Config<InsurgencyConfig> insurgencyConfig;
-        public InsurgencyConfig Config { get => insurgencyConfig.Data; }
+        private readonly Config<InsurgencyConfig> _config;
+        public InsurgencyConfig Config { get => _config.Data; }
 
         public Insurgency()
-            : base("Insurgency", 0.25F)
+            : base(nameof(Insurgency), 0.25F)
         {
-
+            _config = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
+            SetTiming(Config.EventLoopSpeed);
         }
 
         public override string DisplayName => "Insurgency";
@@ -85,11 +86,11 @@ namespace Uncreated.Warfare.Gamemodes
 
         public class InsurgencyConfig : ConfigData
         {
-
+            public float EventLoopSpeed;
             public InsurgencyConfig() => SetDefaults();
             public override void SetDefaults()
             {
-                
+                EventLoopSpeed = 0.25f;
             }
         }
     }

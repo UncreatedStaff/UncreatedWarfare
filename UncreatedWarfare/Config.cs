@@ -42,7 +42,6 @@ namespace Uncreated.Warfare
         public bool AllowCosmetics;
         public bool ModifySkillLevels;
         public bool AllowBatteryStealing;
-        public string ActiveGamemode;
         public string DiscordInviteCode;
         public float InjuredLifeTimeSeconds;
         public byte MaxPlayerCount;
@@ -68,6 +67,7 @@ namespace Uncreated.Warfare
         public bool UsePatchForPlayerCap;
         public bool DisableBackups;
         public float MaxVehicleHeightToLeave;
+        public string GamemodeRotation;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -94,7 +94,6 @@ namespace Uncreated.Warfare
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;
             this.AllowBatteryStealing = false;
-            this.ActiveGamemode = "TeamCTF";
             this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
             this.InjuredLifeTimeSeconds = 90f;
             this.InjuredDamageMultiplier = 0.1f;
@@ -120,6 +119,7 @@ namespace Uncreated.Warfare
             this.UsePatchForPlayerCap = true;
             this.DisableBackups = false;
             this.MaxVehicleHeightToLeave = 50f;
+            this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";
         }
     }
     public class Modules
