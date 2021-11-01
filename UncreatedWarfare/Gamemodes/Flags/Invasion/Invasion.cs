@@ -804,22 +804,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             EndStagingPhase();
         }
-        public void UpdateStagingUI(UCPlayer player, string timeleft, bool first)
+        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
-            if (first)
-            {
-                EffectManager.sendUIEffect(Config.HeaderID, 29100, player.connection, true);
-                if (player.GetTeam() == AttackingTeam)
-                    EffectManager.sendUIEffectText(29100, player.connection, true, "Top", "BRIEFING PHASE");
-                else if (player.GetTeam() == DefendingTeam)
-                    EffectManager.sendUIEffectText(29100, player.connection, true, "Top", "PREPARATION PHASE");
-            }
+            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
 
-            EffectManager.sendUIEffectText(29100, player.connection, true, "Bottom", $"{timeleft}");
+            if (player.GetTeam() == AttackingTeam)
+                EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
+            else if (player.GetTeam() == DefendingTeam)
+                EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "PREPARATION PHASE");
+
+            EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
         }
-        public void UpdateStagingUIForAll(bool first = false)
+        public void UpdateStagingUIForAll()
         {
-            TimeSpan timeLeft = TimeSpan.FromSeconds(_stagingSeconds);
+            TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
             foreach (var player in PlayerManager.OnlinePlayers)
                 UpdateStagingUI(player, timeLeft);
         }

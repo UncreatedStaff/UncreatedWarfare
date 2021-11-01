@@ -517,6 +517,8 @@ namespace Uncreated.Warfare.Gamemodes
 
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
+            ShowStagingUIForAll();
+
             while (StagingSeconds > 0)
             {
                 if (State != EState.STAGING)
@@ -532,14 +534,21 @@ namespace Uncreated.Warfare.Gamemodes
             }
             EndStagingPhase();
         }
-        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        public void ShowStagingUI(UCPlayer player)
         {
-            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
-
             if (player.GetTeam() == AttackingTeam)
                 EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
             else if (player.GetTeam() == DefendingTeam)
                 EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "PREPARATION PHASE");
+        }
+        public void ShowStagingUIForAll()
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+                ShowStagingUI(player);
+        }
+        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        {
+            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
 
             EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
         }
