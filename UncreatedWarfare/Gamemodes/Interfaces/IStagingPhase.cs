@@ -7,13 +7,13 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IStagingPhase
+    public interface IStagingPhase : IGamemode
     {
         int StagingSeconds { get; }
 
         void StartStagingPhase(int seconds);
         IEnumerator<WaitForSeconds> StagingPhaseLoop();
-        void UpdateStagingUI(UCPlayer player, TimeSpan timeLeft);
-        void UpdateStagingUIForAll();
+        void UpdateStagingUI(UCPlayer player, string timeLeft, bool first);
+        void UpdateStagingUIForAll(bool first);
     }
 }
