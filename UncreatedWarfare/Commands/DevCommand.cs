@@ -12,8 +12,6 @@ namespace Uncreated.Warfare.Commands
 {
     public class DevCommand
     {
-        public static event VoidDelegate OnTranslationsReloaded;
-        public static event VoidDelegate OnFlagsReloaded;
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "dev";
         public string Help => "Dev command for various server setup features.";

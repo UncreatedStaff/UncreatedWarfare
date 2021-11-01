@@ -12,6 +12,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 using System.Text;
+using Uncreated.Players;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -138,16 +139,26 @@ namespace Uncreated.Warfare.Gamemodes
                             gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
                         F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
                         Data.Gamemode = gamemode;
+                        _state = EState.DISCARD;
                         Destroy(this);
                         return;
                     }
                 }
             }
+            F.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             _state = EState.ACTIVE;
             _gameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
+            AnnounceMode();
+        }
+        private void AnnounceMode()
+        {
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+            {
+                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
+            }
         }
         public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
@@ -329,6 +340,7 @@ namespace Uncreated.Warfare.Gamemodes
         PAUSED,
         FINISHED,
         LOADING,
-        STAGING
+        STAGING,
+        DISCARD
     }
 }

@@ -245,14 +245,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 
         public static List<Flag> PathWithAdjacents(List<Flag> Selection, Dictionary<int, float> T1Adjacents, Dictionary<int, float> T2Adjacents)
         {
-            F.Log($"1. {Selection.Count}");
             List<Flag> path = new List<Flag>();
             StartAdjacentsLoop(path, Selection, T1Adjacents, T2Adjacents);
             return path;
         }
         private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, Dictionary<int, float> t1adjacents, Dictionary<int, float> t2adjacents)
         {
-            F.Log($"2. {selection.Count}");
             Flag first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
             if (first == null)
             {
@@ -277,7 +275,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 Flag pick = PickRandomFlagWithSpecifiedBias(initBiases);
                 if (pick != null)
                 {
-                    F.Log($"5. {pick.ID}");
                     pick.index = flags.Count;
                     flags.Add(pick);
                 }
@@ -300,7 +297,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static Dictionary<Flag, float> InstantiateFlags(Dictionary<int, float> flags, List<Flag> selection, List<Flag> toNotRemove, Flag current)
         {
-            F.Log($"3. {selection.Count}");
             Dictionary<Flag, float> rtn = new Dictionary<Flag, float>();
             foreach (KeyValuePair<int, float> flag in flags)
             {
@@ -309,26 +305,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     if (toNotRemove == null || !toNotRemove.Exists(x => x.ID == flag.Key))
                         rtn.Add(f, flag.Value);
-                    F.Log($"{flag.Key} == {f.ID}");
                 }
                 else if (current != null)
                 {
-                    F.Log($"{flag.Key} not found.");
                     F.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
                 }
                 else
                 {
-                    F.Log($"{flag.Key} not found.");
                     F.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
                 }
             }
-            F.Log($"3.5. {rtn.Count}");
             return rtn;
         }
 
         private static Flag PickRandomFlagWithSpecifiedBias(Dictionary<Flag, float> biases)
         {
-            F.Log($"4. {biases.Count}");
             if (biases.Count < 1)
             {
                 F.LogError("Biases was empty.");

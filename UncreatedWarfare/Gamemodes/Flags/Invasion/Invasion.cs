@@ -103,7 +103,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public override void StartNextGame(bool onLoad = false)
         {
             base.StartNextGame(onLoad); // set game id
-            F.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
+            if (_state == EState.DISCARD) return;
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
             if (_attackTeam == 1)
                 _defendTeam = 2;
@@ -119,14 +119,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             StartStagingPhase(Config.StagingPhaseSeconds);
 
             InvokeOnNewGameStarting(onLoad);
-            AnnounceMode();
-        }
-        private void AnnounceMode()
-        {
-            foreach (var player in PlayerManager.OnlinePlayers)
-            {
-                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
-            }
         }
         private void InvokeOnNewGameStarting(bool onLoad)
         {
@@ -578,7 +570,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
         }
         readonly Vector3 SpawnRotation = new Vector3(270f, 0f, 180f);
-        private string V3TStr(Vector3 v3) => $"({v3.x:N5}, {v3.y:N5}, {v3.z:N5})";
         private void PlaceBlockerOverAttackerMain()
         {
             DestroyBlockerBarricade();
@@ -783,6 +774,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public void ShowStagingUI(UCPlayer player)
         {
+            EffectManager.sendUIEffect(Config.HeaderID, 29001, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
                 EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
             else if (player.GetTeam() == DefendingTeam)
@@ -790,19 +782,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public void ShowStagingUIForAll()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 ShowStagingUI(player);
         }
         public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
-            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
-
             EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
         }
         public void UpdateStagingUIForAll()
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 UpdateStagingUI(player, timeLeft);
         }
         private void EndStagingPhase()
