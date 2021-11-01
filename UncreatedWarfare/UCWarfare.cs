@@ -11,6 +11,7 @@ using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -231,6 +232,8 @@ namespace Uncreated.Warfare
         }
         internal void UpdateLangs(SteamPlayer player)
         {
+            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
                 List<BarricadeDrop> signs = new List<BarricadeDrop>();
@@ -255,10 +258,14 @@ namespace Uncreated.Warfare
                 InvasionUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), inv.Rotation,
                     inv.Config.FlagUICount, inv.Config.AttackIcon, inv.Config.DefendIcon, inv.AttackingTeam, inv.Config.LockedIcon);
             }
+            else if (Data.Is(out Insurgency ins))
+            {
+                if (ucplayer != null)
+                    ins.UpdateUI(ucplayer);
+            }
             if (Data.Is<ISquads>(out _))
             {
                 ulong team = player.GetTeam();
-                UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
                 if (ucplayer.Squad == null)
                     SquadManager.UpdateSquadList(ucplayer);
                 else

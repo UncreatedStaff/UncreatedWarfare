@@ -221,6 +221,11 @@ namespace Uncreated.Warfare
                 { "emplacement_built", "<color=#b0ffa8>Successfully built {0}. Do /ammo on it to resupply.</color>" },
                 { "fortification_built", "<color=#b0ffa8>Successfully built {0}.</color>" },
                 { "fob_ui", "{0} {1}" },
+                { "cache_destroyed_attack", "<color=#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED</color>" },
+                { "cache_destroyed_defence", "<color=#deadad>WEAPONS CACHE HAS BEEN DESTROYED</color>" },
+                { "cache_discovered_attack", "<color=#dbdbdb>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>" },
+                { "cache_discovered_defence", "<color=#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT</color>" },
+                { "cache_spawned_defence", "<color=#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE</color>" },
 
                 // deployment
                 { "deploy_s", "<color=#fae69c>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
@@ -705,6 +710,8 @@ namespace Uncreated.Warfare
                 { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
                 { "xp_flag_attack", "ATTACK" },
                 { "xp_flag_defend", "DEFENCE" },
+                { "xp_cache_killed", "CACHE DESTROYED" },
+                { "xp_cache_teamkilled", "FRIENDLY CACHE DESTROYED" },
 
                 { "xp_squad_bonus", "SQUAD BONUS" },
                 { "xp_on_duty", "ON DUTY" },

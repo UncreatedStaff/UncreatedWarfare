@@ -9,11 +9,13 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
     public interface IStagingPhase : IGamemode
     {
-        int StagingPhaseSeconds { get; set; }
+        int StagingSeconds { get; }
 
         void StartStagingPhase(int seconds);
         IEnumerator<WaitForSeconds> StagingPhaseLoop();
-        void UpdateStagingUI(UCPlayer player, string timeLeft, bool first);
-        void UpdateStagingUIForAll(bool first);
+        void ShowStagingUI(UCPlayer player);
+        void ShowStagingUIForAll();
+        void UpdateStagingUI(UCPlayer player, TimeSpan timeleft);
+        void UpdateStagingUIForAll();
     }
 }

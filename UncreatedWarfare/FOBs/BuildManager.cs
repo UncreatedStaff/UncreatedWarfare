@@ -67,7 +67,7 @@ namespace Uncreated.Warfare.FOBs
                 );
 
             IEnumerable<BarricadeDrop> FOBstructures = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.FOBID, FOBManager.config.Data.FOBBuildPickupRadius, player.Position, player.GetTeam(), true);
-            FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault());
+            FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault(), "54e3ff");
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
             StatsManager.ModifyTeam(team, t => t.FobsBuilt++, false);
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);

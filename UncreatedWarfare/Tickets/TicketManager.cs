@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -40,42 +41,32 @@ namespace Uncreated.Warfare.Tickets
             _Team1previousTickets = config.Data.StartingTickets;
             _Team2previousTickets = config.Data.StartingTickets;
 
-
+            
 
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
         public static void OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
         {
             if (TeamManager.IsTeam1(eventArgs.dead))
-            {
                 AddTeam1Tickets(-1);
-            }
             else if (TeamManager.IsTeam2(eventArgs.dead))
-            {
                 AddTeam2Tickets(-1);
-            }
+
         }
         public static void OnPlayerDeathOffline(ulong deadteam)
         {
             if (deadteam == 1)
-            {
                 AddTeam1Tickets(-1);
-            }
             else if (deadteam == 2)
-            {
                 AddTeam2Tickets(-1);
-            }
+
         }
         public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
         {
             if (TeamManager.IsTeam1(eventArgs.dead))
-            {
                 AddTeam1Tickets(-1);
-            }
             else if (TeamManager.IsTeam2(eventArgs.dead))
-            {
                 AddTeam2Tickets(-1);
-            }
         }
         public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
@@ -94,14 +85,12 @@ namespace Uncreated.Warfare.Tickets
             if (VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
             {
                 ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
+
                 if (lteam == 1)
-                {
                     AddTeam1Tickets(-1 * data.TicketCost);
-                }
                 else if (lteam == 2)
-                {
                     AddTeam2Tickets(-1 * data.TicketCost);
-                }
+
                 if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
                     if (XPManager.config.Data.VehicleDestroyedXP.ContainsKey(data.Type))
@@ -381,6 +370,22 @@ namespace Uncreated.Warfare.Tickets
                     Team1Tickets = defence;
                 }
             }
+            else if (Data.Is(out Insurgency insurgency))
+            {
+                int attack = insurgency.Config.AttackStartingTickets;
+                int defence = insurgency.CachesLeft;
+
+                if (insurgency.AttackingTeam == 1)
+                {
+                    Team1Tickets = attack;
+                    Team2Tickets = defence;
+                }
+                else if (insurgency.AttackingTeam == 2)
+                {
+                    Team2Tickets = attack;
+                    Team1Tickets = defence;
+                }
+            }
             else
             {
                 Team1Tickets = config.Data.StartingTickets;
@@ -393,6 +398,9 @@ namespace Uncreated.Warfare.Tickets
 
         public static void AddTeam1Tickets(int number)
         {
+            if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == 1)
+                return;
+
             Team1Tickets += number;
             if (Team1Tickets <= 0)
             {
@@ -403,6 +411,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void AddTeam2Tickets(int number)
         {
+            if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == 2)
+                return;
+
             Team2Tickets += number;
             if (Team2Tickets <= 0)
             {
@@ -427,11 +438,20 @@ namespace Uncreated.Warfare.Tickets
                 UIID = config.Data.Team2TicketUIID;
             }
 
-            EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
+            if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == team)
+            {
+                EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
+                insurgency.CachesLeft.ToString(Data.Locale) + " Caches", "", "");
+            }
+            else
+            {
+                EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
                 bleed < 0 ? bleed.ToString(Data.Locale) : string.Empty,
                 message
                 );
+            }
+                
         }
         public static void UpdateUITeam1()
         {

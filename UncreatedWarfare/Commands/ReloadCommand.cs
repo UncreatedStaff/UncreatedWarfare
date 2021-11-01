@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
@@ -163,6 +164,9 @@ namespace Uncreated.Warfare.Commands
 
                 UCWarfare.Instance.Configuration.Load();
                 if (Data.DatabaseManager != null) Data.DatabaseManager.DebugLogging = UCWarfare.Config.Debug;
+
+                if (Data.Is(out Insurgency insurgency))
+                    insurgency.ReloadConfig();
             }
             catch (Exception ex)
             {
