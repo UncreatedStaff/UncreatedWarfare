@@ -514,7 +514,6 @@ namespace Uncreated.Warfare.Gamemodes
 
             StartCoroutine(StagingPhaseLoop());
         }
-
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
             ShowStagingUIForAll();

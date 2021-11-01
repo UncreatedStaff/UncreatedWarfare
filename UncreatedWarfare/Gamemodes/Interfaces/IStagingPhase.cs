@@ -13,6 +13,8 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
 
         void StartStagingPhase(int seconds);
         IEnumerator<WaitForSeconds> StagingPhaseLoop();
+        void ShowStagingUI(UCPlayer player);
+        void ShowStagingUIForAll();
         void UpdateStagingUI(UCPlayer player, TimeSpan timeleft);
         void UpdateStagingUIForAll();
     }

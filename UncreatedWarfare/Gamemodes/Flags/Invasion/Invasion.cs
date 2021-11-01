@@ -789,29 +789,38 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         protected Coroutine UpdateCoroutine = null;
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
-            bool first = true;
-            while (StagingPhaseSeconds > 0)
+            ShowStagingUIForAll();
+
+            while (StagingSeconds > 0)
             {
                 if (State != EState.STAGING)
                 {
                     EndStagingPhase();
                     yield break;
                 }
-                UpdateStagingUIForAll(first);
-                first = false;
+
+                UpdateStagingUIForAll();
+
                 yield return new WaitForSeconds(1);
-                StagingPhaseSeconds--;
+                _stagingSeconds -= 1;
             }
             EndStagingPhase();
         }
-        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        public void ShowStagingUI(UCPlayer player)
         {
-            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
-
             if (player.GetTeam() == AttackingTeam)
                 EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
             else if (player.GetTeam() == DefendingTeam)
                 EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "PREPARATION PHASE");
+        }
+        public void ShowStagingUIForAll()
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+                ShowStagingUI(player);
+        }
+        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        {
+            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
 
             EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
         }
