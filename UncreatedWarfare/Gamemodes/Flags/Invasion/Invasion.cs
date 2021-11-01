@@ -69,7 +69,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public SquadManager SquadManager { get => _squadManager; }
         protected StructureSaver _structureSaver;
         public StructureSaver StructureSaver { get => _structureSaver; }
-        public int StagingPhaseSeconds { get; set; }
+        protected int _stagingSeconds { get; set; }
+        public int StagingSeconds { get => _stagingSeconds; }
 
         public Invasion() : base(nameof(Invasion), 0.25f)
         {
@@ -117,6 +118,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             StartStagingPhase(Config.StagingPhaseSeconds);
 
             InvokeOnNewGameStarting(onLoad);
+            AnnounceMode();
+        }
+        private void AnnounceMode()
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
+            }
         }
         private void InvokeOnNewGameStarting(bool onLoad)
         {
@@ -713,7 +722,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
         public void StartStagingPhase(int seconds)
         {
-            StagingPhaseSeconds = seconds;
+            _stagingSeconds = seconds;
             _state = EState.STAGING;
 
             Flag firstFlag = null;
@@ -729,7 +738,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
-            while (StagingPhaseSeconds > 0)
+            while (_stagingSeconds > 0)
             {
                 if (State != EState.STAGING)
                 {
@@ -740,7 +749,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 UpdateStagingUIForAll();
 
                 yield return new WaitForSeconds(1);
-                StagingPhaseSeconds -= 1;
+                _stagingSeconds -= 1;
             }
             EndStagingPhase();
         }
@@ -757,7 +766,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public void UpdateStagingUIForAll()
         {
-            TimeSpan timeLeft = TimeSpan.FromSeconds(StagingPhaseSeconds);
+            TimeSpan timeLeft = TimeSpan.FromSeconds(_stagingSeconds);
             foreach (var player in PlayerManager.OnlinePlayers)
                 UpdateStagingUI(player, timeLeft);
         }

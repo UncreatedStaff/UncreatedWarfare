@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -34,7 +35,6 @@ namespace Uncreated.Warfare.FOBs
             OnPlayerLeftFOBRadius += OnLeftFOBRadius;
             OnEnemyEnteredFOBRadius += OnEnemyEnteredFOB;
             OnEnemyLeftFOBRadius += OnEnemyLeftFOB;
-
         }
 
         public static void Dispose()
@@ -43,6 +43,14 @@ namespace Uncreated.Warfare.FOBs
             OnPlayerLeftFOBRadius -= OnLeftFOBRadius;
             OnEnemyEnteredFOBRadius -= OnEnemyEnteredFOB;
             OnEnemyLeftFOBRadius -= OnEnemyLeftFOB;
+        }
+        public static void OnnewGameStarting()
+        {
+            Team1FOBs.Clear();
+            Team2FOBs.Clear();
+            SpecialFOBs.Clear();
+
+            UpdateUIAll();
         }
         public static void OnItemDropped(Item item, Vector3 point)
         {
@@ -213,7 +221,7 @@ namespace Uncreated.Warfare.FOBs
                         }
                         else
                         {
-                            if (counter % 5 == 0)
+                            if (counter % 4 == 0)
                             {
                                 UpdateBuildUIForFOB(fob.Structure);
                             }
@@ -230,28 +238,37 @@ namespace Uncreated.Warfare.FOBs
                 }
                 else
                 {
-                    if (!PlayerManager.OnlinePlayers[j].Player.life.isDead && (fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(9, 2))
+                    if ((fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(9, 2))
                     {
-                        if (!fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
+                        if (!PlayerManager.OnlinePlayers[j].Player.life.isDead)
                         {
-                            fob.nearbyEnemies.Add(PlayerManager.OnlinePlayers[j]);
-                            OnEnemyEnteredFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
+                            if (!fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
+                            {
+                                fob.nearbyEnemies.Add(PlayerManager.OnlinePlayers[j]);
+                                OnEnemyEnteredFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
+                            }
                         }
-                    }
-                    else
-                    {
-                        if (fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
+                        else if (fob.nearbyEnemies.Contains(PlayerManager.OnlinePlayers[j]))
                         {
                             fob.nearbyEnemies.Remove(PlayerManager.OnlinePlayers[j]);
                             OnEnemyLeftFOBRadius?.Invoke(fob, PlayerManager.OnlinePlayers[j]);
                         }
+                    }
+                    else if (
+                        Data.Is(out Insurgency insurgency) &&
+                        fob.IsCache &&
+                        !fob.isDiscovered &&
+                        !PlayerManager.OnlinePlayers[j].Player.life.isDead &&
+                        (fob.Structure.model.position - PlayerManager.OnlinePlayers[j].Position).sqrMagnitude < Math.Pow(insurgency.Config.CacheDiscoverRange, 2))
+                    {
+                        insurgency.OnCacheDiscovered(fob);
                     }
                 }
             }
         }
         public static void Tick(SpecialFOB special, int counter = -1)
         {
-            if (special.DisappearAroundEnemies && counter % 5 == 0)
+            if (special.DisappearAroundEnemies && counter % 4 == 0)
             {
                 if (Provider.clients.Where(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(20, 2)).Count() > 0)
                 {
@@ -292,11 +309,8 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
-            if (data.barricade.id == config.Data.FOBID)
-            {
-                DeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeComponent o) ? o.LastDamager : 0);
-            }
-            else if (data.barricade.id == config.Data.AmmoCrateID)
+
+            if (data.barricade.id == config.Data.AmmoCrateID)
             {
                 IEnumerable<BarricadeDrop> TotalFOBs = UCBarricadeManager.GetAllFobs().Where(f => f.GetServersideData().group == data.group);
                 IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, config.Data.FOBBuildPickupRadius, drop.model.position, true);
@@ -321,6 +335,10 @@ namespace Uncreated.Warfare.FOBs
                     component.OnDestroyed();
                 }
             }
+            else
+            {
+                DeleteFOB(instanceID, data.group.GetTeam(), drop.model.TryGetComponent(out BarricadeComponent o) ? o.LastDamager : 0);
+            }
         }
 
         public static void LoadFobsFromMap()
@@ -335,58 +353,92 @@ namespace Uncreated.Warfare.FOBs
 
             for (int i = 0; i < Team1FOBs.Count; i++)
             {
-                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team1FOBBarricades[i]));
+                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team1FOBBarricades[i], "54e3ff"));
             }
             for (int i = 0; i < Team2FOBs.Count; i++)
             {
-                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team2FOBBarricades[i]));
+                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team2FOBBarricades[i], "54e3ff"));
             }
             UpdateUIAll();
         }
-        public static void RegisterNewFOB(BarricadeDrop Structure)
+        public static FOB RegisterNewFOB(BarricadeDrop Structure, string color, bool isCache = false)
         {
+            FOB fob = null;
             ulong team = Structure.GetServersideData().group.GetTeam();
-            if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
+            if (isCache && Data.Is(out Insurgency insurgency))
             {
-                if (F.TryGetPlaytimeComponent(Structure.GetServersideData().owner, out PlaytimeComponent c) && c.stats is IFOBStats f)
-                    f.AddFOBPlaced();
+                int number = insurgency.CachesDestroyed + 1;
+                fob = new FOB("CACHE" + (number).ToString(Data.Locale), number, Structure, color, isCache);
+                
                 if (team == 1)
                 {
-                    ctf.GameStats.fobsPlacedT1++;
+                    Team1FOBs.Insert(0, fob);
                 }
                 else if (team == 2)
                 {
-                    ctf.GameStats.fobsPlacedT2++;
+                    Team2FOBs.Insert(0, fob);
                 }
             }
-            if (team == 1)
+            else
             {
-                for (int i = 0; i < Team1FOBs.Count; i++)
+                if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
                 {
-                    if (Team1FOBs[i].Number != i + 1)
+                    if (F.TryGetPlaytimeComponent(Structure.GetServersideData().owner, out PlaytimeComponent c) && c.stats is IFOBStats f)
+                        f.AddFOBPlaced();
+                    if (team == 1)
                     {
-                        Team1FOBs.Insert(i, new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Structure));
-                        return;
+                        ctf.GameStats.fobsPlacedT1++;
+                    }
+                    else if (team == 2)
+                    {
+                        ctf.GameStats.fobsPlacedT2++;
                     }
                 }
 
-                Team1FOBs.Add(new FOB("FOB" + (Team1FOBs.Count + 1).ToString(Data.Locale), Team1FOBs.Count + 1, Structure));
-            }
-            else if (team == 2)
-            {
-                for (int i = 0; i < Team2FOBs.Count; i++)
+                if (team == 1)
                 {
-                    if (Team2FOBs[i].Number != i + 1)
+                    bool placed = false;
+                    for (int i = 0; i < Team1FOBs.Count; i++)
                     {
-                        Team2FOBs.Insert(i, new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Structure));
-                        return;
+                        if (Team1FOBs[i].Number != i + 1)
+                        {
+                            fob = new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Structure, color, isCache);
+                            Team1FOBs.Insert(i, fob);
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed)
+                    {
+                        fob = new FOB("FOB" + (Team1FOBs.Count + 1).ToString(Data.Locale), Team1FOBs.Count + 1, Structure, color, isCache);
+                        Team1FOBs.Add(fob);
+                    }
+                        
+                }
+                else if (team == 2)
+                {
+                    bool placed = false;
+                    for (int i = 0; i < Team2FOBs.Count; i++)
+                    {
+                        if (Team2FOBs[i].Number != i + 1)
+                        {
+                            fob = new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Structure, color, isCache);
+                            Team2FOBs.Insert(i, fob);
+                            placed = true;
+                            break;
+                        }
+                    }
+
+                    if (!placed)
+                    {
+                        fob = new FOB("FOB" + (Team2FOBs.Count + 1).ToString(Data.Locale), Team2FOBs.Count + 1, Structure, color, isCache);
+                        Team2FOBs.Add(fob);
                     }
                 }
-
-                Team2FOBs.Add(new FOB("FOB" + (Team2FOBs.Count + 1).ToString(Data.Locale), Team2FOBs.Count + 1, Structure));
             }
 
             UpdateUIForTeam(team);
+            return fob;
         }
         public static void RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor, bool disappearAroundEnemies)
         {
@@ -439,9 +491,14 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
             UCPlayer ucplayer = UCPlayer.FromID(player);
-            if (ucplayer != null)
+            bool isInsurgency = Data.Is(out Insurgency insurgency);
+            if (isInsurgency && removed != null && removed.IsCache)
             {
-                if (ucplayer.GetTeam() == team)
+                insurgency.OnCacheDestroyed(removed, ucplayer);
+            }
+            else if (ucplayer != null)
+            {
+                if (ucplayer.GetTeam() == team && !isInsurgency)
                 {
                     XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
                 }
@@ -528,13 +585,13 @@ namespace Uncreated.Warfare.FOBs
             else return;
 
 
-            for (int i = 0; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
+            for (int i = 0; i < 10; i++)
             {
                 EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
             }
 
             int start = 0;
-            for (int i = start; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
+            for (int i = 0; i < Math.Min(SpecialFOBs.Count, config.Data.FobLimit); i++)
             {
                 if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == player.GetTeam())
                 {
@@ -544,11 +601,11 @@ namespace Uncreated.Warfare.FOBs
                     start++;
                 }
             }
-            for (int i = start; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
+            for (int i = 0; i < Math.Min(FOBList.Count, config.Data.FobLimit); i++)
             {
-                string name = FOBList[i].nearbyEnemies.Count == 0 ? $"<color=#54e3ff>{FOBList[i].Name}</color>" : $"<color=#ff8754>{FOBList[i].Name}</color>";
+                string name = FOBList[i].nearbyEnemies.Count == 0 ? $"<color={FOBList[i].UIColor}>{FOBList[i].Name}</color>" : $"<color=#ff8754>{FOBList[i].Name}</color>";
 
-                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
+                EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i + start)), unchecked((short)(config.Data.FirstFOBUiId + i + start)),
                 player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, FOBList[i].ClosestLocation));
             }
         }
@@ -576,7 +633,10 @@ namespace Uncreated.Warfare.FOBs
         public string ClosestLocation;
         public List<UCPlayer> nearbyPlayers;
         public List<UCPlayer> nearbyEnemies;
-        public FOB(string Name, int number, BarricadeDrop Structure)
+        public bool IsCache;
+        public string UIColor;
+        public bool isDiscovered;
+        public FOB(string Name, int number, BarricadeDrop Structure, string color, bool isCache = false)
         {
             this.Name = Name;
             Number = number;
@@ -589,6 +649,10 @@ namespace Uncreated.Warfare.FOBs
                 .name;
             nearbyPlayers = new List<UCPlayer>();
             nearbyEnemies = new List<UCPlayer>();
+
+            IsCache = isCache;
+            UIColor = color;
+            isDiscovered = false;
         }
     }
 

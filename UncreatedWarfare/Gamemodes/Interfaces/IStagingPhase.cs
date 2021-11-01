@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
     public interface IStagingPhase
     {
-        int StagingPhaseSeconds { get; set; }
+        int StagingSeconds { get; }
 
         void StartStagingPhase(int seconds);
         IEnumerator<WaitForSeconds> StagingPhaseLoop();

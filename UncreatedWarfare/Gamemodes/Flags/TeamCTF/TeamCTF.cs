@@ -37,7 +37,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public List<ulong> InAMC = new List<ulong>();
         public Flag ObjectiveTeam1 => _rotation[_objectiveT1Index];
         public Flag ObjectiveTeam2 => _rotation[_objectiveT2Index];
-        public override string DisplayName => "Military RP";
+        public override string DisplayName => "Advance and Secure";
         public override bool EnableAMC => true;
         public override bool ShowOFPUI => true;
         public override bool ShowXPUI => true;
@@ -298,6 +298,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
             InvokeOnNewGameStarting(onLoad);
+            AnnounceMode();
+        }
+        private void AnnounceMode()
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
+            }
         }
         public override void LoadRotation()
         {

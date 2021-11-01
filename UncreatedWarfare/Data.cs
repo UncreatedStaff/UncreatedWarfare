@@ -37,7 +37,7 @@ namespace Uncreated.Warfare
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly Dictionary<string, Type> GAME_MODES = new Dictionary<string, Type>
         {
-            { "TeamCTF", typeof(TeamCTF) }, { "Invasion", typeof(Invasion) }, { "TDM", typeof(TeamDeathmatch) }
+            { "TeamCTF", typeof(TeamCTF) }, { "Invasion", typeof(Invasion) }, { "Insurgency", typeof(Insurgency) }, { "TDM", typeof(TeamDeathmatch) }
         };
         public const string DATA_DIRECTORY = @"Plugins\UncreatedWarfare\";
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
