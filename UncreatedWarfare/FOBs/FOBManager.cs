@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.FOBs
             OnEnemyEnteredFOBRadius -= OnEnemyEnteredFOB;
             OnEnemyLeftFOBRadius -= OnEnemyLeftFOB;
         }
-        public static void OnnewGameStarting()
+        public static void OnNewGameStarting()
         {
             Team1FOBs.Clear();
             Team2FOBs.Clear();

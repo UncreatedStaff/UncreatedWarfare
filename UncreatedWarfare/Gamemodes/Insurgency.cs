@@ -122,7 +122,7 @@ namespace Uncreated.Warfare.Gamemodes
             {
                 VehicleSpawner.RespawnAllVehicles();
             }
-            FOBManager.OnnewGameStarting();
+            FOBManager.OnNewGameStarting();
             RallyManager.WipeAllRallies();
 
             SpawnNewCache();
