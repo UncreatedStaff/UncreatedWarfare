@@ -195,7 +195,7 @@ namespace Uncreated.Warfare.Vehicles
             VehicleID = 0;
             VehicleInstanceID = 0;
             IsActive = true;
-            this.type = EStructType.BARRICADE;
+            type = EStructType.BARRICADE;
             initialized = false;
         }
         public void Initialize()

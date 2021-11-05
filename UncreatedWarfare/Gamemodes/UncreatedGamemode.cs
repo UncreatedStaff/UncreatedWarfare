@@ -58,6 +58,7 @@ namespace Uncreated.Warfare.Gamemodes
             if (EventLoopCoroutine == null)
                 return;
             StopCoroutine(EventLoopCoroutine);
+            F.Log("Event loop stopped", ConsoleColor.DarkGray);
         }
         public virtual void Init()
         {

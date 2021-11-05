@@ -221,6 +221,33 @@ namespace Uncreated.Warfare.Components
             }
             try
             {
+                if (deployable is FOB fob)
+                {
+                    if (fob.IsCache)
+                    {
+                        position = fob.Structure.model.TransformPoint(new Vector3(0, 3, 0));
+                    }
+                    else
+                    {
+                        UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.GetServersideData().owner);
+                        if (FOBowner != null)
+                        {
+                            if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
+                            {
+                                XP.XPManager.AddXP(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP,
+                                    F.Translate("xp_deployed_fob", FOBowner));
+
+                                if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
+                                {
+                                    Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
+                                }
+                            }
+                        }
+                        else
+                            Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, XP.XPManager.config.Data.FOBDeployedXP);
+                    }
+                }
+
                 player.teleportToLocationUnsafe(position, angle);
 
                 _currentTeleportRequest = default;
@@ -229,25 +256,6 @@ namespace Uncreated.Warfare.Components
                     player.Message("deploy_s", locationName);
                 CooldownManager.StartCooldown(UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
 
-                if (deployable is FOB fob)
-                {
-                    UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.GetServersideData().owner);
-                    if (FOBowner != null)
-                    {
-                        if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
-                        {
-                            XP.XPManager.AddXP(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP,
-                                F.Translate("xp_deployed_fob", FOBowner));
-
-                            if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
-                            {
-                                Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
-                            }
-                        }
-                    }
-                    else
-                        Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, XP.XPManager.config.Data.FOBDeployedXP);
-                }
                 yield break;
             }
             catch (Exception ex)

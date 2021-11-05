@@ -27,14 +27,19 @@ namespace Uncreated.Warfare.Components
 
         public void OnDestroyed()
         {
-            for (int i = 0; i < nearbyPlayers.Count; i++)
+            var FOBs = FOBManager.GetFriendlyFOBs(data.group);
+
+            foreach (var p in nearbyPlayers)
             {
-                IEnumerable<BarricadeDrop> TotalFOBs = UCBarricadeManager.GetAllFobs().Where(f => f.GetServersideData().group == data.group);
-                IEnumerable<BarricadeDrop> NearbyFOBs = UCBarricadeManager.GetNearbyBarricades(TotalFOBs, 30, drop.model.position, true);
+                var NearbyFOBs = FOBs.Where(f => f.nearbyPlayers.Contains(p));
 
                 if (NearbyFOBs.Count() == 0)
                 {
-                    EffectManager.askEffectClearByID(FOBManager.config.Data.BuildResourceUI, nearbyPlayers[i].Player.channel.owner.transportConnection);
+                    EffectManager.askEffectClearByID(FOBManager.config.Data.BuildResourceUI, p.connection);
+                }
+                else
+                {
+                    FOBManager.UpdateBuildUI(p);
                 }
             }
         }
@@ -61,8 +66,9 @@ namespace Uncreated.Warfare.Components
                                 if (NearbyFOBs.Count() == 0)
                                 {
                                     EffectManager.sendUIEffect(FOBManager.config.Data.BuildResourceUI, (short)unchecked(FOBManager.config.Data.BuildResourceUI), PlayerManager.OnlinePlayers[i].Player.channel.owner.transportConnection, true);
-                                    FOBManager.UpdateBuildUIForFOB(drop);
                                 }
+
+                                FOBManager.UpdateBuildUI(PlayerManager.OnlinePlayers[i]);
                             }
                         }
                         else

@@ -116,8 +116,6 @@ namespace Uncreated.Warfare
             drop = null;
             return false;
         }
-        public static IEnumerable<BarricadeDrop> GetNearbyFOBs(Vector3 origin, ulong team = 0, float radius = 100, bool sort = true) =>
-            team == 1 || team == 2 ? GetNearbyBarricades(FOBManager.config.Data.FOBID, radius, origin, team, sort) : GetNearbyBarricades(FOBManager.config.Data.FOBID, radius, origin, sort);
         public static IEnumerable<BarricadeDrop> GetAllFobs(ulong team = 0)
         {
             List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -337,18 +335,19 @@ namespace Uncreated.Warfare
                 return interactable;
             else return null;
         }
-        public static void RemoveSingleItemFromStorage(InteractableStorage storage, ushort item_id)
+        public static bool RemoveSingleItemFromStorage(InteractableStorage storage, ushort item_id)
         {
             for (byte i = 0; i < storage.items.items.Count; i++)
             {
                 if (storage.items.getItem(i).item.id == item_id)
                 {
                     storage.items.removeItem(i);
-                    return;
+                    return true;
                 }
             }
+            return false;
         }
-        public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort item_id, int amount)
+        public static int RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort item_id, int amount)
         {
             int counter = 0;
 
@@ -360,9 +359,10 @@ namespace Uncreated.Warfare
                     storage.items.removeItem(i);
 
                     if (counter == amount)
-                        return;
+                        return counter;
                 }
             }
+            return counter;
         }
         public static InteractableVehicle GetVehicleFromLook(PlayerLook look) => GetInteractableFromLook<InteractableVehicle>(look, RayMasks.VEHICLE);
 

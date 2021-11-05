@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public delegate Task ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
     public delegate Task FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
     public delegate Task FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-    public class TeamCTF : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IImplementsLeaderboard, IStructureSaving
+    public class TeamCTF : TicketGamemode, IFlagTeamObjectiveGamemode, IWarstatsGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IImplementsLeaderboard, IStructureSaving, IStagingPhase
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
         // vars
@@ -71,6 +71,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public bool isScreenUp => _isScreenUp;
         private WarStatsTracker _gameStats;
         public WarStatsTracker GameStats => _gameStats;
+
+        protected int _stagingSeconds { get; set; }
+        public int StagingSeconds { get => _stagingSeconds; }
 
 
         // events
@@ -253,21 +256,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
             this._state = EState.FINISHED;
-            ReplaceBarricadesAndStructures();
-            Commands.ClearCommand.WipeVehiclesAndRespawn();
-            Commands.ClearCommand.ClearItems();
             TicketManager.OnRoundWin(winner);
             StartCoroutine(EndGameCoroutine(winner));
         }
         private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
         {
             yield return new WaitForSeconds(Config.end_delay);
+
+            ReplaceBarricadesAndStructures();
+            Commands.ClearCommand.WipeVehiclesAndRespawn();
+            Commands.ClearCommand.ClearItems();
+
             InvokeOnTeamWin(winner);
             if (Config.ShowLeaderboard)
             {
                 _endScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
                 _endScreen.winner = winner;
-                _endScreen.Gamemode = this;
                 _endScreen.warstats = GameStats;
                 _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
                 _endScreen.ShuttingDown = shutdownAfterGame;
@@ -299,6 +303,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             GameStats.Reset();
             InvokeOnNewGameStarting(onLoad);
             AnnounceMode();
+            StartStagingPhase(Config.StagingPhaseSeconds);
         }
         private void AnnounceMode()
         {
@@ -738,6 +743,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            FOBManager.Reset();
             Destroy(_gameStats);
             base.Dispose();
         }
@@ -745,6 +751,63 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             base.EventLoopAction();
             FOBManager.OnGameTick(TicketCounter);
+        }
+
+        public void StartStagingPhase(int seconds)
+        {
+            _stagingSeconds = seconds;
+            _state = EState.STAGING;
+
+            StartCoroutine(StagingPhaseLoop());
+        }
+        public IEnumerator<WaitForSeconds> StagingPhaseLoop()
+        {
+            ShowStagingUIForAll();
+
+            while (StagingSeconds > 0)
+            {
+                if (State != EState.STAGING)
+                {
+                    EndStagingPhase();
+                    yield break;
+                }
+
+                UpdateStagingUIForAll();
+
+                yield return new WaitForSeconds(1);
+                _stagingSeconds -= 1;
+            }
+            EndStagingPhase();
+        }
+        public void ShowStagingUI(UCPlayer player)
+        {
+            EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
+        }
+        public void ShowStagingUIForAll()
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+                ShowStagingUI(player);
+        }
+        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        {
+            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
+
+            EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
+        }
+        public void UpdateStagingUIForAll()
+        {
+            TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
+            foreach (var player in PlayerManager.OnlinePlayers)
+                UpdateStagingUI(player, timeLeft);
+        }
+        private void EndStagingPhase()
+        {
+            TicketManager.OnStagingPhaseEnded();
+
+            foreach (var player in PlayerManager.OnlinePlayers)
+                EffectManager.askEffectClearByID(29001, player.connection);
+
+            _state = EState.ACTIVE;
         }
     }
     public class TeamCTFData : ConfigData
@@ -774,10 +837,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public int end_delay;
         public float NearOtherBaseKillTimer;
         public int xpSecondInterval;
-        // 0-360
-        public float team1spawnangle;
-        public float team2spawnangle;
-        public float lobbyspawnangle;
+        public int StagingPhaseSeconds;
         public Dictionary<int, float> team1adjacencies;
         public Dictionary<int, float> team2adjacencies;
         public TeamCTFData() => SetDefaults();
@@ -806,12 +866,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.PathingData = new AutoObjectiveData();
             this.end_delay = 15;
             this.NearOtherBaseKillTimer = 10f;
-            this.team1spawnangle = 0f;
-            this.team2spawnangle = 0f;
-            this.lobbyspawnangle = 0f;
             this.team1adjacencies = new Dictionary<int, float>();
             this.team2adjacencies = new Dictionary<int, float>();
             this.xpSecondInterval = 10;
+            this.StagingPhaseSeconds = 90;
         }
         public class AutoObjectiveData
         {

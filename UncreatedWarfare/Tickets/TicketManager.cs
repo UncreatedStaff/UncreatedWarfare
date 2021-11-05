@@ -70,6 +70,14 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
+            if (Data.Is(out Insurgency insurgency))
+            {
+                if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
+                {
+                    insurgency.AddIntelligencePoints(1);
+                }
+            }
+
             XPManager.AddXP(parameters.killer, UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75),
                 F.Translate("xp_enemy_killed", parameters.killer.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(parameters.dead).CharacterName));
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
@@ -205,7 +213,7 @@ namespace Uncreated.Warfare.Tickets
                 }
                 else if (capturedTeam == 2)
                 {
-                    Team1Tickets += invasion.Config.TicketsFlagCaptured;
+                    Team2Tickets += invasion.Config.TicketsFlagCaptured;
                     flag.HasBeenCapturedT2 = true;
                 }
             }
@@ -349,11 +357,12 @@ namespace Uncreated.Warfare.Tickets
             GetTeamBleed(newGroup, out int bleed, out string message);
             UpdateUI(player.transportConnection, newGroup, bleed, F.Translate(message, player));
         }
-
-        public static void OnNewGameStarting()
+        public static void OnStagingPhaseEnded()
         {
             TimeSinceMatchStart = DateTime.Now;
-
+        }
+        public static void OnNewGameStarting()
+        {
             if (Data.Is(out Invasion invasion))
             {
                 int attack = invasion.Config.AttackStartingTickets;
