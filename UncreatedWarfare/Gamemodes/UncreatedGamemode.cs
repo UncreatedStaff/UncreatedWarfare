@@ -139,7 +139,7 @@ namespace Uncreated.Warfare.Gamemodes
                         for (int i = 0; i < Provider.clients.Count; i++)
                             gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
                         F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
-                        Steamworks.SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, DisplayName));
+                        Steamworks.SteamGameServer.SetGameDescription(F.Translate("server_desc", 0, gamemode.DisplayName));
                         Data.Gamemode = gamemode;
                         _state = EState.DISCARD;
                         Destroy(this);

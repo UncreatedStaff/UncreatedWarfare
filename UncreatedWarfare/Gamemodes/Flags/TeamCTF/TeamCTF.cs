@@ -710,7 +710,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             else
             {
-                CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, 
+                    player.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+                if (State == EState.STAGING)
+                    this.ShowStagingUI(player);
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);

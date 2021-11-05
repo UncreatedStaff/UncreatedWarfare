@@ -413,15 +413,18 @@ namespace Uncreated.Warfare.Gamemodes
                 F.LogWarning("NO VIABLE CACHE SPAWNS");
                 return;
             }
-
             SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
 
             Barricade barricade = new Barricade(Config.CacheID);
-            var rotation = transform.Rotation;
+            Quaternion rotation = transform.Rotation;
             rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x - 90, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z + 180);
-            var barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
+            Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
             BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
-            if (foundationDrop == null) return;
+            if (foundationDrop == null)
+            {
+                F.LogWarning("Foundation drop is null.");
+                return;
+            }
             FOB cache = FOBManager.RegisterNewFOB(foundationDrop, "#c480d9", true);
 
             if (!Caches[CachesDestroyed].IsActive)
@@ -467,7 +470,7 @@ namespace Uncreated.Warfare.Gamemodes
                 for (int i = 0; i < 15; i++)
                     ItemManager.dropItem(new Item(buildID, true), point, false, true, false);
 
-                foreach (var entry in Config.CacheItems)
+                foreach (KeyValuePair<ushort, int> entry in Config.CacheItems)
                 {
                     for (int i = 0; i < entry.Value; i++)
                         ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
@@ -521,6 +524,8 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void UpdateUI(UCPlayer player)
         {
+            if (State == EState.STAGING)
+                this.ShowStagingUI(player);
             TicketManager.UpdateUI(player.connection, player.GetTeam(), 0, "");
 
             ClearUI(player);
@@ -528,7 +533,7 @@ namespace Uncreated.Warfare.Gamemodes
             int FirstUI = UCWarfare.Config.FlagSettings.FlagUIIdFirst;
             for (int i = 0; i < Caches.Count; i++) unchecked
                 {
-                    var cache = Caches[i];
+                    CacheData cache = Caches[i];
 
                     string text;
                     if (!cache.IsActive)
@@ -612,7 +617,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             _stagingSeconds = seconds;
             _state = EState.STAGING;
-
+            PlaceBlockerOverAttackerMain();
             StartCoroutine(StagingPhaseLoop());
         }
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
@@ -659,6 +664,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         private void EndStagingPhase()
         {
+            DestroyBlockerBarricade();
             TicketManager.OnStagingPhaseEnded();
 
             foreach (var player in PlayerManager.OnlinePlayers)

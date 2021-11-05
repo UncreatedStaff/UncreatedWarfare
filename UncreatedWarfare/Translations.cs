@@ -805,7 +805,7 @@ namespace Uncreated.Warfare
             new ColorData("uncreated", "9cb6a4"),
             new ColorData("attack_icon_color", "ffca61"),
             new ColorData("defend_icon_color", "ba70cc"),
-            new ColorData("locked_icon_color", "bfbfbf"),
+            new ColorData("locked_icon_color", "c2c2c2"),
             new ColorData("undiscovered_flag", "696969"),
             new ColorData("team_count_ui_color_team_1", "ffffff"),
             new ColorData("team_count_ui_color_team_2", "ffffff"),

@@ -671,6 +671,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             else
             {
+                if (State == EState.STAGING)
+                    this.ShowStagingUI(player);
                 InvasionUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, 
                     player.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
             }

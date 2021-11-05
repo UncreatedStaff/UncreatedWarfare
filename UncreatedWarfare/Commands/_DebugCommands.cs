@@ -898,7 +898,7 @@ namespace Uncreated.Warfare.Commands
                         UnityEngine.Object.Destroy(Data.Gamemode);
                     }
                     Data.Gamemode = newGamemode;
-                    SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
+                    SteamGameServer.SetGameDescription(F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
                     Data.Gamemode.Init();
                     Data.Gamemode.OnLevelLoaded();
                     F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
@@ -931,7 +931,7 @@ namespace Uncreated.Warfare.Commands
                     UnityEngine.Object.Destroy(Data.Gamemode);
                 }
                 Data.Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
-                SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
+                SteamGameServer.SetGameDescription(F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
                 Data.Gamemode.Init();
                 Data.Gamemode.OnLevelLoaded();
                 throw;
