@@ -68,6 +68,8 @@ namespace Uncreated.Warfare
         public bool DisableBackups;
         public float MaxVehicleHeightToLeave;
         public string GamemodeRotation;
+        public bool DisableNameFilter;
+        public int MinAlphanumericStringLength;
         public void LoadDefaults()
         {
             this.Modules = new Modules();
@@ -120,6 +122,8 @@ namespace Uncreated.Warfare
             this.DisableBackups = false;
             this.MaxVehicleHeightToLeave = 50f;
             this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";
+            this.DisableNameFilter = false;
+            this.MinAlphanumericStringLength = 5;
         }
     }
     public class Modules

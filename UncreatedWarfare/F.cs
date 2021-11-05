@@ -2587,5 +2587,42 @@ namespace Uncreated.Warfare
             call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) =>
             call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+        public static bool FilterName(string original, out string final)
+        {
+            if (UCWarfare.Config.DisableNameFilter || UCWarfare.Config.MinAlphanumericStringLength <= 0)
+            {
+                final = original;
+                return false;
+            }
+            IEnumerator<char> charenum = original.GetEnumerator();
+            int counter = 0;
+            int alphanumcount = 0;
+            while (charenum.MoveNext())
+            {
+                counter++;
+                char ch = charenum.Current;
+                int c = ch;
+                if (c > 32 && c < 127)
+                {
+                    if (alphanumcount - 1 >= UCWarfare.Config.MinAlphanumericStringLength)
+                    {
+                        final = original;
+                        charenum.Dispose();
+                        return false;
+                    }
+                    else
+                    {
+                        alphanumcount++;
+                    }
+                }
+                else
+                {
+                    alphanumcount = 0;
+                }
+            }
+            charenum.Dispose();
+            final = original;
+            return alphanumcount != original.Length;
+        }
     }
 }
