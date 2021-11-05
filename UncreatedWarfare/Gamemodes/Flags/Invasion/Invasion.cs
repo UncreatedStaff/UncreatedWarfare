@@ -342,6 +342,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             base.InitFlag(flag);
             flag.EvaluatePointsOverride = FlagCheck;
+            flag.IsContestedOverride = ContestedCheck;
             flag.SetOwnerNoEventInvocation(_defendTeam);
             flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true);
         }
@@ -703,9 +704,63 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            EndStagingPhase();
             FOBManager.Reset();
             Destroy(_gameStats);
             base.Dispose();
+        }
+        private bool ContestedCheck(Flag flag, out ulong winner)
+        {
+            if (flag.IsObj(_attackTeam))
+            {
+                if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers == 0)
+                {
+                    winner = 0;
+                    return false;
+                }
+                else if (flag.Team1TotalCappers == flag.Team2TotalCappers)
+                {
+                    winner = 0;
+                }
+                else if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers > 0)
+                {
+                    winner = 2;
+                }
+                else if (flag.Team2TotalCappers == 0 && flag.Team1TotalCappers > 0)
+                {
+                    winner = 1;
+                }
+                else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
+                {
+                    if (flag.Team1TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
+                    {
+                        winner = 1;
+                    }
+                    else
+                    {
+                        winner = 0;
+                    }
+                }
+                else
+                {
+                    if (flag.Team2TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
+                    {
+                        winner = 2;
+                    }
+                    else
+                    {
+                        winner = 0;
+                    }
+                }
+                return winner == 0;
+            }
+            else
+            {
+                if (flag.ObjectivePlayerCountCappers == 0) winner = 0;
+                else winner = flag.WhosObj();
+                if (!flag.IsObj(winner)) winner = 0;
+                return false;
+            }
         }
         private void FlagCheck(Flag flag, bool overrideInactiveCheck = false)
         {

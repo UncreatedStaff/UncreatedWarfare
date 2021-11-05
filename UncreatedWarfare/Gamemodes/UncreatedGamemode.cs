@@ -139,6 +139,7 @@ namespace Uncreated.Warfare.Gamemodes
                         for (int i = 0; i < Provider.clients.Count; i++)
                             gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
                         F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
+                        Steamworks.SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, DisplayName));
                         Data.Gamemode = gamemode;
                         _state = EState.DISCARD;
                         Destroy(this);
@@ -164,7 +165,9 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
         public virtual void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
-        { }
+        {
+
+        }
         public virtual void OnPlayerLeft(UCPlayer player)
         { }
         public virtual void OnPlayerDeath(UCWarfare.DeathEventArgs args)

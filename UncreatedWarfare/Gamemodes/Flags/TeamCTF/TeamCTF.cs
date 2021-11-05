@@ -67,6 +67,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         private EndScreenLeaderboard _endScreen;
         EndScreenLeaderboard IWarstatsGamemode.Leaderboard => _endScreen;
         ILeaderboard IImplementsLeaderboard.Leaderboard => _endScreen;
+        protected Transform _blockerBarricadeT1 = null;
+        protected Transform _blockerBarricadeT2 = null;
         private bool _isScreenUp = false;
         public bool isScreenUp => _isScreenUp;
         private WarStatsTracker _gameStats;
@@ -299,6 +301,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             base.StartNextGame(onLoad); // set game id
             if (_state == EState.DISCARD) return;
             LoadRotation();
+            PlaceBlockerBarricades();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
             InvokeOnNewGameStarting(onLoad);
@@ -724,6 +727,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void Dispose()
         {
+            DestroyBlockerBarricades();
             foreach (SteamPlayer player in Provider.clients)
             {
                 CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
@@ -735,6 +739,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            EndStagingPhase();
             FOBManager.Reset();
             Destroy(_gameStats);
             base.Dispose();
@@ -745,6 +750,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             FOBManager.OnGameTick(TicketCounter);
         }
 
+        private void DestroyBlockerBarricades()
+        {
+            if (_blockerBarricadeT1 != null && Regions.tryGetCoordinate(_blockerBarricadeT1.position, out byte x, out byte y))
+            {
+                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT1);
+                if (drop != null)
+                {
+                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                }
+                _blockerBarricadeT1 = null;
+            }
+            if (_blockerBarricadeT2 != null && Regions.tryGetCoordinate(_blockerBarricadeT2.position, out x, out y))
+            {
+                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT2);
+                if (drop != null)
+                {
+                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                }
+                _blockerBarricadeT2 = null;
+            }
+        }
+        readonly Vector3 SpawnRotation = new Vector3(270f, 0f, 180f);
+        private void PlaceBlockerBarricades()
+        {
+            DestroyBlockerBarricades();
+            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.T1BlockerID),
+                TeamManager.Team1Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
+            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.T2BlockerID),
+                TeamManager.Team2Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
+        }
         public void StartStagingPhase(int seconds)
         {
             _stagingSeconds = seconds;
@@ -773,31 +808,30 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public void ShowStagingUI(UCPlayer player)
         {
+            EffectManager.sendUIEffect(Config.HeaderID, 29001, player.connection, true);
             EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
         }
         public void ShowStagingUIForAll()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 ShowStagingUI(player);
         }
         public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
-            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
-
-            EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
+            EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
         }
         public void UpdateStagingUIForAll()
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 UpdateStagingUI(player, timeLeft);
         }
         private void EndStagingPhase()
         {
             TicketManager.OnStagingPhaseEnded();
-
-            foreach (var player in PlayerManager.OnlinePlayers)
-                EffectManager.askEffectClearByID(29001, player.connection);
+            DestroyBlockerBarricades();
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
 
             _state = EState.ACTIVE;
         }
@@ -830,6 +864,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public float NearOtherBaseKillTimer;
         public int xpSecondInterval;
         public int StagingPhaseSeconds;
+        public ushort T1BlockerID;
+        public ushort T2BlockerID;
+        public ushort HeaderID;
         public Dictionary<int, float> team1adjacencies;
         public Dictionary<int, float> team2adjacencies;
         public TeamCTFData() => SetDefaults();
@@ -862,6 +899,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.team2adjacencies = new Dictionary<int, float>();
             this.xpSecondInterval = 10;
             this.StagingPhaseSeconds = 90;
+            this.T1BlockerID = 36058;
+            this.T2BlockerID = 36059;
+            this.HeaderID = 36066;
         }
         public class AutoObjectiveData
         {

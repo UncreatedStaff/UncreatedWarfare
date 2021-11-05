@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     public class Flag : IDisposable
     {
         public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
+        public delegate bool IsContestedDelegate(Flag flag, out ulong winner);
         public int index = -1;
         public const float MAX_POINTS = 64;
         public Zone ZoneData { get; protected set; }
@@ -134,6 +135,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             HasBeenCapturedT1 = false;
             HasBeenCapturedT2 = false;
             EvaluatePointsOverride = null;
+            IsContestedOverride = null;
             Hide(1);
             Hide(2);
             if (OnReset != null)
@@ -171,6 +173,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public List<Player> PlayersOnVehicleTeam1;
         public int Team1TotalPlayers;
         public EvaluatePointsDelegate EvaluatePointsOverride = null;
+        public IsContestedDelegate IsContestedOverride = null;
         public int Team1TotalCappers;
         public List<Player> PlayersOnFlagTeam2;
         public int Team2TotalPlayers;
@@ -414,6 +417,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public bool IsContested(out ulong winner)
         {
+            if (IsContestedOverride != null)
+                return IsContestedOverride(this, out winner);
             if ((T1Obj && T2Obj) || (T1Obj && Owner == 2) || (T2Obj && Owner == 1)) // must be objective for both teams
             {
                 if (Team1TotalCappers == 0 && Team2TotalCappers == 0)
