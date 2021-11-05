@@ -51,6 +51,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public Flag ObjectiveTeam1 { get => _objectiveT1Index < 0 || _objectiveT1Index >= _rotation.Count ? null : _rotation[_objectiveT1Index]; }
         public Flag ObjectiveTeam2 { get => _objectiveT2Index < 0 || _objectiveT2Index >= _rotation.Count ? null : _rotation[_objectiveT2Index]; }
 
+        public override bool EnableAMC => true;
+        public override bool ShowOFPUI => true;
+        public override bool ShowXPUI => true;
+        public override bool TransmitMicWhileNotActive => true;
+        public override bool UseJoinUI => true;
+        public override bool UseWhitelist => true;
+        public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
+
         protected VehicleSpawner _vehicleSpawner;
         public VehicleSpawner VehicleSpawner { get => _vehicleSpawner; }
         protected VehicleBay _vehicleBay;

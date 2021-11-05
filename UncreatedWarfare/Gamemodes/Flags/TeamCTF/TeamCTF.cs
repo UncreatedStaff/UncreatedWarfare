@@ -44,6 +44,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public override bool TransmitMicWhileNotActive => true;
         public override bool UseJoinUI => true;
         public override bool UseWhitelist => true;
+        public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
         protected VehicleSpawner _vehicleSpawner;
         public VehicleSpawner VehicleSpawner => _vehicleSpawner;
         protected VehicleBay _vehicleBay;
@@ -62,7 +63,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public SquadManager SquadManager => _squadManager;
         protected StructureSaver _structureSaver;
         public StructureSaver StructureSaver => _structureSaver;
-        public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
         // leaderboard
         private EndScreenLeaderboard _endScreen;
         EndScreenLeaderboard IWarstatsGamemode.Leaderboard => _endScreen;

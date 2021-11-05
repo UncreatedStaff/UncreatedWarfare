@@ -28,6 +28,13 @@ namespace Uncreated.Warfare.Gamemodes
         public InsurgencyConfig Config { get => _config.Data; }
 
         public override string DisplayName => "Insurgency";
+        public override bool EnableAMC => true;
+        public override bool ShowOFPUI => true;
+        public override bool ShowXPUI => true;
+        public override bool TransmitMicWhileNotActive => true;
+        public override bool UseJoinUI => true;
+        public override bool UseWhitelist => true;
+        public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
 
         protected VehicleSpawner _vehicleSpawner;
         public VehicleSpawner VehicleSpawner => _vehicleSpawner;
