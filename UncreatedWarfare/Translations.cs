@@ -331,6 +331,7 @@ namespace Uncreated.Warfare
                 { "kick_kicked_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by an operator.</color>" },
                 { "kick_kicked_console_operator", "{0} ({1}) was kicked by an operator because: {2}." },
                 { "kick_kicked_console", "{0} ({1}) was kicked by {2} ({3}) because: {4}." },
+                { "kick_autokick_namefilter", "Your name does not contain enough alphanumeric characters in succession (5), please change your name and rejoin." },
                 // ban
                 { "ban_syntax", "<color=#9cffb3>Syntax: <i>/ban <player> <duration minutes> <reason ...></i>.</color>" },
                 { "ban_permanent_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned.</color>" },
@@ -805,7 +806,7 @@ namespace Uncreated.Warfare
             new ColorData("uncreated", "9cb6a4"),
             new ColorData("attack_icon_color", "ffca61"),
             new ColorData("defend_icon_color", "ba70cc"),
-            new ColorData("locked_icon_color", "bfbfbf"),
+            new ColorData("locked_icon_color", "c2c2c2"),
             new ColorData("undiscovered_flag", "696969"),
             new ColorData("team_count_ui_color_team_1", "ffffff"),
             new ColorData("team_count_ui_color_team_2", "ffffff"),

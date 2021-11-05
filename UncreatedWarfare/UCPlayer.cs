@@ -259,7 +259,7 @@ namespace Uncreated.Warfare
             }
 
         }
-
+        const float IS_NEAR_FOB_DISTANCE = 20f; 
         public bool IsNearFOB()
         {
             if (Player.life.isDead || Player.transform is null)
@@ -276,8 +276,27 @@ namespace Uncreated.Warfare
                         BarricadeDrop b = region.drops[i];
                         if (b.GetServersideData().barricade.id == FOBs.FOBManager.config.Data.FOBID &&
                             b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
-                            (b.model.position - Position).sqrMagnitude <= 20 * 20)
+                            (b.model.position - Position).sqrMagnitude <= IS_NEAR_FOB_DISTANCE * IS_NEAR_FOB_DISTANCE)
                             return true;
+                    }
+                }
+            }
+            if (Data.Is(out Insurgency ins))
+            {
+                for (int x = 0; x < Regions.WORLD_SIZE; x++)
+                {
+                    for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                    {
+                        BarricadeRegion region = BarricadeManager.regions[x, y];
+                        if (region == default) continue;
+                        for (int i = 0; i < region.drops.Count; i++)
+                        {
+                            BarricadeDrop b = region.drops[i];
+                            if (b.GetServersideData().barricade.id == ins.Config.CacheID &&
+                                b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
+                                (b.model.position - Position).sqrMagnitude <= IS_NEAR_FOB_DISTANCE * IS_NEAR_FOB_DISTANCE)
+                                return true;
+                        }
                     }
                 }
             }

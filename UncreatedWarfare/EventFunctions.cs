@@ -355,7 +355,7 @@ namespace Uncreated.Warfare
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
-            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE) return;
+            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE || Data.Gamemode.State == EState.STAGING) return;
             cullingHandler = new PlayerVoice.RelayVoiceCullingHandler((source, target) =>
             {
                 return true;
@@ -781,7 +781,7 @@ namespace Uncreated.Warfare
                 if (kick)
                 {
                     isValid = false;
-                    explanation = $"Your name does not contain enough alphanumeric characters in succession ({UCWarfare.Config.MinAlphanumericStringLength}), please change your name and rejoin.";
+                    explanation = F.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
                     return;
                 }
                 else

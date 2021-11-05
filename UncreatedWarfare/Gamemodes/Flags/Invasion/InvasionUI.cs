@@ -47,6 +47,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                         }
                         else if (team == atkTeam || flag.Owner != atkTeam)
                         {
+                            F.Log("capturing");
                             return new SendUIParameters(team, inVehicle ? F.EFlagStatus.IN_VEHICLE : F.EFlagStatus.CAPTURING, "capturing", UCWarfare.GetColor($"capturing_team_{team}_chat"),
                                 Mathf.RoundToInt(flag.Points), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
                         }
@@ -295,7 +296,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 {
                     if (flag.Owner == TeamManager.Other(atkTeam))
                     {
-                        if (flag.IsContested(out ulong winner))
+                        if (flag.IsContested(out _))
                         {
                             return new SendUIParameters(team, F.EFlagStatus.CONTESTED, "contested", UCWarfare.GetColor($"contested_team_{team}_chat"),
                                 Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers);

@@ -2602,7 +2602,7 @@ namespace Uncreated.Warfare
                 counter++;
                 char ch = charenum.Current;
                 int c = ch;
-                if (c > 32 && c < 127)
+                if (c > 31 && c < 127)
                 {
                     if (alphanumcount - 1 >= UCWarfare.Config.MinAlphanumericStringLength)
                     {

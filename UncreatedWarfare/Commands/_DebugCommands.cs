@@ -220,7 +220,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             catch (Exception ex)
                             {
-                                F.LogError(ex);
+                                F.LogError(ex.InnerException ?? ex);
                                 if (caller.DisplayName == "Console") F.LogError(F.Translate("test_error_executing", 0, out _, info.Name, ex.GetType().Name));
                                 else player.SendChat("test_error_executing", info.Name, ex.GetType().Name);
                             }
@@ -898,7 +898,6 @@ namespace Uncreated.Warfare.Commands
                         UnityEngine.Object.Destroy(Data.Gamemode);
                     }
                     Data.Gamemode = newGamemode;
-                    SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
                     Data.Gamemode.Init();
                     Data.Gamemode.OnLevelLoaded();
                     F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
@@ -931,7 +930,6 @@ namespace Uncreated.Warfare.Commands
                     UnityEngine.Object.Destroy(Data.Gamemode);
                 }
                 Data.Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
-                SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
                 Data.Gamemode.Init();
                 Data.Gamemode.OnLevelLoaded();
                 throw;
@@ -942,6 +940,23 @@ namespace Uncreated.Warfare.Commands
             Data.TrackStats = !Data.TrackStats;
             if (player == null) F.LogWarning("Stat tracking " + (Data.TrackStats ? "enabled." : "disabled."));
             else player.SendChat("Stat tracking " + (Data.TrackStats ? "<b>enabled</b>." : "<b>disabled</b>."));
+        }
+        private void destroyblocker(string[] command, Player player)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
+                    {
+                        BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
+                        if (d.asset.id == 36058 || d.asset.id == 36059)
+                        {
+                            BarricadeManager.destroyBarricade(d, (byte)x, (byte)y, ushort.MaxValue);
+                        }
+                    }
+                }
+            }
         }
     }
 #pragma warning restore IDE0051
