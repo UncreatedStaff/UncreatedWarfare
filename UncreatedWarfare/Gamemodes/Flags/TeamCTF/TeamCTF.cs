@@ -776,6 +776,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 
             StartCoroutine(StagingPhaseLoop());
         }
+        public void SkipStagingPhase()
+        {
+            _stagingSeconds = 0;
+        }
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
             ShowStagingUIForAll();

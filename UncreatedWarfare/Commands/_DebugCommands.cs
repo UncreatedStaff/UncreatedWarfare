@@ -559,6 +559,7 @@ namespace Uncreated.Warfare.Commands
                 List<Zone> zones = new List<Zone>(1) { zone };
                 ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, false, true, false, true, true, Data.FlagStorage + "zonerange_" + zoneName);
             }
+            else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
         private void drawgraph(string[] command, Player player)
         {
@@ -957,6 +958,17 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             }
+        }
+        private void skipstaging(string[] command, Player player)
+        {
+            if (Data.Is(out IStagingPhase gm))
+            {
+                if (player == null) F.Log("Skipped staging phase.");
+                else player.SendChat("Skipped staging phase.");
+                gm.SkipStagingPhase();
+            }
+            else if (player == null) F.Log("Staging phase is disabled.");
+            else player.SendChat("Staging phase is disabled.");
         }
     }
 #pragma warning restore IDE0051

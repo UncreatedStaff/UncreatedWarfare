@@ -47,7 +47,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         protected int _objectiveT2Index;
         public int ObjectiveT1Index { get => _objectiveT1Index; }
         public int ObjectiveT2Index { get => _objectiveT2Index; }
-        public List<ulong> InAMC = new List<ulong>();
         public Flag ObjectiveTeam1 { get => _objectiveT1Index < 0 || _objectiveT1Index >= _rotation.Count ? null : _rotation[_objectiveT1Index]; }
         public Flag ObjectiveTeam2 { get => _objectiveT2Index < 0 || _objectiveT2Index >= _rotation.Count ? null : _rotation[_objectiveT2Index]; }
 
@@ -876,6 +875,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 ShowStagingUI(player);
+        }
+        public void SkipStagingPhase()
+        {
+            _stagingSeconds = 0;
         }
         public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
