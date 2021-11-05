@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Commands
                     insurgency.Config.CacheSpawns.Add(transform);
                     insurgency.SaveConfig();
 
-                    player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
+                        player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
                 }
                 else
                     player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));

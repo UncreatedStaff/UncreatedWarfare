@@ -327,7 +327,7 @@ namespace Uncreated.Warfare
 
 
                 Data.Gamemode.OnPlayerJoined(ucplayer, false);
-                if (Data.Gamemode is TeamGamemode)
+                if (Data.Gamemode is ITeams)
                 {
                     ulong team = player.GetTeam();
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,

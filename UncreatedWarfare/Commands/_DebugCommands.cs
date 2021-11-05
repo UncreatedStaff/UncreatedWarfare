@@ -132,7 +132,7 @@ namespace Uncreated.Warfare.Commands
                     if (command.Length > 1 && ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong id))
                         team = id;
                     else team = F.GetTeam(player);
-                    if (Data.Gamemode is TeamCTF fg)
+                    if (Data.Gamemode is IFlagTeamObjectiveGamemode fg)
                     {
                         if (team != 1 && team != 2)
                         {
@@ -143,14 +143,14 @@ namespace Uncreated.Warfare.Commands
                         }
                         if (team == 1)
                         {
-                            while (!fg.isScreenUp)
+                            while (fg.State == EState.ACTIVE)
                             {
                                 fg.ObjectiveTeam1.CapT1();
                             }
                         }
                         else
                         {
-                            while (!fg.isScreenUp)
+                            while (fg.State == EState.ACTIVE)
                             {
                                 fg.ObjectiveTeam2.CapT2();
                             }
@@ -898,6 +898,7 @@ namespace Uncreated.Warfare.Commands
                         UnityEngine.Object.Destroy(Data.Gamemode);
                     }
                     Data.Gamemode = newGamemode;
+                    SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
                     Data.Gamemode.Init();
                     Data.Gamemode.OnLevelLoaded();
                     F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
@@ -922,15 +923,17 @@ namespace Uncreated.Warfare.Commands
             }
             catch (Exception ex)
             {
+                F.LogError("Error loading gamemode, falling back to TeamCTF:");
+                F.LogError(ex);
                 if (Data.Gamemode != null)
                 {
                     Data.Gamemode.Dispose();
                     UnityEngine.Object.Destroy(Data.Gamemode);
                 }
                 Data.Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
+                SteamGameServer.SetKeyValue("Browser_Desc_Hint", F.Translate("server_desc", 0, Data.Gamemode.DisplayName));
                 Data.Gamemode.Init();
                 Data.Gamemode.OnLevelLoaded();
-                F.LogError(ex);
                 throw;
             }
         }

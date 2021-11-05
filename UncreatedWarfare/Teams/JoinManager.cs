@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 
@@ -54,8 +55,6 @@ namespace Uncreated.Warfare.Teams
             }
             else if (isNewGame)
             {
-                
-
                 LobbyPlayer lobbyPlayer = new LobbyPlayer(player, player.GetTeam());
                 lobbyPlayer.IsDonatorT1 = isDonatorT1;
                 lobbyPlayer.IsDonatorT2 = isDonatorT2;
@@ -77,8 +76,8 @@ namespace Uncreated.Warfare.Teams
                         Team1Players.Add(lobbyPlayer);
                     else if (lobbyPlayer.Team == 2)
                         Team2Players.Add(lobbyPlayer);
+                    ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, ToastMessageSeverity.BIG);
                 }
-                
             }
             else if (player.GetTeam() == 0)
             {
@@ -249,8 +248,6 @@ namespace Uncreated.Warfare.Teams
             {
                 if (lobbyPlayer.Team != 1)
                 {
-                    F.Log($"team 1 selected");
-
                     lobbyPlayer.Team = 1;
                     if (!Team1Players.Contains(lobbyPlayer))
                         Team1Players.Add(lobbyPlayer);
@@ -305,7 +302,7 @@ namespace Uncreated.Warfare.Teams
                 player.SendChat("join_e_groupnoexist", TeamManager.TranslateName(newTeam, player.CSteamID, true));
                 return;
             }
-            Kits.UCInventoryManager.ClearInventory(player);
+            UCInventoryManager.ClearInventory(player);
             if (!group.hasSpaceForMoreMembersInGroup)
             {
                 player.SendChat("join_e_teamfull", teamName);
@@ -317,25 +314,26 @@ namespace Uncreated.Warfare.Teams
 
             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, newTeam);
 
-            Players.FPlayerName names = F.GetPlayerOriginalNames(player.Player);
+            FPlayerName names = F.GetPlayerOriginalNames(player.Player);
             F.Log(F.Translate("join_player_joined_console", 0, out _,
                 names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)),
                 ConsoleColor.Cyan);
 
             player.Player.teleportToLocation(newTeam.GetBaseSpawnFromTeam(), newTeam.GetBaseAngle());
 
-            if (KitManager.KitExists(TeamManager.GetUnarmedFromS64ID(player.Steam64), out var kit))
+            if (KitManager.KitExists(TeamManager.GetUnarmedFromS64ID(player.Steam64), out Kit kit))
                 KitManager.GiveKit(player, kit);
 
             player.SendChat("teams_join_success", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-            //new List<CSteamID>(1) { player.CSteamID }.BroadcastToAllExcept("teams_join_announce", names.CharacterName, teamName);
+            new List<CSteamID>(1) { player.CSteamID }.BroadcastToAllExcept("teams_join_announce", names.CharacterName, teamName);
 
             if (player.Squad != null)
                 Squads.SquadManager.LeaveSquad(player, player.Squad);
             PlayerManager.ApplyToOnline();
 
             CooldownManager.StartCooldown(player, ECooldownType.CHANGE_TEAMS, TeamManager.TeamSwitchCooldown);
+            ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, ToastMessageSeverity.BIG);
         }
 
         public void CloseUI(LobbyPlayer player)

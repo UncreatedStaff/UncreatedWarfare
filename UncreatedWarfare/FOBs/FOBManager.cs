@@ -493,8 +493,8 @@ namespace Uncreated.Warfare.FOBs
         public static FOB RegisterNewFOB(BarricadeDrop Structure, string color, bool isCache = false)
         {
             FOB fob = null;
-            ulong team = Structure.GetServersideData().group.GetTeam();
-
+            SDG.Unturned.BarricadeData data = Structure.GetServersideData();
+            ulong team = data.group.GetTeam();
             bool isInsurgency = Data.Is(out Insurgency insurgency);
 
             if (isCache && isInsurgency)
@@ -518,17 +518,17 @@ namespace Uncreated.Warfare.FOBs
             }
             else
             {
-                if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF ctf && ctf.GameStats != null)
+                if (Data.Is(out IWarstatsGamemode ws) && ws.GameStats != null)
                 {
                     if (F.TryGetPlaytimeComponent(Structure.GetServersideData().owner, out PlaytimeComponent c) && c.stats is IFOBStats f)
                         f.AddFOBPlaced();
                     if (team == 1)
                     {
-                        ctf.GameStats.fobsPlacedT1++;
+                        ws.GameStats.fobsPlacedT1++;
                     }
                     else if (team == 2)
                     {
-                        ctf.GameStats.fobsPlacedT2++;
+                        ws.GameStats.fobsPlacedT2++;
                     }
                 }
 
@@ -557,7 +557,6 @@ namespace Uncreated.Warfare.FOBs
                         fob = new FOB("FOB" + number.ToString(Data.Locale), number, Structure, color, isCache);
                         Team1FOBs.Add(fob);
                     }
-
                 }
                 else if (team == 2)
                 {
@@ -614,10 +613,9 @@ namespace Uncreated.Warfare.FOBs
 
             if (removed != null)
             {
+                List<FOB> FOBList = GetFriendlyFOBs(team);
 
-                var FOBList = GetFriendlyFOBs(team);
-
-                foreach (var p in removed.nearbyPlayers)
+                foreach (UCPlayer p in removed.nearbyPlayers)
                 {
                     if (FOBList.Where(f => f.nearbyPlayers.Contains(p)).Count() != 0)
                     {
@@ -636,8 +634,9 @@ namespace Uncreated.Warfare.FOBs
                         pts.Current.CancelTeleport();
                     }
                 }
+                pts.Dispose();
             }
-            if (Data.Is(out IWarstatsGamemode w) && w.GameStats != null && w.State == Gamemodes.EState.ACTIVE)
+            if (Data.Is(out IWarstatsGamemode w) && w.GameStats != null && w.State == EState.ACTIVE)
             // doesnt count destroying fobs after game ends
             {
                 if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c) && c.stats is IFOBStats f)
@@ -652,12 +651,11 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
             UCPlayer ucplayer = UCPlayer.FromID(player);
-            bool isInsurgency = Data.Is(out Insurgency insurgency);
-            if (isInsurgency && removed != null && removed.IsCache)
+            if (Data.Is(out Insurgency insurgency) && removed != null && removed.IsCache)
             {
                 insurgency.OnCacheDestroyed(removed, ucplayer);
             }
-            else if (!removed.IsCache && ucplayer != null)
+            else if (removed != null && !removed.IsCache && ucplayer != null)
             {
                 if (ucplayer.GetTeam() == team)
                 {

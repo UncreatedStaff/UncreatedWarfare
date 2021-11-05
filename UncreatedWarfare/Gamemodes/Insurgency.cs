@@ -24,8 +24,8 @@ namespace Uncreated.Warfare.Gamemodes
     {
         const float MATCH_PRESENT_THRESHOLD = 0.65f;
 
-        private readonly Config<InsurgencyConfig> insurgencyConfig;
-        public InsurgencyConfig Config { get => insurgencyConfig.Data; }
+        private readonly Config<InsurgencyConfig> _config;
+        public InsurgencyConfig Config { get => _config.Data; }
 
         public override string DisplayName => "Insurgency";
 
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Insurgency()
             : base("Insurgency", 0.25F)
         {
-            insurgencyConfig = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
+            _config = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
         }
         public override void Init()
         {
@@ -405,7 +405,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void SpawnNewCache(bool message = false)
         {
-            var viableSpawns = Config.CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
+            IEnumerable<SerializableTransform> viableSpawns = Config.CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
 
             if (viableSpawns.Count() == 0)
             {
@@ -420,8 +420,8 @@ namespace Uncreated.Warfare.Gamemodes
             rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x - 90, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z + 180);
             var barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
             BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
-
-            var cache = FOBManager.RegisterNewFOB(foundationDrop, "#c480d9", true);
+            if (foundationDrop == null) return;
+            FOB cache = FOBManager.RegisterNewFOB(foundationDrop, "#c480d9", true);
 
             if (!Caches[CachesDestroyed].IsActive)
                 Caches[CachesDestroyed].Activate(cache);
@@ -604,8 +604,8 @@ namespace Uncreated.Warfare.Gamemodes
                 ClearUI(player);
         }
 
-        public void ReloadConfig() => insurgencyConfig.Reload();
-        public void SaveConfig() => insurgencyConfig.Save();
+        public void ReloadConfig() => _config.Reload();
+        public void SaveConfig() => _config.Save();
 
         public void StartStagingPhase(int seconds)
         {
@@ -671,10 +671,10 @@ namespace Uncreated.Warfare.Gamemodes
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            EndStagingPhase();
             FOBManager.Reset();
             Destroy(_gameStats);
             base.Dispose();
-            
         }
 
 
