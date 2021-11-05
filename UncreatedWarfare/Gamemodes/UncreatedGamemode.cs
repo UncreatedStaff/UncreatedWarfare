@@ -13,6 +13,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 using System.Text;
 using Uncreated.Players;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -96,6 +97,24 @@ namespace Uncreated.Warfare.Gamemodes
             {
                 yield return new WaitForSeconds(EventLoopSpeed);
                 DateTime start = DateTime.Now;
+                for (int i = 0; i < Provider.clients.Count; i++)
+                {
+                    try
+                    {
+                        if (Provider.clients[i].player.transform == null)
+                        {
+                            F.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                            Provider.kick(Provider.clients[i].playerID.steamID,
+                                $"Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{UCWarfare.Config.DiscordInviteCode}).");
+                        }
+                    }
+                    catch (NullReferenceException)
+                    {
+                        F.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                        Provider.kick(Provider.clients[i].playerID.steamID,
+                            $"Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{UCWarfare.Config.DiscordInviteCode}).");
+                    }
+                }
                 try
                 {
                     EventLoopAction();
@@ -336,6 +355,7 @@ namespace Uncreated.Warfare.Gamemodes
             }
             return null;
         }
+        
     }
     public enum EState : byte
     {

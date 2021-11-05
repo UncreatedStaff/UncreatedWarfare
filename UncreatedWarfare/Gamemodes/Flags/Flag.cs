@@ -218,9 +218,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else _points = value;
             if (!skipEvent && OldPoints != _points)
             {
-                LastDeltaPoints = _points - OldPoints;
                 OnPointsChanged?.Invoke(_points, OldPoints, this);
             }
+            LastDeltaPoints = _points - OldPoints;
         }
         public event PlayerDelegate OnPlayerEntered;
         public event PlayerDelegate OnPlayerLeft;

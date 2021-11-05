@@ -57,7 +57,6 @@ namespace Uncreated.Warfare.Gamemodes
         protected Transform _blockerBarricade = null;
 
         private uint _counter;
-        private List<ulong> InAMC;
 
         protected ulong _attackTeam;
         public ulong AttackingTeam { get => _attackTeam; }
@@ -123,6 +122,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         private void DestroyBlockerBarricade()
         {
+            bool backup = false;
             if (_blockerBarricade != null && Regions.tryGetCoordinate(_blockerBarricade.position, out byte x, out byte y))
             {
                 BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricade);
@@ -130,7 +130,27 @@ namespace Uncreated.Warfare.Gamemodes
                 {
                     BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                 }
+                else backup = true;
                 _blockerBarricade = null;
+            }
+            else backup = true;
+
+            if (backup)
+            {
+                for (x = 0; x < Regions.WORLD_SIZE; x++)
+                {
+                    for (y = 0; y < Regions.WORLD_SIZE; y++)
+                    {
+                        for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
+                        {
+                            BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
+                            if (d.asset.id == Config.T1BlockerID || d.asset.id == Config.T2BlockerID)
+                            {
+                                BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
+                            }
+                        }
+                    }
+                }
             }
         }
         readonly Vector3 SpawnRotation = new Vector3(270f, 0f, 180f);
@@ -253,7 +273,7 @@ namespace Uncreated.Warfare.Gamemodes
 
             if (_counter % 1 * 4 == 0) // 1 seconds
             {
-
+                CheckPlayersAMC();
             }
             if (_counter % 10 * 4 == 0) // 10 seconds
             {
@@ -297,15 +317,6 @@ namespace Uncreated.Warfare.Gamemodes
                 }
             }
             players.Dispose();
-        }
-        private IEnumerator<WaitForSeconds> KillPlayerInEnemyTerritory(SteamPlayer player)
-        {
-            yield return new WaitForSeconds(Config.NearOtherBaseKillTimer);
-            if (player != null && !player.player.life.isDead && InAMC.Contains(player.playerID.steamID.m_SteamID))
-            {
-                player.player.movement.forceRemoveFromVehicle();
-                player.player.life.askDamage(byte.MaxValue, Vector3.zero, EDeathCause.ACID, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
-            }
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
         {

@@ -781,7 +781,7 @@ namespace Uncreated.Warfare
                 if (kick)
                 {
                     isValid = false;
-                    explanation = $"Your name does not contain enough alphanumeric characters in succession ({UCWarfare.Config.MinAlphanumericStringLength}), please change your name and rejoin.";
+                    explanation = F.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
                     return;
                 }
                 else

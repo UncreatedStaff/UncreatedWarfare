@@ -570,6 +570,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         private void DestroyBlockerBarricade()
         {
+            bool backup = false;
             if (_blockerBarricade != null && Regions.tryGetCoordinate(_blockerBarricade.position, out byte x, out byte y))
             {
                 BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricade);
@@ -577,7 +578,27 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 {
                     BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                 }
+                else backup = true;
                 _blockerBarricade = null;
+            }
+            else backup = true;
+
+            if (backup)
+            {
+                for (x = 0; x < Regions.WORLD_SIZE; x++)
+                {
+                    for (y = 0; y < Regions.WORLD_SIZE; y++)
+                    {
+                        for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
+                        {
+                            BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
+                            if (d.asset.id == Config.T1BlockerID || d.asset.id == Config.T2BlockerID)
+                            {
+                                BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
+                            }
+                        }
+                    }
+                }
             }
         }
         readonly Vector3 SpawnRotation = new Vector3(270f, 0f, 180f);
@@ -778,7 +799,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             {
                 if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1.ID : ObjectiveTeam2.ID))
                 {
-                    bool atkOnFlag = (AttackingTeam == 1ul && flag.Team1TotalCappers > 0) || (AttackingTeam == 2ul && flag.Team2TotalCappers > 0);
+                    //bool atkOnFlag = (AttackingTeam == 1ul && flag.Team1TotalCappers > 0) || (AttackingTeam == 2ul && flag.Team2TotalCappers > 0);
                     if (!flag.IsContested(out ulong winner))
                     {
                         if (winner == AttackingTeam || AttackingTeam != flag.Owner)
@@ -804,7 +825,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             base.EventLoopAction();
             FOBManager.OnGameTick(TicketCounter);
         }
-
+        public override void OnEvaluate()
+        {
+            CheckPlayersAMC();
+        }
         public void StartStagingPhase(int seconds)
         {
             _stagingSeconds = seconds;

@@ -331,6 +331,7 @@ namespace Uncreated.Warfare
                 { "kick_kicked_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by an operator.</color>" },
                 { "kick_kicked_console_operator", "{0} ({1}) was kicked by an operator because: {2}." },
                 { "kick_kicked_console", "{0} ({1}) was kicked by {2} ({3}) because: {4}." },
+                { "kick_autokick_namefilter", "Your name does not contain enough alphanumeric characters in succession (5), please change your name and rejoin." },
                 // ban
                 { "ban_syntax", "<color=#9cffb3>Syntax: <i>/ban <player> <duration minutes> <reason ...></i>.</color>" },
                 { "ban_permanent_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned.</color>" },
