@@ -414,9 +414,20 @@ namespace Uncreated.Warfare.Teams
             return false;
         }
 
-        public void StartNewGameCountdown(LobbyPlayer player)
+        public void OnNewGameStarting()
         {
-            StartCoroutine(CountdownTick());
+            //StartCoroutine(CountdownTick());
+
+            foreach (var player in LobbyPlayers)
+            {
+                player.Player.Player.teleportToLocation(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+
+                player.Team = 0;
+                player.IsInLobby = true;
+            }
+
+            foreach (var player in LobbyPlayers)
+                ShowUI(player, false);
         }
 
         IEnumerator<WaitForSeconds> CountdownTick()

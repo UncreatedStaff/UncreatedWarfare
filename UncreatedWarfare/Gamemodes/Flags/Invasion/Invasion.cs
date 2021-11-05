@@ -111,6 +111,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             base.StartNextGame(onLoad); // set game id
             if (_state == EState.DISCARD) return;
+
+            _joinManager.OnNewGameStarting();
+
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
             if (_attackTeam == 1)
                 _defendTeam = 2;

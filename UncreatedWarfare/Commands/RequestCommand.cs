@@ -173,7 +173,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_notsquadleader");
                     }
-                    else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements && !(kit.Class == EClass.CREWMAN || kit.Class == EClass.PILOT))
+                    else if (Data.Gamemode.State == Gamemodes.EState.ACTIVE && CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_KIT, out Cooldown requestCooldown) && !ucplayer.OnDutyOrAdmin() && !UCWarfare.Config.OverrideKitRequirements && !(kit.Class == EClass.CREWMAN || kit.Class == EClass.PILOT))
                     {
                         player.Message("kit_e_cooldownglobal", requestCooldown.ToString());
                     }
