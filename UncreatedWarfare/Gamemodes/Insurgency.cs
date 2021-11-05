@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Insurgency()
             : base("Insurgency", 0.25F)
         {
-            insurgencyConfig = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
+            _config = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
         }
         public override void Init()
         {
@@ -605,8 +605,8 @@ namespace Uncreated.Warfare.Gamemodes
                 ClearUI(player);
         }
 
-        public void ReloadConfig() => insurgencyConfig.Reload();
-        public void SaveConfig() => insurgencyConfig.Save();
+        public void ReloadConfig() => _config.Reload();
+        public void SaveConfig() => _config.Save();
 
         public void StartStagingPhase(int seconds)
         {
