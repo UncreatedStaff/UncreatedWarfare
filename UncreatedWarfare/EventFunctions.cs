@@ -743,58 +743,58 @@ namespace Uncreated.Warfare
                     Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
                 else
                     Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
+
+                bool kick = false;
+                string cn = null;
+                string nn = null;
+                if (player.playerID.characterName.Length == 0)
+                {
+                    player.playerID.characterName = player.playerID.steamID.m_SteamID.ToString(Data.Locale);
+                    if (player.playerID.nickName.Length == 0)
+                    {
+                        player.playerID.nickName = player.playerID.steamID.m_SteamID.ToString(Data.Locale);
+                    }
+                    else
+                    {
+                        kick = F.FilterName(player.playerID.characterName, out cn);
+                        kick |= F.FilterName(player.playerID.nickName, out nn);
+                    }
+                }
+                else if (player.playerID.nickName.Length == 0)
+                {
+                    player.playerID.nickName = player.playerID.steamID.m_SteamID.ToString(Data.Locale);
+                    if (player.playerID.characterName.Length == 0)
+                    {
+                        player.playerID.characterName = player.playerID.steamID.m_SteamID.ToString(Data.Locale);
+                    }
+                    else
+                    {
+                        kick = F.FilterName(player.playerID.characterName, out cn);
+                        kick |= F.FilterName(player.playerID.nickName, out nn);
+                    }
+                }
+                else
+                {
+                    kick = F.FilterName(player.playerID.characterName, out cn);
+                    kick |= F.FilterName(player.playerID.nickName, out nn);
+                }
+                if (kick)
+                {
+                    isValid = false;
+                    explanation = $"Your name does not contain enough alphanumeric characters in succession ({UCWarfare.Config.MinAlphanumericStringLength}), please change your name and rejoin.";
+                    return;
+                }
+                else
+                {
+                    player.playerID.characterName = cn;
+                    player.playerID.nickName = cn;
+                }
+
                 ulong team = 0;
                 if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
                 {
                     team = save.Team;
                 }
-#if false // <--- set to true and below to true to enable name prefixes.
-                if (Data.Gamemode is ITeams && Data.Gamemode.ShowXPUI)
-                {
-                    string globalPrefix = "";
-                    string teamPrefix = "";
-
-                    // add team tags to global prefix
-                    if (team == 1) globalPrefix += $"{TeamManager.Team1Code.ToUpper()}-";
-                    else if (team == 2) globalPrefix += $"{TeamManager.Team2Code.ToUpper()}-";
-
-                    int xp = XPManager.GetXP(player.playerID.steamID.m_SteamID, true);
-                    // int stars = 0;
-                    // was not being used so i commented it
-                    Rank rank = null;
-                    /*
-                    if (OfficerManager.IsOfficer(player.playerID.steamID, out var officer))
-                    {
-                        rank = OfficerManager.GetOfficerRank(officer.officerLevel);
-                        int officerPoints = OfficerManager.GetOfficerPoints(player.playerID.steamID.m_SteamID, team, true).GetAwaiter().GetResult();
-                        stars = OfficerManager.GetStars(officerPoints);
-                    }
-                    else
-                    {*/
-                    rank = XPManager.GetRank(xp, out _, out _);
-                    //}
-
-                    if (team == 1 || team == 2)
-                    {
-                        globalPrefix += rank.abbreviation;
-                        teamPrefix += rank.abbreviation;
-
-                        globalPrefix += " ";
-                        teamPrefix += " ";
-
-                        player.playerID.characterName = globalPrefix + (player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName);
-                        player.playerID.nickName = teamPrefix + (player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName);
-                    }
-                } 
-                else
-                {
-                    player.playerID.characterName = player.playerID.characterName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName;
-                    player.playerID.nickName = player.playerID.nickName == string.Empty ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName;
-                }
-#else
-                player.playerID.characterName = player.playerID.characterName.Length == 0 ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.characterName;
-                player.playerID.nickName = player.playerID.nickName.Length == 0 ? player.playerID.steamID.m_SteamID.ToString(Data.Locale) : player.playerID.nickName;
-#endif
             }
             catch (Exception ex)
             {
@@ -804,7 +804,6 @@ namespace Uncreated.Warfare
                 explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
             }
         }
-
         internal static void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
         {
             if (Data.Is(out IVehicles v))
