@@ -216,10 +216,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (value > MAX_POINTS) _points = MAX_POINTS;
             else if (value < -MAX_POINTS) _points = -MAX_POINTS;
             else _points = value;
-            if (!skipEvent && OldPoints != _points)
-                OnPointsChanged?.Invoke(_points, OldPoints, this);
             if (!skipDeltaPoints)
                 LastDeltaPoints = _points - OldPoints;
+            if (!skipEvent)
+                OnPointsChanged?.Invoke(_points, OldPoints, this);
         }
         public event PlayerDelegate OnPlayerEntered;
         public event PlayerDelegate OnPlayerLeft;

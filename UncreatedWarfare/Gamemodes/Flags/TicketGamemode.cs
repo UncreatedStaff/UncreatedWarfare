@@ -29,9 +29,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             base.EventLoopAction();
         }
         protected abstract void EvaluateTickets();
-        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            TicketManager.OnGroupChanged(player, oldteam, newteam);
+            TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)

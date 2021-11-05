@@ -180,7 +180,7 @@ namespace Uncreated.Warfare.Gamemodes
                 ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
             }
         }
-        public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public virtual void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
         public virtual void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
         {

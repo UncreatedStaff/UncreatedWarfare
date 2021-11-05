@@ -17,7 +17,7 @@ namespace Uncreated.Warfare
 {
     public class PlayerManager
     {
-        public readonly static RawByteIO<List<PlayerSave>> IO = new RawByteIO<List<PlayerSave>>(PlayerSave.ReadList, PlayerSave.WriteList, directory + file, 4);
+        public readonly static RawByteIO<List<PlayerSave>> IO = new RawByteIO<List<PlayerSave>>(PlayerSave.ReadList, PlayerSave.WriteList, directory + FILE, 4);
         public static List<UCPlayer> OnlinePlayers;
         public static List<UCPlayer> Team1Players;
         public static List<UCPlayer> Team2Players;
@@ -25,8 +25,8 @@ namespace Uncreated.Warfare
         private static readonly string directory = Data.KitsStorage;
         public static readonly Type Type = typeof(PlayerSave);
         private static readonly FieldInfo[] fields = Type.GetFields();
-        private const string file = "playersaves.dat";
-        private static readonly string Path = directory + file;
+        private const string FILE = "playersaves.dat";
+        private static readonly string Path = directory + FILE;
         public PlayerManager()
         {
             Load();
@@ -38,7 +38,7 @@ namespace Uncreated.Warfare
         {
             if (!Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
-            if (File.Exists(directory + file))
+            if (File.Exists(directory + FILE))
             {
                 if (IO.ReadFrom(Path, out List<PlayerSave> saves))
                 {

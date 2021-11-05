@@ -742,7 +742,14 @@ namespace Uncreated.Warfare.FOBs
             {
                 FOBList = Team2FOBs;
             }
-            else return;
+            else
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
+                }
+                return;
+            }
 
 
             for (int i = 0; i < 10; i++)

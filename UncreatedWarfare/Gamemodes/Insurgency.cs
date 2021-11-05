@@ -368,9 +368,16 @@ namespace Uncreated.Warfare.Gamemodes
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
             base.OnPlayerJoined(player, wasAlreadyOnline);
         }
-        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            UpdateUI(UCPlayer.FromSteamPlayer(player));
+            UpdateUI(player);
+            if (State == EState.STAGING)
+            {
+                if (newteam != 1 && newteam != 2)
+                    ClearStagingUI(player);
+                else
+                    ShowStagingUI(player);
+            }
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public void AddIntelligencePoints(int points)
@@ -681,7 +688,11 @@ namespace Uncreated.Warfare.Gamemodes
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                UpdateStagingUI(player, timeLeft);
+            {
+                ulong team = player.GetTeam();
+                if (team == 1 || team == 2)
+                    UpdateStagingUI(player, timeLeft);
+            }
         }
         private void EndStagingPhase()
         {
@@ -692,6 +703,10 @@ namespace Uncreated.Warfare.Gamemodes
                 EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
 
             _state = EState.ACTIVE;
+        }
+        public void ClearStagingUI(UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
         }
         public override void Dispose()
         {

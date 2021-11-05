@@ -76,7 +76,6 @@ namespace Uncreated.Warfare
                     {
                         if (other.transform.CompareTag("Player")) // landmine that player walks over
                         {
-                            F.Log("Landmine walked over by player");
                             if (!Provider.isPvP || other.transform.parent != null && other.transform.parent.CompareTag("Vehicle"))
                                 return false;
 
@@ -85,14 +84,12 @@ namespace Uncreated.Warfare
 
                             if (owner != null && player != null && player.quests.groupID.m_SteamID == F.GetTeamFromPlayerSteam64ID(owner.Owner))
                             {
-                                F.Log("Landmine was triggered by a friendly and so it didnt explode");
                                 return false;
                             }
 
                             if (owner != null && player != null && player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                             {
                                 c.LastLandmineTriggered = new LandmineData(__instance, owner);
-                                F.Log("1Set triggerer.");
                             }
 
                             EffectManager.sendEffect(___explosion2, EffectManager.LARGE, __instance.transform.position);
@@ -103,10 +100,7 @@ namespace Uncreated.Warfare
                         }
                         else // other form of trigger (throwable, animal, etc)
                         {
-                            F.Log("Landmine triggered by other.");
                             ThrowableOwner c = other.transform.GetComponent<ThrowableOwner>(); // throwable?
-                            if (c != null)
-                                F.Log("Found throwable owner: " + c.ownerID.ToString(Data.Locale));
                             EffectManager.sendEffect(___explosion2, EffectManager.LARGE, __instance.transform.position);
                             DamageTool.explode(__instance.transform.position, ___range2, EDeathCause.LANDMINE,
                                 c == null ? CSteamID.Nil : (c.owner == null ? new CSteamID(c.ownerID) : c.owner.channel.owner.playerID.steamID),
@@ -117,7 +111,6 @@ namespace Uncreated.Warfare
                     }
                     else if (other.transform.CompareTag("Player")) // non explosive and player walks over it (barbed, etc)
                     {
-                        F.Log("Trap triggered by player.");
                         if (!Provider.isPvP || other.transform.parent != null && other.transform.parent.CompareTag("Vehicle"))
                             return false;
                         Player player = DamageTool.getPlayer(other.transform);
@@ -128,7 +121,6 @@ namespace Uncreated.Warfare
                         if (owner != null && player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             c.LastLandmineTriggered = new LandmineData(__instance, owner);
-                            F.Log("2Set triggerer.");
                         }
                         DamageTool.damage(player, EDeathCause.SHRED, ELimb.SPINE,
                             owner == null ? CSteamID.Nil : (owner.Player == null ? new CSteamID(owner.Owner) : owner.Player.channel.owner.playerID.steamID)
@@ -145,7 +137,6 @@ namespace Uncreated.Warfare
                         Zombie zombie = DamageTool.getZombie(other.transform);
                         if (zombie != null)
                         {
-                            F.Log("Trap triggered by zombie.");
                             DamageTool.damageZombie(new DamageZombieParameters(zombie, __instance.transform.forward, ___zombieDamage)
                             {
                                 instigator = __instance
@@ -158,7 +149,6 @@ namespace Uncreated.Warfare
                             Animal animal = DamageTool.getAnimal(other.transform);
                             if (animal == null)
                                 return false;
-                            F.Log("Trap triggered by animal.");
                             DamageTool.damageAnimal(new DamageAnimalParameters(animal, __instance.transform.forward, ___animalDamage)
                             {
                                 instigator = __instance

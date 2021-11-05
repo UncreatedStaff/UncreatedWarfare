@@ -620,13 +620,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.channel.owner, player.channel.owner.transportConnection);
             }
         }
-        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            CTFUI.ClearListUI(player.transportConnection, Config.FlagUICount);
-            if (_onFlag.ContainsKey(player.playerID.steamID.m_SteamID))
-                CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.playerID.steamID.m_SteamID])
-                    ?? _rotation[0], player.player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player, player.transportConnection);
-            CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+            CTFUI.ClearListUI(player.Player.channel.owner.transportConnection, Config.FlagUICount);
+            if (_onFlag.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.Player.channel.owner.playerID.steamID.m_SteamID])
+                    ?? _rotation[0], player.Player.movement.getVehicle() != null).SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, Config.ProgressChars, player.Player.channel.owner, player.Player.channel.owner.transportConnection);
+            CTFUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon);
+            if (State == EState.STAGING)
+            {
+                if (newteam != 1 && newteam != 2)
+                    ClearStagingUI(player);
+                else
+                    ShowStagingUI(player);
+            }
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
@@ -807,6 +814,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             EffectManager.sendUIEffect(Config.HeaderID, 29001, player.connection, true);
             EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
         }
+        public void ClearStagingUI(UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
+        }
         public void ShowStagingUIForAll()
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
@@ -820,7 +831,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                UpdateStagingUI(player, timeLeft);
+            {
+                ulong team = player.GetTeam();
+                if (team == 1 || team == 2)
+                    UpdateStagingUI(player, timeLeft);
+            }
         }
         private void EndStagingPhase()
         {

@@ -27,7 +27,7 @@ namespace Uncreated.Warfare.Teams
 
             if (PlayerManager.OnlinePlayers != null)
             {
-                foreach (var player in PlayerManager.OnlinePlayers)
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                     LobbyPlayers.Add(new LobbyPlayer(player, 0));
             }
             
@@ -122,7 +122,6 @@ namespace Uncreated.Warfare.Teams
         public void JoinLobby(UCPlayer player, bool showX)
         {
 
-
             if (player.Player.life.isDead)
             {
                 player.Player.life.ReceiveRespawnRequest(false);
@@ -131,7 +130,9 @@ namespace Uncreated.Warfare.Teams
             {
                 player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
             }
-            
+            ulong oldgroup = player.GetTeam();
+            player.Player.quests.leaveGroup(true);
+            EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
 
             LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
             if (lobbyPlayer == null)
