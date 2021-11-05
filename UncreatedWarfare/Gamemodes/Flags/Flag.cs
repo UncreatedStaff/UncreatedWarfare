@@ -210,17 +210,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             get => _points;
         }
-        public void SetPoints(float value, bool skipEvent = false)
+        public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
         {
             float OldPoints = _points;
             if (value > MAX_POINTS) _points = MAX_POINTS;
             else if (value < -MAX_POINTS) _points = -MAX_POINTS;
             else _points = value;
             if (!skipEvent && OldPoints != _points)
-            {
                 OnPointsChanged?.Invoke(_points, OldPoints, this);
-            }
-            LastDeltaPoints = _points - OldPoints;
+            if (!skipDeltaPoints)
+                LastDeltaPoints = _points - OldPoints;
         }
         public event PlayerDelegate OnPlayerEntered;
         public event PlayerDelegate OnPlayerLeft;

@@ -440,11 +440,17 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("test_go_no_zone", arg);
                         return;
                     }
-                    player.teleportToLocation(zone.Value.Center3DAbove, 90f);
+                    if (Physics.Raycast(new Ray(new Vector3(zone.Value.Center.x, Level.HEIGHT, zone.Value.Center.y), Vector3.down), out RaycastHit hit2, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+                        player.teleportToLocationUnsafe(hit2.point + new Vector3(0, 1, 0), 90f);
+                    else 
+                        player.teleportToLocationUnsafe(zone.Value.Center3DAbove, 90f);
                     player.SendChat("test_go_success_zone", zone.Value.Name);
                     return;
                 }
-                player.teleportToLocation(flag.ZoneData.Center3DAbove, 90f);
+                if (Physics.Raycast(new Ray(new Vector3(flag.ZoneData.Center.x, Level.HEIGHT, flag.ZoneData.Center.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+                    player.teleportToLocationUnsafe(hit.point + new Vector3(0, 1, 0), 90f);
+                else
+                    player.teleportToLocationUnsafe(flag.ZoneData.Center3DAbove, 90f);
                 player.SendChat("test_go_success_flag", flag.Name, flag.TeamSpecificHexColor);
                 return;
             }

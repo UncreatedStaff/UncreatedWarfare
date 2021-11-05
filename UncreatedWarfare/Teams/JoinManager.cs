@@ -18,8 +18,9 @@ namespace Uncreated.Warfare.Teams
         private List<LobbyPlayer> Team2Players;
         private TimeSpan countdown;
 
-        private void Start()
+        private void Awake()
         {
+            F.Log("running");
             LobbyPlayers = new List<LobbyPlayer>();
             Team1Players = new List<LobbyPlayer>();
             Team2Players = new List<LobbyPlayer>();
@@ -418,7 +419,7 @@ namespace Uncreated.Warfare.Teams
         {
             //StartCoroutine(CountdownTick());
 
-            foreach (var player in LobbyPlayers)
+            foreach (LobbyPlayer player in LobbyPlayers)
             {
                 player.Player.Player.teleportToLocation(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
 
@@ -426,7 +427,7 @@ namespace Uncreated.Warfare.Teams
                 player.IsInLobby = true;
             }
 
-            foreach (var player in LobbyPlayers)
+            foreach (LobbyPlayer player in LobbyPlayers)
                 ShowUI(player, false);
         }
 

@@ -354,7 +354,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             flag.EvaluatePointsOverride = FlagCheck;
             flag.IsContestedOverride = ContestedCheck;
             flag.SetOwnerNoEventInvocation(_defendTeam);
-            flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true);
+            flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true, true);
         }
         protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {

@@ -375,7 +375,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void AddIntelligencePoints(int points)
         {
-            var activeCaches = ActiveCaches;
+            List<CacheData> activeCaches = ActiveCaches;
             if (activeCaches.Count == 1 && !activeCaches.First().IsDiscovered)
             {
                 IntelligentsPoints += points;
@@ -529,8 +529,8 @@ namespace Uncreated.Warfare.Gamemodes
                 if (destroyer.GetTeam() == AttackingTeam)
                 {
                     XP.XPManager.AddXP(destroyer.Player, Config.XPCacheDestroyed, F.Translate("xp_cache_killed", destroyer));
-                    Stats.StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
-                    Stats.StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
+                    StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
+                    StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 }
                 else
                 {
