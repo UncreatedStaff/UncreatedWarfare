@@ -300,6 +300,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             base.StartNextGame(onLoad); // set game id
             if (_state == EState.DISCARD) return;
+
+            _joinManager.OnNewGameStarting();
+
             LoadRotation();
             PlaceBlockerBarricades();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);

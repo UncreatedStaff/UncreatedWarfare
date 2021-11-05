@@ -146,6 +146,8 @@ namespace Uncreated.Warfare.Gamemodes
             base.StartNextGame(onLoad); // set game id
             GameStats.Reset();
 
+            _joinManager.OnNewGameStarting();
+
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
             if (_attackTeam == 1)
                 _defendTeam = 2;

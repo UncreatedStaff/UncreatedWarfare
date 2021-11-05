@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Teams
             }
             if (CooldownManager.HasCooldown(player, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
             {
-                player.SendChat("teams_e_cooldown", ((int)Math.Round(cooldown.Timeleft.TotalSeconds)).ToString());
+                player.SendChat("teams_e_cooldown", cooldown.ToString());
                 return;
             }
             if ((player.GetTeam() == 1 || player.GetTeam() == 2) && !player.Player.IsInMain())
