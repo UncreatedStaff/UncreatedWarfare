@@ -38,6 +38,7 @@ namespace Uncreated.Warfare.Gamemodes
             if (UseJoinUI)
             {
                 _joinManager = gameObject.AddComponent<JoinManager>();
+                _joinManager.Initialize();
             }
             base.Init();
         }

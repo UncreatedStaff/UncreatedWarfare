@@ -643,7 +643,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
-            ShowStagingUIForAll();
+            //ShowStagingUIForAll();
 
             while (StagingSeconds > 0)
             {

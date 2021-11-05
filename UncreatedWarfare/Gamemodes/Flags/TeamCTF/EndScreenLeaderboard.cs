@@ -78,15 +78,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 SteamPlayer queued = TeleportQueue.Dequeue();
                 if (queued != null && queued.player != null)
                 {
-                    lastTp = Time.realtimeSinceStartup;
-                    if (queued.player.life.isDead)
-                    {
-                        queued.player.life.ReceiveRespawnRequest(false);
-                    }
-                    else
-                    {
-                        queued.player.teleportToLocation(F.GetBaseSpawn(queued, out ulong playerteam), F.GetBaseAngle(playerteam));
-                    }
+                    //lastTp = Time.realtimeSinceStartup;
+                    //if (queued.player.life.isDead)
+                    //{
+                    //    queued.player.life.ReceiveRespawnRequest(false);
+                    //}
+                    //else
+                    //{
+                    //    queued.player.teleportToLocation(F.GetBaseSpawn(queued, out ulong playerteam), F.GetBaseAngle(playerteam));
+                    //}
                 }
             }
         }

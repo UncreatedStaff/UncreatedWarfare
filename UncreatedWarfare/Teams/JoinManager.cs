@@ -18,13 +18,19 @@ namespace Uncreated.Warfare.Teams
         private List<LobbyPlayer> Team2Players;
         private TimeSpan countdown;
 
-        private void Awake()
+        public void Initialize()
         {
-            F.Log("running");
             LobbyPlayers = new List<LobbyPlayer>();
             Team1Players = new List<LobbyPlayer>();
             Team2Players = new List<LobbyPlayer>();
             countdown = TimeSpan.FromTicks(0);
+
+            if (PlayerManager.OnlinePlayers != null)
+            {
+                foreach (var player in PlayerManager.OnlinePlayers)
+                    LobbyPlayers.Add(new LobbyPlayer(player, 0));
+            }
+            
 
             EffectManager.onEffectButtonClicked += OnButtonClicked;
         }
@@ -115,6 +121,18 @@ namespace Uncreated.Warfare.Teams
 
         public void JoinLobby(UCPlayer player, bool showX)
         {
+
+
+            if (player.Player.life.isDead)
+            {
+                player.Player.life.ReceiveRespawnRequest(false);
+            }
+            else
+            {
+                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+            }
+            
+
             LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
             if (lobbyPlayer == null)
             {
@@ -297,14 +315,7 @@ namespace Uncreated.Warfare.Teams
             {
                 if (lobbyPlayer.Team != 0)
                 {
-                    if (lobbyPlayer.Team != lobbyPlayer.Player.GetTeam())
-                    {
-                        StartCoroutine(ConfirmJoin(lobbyPlayer));
-                    }
-                    else
-                    {
-                        CloseUI(lobbyPlayer);
-                    }
+                    StartCoroutine(ConfirmJoin(lobbyPlayer));
                 }
             }
             else if (buttonName == "X")
@@ -419,16 +430,13 @@ namespace Uncreated.Warfare.Teams
         {
             //StartCoroutine(CountdownTick());
 
-            foreach (LobbyPlayer player in LobbyPlayers)
-            {
-                player.Player.Player.teleportToLocation(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+            LobbyPlayers.Clear();
 
-                player.Team = 0;
-                player.IsInLobby = true;
-            }
+            foreach (var player in PlayerManager.OnlinePlayers)
+                LobbyPlayers.Add(new LobbyPlayer(player, 0));
 
-            foreach (LobbyPlayer player in LobbyPlayers)
-                ShowUI(player, false);
+            foreach (var player in PlayerManager.OnlinePlayers)
+                JoinLobby(player, false);
         }
 
         IEnumerator<WaitForSeconds> CountdownTick()

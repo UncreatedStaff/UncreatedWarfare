@@ -785,7 +785,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
-            ShowStagingUIForAll();
+            //ShowStagingUIForAll();
 
             while (StagingSeconds > 0)
             {

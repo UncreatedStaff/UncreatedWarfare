@@ -849,7 +849,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         protected Coroutine UpdateCoroutine = null;
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
-            ShowStagingUIForAll();
+            //ShowStagingUIForAll();
 
             while (StagingSeconds > 0)
             {
