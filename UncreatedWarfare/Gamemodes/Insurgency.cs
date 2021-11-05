@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Gamemodes
         public List<CacheData> ActiveCaches { get => Caches.Where(c => c.IsActive && !c.IsDestroyed).ToList(); }
         private List<Vector3> SeenCaches;
 
-        protected int _stagingSeconds { get; set; }
+        protected int _stagingSeconds;
         public int StagingSeconds { get => _stagingSeconds; }
 
         public bool _isScreenUp;
@@ -636,6 +636,10 @@ namespace Uncreated.Warfare.Gamemodes
             _state = EState.STAGING;
             PlaceBlockerOverAttackerMain();
             StartCoroutine(StagingPhaseLoop());
+        }
+        public void SkipStagingPhase()
+        {
+            _stagingSeconds = 0;
         }
         public IEnumerator<WaitForSeconds> StagingPhaseLoop()
         {
