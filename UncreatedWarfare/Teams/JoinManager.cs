@@ -89,6 +89,14 @@ namespace Uncreated.Warfare.Teams
                 LobbyPlayers.Add(lobbyPlayer);
                 ShowUI(lobbyPlayer, false);
             }
+            else
+            {
+                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
+                lobbyPlayer.IsInLobby = false;
+                lobbyPlayer.IsDonatorT1 = isDonatorT1;
+                lobbyPlayer.IsDonatorT2 = isDonatorT2;
+                LobbyPlayers.Add(lobbyPlayer);
+            }
 
             foreach (LobbyPlayer p in LobbyPlayers)
                 UpdateUITeams(p, p.Team);
@@ -103,9 +111,21 @@ namespace Uncreated.Warfare.Teams
             foreach (LobbyPlayer p in LobbyPlayers)
                 UpdateUITeams(p, p.Team);
         }
+
         public void JoinLobby(UCPlayer player, bool showX)
         {
             LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
+            if (lobbyPlayer == null)
+            {
+                F.LogWarning("This player doesn't have a lobby player yet.");
+                bool isDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0;
+                bool isDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0;
+                lobbyPlayer = new LobbyPlayer(player, 0);
+                lobbyPlayer.IsInLobby = true;
+                lobbyPlayer.IsDonatorT1 = isDonatorT1;
+                lobbyPlayer.IsDonatorT2 = isDonatorT2;
+                LobbyPlayers.Add(lobbyPlayer);
+            }
             lobbyPlayer.IsInLobby = true;
             ShowUI(lobbyPlayer, showX);
 

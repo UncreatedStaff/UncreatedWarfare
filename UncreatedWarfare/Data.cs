@@ -220,7 +220,6 @@ namespace Uncreated.Warfare
                     Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
                 F.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
                 F.Log("Initialized gamemode.", ConsoleColor.Magenta);
-                SteamGameServer.SetGameDescription(F.Translate("server_desc", 0, Gamemode.DisplayName));
             } else
             {
                 F.LogError("Failed to Initialize Gamemode");

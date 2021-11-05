@@ -447,33 +447,31 @@ namespace Uncreated.Warfare.Gamemodes
         }
         void SpawnCacheItems(FOB cache)
         {
+            ushort ammoID = 0;
+            ushort buildID = 0;
+            if (DefendingTeam == 1)
+            {
+                ammoID = FOBManager.config.Data.Team1AmmoID;
+                buildID = FOBManager.config.Data.Team1BuildID;
+            }
+            else if (DefendingTeam == 1)
+            {
+                ammoID = FOBManager.config.Data.Team2AmmoID;
+                buildID = FOBManager.config.Data.Team2BuildID;
+            }
             if (cache.Structure.interactable is InteractableStorage storage)
             {
-                ushort ammoID = 0;
-                ushort buildID = 0;
-                if (DefendingTeam == 1)
-                {
-                    ammoID = FOBManager.config.Data.Team1AmmoID;
-                    buildID = FOBManager.config.Data.Team1BuildID;
-                }
-                else if (DefendingTeam == 1)
-                {
-                    ammoID = FOBManager.config.Data.Team2AmmoID;
-                    buildID = FOBManager.config.Data.Team2BuildID;
-                }
-
                 while (storage.items.tryAddItem(new Item(ammoID, true))) { }
+            }
+            Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
-                Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
+            for (int i = 0; i < 15; i++)
+                ItemManager.dropItem(new Item(buildID, true), point, false, true, false);
 
-                for (int i = 0; i < 15; i++)
-                    ItemManager.dropItem(new Item(buildID, true), point, false, true, false);
-
-                foreach (KeyValuePair<ushort, int> entry in Config.CacheItems)
-                {
-                    for (int i = 0; i < entry.Value; i++)
-                        ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
-                }
+            foreach (KeyValuePair<ushort, int> entry in Config.CacheItems)
+            {
+                for (int i = 0; i < entry.Value; i++)
+                    ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
             }
         }
         private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()
@@ -666,8 +664,8 @@ namespace Uncreated.Warfare.Gamemodes
             DestroyBlockerBarricade();
             TicketManager.OnStagingPhaseEnded();
 
-            foreach (var player in PlayerManager.OnlinePlayers)
-                EffectManager.askEffectClearByID(29001, player.connection);
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
 
             _state = EState.ACTIVE;
         }

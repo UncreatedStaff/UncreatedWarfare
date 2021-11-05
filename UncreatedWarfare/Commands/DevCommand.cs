@@ -10,9 +10,9 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class DevCommand
+    public class DevCommand : IRocketCommand
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Both;
+        public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "dev";
         public string Help => "Dev command for various server setup features.";
         public string Syntax => "/dev [arguments]";
