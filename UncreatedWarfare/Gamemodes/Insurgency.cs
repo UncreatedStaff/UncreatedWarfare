@@ -152,7 +152,6 @@ namespace Uncreated.Warfare.Gamemodes
             else if (_attackTeam == 2)
                 _defendTeam = 1;
 
-            CachesLeft = UnityEngine.Random.Range(Config.MinStartingCaches, Config.MaxStartingCaches + 1);
             CachesDestroyed = 0;
             Caches = new List<CacheData>();
             SeenCaches = new List<Vector3>();
