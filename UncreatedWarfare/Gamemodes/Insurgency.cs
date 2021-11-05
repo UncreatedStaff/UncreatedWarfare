@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Insurgency()
             : base("Insurgency", 0.25F)
         {
-            _config = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
+            insurgencyConfig = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
         }
         public override void Init()
         {
@@ -440,6 +440,39 @@ namespace Uncreated.Warfare.Gamemodes
             }
 
             UpdateUIAll();
+
+            SpawnCacheItems(cache);
+        }
+        void SpawnCacheItems(FOB cache)
+        {
+            if (cache.Structure.interactable is InteractableStorage storage)
+            {
+                ushort ammoID = 0;
+                ushort buildID = 0;
+                if (DefendingTeam == 1)
+                {
+                    ammoID = FOBManager.config.Data.Team1AmmoID;
+                    buildID = FOBManager.config.Data.Team1BuildID;
+                }
+                else if (DefendingTeam == 1)
+                {
+                    ammoID = FOBManager.config.Data.Team2AmmoID;
+                    buildID = FOBManager.config.Data.Team2BuildID;
+                }
+
+                while (storage.items.tryAddItem(new Item(ammoID, true))) { }
+
+                Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
+
+                for (int i = 0; i < 15; i++)
+                    ItemManager.dropItem(new Item(buildID, true), point, false, true, false);
+
+                foreach (var entry in Config.CacheItems)
+                {
+                    for (int i = 0; i < entry.Value; i++)
+                        ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
+                }
+            }
         }
         private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()
         {
@@ -572,8 +605,8 @@ namespace Uncreated.Warfare.Gamemodes
                 ClearUI(player);
         }
 
-        public void ReloadConfig() => _config.Reload();
-        public void SaveConfig() => _config.Save();
+        public void ReloadConfig() => insurgencyConfig.Reload();
+        public void SaveConfig() => insurgencyConfig.Save();
 
         public void StartStagingPhase(int seconds)
         {
@@ -663,6 +696,8 @@ namespace Uncreated.Warfare.Gamemodes
             public ushort T1BlockerID;
             public ushort T2BlockerID;
             public ushort CacheID;
+            public ushort CacheStartingBuild;
+            public Dictionary<ushort, int> CacheItems;
             public List<SerializableTransform> CacheSpawns;
 
             public override void SetDefaults()
@@ -676,12 +711,14 @@ namespace Uncreated.Warfare.Gamemodes
                 IntelPointsToDiscovery = 30;
                 IntelPointsToSpawn = 15;
                 XPCacheDestroyed = 800;
+                HeaderID = 36066;
                 T1BlockerID = 36058;
                 T2BlockerID = 36059;
                 XPCacheTeamkilled = -8000;
                 TicketsCache = 80;
                 CacheID = 38404;
-                HeaderID = 36066;
+                CacheStartingBuild = 15;
+                CacheItems = new Dictionary<ushort, int>();
                 CacheSpawns = new List<SerializableTransform>();
             }
         }
