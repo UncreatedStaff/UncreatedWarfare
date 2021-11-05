@@ -47,6 +47,7 @@ namespace Uncreated.Warfare.Gamemodes
         public SquadManager SquadManager => _squadManager;
         protected StructureSaver _structureSaver;
         public StructureSaver StructureSaver => _structureSaver;
+        protected Transform _blockerBarricade = null;
 
         private uint _counter;
         private List<ulong> InAMC;
@@ -82,7 +83,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Insurgency()
             : base("Insurgency", 0.25F)
         {
-            insurgencyConfig = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
+            _config = new Config<InsurgencyConfig>(Data.FlagStorage, "insurgency.json");
         }
         public override void Init()
         {
@@ -113,9 +114,35 @@ namespace Uncreated.Warfare.Gamemodes
             VehicleSigns.InitAllSigns();
             base.OnLevelLoaded();
         }
+        private void DestroyBlockerBarricade()
+        {
+            if (_blockerBarricade != null && Regions.tryGetCoordinate(_blockerBarricade.position, out byte x, out byte y))
+            {
+                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricade);
+                if (drop != null)
+                {
+                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                }
+                _blockerBarricade = null;
+            }
+        }
+        readonly Vector3 SpawnRotation = new Vector3(270f, 0f, 180f);
+        private void PlaceBlockerOverAttackerMain()
+        {
+            DestroyBlockerBarricade();
+            if (_attackTeam == 1)
+            {
+                _blockerBarricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.T1BlockerID),
+                    TeamManager.Team1Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
+            }
+            else if (_attackTeam == 2)
+            {
+                _blockerBarricade = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.T2BlockerID),
+                    TeamManager.Team2Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
+            }
+        }
         public override void StartNextGame(bool onLoad = false)
         {
-            F.Log("Loading new game.", ConsoleColor.Cyan);
             base.StartNextGame(onLoad); // set game id
             GameStats.Reset();
 
@@ -135,7 +162,7 @@ namespace Uncreated.Warfare.Gamemodes
             {
                 VehicleSpawner.RespawnAllVehicles();
             }
-            FOBManager.OnnewGameStarting();
+            FOBManager.OnNewGameStarting();
             RallyManager.WipeAllRallies();
 
             CachesLeft = UnityEngine.Random.Range(Config.MinStartingCaches, Config.MaxStartingCaches + 1);
@@ -143,16 +170,8 @@ namespace Uncreated.Warfare.Gamemodes
                 Caches.Add(new CacheData());
 
             SpawnNewCache();
-            AnnounceMode();
 
             StartStagingPhase(Config.StagingPhaseSeconds);
-        }
-        private void AnnounceMode()
-        {
-            foreach (var player in PlayerManager.OnlinePlayers)
-            {
-                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
-            }
         }
         public override void DeclareWin(ulong winner)
         {
@@ -375,7 +394,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             cache.isDiscovered = true;
 
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
                     ToastMessage.QueueMessage(player, F.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", ToastMessageSeverity.BIG);
@@ -395,7 +414,7 @@ namespace Uncreated.Warfare.Gamemodes
                 return;
             }
 
-            var transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
+            SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
 
             Barricade barricade = new Barricade(Config.CacheID);
             var rotation = transform.Rotation;
@@ -415,7 +434,7 @@ namespace Uncreated.Warfare.Gamemodes
 
             if (message)
             {
-                foreach (var player in PlayerManager.OnlinePlayers)
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                     if (player.GetTeam() == DefendingTeam)
                         ToastMessage.QueueMessage(player, F.Translate("cache_spawned_defence", player), "", ToastMessageSeverity.BIG);
             }
@@ -536,7 +555,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void UpdateUIAll()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 UpdateUI(player);
         }
         public void ClearUI(UCPlayer player)
@@ -549,12 +568,12 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void ClearUIAll()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 ClearUI(player);
         }
 
-        public void ReloadConfig() => insurgencyConfig.Reload();
-        public void SaveConfig() => insurgencyConfig.Save();
+        public void ReloadConfig() => _config.Reload();
+        public void SaveConfig() => _config.Save();
 
         public void StartStagingPhase(int seconds)
         {
@@ -584,6 +603,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void ShowStagingUI(UCPlayer player)
         {
+            EffectManager.sendUIEffect(Config.HeaderID, 29001, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
                 EffectManager.sendUIEffectText(29001, player.connection, true, "Top", "BRIEFING PHASE");
             else if (player.GetTeam() == DefendingTeam)
@@ -591,19 +611,17 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void ShowStagingUIForAll()
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 ShowStagingUI(player);
         }
         public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
-            EffectManager.sendUIEffect(29001, 29001, player.connection, true);
-
             EffectManager.sendUIEffectText(29001, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds.ToString("D2")}");
         }
         public void UpdateStagingUIForAll()
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 UpdateStagingUI(player, timeLeft);
         }
         private void EndStagingPhase()
@@ -630,7 +648,6 @@ namespace Uncreated.Warfare.Gamemodes
 
         public class InsurgencyConfig : ConfigData
         {
-            
             public int MinStartingCaches;
             public int MaxStartingCaches;
             public int StagingPhaseSeconds;
@@ -642,6 +659,9 @@ namespace Uncreated.Warfare.Gamemodes
             public int XPCacheDestroyed;
             public int XPCacheTeamkilled;
             public int TicketsCache;
+            public ushort HeaderID;
+            public ushort T1BlockerID;
+            public ushort T2BlockerID;
             public ushort CacheID;
             public List<SerializableTransform> CacheSpawns;
 
@@ -656,9 +676,12 @@ namespace Uncreated.Warfare.Gamemodes
                 IntelPointsToDiscovery = 30;
                 IntelPointsToSpawn = 15;
                 XPCacheDestroyed = 800;
+                T1BlockerID = 36058;
+                T2BlockerID = 36059;
                 XPCacheTeamkilled = -8000;
                 TicketsCache = 80;
                 CacheID = 38404;
+                HeaderID = 36066;
                 CacheSpawns = new List<SerializableTransform>();
             }
         }

@@ -8,12 +8,25 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 using Rocket.Unturned.Player;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
+using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
+using System.Text;
+using Uncreated.Players;
 
 namespace Uncreated.Warfare.Gamemodes
 {
     public delegate Task TeamWinDelegate(ulong team);
     public abstract class Gamemode : MonoBehaviour, IDisposable, IGamemode
     {
+        public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
+        {
+            { "TeamCTF", typeof(TeamCTF) },
+            { "Invasion", typeof(Invasion) },
+            { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
+            { "Insurgency", typeof(Insurgency) }
+        };
+        public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
         protected readonly string _name;
         public string Name { get => _name; }
         private float EventLoopSpeed;
@@ -111,11 +124,42 @@ namespace Uncreated.Warfare.Gamemodes
         public abstract void DeclareWin(ulong winner);
         public virtual void StartNextGame(bool onLoad = false)
         {
+            if (!onLoad)
+            {
+                Type nextMode = GetNextGamemode();
+                if (this.GetType() != nextMode)
+                {
+                    this.Dispose();
+                    Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
+                    if (gamemode != null)
+                    {
+                        gamemode.Init();
+                        gamemode.OnLevelLoaded();
+                        //F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+                        for (int i = 0; i < Provider.clients.Count; i++)
+                            gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
+                        F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
+                        Data.Gamemode = gamemode;
+                        _state = EState.DISCARD;
+                        Destroy(this);
+                        return;
+                    }
+                }
+            }
+            F.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             _state = EState.ACTIVE;
             _gameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
+            AnnounceMode();
+        }
+        private void AnnounceMode()
+        {
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+            {
+                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
+            }
         }
         public virtual void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
@@ -134,11 +178,11 @@ namespace Uncreated.Warfare.Gamemodes
                 EventLoopCoroutine = StartCoroutine(EventLoop());
             }
         }
-        public static Gamemode FindGamemode(string name, Dictionary<string, Type> modes)
+        public static Gamemode FindGamemode(string name)
         {
             try
             {
-                if (modes.TryGetValue(name, out Type type))
+                if (GAMEMODES.TryGetValue(name, out Type type))
                 {
                     if (type == default) return null;
                     if (!type.IsSubclassOf(typeof(Gamemode))) return null;
@@ -208,6 +252,88 @@ namespace Uncreated.Warfare.Gamemodes
                 F.LogError(ex);
             }
         }
+        public static void ReadGamemodes()
+        {
+            if (GAMEMODE_ROTATION.Count > 0) GAMEMODE_ROTATION.Clear();
+            List<KeyValuePair<string, float>> gms = new List<KeyValuePair<string, float>>();
+            using (IEnumerator<char> iter = UCWarfare.Config.GamemodeRotation.GetEnumerator())
+            {
+                StringBuilder current = new StringBuilder(32);
+                string name = null;
+                bool inName = true;
+                float weight = 1f;
+                while (iter.MoveNext())
+                {
+                    char c = iter.Current;
+                    if (c == ' ') continue;
+                    if (inName)
+                    {
+                        if (c == ':')
+                        {
+                            name = current.ToString();
+                            current.Clear();
+                            inName = false;
+                        }
+                        else if (c == ',')
+                        {
+                            gms.Add(new KeyValuePair<string, float>(current.ToString(), 1f));
+                        }
+                        else if (current.Length < 32)
+                        {
+                            current.Append(c);
+                        }
+                    }
+                    else
+                    {
+                        if (c == ',')
+                        {
+                            if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
+                                gms.Add(new KeyValuePair<string, float>(name, weight));
+                            name = null;
+                            current.Clear();
+                            inName = true;
+                        }
+                        else if (current.Length < 32)
+                        {
+                            current.Append(c);
+                        }
+                    }
+                }
+                if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
+                    gms.Add(new KeyValuePair<string, float>(name, weight));
+            }
+            using (IEnumerator<KeyValuePair<string, float>> iter = gms.GetEnumerator())
+            {
+                while (iter.MoveNext())
+                {
+                    if (GAMEMODES.TryGetValue(iter.Current.Key, out Type GamemodeType))
+                        GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GamemodeType, iter.Current.Value));
+                }
+            }
+        }
+        public static Type GetNextGamemode()
+        {
+            using (IEnumerator<KeyValuePair<Type, float>> iter = GAMEMODE_ROTATION.GetEnumerator())
+            {
+                float total = 0f;
+                while (iter.MoveNext())
+                {
+                    total += iter.Current.Value;
+                }
+                float sel = UnityEngine.Random.Range(0f, total);
+                iter.Reset();
+                total = 0f;
+                while (iter.MoveNext())
+                {
+                    total += iter.Current.Value;
+                    if (sel < total)
+                    {
+                        return iter.Current.Key;
+                    }
+                }
+            }
+            return null;
+        }
     }
     public enum EState : byte
     {
@@ -215,6 +341,7 @@ namespace Uncreated.Warfare.Gamemodes
         PAUSED,
         FINISHED,
         LOADING,
-        STAGING
+        STAGING,
+        DISCARD
     }
 }

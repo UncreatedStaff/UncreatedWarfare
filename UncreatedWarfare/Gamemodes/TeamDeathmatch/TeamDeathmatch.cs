@@ -58,9 +58,9 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         }
         public override void StartNextGame(bool onLoad = false)
         {
+            base.StartNextGame(onLoad);
             _t1score = 0;
             _t2score = 0;
-            base.StartNextGame(onLoad);
         }
         protected override void EventLoopAction() 
         {

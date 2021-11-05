@@ -10,29 +10,25 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
 {
-    internal class DevCommand
+    public class DevCommand
     {
-        public class ReloadCommand : IRocketCommand
+        public AllowedCaller AllowedCaller => AllowedCaller.Both;
+        public string Name => "dev";
+        public string Help => "Dev command for various server setup features.";
+        public string Syntax => "/dev [arguments]";
+        public List<string> Aliases => new List<string>();
+        public List<string> Permissions => new List<string>() { "uc.dev" };
+        public void Execute(IRocketPlayer caller, string[] command)
         {
-            public static event VoidDelegate OnTranslationsReloaded;
-            public static event VoidDelegate OnFlagsReloaded;
-            public AllowedCaller AllowedCaller => AllowedCaller.Both;
-            public string Name => "dev";
-            public string Help => "Dev command for various server setup features.";
-            public string Syntax => "/dev [arguments]";
-            public List<string> Aliases => new List<string>();
-            public List<string> Permissions => new List<string>() { "uc.dev" };
-            public void Execute(IRocketPlayer caller, string[] command)
-            {
-                UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
-                if (command.Length > 0 && command[0].ToLower() == "addcache")
+            if (command.Length > 0 && command[0].ToLower() == "addcache")
+            {
+                if (Data.Is(out Insurgency insurgency))
                 {
-                    if (Data.Is(out Insurgency insurgency))
-                    {
-                        var transform = new SerializableTransform(player.Player.transform);
-                        insurgency.Config.CacheSpawns.Add(transform);
-                        insurgency.SaveConfig();
+                    SerializableTransform transform = new SerializableTransform(player.Player.transform);
+                    insurgency.Config.CacheSpawns.Add(transform);
+                    insurgency.SaveConfig();
 
                         player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
                     }

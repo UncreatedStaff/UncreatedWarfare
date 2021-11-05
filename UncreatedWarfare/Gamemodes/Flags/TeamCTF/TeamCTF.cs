@@ -296,21 +296,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void StartNextGame(bool onLoad = false)
         {
-            F.Log("Loading new game.", ConsoleColor.Cyan);
             base.StartNextGame(onLoad); // set game id
+            if (_state == EState.DISCARD) return;
             LoadRotation();
             EffectManager.ClearEffectByID_AllPlayers(Config.CaptureUI);
             GameStats.Reset();
             InvokeOnNewGameStarting(onLoad);
-            AnnounceMode();
             StartStagingPhase(Config.StagingPhaseSeconds);
-        }
-        private void AnnounceMode()
-        {
-            foreach (var player in PlayerManager.OnlinePlayers)
-            {
-                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
-            }
         }
         public override void LoadRotation()
         {

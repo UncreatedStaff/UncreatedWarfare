@@ -887,7 +887,7 @@ namespace Uncreated.Warfare.Commands
                 else player.SendChat("Syntax:  <i>/test gamemode <GamemodeName>.</i>");
                 return;
             }
-            Gamemode newGamemode = Gamemode.FindGamemode(command[1], Data.GAME_MODES);
+            Gamemode newGamemode = Gamemode.FindGamemode(command[1]);
             try
             {
                 if (newGamemode != null)

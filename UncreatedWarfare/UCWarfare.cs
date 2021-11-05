@@ -266,7 +266,7 @@ namespace Uncreated.Warfare
             if (Data.Is<ISquads>(out _))
             {
                 ulong team = player.GetTeam();
-                if (ucplayer.Squad == null) // huh
+                if (ucplayer.Squad == null)
                     SquadManager.UpdateSquadList(ucplayer);
                 else
                 {

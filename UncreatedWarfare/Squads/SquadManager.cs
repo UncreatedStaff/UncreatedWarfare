@@ -447,7 +447,7 @@ namespace Uncreated.Warfare.Squads
 
         public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
 
-        public bool IsFull() => Members.Count < 6;
+        public bool IsFull() => Members.Count >= 6;
         public bool IsNotSolo() => Members.Count > 1;
 
         IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();

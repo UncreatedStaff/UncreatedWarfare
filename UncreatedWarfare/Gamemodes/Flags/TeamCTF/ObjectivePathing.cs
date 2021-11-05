@@ -251,7 +251,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, Dictionary<int, float> t1adjacents, Dictionary<int, float> t2adjacents)
         {
-            flags.Add(PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null)));
+            Flag first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
+            if (first == null)
+            {
+                F.LogError("Unable to pick the first flag.");
+                return;
+            }
+            flags.Add(first);
             flags[0].index = 0;
             AdjacentsFlagLoop(flags, selection, t2adjacents);
         }
@@ -300,8 +306,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                     if (toNotRemove == null || !toNotRemove.Exists(x => x.ID == flag.Key))
                         rtn.Add(f, flag.Value);
                 }
-                else if (current != null) F.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
-                else F.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
+                else if (current != null)
+                {
+                    F.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
+                }
+                else
+                {
+                    F.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
+                }
             }
             return rtn;
         }
@@ -310,7 +322,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if (biases.Count < 1)
             {
-                F.Log("Biases was empty.");
+                F.LogError("Biases was empty.");
                 return default;
             }
             float total = 0;
