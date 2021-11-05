@@ -126,7 +126,7 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
             }
 
-            if (data.barricade.id == FOBManager.config.Data.AmmoCrateID)
+            if (data.barricade.id == FOBManager.config.Data.AmmoCrateID || (Data.Is(out Insurgency insurgency) && data.barricade.id == insurgency.Config.CacheID))
             {
                 if (drop.interactable is InteractableStorage storage)
                 {

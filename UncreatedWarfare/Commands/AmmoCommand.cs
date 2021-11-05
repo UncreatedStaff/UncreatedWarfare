@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -67,24 +68,30 @@ namespace Uncreated.Warfare.Commands
 
                 if (NearbyAmmoStations.Count() == 0)
                 {
-                    player.SendChat("ammo_vehicle_not_near_ammo_crate");
-                    return;
-                }
-
-                BarricadeDrop ammoStation = NearbyAmmoStations.FirstOrDefault();
-
-                if (!(ammoStation.interactable is InteractableStorage storage))
-                {
-                    player.SendChat("ammo_crate_has_no_storage");
-                    return;
+                    if (Data.Is(out Insurgency insurgency))
+                    {
+                        NearbyAmmoStations = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.AmmoCrateID, 100, vehicle.transform.position, player.GetTeam(), true);
+                        if (NearbyAmmoStations.Count() == 0)
+                        {
+                            player.SendChat("ammo_vehicle_not_near_ammo_crate");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        player.SendChat("ammo_vehicle_not_near_ammo_crate");
+                        return;
+                    }
                 }
 
                 int ammo_count = 0;
-                ulong team = player.GetTeam();
-                foreach (ItemJar jar in storage.items.items)
+
+                foreach (var a in NearbyAmmoStations)
                 {
-                    if (team == 1 && jar.item.id == FOBManager.config.Data.Team1AmmoID || team == 2 && jar.item.id == FOBManager.config.Data.Team2AmmoID)
-                        ammo_count++;
+                    if (a.interactable is InteractableStorage storage)
+                    {
+                        ammo_count += FOBManager.CountAmmo(storage, player.GetTeam());
+                    }
                 }
 
                 if (ammo_count < vehicleData.RearmCost)
@@ -92,6 +99,9 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_not_enough_stock", ammo_count.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
                     return;
                 }
+                
+                ulong team = player.GetTeam();
+
                 if (vehicleData.Items.Count == 0)
                 {
                     player.SendChat("ammo_vehicle_full_already");
@@ -108,10 +118,24 @@ namespace Uncreated.Warfare.Commands
                 foreach (ushort item in vehicleData.Items)
                     ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
 
-                if (player.IsTeam1())
-                    UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team1AmmoID, vehicleData.RearmCost);
-                else if (player.IsTeam2())
-                    UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team2AmmoID, vehicleData.RearmCost);
+                int toRemove = vehicleData.RearmCost;
+
+                foreach (var a in NearbyAmmoStations)
+                {
+                    if (a.interactable is InteractableStorage storage)
+                    {
+                        int removed = 0;
+                        if (player.IsTeam1())
+                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team1AmmoID, toRemove);
+                        else if (player.IsTeam2())
+                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team2AmmoID, toRemove);
+
+                        if (removed >= toRemove)
+                            break;
+                        else
+                            toRemove -= removed;
+                    }
+                }
 
                 return;
             }
@@ -127,7 +151,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_no_kit");
                     return;
                 }
-                if (FOBManager.config.Data.AmmoCrateID == barricade.barricade.id)
+                if (barricade.barricade.id == FOBManager.config.Data.AmmoCrateID || (Data.Is(out Insurgency insurgency) && barricade.barricade.id == insurgency.Config.CacheID))
                 {
                     if (!(drop.interactable is InteractableStorage storage))
                     {

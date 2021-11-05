@@ -231,21 +231,23 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 }
             }
             this._state = EState.FINISHED;
-            ReplaceBarricadesAndStructures();
-            Commands.ClearCommand.WipeVehiclesAndRespawn();
-            Commands.ClearCommand.ClearItems();
+            
             TicketManager.OnRoundWin(winner);
             StartCoroutine(EndGameCoroutine(winner));
         }
         private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
         {
             yield return new WaitForSeconds(Config.end_delay);
+
             InvokeOnTeamWin(winner);
+            ReplaceBarricadesAndStructures();
+            Commands.ClearCommand.WipeVehiclesAndRespawn();
+            Commands.ClearCommand.ClearItems();
+
             if (Config.ShowLeaderboard)
             {
                 _endScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
                 _endScreen.winner = winner;
-                _endScreen.Gamemode = this;
                 _endScreen.warstats = GameStats;
                 _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
                 _endScreen.ShuttingDown = shutdownAfterGame;
@@ -701,6 +703,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
+            FOBManager.Reset();
             Destroy(_gameStats);
             base.Dispose();
         }
@@ -797,6 +800,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         private void EndStagingPhase()
         {
+            TicketManager.OnStagingPhaseEnded();
+
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
 
@@ -833,10 +838,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public int end_delay;
         public float NearOtherBaseKillTimer;
         public int xpSecondInterval;
-        // 0-360
-        public float team1spawnangle;
-        public float team2spawnangle;
-        public float lobbyspawnangle;
         public ushort T1BlockerID;
         public ushort T2BlockerID;
         public ushort HeaderID;
@@ -872,9 +873,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             this.PathingData = new TeamCTFData.AutoObjectiveData();
             this.end_delay = 15;
             this.NearOtherBaseKillTimer = 10f;
-            this.team1spawnangle = 0f;
-            this.team2spawnangle = 0f;
-            this.lobbyspawnangle = 0f;
             this.TicketsFlagCaptured = 150;
             this.AttackStartingTickets = 250;
             this.StagingPhaseSeconds = 150;

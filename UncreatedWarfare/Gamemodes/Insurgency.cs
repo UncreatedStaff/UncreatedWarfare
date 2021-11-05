@@ -15,13 +15,17 @@ using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Stats;
 
 namespace Uncreated.Warfare.Gamemodes
 {
-    internal class Insurgency : TeamGamemode, ITeams, IFOBs, IVehicles, IKitRequests, IRevives, ISquads, IImplementsLeaderboard, IStructureSaving, ITickets, IStagingPhase
+    internal class Insurgency : TeamGamemode, ITeams, IFOBs, IVehicles, IKitRequests, IRevives, ISquads, IImplementsLeaderboard, IStructureSaving, ITickets, IStagingPhase, IWarstatsGamemode
     {
-        private readonly Config<InsurgencyConfig> _config;
-        public InsurgencyConfig Config { get => _config.Data; }
+        const float MATCH_PRESENT_THRESHOLD = 0.65f;
+
+        private readonly Config<InsurgencyConfig> insurgencyConfig;
+        public InsurgencyConfig Config { get => insurgencyConfig.Data; }
 
         public override string DisplayName => "Insurgency";
 
@@ -53,20 +57,29 @@ namespace Uncreated.Warfare.Gamemodes
         protected ulong _defendTeam;
         public ulong DefendingTeam { get => _defendTeam; }
 
+        public int IntelligentsPoints;
+
         public int CachesLeft { get; private set; }
         public int CachesDestroyed { get; private set; }
-        private FOB currentCache;
+        private List<CacheData> Caches;
+        public List<CacheData> ActiveCaches { get => Caches.Where(c => c.IsActive && !c.IsDestroyed).ToList(); }
         private List<Vector3> SeenCaches;
 
         protected int _stagingSeconds { get; set; }
         public int StagingSeconds { get => _stagingSeconds; }
 
-        public bool isScreenUp { get => false; }
+        public bool _isScreenUp;
+        public bool isScreenUp { get => _isScreenUp; }
 
-        public ILeaderboard Leaderboard { get; }
+        protected WarStatsTracker _gameStats;
+        public WarStatsTracker GameStats { get => _gameStats; }
+        protected EndScreenLeaderboard _endScreen;
+        EndScreenLeaderboard IWarstatsGamemode.Leaderboard { get => _endScreen; }
+        ILeaderboard IImplementsLeaderboard.Leaderboard { get => _endScreen; }
 
-        protected TicketManager _ticketManager;
+        private TicketManager _ticketManager;
         public TicketManager TicketManager { get => _ticketManager; }
+
         public Insurgency()
             : base("Insurgency", 0.25F)
         {
@@ -78,12 +91,6 @@ namespace Uncreated.Warfare.Gamemodes
 
             _counter = 0;
             InAMC = new List<ulong>();
-
-            CachesLeft = UnityEngine.Random.Range(Config.MinStartingCaches, Config.MaxStartingCaches + 1);
-            CachesDestroyed = 0;
-            currentCache = null;
-            SeenCaches = new List<Vector3>();
-
 
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
@@ -99,6 +106,7 @@ namespace Uncreated.Warfare.Gamemodes
             _vehicleSpawner = new VehicleSpawner();
             _vehicleSigns = new VehicleSigns();
             _requestSigns = new RequestSigns();
+            _gameStats = UCWarfare.I.gameObject.AddComponent<WarStatsTracker>();
             FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             VehicleSpawner.OnLevelLoaded();
@@ -136,14 +144,18 @@ namespace Uncreated.Warfare.Gamemodes
         public override void StartNextGame(bool onLoad = false)
         {
             base.StartNextGame(onLoad); // set game id
-            if (_state == EState.DISCARD) return;
-            //GameStats.Reset();
+            GameStats.Reset();
 
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
             if (_attackTeam == 1)
                 _defendTeam = 2;
             else if (_attackTeam == 2)
                 _defendTeam = 1;
+
+            CachesLeft = UnityEngine.Random.Range(Config.MinStartingCaches, Config.MaxStartingCaches + 1);
+            CachesDestroyed = 0;
+            Caches = new List<CacheData>();
+            SeenCaches = new List<Vector3>();
 
             TicketManager.OnNewGameStarting();
             if (!onLoad)
@@ -152,6 +164,10 @@ namespace Uncreated.Warfare.Gamemodes
             }
             FOBManager.OnNewGameStarting();
             RallyManager.WipeAllRallies();
+
+            CachesLeft = UnityEngine.Random.Range(Config.MinStartingCaches, Config.MaxStartingCaches + 1);
+            for (int i = 0; i < CachesLeft; i++)
+                Caches.Add(new CacheData());
 
             SpawnNewCache();
 
@@ -168,38 +184,62 @@ namespace Uncreated.Warfare.Gamemodes
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
                 ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
             }
-            Stats.StatsManager.ModifyTeam(winner, t => t.Wins++, false);
-            Stats.StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
-            //foreach (PlayerCurrentGameStats played in GameStats.playerstats.Values)
-            //{
-            //    // Any player who was online for 70% of the match will be awarded a win or punished with a loss
-            //    if ((float)played.onlineCount1 / GameStats.gamepercentagecounter >= MATCH_PRESENT_THRESHOLD)
-            //    {
-            //        if (winner == 1)
-            //            Stats.StatsManager.ModifyStats(played.id, s => s.Wins++, false);
-            //        else
-            //            Stats.StatsManager.ModifyStats(played.id, s => s.Losses++, false);
-            //    }
-            //    else if ((float)played.onlineCount2 / GameStats.gamepercentagecounter >= MATCH_PRESENT_THRESHOLD)
-            //    {
-            //        if (winner == 2)
-            //            Stats.StatsManager.ModifyStats(played.id, s => s.Wins++, false);
-            //        else
-            //            Stats.StatsManager.ModifyStats(played.id, s => s.Losses++, false);
-            //    }
-            //}
+            StatsManager.ModifyTeam(winner, t => t.Wins++, false);
+            StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
+
+
+            foreach (PlayerCurrentGameStats played in GameStats.playerstats.Values)
+            {
+                // Any player who was online for 70% of the match will be awarded a win or punished with a loss
+                if ((float)played.onlineCount1 / GameStats.gamepercentagecounter >= MATCH_PRESENT_THRESHOLD)
+                {
+                    if (winner == 1)
+                        StatsManager.ModifyStats(played.id, s => s.Wins++, false);
+                    else
+                        StatsManager.ModifyStats(played.id, s => s.Losses++, false);
+                }
+                else if ((float)played.onlineCount2 / GameStats.gamepercentagecounter >= MATCH_PRESENT_THRESHOLD)
+                {
+                    if (winner == 2)
+                        StatsManager.ModifyStats(played.id, s => s.Wins++, false);
+                    else
+                        StatsManager.ModifyStats(played.id, s => s.Losses++, false);
+                }
+            }
+
+
             this._state = EState.FINISHED;
-            ReplaceBarricadesAndStructures();
-            Commands.ClearCommand.WipeVehiclesAndRespawn();
-            Commands.ClearCommand.ClearItems();
             TicketManager.OnRoundWin(winner);
             StartCoroutine(EndGameCoroutine(winner));
         }
         private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
         {
-            yield return new WaitForSeconds(5);
-        }
+            yield return new WaitForSeconds(10);
+            InvokeOnTeamWin(winner);
 
+            ReplaceBarricadesAndStructures();
+            Commands.ClearCommand.WipeVehiclesAndRespawn();
+            Commands.ClearCommand.ClearItems();
+
+            _endScreen = UCWarfare.I.gameObject.AddComponent<EndScreenLeaderboard>();
+            _endScreen.winner = winner;
+            _endScreen.warstats = GameStats;
+            _endScreen.OnLeaderboardExpired += OnShouldStartNewGame;
+            _endScreen.ShuttingDown = shutdownAfterGame;
+            _endScreen.ShuttingDownMessage = shutdownMessage;
+            _endScreen.ShuttingDownPlayer = shutdownPlayer;
+            _isScreenUp = true;
+            _endScreen.EndGame("¶·¸¹º»:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+            
+        }
+        private void OnShouldStartNewGame()
+        {
+            if (_endScreen != default)
+                _endScreen.OnLeaderboardExpired -= OnShouldStartNewGame;
+            Destroy(_endScreen);
+            _isScreenUp = false;
+            StartNextGame();
+        }
         protected override void EventLoopAction()
         {
             CheckMainCampers();
@@ -296,23 +336,54 @@ namespace Uncreated.Warfare.Gamemodes
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
                 player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
             }
-            //GameStats.AddPlayer(player.Player);
-            //if (isScreenUp && _endScreen != null && Config.ShowLeaderboard)
-            //{
-            //    _endScreen.SendScreenToPlayer(player.Player.channel.owner, Config.ProgressChars);
-            //}
-            //else
-            //{
+            GameStats.AddPlayer(player.Player);
+            if (isScreenUp && _endScreen != null)
+            {
+                _endScreen.SendScreenToPlayer(player.Player.channel.owner, "¶·¸¹º»:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+            }
+            else
+            {
                 UpdateUI(player);
-            //}
-            //StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-            //StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+            }
+            StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
+            StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
             base.OnPlayerJoined(player, wasAlreadyOnline);
         }
         public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
             UpdateUI(UCPlayer.FromSteamPlayer(player));
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+        }
+        public void AddIntelligencePoints(int points)
+        {
+            var activeCaches = ActiveCaches;
+            if (activeCaches.Count == 1 && !activeCaches.First().IsDiscovered)
+            {
+                IntelligentsPoints += points;
+                if (IntelligentsPoints >= Config.IntelPointsToDiscovery)
+                {
+                    IntelligentsPoints = 0;
+                    OnCacheDiscovered(activeCaches.First().Cache);
+                }
+            }
+            else if (activeCaches.Count == 1 && activeCaches.First().IsDiscovered && CachesLeft != 1)
+            {
+                IntelligentsPoints += points;
+                if (IntelligentsPoints >= Config.IntelPointsToSpawn)
+                {
+                    IntelligentsPoints = 0;
+                    SpawnNewCache(true);
+                }
+            }
+            else if (activeCaches.Count == 2 && !activeCaches.Last().IsDiscovered)
+            {
+                IntelligentsPoints += points;
+                if (IntelligentsPoints >= Config.IntelPointsToDiscovery)
+                {
+                    IntelligentsPoints = 0;
+                    OnCacheDiscovered(activeCaches.Last().Cache);
+                }
+            }
         }
         public override void OnPlayerDeath(UCWarfare.DeathEventArgs args)
         {
@@ -322,7 +393,6 @@ namespace Uncreated.Warfare.Gamemodes
         public void OnCacheDiscovered(FOB cache)
         {
             cache.isDiscovered = true;
-            string cacheNumber = CacheNumberWords(cache.Number);
 
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
@@ -336,9 +406,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void SpawnNewCache(bool message = false)
         {
-            string cacheNumber = CacheNumberWords(CachesDestroyed + 1);
-
-            IEnumerable<SerializableTransform> viableSpawns = Config.CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
+            var viableSpawns = Config.CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
 
             if (viableSpawns.Count() == 0)
             {
@@ -348,12 +416,19 @@ namespace Uncreated.Warfare.Gamemodes
 
             SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
 
-            Barricade barricade = new Barricade(FOBManager.config.Data.FOBID);
-            transform.Rotation.eulerAngles.Set(transform.Rotation.eulerAngles.x + 90, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z);
-            Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, transform.Rotation, 0, DefendingTeam);
+            Barricade barricade = new Barricade(Config.CacheID);
+            var rotation = transform.Rotation;
+            rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x - 90, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z + 180);
+            var barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
             BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
 
-            currentCache = FOBManager.RegisterNewFOB(foundationDrop, "#c480d9", true);
+            var cache = FOBManager.RegisterNewFOB(foundationDrop, "#c480d9", true);
+
+            if (!Caches[CachesDestroyed].IsActive)
+                Caches[CachesDestroyed].Activate(cache);
+            else
+                Caches[CachesDestroyed + 1].Activate(cache);
+
 
             SeenCaches.Add(transform.Position);
 
@@ -382,9 +457,7 @@ namespace Uncreated.Warfare.Gamemodes
             }
             else
             {
-                string cacheNumber = CacheNumberWords(cache.Number);
-
-                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                foreach (var player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == AttackingTeam)
                         ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_attack", player), "", ToastMessageSeverity.BIG);
@@ -392,7 +465,10 @@ namespace Uncreated.Warfare.Gamemodes
                         ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_defence", player), "", ToastMessageSeverity.BIG);
                 }
 
-                StartCoroutine(WaitToSpawnNewCache());
+                if (ActiveCaches.Count == 0)
+                {
+                    StartCoroutine(WaitToSpawnNewCache());
+                }
             }
             
             if (destroyer != null)
@@ -408,63 +484,32 @@ namespace Uncreated.Warfare.Gamemodes
                     XP.XPManager.AddXP(destroyer.Player, Config.XPCacheTeamkilled, F.Translate("xp_cache_teamkilled", destroyer));
                 }
             }
-            currentCache = null;
             UpdateUIAll();
         }
         public void UpdateUI(UCPlayer player)
         {
             TicketManager.UpdateUI(player.connection, player.GetTeam(), 0, "");
 
-            int totalCaches = CachesDestroyed + CachesLeft;
-            int cacheNumber = CachesDestroyed + 1;
-
             ClearUI(player);
 
             int FirstUI = UCWarfare.Config.FlagSettings.FlagUIIdFirst;
-            for (int i = 0; i < totalCaches; i++) unchecked
+            for (int i = 0; i < Caches.Count; i++) unchecked
                 {
-                    string text;
-                    if (i == CachesDestroyed)
-                    {
-                        if (currentCache != null && !currentCache.Structure.GetServersideData().barricade.isDead)
-                        {
-                            if (currentCache.isDiscovered)
-                            {
-                                if (player.GetTeam() == AttackingTeam)
-                                {
-                                    text = $"<color=#ffca61>{currentCache.Name}</color> <color=#c2c2c2>{currentCache.ClosestLocation}</color>";
-                                }
-                                else
-                                {
-                                    text = $"<color=#c480d9>{currentCache.Name}</color> <color=#c2c2c2>{currentCache.ClosestLocation}</color>";
-                                }
-                            }
-                            else
-                            {
-                                if (player.GetTeam() == AttackingTeam)
-                                {
-                                    text = $"<color=#c2c2c2>{currentCache.Name}</color> <color=#696969>Unknown</color>";
+                    var cache = Caches[i];
 
-                                }
-                                else
-                                {
-                                    text = $"<color=#84d980>{currentCache.Name}</color> <color=#c2c2c2>{currentCache.ClosestLocation}</color>";
-                                }
-                            }
+                    string text;
+                    if (!cache.IsActive)
+                    {
+                        if (player.GetTeam() == AttackingTeam)
+                        {
+                            text = $"<color=#696969>Undiscovered</color>";
                         }
                         else
                         {
-                            if (player.GetTeam() == AttackingTeam)
-                            {
-                                text = $"<color=#c2c2c2>CACHE{cacheNumber}</color> <color=#696969>Unknown</color>";
-                            }
-                            else
-                            {
-                                text = $"<color=#696969>Unknown</color>";
-                            }
+                            text = $"<color=#696969>Unknown</color>";
                         }
                     }
-                    else if (i < CachesDestroyed)
+                    else if (cache.IsDestroyed)
                     {
                         if (player.GetTeam() == AttackingTeam)
                         {
@@ -477,13 +522,28 @@ namespace Uncreated.Warfare.Gamemodes
                     }
                     else
                     {
-                        if (player.GetTeam() == AttackingTeam)
+                        if (cache.IsDiscovered)
                         {
-                            text = $"<color=#696969>Undiscovered</color>";
+                            if (player.GetTeam() == AttackingTeam)
+                            {
+                                text = $"<color=#ffca61>{cache.Cache.Name}</color> <color=#c2c2c2>{cache.Cache.ClosestLocation}</color>";
+                            }
+                            else
+                            {
+                                text = $"<color=#c480d9>{cache.Cache.Name}</color> <color=#c2c2c2>{cache.Cache.ClosestLocation}</color>";
+                            }
                         }
                         else
                         {
-                            text = $"<color=#696969>Unknown</color>";
+                            if (player.GetTeam() == AttackingTeam)
+                            {
+                                text = $"<color=#696969>Undiscovered</color>";
+
+                            }
+                            else
+                            {
+                                text = $"<color=#84d980>{cache.Cache.Name}</color> <color=#c2c2c2>{cache.Cache.ClosestLocation}</color>";
+                            }
                         }
                     }
 
@@ -510,17 +570,6 @@ namespace Uncreated.Warfare.Gamemodes
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 ClearUI(player);
-        }
-        private string CacheNumberWords(int number)
-        {
-            string word = "";
-            if (number == 1) word = "ONE";
-            else if (number == 2) word = "TWO";
-            else if (number == 3) word = "THREE";
-            else if (number == 4) word = "FOUR";
-            else if (number == 5) word = "FIVE";
-            else if (number == 6) word = "SIX";
-            return word;
         }
 
         public void ReloadConfig() => _config.Reload();
@@ -577,13 +626,23 @@ namespace Uncreated.Warfare.Gamemodes
         }
         private void EndStagingPhase()
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
+            TicketManager.OnStagingPhaseEnded();
 
-            // clear UI
-            // remove main barricades
-            // remove VCP fob
+            foreach (var player in PlayerManager.OnlinePlayers)
+                EffectManager.askEffectClearByID(29001, player.connection);
+
             _state = EState.ACTIVE;
+        }
+        public override void Dispose()
+        {
+            _squadManager?.Dispose();
+            _vehicleSpawner?.Dispose();
+            _reviveManager?.Dispose();
+            _kitManager?.Dispose();
+            FOBManager.Reset();
+            Destroy(_gameStats);
+            base.Dispose();
+            
         }
 
 
@@ -595,12 +654,15 @@ namespace Uncreated.Warfare.Gamemodes
             public int AttackStartingTickets;
             public float NearOtherBaseKillTimer;
             public float CacheDiscoverRange;
+            public int IntelPointsToDiscovery;
+            public int IntelPointsToSpawn;
             public int XPCacheDestroyed;
             public int XPCacheTeamkilled;
             public int TicketsCache;
             public ushort HeaderID;
             public ushort T1BlockerID;
             public ushort T2BlockerID;
+            public ushort CacheID;
             public List<SerializableTransform> CacheSpawns;
 
             public override void SetDefaults()
@@ -611,13 +673,34 @@ namespace Uncreated.Warfare.Gamemodes
                 AttackStartingTickets = 300;
                 NearOtherBaseKillTimer = 7;
                 CacheDiscoverRange = 75;
+                IntelPointsToDiscovery = 30;
+                IntelPointsToSpawn = 15;
                 XPCacheDestroyed = 800;
                 T1BlockerID = 36058;
                 T2BlockerID = 36059;
                 XPCacheTeamkilled = -8000;
                 TicketsCache = 80;
+                CacheID = 38404;
                 HeaderID = 36066;
                 CacheSpawns = new List<SerializableTransform>();
+            }
+        }
+
+        public class CacheData
+        {
+            public int Number { get => Cache != null ? Cache.Number : 0;  }
+            public bool IsActive { get => Cache != null;  }
+            public bool IsDestroyed { get => Cache != null && Cache.Structure.GetServersideData().barricade.isDead; }
+            public bool IsDiscovered { get => Cache != null && Cache.isDiscovered; }
+            public FOB Cache { get; private set; }
+
+            public CacheData()
+            {
+                Cache = null;
+            }
+            public void Activate(FOB cache)
+            {
+                Cache = cache;
             }
         }
     }

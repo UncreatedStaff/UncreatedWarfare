@@ -48,9 +48,9 @@ namespace Uncreated.Warfare.Teams
         public static string NeutralColorHex { get => _data.Data.AdminColorHex; }
         public static string Team1UnarmedKit { get => _data.Data.team1unarmedkit; }
         public static string Team2UnarmedKit { get => _data.Data.team2unarmedkit; }
-        public static float Team1SpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.team1spawnangle : 0f; }
-        public static float Team2SpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.team2spawnangle : 0f; }
-        public static float LobbySpawnAngle { get => Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF t ? t.Config.lobbyspawnangle : 0f; }
+        public static float Team1SpawnAngle { get => _data.Data.team1spawnangle; }
+        public static float Team2SpawnAngle { get => _data.Data.team2spawnangle; }
+        public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
         public static float TeamSwitchCooldown { get => _data.Data.team_switch_cooldown; }
         public static string DefaultKit { get => _data.Data.defaultkit; }
         public static Zone Team1Main
@@ -321,6 +321,9 @@ namespace Uncreated.Warfare.Teams
         public string team1unarmedkit;
         public string team2unarmedkit;
         public string defaultkit;
+        public float team1spawnangle;
+        public float team2spawnangle;
+        public float lobbyspawnangle;
         public float team_switch_cooldown;
         [JsonIgnore]
         public Color Team1Color
@@ -434,6 +437,9 @@ namespace Uncreated.Warfare.Teams
             this.team1unarmedkit = team1unarmedkit ?? "usunarmed";
             this.team2unarmedkit = team2unarmedkit ?? "ruunarmed";
             this.defaultkit = defaultkit ?? "default";
+            this.team1spawnangle = team1spawnangle;
+            this.team2spawnangle = team2spawnangle;
+            this.lobbyspawnangle = lobbyspawnangle;
             this.team_switch_cooldown = team_switch_cooldown;
         }
         public override void SetDefaults()
@@ -450,6 +456,9 @@ namespace Uncreated.Warfare.Teams
             team1unarmedkit = "usunarmed";
             team2unarmedkit = "ruunarmed";
             defaultkit = "default";
+            team1spawnangle = 0;
+            team2spawnangle = 0;
+            lobbyspawnangle = -90;
             team_switch_cooldown = 1200;
         }
     }

@@ -30,15 +30,30 @@ namespace Uncreated.Warfare.Commands
                     insurgency.Config.CacheSpawns.Add(transform);
                     insurgency.SaveConfig();
 
-                    player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
+                        player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
+                    }
+                    else
+                        player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));
+                }
+                else if (command.Length > 1 && command[0].ToLower() == "addintel")
+                {
+                    if (Data.Is(out Insurgency insurgency))
+                    {
+                        if (int.TryParse(command[1], out int points))
+                        {
+                            insurgency.AddIntelligencePoints(points);
+
+                            player.Message($"Added {points} intelligence points.".Colorize("dbc39e"));
+                        }
+                        else
+                            player.Message($"'{command[1]}' is not a valid number of intelligence points.".Colorize("dba29e"));
+                    }
+                    else
+                        player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));
                 }
                 else
-                {
-                    player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));
-                }
+                    player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));
             }
-            else
-                player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));
         }
     }
 }
