@@ -117,6 +117,7 @@ namespace Uncreated.Warfare
                 { "kits_heading", "<color=#b0a99d>You have access to the following <color=#ffd494>PREMIUM</color> kits:</color>" },
                 { "kits_nokits", "<color=#b0a99d>You have no premium kits. Go and <b><color=#e6c6b3>request a regular kit at the <color=#99a38e>ARMORY</color></b></color></color>" },
                 { "kits_notonduty", "<color=#a6918a>You must be on duty to execute that command.</color>" },
+                
 
                 // Range
                 { "range", "<color=#9e9c99>The range to your squad's marker is: <color=#8aff9f>{0}m</color></color>" },
@@ -466,7 +467,9 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
                 { "request_vehicle_e_already_owned", "<color=#a8918a>You have already requested a nearby vehicle.</color>" },
+                { "request_vehicle_e_staging", "<color=#a6918a>This vehicle can only be requested after the game starts.</color>" },
                 { "request_vehicle_given", "<color=#b3a591>This <color=#ffe2ab>{0}</color> is now yours to take into battle.</color>" },
+
 
                 // structure
                 { "structure_not_looking", "<color=#ff8c69>You must be looking at a barricade, structure, or vehicle.</color>" },

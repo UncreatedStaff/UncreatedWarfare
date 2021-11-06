@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.FOBs
             if (NearbyFOBs.Count() != 0)
             {
                 player.SendChat("fob_error_fobtooclose");
-                //return false;
+                return false;
             }
             ushort BuildID = 0;
             if (team == 1)

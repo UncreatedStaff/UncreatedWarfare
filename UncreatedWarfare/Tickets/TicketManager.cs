@@ -488,55 +488,14 @@ namespace Uncreated.Warfare.Tickets
         {
             if (Data.Is(out IFlagRotation fg))
             {
-                int friendlyCount = fg.Rotation.Where(f => f.Owner == team).Count();
-                int enemyCount = fg.Rotation.Where(f => f.Owner != team && !f.IsNeutral()).Count();
-
-                float friendlyRatio = (float)friendlyCount * fg.Rotation.Count();
-                float enemyRatio = enemyCount / (float)fg.Rotation.Count();
-
-                int neutralFlagsCount = fg.Rotation.Where(f => f.IsNeutral()).Count();
-
-                if (neutralFlagsCount == 0)
+                if (Data.Is(out Invasion invasion) && team == invasion.AttackingTeam)
                 {
-                    if (enemyRatio <= 0.6F && friendlyRatio <= 0.6F)
+                    int defenderFlags = fg.Rotation.Where(f => f.Owner == invasion.DefendingTeam).Count();
+
+                    if (defenderFlags == fg.Rotation.Count)
                     {
-                        bleed = 0;
-                        message = "";
-                    }
-                    else if (0.6F < enemyRatio && enemyRatio <= 0.8F)
-                    {
-                        message = "enemy_controlling";
                         bleed = -1;
-                    }
-                    else if (0.8F < enemyRatio && enemyRatio < 1F)
-                    {
-                        message = "enemy_dominating";
-                        bleed = -2;
-                    }
-                    else if (enemyRatio == 1)
-                    {
-                        message = "defeated";
-                        bleed = -3;
-                    }
-                    else if (0.6F < friendlyRatio && friendlyRatio <= 0.8F)
-                    {
-                        message = "controlling";
-                        bleed = 1;
-                    }
-                    else if (0.8F < friendlyRatio && friendlyRatio < 1F)
-                    {
-                        message = "dominating";
-                        bleed = 2;
-                    }
-                    else if (friendlyRatio == 1)
-                    {
-                        message = "victorious";
-                        bleed = 3;
-                    }
-                    else
-                    {
-                        bleed = 0;
-                        message = "";
+                        message = bleed.ToString() + "BLEEDING TICKETS";
                     }
                 }
             }

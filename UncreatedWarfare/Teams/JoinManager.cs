@@ -51,66 +51,28 @@ namespace Uncreated.Warfare.Teams
         }
         public void OnPlayerConnected(UCPlayer player, bool isNewPlayer, bool isNewGame)
         {
-            bool isDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0;
-            bool isDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0;
-
-            if (isNewPlayer)
+            if (!isNewGame)
             {
-                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
-                lobbyPlayer.IsInLobby = true;
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-                LobbyPlayers.Add(lobbyPlayer);
-                ShowUI(lobbyPlayer, false);
-            }
-            else if (isNewGame)
-            {
+                bool isDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0;
+                bool isDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0;
                 LobbyPlayer lobbyPlayer = new LobbyPlayer(player, player.GetTeam());
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-
-                if (!(player.GetTeam() == 1 || player.GetTeam() == 2) || IsTeamFull(lobbyPlayer, lobbyPlayer.Team))
-                {
-                    player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                    lobbyPlayer.Team = 0;
-                    lobbyPlayer.IsInLobby = true;
-                    LobbyPlayers.Add(lobbyPlayer);
-                    ShowUI(lobbyPlayer, false);
-                }
-                else
-                {
-                    player.Player.teleportToLocationUnsafe(player.Player.GetBaseSpawn(out ulong team), F.GetBaseAngle(team));
-
-                    LobbyPlayers.Add(lobbyPlayer);
-                    if (lobbyPlayer.Team == 1)
-                        Team1Players.Add(lobbyPlayer);
-                    else if (lobbyPlayer.Team == 2)
-                        Team2Players.Add(lobbyPlayer);
-                    ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, ToastMessageSeverity.BIG);
-                }
-            }
-            else if (player.GetTeam() == 0)
-            {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
-                lobbyPlayer.IsInLobby = true;
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                LobbyPlayers.Add(lobbyPlayer);
-                ShowUI(lobbyPlayer, false);
-            }
-            else
-            {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
                 lobbyPlayer.IsInLobby = false;
                 lobbyPlayer.IsDonatorT1 = isDonatorT1;
                 lobbyPlayer.IsDonatorT2 = isDonatorT2;
                 LobbyPlayers.Add(lobbyPlayer);
-            }
 
-            foreach (LobbyPlayer p in LobbyPlayers)
-                UpdateUITeams(p, p.Team);
+                if (lobbyPlayer.Team == 1)
+                    Team1Players.Add(lobbyPlayer);
+                else if (lobbyPlayer.Team == 2)
+                    Team2Players.Add(lobbyPlayer);
+
+                foreach (LobbyPlayer p in LobbyPlayers)
+                    UpdateUITeams(p, p.Team);
+            }
+            else
+            {
+                JoinLobby(player, false);
+            }
         }
 
         public void OnPlayerDisconnected(UCPlayer player)
@@ -125,19 +87,22 @@ namespace Uncreated.Warfare.Teams
 
         public void JoinLobby(UCPlayer player, bool showX)
         {
-
+            showX = false;
 
             if (player.Player.life.isDead)
             {
                 player.Player.life.ReceiveRespawnRequest(false);
             }
-            else
-            {
-                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-            }
-            
 
-            LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
+            player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+
+            ulong oldgroup = player.GetTeam();
+
+            player.Player.quests.leaveGroup(true);
+
+            EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
+
+            LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player.Steam64 == player.Steam64);
             if (lobbyPlayer == null)
             {
                 F.LogWarning("This player doesn't have a lobby player yet.");
@@ -149,6 +114,7 @@ namespace Uncreated.Warfare.Teams
                 lobbyPlayer.IsDonatorT2 = isDonatorT2;
                 LobbyPlayers.Add(lobbyPlayer);
             }
+
             lobbyPlayer.IsInLobby = true;
             ShowUI(lobbyPlayer, showX);
 
@@ -158,6 +124,8 @@ namespace Uncreated.Warfare.Teams
 
         public void ShowUI(LobbyPlayer player, bool showX)
         {
+            showX = false;
+
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
 
@@ -292,9 +260,9 @@ namespace Uncreated.Warfare.Teams
                 if (lobbyPlayer.Team != 1)
                 {
                     lobbyPlayer.Team = 1;
-                    if (!Team1Players.Contains(lobbyPlayer))
+                    if (!Team1Players.Exists(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID))
                         Team1Players.Add(lobbyPlayer);
-                    Team2Players.Remove(lobbyPlayer);
+                    Team2Players.RemoveAll(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID);
                     foreach (LobbyPlayer p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 
@@ -306,9 +274,9 @@ namespace Uncreated.Warfare.Teams
                 if (lobbyPlayer.Team != 2)
                 {
                     lobbyPlayer.Team = 2;
-                    if (!Team2Players.Contains(lobbyPlayer))
+                    if (!Team2Players.Exists(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID))
                         Team2Players.Add(lobbyPlayer);
-                    Team1Players.Remove(lobbyPlayer);
+                    Team1Players.RemoveAll(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID);
                     foreach (var p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 

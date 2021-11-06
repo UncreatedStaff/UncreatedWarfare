@@ -657,7 +657,24 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         protected override void EvaluateTickets()
         {
+            if (_state == EState.ACTIVE)
+            {
+                TicketManager.GetTeamBleed(1, out int Team1Bleed, out _);
+                TicketManager.GetTeamBleed(2, out int Team2Bleed, out _);
 
+                if (TicketCounter % 60 == 0)
+                {
+                    if (Team1Bleed == -1)
+                        TicketManager.Team1Tickets--;
+                    if (Team2Bleed == -1)
+                        TicketManager.Team2Tickets--;
+                }
+
+                if (Team1Bleed < 0)
+                    TicketManager.UpdateUITeam1();
+                if (Team2Bleed < 0)
+                    TicketManager.UpdateUITeam2();
+            }
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
         {
