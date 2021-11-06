@@ -344,7 +344,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 InvasionUI.ClearListUI(client.transportConnection, Config.FlagUICount);
                 InvasionUI.SendFlagListUI(client.transportConnection, client.playerID.steamID.m_SteamID, client.GetTeam(), _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
             }
-            F.Log("Reached end of load rotation :)");
             PrintFlagRotation();
             EvaluatePoints();
         }
@@ -354,7 +353,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             flag.EvaluatePointsOverride = FlagCheck;
             flag.IsContestedOverride = ContestedCheck;
             flag.SetOwnerNoEventInvocation(_defendTeam);
-            flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true);
+            flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true, true);
         }
         protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {
@@ -618,15 +617,22 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     TeamManager.Team2Main.Center3DAbove, Quaternion.Euler(SpawnRotation), 0, 0);
             }
         }
-        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            InvasionUI.ClearListUI(player.transportConnection, Config.FlagUICount);
-            if (_onFlag.ContainsKey(player.playerID.steamID.m_SteamID))
-                InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.playerID.steamID.m_SteamID])
-                    ?? _rotation[0], player.player.movement.getVehicle() != null, AttackingTeam)
+            InvasionUI.ClearListUI(player.Player.channel.owner.transportConnection, Config.FlagUICount);
+            if (_onFlag.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == _onFlag[player.Player.channel.owner.playerID.steamID.m_SteamID])
+                    ?? _rotation[0], player.Player.movement.getVehicle() != null, AttackingTeam)
                     .SendToPlayer(Config.PlayerIcon, Config.UseUI, Config.CaptureUI, Config.ShowPointsOnUI, 
-                    Config.ProgressChars, player, player.transportConnection);
-            InvasionUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
+                    Config.ProgressChars, player.Player.channel.owner, player.Player.channel.owner.transportConnection);
+            InvasionUI.SendFlagListUI(player.Player.channel.owner.transportConnection, player.Player.channel.owner.playerID.steamID.m_SteamID, newGroup, _rotation, Config.FlagUICount, Config.AttackIcon, Config.DefendIcon, AttackingTeam, Config.LockedIcon);
+            if (State == EState.STAGING)
+            {
+                if (newteam != 1 && newteam != 2)
+                    ClearStagingUI(player);
+                else
+                    ShowStagingUI(player);
+            }
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         protected override bool TimeToCheck()
@@ -908,7 +914,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                UpdateStagingUI(player, timeLeft);
+            {
+                ulong team = player.GetTeam();
+                if (team == 1 || team == 2)
+                    UpdateStagingUI(player, timeLeft);
+            }
+        }
+        public void ClearStagingUI(UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
         }
         private void EndStagingPhase()
         {

@@ -500,10 +500,11 @@ namespace Uncreated.Warfare.FOBs
             if (isCache)
             {
                 int number;
-                if (insurgency.ActiveCaches.Count == 0)
+                List<Insurgency.CacheData> caches = insurgency.ActiveCaches;
+                if (caches.Count == 0)
                     number = insurgency.CachesDestroyed + 1;
                 else
-                    number = insurgency.ActiveCaches.Last().Number + 1;
+                    number = caches.Last().Number + 1;
 
                 fob = new FOB("CACHE" + (number).ToString(Data.Locale), number, Structure, color, isCache);
                 
@@ -741,7 +742,14 @@ namespace Uncreated.Warfare.FOBs
             {
                 FOBList = Team2FOBs;
             }
-            else return;
+            else
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    EffectManager.askEffectClearByID(unchecked((ushort)(config.Data.FirstFOBUiId + i)), player.Player.channel.owner.transportConnection);
+                }
+                return;
+            }
 
 
             for (int i = 0; i < 10; i++)

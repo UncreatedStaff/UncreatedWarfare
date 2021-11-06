@@ -18,5 +18,6 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
         void UpdateStagingUI(UCPlayer player, TimeSpan timeleft);
         void UpdateStagingUIForAll();
         void SkipStagingPhase();
+        void ClearStagingUI(UCPlayer player);
     }
 }

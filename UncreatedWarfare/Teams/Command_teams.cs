@@ -26,17 +26,17 @@ namespace Uncreated.Warfare.Teams
                 player.SendChat("command_e_gamemode");
                 return;
             }
-            if (CooldownManager.HasCooldown(player, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
+            if (!player.OnDuty() && CooldownManager.HasCooldown(player, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
             {
                 player.SendChat("teams_e_cooldown", cooldown.ToString());
                 return;
             }
-            if ((player.GetTeam() == 1 || player.GetTeam() == 2) && !player.Player.IsInMain())
+            ulong team = player.GetTeam();
+            if ((team == 1ul || team == 2ul) && !player.Player.IsInMain())
             {
                 player.SendChat("teams_e_notinmain");
                 return;
             }
-
             teamgm.JoinManager.JoinLobby(player, true);
             
         }

@@ -368,14 +368,21 @@ namespace Uncreated.Warfare.Gamemodes
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
             base.OnPlayerJoined(player, wasAlreadyOnline);
         }
-        public override void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+        public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            UpdateUI(UCPlayer.FromSteamPlayer(player));
+            UpdateUI(player);
+            if (State == EState.STAGING)
+            {
+                if (newteam != 1 && newteam != 2)
+                    ClearStagingUI(player);
+                else
+                    ShowStagingUI(player);
+            }
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public void AddIntelligencePoints(int points)
         {
-            var activeCaches = ActiveCaches;
+            List<CacheData> activeCaches = ActiveCaches;
             if (activeCaches.Count == 1 && !activeCaches.First().IsDiscovered)
             {
                 IntelligentsPoints += points;
@@ -529,8 +536,8 @@ namespace Uncreated.Warfare.Gamemodes
                 if (destroyer.GetTeam() == AttackingTeam)
                 {
                     XP.XPManager.AddXP(destroyer.Player, Config.XPCacheDestroyed, F.Translate("xp_cache_killed", destroyer));
-                    Stats.StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
-                    Stats.StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
+                    StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
+                    StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 }
                 else
                 {
@@ -681,7 +688,11 @@ namespace Uncreated.Warfare.Gamemodes
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                UpdateStagingUI(player, timeLeft);
+            {
+                ulong team = player.GetTeam();
+                if (team == 1 || team == 2)
+                    UpdateStagingUI(player, timeLeft);
+            }
         }
         private void EndStagingPhase()
         {
@@ -692,6 +703,10 @@ namespace Uncreated.Warfare.Gamemodes
                 EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
 
             _state = EState.ACTIVE;
+        }
+        public void ClearStagingUI(UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(Config.HeaderID, player.connection);
         }
         public override void Dispose()
         {

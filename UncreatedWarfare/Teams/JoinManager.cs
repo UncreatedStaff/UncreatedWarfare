@@ -18,10 +18,6 @@ namespace Uncreated.Warfare.Teams
         private List<LobbyPlayer> Team2Players;
         private TimeSpan countdown;
 
-        private void Start()
-        {
-            
-        }
         public void Initialize()
         {
             LobbyPlayers = new List<LobbyPlayer>();
@@ -31,7 +27,7 @@ namespace Uncreated.Warfare.Teams
 
             if (PlayerManager.OnlinePlayers != null)
             {
-                foreach (var player in PlayerManager.OnlinePlayers)
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                     LobbyPlayers.Add(new LobbyPlayer(player, 0));
             }
             

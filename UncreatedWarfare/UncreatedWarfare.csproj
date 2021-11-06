@@ -3,8 +3,8 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-	  <OutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins</OutputPath>
-	<Version>3.21.4.0</Version>
+    <OutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</OutputPath>
+	<Version>3.21.4.1</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -27,7 +27,7 @@
     <FileVersion>3.21.4.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <BaseOutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins</BaseOutputPath>
+    <BaseOutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

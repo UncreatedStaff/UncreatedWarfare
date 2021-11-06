@@ -35,16 +35,16 @@ namespace Uncreated.Warfare
         {
             ulong oldteam = oldGroup.GetTeam();
             ulong newteam = newGroup.GetTeam();
-
+            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
             PlayerManager.VerifyTeam(player.player);
-            Data.Gamemode?.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+            Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
 
 
             SquadManager.ClearUIsquad(player.player);
             SquadManager.UpdateUIMemberCount(newGroup);
             SquadManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
-            FOBManager.UpdateUI(UCPlayer.FromSteamPlayer(player));
+            FOBManager.UpdateUI(ucplayer);
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);
 
