@@ -311,7 +311,12 @@ namespace Uncreated.Warfare.Commands
             double delay = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
             double timeleft = data.Delay - delay;
 
-            if (delay < data.Delay)
+            if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)
+            {
+                ucplayer.Message("request_vehicle_e_staging", F.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
+                return;
+            }
+            if (delay < data.Delay )
             {
                 ucplayer.Message("request_vehicle_e_delay", F.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
                 return;

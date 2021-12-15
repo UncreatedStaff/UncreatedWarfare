@@ -132,6 +132,8 @@ namespace Uncreated.Warfare.Teams
 
         public void ShowUI(LobbyPlayer player, bool showX)
         {
+            showX = false;
+
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
 

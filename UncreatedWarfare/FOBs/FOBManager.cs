@@ -532,7 +532,7 @@ namespace Uncreated.Warfare.FOBs
             ulong team = data.group.GetTeam();
             bool isInsurgency = Data.Is(out Insurgency insurgency);
 
-            if (isCache && isInsurgency)
+            if (isCache)
             {
                 int number;
                 List<Insurgency.CacheData> caches = insurgency.ActiveCaches;
