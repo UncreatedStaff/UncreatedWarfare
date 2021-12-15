@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -178,6 +179,11 @@ namespace Uncreated.Warfare.Vehicles
         {
             try
             {
+                if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
+                {
+                    shouldAllow = false;
+                    return;
+                }
                 if (vehicle == null || !vehicle.asset.canBeLocked)
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
@@ -190,7 +196,7 @@ namespace Uncreated.Warfare.Vehicles
                     return;
                 }
                 if (Data.Gamemode.State == Gamemodes.EState.STAGING &&
-                    Data.Is(out IStagingPhase invasion) && Data.Is(out IAttackDefence atk) && player.GetTeam() == atk.AttackingTeam)
+                    Data.Is(out IStagingPhase invasion) && Data.Is(out IAttackDefense atk) && player.GetTeam() == atk.AttackingTeam)
                 {
                     player.SendChat("vehicle_staging");
                     shouldAllow = false;

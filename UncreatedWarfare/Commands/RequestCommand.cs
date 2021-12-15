@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -26,6 +27,11 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>() { "uc.request" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            // dont allow requesting between game end and leaderboard
+            if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
+            {
+                return;
+            }
             UnturnedPlayer player = (UnturnedPlayer)caller;
             if (!Data.Is(out IKitRequests ctf))
             {
@@ -34,6 +40,7 @@ namespace Uncreated.Warfare.Commands
             }
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
             if (player == null || ucplayer == null) return;
+            if (ucplayer.Position == UnityEngine.Vector3.zero) return;
             ulong team = ucplayer.GetTeam();
             if (command.Length > 0)
             {

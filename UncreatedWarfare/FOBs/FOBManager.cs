@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -329,6 +330,39 @@ namespace Uncreated.Warfare.FOBs
             if (counter % 60 == 0)
                 RefillMainStorages();
         }
+        public static void OnPlayerDisconnect(UCPlayer player)
+        {
+            for (int i = 0; i < Team1FOBs.Count; i++)
+            {
+                for (int p = 0; p < Team1FOBs[i].nearbyPlayers.Count; p++)
+                {
+                    if (Team1FOBs[i].nearbyPlayers[p] == null)
+                    {
+                        Team1FOBs[i].nearbyPlayers.RemoveAt(p);
+                    } 
+                    else if (player.Steam64 == Team1FOBs[i].nearbyPlayers[p].Steam64)
+                    {
+                        Team1FOBs[i].nearbyPlayers.RemoveAt(p);
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < Team2FOBs.Count; i++)
+            {
+                for (int p = 0; p < Team2FOBs[i].nearbyPlayers.Count; p++)
+                {
+                    if (Team2FOBs[i].nearbyPlayers[p] == null)
+                    {
+                        Team2FOBs[i].nearbyPlayers.RemoveAt(p);
+                    }
+                    else if (player.Steam64 == Team2FOBs[i].nearbyPlayers[p].Steam64)
+                    {
+                        Team2FOBs[i].nearbyPlayers.RemoveAt(p);
+                        break;
+                    }
+                }
+            }
+        }
         public static void Tick(FOB fob, int counter = -1)
         {
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
@@ -458,7 +492,7 @@ namespace Uncreated.Warfare.FOBs
             }
             else if (data.barricade.id == config.Data.FOBBaseID)
             {
-                if (drop.model.TryGetComponent<FOBBaseComponent>(out var component))
+                if (drop.model.TryGetComponent<FOBBaseComponent>(out FOBBaseComponent component))
                 {
                     component.OnDestroyed();
                 }
@@ -480,13 +514,14 @@ namespace Uncreated.Warfare.FOBs
             Team2FOBs.Clear();
             SpecialFOBs.Clear();
 
-            for (int i = 0; i < Team1FOBs.Count; i++)
+            string clr = UCWarfare.GetColorHex("default_fob_color");
+            for (int i = 0; i < Team1FOBBarricades.Count; i++)
             {
-                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team1FOBBarricades[i], "54e3ff"));
+                Team1FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team1FOBBarricades[i], clr));
             }
-            for (int i = 0; i < Team2FOBs.Count; i++)
+            for (int i = 0; i < Team2FOBBarricades.Count; i++)
             {
-                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team2FOBBarricades[i], "54e3ff"));
+                Team2FOBs.Add(new FOB("FOB" + (i + 1).ToString(Data.Locale), i + 1, Team2FOBBarricades[i], clr));
             }
             UpdateUIAll();
         }
@@ -506,7 +541,7 @@ namespace Uncreated.Warfare.FOBs
                 else
                     number = caches.Last().Number + 1;
 
-                fob = new FOB("CACHE" + (number).ToString(Data.Locale), number, Structure, color, isCache);
+                fob = new FOB("CACHE" + number.ToString(Data.Locale), number, Structure, color, true);
                 
                 if (team == 1)
                 {
@@ -590,11 +625,13 @@ namespace Uncreated.Warfare.FOBs
             UpdateUIForTeam(team);
             return fob;
         }
-        public static void RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor, bool disappearAroundEnemies)
+        public static SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor, bool disappearAroundEnemies)
         {
-            SpecialFOBs.Add(new SpecialFOB(name, point, team, UIcolor, disappearAroundEnemies));
+            SpecialFOB f = new SpecialFOB(name, point, team, UIcolor, disappearAroundEnemies);
+            SpecialFOBs.Add(f);
 
             UpdateUIForTeam(team);
+            return f;
         }
 
         public static void DeleteFOB(uint instanceID, ulong team, ulong player)
@@ -701,11 +738,11 @@ namespace Uncreated.Warfare.FOBs
             List<BarricadeDrop> barricadeDrops = barricadeRegions.SelectMany(brd => brd.drops).ToList();
 
             Team1Barricades = barricadeDrops.Where(b =>
-                b.GetServersideData().barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
+                b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam1(b.GetServersideData().group)        // All barricades that are friendly
                 ).ToList();
             Team2Barricades = barricadeDrops.Where(b =>
-                b.GetServersideData().barricade.id == config.Data.FOBID &&   // All barricades that are FOB Structures
+                b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID &&   // All barricades that are FOB Structures
                 TeamManager.IsTeam2(b.GetServersideData().group)        // All barricades that are friendly
                 ).ToList();
         }
@@ -762,7 +799,7 @@ namespace Uncreated.Warfare.FOBs
             {
                 if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == team)
                 {
-                    string name = $"<color={SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
+                    string name = $"<color=#{SpecialFOBs[i].UIColor}>{SpecialFOBs[i].Name}</color>";
                     EffectManager.sendUIEffect(unchecked((ushort)(config.Data.FirstFOBUiId + i)), unchecked((short)(config.Data.FirstFOBUiId + i)),
                     player.Player.channel.owner.transportConnection, true, F.Translate("fob_ui", player.Steam64, name, SpecialFOBs[i].ClosestLocation));
                     start++;

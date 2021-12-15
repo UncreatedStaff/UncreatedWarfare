@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
@@ -36,6 +37,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     ReloadTranslations();
                     ReloadAllConfigFiles();
+                    ReloadGamemodeConfig();
                     ReloadConfig();
                     ReloadKits();
                     ReloadFlags();
@@ -80,6 +82,17 @@ namespace Uncreated.Warfare.Commands
                         ReloadFlags();
                         if (isConsole) F.Log(F.Translate("reload_reloaded_flags", 0, out _));
                         else player.SendChat("reload_reloaded_flags");
+                    }
+                    else
+                        player.Player.SendChat("no_permissions");
+                }
+                else if (cmd == "gameconfig")
+                {
+                    if (isConsole || player.HasPermission("uc.reload.gameconfig") || player.HasPermission("uc.reload.all"))
+                    {
+                        ReloadGamemodeConfig();
+                        if (isConsole) F.Log(F.Translate("reload_reloaded_gameconfig", 0, out _));
+                        else player.SendChat("reload_reloaded_gameconfig");
                     }
                     else
                         player.Player.SendChat("no_permissions");
@@ -191,14 +204,20 @@ namespace Uncreated.Warfare.Commands
                 F.LogError(ex);
             }
         }
+        internal static void ReloadGamemodeConfig()
+        {
+            Gamemode.ConfigObj.Reload();
+            SquadManager.TempCacheEffectIDs();
+            Gamemodes.Flags.TeamCTF.CTFUI.TempCacheEffectIDs();
+            LeaderboardEx.TempCacheEffectIDs();
+        }
         internal static void ReloadFlags()
         {
             try
             {
-                if (Data.Gamemode is Gamemodes.Flags.FlagGamemode flaggm)
+                Gamemode.ConfigObj.Reload();
+                if (Data.Gamemode is FlagGamemode flaggm)
                 {
-                    if (Data.Gamemode is Gamemodes.Flags.TeamCTF.TeamCTF tctf)
-                        tctf.ReloadConfig();
                     flaggm.LoadAllFlags();
                     flaggm.StartNextGame(false);
                 }

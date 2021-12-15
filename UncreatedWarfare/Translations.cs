@@ -48,6 +48,8 @@ namespace Uncreated.Warfare
                 { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
                 { "command_e_gamemode", "<color=#ffa238>This command is not enabled in this gamemode.</color>" },
                 { "force_loaded_gamemode", "<color=#e6e3d5>Loaded gamemode <b>{0}</b>, everyone was returned to lobby.</color>" },
+                { "flag_header", "Flags" },
+                { "null_transform_kick_message", "Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0})." },
 
                 // group
                 { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</i></color>" },
@@ -222,10 +224,10 @@ namespace Uncreated.Warfare
                 { "fortification_built", "<color=#b0ffa8>Successfully built {0}.</color>" },
                 { "fob_ui", "{0} {1}" },
                 { "cache_destroyed_attack", "<color=#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED</color>" },
-                { "cache_destroyed_defence", "<color=#deadad>WEAPONS CACHE HAS BEEN DESTROYED</color>" },
+                { "cache_destroyed_defense", "<color=#deadad>WEAPONS CACHE HAS BEEN DESTROYED</color>" },
                 { "cache_discovered_attack", "<color=#dbdbdb>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>" },
-                { "cache_discovered_defence", "<color=#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT</color>" },
-                { "cache_spawned_defence", "<color=#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE</color>" },
+                { "cache_discovered_defense", "<color=#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT</color>" },
+                { "cache_spawned_defense", "<color=#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE</color>" },
 
                 // deployment
                 { "deploy_s", "<color=#fae69c>You have arrived at <color=#bdbab1>{0}</color>.</color>" },
@@ -641,6 +643,7 @@ namespace Uncreated.Warfare
                 { "reload_reloaded_slots", "<color=#e6e3d5>Reset the slots plugin to max.</color>" },
                 { "reload_reloaded_slots_not_enabled", "<color=#e6e3d5>{0} must be enabled to use this command operation.</color>" },
                 { "reload_reloaded_sql", "<color=#e6e3d5>Reopened the MySql Connection.</color>" },
+                { "reload_reloaded_gameconfig", "<color=#e6e3d5>Reloaded Gamemode Config.</color>" },
 
                 //test
                 { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
@@ -686,6 +689,8 @@ namespace Uncreated.Warfare
                 { "gamemode_not_flag_gamemode", "<color=#ff8c69>Current gamemode <color=#ff758f>{0}</color> is not a <color=#ff758f>FLAG GAMEMODE</color>.</color>" },
                 { "gamemode_flag_not_on_cap_team", "<color=#ff8c69>You're not on a team that can capture flags.</color>" },
                 { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
+                { "phases_briefing", "BRIEFING PHASE" },
+                { "phases_preparation", "PREPARATION PHASE" },
 
                 // xp toast messages
                 { "xp_built_emplacement", "BUILT EMPLACEMENT" },
@@ -772,7 +777,18 @@ namespace Uncreated.Warfare
 
                 { "injured_ui_header", "You are injured" },
                 { "injured_ui_give_up", "Press <b>'/'</b> to give up.\n " },
-                { "injured_chat", "<color=#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.</color>" }
+                { "injured_chat", "<color=#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.</color>" },
+
+                // Insurgency
+
+                { "insurgency_ui_unknown_attack", "<color=#696969>Undiscovered</color>" },
+                { "insurgency_ui_unknown_defense", "<color=#696969>Unknown</color>" },
+                { "insurgency_ui_destroyed_attack", "<color=#5a6e5c>Destroyed</color>" },
+                { "insurgency_ui_destroyed_defense", "<color=#6b5858>Lost</color>" },
+                { "insurgency_ui_cache_attack", "<color=#ffca61>{0}</color> <color=#c2c2c2>{1}</color>" },
+                { "insurgency_ui_cache_defense_undiscovered", "<color=#84d980>{0}</color> <color=#c2c2c2>{1}</color>" },
+                { "insurgency_ui_cache_defense_discovered", "<color=#c480d9>{0}</color> <color=#c2c2c2>{1}</color>" },
+                { "caches_header", "Caches" },
             };
         }
         public static Dictionary<string, string> DefaultTranslations;
@@ -812,6 +828,9 @@ namespace Uncreated.Warfare
             new ColorData("team_count_ui_color_team_2", "ffffff"),
             new ColorData("team_count_ui_color_team_1_icon", "4785ff"),
             new ColorData("team_count_ui_color_team_2_icon", "f53b3b"),
+            new ColorData("default_fob_color", "54e3ff"),
+            new ColorData("invasion_special_fob", "5482ff"),
+            new ColorData("insurgency_cache_color", "c480d9"),
 
             // Team Colors
             new ColorData("team_1_color", "4785ff"),

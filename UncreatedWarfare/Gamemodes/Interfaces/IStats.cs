@@ -11,18 +11,16 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     {
         Player Player { get; set; }
         ulong Steam64 { get; }
-        void Update(float dt);
-        void CheckGame();
     }
     public interface IPVPModeStats : IStats
     {
         int Kills { get; }
         int Deaths { get; }
-        int DamageDone { get; }
+        float DamageDone { get; }
         float KDR { get; }
         void AddKill();
         void AddDeath();
-        void AddDamage(int amount);
+        void AddDamage(float amount);
     }
     public interface ITeamPVPModeStats : IPVPModeStats
     {
@@ -45,6 +43,7 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     {
         int Captures { get; }
         void AddCapture();
+        void AddCaptures(int amount);
     }
     public interface IFOBStats : IStats
     {

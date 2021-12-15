@@ -6,7 +6,7 @@ namespace Uncreated.Warfare
     public class CooldownManager
     {
         public static Config<CooldownConfig> config;
-        private static List<Cooldown> cooldowns = new List<Cooldown>();
+        private readonly static List<Cooldown> cooldowns = new List<Cooldown>();
 
         public CooldownManager()
         {
@@ -15,21 +15,27 @@ namespace Uncreated.Warfare
 
         public static void StartCooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
         {
-            if (HasCooldown(player, type, out var existing))
+            if (HasCooldown(player, type, out Cooldown existing))
                 existing.timeAdded = DateTime.Now;
             else
                 cooldowns.Add(new Cooldown(player, type, seconds, data));
         }
         public static bool HasCooldown(UCPlayer player, ECooldownType type, out Cooldown cooldown, params object[] data)
         {
-            cooldowns.RemoveAll(c => c.Timeleft.TotalSeconds <= 0);
+            cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
             cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
             return cooldown != null;
         }
-        public static void RemoveCooldown(UCPlayer player, ECooldownType type)
+        public static void RemoveCooldown(UCPlayer player, ECooldownType type) => cooldowns.RemoveAll(c => c.player == null || c.player.CSteamID == player.CSteamID && c.type == type);
+        public static void RemoveCooldown(UCPlayer player) => cooldowns.RemoveAll(c => c.player.CSteamID == player.CSteamID);
+        public static void RemoveCooldown(ECooldownType type) => cooldowns.RemoveAll(x => x.player == null || x.type == type);
+        public static void OnGameStarting()
         {
-            cooldowns.RemoveAll(c => c.player.CSteamID == player.CSteamID && c.type == type);
+            RemoveCooldown(ECooldownType.REQUEST_KIT);
+            RemoveCooldown(ECooldownType.PREMIUM_KIT);
+            RemoveCooldown(ECooldownType.REQUEST_VEHICLE);
         }
+
 
         public class CooldownConfig : ConfigData
         {

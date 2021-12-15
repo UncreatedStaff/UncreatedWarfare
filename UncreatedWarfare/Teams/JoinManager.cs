@@ -14,25 +14,41 @@ namespace Uncreated.Warfare.Teams
     public class JoinManager : MonoBehaviour, IDisposable
     {
         private List<LobbyPlayer> LobbyPlayers;
-        private List<LobbyPlayer> Team1Players;
-        private List<LobbyPlayer> Team2Players;
         private TimeSpan countdown;
 
         public void Initialize()
         {
             LobbyPlayers = new List<LobbyPlayer>();
-            Team1Players = new List<LobbyPlayer>();
-            Team2Players = new List<LobbyPlayer>();
             countdown = TimeSpan.FromTicks(0);
 
             if (PlayerManager.OnlinePlayers != null)
             {
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                    LobbyPlayers.Add(new LobbyPlayer(player, 0));
+                {
+                    LobbyPlayers.Add(LobbyPlayer.CreateNew(player, player.GetTeam()));
+                }
             }
-            
-
             EffectManager.onEffectButtonClicked += OnButtonClicked;
+        }
+        public void UpdatePlayer(Player player)
+        {
+            ulong team = player.GetTeam();
+            LobbyPlayer pl = LobbyPlayers.FirstOrDefault(x => x.Steam64 == player.channel.owner.playerID.steamID.m_SteamID);
+            if (pl != null)
+            {
+                if (!pl.Reset())
+                {
+                    pl = LobbyPlayer.CreateNew(UCPlayer.FromPlayer(player), team);
+                }
+                else
+                {
+                    pl.Team = team;
+                }
+            }
+            else
+            {
+                pl = LobbyPlayer.CreateNew(UCPlayer.FromPlayer(player), team);
+            }
         }
         public bool IsInLobby(UCPlayer player)
         {
@@ -47,105 +63,66 @@ namespace Uncreated.Warfare.Teams
         }
         public void OnPlayerConnected(UCPlayer player, bool isNewPlayer, bool isNewGame)
         {
-            bool isDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0;
-            bool isDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0;
-
-            if (isNewPlayer)
+            if (!isNewGame)
             {
-                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
-                lobbyPlayer.IsInLobby = true;
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
+                LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
                 LobbyPlayers.Add(lobbyPlayer);
                 ShowUI(lobbyPlayer, false);
-            }
-            else if (isNewGame)
-            {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, player.GetTeam());
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-
-                if (!(player.GetTeam() == 1 || player.GetTeam() == 2) || IsTeamFull(lobbyPlayer, lobbyPlayer.Team))
-                {
-                    player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                    lobbyPlayer.Team = 0;
-                    lobbyPlayer.IsInLobby = true;
-                    LobbyPlayers.Add(lobbyPlayer);
-                    ShowUI(lobbyPlayer, false);
-                }
-                else
-                {
-                    player.Player.teleportToLocationUnsafe(player.Player.GetBaseSpawn(out ulong team), F.GetBaseAngle(team));
-
-                    LobbyPlayers.Add(lobbyPlayer);
-                    if (lobbyPlayer.Team == 1)
-                        Team1Players.Add(lobbyPlayer);
-                    else if (lobbyPlayer.Team == 2)
-                        Team2Players.Add(lobbyPlayer);
-                    ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, ToastMessageSeverity.BIG);
-                }
-            }
-            else if (player.GetTeam() == 0)
-            {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
-                lobbyPlayer.IsInLobby = true;
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                LobbyPlayers.Add(lobbyPlayer);
-                ShowUI(lobbyPlayer, false);
+                foreach (LobbyPlayer p in LobbyPlayers)
+                    UpdateUITeams(p, p.Team);
             }
             else
             {
-                LobbyPlayer lobbyPlayer = new LobbyPlayer(player, 0);
-                lobbyPlayer.IsInLobby = false;
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-                LobbyPlayers.Add(lobbyPlayer);
+                JoinLobby(player, false);
             }
-
-            foreach (LobbyPlayer p in LobbyPlayers)
-                UpdateUITeams(p, p.Team);
         }
 
         public void OnPlayerDisconnected(UCPlayer player)
         {
-            LobbyPlayers.RemoveAll(p => p.Player.Steam64 == player.Steam64);
-            Team1Players.RemoveAll(p => p.Player.Steam64 == player.Steam64);
-            Team2Players.RemoveAll(p => p.Player.Steam64 == player.Steam64);
-
-            foreach (LobbyPlayer p in LobbyPlayers)
-                UpdateUITeams(p, p.Team);
+            bool x = false;
+            for (int i = 0; i < LobbyPlayers.Count; i++)
+            {
+                if (LobbyPlayers[i].Steam64 == player.Steam64)
+                {
+                    if (LobbyPlayers[i].current != null)
+                    {
+                        StopCoroutine(LobbyPlayers[i].current);
+                        LobbyPlayers[i].current = null;
+                    }
+                    LobbyPlayers.RemoveAt(i);
+                    x = true;
+                    break;
+                }
+            }
+            if (x)
+                foreach (LobbyPlayer p in LobbyPlayers)
+                    UpdateUITeams(p, p.Team);
         }
 
         public void JoinLobby(UCPlayer player, bool showX)
         {
+            LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player.Steam64 == player.Steam64);
+            if (lobbyPlayer == null)
+            {
+                LobbyPlayer.CreateNew(player);
+                LobbyPlayers.Add(lobbyPlayer);
+            }
+            else if (lobbyPlayer.IsInLobby) return;
+            showX = false;
 
             if (player.Player.life.isDead)
             {
                 player.Player.life.ReceiveRespawnRequest(false);
             }
-            else
-            {
-                player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-            }
+
+            player.Player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+
             ulong oldgroup = player.GetTeam();
+
             player.Player.quests.leaveGroup(true);
+
             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
 
-            LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player == player);
-            if (lobbyPlayer == null)
-            {
-                F.LogWarning("This player doesn't have a lobby player yet.");
-                bool isDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0;
-                bool isDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0;
-                lobbyPlayer = new LobbyPlayer(player, 0);
-                lobbyPlayer.IsInLobby = true;
-                lobbyPlayer.IsDonatorT1 = isDonatorT1;
-                lobbyPlayer.IsDonatorT2 = isDonatorT2;
-                LobbyPlayers.Add(lobbyPlayer);
-            }
             lobbyPlayer.IsInLobby = true;
             ShowUI(lobbyPlayer, showX);
 
@@ -163,8 +140,8 @@ namespace Uncreated.Warfare.Teams
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper().Colorize(TeamManager.Team1ColorHex));
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper().Colorize(TeamManager.Team2ColorHex));
 
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", Team1Players.Count.ToString());
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", Team2Players.Count.ToString());
+            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
+            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
 
             if (showX && player.Player.GetTeam() == 1)
             {
@@ -193,21 +170,23 @@ namespace Uncreated.Warfare.Teams
                 EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "GameStarting", true);
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "GameStartingSeconds", countdown.Minutes.ToString("D2") + ":" + countdown.Seconds.ToString("D2"));
             }
-
-            for (int i = 0; i < Team1Players.Count; i++)
+            int t1 = 0;
+            int t2 = 0;
+            for (int i = 0; i < LobbyPlayers.Count; i++)
             {
-                string name = Team1Players[i].Player.CharacterName;
-                if (Team1Players[i].IsInLobby)
+                string name = LobbyPlayers[i].Player.CharacterName;
+                if (LobbyPlayers[i].IsInLobby)
                     name = name.Colorize("9F9F9F");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (i + 1), name);
-            }
-
-            for (int i = 0; i < Team2Players.Count; i++)
-            {
-                string name = Team2Players[i].Player.CharacterName;
-                if (Team2Players[i].IsInLobby)
-                    name = name.Colorize("9F9F9F");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (i + 1), name);
+                if (LobbyPlayers[i].Team == 1)
+                {
+                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (t1 + 1), name);
+                    t1++;
+                }
+                else if (LobbyPlayers[i].Team == 2)
+                {
+                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (t2 + 1), name);
+                    t2++;
+                }
             }
         }
 
@@ -217,8 +196,8 @@ namespace Uncreated.Warfare.Teams
 
             //F.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
 
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", Team1Players.Count.ToString());
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", Team2Players.Count.ToString());
+            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
+            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
 
             if (!player.Player.OnDuty() && !player.IsDonatorT1 && IsTeamFull(player, 1))
             {
@@ -247,21 +226,23 @@ namespace Uncreated.Warfare.Teams
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (i + 1), "");
                 EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (i + 1), "");
             }
-
-            for (int i = 0; i < Team1Players.Count; i++)
+            int t1 = 0;
+            int t2 = 0;
+            for (int i = 0; i < LobbyPlayers.Count; i++)
             {
-                string name = Team1Players[i].Player.CharacterName;
-                if (Team1Players[i].IsInLobby)
-                    name.Colorize("9F9F9F");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (i + 1), name);
-            }
-
-            for (int i = 0; i < Team2Players.Count; i++)
-            {
-                string name = Team2Players[i].Player.CharacterName;
-                if (Team2Players[i].IsInLobby)
-                    name.Colorize("9F9F9F");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (i + 1), name);
+                string name = LobbyPlayers[i].Player.CharacterName;
+                if (LobbyPlayers[i].IsInLobby)
+                    name = name.Colorize("9F9F9F");
+                if (LobbyPlayers[i].Team == 1)
+                {
+                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (t1 + 1), name);
+                    t1++;
+                }
+                else if (LobbyPlayers[i].Team == 2)
+                {
+                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (t2 + 1), name);
+                    t2++;
+                }
             }
         }
 
@@ -282,16 +263,13 @@ namespace Uncreated.Warfare.Teams
 
         public void OnButtonClicked(Player nelsonplayer, string buttonName)
         {
-            var lobbyPlayer = LobbyPlayers.Find(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID);
+            LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID);
 
             if (buttonName == "Team1Button")
             {
                 if (lobbyPlayer.Team != 1)
                 {
                     lobbyPlayer.Team = 1;
-                    if (!Team1Players.Contains(lobbyPlayer))
-                        Team1Players.Add(lobbyPlayer);
-                    Team2Players.Remove(lobbyPlayer);
                     foreach (LobbyPlayer p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 
@@ -303,10 +281,7 @@ namespace Uncreated.Warfare.Teams
                 if (lobbyPlayer.Team != 2)
                 {
                     lobbyPlayer.Team = 2;
-                    if (!Team2Players.Contains(lobbyPlayer))
-                        Team2Players.Add(lobbyPlayer);
-                    Team1Players.Remove(lobbyPlayer);
-                    foreach (var p in LobbyPlayers)
+                    foreach (LobbyPlayer p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 
                     EffectManager.sendUIEffectText(29000, lobbyPlayer.Player.connection, true, "Team2Select", "JOINED");
@@ -314,14 +289,10 @@ namespace Uncreated.Warfare.Teams
             }
             else if (buttonName == "Confirm")
             {
-                if (lobbyPlayer.Team != 0)
+                if (lobbyPlayer.Team != 0 && lobbyPlayer.current == null)
                 {
-                    StartCoroutine(ConfirmJoin(lobbyPlayer));
+                    lobbyPlayer.current = StartCoroutine(ConfirmJoin(lobbyPlayer));
                 }
-            }
-            else if (buttonName == "X")
-            {
-                CloseUI(lobbyPlayer);
             }
         }
 
@@ -369,12 +340,20 @@ namespace Uncreated.Warfare.Teams
             ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, ToastMessageSeverity.BIG);
         }
 
+        public void CloseUI(UCPlayer player)
+        {
+            if (player == null) return;
+            LobbyPlayer lp = LobbyPlayers.Find(x => x.Steam64 == player.Steam64);
+            if (lp == null || lp.Player == null) return;
+            CloseUI(lp);
+        }
         public void CloseUI(LobbyPlayer player)
         {
             player.IsInLobby = false;
             player.Team = player.Player.GetTeam();
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+            player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
             EffectManager.askEffectClearByID(36036, player.Player.connection);
 
             foreach (LobbyPlayer p in LobbyPlayers)
@@ -388,8 +367,8 @@ namespace Uncreated.Warfare.Teams
             if (player.Team == team)
                 return false;
 
-            int Team1Count = Team1Players.Count;
-            int Team2Count = Team2Players.Count;
+            int Team1Count = LobbyPlayers.Count(x => x.Team == 1);
+            int Team2Count = LobbyPlayers.Count(x => x.Team == 2);
 
             if (Team1Count == 0 || Team2Count == 0)
                 return false;
@@ -398,30 +377,30 @@ namespace Uncreated.Warfare.Teams
             {
                 if (player.Team == 2) // if player is on the opposing team
                 {
-                    return (float)(Team1Count + 1) / (Team2Count - 1) - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                    return (Team1Count + 1f) / (Team2Count - 1f) - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
                 else if (player.Team == 1) // if player is already on the specified team
                 {
-                    return (float)(Team1Count) / Team2Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                    return (float)Team1Count / Team2Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
                 else // if player has not joined a team yet
                 {
-                    return (float)(Team1Count + 1) / Team2Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                    return (Team1Count + 1f) / Team2Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
             }
             else if (team == 2)
             {
                 if (player.Team == 1) // if player is on the opposing team
                 {
-                    return (float)(Team2Count + 1) / (Team1Count - 1) - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                    return (Team2Count + 1f) / (Team1Count - 1f) - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
                 else if (player.Team == 2) // if player is already on the specified team
                 {
-                    return (float)(Team2Count) / Team1Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                    return (float)(Team2Count) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
                 else // if player has not joined a team yet
                 {
-                    return (float)(Team2Count + 1) / Team1Count - 1 >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                    return (Team2Count + 1f) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
             }
             return false;
@@ -430,16 +409,12 @@ namespace Uncreated.Warfare.Teams
         public void OnNewGameStarting()
         {
             //StartCoroutine(CountdownTick());
+            LobbyPlayers.RemoveAll(x => !x.Reset());
 
-            LobbyPlayers.Clear();
-
-            foreach (var player in PlayerManager.OnlinePlayers)
-                LobbyPlayers.Add(new LobbyPlayer(player, 0));
-
-            foreach (var player in PlayerManager.OnlinePlayers)
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 JoinLobby(player, false);
         }
-
+#if false
         IEnumerator<WaitForSeconds> CountdownTick()
         {
             for (int seconds = 30; seconds >= 0; seconds--)
@@ -452,7 +427,7 @@ namespace Uncreated.Warfare.Teams
                 yield return new WaitForSeconds(1);
             }
         }
-
+#endif
         IEnumerator<WaitForSeconds> ConfirmJoin(LobbyPlayer player)
         {
             EffectManager.sendUIEffectText(29000, player.Player.connection, true, "ConfirmText", "<color=#999999>JOINING...</color>");
@@ -469,11 +444,13 @@ namespace Uncreated.Warfare.Teams
 
         public class LobbyPlayer
         {
-            public readonly UCPlayer Player;
+            public UCPlayer Player;
+            public readonly ulong Steam64;
             public ulong Team;
             public bool IsInLobby;
             public bool IsDonatorT1;
             public bool IsDonatorT2;
+            public Coroutine current = null;
 
             public LobbyPlayer(UCPlayer player, ulong team)
             {
@@ -482,6 +459,29 @@ namespace Uncreated.Warfare.Teams
                 IsInLobby = true;
                 IsDonatorT1 = false;
                 IsDonatorT2 = false;
+                Steam64 = player.Steam64;
+            }
+            public bool Reset()
+            {
+                Team = 0;
+                current = null;
+                if (Player == null || PlayerTool.getSteamPlayer(Player.Steam64) == null)
+                    Player = PlayerManager.OnlinePlayers.Find(x => x.Steam64 == Steam64) ?? null;
+                return Player != null;
+            }
+            public void CheckKits()
+            {
+                IsDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(Player.Steam64) && k.Team == 1).Count() > 0;
+                IsDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(Player.Steam64) && k.Team == 2).Count() > 0;
+            }
+            public static LobbyPlayer CreateNew(UCPlayer player, ulong team = 0)
+            {
+                return new LobbyPlayer(player, team)
+                {
+                    IsInLobby = true,
+                    IsDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 1).Count() > 0,
+                    IsDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && k.AllowedUsers.Contains(player.Steam64) && k.Team == 2).Count() > 0
+                };
             }
         }
     }

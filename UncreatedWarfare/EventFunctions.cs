@@ -10,6 +10,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
@@ -40,8 +41,6 @@ namespace Uncreated.Warfare
             Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
 
 
-            SquadManager.ClearUIsquad(player.player);
-            SquadManager.UpdateUIMemberCount(newGroup);
             SquadManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
             FOBManager.UpdateUI(ucplayer);
@@ -126,7 +125,7 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
             }
 
-            if (data.barricade.id == FOBManager.config.Data.AmmoCrateID || (Data.Is(out Insurgency insurgency) && data.barricade.id == insurgency.Config.CacheID))
+            if (data.barricade.id == FOBManager.config.Data.AmmoCrateID || (Data.Is(out Insurgency insurgency) && data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
             {
                 if (drop.interactable is InteractableStorage storage)
                 {
@@ -437,9 +436,7 @@ namespace Uncreated.Warfare
             {
                 SendUIParameters p = CTFUI.RefreshStaticUI(player.GetTeam(), flag, true);
                 if (p.status != F.EFlagStatus.BLANK && p.status != F.EFlagStatus.DONT_DISPLAY)
-                    p.SendToPlayer(ctf.Config.PlayerIcon, ctf.Config.UseUI,
-                    ctf.Config.CaptureUI, ctf.Config.ShowPointsOnUI, ctf.Config.ProgressChars, player.channel.owner,
-                    player.channel.owner.transportConnection);
+                    p.SendToPlayer(player.channel.owner);
             }
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
             {
@@ -663,9 +660,14 @@ namespace Uncreated.Warfare
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            if (Data.Is(out ITeams gm) && gm.UseJoinUI)
-                gm.JoinManager.OnPlayerDisconnected(ucplayer);
-            string kit = ucplayer.KitName;
+            string kit = string.Empty;
+            if (ucplayer != null)
+            {
+                if (Data.Is(out ITeams gm) && gm.UseJoinUI)
+                    gm.JoinManager.OnPlayerDisconnected(ucplayer);
+                if (Data.Is<IFOBs>(out _)) FOBManager.OnPlayerDisconnect(ucplayer);
+                kit = ucplayer.KitName;
+            }
             try
             {
                 Data.Gamemode.OnPlayerLeft(ucplayer);
@@ -788,12 +790,6 @@ namespace Uncreated.Warfare
                 {
                     player.playerID.characterName = cn;
                     player.playerID.nickName = cn;
-                }
-
-                ulong team = 0;
-                if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
-                {
-                    team = save.Team;
                 }
             }
             catch (Exception ex)

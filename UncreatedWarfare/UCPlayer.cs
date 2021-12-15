@@ -11,6 +11,7 @@ using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -61,17 +62,21 @@ namespace Uncreated.Warfare
             {
                 try
                 {
-                    if (Player.transform is null)
+                    if (Player.transform == null)
                     {
-                        F.LogWarning("DEPLOY ERROR: Player transform was null");
-                        return new Vector3(0, 0, 0);
+                        F.LogWarning("ERROR: Player transform was null");
+                        F.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
+                        Provider.kick(Player.channel.owner.playerID.steamID, F.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                        return Vector3.zero;
                     }
                     return Player.transform.position;
                 }
                 catch (NullReferenceException)
                 {
-                    F.LogWarning("DEPLOY ERROR: Player transform was null");
-                    return new Vector3(0, 0, 0);
+                    F.LogWarning("ERROR: Player transform was null");
+                    F.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
+                    Provider.kick(Player.channel.owner.playerID.steamID, F.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                    return Vector3.zero;
                 }
             }
         }
@@ -274,14 +279,14 @@ namespace Uncreated.Warfare
                     for (int i = 0; i < region.drops.Count; i++)
                     {
                         BarricadeDrop b = region.drops[i];
-                        if (b.GetServersideData().barricade.id == FOBs.FOBManager.config.Data.FOBID &&
+                        if (b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID &&
                             b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
                             (b.model.position - Position).sqrMagnitude <= IS_NEAR_FOB_DISTANCE * IS_NEAR_FOB_DISTANCE)
                             return true;
                     }
                 }
             }
-            if (Data.Is(out Insurgency ins))
+            if (Data.Is<Insurgency>(out _))
             {
                 for (int x = 0; x < Regions.WORLD_SIZE; x++)
                 {
@@ -292,7 +297,7 @@ namespace Uncreated.Warfare
                         for (int i = 0; i < region.drops.Count; i++)
                         {
                             BarricadeDrop b = region.drops[i];
-                            if (b.GetServersideData().barricade.id == ins.Config.CacheID &&
+                            if (b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID &&
                                 b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
                                 (b.model.position - Position).sqrMagnitude <= IS_NEAR_FOB_DISTANCE * IS_NEAR_FOB_DISTANCE)
                                 return true;

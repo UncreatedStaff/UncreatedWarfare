@@ -6,13 +6,9 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IImplementsLeaderboard
+    public interface IImplementsLeaderboard<Stats, StatTracker>
     {
         bool isScreenUp { get; }
-        ILeaderboard Leaderboard { get; }
-    }
-    public interface ILeaderboard
-    {
-
+        Leaderboard<Stats, StatTracker> Leaderboard { get; }
     }
 }

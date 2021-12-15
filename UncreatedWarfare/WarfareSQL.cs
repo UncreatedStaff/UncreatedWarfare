@@ -515,60 +515,6 @@ namespace Uncreated.Warfare
             if (ip == null) return "255.255.255.255";
             else return ip;
         }
-        public void MigrateLevels()
-        {
-            List<ulong> steamids = new List<ulong>();
-            List<FLevels> lvls = new List<FLevels>();
-            Query($"SELECT * FROM `levels`;", new object[0], R =>
-            {
-                ulong id = R.GetUInt64("Steam64");
-                lvls.Add(new FLevels
-                {
-                    Steam64 = id,
-                    ofp = R.GetUInt32("OfficerPoints"),
-                    xp = R.GetUInt32("XP"),
-                    Team = R.GetUInt64("Team")
-                });
-                if (!steamids.Contains(id))
-                    steamids.Add(id);
-            });
-            Dictionary<ulong, uint> XPs = new Dictionary<ulong, uint>();
-            Dictionary<ulong, uint> OFPs = new Dictionary<ulong, uint>();
-            for (int i = 0; i < lvls.Count; i++)
-            {
-                if (XPs.TryGetValue(lvls[i].Steam64, out uint xp))
-                {
-                    if (xp < lvls[i].xp)
-                    {
-                        XPs[lvls[i].Steam64] = lvls[i].xp;
-                    }
-                }
-                else
-                {
-                    XPs.Add(lvls[i].Steam64, lvls[i].xp);
-                }
-                if (OFPs.TryGetValue(lvls[i].Steam64, out uint ofp))
-                {
-                    if (ofp < lvls[i].ofp)
-                    {
-                        OFPs[lvls[i].Steam64] = lvls[i].ofp;
-                    }
-                }
-                else
-                {
-                    OFPs.Add(lvls[i].Steam64, lvls[i].ofp);
-                }
-            }
-
-            for (int i = 0; i < steamids.Count; i++)
-            {
-                if (!XPs.TryGetValue(steamids[i], out uint xp))
-                    xp = 0;
-                if (!OFPs.TryGetValue(steamids[i], out uint ofp))
-                    ofp = 0;
-                NonQuery("INSERT INTO `points` (`Steam64`, `OfficerPoints`, `XP`) VALUES (@0, @1, @2);", new object[] { steamids[i], ofp, xp });
-            }
-        }
         struct FLevels
         {
             public ulong Steam64;

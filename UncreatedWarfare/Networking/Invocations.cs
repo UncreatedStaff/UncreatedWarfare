@@ -10,6 +10,7 @@ using Uncreated.Networking;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.XP;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Networking
 {
@@ -469,6 +470,49 @@ namespace Uncreated.Warfare.Networking
                 }
             }
             SendItemInfos.Invoke(connection, rtn);
+        }
+
+
+        internal static readonly NetCall<ushort, byte[]> RequestIcon = new NetCall<ushort, byte[]>(2102);
+        internal static readonly NetCall<ushort, byte[], byte[]> SendIcon = new NetCall<ushort, byte[], byte[]>(2103);
+        [NetCall(ENetCall.FROM_SERVER, 2102)]
+        internal static void ReceiveIconRequest(ushort id, byte[] state)
+        {
+            if (!(Assets.find(EAssetType.ITEM, id) is ItemAsset asset)) return;
+            Item item = new Item(id, asset.amount, asset.qualityMax, state);
+            F.Log("starting");
+            DateTime dt = DateTime.Now;
+            ItemTool.getIcon(id, asset.qualityMax, state, (txt) => SendRenderedIcon(id, state, txt, dt));
+        }
+        private static void SendRenderedIcon(ushort id, byte[] state, Texture2D texture, DateTime start)
+        {
+            byte[] png;
+            try
+            {
+                png = texture.EncodeToPNG();
+                UnityEngine.Object.Destroy(texture);
+            }
+            catch (ArgumentException)
+            {
+                // Reading unreadable textures: https://fargesportfolio.com/unity-texture-texture2d-rendertexture/
+                RenderTexture rt = RenderTexture.GetTemporary(texture.width, texture.height);
+                Texture2D newText = new Texture2D(texture.width, texture.height, TextureFormat.ARGB32, false)
+                {
+                    name = texture.name
+                };
+                RenderTexture currentActiveRT = RenderTexture.active;
+                RenderTexture.active = rt;
+                Graphics.Blit(texture, rt);
+                newText.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
+                newText.Apply(false);
+                RenderTexture.active = currentActiveRT;
+                RenderTexture.ReleaseTemporary(rt);
+                UnityEngine.Object.Destroy(texture);
+                png = newText.EncodeToPNG();
+                UnityEngine.Object.Destroy(newText);
+            }
+            F.Log($"done rendering {png.Length} bytes in {(DateTime.Now - start).TotalMilliseconds}ms");
+            System.IO.File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\txt.png", png);
         }
     }
 }

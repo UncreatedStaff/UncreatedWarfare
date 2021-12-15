@@ -199,6 +199,11 @@ namespace Uncreated.Warfare
             this.position = new SerializableVector3(position);
             this.euler_angles = new SerializableVector3(eulerAngles);
         }
+        public SerializableTransform(float posx, float posy, float posz, float rotx, float roty, float rotz)
+        {
+            this.position = new SerializableVector3(posx, posy, posz);
+            this.euler_angles = new SerializableVector3(rotx, roty, rotz);
+        }
         public SerializableTransform(Vector3 position, Quaternion rotation)
         {
             this.position = new SerializableVector3(position);

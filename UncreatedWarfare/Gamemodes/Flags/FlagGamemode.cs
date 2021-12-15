@@ -45,6 +45,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (ttc)
             {
                 EvaluatePoints();
+                if (EnableAMC)
+                    CheckPlayersAMC();
                 OnEvaluate();
             }
         }

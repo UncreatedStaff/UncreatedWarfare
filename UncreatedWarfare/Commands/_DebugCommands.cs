@@ -38,205 +38,221 @@ namespace Uncreated.Warfare.Commands
         private readonly Type type = typeof(_DebugCommand);
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            Player player = caller.DisplayName == "Console" ? null : (caller as UnturnedPlayer).Player;
-            bool isConsole = caller.DisplayName == "Console";
+            bool isConsole = caller is ConsolePlayer;
+            Player player = isConsole ? null : (caller as UnturnedPlayer).Player;
             if (command.Length > 0)
             {
-                // awaitable commands go in here, others go in the group of methods below...
-                if (command[0] == "givexp")
+                try
                 {
-                    if (command.Length < 3)
+                    MethodInfo info = type.GetMethod(command[0], BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (info == null)
                     {
-                        player.SendChat("test_givexp_syntax");
-                        return;
-                    }
-                    if (int.TryParse(command[2], out int amount))
-                    {
-                        UCPlayer target = UCPlayer.FromName(command[1]);
-                        if (target == default)
-                        {
-                            player.SendChat("test_givexp_player_not_found", command[1]);
-                            return;
-                        }
-                        XPManager.AddXP(target.Player, amount, isConsole ? F.Translate("xp_from_operator", target.Steam64) :
-                            F.Translate("xp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
-                        player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
-                    }
-                    else
-                        player.SendChat("test_givexp_invalid_amount", command[2].ToLower());
-                }
-                else if (command[0] == "giveof" || command[0] == "giveop")
-                {
-                    if (command.Length < 3)
-                    {
-                        player.SendChat("test_giveof_syntax");
-                        return;
-                    }
-                    if (int.TryParse(command[2], out int amount))
-                    {
-                        UCPlayer target = UCPlayer.FromName(command[1]);
-                        if (target == default)
-                        {
-                            player.SendChat("test_giveof_player_not_found", command[1]);
-                            return;
-                        }
-                        OfficerManager.AddOfficerPoints(target.Player, amount, isConsole ? F.Translate("ofp_from_operator", target.Steam64) :
-                            F.Translate("ofp_from_player", target.Steam64, F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
-                        player.SendChat("test_giveof_success", amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName);
-                    }
-                    else
-                        player.SendChat("test_giveof_invalid_amount", command[2]);
-                }
-                else if (command[0] == "quickcap")
-                {
-                    if (Data.Is(out IFlagRotation fg))
-                    {
-                        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
-                        if (flag == default)
-                        {
-                            player.SendChat("test_zone_not_in_zone",
-                                player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
-                                player.transform.position.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
-                            return;
-                        }
-                        ulong team = player.GetTeam();
-                        if (team == 1)
-                        {
-                            if (flag.Points < 0)
-                            {
-                                flag.CapT1(Math.Abs(flag.Points));
-                            }
-                            else
-                            {
-                                flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
-                            }
-                        }
-                        else if (team == 2)
-                        {
-                            if (flag.Points > 0)
-                            {
-                                flag.CapT2(flag.Points);
-                            }
-                            else
-                            {
-                                flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
-                            }
-                        }
-                        else player.SendChat("gamemode_flag_not_on_cap_team");
-                    }
-                    else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
-                }
-                else if (command[0] == "quickwin")
-                {
-                    ulong team;
-                    if (command.Length > 1 && ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong id))
-                        team = id;
-                    else team = F.GetTeam(player);
-                    if (Data.Gamemode is IFlagTeamObjectiveGamemode fg)
-                    {
-                        if (team != 1 && team != 2)
-                        {
-                            if (caller.DisplayName == "Console")
-                                F.LogError(F.Translate("gamemode_flag_not_on_cap_team_console", 0, out _));
-                            player.SendChat("gamemode_flag_not_on_cap_team");
-                            return;
-                        }
-                        if (team == 1)
-                        {
-                            while (fg.State == EState.ACTIVE)
-                            {
-                                fg.ObjectiveTeam1.CapT1();
-                            }
-                        }
-                        else
-                        {
-                            while (fg.State == EState.ACTIVE)
-                            {
-                                fg.ObjectiveTeam2.CapT2();
-                            }
-                        }
+                        if (isConsole) F.LogError(F.Translate("test_no_method", 0, out _, command[0]));
+                        else player.SendChat("test_no_method", command[0]);
                     }
                     else
                     {
-                        Data.Gamemode.DeclareWin(team);
+                        try
+                        {
+                            info.Invoke(this, new object[2] { command, player });
+                        }
+                        catch (Exception ex)
+                        {
+                            F.LogError(ex.InnerException ?? ex);
+                            if (isConsole) F.LogError(F.Translate("test_error_executing", 0, out _, info.Name, (ex.InnerException ?? ex).GetType().Name));
+                            else player.SendChat("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
+                        }
                     }
                 }
-                else if (command[0] == "savemanyzones")
+                catch (AmbiguousMatchException)
                 {
-                    if (Data.Is(out IFlagRotation fg))
-                    {
-                        if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
-                            times = 1U;
-                        List<Zone> zones = new List<Zone>();
-                        if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
-                            Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
-                        for (int i = 0; i < times; i++)
-                        {
-                            zones.Clear();
-                            ReloadCommand.ReloadFlags();
-                            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-                            ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, true, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
-                            F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
-                        }
-                    }
-                    else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+                    if (isConsole) F.LogError(F.Translate("test_multiple_matches", 0, out _, command[0]));
+                    else player.SendChat("test_multiple_matches", command[0]);
                 }
-                else if (command[0] == "savemanygraphs")
-                {
-                    if (Data.Is(out IFlagRotation fg))
-                    {
-                        if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
-                            times = 1U;
-                        List<Zone> zones = new List<Zone>();
-                        if (!Directory.Exists(Data.FlagStorage + "GraphExport\\"))
-                            Directory.CreateDirectory(Data.FlagStorage + "GraphExport\\");
-                        for (int i = 0; i < times; i++)
-                        {
-                            zones.Clear();
-                            ReloadCommand.ReloadFlags();
-                            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-                            ZoneDrawing.DrawZoneMap(fg, Data.FlagStorage + @"GraphExport\zonegraph_" + i.ToString(Data.Locale));
-                            F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
-                        }
-                    }
-                    else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
-                }
-                else if (command[0] == "goto") go(command, player);
-                else
-                {
-                    try
-                    {
-                        MethodInfo info = type.GetMethod(command[0], BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (info == null)
-                        {
-                            if (caller.DisplayName == "Console") F.LogError(F.Translate("test_no_method", 0, out _, command[0]));
-                            else player.SendChat("test_no_method", command[0]);
-                        }
-                        else
-                        {
-                            try
-                            {
-                                info.Invoke(this, new object[2] { command, player });
-                            }
-                            catch (Exception ex)
-                            {
-                                F.LogError(ex.InnerException ?? ex);
-                                if (caller.DisplayName == "Console") F.LogError(F.Translate("test_error_executing", 0, out _, info.Name, ex.GetType().Name));
-                                else player.SendChat("test_error_executing", info.Name, ex.GetType().Name);
-                            }
-                        }
-                    }
-                    catch (AmbiguousMatchException)
-                    {
-                        if (caller.DisplayName == "Console") F.LogError(F.Translate("test_multiple_matches", 0, out _, command[0]));
-                        else player.SendChat("test_multiple_matches", command[0]);
-                    }
-                }
+            }
+            else
+            {
+                if (isConsole) F.LogError("Usage: /test <operation> [parameters...]");
+                else player.SendChat("Usage: /test <operation> [parameters...]", Color.red);
             }
         }
 #pragma warning disable IDE1006
 #pragma warning disable IDE0060
 #pragma warning disable IDE0051
+
+        private void givexp(string[] command, Player player)
+        {
+            if (command.Length < 3)
+            {
+                if (player == null)
+                    F.LogWarning(F.Translate("test_givexp_syntax", 0, out _));
+                else
+                    player.SendChat("test_givexp_syntax");
+                return;
+            }
+            if (int.TryParse(command[2], out int amount))
+            {
+                UCPlayer target = UCPlayer.FromName(command[1]);
+                if (target == default)
+                {
+                    if (player == null)
+                        F.LogWarning(F.Translate("test_givexp_player_not_found", 0, out _, command[1]));
+                    else
+                        player.SendChat("test_givexp_player_not_found", command[1]);
+                    return;
+                }
+                XPManager.AddXP(target.Player, amount, player == null ? F.Translate("xp_from_operator", target.Steam64) :
+                    F.Translate("xp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
+                if (player == null)
+                    F.Log(F.Translate("test_givexp_success", 0, out _, amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName));
+                else
+                    player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
+            }
+            else if (player == null)
+                F.LogWarning(F.Translate("test_givexp_invalid_amount", 0, out _, command[2]));
+            else
+                player.SendChat("test_givexp_invalid_amount", command[2]);
+        }
+        private void giveofp(string[] command, Player player)
+        {
+            if (command.Length < 3)
+            {
+                if (player == null)
+                    F.LogWarning(F.Translate("test_giveof_syntax", 0, out _));
+                else
+                    player.SendChat("test_giveof_syntax");
+                return;
+            }
+            if (int.TryParse(command[2], out int amount))
+            {
+                UCPlayer target = UCPlayer.FromName(command[1]);
+                if (target == default)
+                {
+                    if (player == null)
+                        F.LogWarning(F.Translate("test_giveof_player_not_found", 0, out _, command[1]));
+                    else
+                        player.SendChat("test_giveof_player_not_found", command[1]);
+                    return;
+                }
+                OfficerManager.AddOfficerPoints(target.Player, amount, player == null ? F.Translate("ofp_from_operator", target.Steam64) :
+                    F.Translate("ofp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
+                if (player == null)
+                    F.Log(F.Translate("test_giveof_success", 0, out _, amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName));
+                else
+                    player.SendChat("test_giveof_success", amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName);
+            }
+            else if (player == null)
+                F.LogWarning(F.Translate("test_giveof_invalid_amount", 0, out _, command[2]));
+            else
+                player.SendChat("test_giveof_invalid_amount", command[2]);
+        }
+        private void quickcap(string[] command, Player player)
+        {
+            if (player == null)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            if (Data.Is(out IFlagRotation fg))
+            {
+                Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(player));
+                if (flag == default)
+                {
+                    player.SendChat("test_zone_not_in_zone",
+                        player.transform.position.x.ToString(Data.Locale), player.transform.position.y.ToString(Data.Locale),
+                        player.transform.position.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
+                    return;
+                }
+                ulong team = player.GetTeam();
+                if (team == 1)
+                {
+                    if (flag.Points < 0)
+                    {
+                        flag.CapT1(Math.Abs(flag.Points));
+                    }
+                    else
+                    {
+                        flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
+                    }
+                }
+                else if (team == 2)
+                {
+                    if (flag.Points > 0)
+                    {
+                        flag.CapT2(flag.Points);
+                    }
+                    else
+                    {
+                        flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
+                    }
+                }
+                else player.SendChat("gamemode_flag_not_on_cap_team");
+            }
+            else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        }
+        private void quickwin(string[] command, Player player)
+        {
+            ulong team;
+            if (command.Length > 1 && ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong id))
+                team = id;
+            else if (player != null) team = F.GetTeam(player);
+            else team = 0;
+            if (team != 1 && team != 2)
+            {
+                if (player == null)
+                    F.LogError(F.Translate("gamemode_flag_not_on_cap_team_console", 0, out _));
+                else
+                    player.SendChat("gamemode_flag_not_on_cap_team");
+                return;
+            }
+            Data.Gamemode.DeclareWin(team);
+        }
+        private void savemanyzones(string[] command, Player player)
+        {
+            if (Data.Is(out IFlagRotation fg))
+            {
+                if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
+                    times = 1U;
+                List<Zone> zones = new List<Zone>();
+                if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
+                    Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
+                for (int i = 0; i < times; i++)
+                {
+                    zones.Clear();
+                    ReloadCommand.ReloadFlags();
+                    fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+                    ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, true, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
+                    F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                }
+            }
+            else if (player == null)
+                F.LogWarning(F.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+            else
+                player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        }
+        private void savemanygraphs(string[] command, Player player)
+        {
+            if (Data.Is(out IFlagRotation fg))
+            {
+                if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint times))
+                    times = 1U;
+                List<Zone> zones = new List<Zone>();
+                if (!Directory.Exists(Data.FlagStorage + "GraphExport\\"))
+                    Directory.CreateDirectory(Data.FlagStorage + "GraphExport\\");
+                for (int i = 0; i < times; i++)
+                {
+                    zones.Clear();
+                    ReloadCommand.ReloadFlags();
+                    fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+                    ZoneDrawing.DrawZoneMap(fg, Data.FlagStorage + @"GraphExport\zonegraph_" + i.ToString(Data.Locale));
+                    F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                }
+            }
+            else if (player == null)
+                F.LogWarning(F.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+            else
+                player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        }
         private void zone(string[] command, Player player)
         {
             if (player == default)
@@ -419,6 +435,8 @@ namespace Uncreated.Warfare.Commands
                         flag = ctf.ObjectiveTeam1;
                     else if (arg == "obj2" && ctf.ObjectiveTeam2 != null)
                         flag = ctf.ObjectiveTeam2;
+                    else if (arg == "lobby")
+                        flag = null;
                     else
                         flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
                 }
@@ -434,13 +452,15 @@ namespace Uncreated.Warfare.Commands
                 if (flag == default)
                 {
                     Dictionary<int, Zone> eZones = Data.ExtraZones;
-                    KeyValuePair<int, Zone> zone = eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.Key == o));
+                    KeyValuePair<int, Zone> zone = arg == "lobby" ? new KeyValuePair<int, Zone>(0, Teams.TeamManager.LobbyZone) : eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.Key == o));
                     if (zone.Equals(default(KeyValuePair<int, Zone>)))
                     {
                         player.SendChat("test_go_no_zone", arg);
                         return;
                     }
-                    if (Physics.Raycast(new Ray(new Vector3(zone.Value.Center.x, Level.HEIGHT, zone.Value.Center.y), Vector3.down), out RaycastHit hit2, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+                    if (zone.Key == 0)
+                        player.teleportToLocationUnsafe(Teams.TeamManager.LobbySpawn, Teams.TeamManager.LobbySpawnAngle);
+                    else if (Physics.Raycast(new Ray(new Vector3(zone.Value.Center.x, Level.HEIGHT, zone.Value.Center.y), Vector3.down), out RaycastHit hit2, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
                         player.teleportToLocationUnsafe(hit2.point + new Vector3(0, 1, 0), 90f);
                     else 
                         player.teleportToLocationUnsafe(zone.Value.Center3DAbove, 90f);
@@ -673,28 +693,6 @@ namespace Uncreated.Warfare.Commands
         {
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.channel.owner.transportConnection });
         }
-        private void getveh(string[] command, Player player)
-        {
-            if (player == default)
-            {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
-                return;
-            }
-            if (command.Length < 1 || float.TryParse(command[0], System.Globalization.NumberStyles.Any, Data.Locale, out float radius))
-            {
-                player.SendChat("Invalid syntax for getveh: /getveh <radius>");
-                return;
-            }
-            List<InteractableVehicle> vehs = new List<InteractableVehicle>();
-            VehicleManager.getVehiclesInRadius(player.transform.position, radius * radius, vehs);
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < vehs.Count; i++)
-            {
-                if (i != 0) sb.Append(", ");
-                sb.Append(vehs[i].asset.vehicleName).Append(" - ").Append((vehs[i].transform.position - player.transform.position).magnitude).Append("m");
-            }
-            player.SendChat("Vehicles: " + sb.ToString());
-        }
         private void game(string[] command, Player player)
         {
             if (Data.Is(out IFlagRotation fg))
@@ -715,35 +713,6 @@ namespace Uncreated.Warfare.Commands
                     $"{fg.Rotation.Count} Flags: {flags}Players:\n" +
                     $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (F.TryGetPlaytimeComponent(x.player, out PlaytimeComponent c) ? F.GetTimeFromSeconds((uint)Mathf.RoundToInt(c.CurrentTimeSeconds), 0) : "unknown pt")))}"// ends with \n
                     );
-            }
-        }
-        private void migratelevels(string[] command, Player player)
-        {
-            if (player != null)
-            {
-                player.SendChat("This command can only be called from console.");
-                return;
-            }
-            F.Log("Migrating...", ConsoleColor.Yellow);
-            Data.DatabaseManager.MigrateLevels();
-            F.Log("Migrated all levels.", ConsoleColor.Yellow);
-        }
-        private void dumpranks(string[] command, Player player)
-        {
-            if (player != null)
-            {
-                player.SendChat("This command can only be called from console.");
-                return;
-            }
-            F.Log("Ranks: ");
-            for (int i = 0; i < XPManager.config.Data.Ranks.Length; i++)
-            {
-                F.Log($"{XPManager.config.Data.Ranks[i].name}, {XPManager.config.Data.Ranks[i].level}, {XPManager.config.Data.Ranks[i].XP}");
-            }
-            F.Log("Officers: ");
-            for (int i = 0; i < OfficerManager.config.Data.OfficerRanks.Length; i++)
-            {
-                F.Log($"{OfficerManager.config.Data.OfficerRanks[i].name}, {OfficerManager.config.Data.OfficerRanks[i].level}, {OfficerManager.config.Data.OfficerRanks[i].XP}");
             }
         }
         private void consolidateKits(string[] command, Player player)
@@ -967,6 +936,72 @@ namespace Uncreated.Warfare.Commands
             }
             else if (player == null) F.Log("Staging phase is disabled.");
             else player.SendChat("Staging phase is disabled.");
+        }
+        private void render(string[] command, Player player)
+        {
+            if (player != null && player.equipment != null)
+            {
+                ItemJar equipped = player.inventory.getItem(player.equipment.equippedPage, 
+                    player.inventory.getIndex(player.equipment.equippedPage, player.equipment.equipped_x, 
+                    player.equipment.equipped_y));
+                if (equipped != null)
+                {
+                    Networking.Invocations.ReceiveIconRequest(equipped.item.id, equipped.item.state);
+                }
+                else
+                {
+                    F.Log("not equipped");
+                }
+            }
+            else
+            {
+                F.Log("something null");
+            }
+        }
+        private void resetlobby(string[] command, Player player)
+        {
+            if (Data.Is(out ITeams t) && t.UseJoinUI)
+            {
+                if (command.Length < 1)
+                {
+                    if (player == null)
+                        F.Log("Syntax: /resetlobby <Player>", ConsoleColor.Yellow);
+                    else
+                        player.SendChat("Syntax: /resetlobby <Player>", Color.red);
+                    return;
+                }
+                UCPlayer ucplayer = UCPlayer.FromName(command[1]);
+                if (ucplayer == null)
+                {
+                    if (player == null)
+                        F.Log("Unable to find a player by that name.", ConsoleColor.Yellow);
+                    else
+                        player.SendChat("Unable to find a player by that name.", Color.red);
+                    return;
+                }
+                t.JoinManager.OnPlayerDisconnected(ucplayer);
+                t.JoinManager.CloseUI(ucplayer);
+                t.JoinManager.OnPlayerConnected(ucplayer, false, false);
+            }
+            else if (player == null)
+                F.Log(F.Translate("gamemode_not_team_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+            else
+                player.SendChat("gamemode_not_team_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        }
+        private void clearcooldowns(string[] command, Player player)
+        {
+            if (player == null)
+            {
+                F.Log("This command can only be called by a player.");
+                return;
+            }
+            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+            if (ucplayer == null)
+            {
+                player.SendChat("UCPlayer error", Color.yellow);
+                return;
+            }
+            CooldownManager.RemoveCooldown(ucplayer);
         }
     }
 #pragma warning restore IDE0051

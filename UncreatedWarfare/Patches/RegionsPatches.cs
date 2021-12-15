@@ -174,7 +174,7 @@ namespace Uncreated.Warfare
                                 BarricadeDrop drop = region.drops[index];
                                 SDG.Unturned.BarricadeData serversideData = drop.GetServersideData();
                                 InteractableStorage interactable = drop.interactable as InteractableStorage;
-                                writer.WriteUInt16(serversideData.barricade.id);
+                                writer.WriteGuid(drop.asset.GUID);
                                 if (interactable != null)
                                 {
                                     byte[] bytes1;

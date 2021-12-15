@@ -122,12 +122,12 @@ namespace Uncreated.Warfare
             }
 
             /* BASIC CONFIGS */
-            Provider.configData.Normal.Players.Lose_Items_PvP = 0;
-            Provider.configData.Normal.Players.Lose_Items_PvE = 0;
-            Provider.configData.Normal.Players.Lose_Clothes_PvP = false;
-            Provider.configData.Normal.Players.Lose_Clothes_PvE = false;
-            Provider.configData.Normal.Barricades.Decay_Time = 0;
-            Provider.configData.Normal.Structures.Decay_Time = 0;
+            Provider.modeConfigData.Players.Lose_Items_PvP = 0;
+            Provider.modeConfigData.Players.Lose_Items_PvE = 0;
+            Provider.modeConfigData.Players.Lose_Clothes_PvP = false;
+            Provider.modeConfigData.Players.Lose_Clothes_PvE = false;
+            Provider.modeConfigData.Barricades.Decay_Time = 0;
+            Provider.modeConfigData.Structures.Decay_Time = 0;
 
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);

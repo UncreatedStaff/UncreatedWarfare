@@ -14,19 +14,24 @@ using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 using System.Text;
 using Uncreated.Players;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes
 {
     public delegate Task TeamWinDelegate(ulong team);
     public abstract class Gamemode : MonoBehaviour, IDisposable, IGamemode
     {
+        protected const float MATCH_PRESENT_THRESHOLD = 0.65f;
+        public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
         public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
         {
             { "TeamCTF", typeof(TeamCTF) },
             { "Invasion", typeof(Invasion) },
             { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
-            { "Insurgency", typeof(Insurgency) }
+            { "Insurgency", typeof(Insurgency.Insurgency) }
         };
+        internal static readonly Config<GamemodeConfigs> ConfigObj = new Config<GamemodeConfigs>(Data.DATA_DIRECTORY, "gamemode_settings.json");
+        public static GamemodeConfigs Config => ConfigObj.Data;
         public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
         protected readonly string _name;
         public string Name { get => _name; }
@@ -50,7 +55,9 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual bool ShowXPUI { get => true; }
         public virtual bool ShowOFPUI { get => true; }
         public virtual bool AllowCosmetics { get => true; }
-        public virtual float Weight { get => 1.0f; }
+
+        protected int _stagingSeconds { get; set; }
+        public int StagingSeconds { get => _stagingSeconds; }
 
         protected long _gameID;
         public long GameID { get => _gameID; }
@@ -104,15 +111,13 @@ namespace Uncreated.Warfare.Gamemodes
                         if (Provider.clients[i].player.transform == null)
                         {
                             F.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                            Provider.kick(Provider.clients[i].playerID.steamID,
-                                $"Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{UCWarfare.Config.DiscordInviteCode}).");
+                            Provider.kick(Provider.clients[i].playerID.steamID, F.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
                         }
                     }
                     catch (NullReferenceException)
                     {
                         F.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(Provider.clients[i].playerID.steamID,
-                            $"Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{UCWarfare.Config.DiscordInviteCode}).");
+                        Provider.kick(Provider.clients[i].playerID.steamID, F.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
                     }
                 }
                 try
@@ -141,44 +146,54 @@ namespace Uncreated.Warfare.Gamemodes
             shutdownPlayer = 0;
         }
         public abstract void DeclareWin(ulong winner);
-        public virtual void StartNextGame(bool onLoad = false)
+        public bool KeepGamemode()
         {
-            if (!onLoad)
+            Type nextMode = GetNextGamemode();
+            if (this.GetType() != nextMode)
             {
-                Type nextMode = GetNextGamemode();
-                if (this.GetType() != nextMode)
+                this.Dispose();
+                Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
+                if (gamemode != null)
                 {
-                    this.Dispose();
-                    Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
-                    if (gamemode != null)
-                    {
-                        gamemode.Init();
-                        gamemode.OnLevelLoaded();
-                        //F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
-                        for (int i = 0; i < Provider.clients.Count; i++)
-                            gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
-                        F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
-                        Data.Gamemode = gamemode;
-                        _state = EState.DISCARD;
-                        Destroy(this);
-                        return;
-                    }
+                    gamemode.Init();
+                    gamemode.OnLevelLoaded();
+                    //F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+                    for (int i = 0; i < Provider.clients.Count; i++)
+                        gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
+                    F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
+                    Data.Gamemode = gamemode;
+                    _state = EState.DISCARD;
+                    Destroy(this);
+                    return false;
                 }
             }
+            return true;
+        }
+        protected virtual void EndGame()
+        {
+            if (KeepGamemode())
+                StartNextGame(false);
+        }
+        public virtual void StartNextGame(bool onLoad = false)
+        {
+            CooldownManager.OnGameStarting();
             F.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             _state = EState.ACTIVE;
             _gameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
-            //AnnounceMode();
         }
-        private void AnnounceMode()
+        public void AnnounceMode()
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
+                AnnounceMode(PlayerManager.OnlinePlayers[i]);
             }
+        }
+        public void AnnounceMode(UCPlayer player)
+        {
+            ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
         }
         public virtual void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
@@ -223,8 +238,78 @@ namespace Uncreated.Warfare.Gamemodes
         { }
         public virtual void Unsubscribe()
         { }
+        protected Coroutine _stagingPhaseTimer;
+        public virtual void StartStagingPhase(int seconds)
+        {
+            _stagingSeconds = seconds;
+            _state = EState.STAGING;
+
+            _stagingPhaseTimer = StartCoroutine(StagingPhaseLoop());
+        }
+        public void SkipStagingPhase()
+        {
+            _stagingSeconds = 0;
+        }
+        public IEnumerator<WaitForSeconds> StagingPhaseLoop()
+        {
+            ShowStagingUIForAll();
+
+            while (StagingSeconds > 0)
+            {
+                if (State != EState.STAGING)
+                {
+                    EndStagingPhase();
+                    _stagingPhaseTimer = null;
+                    yield break;
+                }
+
+                UpdateStagingUIForAll();
+
+                yield return new WaitForSeconds(1);
+                _stagingSeconds--;
+            }
+            EndStagingPhase();
+            _stagingPhaseTimer = null;
+        }
+        public virtual void ShowStagingUI(UCPlayer player)
+        {
+            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
+            EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", F.Translate("phases_briefing", player));
+        }
+        public void ClearStagingUI(UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(CTFUI.headerID, player.connection);
+        }
+        public void ShowStagingUIForAll()
+        {
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                ShowStagingUI(player);
+        }
+        public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
+        {
+            EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
+        }
+        public void UpdateStagingUIForAll()
+        {
+            TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+            {
+                ulong team = player.GetTeam();
+                if (team == 1 || team == 2)
+                    UpdateStagingUI(player, timeLeft);
+            }
+        }
+        protected virtual void EndStagingPhase()
+        {
+            if (this is ITickets)
+                TicketManager.OnStagingPhaseEnded();
+            EffectManager.ClearEffectByID_AllPlayers(CTFUI.headerID);
+            _state = EState.ACTIVE;
+        }
         public virtual void Dispose()
         {
+            if (_stagingPhaseTimer != null)
+                StopCoroutine(_stagingPhaseTimer);
             Unsubscribe();
             CancelCoroutine();
             Whitelister?.Dispose();
@@ -276,6 +361,11 @@ namespace Uncreated.Warfare.Gamemodes
         public static void ReadGamemodes()
         {
             if (GAMEMODE_ROTATION.Count > 0) GAMEMODE_ROTATION.Clear();
+            if (UCWarfare.Config.GamemodeRotation == null)
+            {
+                GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(typeof(TeamCTF), 1.0f));
+                return;
+            }
             List<KeyValuePair<string, float>> gms = new List<KeyValuePair<string, float>>();
             using (IEnumerator<char> iter = UCWarfare.Config.GamemodeRotation.GetEnumerator())
             {
@@ -355,7 +445,6 @@ namespace Uncreated.Warfare.Gamemodes
             }
             return null;
         }
-        
     }
     public enum EState : byte
     {

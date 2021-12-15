@@ -149,10 +149,8 @@ namespace Uncreated.Warfare
             else if (player.IsTeam2())
                 Team2Players.Add(player);
 
-            SquadManager.InvokePlayerJoined(player, save.SquadName);
-            F.Log("updating FOB UI :)");
+            SquadManager.OnPlayerJoined(player, save.SquadName);
             FOBManager.UpdateUI(player);
-            F.Log("FOB UI update successful :)");
         }
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {
@@ -166,7 +164,7 @@ namespace Uncreated.Warfare
             else if (TeamManager.IsTeam2(rocketplayer))
                 Team2Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
 
-            SquadManager.InvokePlayerLeft(player);
+            SquadManager.OnPlayerDisconnected(player);
         }
         public static List<UCPlayer> GetNearbyPlayers(float range, Vector3 point) => OnlinePlayers.Where(p => !p.Player.life.isDead && (p.Position - point).sqrMagnitude < Math.Pow(range, 2)).ToList();
         public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point) => OnlinePlayers.Find(p => p.Steam64 == playerID && !p.Player.life.isDead && (p.Position - point).sqrMagnitude < Math.Pow(range, 2)) != null;

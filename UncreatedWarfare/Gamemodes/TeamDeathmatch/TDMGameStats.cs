@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public int teamkills; // works
         internal int gamepercentagecounter;
         public Coroutine update;
-        public LongestShot LongestShot = LongestShot.Nil;
+        public Flags.LongestShot LongestShot = Flags.LongestShot.Nil;
         public void Update()
         {
             durationCounter += Time.deltaTime;
@@ -89,7 +89,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             fobsDestroyedT2 = 0;
             teamkills = 0;
             update = StartCoroutine(CompileAverages());
-            LongestShot = LongestShot.Nil;
+            LongestShot = Flags.LongestShot.Nil;
         }
         public void StopCounting()
         {
@@ -114,8 +114,8 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
                 DateTime dt = DateTime.Now;
                 CompileArmyAverageT1(Provider.clients.Count(x => x.GetTeam() == 1 && x.player.transform != null && !TeamManager.Team1Main.IsInside(x.player.transform.position)));
                 CompileArmyAverageT2(Provider.clients.Count(x => x.GetTeam() == 2 && x.player.transform != null && !TeamManager.Team2Main.IsInside(x.player.transform.position)));
-                foreach (IStats s in playerstats.Values)
-                    s.CheckGame();
+                //foreach (IStats s in playerstats.Values)
+                //    s.CheckGame();
                 gamepercentagecounter++;
                 yield return new WaitForSeconds(10f);
             }
@@ -284,7 +284,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public int Teamkills => teamkills;
         public int Kills => kills;
         public int Deaths => deaths;
-        public int DamageDone => damagedone;
+        public float DamageDone => damagedone;
         public int Revives => revives;
         public int XPGained => xpgained;
         public int OFPGained => officerpointsgained;
@@ -293,7 +293,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public int teamkills;
         public int fobsdestroyed;
         public int fobsplaced;
-        public int damagedone;
+        public float damagedone;
         public int onlineCount1;
         public int onlineCount2;
         public int revives;
@@ -332,7 +332,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public void AddXP(int amount) => xpgained += amount;
         public void AddOfficerPoints(int amount) => officerpointsgained += amount;
         public void AddToTimeDeployed(float amount) => timeDeployedCounter += amount;
-        public void AddDamage(int amount) => damagedone += amount;
+        public void AddDamage(float amount) => damagedone += amount;
         public void AddRevive() => revives++;
         public void CheckGame()
         {
@@ -349,13 +349,14 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         {
 
         }
+        /*
         public override string ToString()
             =>
             $"Player: {id} ({(player == null ? "offline" : player.channel.owner.playerID.playerName)})\n" +
             $"Kills: {kills}\nDeaths: {deaths}\nTime Deployed: {TimeDeployed:g}\n" +
             $"Captures: {captures}\nTeamkills: {teamkills}\nFobs Destroyed: {fobsdestroyed}\n" +
             $"Fobs Placed: {fobsplaced}\nDamage Done: {damagedone}\nXP Gained: {xpgained}\nOfficer Pts Gained: {officerpointsgained}\n" +
-            $"OnlineTimeT1:{(float)onlineCount1 / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%." +
-            $"OnlineTimeT2:{(float)onlineCount2 / ((TeamCTF)Data.Gamemode).GameStats.gamepercentagecounter * 100}%.";
+            $"OnlineTimeT1:{(float)onlineCount1 / ((TeamDeathmatch)Data.Gamemode).GameStats.coroutinect * 100}%." +
+            $"OnlineTimeT2:{(float)onlineCount2 / ((TeamDeathmatch)Data.Gamemode).GameStats.coroutinect * 100}%.";*/
     }
 }

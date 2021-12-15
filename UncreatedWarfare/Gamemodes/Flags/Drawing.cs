@@ -38,21 +38,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     bool done = false;
                     while (!done)
                     {
-                        SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, step, out done, filename, false);
+                        GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, step, out done, filename, false);
                         step++;
                     }
                 }
                 else
-                {
-                    SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out _, filename, false);
-                }
+                    GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out _, filename, false);
                 if (drawrange)
-                    SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename, drawsearchangles);
+                    GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename, drawsearchangles);
                 if (drawpath)
-                    SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
-                SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
-                if (player != default)
+                    GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
+                GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
+                if (player != null)
                     player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
+                else F.Log("Picture finished generating, check the Config\\Maps\\Flags folder menu");
             }
             else
             {
@@ -78,11 +77,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         bool done = !drawIsInTest;
                         if (drawIsInTest)
                         {
-                            SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, overlayStep, out done, filename, false);
+                            GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, overlayStep, out done, filename, false);
                         }
                         else if (overlayStep == 0)
                         {
-                            SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out done, filename, false);
+                            GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out done, filename, false);
                         }
                         overlayStep++;
                         yield return new WaitForSeconds(0.5f);
@@ -91,10 +90,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         else
                         {
                             if (drawrange)
-                                SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename, drawsearchangles);
+                                GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename, drawsearchangles);
                             if (drawpath)
-                                SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
-                            SendPlayerZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
+                                GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
+                            GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
                             if (player != default)
                                 player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
                             overlayStep = 0;
@@ -108,7 +107,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
             }
         }
-        internal static void SendPlayerZoneOverlay(IFlagRotation gamemode, Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename, bool drawAngles)
+        internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename, bool drawAngles)
         {
             complete = false;
             F.Log("STEP " + step.ToString(Data.Locale));

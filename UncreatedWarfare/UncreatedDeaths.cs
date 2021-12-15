@@ -7,7 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
@@ -49,7 +52,24 @@ namespace Uncreated.Warfare
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
-                    ctf.GameStats.teamkills++;
+                    if (team == 1)
+                        ctf.GameStats.teamkillsT1++;
+                    else
+                        ctf.GameStats.teamkillsT2++;
+                }
+                else if (Data.Gamemode is Invasion inv)
+                {
+                    if (team == 1)
+                        inv.GameStats.teamkillsT1++;
+                    else
+                        inv.GameStats.teamkillsT2++;
+                }
+                else if (Data.Gamemode is Insurgency ins)
+                {
+                    if (team == 1)
+                        ins.GameStats.teamkillsT1++;
+                    else
+                        ins.GameStats.teamkillsT2++;
                 }
             }
         }
@@ -98,8 +118,13 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnEnemyKilled(parameters);
                 Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
-                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
-                    kd.AddKill();
+                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c))
+                {
+                    if (c.stats is IPVPModeStats kd)
+                        kd.AddKill();
+                    if (c.stats is BaseCTFStats st && parameters.killer.IsOnFlag())
+                        st.AddKillOnPoint();
+                }
                 bool atk = false;
                 bool def = false;
                 if (Data.Is(out IWarstatsGamemode ws))

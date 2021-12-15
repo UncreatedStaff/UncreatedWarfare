@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Tickets;
@@ -52,7 +53,13 @@ namespace Uncreated.Warfare.FOBs
 
             RemoveNearbyItemsByID(BuildID, FOBManager.config.Data.FOBRequiredBuild, foundation.point, FOBManager.config.Data.FOBBuildPickupRadius);
 
-            Barricade barricade = new Barricade(FOBManager.config.Data.FOBID);
+            if (!(Assets.find(Gamemode.Config.Barricades.FOBGUID) is ItemBarricadeAsset asset))
+            {
+                F.LogError("FOB GUID is not a valid Barricade");
+                return false;
+            }
+
+            Barricade barricade = new Barricade(asset);
             BarricadeManager.dropNonPlantedBarricade(barricade, foundation.point, Quaternion.Euler(foundation.angle_x * 2, foundation.angle_y * 2, foundation.angle_z * 2), foundation.owner, foundation.group);
             EffectManager.sendEffect(29, EffectManager.MEDIUM, foundation.point);
             player.SendChat("fob_built");
@@ -67,7 +74,7 @@ namespace Uncreated.Warfare.FOBs
                 );
 
             IEnumerable<BarricadeDrop> FOBstructures = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.FOBID, FOBManager.config.Data.FOBBuildPickupRadius, player.Position, player.GetTeam(), true);
-            FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault(), "#54e3ff");
+            FOBManager.RegisterNewFOB(FOBstructures.FirstOrDefault(), UCWarfare.GetColorHex("default_fob_color"));
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
             StatsManager.ModifyTeam(team, t => t.FobsBuilt++, false);
             BarricadeDrop foundationDrop = F.GetBarricadeFromInstID(foundation.instanceID);

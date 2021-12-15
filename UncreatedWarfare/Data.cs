@@ -13,6 +13,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
@@ -202,6 +203,11 @@ namespace Uncreated.Warfare
             Localization = JSONMethods.LoadTranslations(out DeathLocalization, out LimbLocalization);
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
+
+            // remove once effectmanager supports GUIDs
+            SquadManager.TempCacheEffectIDs();
+            CTFUI.TempCacheEffectIDs();
+            LeaderboardEx.TempCacheEffectIDs();
 
             /* CONSTRUCT FRAMEWORK */
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);

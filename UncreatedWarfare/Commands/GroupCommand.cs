@@ -98,6 +98,8 @@ namespace Uncreated.Warfare.Commands
                             GroupManager.save();
                             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, groupInfo.groupID.m_SteamID);
                             ulong team = player.GetTeam();
+                            if (gm.JoinManager != null)
+                                gm.JoinManager.UpdatePlayer(player.Player);
                             if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                             if (team == 1)
                             {

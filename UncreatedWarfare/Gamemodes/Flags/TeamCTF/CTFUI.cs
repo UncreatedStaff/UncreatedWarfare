@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -9,8 +10,23 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
     public static class CTFUI
     {
-        public static int FromMax(int cap, string progresschars) => Math.Abs(cap) >= Mathf.RoundToInt(Flag.MAX_POINTS) ? progresschars.Length - 1 : ((progresschars.Length - 1) / Mathf.RoundToInt(Flag.MAX_POINTS)) * Math.Abs(cap);
-        public static int FromMax(int cap, int max, string progresschars) => Math.Abs(cap) >= max ? progresschars.Length - 1 : ((progresschars.Length - 1) / max) * Math.Abs(cap);
+        internal static ushort flagListID;
+        internal const short flagListKey = 12004;
+        internal static ushort captureID;
+        internal const short captureKey = 12005;
+        internal static ushort headerID;
+        internal const short headerKey = 12006;
+        internal static void TempCacheEffectIDs()
+        {
+            if (Assets.find(Gamemode.Config.UI.FlagListGUID) is EffectAsset flagList)
+                flagListID = flagList.id;
+            if (Assets.find(Gamemode.Config.UI.CaptureGUID) is EffectAsset capture)
+                captureID = capture.id;
+            if (Assets.find(Gamemode.Config.UI.HeaderGUID) is EffectAsset header)
+                headerID = header.id;
+        }
+        public static int FromMax(int cap) => Math.Abs(cap) >= Mathf.RoundToInt(Flag.MAX_POINTS) ? Gamemode.Config.UI.ProgressChars.Length - 1 : ((Gamemode.Config.UI.ProgressChars.Length - 1) / Mathf.RoundToInt(Flag.MAX_POINTS)) * Math.Abs(cap);
+        public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UI.ProgressChars.Length - 1 : ((Gamemode.Config.UI.ProgressChars.Length - 1) / max) * Math.Abs(cap);
         public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
         {
             if (flag.LastDeltaPoints == 0)
@@ -153,89 +169,167 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
             }
         }
-        public static void ClearListUI(ITransportConnection player, int ListUiCount)
+        public static void ClearCaptureUI(UCPlayer player)
         {
-            for (int i = 0; i < ListUiCount; i++) unchecked
-                {
-                    EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
-                }
+            EffectManager.askEffectClearByID(captureID, player.Player.channel.owner.transportConnection);
         }
-        public static void SendFlagListUI(ITransportConnection player, ulong playerid, ulong team, List<Flag> Rotation, int ListUiCount, char AttackIcon, char DefendIcon)
+        public static void ClearCaptureUI(ITransportConnection player)
         {
-            ClearListUI(player, ListUiCount);
-            if (team == 1 || team == 2)
+            EffectManager.askEffectClearByID(captureID, player);
+        }
+        public static void ClearCaptureUI()
+        {
+            EffectManager.ClearEffectByID_AllPlayers(captureID);
+        }
+        public static void ClearFlagList(UCPlayer player)
+        {
+            EffectManager.askEffectClearByID(flagListID, player.Player.channel.owner.transportConnection);
+        }
+        public static void ClearFlagList(ITransportConnection player)
+        {
+            EffectManager.askEffectClearByID(flagListID, player);
+        }
+        public static void SendFlagList(UCPlayer player)
+        {
+            if (player == null) return;
+            ulong team = player.GetTeam();
+            if (team < 1 || team > 3) return;
+            if (Data.Is(out IFlagRotation gm))
             {
-                for (int i = 0; i < ListUiCount; i++)
+                ITransportConnection c = player.Player.channel.owner.transportConnection;
+                List<Flag> rotation = gm.Rotation;
+                EffectManager.sendUIEffect(flagListID, flagListKey, c, true);
+                EffectManager.sendUIEffectVisibility(flagListKey, c, true, "Header", true);
+                EffectManager.sendUIEffectText(flagListKey, c, true, "Header", F.Translate("flag_header", player));
+                if (team == 1 || team == 2)
                 {
-                    if (Rotation.Count <= i)
+                    for (int i = 0; i < Gamemode.Config.UI.FlagUICount; i++)
                     {
-                        EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
-                    }
-                    else
-                    {
-                        int index = team == 1 ? i : Rotation.Count - i - 1;
-                        if (Rotation[i] == default) continue;
-                        unchecked
+                        string i2 = i.ToString();
+                        if (rotation.Count <= i)
                         {
-                            Flag flag = Rotation[index];
+                            EffectManager.sendUIEffectVisibility(flagListKey, c, true, i2, false);
+                        }
+                        else
+                        {
+                            EffectManager.sendUIEffectVisibility(flagListKey, c, true, i2, true);
+                            int index = team == 1 ? i : rotation.Count - i - 1;
+                            Flag flag = rotation[index];
                             string objective = string.Empty;
                             if (flag.T1Obj)
                             {
                                 if (team == 1)
-                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{AttackIcon}</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
                                 else if (team == 2 && flag.Owner == 2)
-                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{DefendIcon}</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
                             }
                             if (flag.T2Obj)
                             {
                                 if (team == 2)
-                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{AttackIcon}</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
                                 else if (team == 1 && flag.Owner == 1)
-                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{DefendIcon}</color>";
+                                    objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
                             }
-                            EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true, flag.Discovered(team) ?
+                            EffectManager.sendUIEffectText(flagListKey, c, true, "N" + i2,
+                                flag.Discovered(team) ?
                                 $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
-                                $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{F.Translate("undiscovered_flag", playerid)}</color>",
-                                objective
-                            );
+                                $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{F.Translate("undiscovered_flag", player)}</color>");
+                            EffectManager.sendUIEffectText(flagListKey, c, true, "I" + i2, objective);
+                        }
+                    }
+                }
+                else if (team == 3)
+                {
+                    for (int i = 0; i < Gamemode.Config.UI.FlagUICount; i++)
+                    {
+                        string i2 = i.ToString();
+                        if (rotation.Count <= i)
+                        {
+                            EffectManager.sendUIEffectVisibility(flagListKey, c, true, i2, false);
+                        }
+                        else
+                        {
+                            EffectManager.sendUIEffectVisibility(flagListKey, c, true, i2, true);
+                            Flag flag = rotation[i];
+                            string objective = string.Empty;
+                            if (flag.T1Obj)
+                            {
+                                objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                                if (flag.Owner == 2)
+                                    objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            }
+                            if (flag.T2Obj)
+                            {
+                                objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                                if (flag.Owner == 1)
+                                    objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            }
+                            EffectManager.sendUIEffectText(flagListKey, c, true, "N" + i2,
+                                $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                                $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                                $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                            EffectManager.sendUIEffectText(flagListKey, c, true, "I" + i2, objective);
                         }
                     }
                 }
             }
-            else if (team == 3)
+        }
+        public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
+        {
+            if (Data.Is(out IFlagRotation gm))
             {
-                for (int i = 0; i < ListUiCount; i++)
+                List<Flag> rotation = gm.Rotation;
+                int index = rotation.IndexOf(flag);
+                if (index == -1) return;
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
-                    if (Rotation.Count <= i)
+                    UCPlayer player = PlayerManager.OnlinePlayers[i];
+                    ulong team = player.GetTeam();
+                    if (team < 1 || team > 3) continue;
+                    if (!flag.Discovered(team)) continue;
+                    ITransportConnection c = player.Player.channel.owner.transportConnection;
+                    int i3 = team == 2 ? rotation.Count - index - 1 : index;
+                    string i2 = i3.ToString();
+                    string objective = string.Empty;
+                    if (team == 1 || team == 2)
                     {
-                        EffectManager.askEffectClearByID((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), player);
+                        if (flag.T1Obj)
+                        {
+                            if (team == 1)
+                                objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            else if (team == 2 && flag.Owner == 2)
+                                objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                        }
+                        if (flag.T2Obj)
+                        {
+                            if (team == 2)
+                                objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            else if (team == 1 && flag.Owner == 1)
+                                objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                        }
+                        if (ownerChanged)
+                            EffectManager.sendUIEffectText(flagListKey, c, true, "N" + i2, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
+                        EffectManager.sendUIEffectText(flagListKey, c, true, "I" + i2, objective);
                     }
                     else
                     {
-                        if (Rotation.Count <= i || Rotation[i] == default) continue;
-                        unchecked
+                        if (flag.T1Obj)
                         {
-                            Flag flag = Rotation[i];
-                            string objective = string.Empty;
-                            if (flag.T1Obj)
-                            {
-                                objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{AttackIcon}</color>";
-                                if (flag.Owner == 2)
-                                    objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{DefendIcon}</color>";
-                            }
-                            if (flag.T2Obj)
-                            {
-                                objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{AttackIcon}</color>";
-                                if (flag.Owner == 1)
-                                    objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{DefendIcon}</color>";
-                            }
-                            EffectManager.sendUIEffect((ushort)(UCWarfare.Config.FlagSettings.FlagUIIdFirst + i), (short)(1000 + i), player, true,
-                                $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
-                                $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                                $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}",
-                                objective
-                                );
+                            objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            if (flag.Owner == 2)
+                                objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
                         }
+                        if (flag.T2Obj)
+                        {
+                            objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            if (flag.Owner == 1)
+                                objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                        }
+                        EffectManager.sendUIEffectText(flagListKey, c, true, "N" + i2,
+                            $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                            $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                            $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                        EffectManager.sendUIEffectText(flagListKey, c, true, "I" + i2, objective);
                     }
                 }
             }
@@ -328,7 +422,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             this.team2count = team2count;
             this.formatting = formatting;
         }
-        public void SendToPlayer(char charactericon, bool useui, ushort uiid, bool pts, string progresschars, SteamPlayer player, ITransportConnection connection) =>
-            F.UIOrChat(charactericon, useui, uiid, pts, progresschars, this, player, connection, player.playerID.steamID.m_SteamID);
+        public void SendToPlayer(SteamPlayer player) =>
+            F.UIOrChat(Gamemode.Config.UI.PlayerIcon, true, CTFUI.captureID, Gamemode.Config.UI.ShowPointsOnUI, Gamemode.Config.UI.ProgressChars, this, player, player.transportConnection, player.playerID.steamID.m_SteamID);
     }
 }
