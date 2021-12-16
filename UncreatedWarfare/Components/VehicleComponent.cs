@@ -1,11 +1,12 @@
 ﻿using Steamworks;
+using System;
 using UnityEngine;
 namespace Uncreated.Warfare.Components
 {
     public class VehicleComponent : MonoBehaviour
     {
         public CSteamID owner;
-        public ushort item;
+        public Guid item;
         public bool isVehicle = false;
     }
 }

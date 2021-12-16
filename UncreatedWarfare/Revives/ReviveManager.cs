@@ -239,7 +239,7 @@ namespace Uncreated.Warfare.Revives
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
             SpawnInjuredMarker(parameters.player.transform.position, team);
             UpdateMedicMarkers(parameters.player.channel.owner.transportConnection, team, parameters.player.transform.position, false);
-            ushort item = 0;
+            Guid item = Guid.Empty;
             if (killer != default)
             {
                 if (DeathInfo.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DeathInfo info))
@@ -285,9 +285,9 @@ namespace Uncreated.Warfare.Revives
                                     kitData.Downs++;
                                 }
                             }, false);
-                            if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset && asset != null)
+                            if (Assets.find(item) is ItemAsset asset && asset != null)
                             {
-                                Stats.StatsManager.ModifyWeapon(item, kit.Name, w => w.Downs++, true);
+                                Stats.StatsManager.ModifyWeapon(asset.id, kit.Name, w => w.Downs++, true);
                             }
                         }
                         else

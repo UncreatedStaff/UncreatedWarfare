@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -14,22 +15,14 @@ namespace Uncreated.Warfare.FOBs
         {
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-            if (data.barricade.id == FOBManager.config.Data.RepairStationID)
+            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
             {
-                for (int i = 0; i < region.drops.Count; i++)
-                {
-                    if (data.instanceID == region.drops[i].instanceID)
-                    {
-                        drop = region.drops[i];
-                    }
-                }
-                if (drop != null)
-                    RegisterNewRepairStation(data, drop);
+                RegisterNewRepairStation(data, drop);
             }
         }
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
-            if (data.barricade.id == FOBManager.config.Data.RepairStationID)
+            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
             {
                 TryDeleteRepairStation(instanceID);
             }
@@ -85,7 +78,7 @@ namespace Uncreated.Warfare.FOBs
                     if (region == default) continue;
                     for (int i = 0; i < region.drops.Count; i++)
                     {
-                        if (region.drops[i].GetServersideData().barricade.id == FOBManager.config.Data.RepairStationID)
+                        if (region.drops[i].asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
                         {
                             barricades.Add(new RBarricade(region.drops[i].GetServersideData(), region.drops[i]));
                         }
@@ -214,12 +207,20 @@ namespace Uncreated.Warfare.FOBs
                         {
                             int build_count = 0;
 
+                            ulong team = parent.structure.group.GetTeam();
                             foreach (ItemJar jar in parent.storage.items.items)
                             {
-                                if (TeamManager.IsTeam1(parent.structure.group) && jar.item.id == FOBManager.config.Data.Team1BuildID)
+                                if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) continue;
+                                if (team == 1 && asset.GUID == Gamemode.Config.Items.T1Build)
+                                {
                                     build_count++;
-                                else if (TeamManager.IsTeam2(parent.structure.group) && jar.item.id == FOBManager.config.Data.Team2BuildID)
+                                    break;
+                                }
+                                else if (team == 2 && asset.GUID == Gamemode.Config.Items.T2Build)
+                                {
                                     build_count++;
+                                    break;
+                                }
                             }
 
                             if (build_count > 0)
@@ -227,10 +228,10 @@ namespace Uncreated.Warfare.FOBs
                                 parent.VehiclesRepairing.Add(nearby[i].instanceID, 9);
                                 parent.RepairVehicle(nearby[i]);
 
-                                if (TeamManager.IsTeam1(parent.structure.group))
-                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, FOBManager.config.Data.Team1BuildID);
-                                else if (TeamManager.IsTeam2(parent.structure.group))
-                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, FOBManager.config.Data.Team2BuildID);
+                                if (team == 1)
+                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, Gamemode.Config.Items.T1Build);
+                                else if (team == 2)
+                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, Gamemode.Config.Items.T2Build);
                             }
                         }
                     }

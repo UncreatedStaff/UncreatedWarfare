@@ -163,7 +163,7 @@ namespace Uncreated.Warfare.Kits
         public string kit_name;
         public SerializableTransform transform;
         [JsonSettable]
-        public ushort sign_id;
+        public Guid sign_id;
         [JsonSettable]
         public ulong owner;
         [JsonSettable]
@@ -174,7 +174,7 @@ namespace Uncreated.Warfare.Kits
         [JsonIgnore]
         public bool exists;
         [JsonConstructor]
-        public RequestSign(string kit_name, SerializableTransform transform, ushort sign_id, ulong owner, ulong group, uint instance_id)
+        public RequestSign(string kit_name, SerializableTransform transform, Guid sign_id, ulong owner, ulong group, uint instance_id)
         {
             this.kit_name = kit_name;
             this.transform = transform;
@@ -190,7 +190,7 @@ namespace Uncreated.Warfare.Kits
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             if (drop != null)
             {
-                this.sign_id = drop.GetServersideData().barricade.id;
+                this.sign_id = drop.GetServersideData().barricade.asset.GUID;
                 this.instance_id = drop.instanceID;
                 this.transform = new SerializableTransform(sign.transform);
                 this.barricadetransform = sign.transform;
@@ -204,7 +204,7 @@ namespace Uncreated.Warfare.Kits
         {
             this.kit_name = "default";
             this.transform = SerializableTransform.Zero;
-            this.sign_id = 0;
+            this.sign_id = Guid.Empty;
             this.owner = 0;
             this.group = 0;
             this.instance_id = 0;
@@ -265,8 +265,13 @@ namespace Uncreated.Warfare.Kits
             SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (drop == null || data == null)
             {
+                if (!(Assets.find(sign_id) is ItemBarricadeAsset asset))
+                {
+                    F.LogError("Failed to find barricade with " + sign_id.ToString("N"));
+                    return;
+                }
                 this.barricadetransform = BarricadeManager.dropNonPlantedBarricade(
-                    new Barricade(sign_id),
+                    new Barricade(asset),
                     transform.position.Vector3, transform.Rotation, owner, group
                     );
                 drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);

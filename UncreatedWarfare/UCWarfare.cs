@@ -14,6 +14,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
@@ -137,9 +138,6 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
-            if (Config.Modules.VehicleSpawning)
-            {
-            }
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
@@ -248,30 +246,27 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            if (Data.Is(out TeamCTF ctf))
+            if (Data.Is<TeamCTF>(out _))
             {
-                CTFUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), ctf.Rotation,
-                    ctf.Config.FlagUICount, ctf.Config.AttackIcon, ctf.Config.DefendIcon);
+                CTFUI.SendFlagList(ucplayer);
             }
-            else if (Data.Is(out Invasion inv))
+            else if (Data.Is<Invasion>(out _))
             {
-                InvasionUI.SendFlagListUI(player.transportConnection, player.playerID.steamID.m_SteamID, player.GetTeam(), inv.Rotation,
-                    inv.Config.FlagUICount, inv.Config.AttackIcon, inv.Config.DefendIcon, inv.AttackingTeam, inv.Config.LockedIcon);
+                InvasionUI.SendFlagList(ucplayer);
             }
             else if (Data.Is(out Insurgency ins))
             {
-                if (ucplayer != null)
-                    ins.UpdateUI(ucplayer);
+                InsurgencyUI.SendCacheList(ucplayer);
             }
             if (Data.Is<ISquads>(out _))
             {
                 ulong team = player.GetTeam();
                 if (ucplayer.Squad == null)
-                    SquadManager.UpdateSquadList(ucplayer);
+                    SquadManager.SendSquadList(ucplayer);
                 else
                 {
-                    SquadManager.UpdateUISquad(ucplayer.Squad);
-                    SquadManager.UpdateUIMemberCount(team);
+                    SquadManager.SendSquadMenu(ucplayer, ucplayer.Squad);
+                    SquadManager.UpdateMemberList(ucplayer.Squad);
                     if (RallyManager.HasRally(ucplayer.Squad, out RallyPoint p))
                         p.ShowUIForPlayer(ucplayer);
                 }
@@ -281,7 +276,6 @@ namespace Uncreated.Warfare
             if (Data.Gamemode.ShowOFPUI)
                 Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, false), out _);
         }
-
         private void Update()
         {
             while (RunOnMainThread.Count > 0)

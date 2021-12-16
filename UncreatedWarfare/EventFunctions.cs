@@ -43,7 +43,7 @@ namespace Uncreated.Warfare
 
             SquadManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
-            FOBManager.UpdateUI(ucplayer);
+            FOBManager.SendFOBList(ucplayer);
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);
 
@@ -114,18 +114,18 @@ namespace Uncreated.Warfare
             owner.Owner = data.owner;
             SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
             owner.Player = player?.player;
-            owner.BarricadeID = data.barricade.id;
+            owner.BarricadeGUID = data.barricade.asset.GUID;
             RallyManager.OnBarricadePlaced(drop, region);
 
             RepairManager.OnBarricadePlaced(drop, region);
 
             // ammo bag
-            if (FOBManager.config.Data.AmmoBagIDs.Contains(data.barricade.id))
+            if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
             {
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
             }
 
-            if (data.barricade.id == FOBManager.config.Data.AmmoCrateID || (Data.Is(out Insurgency insurgency) && data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
+            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is(out Insurgency insurgency) && data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
             {
                 if (drop.interactable is InteractableStorage storage)
                 {
@@ -136,7 +136,7 @@ namespace Uncreated.Warfare
                 }
             }
 
-            if (data.barricade.id == FOBManager.config.Data.FOBBaseID)
+            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBBaseGUID)
             {
                 drop.model.gameObject.AddComponent<FOBBaseComponent>().Initialize(drop, data);
             }
@@ -165,7 +165,7 @@ namespace Uncreated.Warfare
             Patches.DeathsPatches.lastProjected = projectile;
             if (F.TryGetPlaytimeComponent(gun.player, out PlaytimeComponent c))
             {
-                c.lastProjected = gun.equippedGunAsset.id;
+                c.lastProjected = gun.equippedGunAsset.GUID;
             }
         }
         internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)
@@ -173,7 +173,7 @@ namespace Uncreated.Warfare
             PlaytimeComponent c = F.GetPlaytimeComponent(gun.player, out bool success);
             if (success)
             {
-                c.lastShot = gun.equippedGunAsset.id;
+                c.lastShot = gun.equippedGunAsset.GUID;
             }
         }
         internal static void ReloadCommand_onTranslationsReloaded()
@@ -202,7 +202,7 @@ namespace Uncreated.Warfare
                 }
                 RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
                 if (!shouldAllow) return;
-                if (barricade.id == FOBManager.config.Data.FOBBaseID && FOBManager.config.Data.RestrictFOBPlacement)
+                if (barricade.asset.GUID == Gamemode.Config.Barricades.FOBBaseGUID && FOBManager.config.Data.RestrictFOBPlacement)
                 {
                     if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                     {
@@ -223,7 +223,7 @@ namespace Uncreated.Warfare
                         return;
                     }
                 }
-                else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.id))
+                else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
                 {
                     if (player != null && player.OffDuty() && player.KitClass != EClass.RIFLEMAN)
                     {
@@ -379,11 +379,11 @@ namespace Uncreated.Warfare
         }
         internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
         {
-            if (storage == null || !shouldAllow || UCWarfare.Config.LimitedStorages == null || UCWarfare.Config.LimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
+            if (storage == null || !shouldAllow || Gamemode.Config.Barricades.TimeLimitedStorages == null || Gamemode.Config.Barricades.TimeLimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
             SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
             BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
             if (player == null || storagedrop == null ||
-                !UCWarfare.Config.LimitedStorages.Contains(storagedrop.GetServersideData().barricade.id)) return;
+                !Gamemode.Config.Barricades.TimeLimitedStorages.Contains(storagedrop.asset.GUID)) return;
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
             if (ucplayer == null) return;
             if (ucplayer.StorageCoroutine != null)
@@ -432,10 +432,10 @@ namespace Uncreated.Warfare
         }
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
         {
-            if (Data.Gamemode is TeamCTF ctf && player.IsOnFlag(out Flag flag))
+            if (Data.Is<IFlagRotation>(out _) && player.IsOnFlag(out Flag flag))
             {
                 SendUIParameters p = CTFUI.RefreshStaticUI(player.GetTeam(), flag, true);
-                if (p.status != F.EFlagStatus.BLANK && p.status != F.EFlagStatus.DONT_DISPLAY)
+                if (p.status != EFlagStatus.BLANK && p.status != EFlagStatus.DONT_DISPLAY)
                     p.SendToPlayer(player.channel.owner);
             }
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
@@ -568,11 +568,11 @@ namespace Uncreated.Warfare
             UCPlayer utplayer = UCPlayer.FromPlayer(player);
             if (utplayer.OnDuty())
                 return;
-            if (!Whitelister.IsWhitelisted(jar.item.id, out _))
+            if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) return;
+            if (!Whitelister.IsWhitelisted(asset.GUID, out _))
             {
                 allow = false;
-                player.SendChat("cant_store_this_item",
-                    !(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset) || asset.itemName == null ? jar.item.id.ToString(Data.Locale) : asset.itemName);
+                player.SendChat("cant_store_this_item", asset.itemName);
             }
         }
         internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)

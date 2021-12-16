@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿//#define NONADJACENCIES
+using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Teams;
@@ -31,6 +32,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public static int MAX_FLAGS = 8;
         public static int MIN_FLAGS = 5;
         public static int MAX_REDOS = 20;
+#if NONADJACENCIES
         public static void SetVariables(
             float MAIN_SEARCH_RADIUS,
             float MAIN_STOP_RADIUS,
@@ -242,7 +244,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             return Rotation;
         }
-
+#endif
         public static List<Flag> PathWithAdjacents(List<Flag> Selection, Dictionary<int, float> T1Adjacents, Dictionary<int, float> T2Adjacents)
         {
             List<Flag> path = new List<Flag>();

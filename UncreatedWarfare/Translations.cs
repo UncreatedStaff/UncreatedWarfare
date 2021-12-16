@@ -832,6 +832,7 @@ namespace Uncreated.Warfare
             new ColorData("team_count_ui_color_team_1_icon", "4785ff"),
             new ColorData("team_count_ui_color_team_2_icon", "f53b3b"),
             new ColorData("default_fob_color", "54e3ff"),
+            new ColorData("enemy_nearby_fob_color", "ff8754"),
             new ColorData("invasion_special_fob", "5482ff"),
             new ColorData("insurgency_cache_color", "c480d9"),
 

@@ -249,7 +249,7 @@ namespace Uncreated.Warfare.Commands
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)
         {
-            if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
+            if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 ucplayer.Message("request_vehicle_e_notrequestable");
                 return;
@@ -334,7 +334,7 @@ namespace Uncreated.Warfare.Commands
 
                 VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
-                VehicleBay.IncrementRequestCount(vehicle.id, true);
+                VehicleBay.IncrementRequestCount(vehicle.asset.GUID, true);
 
                 if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
                 {
@@ -356,7 +356,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 
-                if (!FOBManager.config.Data.Emplacements.Exists(e => e.vehicleID == vehicle.id))
+                if (!FOBManager.config.Data.Emplacements.Exists(e => e.vehicleID == vehicle.asset.GUID))
                 {
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack

@@ -28,18 +28,18 @@ namespace Uncreated.Warfare.Vehicles
         protected override string LoadDefaults() => "[]";
         public static void AddRequestableVehicle(InteractableVehicle vehicle)
         {
-            VehicleData data = new VehicleData(vehicle.id);
+            VehicleData data = new VehicleData(vehicle.asset.GUID);
             data.SaveMetaData(vehicle);
             AddObjectToSave(data);
         }
-        public static void RemoveRequestableVehicle(ushort vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
-        public static bool VehicleExists(ushort vehicleID, out VehicleData vehicleData)
+        public static void RemoveRequestableVehicle(Guid vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
+        public static bool VehicleExists(Guid vehicleID, out VehicleData vehicleData)
         {
             bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
             vehicleData = v;
             return result;
         }
-        public static void IncrementRequestCount(ushort vehicleID, bool save)
+        public static void IncrementRequestCount(Guid vehicleID, bool save)
         {
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
@@ -51,18 +51,23 @@ namespace Uncreated.Warfare.Vehicles
             }
             if (save) Save();
         }
-        public static void SetItems(ushort vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
-        public static void AddCrewmanSeat(ushort vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
-        public static void RemoveCrewmanSeat(ushort vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
+        public static void SetItems(Guid vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
+        public static void AddCrewmanSeat(Guid vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
+        public static void RemoveCrewmanSeat(Guid vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
         /// <summary>Level must be loaded.</summary>
-        public static InteractableVehicle SpawnLockedVehicle(ushort vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
+        public static InteractableVehicle SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
             try
             {
                 instanceID = 0;
                 if (VehicleExists(vehicleID, out VehicleData vehicleData))
                 {
-                    InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleID, position, rotation);
+                    if (!(Assets.find(vehicleID) is VehicleAsset asset))
+                    {
+                        F.LogError("SpawnLockedVehicle: Unable to find vehicle asset of " + vehicleID.ToString());
+                        return null;
+                    }
+                    InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(asset.id, position, rotation);
                     if (vehicle == null) return null;
                     instanceID = vehicle.instanceID;
 
@@ -70,9 +75,12 @@ namespace Uncreated.Warfare.Vehicles
                     {
                         foreach (VBarricade vb in vehicleData.Metadata.Barricades)
                         {
-                            Barricade barricade = Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset
-                                ? new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset)
-                                : new Barricade(vb.BarricadeID) { state = Convert.FromBase64String(vb.State) };
+                            if (!(Assets.find(vb.BarricadeID) is ItemBarricadeAsset basset))
+                            {
+                                F.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
+                                continue;
+                            }
+                            Barricade barricade = new Barricade(basset, asset.health, Convert.FromBase64String(vb.State));
                             Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
                             BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
                         }
@@ -91,7 +99,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 else
                 {
-                    F.Log($"VEHICLE SPAWN ERROR: {UCAssetManager.FindVehicleAsset(vehicleID).vehicleName} has not been registered in the VehicleBay.");
+                    F.Log($"VEHICLE SPAWN ERROR: {(Assets.find(vehicleID) is VehicleAsset va ? va.vehicleName : vehicleID.ToString("N"))} has not been registered in the VehicleBay.");
                     return null;
                 }
             }
@@ -122,14 +130,14 @@ namespace Uncreated.Warfare.Vehicles
             foreach (VBarricade vb in vehicleData.Metadata.Barricades)
             {
                 Barricade barricade;
-                if (Assets.find(EAssetType.ITEM, vb.BarricadeID) is ItemBarricadeAsset asset)
+                if (Assets.find(vb.BarricadeID) is ItemBarricadeAsset asset)
                 {
-                    barricade = new Barricade(vb.BarricadeID, asset.health, Convert.FromBase64String(vb.State), asset);
+                    barricade = new Barricade(asset, asset.health, Convert.FromBase64String(vb.State));
                 }
                 else
                 {
-                    barricade = new Barricade(vb.BarricadeID)
-                    { state = Convert.FromBase64String(vb.State) };
+                    F.LogError("ResupplyVehicleBarricades: Unable to find barricade asset of " + vb.BarricadeID.ToString());
+                    continue;
                 }
                 Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
                 BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
@@ -159,7 +167,7 @@ namespace Uncreated.Warfare.Vehicles
         private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (FOBManager.config.Data.Emplacements.Exists(x => x.vehicleID == vehicle.id)) return;
+            if (FOBManager.config.Data.Emplacements.Exists(x => x.vehicleID == vehicle.asset.GUID)) return;
             if (pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
                 player.SendChat("vehicle_too_high");
@@ -208,20 +216,20 @@ namespace Uncreated.Warfare.Vehicles
                     return;
                 }
 
-                if (!KitManager.HasKit(player, out var kit))
+                if (!KitManager.HasKit(player, out Kit kit))
                 {
                     player.SendChat("vehicle_no_kit");
                     shouldAllow = false;
                     return;
                 }
 
-                if (!VehicleExists(vehicle.id, out var vehicleData))
+                if (!VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
 
-                if (FOBManager.config.Data.Emplacements.Exists(i => i.vehicleID == vehicle.id))
+                if (FOBManager.config.Data.Emplacements.Exists(i => i.vehicleID == vehicle.asset.GUID))
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
@@ -323,10 +331,10 @@ namespace Uncreated.Warfare.Vehicles
             try
             {
                 if (vehicle == null) return;
-                if (!VehicleExists(vehicle.id, out VehicleData vehicleData))
+                if (!VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
                     return;
 
-                if (FOBManager.config.Data.Emplacements.Exists(i => i.vehicleID == vehicle.id))
+                if (FOBManager.config.Data.Emplacements.Exists(i => i.vehicleID == vehicle.asset.GUID))
                     return;
 
                 UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
@@ -481,7 +489,7 @@ namespace Uncreated.Warfare.Vehicles
     public class VehicleData
     {
         [JsonSettable]
-        public ushort VehicleID;
+        public Guid VehicleID;
         [JsonSettable]
         public ulong Team;
         [JsonSettable]
@@ -524,7 +532,7 @@ namespace Uncreated.Warfare.Vehicles
         public List<byte> CrewSeats;
         public MetaSave Metadata;
         public int RequestCount;
-        public VehicleData(ushort vehicleID)
+        public VehicleData(Guid vehicleID)
         {
             VehicleID = vehicleID;
             Team = 0;
@@ -547,7 +555,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public VehicleData()
         {
-            VehicleID = 0;
+            VehicleID = Guid.Empty;
             Team = 0;
             RespawnTime = 600;
             Delay = 0;
@@ -585,7 +593,7 @@ namespace Uncreated.Warfare.Vehicles
                 for (int i = 0; i < vehicleRegion.drops.Count; i++)
                 {
                     SDG.Unturned.BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
-                    barricades.Add(new VBarricade(bdata.barricade.id, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
+                    barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
                         bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
                 }
                 if (barricades.Count > 0) Metadata = new MetaSave(vehicle.id, barricades);
@@ -607,7 +615,7 @@ namespace Uncreated.Warfare.Vehicles
 
     public class VBarricade
     {
-        public ushort BarricadeID;
+        public Guid BarricadeID;
         public ushort Health;
         public ulong OwnerID;
         public ulong GroupID;
@@ -619,7 +627,7 @@ namespace Uncreated.Warfare.Vehicles
         public float AngleZ;
         public string State;
 
-        public VBarricade(ushort barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
+        public VBarricade(Guid barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
         {
             BarricadeID = barricadeID;
             Health = health;

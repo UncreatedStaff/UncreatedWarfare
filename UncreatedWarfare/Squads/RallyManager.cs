@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -16,7 +17,7 @@ namespace Uncreated.Warfare.Squads
         {
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-            if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
+            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
                 UCPlayer player = UCPlayer.FromID(data.owner);
                 if (player?.Squad != null)
@@ -39,7 +40,7 @@ namespace Uncreated.Warfare.Squads
             ref bool shouldAllow
             )
         {
-            if (barricade.id == SquadManager.config.Data.Team1RallyID || barricade.id == SquadManager.config.Data.Team2RallyID)
+            if (barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
                 UCPlayer player = UCPlayer.FromID(owner);
                 if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
@@ -78,7 +79,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
-            if (data.barricade.id == SquadManager.config.Data.Team1RallyID || data.barricade.id == SquadManager.config.Data.Team2RallyID)
+            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
                 TryDeleteRallyPoint(instanceID);
             }
@@ -89,7 +90,7 @@ namespace Uncreated.Warfare.Squads
             rallypoints.Clear();
             foreach (SteamPlayer player in Provider.clients)
             {
-                EffectManager.askEffectClearByID(SquadManager.config.Data.rallyUI, player.transportConnection);
+                EffectManager.askEffectClearByID(SquadManager.rallyID, player.transportConnection);
             }
 
             IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().GetEnumerator();
@@ -159,8 +160,8 @@ namespace Uncreated.Warfare.Squads
             IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
             return barricadeDrops.Where(b =>
-                b.GetServersideData().barricade.id == SquadManager.config.Data.Team1RallyID ||
-                b.GetServersideData().barricade.id == SquadManager.config.Data.Team2RallyID);
+                b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID ||
+                b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID);
         }
     }
 
@@ -197,14 +198,14 @@ namespace Uncreated.Warfare.Squads
                 if (AwaitingPlayers.Contains(member))
                 {
                     string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
-                    EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, member.Player.channel.owner.transportConnection, true,
+                    EffectManager.sendUIEffect(SquadManager.rallyID, SquadManager.rallyKey, member.Player.channel.owner.transportConnection, true,
                     line);
                 }
             }
         }
         public void ShowUIForPlayer(UCPlayer player)
         {
-            EffectManager.sendUIEffect(SquadManager.config.Data.rallyUI, (short)SquadManager.config.Data.rallyUI, player.Player.channel.owner.transportConnection, true,
+            EffectManager.sendUIEffect(SquadManager.rallyID, SquadManager.rallyKey, player.Player.channel.owner.transportConnection, true,
                         F.Translate("rally_ui", player.Steam64, $"({nearestLocation})"
                         ));
         }
@@ -215,7 +216,7 @@ namespace Uncreated.Warfare.Squads
         }
         public void ClearUIForPlayer(UCPlayer player)
         {
-            EffectManager.askEffectClearByID(SquadManager.config.Data.rallyUI, player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(SquadManager.rallyID, player.Player.channel.owner.transportConnection);
         }
         public void ClearUIForSquad()
         {

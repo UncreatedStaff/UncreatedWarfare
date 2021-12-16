@@ -191,7 +191,7 @@ namespace Uncreated.Warfare
                             if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
                             {
                                 ThrowableOwner a = c.thrown.FirstOrDefault(x =>
-                                    Assets.find(EAssetType.ITEM, x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
+                                    Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
                                 if (a != null)
                                     vc.item = a.ThrowableID;
                             }
@@ -251,7 +251,7 @@ namespace Uncreated.Warfare
                 __instance.dropTrunkItems();
                 if (F.TryGetPlaytimeComponent(instigator, out PlaytimeComponent c))
                 {
-                    c.lastExplodedVehicle = __instance.asset.id;
+                    c.lastExplodedVehicle = __instance.asset.GUID;
                 }
                 DamageTool.explode(__instance.transform.position, 8f, EDeathCause.VEHICLE, instigator, 200f, 200f, 200f, 0.0f, 0.0f, 500f, 2000f, 500f, out _, damageOrigin: EDamageOrigin.Vehicle_Explosion);
                 for (int index = 0; index < __instance.passengers.Length; ++index)
@@ -354,7 +354,7 @@ namespace Uncreated.Warfare
                             if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
                             if (F.TryGetPlaytimeComponent(driver, out PlaytimeComponent c))
                             {
-                                c.lastRoadkilled = ___vehicle.asset.id;
+                                c.lastRoadkilled = ___vehicle.asset.GUID;
                             }
                         }
                         else if (___vehicle.speed <= 10.0)

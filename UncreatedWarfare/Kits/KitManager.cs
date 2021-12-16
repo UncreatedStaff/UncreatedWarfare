@@ -40,10 +40,10 @@ namespace Uncreated.Warfare.Kits
                     {
                         ItemJar jar = life.player.inventory.getItem(page, index);
 
-                        ItemAsset asset = Rocket.Unturned.Items.UnturnedItems.GetItemAssetById(jar.item.id);
+                        if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) continue;
                         float percentage = (float)jar.item.amount / asset.amount;
 
-                        bool notInKit = !kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(jar.item.id, out _);
+                        bool notInKit = !kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(asset.GUID, out _);
                         if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
                         {
                             if (notInKit)
@@ -210,8 +210,8 @@ namespace Uncreated.Warfare.Kits
                 for (byte index = 0; index < count; index++)
                 {
                     ItemJar jar = player.Player.inventory.getItem(page, 0);
-
-                    if (!kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(jar.item.id, out _))
+                    if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) continue;
+                    if (!kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(asset.GUID, out _))
                     {
                         nonKitItems.Add(jar);
                     }
@@ -221,9 +221,8 @@ namespace Uncreated.Warfare.Kits
 
             foreach (KitItem i in kit.Items)
             {
-                if (ignoreAmmoBags && FOBs.FOBManager.config.Data.AmmoBagIDs.Contains(i.ID))
+                if (ignoreAmmoBags && Assets.find(Gamemode.Config.Barricades.AmmoBagGUID) is ItemAsset asset && asset.id == i.ID)
                     continue;
-
                 Item item = new Item(i.ID, i.amount, i.quality);
                 item.metadata = Convert.FromBase64String(i.metadata);
 
@@ -231,7 +230,7 @@ namespace Uncreated.Warfare.Kits
                     player.Player.inventory.tryAddItem(item, true);
             }
 
-            foreach (var jar in nonKitItems)
+            foreach (ItemJar jar in nonKitItems)
             {
                 player.Player.inventory.tryAddItem(jar.item, true);
             }

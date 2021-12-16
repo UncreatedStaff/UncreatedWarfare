@@ -253,28 +253,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 img.LoadImage(fileData, false);
             }
             Dictionary<Flag, float> flags = new Dictionary<Flag, float>();
-            if (gamemode is TeamCTF.TeamCTF ctf)
-            {
-                flags = ObjectivePathing.InstantiateFlags(ctf.Config.team1adjacencies, ctf.LoadedFlags, null, null);
-                foreach (KeyValuePair<Flag, float> t1mainarrow in flags)
-                    DrawLineGradient(new Line(TeamManager.Team1Main.InverseZone.Center, t1mainarrow.Key.ZoneData.InverseZone.Center), thickness, img, TeamManager.Team1Color,
-                        gamemode.Rotation.Count > 0 && gamemode.Rotation[0].ID == t1mainarrow.Key.ID ? color1path : color2, false);
-                flags = ObjectivePathing.InstantiateFlags(ctf.Config.team2adjacencies, ctf.LoadedFlags, null, null);
-                foreach (KeyValuePair<Flag, float> t2mainarrow in flags)
-                    DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center), thickness, img,
-                        gamemode.Rotation.Count > 0 && gamemode.Rotation.Last().ID == t2mainarrow.Key.ID ? color1path : color1, TeamManager.Team2Color, false);
-            } 
-            else if (gamemode is Invasion.Invasion inv)
-            {
-                flags = ObjectivePathing.InstantiateFlags(inv.Config.team1adjacencies, inv.LoadedFlags, null, null);
-                foreach (KeyValuePair<Flag, float> t1mainarrow in flags)
-                    DrawLineGradient(new Line(TeamManager.Team1Main.InverseZone.Center, t1mainarrow.Key.ZoneData.InverseZone.Center), thickness, img, TeamManager.Team1Color,
-                        gamemode.Rotation.Count > 0 && gamemode.Rotation[0].ID == t1mainarrow.Key.ID ? color1path : color2, false);
-                flags = ObjectivePathing.InstantiateFlags(inv.Config.team2adjacencies, inv.LoadedFlags, null, null);
-                foreach (KeyValuePair<Flag, float> t2mainarrow in flags)
-                    DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center), thickness, img,
-                        gamemode.Rotation.Count > 0 && gamemode.Rotation.Last().ID == t2mainarrow.Key.ID ? color1path : color1, TeamManager.Team2Color, false);
-            }
+            flags = ObjectivePathing.InstantiateFlags(Gamemode.Config.MapConfig.Team1Adjacencies, gamemode.LoadedFlags, null, null);
+            foreach (KeyValuePair<Flag, float> t1mainarrow in flags)
+                DrawLineGradient(new Line(TeamManager.Team1Main.InverseZone.Center, t1mainarrow.Key.ZoneData.InverseZone.Center), thickness, img, TeamManager.Team1Color,
+                    gamemode.Rotation.Count > 0 && gamemode.Rotation[0].ID == t1mainarrow.Key.ID ? color1path : color2, false);
+            flags = ObjectivePathing.InstantiateFlags(Gamemode.Config.MapConfig.Team2Adjacencies, gamemode.LoadedFlags, null, null);
+            foreach (KeyValuePair<Flag, float> t2mainarrow in flags)
+                DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center), thickness, img,
+                    gamemode.Rotation.Count > 0 && gamemode.Rotation.Last().ID == t2mainarrow.Key.ID ? color1path : color1, TeamManager.Team2Color, false);
             List<int> drewPaths = new List<int>();
             List<KeyValuePair<int, int>> drawnLines = new List<KeyValuePair<int, int>>();
             foreach (Flag flag in gamemode.LoadedFlags)

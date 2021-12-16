@@ -47,6 +47,7 @@ namespace Uncreated.Warfare.Vehicles
             index = ushort.MaxValue;
             return null;
         }
+        [Obsolete]
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(ushort id, float radius, Vector3 origin)
         {
             float sqrRadius = radius * radius;
@@ -61,6 +62,21 @@ namespace Uncreated.Warfare.Vehicles
             vehicles.Clear();
             return newvehicles;
         }
+        public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
+        {
+            float sqrRadius = radius * radius;
+            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+            List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
+            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+            for (int v = 0; v < vehicles.Count; v++)
+            {
+                if (vehicles[v].asset.GUID == id)
+                    newvehicles.Add(vehicles[v]);
+            }
+            vehicles.Clear();
+            return newvehicles;
+        }
+        [Obsolete]
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<ushort> ids, float radius, Vector3 origin)
         {
             float sqrRadius = radius * radius;
@@ -70,6 +86,20 @@ namespace Uncreated.Warfare.Vehicles
             for (int v = 0; v < vehicles.Count; v++)
             {
                 if (ids.Contains(vehicles[v].id))
+                    newvehicles.Add(vehicles[v]);
+            }
+            vehicles.Clear();
+            return newvehicles;
+        }
+        public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
+        {
+            float sqrRadius = radius * radius;
+            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+            List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
+            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+            for (int v = 0; v < vehicles.Count; v++)
+            {
+                if (ids.Contains(vehicles[v].asset.GUID))
                     newvehicles.Add(vehicles[v]);
             }
             vehicles.Clear();

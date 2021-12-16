@@ -15,8 +15,6 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
 {
     public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISquads, IRevives, ITeamScore
     {
-        protected Config<TDMData> _config;
-        public TDMData Config { get => _config.Data; }
         public TeamDeathmatch() : base(nameof(TeamDeathmatch), 0f)
         {
 
@@ -86,15 +84,6 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
             base.OnLevelLoaded();
-        }
-    }
-    public class TDMData : ConfigData
-    {
-        public int MaxKills = 250;
-        public TDMData() => SetDefaults();
-        public override void SetDefaults()
-        {
-
         }
     }
 }

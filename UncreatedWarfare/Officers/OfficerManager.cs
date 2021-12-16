@@ -77,12 +77,12 @@ namespace Uncreated.Warfare.Officers
             if (ucplayer != null)
                 ucplayer.CachedOfp = newBalance;
 
-            if (message != "" && amount != 0 && !(Data.Gamemode is IImplementsLeaderboard lb && lb.isScreenUp))
+            if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance, out int stars);
 
-            if (stars > oldStars && !(Data.Gamemode is IImplementsLeaderboard l && l.isScreenUp))
+            if (stars > oldStars && !(Data.Gamemode is IEndScreen l && l.isScreenUp))
             {
                 string startString = F.Colorize(F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), UCWarfare.GetColorHex("star_color"));
 
@@ -242,7 +242,7 @@ namespace Uncreated.Warfare.Officers
             int requiredPoints = GetRequiredLevelPoints(balance);
 
             stars = GetStars(balance);
-            if (Data.Gamemode is IImplementsLeaderboard lb && lb.isScreenUp) return;
+            if (Data.Gamemode is IEndScreen lb && lb.isScreenUp) return;
 
             EffectManager.sendUIEffect(config.Data.StarsUI, (short)config.Data.StarsUI, player.channel.owner.transportConnection, true);
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Icon",

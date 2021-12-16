@@ -167,6 +167,7 @@ namespace Uncreated.Warfare.Commands
         {
             try
             {
+                Gamemode.ConfigObj.Reload();
                 SquadManager.config.Reload();
                 TicketManager.config.Reload();
                 XPManager.config.Reload();
@@ -177,9 +178,6 @@ namespace Uncreated.Warfare.Commands
 
                 UCWarfare.Instance.Configuration.Load();
                 if (Data.DatabaseManager != null) Data.DatabaseManager.DebugLogging = UCWarfare.Config.Debug;
-
-                if (Data.Is(out Insurgency insurgency))
-                    insurgency.ReloadConfig();
             }
             catch (Exception ex)
             {
@@ -210,6 +208,7 @@ namespace Uncreated.Warfare.Commands
             SquadManager.TempCacheEffectIDs();
             Gamemodes.Flags.TeamCTF.CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
+            FOBManager.TempCacheEffectIDs();
         }
         internal static void ReloadFlags()
         {

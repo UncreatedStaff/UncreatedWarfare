@@ -8,6 +8,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
@@ -75,9 +76,11 @@ namespace Uncreated.Warfare.Tickets
                 if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
                 {
                     insurgency.AddIntelligencePoints(1);
+                    if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c) && c.stats is InsurgencyPlayerStats s)
+                        s._intelligencePointsCollected++;
+                    insurgency.GameStats.intelligenceGathered++;
                 }
             }
-
             XPManager.AddXP(parameters.killer, UCPlayer.FromPlayer(parameters.killer).NearbyMemberBonus(XPManager.config.Data.EnemyKilledXP, 75),
                 F.Translate("xp_enemy_killed", parameters.killer.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(parameters.dead).CharacterName));
             //await OfficerManager.AddOfficerPoints(parameters.killer, parameters.killer.GetTeam(), OfficerManager.config.data.MemberEnemyKilledPoints);
@@ -90,7 +93,7 @@ namespace Uncreated.Warfare.Tickets
         }
         private static void OnVehicleExploded(InteractableVehicle vehicle)
         {
-            if (VehicleBay.VehicleExists(vehicle.id, out VehicleData data))
+            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
 
@@ -204,18 +207,36 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
-            if (Data.Is(out Invasion invasion))
+            if (Data.Is<Invasion>(out _))
             {
                 if (capturedTeam == 1)
                 {
-                    Team1Tickets += invasion.Config.TicketsFlagCaptured;
+                    Team1Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
                     flag.HasBeenCapturedT1 = true;
                 }
                 else if (capturedTeam == 2)
                 {
-                    Team2Tickets += invasion.Config.TicketsFlagCaptured;
+                    Team2Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
                     flag.HasBeenCapturedT2 = true;
                 }
+            }
+            else if (Data.Is<TeamCTF>(out _))
+            {
+                if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
+                {
+                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+                    flag.HasBeenCapturedT1 = true;
+                }
+                else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
+                {
+                    Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+                    flag.HasBeenCapturedT2 = true;
+                }
+
+                if (lostTeam == 1)
+                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+                if (lostTeam == 2)
+                    Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
             }
             else
             {
@@ -365,8 +386,8 @@ namespace Uncreated.Warfare.Tickets
         {
             if (Data.Is(out Invasion invasion))
             {
-                int attack = invasion.Config.AttackStartingTickets;
-                int defence = invasion.Config.AttackStartingTickets + (invasion.Rotation.Count * invasion.Config.TicketsFlagCaptured);
+                int attack = Gamemode.Config.Invasion.AttackStartingTickets;
+                int defence = Gamemode.Config.Invasion.AttackStartingTickets + (invasion.Rotation.Count * Gamemode.Config.Invasion.TicketsFlagCaptured);
 
                 if (invasion.AttackingTeam == 1)
                 {
@@ -381,7 +402,7 @@ namespace Uncreated.Warfare.Tickets
             }
             else if (Data.Is(out Insurgency insurgency))
             {
-                int attack = insurgency.Config.AttackStartingTickets;
+                int attack = Gamemode.Config.Insurgency.AttackStartingTickets;
                 int defence = insurgency.CachesLeft;
 
                 if (insurgency.AttackingTeam == 1)

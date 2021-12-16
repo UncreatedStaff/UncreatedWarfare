@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,10 +11,10 @@ namespace Uncreated.Warfare.Components
         public Player owner;
         public GameObject projectile;
         public PlaytimeComponent ownerObj;
-        public ushort ThrowableID;
+        public Guid ThrowableID;
         public void Set(UseableThrowable throwable, GameObject projectile, PlaytimeComponent owner)
         {
-            this.ThrowableID = throwable.equippedThrowableAsset.id;
+            this.ThrowableID = throwable.equippedThrowableAsset.GUID;
             this.owner = throwable.player;
             this.ownerID = throwable.player.channel.owner.playerID.steamID.m_SteamID;
             this.projectile = projectile;

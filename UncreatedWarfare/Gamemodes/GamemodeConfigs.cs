@@ -8,6 +8,7 @@ namespace Uncreated.Warfare.Gamemodes
     public class GamemodeConfigs : ConfigData
     {
         public BARRICADE_IDS Barricades;
+        public ITEM_IDS Items;
         public UI_CONFIG UI;
         public TEAM_CTF_CONFIG TeamCTF;
         public INVASION Invasion;
@@ -68,6 +69,8 @@ namespace Uncreated.Warfare.Gamemodes
         {
             Barricades = new BARRICADE_IDS();
             Barricades.SetDefaults();
+            Items = new ITEM_IDS();
+            Items.SetDefaults();
             UI = new UI_CONFIG();
             UI.SetDefaults();
             Invasion = new INVASION();
@@ -101,26 +104,18 @@ namespace Uncreated.Warfare.Gamemodes
 
     public struct UI_CONFIG
     {
-        [JsonConverter(typeof(GuidConverter))]
         public Guid CaptureGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid FlagListGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid HeaderGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid FOBListGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid SquadListGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid SquadMenuGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid RallyGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid XPGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid OfficerGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid CTFLeaderboardGUID;
+        public Guid InsurgencyLeaderboardGUID;
+        public Guid NearbyResourcesGUID;
         public int FlagUICount;
         public int MaxSquadMembers;
         public int MaxSquads;
@@ -133,16 +128,18 @@ namespace Uncreated.Warfare.Gamemodes
         public char LockIcon;
         public void SetDefaults()
         {
-            CaptureGUID = new Guid(new byte[16] { 118, 169, 255, 180, 101, 154, 73, 64, 128, 217, 140, 142, 247, 115, 56, 21 });
-            FlagListGUID = new Guid(new byte[16] { 192, 31, 228, 109, 155, 121, 67, 100, 172, 166, 163, 136, 122, 2, 129, 100 });
-            HeaderGUID = new Guid(new byte[16] { 222, 185, 232, 166, 155, 170, 77, 96, 180, 80, 68, 63, 9, 154, 67, 109 });
-            FOBListGUID = new Guid(new byte[16] { 44, 1, 163, 105, 67, 234, 69, 24, 157, 134, 111, 84, 99, 248, 229, 233 });
-            SquadListGUID = new Guid(new byte[16] { 90, 205, 9, 31, 30, 123, 79, 147, 172, 159, 84, 49, 114, 154, 197, 204 });
-            SquadMenuGUID = new Guid(new byte[16] { 152, 21, 64, 2, 251, 205, 75, 116, 153, 85, 45, 100, 151, 219, 143, 197 });
-            RallyGUID = new Guid(new byte[16] { 162, 128, 172, 63, 232, 193, 72, 108, 173, 200, 236, 163, 49, 232, 206, 50 });
-            XPGUID = new Guid(new byte[16] { 214, 222, 10, 128, 37, 222, 68, 210, 154, 153, 164, 25, 55, 165, 138, 89 });
-            OfficerGUID = new Guid(new byte[16] { 159, 211, 27, 119, 107, 116, 75, 114, 132, 127, 45, 192, 13, 186, 147, 168 });
-            CTFLeaderboardGUID = new Guid(new byte[16] { 184, 51, 137, 223, 18, 69, 67, 141, 177, 136, 137, 175, 148, 240, 73, 96 });
+            CaptureGUID = new Guid("76a9ffb4-659a-4940-80d9-8c8ef7733815");
+            FlagListGUID = new Guid("c01fe46d-9b79-4364-aca6-a3887a028164");
+            HeaderGUID = new Guid("c14fe9ff-ee6d-4f8d-be7f-57885f678edd");
+            FOBListGUID = new Guid("2c01a369-43ea-4518-9d86-6f5463f8e5e9");
+            SquadListGUID = new Guid("5acd091f-1e7b-4f93-ac9f-5431729ac5cc");
+            SquadMenuGUID = new Guid("98154002-fbcd-4b74-9955-2d6497db8fc5");
+            RallyGUID = new Guid("a280ac3f-e8c1-486c-adc8-eca331e8ce32");
+            XPGUID = new Guid("d6de0a80-25de-44d2-9a99-a41937a58a59");
+            OfficerGUID = new Guid("9fd31b77-6b74-4b72-847f-2dc00dba93a8");
+            CTFLeaderboardGUID = new Guid("b83389df-1245-438d-b188-89af94f04960");
+            InsurgencyLeaderboardGUID = new Guid("c0bf4518-d941-4319-b67d-bb46ad88ba2f");
+            NearbyResourcesGUID = new Guid("3775a1e7-d84b-47e7-9cac-ecd5e6b2a224");
             MaxSquadMembers = 6;
             MaxSquads = 8;
             FlagUICount = 10;
@@ -157,26 +154,59 @@ namespace Uncreated.Warfare.Gamemodes
     }
     public struct BARRICADE_IDS
     {
-        [JsonConverter(typeof(GuidConverter))]
         public Guid InsurgencyCacheGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid FOBGUID;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid FOBBaseGUID;
+        public Guid AmmoCrateGUID;
+        public Guid AmmoCrateBaseGUID;
+        public Guid RepairStationGUID;
+        public Guid RepairStationBaseGUID;
+        public Guid AmmoBagGUID;
+        public Guid T1RallyPointGUID;
+        public Guid T2RallyPointGUID;
+        public Guid VehicleBayGUID;
+        public Guid[] TimeLimitedStorages;
         public void SetDefaults()
         {
-            InsurgencyCacheGUID = new Guid(new byte[16] { 57, 5, 31, 51, 242, 68, 73, 180, 179, 65, 125, 13, 102, 106, 79, 39 });
-            FOBGUID = new Guid(new byte[16] { 97, 195, 73, 241, 0, 0, 73, 143, 162, 185, 44, 2, 157, 56, 229, 35 });
-            FOBBaseGUID = new Guid(new byte[16] { 27, 177, 114, 119, 221, 129, 72, 223, 159, 76, 83, 209, 161, 155, 37, 3 });
+            InsurgencyCacheGUID = new Guid("39051f33-f244-49b4-b341-7d0d666a4f27");
+            FOBGUID = new Guid("61c349f1-0000-498f-a2b9-2c029d38e523");
+            FOBBaseGUID = new Guid("1bb17277-dd81-48df-9f4c-53d1a19b2503");
+            AmmoCrateGUID = new Guid("6fe20851-9d7c-45b0-be38-273118eea7fd");
+            AmmoCrateBaseGUID = new Guid("eccfe06e-53d0-41d5-b83c-614ffa62ee59");
+            RepairStationGUID = new Guid("c0d11e06-6669-4dde-a667-377b4c0580be");
+            RepairStationBaseGUID = new Guid("26a6b91c-d194-4730-a0f2-8e5f299cebf9");
+            AmmoBagGUID = new Guid("16f55b99-9e9b-4f15-8be1-2645e41dd753");
+            T1RallyPointGUID = new Guid("5e1db525-1793-41d3-b0c7-576876212a81");
+            T2RallyPointGUID = new Guid("0d789536-0c80-440f-be4a-45eba28b2007");
+            VehicleBayGUID = new Guid("c076f9e9-f35f-42a4-b8b5-711dfb230010");
+            TimeLimitedStorages = new Guid[4]
+            {
+                AmmoCrateGUID,
+                RepairStationGUID,
+                new Guid("a2eb7659-0cf7-4401-aeb7-ff4b4b79fd86"), // supply crate
+                new Guid("2193aa0b-272f-4cc1-938f-719c8e8badb1")  // supply roll
+            };
         }
     }
+    public struct ITEM_IDS
+    {
+        public Guid T1Build;
+        public Guid T2Build;
+        public Guid T1Ammo;
+        public Guid T2Ammo;
+        public void SetDefaults()
+        {
+            T1Build = new Guid("a70978a0-b47e-4017-a026-1e676af57042");
+            T2Build = new Guid("6a8b8b3c-7960-4aee-a97f-53c235947a1f");
+            T1Ammo = new Guid("51e1e372-bf53-41e1-b4b1-6a0eacce37eb");
+            T2Ammo = new Guid("8dd66da5-affa-480b-a324-e270e52a46d7");
+        }
+    }
+
     public struct MAP_CONFIG
     {
         public string Map;
-
-        [JsonConverter(typeof(GuidConverter))]
         public Guid T1ZoneBlocker;
-        [JsonConverter(typeof(GuidConverter))]
         public Guid T2ZoneBlocker;
         public Dictionary<int, float> Team1Adjacencies;
         public Dictionary<int, float> Team2Adjacencies;
@@ -201,18 +231,30 @@ namespace Uncreated.Warfare.Gamemodes
             switch (Map)
             {
                 case "Nuijamaa":
-                    T1ZoneBlocker = new Guid(new byte[16] { 163, 201, 65, 197, 247, 23, 74, 71, 153, 248, 9, 167, 243, 12, 132, 120 });
-                    T2ZoneBlocker = new Guid(new byte[16] { 209, 2, 197, 7, 216, 50, 70, 64, 162, 139, 208, 244, 234, 163, 117, 168 });
+                    T1ZoneBlocker = new Guid("57927806-0501-4735-ab01-2f1f7adaf714");
+                    T2ZoneBlocker = new Guid("b4c0a51b-7005-4ad5-b6fe-06aead982d94");
                     CacheSpawns = NuijamaaDefaultCaches;
+                    Team1Adjacencies = new Dictionary<int, float>()
+                    {
+                        { 16, 1f },
+                        { 15, 1f },
+                        { 1, 1f },
+                    };
+                    Team2Adjacencies = new Dictionary<int, float>()
+                    {
+                        { 12, 1f },
+                        { 3, 1f },
+                        { 8, 1f }
+                    };
                     break;
                 default:
                     T1ZoneBlocker = Guid.Empty;
                     T2ZoneBlocker = Guid.Empty;
                     CacheSpawns = new SerializableTransform[0];
+                    Team1Adjacencies = new Dictionary<int, float>();
+                    Team2Adjacencies = new Dictionary<int, float>();
                     break;
             }
-            Team1Adjacencies = new Dictionary<int, float>();
-            Team2Adjacencies = new Dictionary<int, float>();
         }
 
 
@@ -317,21 +359,25 @@ namespace Uncreated.Warfare.Gamemodes
         public int StagingTime;
         public float EvaluateTime;
         public int TicketXPInterval;
-        public bool ShowLeaderboard;
+        public int RequiredPlayerDifferenceToCapture;
         public int OverrideContestDifference;
         public bool AllowVehicleCapture;
         public int DiscoveryForesight;
         public int FlagTickInterval;
+        public int TicketsFlagCaptured;
+        public int TicketsFlagLost;
         public void SetDefaults()
         {
             StagingTime = 90;
             EvaluateTime = 0.25f;
             TicketXPInterval = 10;
-            ShowLeaderboard = true;
             OverrideContestDifference = 2;
             AllowVehicleCapture = false;
             DiscoveryForesight = 2;
             FlagTickInterval = 4;
+            TicketsFlagCaptured = 20;
+            TicketsFlagLost = -20;
+            RequiredPlayerDifferenceToCapture = 2;
         }
     }
     public struct INVASION
@@ -339,11 +385,17 @@ namespace Uncreated.Warfare.Gamemodes
         public int StagingTime;
         public int DiscoveryForesight;
         public string SpecialFOBName;
+        public int TicketsFlagCaptured;
+        public int AttackStartingTickets;
+        public int TicketXPInterval;
         public void SetDefaults()
         {
-            StagingTime = 90;
+            StagingTime = 150;
             DiscoveryForesight = 2;
             SpecialFOBName = "VCP";
+            TicketsFlagCaptured = 150;
+            AttackStartingTickets = 250;
+            TicketXPInterval = 10;
         }
     }
     public struct INSURGENCY
@@ -374,43 +426,6 @@ namespace Uncreated.Warfare.Gamemodes
             TicketsCache = 80;
             CacheStartingBuild = 15;
             CacheItems = new Dictionary<ushort, int>();
-        }
-    }
-
-    public class GuidConverter : JsonConverter
-    {
-        public override bool CanConvert(Type objectType) => objectType == typeof(Guid);
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-        {
-            if (reader.TokenType == JsonToken.Null)
-            {
-                throw new JsonReaderException("Type GUID can not be null! (GuidConverter.ReadJson)");
-            }
-            if (reader.TokenType == JsonToken.String)
-            {
-                string v = reader.Value.ToString();
-                if (Guid.TryParseExact(v, "N", out Guid res))
-                    return res;
-                else if (Guid.TryParse(v, out res))
-                    return res;
-                else
-                {
-                    throw new JsonReaderException("Unable to parse " + v + " as a GUID! (GuidConverter.ReadJson)");
-                }
-            }
-            else
-                throw new JsonReaderException("Unable to parse non-string value as a GUID! (GuidConverter.ReadJson)");
-        }
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            if (value is Guid guid)
-            {
-                writer.WriteValue(guid.ToString("N"));
-            }
-            else
-            {
-                writer.WriteNull();
-            }
         }
     }
 }

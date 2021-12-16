@@ -163,7 +163,7 @@ namespace Uncreated.Warfare.Commands
                                             if (structure is Interactable2SalvageStructure str)
                                             {
                                                 SDG.Unturned.StructureData data = drop.GetServersideData();
-                                                if (data != default) itemname = Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset iasset ? iasset.itemName : data.structure.id.ToString(Data.Locale);
+                                                if (data != default) itemname = data.structure.asset.itemName;
                                                 else itemname = str.name;
                                             }
                                             else if (structure is Interactable2SalvageBarricade bar)
@@ -172,7 +172,7 @@ namespace Uncreated.Warfare.Commands
                                                 if (bdrop != null)
                                                 {
                                                     SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                                                    if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
+                                                    if (data != default) itemname = data.barricade.asset.itemName;
                                                     else itemname = bar.name;
                                                 }
                                                 else itemname = bar.name;
@@ -198,7 +198,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         string itemname;
                                         SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                                        if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
+                                        if (data != default) itemname = data.barricade.asset.itemName;
                                         else itemname = barricade2.name;
                                         player.SendChat("structure_unsaved_already",
                                             structureaded == default ? "unknown" : itemname);
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         string itemname;
                                         SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                                        if (data != default) itemname = Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset iasset ? iasset.itemName : data.barricade.id.ToString(Data.Locale);
+                                        if (data != default) itemname = data.barricade.asset.itemName;
                                         else itemname = barricade.name;
                                         player.SendChat("structure_unsaved_already",
                                             structureaded == default ? "unknown" : itemname);
@@ -340,8 +340,7 @@ namespace Uncreated.Warfare.Commands
             if (bdrop != null && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
             {
                 SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                player.SendChat("structure_popped",
-                    Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale));
+                player.SendChat("structure_popped", data.barricade.asset.itemName);
                 BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
             }
             else
@@ -355,8 +354,7 @@ namespace Uncreated.Warfare.Commands
             if (sdrop != null && Regions.tryGetCoordinate(sdrop.model.position, out byte x, out byte y))
             {
                 SDG.Unturned.StructureData data = sdrop.GetServersideData();
-                player.SendChat("structure_popped",
-                    Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale));
+                player.SendChat("structure_popped", data.structure.asset.itemName);
                 StructureManager.destroyStructure(sdrop, x, y, UnityEngine.Vector3.down);
             }
             else
@@ -377,8 +375,7 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             VehicleManager.askVehicleDestroy(vehicle);
-            player.SendChat("structure_popped",
-                Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale));
+            player.SendChat("structure_popped", vehicle.asset.vehicleName);
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
                 spawn.StartVehicleRespawnTimer();
         }
@@ -447,15 +444,11 @@ namespace Uncreated.Warfare.Commands
                     string teamname = TeamManager.TranslateName(data.group, player);
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                            Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                            F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
+                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                     }
                     else
                     {
-                        player.SendChat("structure_last_owner_chat",
-                            Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                            F.GetPlayerOriginalNames(data.owner).CharacterName,
+                        player.SendChat("structure_last_owner_chat", data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName,
                             data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)),
                             teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                     }
@@ -465,15 +458,12 @@ namespace Uncreated.Warfare.Commands
                     ulong grp = data.group;
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                            Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
-                            F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
+                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
                     }
                     else
                     {
                         string clr = UCWarfare.GetColorHex("neutral");
-                        player.SendChat("structure_last_owner_chat",
-                            Assets.find(EAssetType.ITEM, data.barricade.id) is ItemAsset asset ? asset.itemName : data.barricade.id.ToString(Data.Locale),
+                        player.SendChat("structure_last_owner_chat", data.barricade.asset.itemName,
                             F.GetPlayerOriginalNames(data.owner).CharacterName,
                             data.owner.ToString(Data.Locale), clr, grp.ToString(), clr);
                     }
@@ -500,15 +490,11 @@ namespace Uncreated.Warfare.Commands
                     string teamname = TeamManager.TranslateName(data.group, player);
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                            Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
-                            F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
+                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                     }
                     else
                     {
-                        player.SendChat("structure_last_owner_chat",
-                            Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
-                            F.GetPlayerOriginalNames(data.owner).CharacterName,
+                        player.SendChat("structure_last_owner_chat", data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName,
                             data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)),
                             teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
                     }
@@ -518,15 +504,12 @@ namespace Uncreated.Warfare.Commands
                     ulong grp = data.group;
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                            Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
-                            F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
+                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
                     }
                     else
                     {
                         string clr = UCWarfare.GetColorHex("neutral");
-                        player.SendChat("structure_last_owner_chat",
-                            Assets.find(EAssetType.ITEM, data.structure.id) is ItemAsset asset ? asset.itemName : data.structure.id.ToString(Data.Locale),
+                        player.SendChat("structure_last_owner_chat", data.structure.asset.itemName,
                             F.GetPlayerOriginalNames(data.owner).CharacterName,
                             data.owner.ToString(Data.Locale), clr, grp.ToString(), clr);
                     }
@@ -555,14 +538,14 @@ namespace Uncreated.Warfare.Commands
                     if (sendurl)
                     {
                         player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                            Assets.find(EAssetType.ITEM, data.BarricadeID) is ItemAsset asset ? asset.itemName : data.BarricadeID.ToString(Data.Locale),
+                            Assets.find(data.BarricadeGUID) is ItemAsset asset ? asset.itemName : data.BarricadeGUID.ToString("N"),
                             F.GetPlayerOriginalNames(data.Owner).CharacterName, teamname), data.Owner);
                     }
                     else
                     {
                         Players.FPlayerName ownerName = F.GetPlayerOriginalNames(data.Owner);
                         player.SendChat("structure_last_owner_chat",
-                            Assets.find(EAssetType.ITEM, data.BarricadeID) is ItemAsset asset ? asset.itemName : data.BarricadeID.ToString(Data.Locale),
+                            Assets.find(data.BarricadeGUID) is ItemAsset asset ? asset.itemName : data.BarricadeGUID.ToString("N"),
                             ownerName.CharacterName,
                             ownerName.PlayerName,
                             TeamManager.GetTeamHexColor(team),
@@ -575,7 +558,7 @@ namespace Uncreated.Warfare.Commands
                     if (sendurl)
                     {
                         player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
-                            Assets.find(EAssetType.ITEM, data.BarricadeID) is ItemAsset asset ? asset.itemName : data.BarricadeID.ToString(Data.Locale),
+                            Assets.find(data.BarricadeGUID) is ItemAsset asset ? asset.itemName : data.BarricadeGUID.ToString("N"),
                             F.GetPlayerOriginalNames(data.Owner).CharacterName, grp.ToString()), data.Owner);
                     }
                     else
@@ -583,7 +566,7 @@ namespace Uncreated.Warfare.Commands
                         string clr = UCWarfare.GetColorHex("neutral");
                         Players.FPlayerName ownerName = F.GetPlayerOriginalNames(data.Owner);
                         player.SendChat("structure_last_owner_chat",
-                            Assets.find(EAssetType.ITEM, data.BarricadeID) is ItemAsset asset ? asset.itemName : data.BarricadeID.ToString(Data.Locale),
+                            Assets.find(data.BarricadeGUID) is ItemAsset asset ? asset.itemName : data.BarricadeGUID.ToString("N"),
                             ownerName.CharacterName,
                             ownerName.PlayerName,
                             clr, grp.ToString(), clr);

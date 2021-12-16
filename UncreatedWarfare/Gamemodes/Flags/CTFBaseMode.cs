@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     public delegate void ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
     public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
     public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-    public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> : TicketGamemode, IFlagTeamObjectiveGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IImplementsLeaderboard<Stats, StatTracker>, IStructureSaving, IStagingPhase
+    public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> : TicketGamemode, IFlagTeamObjectiveGamemode, IVehicles, IFOBs, IKitRequests, IRevives, ISquads, IImplementsLeaderboard<Stats, StatTracker>, IStructureSaving, IStagingPhase, IGameStats
         where Leaderboard : BaseCTFLeaderboard<Stats, StatTracker>
         where Stats : BaseCTFStats
         where StatTracker : BaseCTFTracker<Stats>
@@ -34,8 +34,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected int _objectiveT2Index;
         public int ObjectiveT1Index => _objectiveT1Index;
         public int ObjectiveT2Index => _objectiveT2Index;
-        public Flag ObjectiveTeam1 => _rotation[_objectiveT1Index];
-        public Flag ObjectiveTeam2 => _rotation[_objectiveT2Index];
+        public Flag ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < _rotation.Count ? _rotation[_objectiveT1Index] : null;
+        public Flag ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < _rotation.Count ? _rotation[_objectiveT2Index] : null;
         public override bool EnableAMC => true;
         public override bool ShowOFPUI => true;
         public override bool ShowXPUI => true;
@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         private StatTracker _gameStats;
         public StatTracker GameStats => _gameStats;
 
-
+        object IGameStats.GameStats => _gameStats;
 
         public CTFBaseMode() : base(nameof(TeamCTF), 1f)
         {
@@ -243,6 +243,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             if (_allFlags == null || _allFlags.Count == 0) return;
             LoadFlagsIntoRotation();
+            if (_rotation.Count < 1)
+            {
+                F.LogError("No flags were put into rotation!!");
+            }
             _objectiveT1Index = 0;
             _objectiveT2Index = _rotation.Count - 1;
             if (Config.TeamCTF.DiscoveryForesight < 1)
@@ -276,7 +280,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void PrintFlagRotation()
         {
-            F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.Green);
+            F.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
             base.PrintFlagRotation();
         }
         protected virtual void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
@@ -285,23 +289,25 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 if (GameStats != null)
                     GameStats.flagOwnerChanges++;
-                F.Log("Team 1 objective: " + ObjectiveTeam1.Name + ", Team 2 objective: " + ObjectiveTeam2.Name, ConsoleColor.Green);
-                if (UCWarfare.Config.FlagSettings.DiscoveryForesight > 0)
+                F.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
+                if (Config.TeamCTF.DiscoveryForesight > 0)
                 {
                     if (Team == 1)
                     {
-                        for (int i = NewFlagObj.index; i < NewFlagObj.index + UCWarfare.Config.FlagSettings.DiscoveryForesight; i++)
+                        for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.TeamCTF.DiscoveryForesight; i++)
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(1);
+                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
                         }
                     }
                     else if (Team == 2)
                     {
-                        for (int i = NewFlagObj.index; i > NewFlagObj.index - UCWarfare.Config.FlagSettings.DiscoveryForesight; i--)
+                        for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.TeamCTF.DiscoveryForesight; i--)
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(2);
+                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
                         }
                     }
                 }
@@ -356,7 +362,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 VehicleSpawner.RespawnAllVehicles();
                 //FOBManager.WipeAllFOBRelatedBarricades(); (ran already kinda)
             }
-            FOBManager.UpdateUIAll();
+            FOBManager.OnNewGameStarting();
             RallyManager.WipeAllRallies();
         }
         protected override void PlayerEnteredFlagRadius(Flag flag, Player player)

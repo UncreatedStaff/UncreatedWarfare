@@ -180,7 +180,8 @@ namespace Uncreated.Warfare.Vehicles
             this.instance_id = save.instance_id;
             this.bay_instance_id = bay.SpawnPadInstanceID;
             this.bay_type = bay.type;
-            this.placeholder_text = $"sign_vbs_" + bay.VehicleID.ToString(Data.Locale);
+            Asset asset = Assets.find(bay.VehicleID);
+            this.placeholder_text = $"sign_vbs_" + asset == null ? bay.VehicleID.ToString("N") : asset.id.ToString(Data.Locale);
             this.sign_transform = save.transform;
             if (StructureSaver.StructureExists(bay.SpawnPadInstanceID, bay.type, out Structure s))
                 this.bay_transform = s.transform;

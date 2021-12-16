@@ -439,7 +439,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
                 else if (Team1TotalCappers > Team2TotalCappers)
                 {
-                    if (Team1TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team2TotalCappers)
+                    if (Team1TotalCappers - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= Team2TotalCappers)
                     {
                         winner = 1;
                     }
@@ -450,7 +450,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
                 else
                 {
-                    if (Team2TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= Team1TotalCappers)
+                    if (Team2TotalCappers - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= Team1TotalCappers)
                     {
                         winner = 2;
                     }

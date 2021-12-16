@@ -35,6 +35,10 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     {
         Tickets.TicketManager TicketManager { get; }
     }
+    public interface IGameStats : IGamemode
+    {
+        object GameStats { get; }
+    }
     public interface IFlagRotation : IGamemode
     {
         List<Flags.Flag> Rotation { get; }

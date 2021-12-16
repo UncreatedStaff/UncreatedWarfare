@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
@@ -35,7 +36,7 @@ namespace Uncreated.Warfare.Commands
 
             if (vehicle != null)
             {
-                if (!VehicleBay.VehicleExists(vehicle.id, out VehicleData vehicleData))
+                if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
                 {
                     player.SendChat("ammo_vehicle_cant_rearm");
                     return;
@@ -64,29 +65,17 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                IEnumerable<BarricadeDrop> NearbyAmmoStations = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.AmmoCrateID, 100, vehicle.transform.position, player.GetTeam(), true);
+                IEnumerable<BarricadeDrop> NearbyAmmoStations = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, 100, vehicle.transform.position, player.GetTeam(), true);
 
                 if (NearbyAmmoStations.Count() == 0)
                 {
-                    if (Data.Is(out Insurgency insurgency))
-                    {
-                        NearbyAmmoStations = UCBarricadeManager.GetNearbyBarricades(FOBManager.config.Data.AmmoCrateID, 100, vehicle.transform.position, player.GetTeam(), true);
-                        if (NearbyAmmoStations.Count() == 0)
-                        {
-                            player.SendChat("ammo_vehicle_not_near_ammo_crate");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        player.SendChat("ammo_vehicle_not_near_ammo_crate");
-                        return;
-                    }
+                    player.SendChat("ammo_vehicle_not_near_ammo_crate");
+                    return;
                 }
 
                 int ammo_count = 0;
 
-                foreach (var a in NearbyAmmoStations)
+                foreach (BarricadeDrop a in NearbyAmmoStations)
                 {
                     if (a.interactable is InteractableStorage storage)
                     {
@@ -126,9 +115,9 @@ namespace Uncreated.Warfare.Commands
                     {
                         int removed = 0;
                         if (player.IsTeam1())
-                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team1AmmoID, toRemove);
+                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, Gamemode.Config.Items.T1Ammo, toRemove);
                         else if (player.IsTeam2())
-                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, FOBManager.config.Data.Team2AmmoID, toRemove);
+                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, Gamemode.Config.Items.T2Ammo, toRemove);
 
                         if (removed >= toRemove)
                             break;
@@ -151,7 +140,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_no_kit");
                     return;
                 }
-                if (barricade.barricade.id == FOBManager.config.Data.AmmoCrateID || (Data.Is(out Insurgency insurgency) && barricade.barricade.id == insurgency.Config.CacheID))
+                if (barricade.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
                 {
                     if (!(drop.interactable is InteractableStorage storage))
                     {
@@ -163,8 +152,12 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
                         return;
                     }
-                    if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team1AmmoID)) ||
-                    (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == FOBManager.config.Data.Team2AmmoID)))
+                    if (!(Assets.find(Gamemode.Config.Items.T1Ammo) is ItemAsset t1ammo) || !(Assets.find(Gamemode.Config.Items.T2Ammo) is ItemAsset t2ammo))
+                    {
+                        F.LogError("Either t1ammo or t2ammo guid isn't a valid item");
+                        return;
+                    }
+                    if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == t1ammo.id)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == t2ammo.id)))
                     {
                         player.SendChat("ammo_no_stock");
                         return;
@@ -180,11 +173,11 @@ namespace Uncreated.Warfare.Commands
                     if (FOBManager.config.Data.AmmoCommandCooldown > 0)
                         CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
                     if (player.IsTeam1())
-                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team1AmmoID);
+                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, Gamemode.Config.Items.T1Ammo);
                     else if (player.IsTeam2())
-                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, FOBManager.config.Data.Team2AmmoID);
+                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, Gamemode.Config.Items.T2Ammo);
                 }
-                else if (FOBManager.config.Data.AmmoBagIDs.Contains(barricade.barricade.id))
+                else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.barricade.asset.GUID)
                 {
                     if (drop.model.TryGetComponent(out AmmoBagComponent ammobag))
                     {

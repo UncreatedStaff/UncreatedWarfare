@@ -74,6 +74,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             if (_allFlags == null || _allFlags.Count == 0) return;
             LoadFlagsIntoRotation();
+            if (_rotation.Count < 1)
+            {
+                F.LogError("No flags were put into rotation!!");
+            }
             if (_attackTeam == 1)
             {
                 _objectiveT1Index = _rotation.Count - 1;
@@ -182,7 +186,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 }
                 else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
                 {
-                    if (flag.Team1TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
+                    if (flag.Team1TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
                     {
                         winner = 1;
                     }
@@ -193,7 +197,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 }
                 else
                 {
-                    if (flag.Team2TotalCappers - UCWarfare.Config.FlagSettings.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
+                    if (flag.Team2TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
                     {
                         winner = 2;
                     }

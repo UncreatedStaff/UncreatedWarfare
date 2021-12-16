@@ -17,10 +17,11 @@ using UnityEngine;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency
 {
-    public class Insurgency : TeamGamemode, ITeams, IFOBs, IVehicles, IKitRequests, IRevives, ISquads, IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>, IStructureSaving, ITickets, IStagingPhase, IAttackDefense
+    public class Insurgency : TeamGamemode, ITeams, IFOBs, IVehicles, IKitRequests, IRevives, ISquads, IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>, IStructureSaving, ITickets, IStagingPhase, IAttackDefense, IGameStats
     {
         public override string DisplayName => "Insurgency";
         public override bool EnableAMC => true;
@@ -74,6 +75,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         protected InsurgencyLeaderboard _endScreen;
         Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard { get => _endScreen; }
 
+        object IGameStats.GameStats => _gameStats;
+
         private TicketManager _ticketManager;
         public TicketManager TicketManager { get => _ticketManager; }
 
@@ -107,7 +110,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public override void StartNextGame(bool onLoad = false)
         {
             base.StartNextGame(onLoad); // set game id
-            GameStats.Reset();
+            _gameStats.Reset();
 
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
             if (_attackTeam == 1)
@@ -247,7 +250,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             GameStats.OnPlayerJoin(player.Player);
             if (isScreenUp && _endScreen != null)
             {
-                _endScreen.SendLeaderboard(player);
+                _endScreen.SendLeaderboard(player, TeamManager.GetTeamHexColor(_endScreen.Winner), this);
             }
             else
             {
@@ -273,12 +276,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             TicketManager.UpdateUI(player.connection, player.GetTeam(), 0, "");
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
-        public void AddIntelligencePoints(int points)
+        public bool AddIntelligencePoints(int points)
         {
             List<CacheData> activeCaches = ActiveCaches;
-            if (activeCaches.Count != 1 && activeCaches.Count != 2) return;
+            if (activeCaches.Count != 1 && activeCaches.Count != 2) return false;
             CacheData first = activeCaches[0];
-            if (first == null) return;
+            if (first == null) return false;
             if (activeCaches.Count == 1)
             {
                 if (!first.IsDiscovered)
@@ -288,8 +291,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     {
                         IntelligencePoints = 0;
                         OnCacheDiscovered(first.Cache);
+                        return true;
                     }
-                    return;
+                    return false;
                 }
                 if (first.IsDiscovered && CachesLeft != 1)
                 {
@@ -298,13 +302,14 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     {
                         IntelligencePoints = 0;
                         SpawnNewCache(true);
+                        return true;
                     }
-                    return;
+                    return false;
                 }
-                return;
+                return false;
             }
             CacheData last = activeCaches[activeCaches.Count - 1];
-            if (last == null) return;
+            if (last == null) return false;
             if (!last.IsDiscovered)
             {
                 IntelligencePoints += points;
@@ -312,8 +317,11 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 {
                     IntelligencePoints = 0;
                     OnCacheDiscovered(last.Cache);
+                    return true;
                 }
+                return false;
             }
+            return false;
         }
         public void OnCacheDiscovered(FOB cache)
         {
@@ -387,26 +395,29 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         void SpawnCacheItems(FOB cache)
         {
-            ushort ammoID = 0;
-            ushort buildID = 0;
+            Guid ammoID;
+            Guid buildID;
             if (DefendingTeam == 1)
             {
-                ammoID = FOBManager.config.Data.Team1AmmoID;
-                buildID = FOBManager.config.Data.Team1BuildID;
+                ammoID = Config.Items.T1Ammo;
+                buildID = Config.Items.T1Build;
             }
-            else if (DefendingTeam == 1)
+            else if (DefendingTeam == 2)
             {
-                ammoID = FOBManager.config.Data.Team2AmmoID;
-                buildID = FOBManager.config.Data.Team2BuildID;
+                ammoID = Config.Items.T2Ammo;
+                buildID = Config.Items.T2Build;
             }
+            else return;
+            if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
+                return;
             if (cache.Structure.interactable is InteractableStorage storage)
             {
-                while (storage.items.tryAddItem(new Item(ammoID, true))) { }
+                while (storage.items.tryAddItem(new Item(ammo.id, true))) { }
             }
             Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
             for (int i = 0; i < 15; i++)
-                ItemManager.dropItem(new Item(buildID, true), point, false, true, false);
+                ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
 
             foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
             {
@@ -451,6 +462,17 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     XP.XPManager.AddXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, F.Translate("xp_cache_killed", destroyer));
                     StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                     StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
+                    if (_gameStats != null)
+                    {
+                        foreach (KeyValuePair<ulong, InsurgencyPlayerStats> stats in _gameStats.stats)
+                        {
+                            if (stats.Key == destroyer.Steam64)
+                            {
+                                stats.Value._cachesDestroyed++;
+                                break;
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -511,34 +533,5 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 Cache = cache;
             }
         }
-    }
-
-    public class InsurgencyLeaderboard : Leaderboard<InsurgencyPlayerStats, InsurgencyTracker>
-    {
-        protected override Guid GUID => Gamemode.Config.UI.CTFLeaderboardGUID;
-
-        public override void Calculate()
-        {
-
-        }
-        public override void SendLeaderboard()
-        {
-
-        }
-        public virtual void SendLeaderboard(UCPlayer player)
-        {
-
-        }
-    }
-
-    public class InsurgencyPlayerStats : TeamPlayerStats
-    {
-        public InsurgencyPlayerStats(Player player) : base(player) { }
-
-        public InsurgencyPlayerStats(ulong player) : base(player) { }
-    }
-    public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>
-    {
-
     }
 }

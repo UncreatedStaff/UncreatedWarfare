@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Squads
                 EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
                 EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
                     F.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2, squad.Members[i].Icon.ToString());
+                EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
             }
             for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
             {
@@ -198,6 +198,8 @@ namespace Uncreated.Warfare.Squads
             for (int s = 0; s < Squads.Count; s++)
             {
                 if (Squads[s].Team != team) continue;
+                if (s2 == 0)
+                    EffectManager.sendUIEffectVisibility(squadListKey, c, true, "Header", true);
                 Squad sq = Squads[s];
                 string s22 = s2.ToString();
                 EffectManager.sendUIEffectVisibility(squadListKey, c, true, s22, true);
@@ -209,6 +211,8 @@ namespace Uncreated.Warfare.Squads
             }
             for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
             {
+                if (s2 == 0)
+                    EffectManager.sendUIEffectVisibility(squadListKey, c, true, "Header", false);
                 EffectManager.sendUIEffectVisibility(squadListKey, c, true, s2.ToString(), false);
             }
         }
@@ -270,7 +274,7 @@ namespace Uncreated.Warfare.Squads
                     EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
                         F.Translate("squad_ui_player_name", squad.Members[m], F.GetPlayerOriginalNames(squad.Members[i]).NickName));
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2, squad.Members[i].Icon.ToString());
+                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
                 }
                 for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
                 {
@@ -580,14 +584,8 @@ namespace Uncreated.Warfare.Squads
 
     public class SquadConfigData : ConfigData
     {
-        public ushort Team1RallyID;
-        public ushort Team2RallyID;
         public ushort RallyTimer;
         public float RallyDespawnDistance;
-        public ushort rallyUI;
-        public ushort squadLUI;
-        public ushort squadSUI;
-        public ushort squadLTUI;
         public int SquadDisconnectTime;
         public Dictionary<EClass, ClassConfig> Classes;
         public ushort EmptyMarker;
@@ -600,8 +598,6 @@ namespace Uncreated.Warfare.Squads
 
         public override void SetDefaults()
         {
-            Team1RallyID = 38381;
-            Team2RallyID = 38382;
             RallyTimer = 45;
             RallyDespawnDistance = 30;
             EmptyMarker = 36100;

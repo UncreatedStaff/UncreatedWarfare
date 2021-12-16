@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Components
     {
         public ulong Owner;
         public Player Player;
-        public ushort BarricadeID;
+        public Guid BarricadeGUID;
         public ulong LastDamager;
     }
 }

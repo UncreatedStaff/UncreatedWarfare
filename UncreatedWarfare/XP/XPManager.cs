@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.XP
                 ucplayer.CachedXp = newBalance;
             }
 
-            if (message != "" && amount != 0 && !(Data.Gamemode is IImplementsLeaderboard lb && lb.isScreenUp))
+            if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
                 ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
 
             UpdateUI(player, newBalance, out Rank rank);

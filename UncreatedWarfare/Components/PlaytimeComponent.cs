@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Components
     public struct LandmineData
     {
         public static LandmineData Nil = new LandmineData(null, null);
-        public ushort barricadeID;
+        public Guid barricadeGUID;
         public Player owner;
         public ulong ownerID;
         public int instanceID;
@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.Components
         {
             if (trap == null || owner == null)
             {
-                barricadeID = 0;
+                barricadeGUID = Guid.Empty;
                 this.owner = null;
                 if (owner != null)
                     this.ownerID = owner.Owner;
@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Components
             else
             {
                 this.instanceID = trap.GetInstanceID();
-                this.barricadeID = owner.BarricadeID;
+                this.barricadeGUID = owner.BarricadeGUID;
                 this.owner = owner.Player;
                 this.ownerID = owner.Owner;
             }
@@ -41,13 +41,13 @@ namespace Uncreated.Warfare.Components
         public float CurrentTimeSeconds;
         public Gamemodes.Interfaces.IStats stats;
         public Player player;
-        public ushort lastShot;
-        public ushort lastProjected;
+        public Guid lastShot;
+        public Guid lastProjected;
         public List<ThrowableOwner> thrown;
         public LandmineData LastLandmineTriggered;
         public LandmineData LastLandmineExploded;
-        public ushort lastExplodedVehicle;
-        public ushort lastRoadkilled;
+        public Guid lastExplodedVehicle;
+        public Guid lastRoadkilled;
         private Coroutine _currentTeleportRequest;
         public Vehicles.VehicleSpawn currentlylinking;
         public void QueueMessage(ToastMessage message)
@@ -116,8 +116,6 @@ namespace Uncreated.Warfare.Components
         {
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
-            if (stats != null)
-                stats.Update(dt);
         }
         /// <summary>Start a delayed teleport on the player.</summary>
         /// <returns>True if there were no requests pending, false if there were.</returns>

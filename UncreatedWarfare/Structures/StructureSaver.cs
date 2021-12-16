@@ -70,14 +70,14 @@ namespace Uncreated.Warfare.Structures
     {
         public const string ARGUMENT_EXCEPTION_VEHICLE_SAVED = "ERROR_VEHICLE_SAVED";
         public const string ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND = "ERROR_BARRICADE_NOT_FOUND";
-        public ushort id;
+        public Guid id;
         [JsonIgnore]
         public ItemAsset Asset
         {
             get
             {
                 if (_asset != default) return _asset;
-                if (Assets.find(EAssetType.ITEM, id) is ItemAsset asset)
+                if (Assets.find(id) is ItemAsset asset)
                 {
                     _asset = asset;
                     return asset;
@@ -116,7 +116,7 @@ namespace Uncreated.Warfare.Structures
         [JsonIgnore]
         public bool exists;
         [JsonConstructor]
-        public Structure(ushort id, ushort health, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
+        public Structure(Guid id, ushort health, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
         {
             this.id = id;
             this.health = health;
@@ -157,7 +157,7 @@ namespace Uncreated.Warfare.Structures
         }
         public Structure()
         {
-            this.id = 0;
+            this.id = Guid.Empty;
             this.health = 100;
             this.state = string.Empty;
             this.type = EStructType.BARRICADE;
@@ -175,8 +175,14 @@ namespace Uncreated.Warfare.Structures
                 if (data == default)
                 {
                     ItemBarricadeAsset asset = Asset as ItemBarricadeAsset;
+                    if (asset == null)
+                    {
+                        F.LogError("Failed to find barricade asset in Structure Saver");
+                        exists = false;
+                        return;
+                    }
                     Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
-                        new Barricade(id, asset.health, Metadata, asset),
+                        new Barricade(asset, asset.health, Metadata),
                         transform.position.Vector3, transform.Rotation, owner, group
                         );
                     if (newBarricade == null)
@@ -214,7 +220,7 @@ namespace Uncreated.Warfare.Structures
                 {
                     ItemStructureAsset asset = Asset as ItemStructureAsset;
                     if (!StructureManager.dropStructure(
-                        new SDG.Unturned.Structure(id, asset.health, asset),
+                        new SDG.Unturned.Structure(asset, asset.health),
                         transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
                         transform.euler_angles.z, owner, group))
                     {
@@ -255,7 +261,7 @@ namespace Uncreated.Warfare.Structures
         }
         public Structure(StructureDrop drop, SDG.Unturned.StructureData data)
         {
-            this.id = data.structure.id;
+            this.id = data.structure.asset.GUID;
             this._metadata = new byte[0];
             this.state = Convert.ToBase64String(_metadata);
             this.transform = new SerializableTransform(drop.model.transform);
@@ -266,7 +272,7 @@ namespace Uncreated.Warfare.Structures
         }
         public Structure(BarricadeDrop drop, SDG.Unturned.BarricadeData data)
         {
-            this.id = data.barricade.id;
+            this.id = data.barricade.asset.GUID;
             this._metadata = data.barricade.state;
             this.state = Convert.ToBase64String(_metadata);
             this.transform = new SerializableTransform(drop.model.transform);

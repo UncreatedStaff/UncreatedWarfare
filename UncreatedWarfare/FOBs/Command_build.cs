@@ -2,6 +2,7 @@
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
@@ -42,7 +43,7 @@ namespace Uncreated.Warfare.FOBs
                 return;
             }
 
-            if (foundation.barricade.id == FOBManager.config.Data.FOBBaseID)
+            if (foundation.barricade.asset.GUID == Gamemode.Config.Barricades.FOBBaseGUID)
             {
                 if ((team == 1 ? FOBManager.Team1FOBs : FOBManager.Team2FOBs).Count > 9)
                 {
@@ -51,17 +52,17 @@ namespace Uncreated.Warfare.FOBs
                 }
                 BuildManager.TryBuildFOB(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.Data.AmmoCrateBaseID)
+            else if (foundation.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateBaseGUID)
             {
                 BuildManager.TryBuildAmmoCrate(foundation, player);
             }
-            else if (foundation.barricade.id == FOBManager.config.Data.RepairStationBaseID)
+            else if (foundation.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationBaseGUID)
             {
                 BuildManager.TryBuildRepairStation(foundation, player);
             }
             else
             {
-                Emplacement emplacement = FOBManager.config.Data.Emplacements.Find(e => e.baseID == foundation.barricade.id);
+                Emplacement emplacement = FOBManager.config.Data.Emplacements.Find(e => e.baseID == foundation.barricade.asset.GUID);
 
                 if (emplacement != default)
                 {
@@ -69,7 +70,7 @@ namespace Uncreated.Warfare.FOBs
                     return;
                 }
 
-                Fortification fortification = FOBManager.config.Data.Fortifications.Find(f => f.base_id == foundation.barricade.id);
+                Fortification fortification = FOBManager.config.Data.Fortifications.Find(f => f.base_id == foundation.barricade.asset.GUID);
 
                 if (fortification != default)
                 {

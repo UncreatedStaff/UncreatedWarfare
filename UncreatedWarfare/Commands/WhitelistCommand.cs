@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 
@@ -25,15 +26,20 @@ namespace Uncreated.Warfare.Commands
             {
                 if (arguments[0].ToLower() == "add")
                 {
-                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
+                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out ushort itemID))
                     {
-                        if (!Whitelister.IsWhitelisted(itemID, out _))
+                        if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
                         {
-                            Whitelister.AddItem(itemID);
-                            player.SendChat("whitelist_added", arguments[1]);
+                            if (!Whitelister.IsWhitelisted(asset.GUID, out _))
+                            {
+                                Whitelister.AddItem(asset.GUID);
+                                player.SendChat("whitelist_added", arguments[1]);
+                            }
+                            else
+                                player.SendChat("whitelist_e_exist", arguments[1]);
                         }
                         else
-                            player.SendChat("whitelist_e_exist", arguments[1]);
+                            player.SendChat("whitelist_e_invalidid", arguments[1]);
                     }
                     else
                         player.SendChat("whitelist_e_invalidid", arguments[1]);
@@ -42,13 +48,18 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
                     {
-                        if (Whitelister.IsWhitelisted(itemID, out _))
+                        if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
                         {
-                            Whitelister.RemoveItem(itemID);
-                            player.SendChat("whitelist_removed", arguments[1]);
+                            if (Whitelister.IsWhitelisted(asset.GUID, out _))
+                            {
+                                Whitelister.RemoveItem(asset.GUID);
+                                player.SendChat("whitelist_removed", arguments[1]);
+                            }
+                            else
+                                player.SendChat("whitelist_e_noexist", arguments[1]);
                         }
                         else
-                            player.SendChat("whitelist_e_noexist", arguments[1]);
+                            player.SendChat("whitelist_e_invalidid", arguments[1]);
                     }
                     else
                         player.SendChat("whitelist_e_invalidid", arguments[1]);
@@ -62,20 +73,25 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (arguments[1].ToLower() == "maxamount" || arguments[1].ToLower() == "a")
                     {
-                        if (UInt16.TryParse(arguments[2], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
+                        if (UInt16.TryParse(arguments[2], System.Globalization.NumberStyles.Any, Data.Locale, out ushort itemID))
                         {
-                            if (UInt16.TryParse(arguments[3], System.Globalization.NumberStyles.Any, Data.Locale, out var amount))
+                            if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
                             {
-                                if (Whitelister.IsWhitelisted(itemID, out _))
+                                if (UInt16.TryParse(arguments[3], System.Globalization.NumberStyles.Any, Data.Locale, out ushort amount))
                                 {
-                                    Whitelister.SetAmount(itemID, amount);
-                                    player.SendChat("whitelist_removed", arguments[2]);
+                                    if (Whitelister.IsWhitelisted(asset.GUID, out _))
+                                    {
+                                        Whitelister.SetAmount(asset.GUID, amount);
+                                        player.SendChat("whitelist_removed", arguments[2]);
+                                    }
+                                    else
+                                        player.SendChat("whitelist_e_noexist", arguments[2]);
                                 }
                                 else
-                                    player.SendChat("whitelist_e_noexist", arguments[2]);
+                                    player.SendChat("whitelist_e_invalidamount", arguments[3]);
                             }
                             else
-                                player.SendChat("whitelist_e_invalidamount", arguments[3]);
+                                player.SendChat("whitelist_e_invalidid", arguments[2]);
                         }
                         else
                             player.SendChat("whitelist_e_invalidid", arguments[2]);

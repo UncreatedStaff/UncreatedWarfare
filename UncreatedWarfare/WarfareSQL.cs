@@ -515,13 +515,6 @@ namespace Uncreated.Warfare
             if (ip == null) return "255.255.255.255";
             else return ip;
         }
-        struct FLevels
-        {
-            public ulong Steam64;
-            public uint xp;
-            public uint ofp;
-            public ulong Team;
-        }
         public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
             => F.Log(message, color);
         public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)

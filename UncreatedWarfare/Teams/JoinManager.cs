@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Teams
     {
         private List<LobbyPlayer> LobbyPlayers;
         private TimeSpan countdown;
-
+        internal short joinUiKey = 29000;
         public void Initialize()
         {
             LobbyPlayers = new List<LobbyPlayer>();
@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.Teams
             LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player.Steam64 == player.Steam64);
             if (lobbyPlayer == null)
             {
-                LobbyPlayer.CreateNew(player);
+                lobbyPlayer = LobbyPlayer.CreateNew(player);
                 LobbyPlayers.Add(lobbyPlayer);
             }
             else if (lobbyPlayer.IsInLobby) return;
@@ -137,40 +137,40 @@ namespace Uncreated.Warfare.Teams
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
 
-            EffectManager.sendUIEffect(36036, 29000, player.Player.connection, true);
+            EffectManager.sendUIEffect(36036, joinUiKey, player.Player.connection, true);
 
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper().Colorize(TeamManager.Team1ColorHex));
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper().Colorize(TeamManager.Team2ColorHex));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper().Colorize(TeamManager.Team1ColorHex));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper().Colorize(TeamManager.Team2ColorHex));
 
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
 
             if (showX && player.Player.GetTeam() == 1)
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Select", "<color=A4A4A4>JOINED</color>");
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team1Highlight", true);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team1Button", false);
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Select", "<color=A4A4A4>JOINED</color>");
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team1Highlight", true);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team1Button", false);
             }
             else if (showX && player.Player.GetTeam() == 2)
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Select", "<color=A4A4A4>JOINED</color>");
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team2Highlight", true);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team2Button", false);
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Select", "<color=A4A4A4>JOINED</color>");
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team2Highlight", true);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team2Button", false);
             }
 
             if (!showX)
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "X", false);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "X", false);
 
             if (countdown.Ticks == 0)
             {
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Confirm", true);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "GameStarting", false);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Confirm", true);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "GameStarting", false);
             }
             else
             {
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Confirm", false);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "GameStarting", true);
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "GameStartingSeconds", countdown.Minutes.ToString("D2") + ":" + countdown.Seconds.ToString("D2"));
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Confirm", false);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "GameStarting", true);
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "GameStartingSeconds", countdown.Minutes.ToString("D2") + ":" + countdown.Seconds.ToString("D2"));
             }
             int t1 = 0;
             int t2 = 0;
@@ -181,12 +181,12 @@ namespace Uncreated.Warfare.Teams
                     name = name.Colorize("9F9F9F");
                 if (LobbyPlayers[i].Team == 1)
                 {
-                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (t1 + 1), name);
+                    EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "T1P" + (t1 + 1), name);
                     t1++;
                 }
                 else if (LobbyPlayers[i].Team == 2)
                 {
-                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (t2 + 1), name);
+                    EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "T2P" + (t2 + 1), name);
                     t2++;
                 }
             }
@@ -198,35 +198,35 @@ namespace Uncreated.Warfare.Teams
 
             //F.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
 
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
 
             if (!player.Player.OnDuty() && !player.IsDonatorT1 && IsTeamFull(player, 1))
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Select", "<color=#bf6363>FULL</color>");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Select", "CLICK TO JOIN");
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team1Button", false);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team2Button", true);
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Select", "<color=#bf6363>FULL</color>");
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Select", "CLICK TO JOIN");
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team1Button", false);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team2Button", true);
             }
             else if (!player.Player.OnDuty() && !player.IsDonatorT2 && IsTeamFull(player, 2))
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Select", "<color=#bf6363>FULL</color>");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Select", "CLICK TO JOIN");
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team2Button", false);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team1Button", true);
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Select", "<color=#bf6363>FULL</color>");
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Select", "CLICK TO JOIN");
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team2Button", false);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team1Button", true);
             }
             else
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team1Select", "CLICK TO JOIN");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "Team2Select", "CLICK TO JOIN");
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team1Button", true);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Team2Button", true);
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Select", "CLICK TO JOIN");
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Select", "CLICK TO JOIN");
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team1Button", true);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Team2Button", true);
             }
 
             for (int i = 0; i < 32; i++)
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (i + 1), "");
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (i + 1), "");
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "T1P" + (i + 1), "");
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "T2P" + (i + 1), "");
             }
             int t1 = 0;
             int t2 = 0;
@@ -237,12 +237,12 @@ namespace Uncreated.Warfare.Teams
                     name = name.Colorize("9F9F9F");
                 if (LobbyPlayers[i].Team == 1)
                 {
-                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T1P" + (t1 + 1), name);
+                    EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "T1P" + (t1 + 1), name);
                     t1++;
                 }
                 else if (LobbyPlayers[i].Team == 2)
                 {
-                    EffectManager.sendUIEffectText(29000, player.Player.connection, true, "T2P" + (t2 + 1), name);
+                    EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "T2P" + (t2 + 1), name);
                     t2++;
                 }
             }
@@ -254,12 +254,12 @@ namespace Uncreated.Warfare.Teams
 
             if (countdown.Seconds > 0)
             {
-                EffectManager.sendUIEffectText(29000, player.Player.connection, true, "GameStartingSeconds", countdown.Minutes.ToString("D2") + ":" + countdown.Seconds.ToString("D2"));
+                EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "GameStartingSeconds", countdown.Minutes.ToString("D2") + ":" + countdown.Seconds.ToString("D2"));
             }
             else
             {
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "GameStarting", false);
-                EffectManager.sendUIEffectVisibility(29000, player.Player.connection, true, "Confirm", true);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "GameStarting", false);
+                EffectManager.sendUIEffectVisibility(joinUiKey, player.Player.connection, true, "Confirm", true);
             }
         }
 
@@ -275,7 +275,7 @@ namespace Uncreated.Warfare.Teams
                     foreach (LobbyPlayer p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 
-                    EffectManager.sendUIEffectText(29000, lobbyPlayer.Player.connection, true, "Team1Select", "JOINED");
+                    EffectManager.sendUIEffectText(joinUiKey, lobbyPlayer.Player.connection, true, "Team1Select", "JOINED");
                 }
             }
             else if (buttonName == "Team2Button")
@@ -286,7 +286,7 @@ namespace Uncreated.Warfare.Teams
                     foreach (LobbyPlayer p in LobbyPlayers)
                         UpdateUITeams(p, p.Team);
 
-                    EffectManager.sendUIEffectText(29000, lobbyPlayer.Player.connection, true, "Team2Select", "JOINED");
+                    EffectManager.sendUIEffectText(joinUiKey, lobbyPlayer.Player.connection, true, "Team2Select", "JOINED");
                 }
             }
             else if (buttonName == "Confirm")
@@ -432,7 +432,7 @@ namespace Uncreated.Warfare.Teams
 #endif
         IEnumerator<WaitForSeconds> ConfirmJoin(LobbyPlayer player)
         {
-            EffectManager.sendUIEffectText(29000, player.Player.connection, true, "ConfirmText", "<color=#999999>JOINING...</color>");
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "ConfirmText", "<color=#999999>JOINING...</color>");
             yield return new WaitForSeconds(1);
             JoinTeam(player.Player, player.Team);
             player.IsInLobby = false;

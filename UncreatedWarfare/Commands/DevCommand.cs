@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
@@ -27,10 +28,8 @@ namespace Uncreated.Warfare.Commands
                 if (Data.Is(out Insurgency insurgency))
                 {
                     SerializableTransform transform = new SerializableTransform(player.Player.transform);
-                    insurgency.Config.CacheSpawns.Add(transform);
-                    insurgency.SaveConfig();
-
-                        player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
+                    Gamemode.Config.MapConfig.AddCacheSpawn(transform);
+                    player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
                 }
                 else
                     player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));

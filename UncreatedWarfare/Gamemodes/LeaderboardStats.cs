@@ -228,11 +228,11 @@ namespace Uncreated.Warfare.Gamemodes
         public ulong Steam64 => _id;
         public static T New<T>(Player player) where T : BasePlayerStats
         {
-            return (T)Activator.CreateInstance(typeof(T), player);
+            return (T)Activator.CreateInstance(typeof(T), new object[1] { player });
         }
         public static T New<T>(ulong player) where T : BasePlayerStats
         {
-            return (T)Activator.CreateInstance(typeof(T), player);
+            return (T)Activator.CreateInstance(typeof(T), new object[1] { player });
         }
         public BasePlayerStats(Player player) : this(player.channel.owner.playerID.steamID.m_SteamID) { }
         public BasePlayerStats(ulong player)

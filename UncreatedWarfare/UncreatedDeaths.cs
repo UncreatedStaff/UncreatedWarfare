@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -44,9 +45,12 @@ namespace Uncreated.Warfare
                 if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c) && c.stats is ITeamPVPModeStats tpvp)
                     tpvp.AddTeamkill();
                 if (Configuration.Instance.AdminLoggerSettings.LogTKs)
+                {
+                    Asset a = Assets.find(parameters.item);
                     Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID,
                         parameters.dead.channel.owner.playerID.steamID.m_SteamID,
-                        parameters.key, parameters.itemName ?? "", parameters.item, parameters.distance);
+                        parameters.key, parameters.itemName ?? "", a == null ? (ushort)0 : a.id, parameters.distance);
+                }
                 Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
@@ -79,7 +83,7 @@ namespace Uncreated.Warfare
             public Player dead;
             public Player LandmineLinkedAssistant;
             public EDeathCause cause;
-            public ushort item;
+            public Guid item;
             public string itemName;
             public string key;
             public ELimb limb;
@@ -127,14 +131,46 @@ namespace Uncreated.Warfare
                 }
                 bool atk = false;
                 bool def = false;
-                if (Data.Is(out IWarstatsGamemode ws))
+                if (Data.Is(out IGameStats ws) && ws.GameStats is ILongestShotTracker ls)
                 {
-                    if (ws.GameStats != null && parameters.cause == EDeathCause.GUN && (ws.GameStats.LongestShot.Player == 0 || ws.GameStats.LongestShot.Distance < parameters.distance))
+                    if (ws.GameStats != null && parameters.cause == EDeathCause.GUN && (ls.LongestShot.Player == 0 || ls.LongestShot.Distance < parameters.distance))
                     {
-                        ws.GameStats.LongestShot.Player = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
-                        ws.GameStats.LongestShot.Distance = parameters.distance;
-                        ws.GameStats.LongestShot.Gun = parameters.item;
-                        ws.GameStats.LongestShot.Team = team;
+                        ls.LongestShot = new LongestShot()
+                        {
+                            Player = parameters.killer.channel.owner.playerID.steamID.m_SteamID,
+                            Distance = parameters.distance,
+                            Gun = parameters.item,
+                            Team = team
+                        };
+                    }
+                }
+                if (Data.Is(out Insurgency ins))
+                {
+                    if (team == ins.DefendingTeam)
+                    {
+                        for (int i = 0; i < ins.Caches.Count; i++)
+                        {
+                            Insurgency.CacheData d = ins.Caches[i];
+                            if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
+                                (d.Cache.Structure.model.transform.position - parameters.killer.transform.position).sqrMagnitude <=
+                                Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                            {
+                                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
+                            }
+                        }
+                    }
+                    else if (team == ins.AttackingTeam && parameters.dead != null)
+                    {
+                        for (int i = 0; i < ins.Caches.Count; i++)
+                        {
+                            Insurgency.CacheData d = ins.Caches[i];
+                            if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
+                                (d.Cache.Structure.model.transform.position - parameters.dead.transform.position).sqrMagnitude <=
+                                Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                            {
+                                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
+                            }
+                        }
                     }
                 }
                 if (Data.Is(out IFlagRotation fg))
@@ -193,9 +229,9 @@ namespace Uncreated.Warfare
                 else
                     StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s =>
                     { s.Kills++; if (atk) s.KillsWhileAttackingFlags++; else if (def) s.KillsWhileDefendingFlags++; }, false);
-                if (KitManager.KitExists(parameters.kitname, out kit) && parameters.cause != EDeathCause.VEHICLE && parameters.cause != EDeathCause.ROADKILL && Assets.find(EAssetType.ITEM, parameters.item) is ItemAsset asset && asset != null)
+                if (KitManager.KitExists(parameters.kitname, out kit) && parameters.cause != EDeathCause.VEHICLE && parameters.cause != EDeathCause.ROADKILL && Assets.find(parameters.item) is ItemAsset asset)
                 {
-                    StatsManager.ModifyWeapon(parameters.item, kit.Name, x =>
+                    StatsManager.ModifyWeapon(asset.id, kit.Name, x =>
                     {
                         x.Kills++;
                         if (parameters.limb == ELimb.SKULL)
@@ -222,7 +258,7 @@ namespace Uncreated.Warfare
         {
             public Player dead;
             public EDeathCause cause;
-            public ushort item;
+            public Guid item;
             public string itemName;
             public string key;
             public ELimb limb;
@@ -295,8 +331,8 @@ namespace Uncreated.Warfare
                         }
                     }, false);
                     StatsManager.ModifyKit(kit.Name, k => k.Deaths++, true);
-                    if (Assets.find(EAssetType.ITEM, parameters.item) is ItemAsset asset && asset != null)
-                        StatsManager.ModifyWeapon(parameters.item, kit.Name, w => w.Deaths++, true);
+                    if (Assets.find(parameters.item) is ItemAsset asset)
+                        StatsManager.ModifyWeapon(asset.id, kit.Name, w => w.Deaths++, true);
                 }
                 else
                     StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s => s.Deaths++, false);
@@ -318,7 +354,7 @@ namespace Uncreated.Warfare
             public Player dead;
             public KillEventArgs killerargs;
             public EDeathCause cause;
-            public ushort item;
+            public Guid item;
             public string itemName;
             public string key;
             public ELimb limb;
@@ -440,7 +476,7 @@ namespace Uncreated.Warfare
                 ulong deadTeam = F.GetTeam(dead);
                 ulong placerTeam;
                 ulong triggererTeam;
-                ushort landmineID;
+                Guid landmineID;
                 LandmineData landmine;
                 string landmineName;
                 if (placer == null)
@@ -449,7 +485,7 @@ namespace Uncreated.Warfare
                     placer = dead.Player.channel.owner;
                     placerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                     foundPlacer = false;
-                    landmineID = 0;
+                    landmineID = Guid.Empty;
                     landmineName = "Unknown";
                     landmine = LandmineData.Nil;
                     placerTeam = 0;
@@ -468,24 +504,23 @@ namespace Uncreated.Warfare
                         if (c.LastLandmineExploded.Equals(default(LandmineData)) || c.LastLandmineExploded.owner == null)
                         {
                             landmine = LandmineData.Nil;
-                            landmineID = 0;
+                            landmineID = Guid.Empty;
                         }
                         else
                         {
                             landmine = c.LastLandmineExploded;
-                            landmineID = c.LastLandmineExploded.barricadeID;
+                            landmineID = c.LastLandmineExploded.barricadeGUID;
                         }
                     }
                     else
                     {
-                        landmineID = 0;
+                        landmineID = Guid.Empty;
                         landmine = LandmineData.Nil;
                     }
-                    F.Log("Landmine: " + $"{landmine.ownerID}, {landmine.instanceID}, {landmine.barricadeID}");
-                    if (landmineID != 0)
+                    if (landmineID != Guid.Empty)
                     {
-                        if (Assets.find(EAssetType.ITEM, landmineID) is ItemAsset asset) landmineName = asset.itemName;
-                        else landmineName = landmineID.ToString(Data.Locale);
+                        if (Assets.find(landmineID) is ItemAsset asset) landmineName = asset.itemName;
+                        else landmineName = landmineID.ToString("N");
                     }
                     else landmineName = "Unknown";
                     if (landmine.instanceID != 0)
@@ -520,12 +555,12 @@ namespace Uncreated.Warfare
                     F.Log($"Triggerer: {(foundTriggerer ? "not found" : triggererName.PlayerName)}");
                 }
                 string key = "LANDMINE";
-                string itemkey = landmineID.ToString(Data.Locale);
+                string itemkey = landmineID.ToString("N");
                 if (foundPlacer && placer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                 {
                     key += "_SUICIDE";
                 }
-                if (landmineID == 0)
+                if (landmineID == Guid.Empty)
                 {
                     key += "_UNKNOWN";
                 }
@@ -837,7 +872,7 @@ namespace Uncreated.Warfare
                 SteamPlayer killer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
                 FPlayerName killerName;
                 bool foundKiller;
-                ushort item;
+                Guid item;
                 string itemName = null;
                 float distance = 0f;
                 bool translateName = false;
@@ -859,19 +894,17 @@ namespace Uncreated.Warfare
                         bool foundvehasset = true;
                         if (itemIsVehicle)
                         {
-                            VehicleAsset asset = (VehicleAsset)Assets.find(EAssetType.VEHICLE, item);
-                            if (asset != null) itemName = asset.vehicleName;
+                            if (Assets.find(item) is VehicleAsset asset) itemName = asset.vehicleName;
                             else
                             {
-                                itemName = item.ToString(Data.Locale);
+                                itemName = item.ToString("N");
                                 foundvehasset = false;
                             }
                         }
                         if (!itemIsVehicle || !foundvehasset)
                         {
-                            ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, item);
-                            if (asset != null) itemName = asset.itemName;
-                            else itemName = item.ToString(Data.Locale);
+                            if (Assets.find(item) is ItemAsset asset) itemName = asset.itemName;
+                            else itemName = item.ToString("N");
                         }
 
                     }
@@ -891,7 +924,7 @@ namespace Uncreated.Warfare
                         }
                         foundKiller = false;
                         kitname = string.Empty;
-                        item = 0;
+                        item = Guid.Empty;
                         itemName = "Unknown";
                     }
                 }
@@ -914,20 +947,18 @@ namespace Uncreated.Warfare
                             turretOwner = info.vehicle;
                         }
                     }
-                    catch { item = 0; kitname = string.Empty; }
-                    if (item != 0)
+                    catch { item = Guid.Empty; kitname = string.Empty; }
+                    if (item != Guid.Empty)
                     {
                         if (itemIsVehicle)
                         {
-                            VehicleAsset asset = (VehicleAsset)Assets.find(EAssetType.VEHICLE, item);
-                            if (asset != null) itemName = asset.vehicleName;
-                            else itemName = item.ToString(Data.Locale);
+                            if (Assets.find(item) is VehicleAsset asset) itemName = asset.vehicleName;
+                            else itemName = item.ToString("N");
                         }
                         else
                         {
-                            ItemAsset asset = (ItemAsset)Assets.find(EAssetType.ITEM, item);
-                            if (asset != null) itemName = asset.itemName;
-                            else itemName = item.ToString(Data.Locale);
+                            if (Assets.find(item) is ItemAsset asset) itemName = asset.itemName;
+                            else itemName = item.ToString("N");
                         }
                     }
                     else itemName = "Unknown";
@@ -939,9 +970,10 @@ namespace Uncreated.Warfare
                 if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH
                     || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL || cause == EDeathCause.BLEEDING) && foundKiller)
                 {
-                    if (item != 0)
+                    if (item != Guid.Empty)
                     {
-                        string k1 = (itemIsVehicle ? "v" : "") + item.ToString(Data.Locale);
+                        Asset a = Assets.find(item);
+                        string k1 = (itemIsVehicle ? "v" : "") + a == null ? "0" : a.id.ToString(Data.Locale);
                         string k2 = k1 + "_SUICIDE";
                         if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(k1))
                         {
@@ -1074,7 +1106,7 @@ namespace Uncreated.Warfare
             F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
             F.Log(message, ConsoleColor.Cyan);
         }
-        internal void GetKillerInfo(out ushort item, out float distance, out FPlayerName killernames, out ulong KillerTeam, out string kitname, out ushort vehicle, EDeathCause cause, SteamPlayer killer, Player dead)
+        internal void GetKillerInfo(out Guid item, out float distance, out FPlayerName killernames, out ulong KillerTeam, out string kitname, out ushort vehicle, EDeathCause cause, SteamPlayer killer, Player dead)
         {
             vehicle = 0;
             if (killer == null || dead == null)
@@ -1113,7 +1145,7 @@ namespace Uncreated.Warfare
                     item = c.lastShot;
                 else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
                 {
-                    ThrowableOwner g = c.thrown.FirstOrDefault(x => Assets.find(EAssetType.ITEM, x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
+                    ThrowableOwner g = c.thrown.FirstOrDefault(x => Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
                     if (g != default)
                     {
                         item = g.ThrowableID;
@@ -1126,7 +1158,7 @@ namespace Uncreated.Warfare
                         if (Config.Debug)
                             F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }
-                    else item = killer.player.equipment.itemID;
+                    else item = killer.player.equipment.asset.GUID;
                 }
                 else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
                     item = c.lastProjected;
@@ -1134,15 +1166,15 @@ namespace Uncreated.Warfare
                     item = c.lastExplodedVehicle;
                 else if (cause == EDeathCause.ROADKILL && c.lastRoadkilled != default)
                     item = c.lastRoadkilled;
-                else item = killer.player.equipment.itemID;
+                else item = killer.player.equipment.asset.GUID;
             }
-            else item = killer.player.equipment.itemID;
+            else item = killer.player.equipment.asset.GUID;
         }
     }
     public class DeathInfo
     {
         public float distance;
-        public ushort item;
+        public Guid item;
         public FPlayerName killerName;
         public ulong killerTeam;
         public string kitName;

@@ -27,6 +27,17 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
         int Teamkills { get; }
         void AddTeamkill();
     }
+    public interface ILongestShotTracker
+    {
+        Flags.LongestShot LongestShot { get; set; }
+    }
+    public interface IFobsTracker
+    {
+        int FOBsPlacedT1 { get; set; }
+        int FOBsPlacedT2 { get; set; }
+        int FOBsDestroyedT1 { get; set; }
+        int FOBsDestroyedT2 { get; set; }
+    }
     public interface IRevivesStats : IStats
     {
         int Revives { get; }

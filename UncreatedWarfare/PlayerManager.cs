@@ -150,7 +150,7 @@ namespace Uncreated.Warfare
                 Team2Players.Add(player);
 
             SquadManager.OnPlayerJoined(player, save.SquadName);
-            FOBManager.UpdateUI(player);
+            FOBManager.SendFOBList(player);
         }
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {

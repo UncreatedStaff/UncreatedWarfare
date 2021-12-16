@@ -236,6 +236,27 @@ namespace Uncreated.Warfare
 
             return list;
         }
+        public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate)
+        {
+            int rtn = 0;
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == null) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (predicate.Invoke(region.drops[i]))
+                        {
+                            rtn++;
+                        }
+                    }
+                }
+            }
+
+            return rtn;
+        }
         public static IEnumerable<BarricadeDrop> GetNearbyBarricades(IEnumerable<BarricadeDrop> selection, float range, Vector3 origin, bool sortClosest)
         {
             List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -502,6 +523,10 @@ namespace Uncreated.Warfare
                 return GetNearbyItems(iasset.id, range, origin);
             }
             return new List<SDG.Unturned.ItemData>();
+        }
+        public static List<SDG.Unturned.ItemData> GetNearbyItems(ItemAsset id, float range, Vector3 origin)
+        {
+            return GetNearbyItems(id.id, range, origin);
         }
         public static T GetInteractable2FromLook<T>(PlayerLook look, int Raymask = RayMasks.BARRICADE) where T : Interactable2
         {

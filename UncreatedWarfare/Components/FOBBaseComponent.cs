@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Components
 
                 if (NearbyFOBs.Count() == 0)
                 {
-                    EffectManager.askEffectClearByID(FOBManager.config.Data.BuildResourceUI, p.connection);
+                    EffectManager.askEffectClearByID(FOBManager.nearbyResourceId, p.connection);
                 }
                 else
                 {
@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Components
 
                                 if (NearbyFOBs.Count() == 0)
                                 {
-                                    EffectManager.sendUIEffect(FOBManager.config.Data.BuildResourceUI, (short)unchecked(FOBManager.config.Data.BuildResourceUI), PlayerManager.OnlinePlayers[i].Player.channel.owner.transportConnection, true);
+                                    EffectManager.sendUIEffect(FOBManager.nearbyResourceId, FOBManager.nearbyResourceKey, PlayerManager.OnlinePlayers[i].Player.channel.owner.transportConnection, true);
                                 }
 
                                 FOBManager.UpdateBuildUI(PlayerManager.OnlinePlayers[i]);
@@ -82,7 +82,7 @@ namespace Uncreated.Warfare.Components
 
                                 if (NearbyFOBs.Count() == 0)
                                 {
-                                    EffectManager.askEffectClearByID(FOBManager.config.Data.BuildResourceUI, PlayerManager.OnlinePlayers[i].Player.channel.owner.transportConnection);
+                                    EffectManager.askEffectClearByID(FOBManager.nearbyResourceId, PlayerManager.OnlinePlayers[i].Player.channel.owner.transportConnection);
                                 }
                             }
                         }

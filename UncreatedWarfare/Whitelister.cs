@@ -47,10 +47,19 @@ namespace Uncreated.Warfare
             {
                 return;
             }
-
-            bool IsWhiteListed = IsWhitelisted(itemData.item.id, out WhitelistItem whitelistedItem);
-
-            if (to_page == PlayerInventory.STORAGE && !IsWhiteListed)
+            WhitelistItem whitelistedItem;
+            bool isWhitelisted;
+            if (!(Assets.find(EAssetType.ITEM, itemData.item.id) is ItemAsset a))
+            {
+                whitelistedItem = null;
+                isWhitelisted = false;
+                F.LogError("Unknown asset on item " + itemData.item.id.ToString());
+            }
+            else
+            {
+                isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
+            }
+            if (to_page == PlayerInventory.STORAGE && !isWhitelisted)
             {
                 shouldAllow = false;
                 return;
@@ -66,7 +75,7 @@ namespace Uncreated.Warfare
 
                 if (allowedItems == 0)
                 {
-                    if (!IsWhiteListed)
+                    if (!isWhitelisted)
                     {
                         shouldAllow = false;
                         player.Message("whitelist_notallowed");
@@ -79,7 +88,7 @@ namespace Uncreated.Warfare
                 }
                 else if (itemCount >= allowedItems)
                 {
-                    if (!IsWhiteListed)
+                    if (!isWhitelisted)
                     {
                         shouldAllow = false;
                         player.Message("whitelist_kit_maxamount");
@@ -109,7 +118,7 @@ namespace Uncreated.Warfare
                 return;
 
             SDG.Unturned.BarricadeData data = barricade.GetServersideData();
-            if (IsWhitelisted(data.barricade.id, out _))
+            if (IsWhitelisted(data.barricade.asset.GUID, out _))
                 return;
 
             //if (KitManager.KitExists(player.KitName, out var kit))
@@ -127,7 +136,7 @@ namespace Uncreated.Warfare
             if (player.OnDuty())
                 return;
             SDG.Unturned.StructureData data = structure.GetServersideData();
-            if (IsWhitelisted(data.structure.id, out _))
+            if (IsWhitelisted(data.structure.asset.GUID, out _))
                 return;
 
             player.Message("whitelist_nosalvage");
@@ -166,17 +175,17 @@ namespace Uncreated.Warfare
                 }
                 if (KitManager.HasKit(player.CSteamID, out Kit kit))
                 {
-                    if (IsWhitelisted(barricade.id, out _))
+                    if (IsWhitelisted(barricade.asset.GUID, out _))
                     {
                         return;
                     }
                     else
                     {
-                        int allowedCount = kit.Items.Where(k => k.ID == barricade.id).Count();
+                        int allowedCount = kit.Items.Where(k => k.ID == barricade.asset.id).Count();
 
                         if (allowedCount > 0)
                         {
-                            int placedCount = UCBarricadeManager.GetBarricadesWhere(b => b.GetServersideData().barricade.id == barricade.id && b.GetServersideData().owner == player.Steam64).Count;
+                            int placedCount = UCBarricadeManager.CountBarricadesWhere(b => b.asset.GUID == barricade.asset.GUID && b.GetServersideData().owner == player.Steam64);
 
                             if (placedCount >= allowedCount)
                             {
@@ -223,11 +232,11 @@ namespace Uncreated.Warfare
                 }
                 if (KitManager.HasKit(player.CSteamID, out Kit kit))
                 {
-                    if (kit.Items.Exists(k => k.ID == structure.id))
+                    if (kit.Items.Exists(k => k.ID == structure.asset.id))
                     {
                         return;
                     }
-                    else if (IsWhitelisted(structure.id, out _))
+                    else if (IsWhitelisted(structure.asset.GUID, out _))
                     {
                         return;
                     }
@@ -242,10 +251,10 @@ namespace Uncreated.Warfare
                 F.LogError(ex);
             }
         }
-        public static void AddItem(ushort ID) => AddObjectToSave(new WhitelistItem(ID, 255));
-        public static void RemoveItem(ushort ID) => RemoveWhere(i => i.itemID == ID);
-        public static void SetAmount(ushort ID, ushort newAmount) => UpdateObjectsWhere(i => i.itemID == ID, i => i.amount = newAmount);
-        public static bool IsWhitelisted(ushort itemID, out WhitelistItem item) => ObjectExists(w => w.itemID == itemID, out item);
+        public static void AddItem(Guid ID) => AddObjectToSave(new WhitelistItem(ID, 255));
+        public static void RemoveItem(Guid ID) => RemoveWhere(i => i.itemID == ID);
+        public static void SetAmount(Guid ID, ushort newAmount) => UpdateObjectsWhere(i => i.itemID == ID, i => i.amount = newAmount);
+        public static bool IsWhitelisted(Guid itemID, out WhitelistItem item) => ObjectExists(w => w.itemID == itemID, out item);
         public void Dispose()
         {
             ItemManager.onTakeItemRequested -= OnItemPickup;
@@ -257,18 +266,18 @@ namespace Uncreated.Warfare
     }
     public class WhitelistItem
     {
-        public ushort itemID;
+        public Guid itemID;
         [JsonSettable]
-        public ushort amount;
+        public int amount;
 
-        public WhitelistItem(ushort itemID, ushort amount)
+        public WhitelistItem(Guid itemID, ushort amount)
         {
             this.itemID = itemID;
             this.amount = amount;
         }
         public WhitelistItem()
         {
-            this.itemID = 0;
+            this.itemID = Guid.Empty;
             this.amount = 1;
         }
     }

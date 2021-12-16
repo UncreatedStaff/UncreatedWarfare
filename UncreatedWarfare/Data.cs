@@ -208,6 +208,7 @@ namespace Uncreated.Warfare
             SquadManager.TempCacheEffectIDs();
             CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
+            FOBManager.TempCacheEffectIDs();
 
             /* CONSTRUCT FRAMEWORK */
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
