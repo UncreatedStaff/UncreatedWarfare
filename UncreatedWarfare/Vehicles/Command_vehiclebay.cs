@@ -1,6 +1,7 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Structures;
@@ -185,7 +186,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         if (property == "items")
                         {
-                            List<ushort> items = new List<ushort>();
+                            List<Guid> items = new List<Guid>();
 
                             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
                             {
@@ -196,11 +197,12 @@ namespace Uncreated.Warfare.Kits
 
                                 for (byte index = 0; index < pageCount; index++)
                                 {
-                                    items.Add(player.Player.inventory.getItem(page, index).item.id);
+                                    if (Assets.find(EAssetType.ITEM, player.Player.inventory.getItem(page, index).item.id) is ItemAsset a)
+                                        items.Add(a.GUID);
                                 }
                             }
 
-                            VehicleBay.SetItems(vehicle.asset.GUID, items);
+                            VehicleBay.SetItems(vehicle.asset.GUID, items.ToArray());
 
                             if (items.Count == 0)
                                 player.SendChat("vehiclebay_cleareditems", vehicle.asset.vehicleName, items.Count.ToString(Data.Locale));

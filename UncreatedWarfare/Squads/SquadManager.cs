@@ -30,6 +30,7 @@ namespace Uncreated.Warfare.Squads
                 squadMenuID = squadMenu.id;
             if (Assets.find(Gamemode.Config.UI.RallyGUID) is EffectAsset rally)
                 rallyID = rally.id;
+            F.Log("Found squad UIs: " + squadListID + ", " + squadMenuID + ", " + rallyID);
         }
         public static readonly string[] NAMES =
         {
@@ -109,7 +110,7 @@ namespace Uncreated.Warfare.Squads
             {
                 int s2 = 1;
                 EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S0", true);
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "S0", F.Translate("squad_ui_expanded", player));
+                EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN0", F.Translate("squad_ui_expanded", player));
                 for (int s = 0; s < Squads.Count; s++)
                 {
                     if (Squads[s] == squad || Squads[s].Team != squad.Team) continue;
@@ -371,7 +372,6 @@ namespace Uncreated.Warfare.Squads
             bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
             player.Squad = null;
             ClearMenu(player.Player);
-            SendSquadList(player);
 
             if (squad.Members.Count == 0)
             {
@@ -419,6 +419,8 @@ namespace Uncreated.Warfare.Squads
 
             if (RallyManager.HasRally(squad, out RallyPoint rally2))
                 rally2.ClearUIForPlayer(player);
+
+            SendSquadList(player);
 
             PlayerManager.ApplyToOnline();
         }

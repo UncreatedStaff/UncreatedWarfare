@@ -174,7 +174,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
-                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG);
             }
             StatsManager.ModifyTeam(winner, t => t.Wins++, false);
             StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);

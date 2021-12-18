@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Officers
                 ucplayer.CachedOfp = newBalance;
 
             if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
-                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIOFFICERPTS);
+                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, EToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance, out int stars);
 
@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.Officers
             {
                 string startString = F.Colorize(F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), UCWarfare.GetColorHex("star_color"));
 
-                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), startString, ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), startString, EToastMessageSeverity.BIG);
 
                 F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
             }

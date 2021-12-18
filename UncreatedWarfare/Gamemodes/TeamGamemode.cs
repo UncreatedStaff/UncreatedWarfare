@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Gamemodes
                                 int a = Mathf.RoundToInt(AMC_TIME);
                                 ToastMessage.QueueMessage(players.Current,
                                     F.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
-                                    ToastMessageSeverity.WARNING);
+                                    EToastMessageSeverity.WARNING);
                                 UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
                             }
                         }

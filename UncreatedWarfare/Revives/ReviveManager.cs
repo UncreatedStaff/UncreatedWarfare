@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Revives
                     byte kteam = killer.GetTeamByte();
                     if (kteam != team)
                     {
-                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), ToastMessageSeverity.MINIXP);
+                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINIXP);
 
                         Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
                         if (KitManager.HasKit(killer, out Kit kit))
@@ -294,7 +294,7 @@ namespace Uncreated.Warfare.Revives
                             Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
                     }
                     else
-                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_friendly_downed", killer), ToastMessageSeverity.MINIXP);
+                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINIXP);
                 }
             }
             if (parameters.player.transform.TryGetComponent(out Reviver reviver))

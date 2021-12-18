@@ -193,7 +193,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void AnnounceMode(UCPlayer player)
         {
-            ToastMessage.QueueMessage(player, "", DisplayName, ToastMessageSeverity.BIG);
+            ToastMessage.QueueMessage(player, "", DisplayName, EToastMessageSeverity.BIG);
         }
         public virtual void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }

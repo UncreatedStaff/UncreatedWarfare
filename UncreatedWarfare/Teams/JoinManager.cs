@@ -339,7 +339,7 @@ namespace Uncreated.Warfare.Teams
             PlayerManager.ApplyToOnline();
 
             CooldownManager.StartCooldown(player, ECooldownType.CHANGE_TEAMS, TeamManager.TeamSwitchCooldown);
-            ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, ToastMessageSeverity.BIG);
+            ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, EToastMessageSeverity.BIG);
         }
 
         public void CloseUI(UCPlayer player)

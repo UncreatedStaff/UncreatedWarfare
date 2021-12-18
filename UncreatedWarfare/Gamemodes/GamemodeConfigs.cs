@@ -79,9 +79,10 @@ namespace Uncreated.Warfare.Gamemodes
             Insurgency.SetDefaults();
             TeamCTF = new TEAM_CTF_CONFIG();
             TeamCTF.SetDefaults();
-            MapsConfig = new MAP_CONFIG[1]
+            MapsConfig = new MAP_CONFIG[2]
             {
-                new MAP_CONFIG() { Map = "Nuijamaa" }
+                new MAP_CONFIG() { Map = "Nuijamaa" },
+                new MAP_CONFIG() { Map = "Gulf of Aqaba" }
             };
             for (int i = 0; i < MapsConfig.Length; i++)
                 MapsConfig[i].SetDefaults();

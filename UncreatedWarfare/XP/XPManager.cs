@@ -73,18 +73,18 @@ namespace Uncreated.Warfare.XP
             }
 
             if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
-                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
+                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, EToastMessageSeverity.MINIXP);
 
             UpdateUI(player, newBalance, out Rank rank);
 
             if (rank.level > oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
                 F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
             else if (rank.level < oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
                 F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
 

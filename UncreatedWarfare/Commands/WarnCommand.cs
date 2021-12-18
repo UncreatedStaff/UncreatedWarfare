@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Commands
                                     Invocations.Shared.LogWarned.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                 }
                                 F.SendChat(player.playerID.steamID, "warn_warned_private_operator", reason);
-                                ToastMessage.QueueMessage(player, F.Translate("warn_warned_private_operator", player, out _, reason), ToastMessageSeverity.WARNING);
+                                ToastMessage.QueueMessage(player, F.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING);
                                 F.BroadcastToAllExcept(new List<CSteamID> { player.playerID.steamID }, "warn_warned_broadcast_operator", name.CharacterName);
                             }
                         }
@@ -94,7 +94,7 @@ namespace Uncreated.Warfare.Commands
                                 F.SendChat(player, "warn_warned_feedback", name.CharacterName);
                                 ToastMessage.QueueMessage(steamplayer,
                                     F.Translate("warn_warned_private", player, out _, callerName.CharacterName, reason),
-                                    ToastMessageSeverity.WARNING);
+                                    EToastMessageSeverity.WARNING);
                                 F.SendChat(steamplayer.playerID.steamID, "warn_warned_private", callerName.CharacterName, reason);
                                 F.BroadcastToAllExcept(new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID },
                                     "warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
@@ -133,7 +133,7 @@ namespace Uncreated.Warfare.Commands
                     F.SendChat(admin, "warn_warned_feedback", names.CharacterName);
                 ToastMessage.QueueMessage(violator,
                     F.Translate("warn_warned_private" + (admin == null ? "_operator" : string.Empty), Admin, out _, callerName.CharacterName, Reason),
-                    ToastMessageSeverity.WARNING);
+                    EToastMessageSeverity.WARNING);
                 F.SendChat(violator, "warn_warned_private" + (admin == null ? "_operator" : string.Empty), callerName.CharacterName, Reason);
                 F.BroadcastToAllExcept(new List<CSteamID> { violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID },
                     "warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);

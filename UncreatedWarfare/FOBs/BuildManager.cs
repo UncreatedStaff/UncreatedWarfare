@@ -86,7 +86,6 @@ namespace Uncreated.Warfare.FOBs
             }
             return true;
         }
-
         public static bool TryBuildAmmoCrate(SDG.Unturned.BarricadeData foundation, UnturnedPlayer player)
         {
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);

@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -50,57 +51,118 @@ namespace Uncreated.Warfare.Components
         public Guid lastRoadkilled;
         private Coroutine _currentTeleportRequest;
         public Vehicles.VehicleSpawn currentlylinking;
-        public void QueueMessage(ToastMessage message)
+        private struct ToastMessageInfo
         {
-            if (toastMessages.Count == 0 && toastMessageOpen == 0)
-                SendToastMessage(message);
-            else
-                toastMessages.Enqueue(message);
-        }
-        Queue<ToastMessage> toastMessages;
-        ushort toastMessageOpen;
-        private void SendToastMessage(ToastMessage message)
-        {
-            switch (message.Severity)
+            public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
+            public byte channel;
+            public ushort id;
+            public EToastMessageSeverity type;
+            public Guid guid;
+            public float time;
+            public ToastMessageInfo(EToastMessageSeverity type, Guid guid, byte channel, float time)
             {
-                default:
-                case ToastMessageSeverity.INFO:
-                    toastMessageOpen = UCWarfare.Config.ToastIDInfo;
-                    break;
-                case ToastMessageSeverity.WARNING:
-                    toastMessageOpen = UCWarfare.Config.ToastIDWarning;
-                    break;
-                case ToastMessageSeverity.SEVERE:
-                    toastMessageOpen = UCWarfare.Config.ToastIDSevere;
-                    break;
-                case ToastMessageSeverity.MINIXP:
-                    toastMessageOpen = UCWarfare.Config.MiniToastXP;
-                    break;
-                case ToastMessageSeverity.MINIOFFICERPTS:
-                    toastMessageOpen = UCWarfare.Config.MiniToastOfficerPoints;
-                    break;
-                case ToastMessageSeverity.BIG:
-                    toastMessageOpen = UCWarfare.Config.BigToast;
-                    break;
+                this.type = type;
+                this.channel = channel;
+                this.guid = guid;
+                this.time = time;
+                this.id = 0;
+                ReloadAsset();
             }
+            public void ReloadAsset()
+            {
+                if (!(Assets.find(this.guid) is EffectAsset ea))
+                    F.Log("Unable to find effect asset with GUID " + this.guid.ToString("N") + " in toast messages.");
+                else 
+                    this.id = ea.id;
+            }
+        }
+        private static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
+        {
+            new ToastMessageInfo(EToastMessageSeverity.INFO, new Guid("d7504683-4b32-4ed4-9191-4b4136ab1bc8"), 0, 12f), // info
+            new ToastMessageInfo(EToastMessageSeverity.WARNING, new Guid("5678a559-695e-4d99-9dfe-a9a771b6616f"), 0, 12f), // warning
+            new ToastMessageInfo(EToastMessageSeverity.SEVERE, new Guid("26fed656-4ccf-4c46-aac1-df01dbba0aab"), 0, 12f), // error
+            new ToastMessageInfo(EToastMessageSeverity.MINIXP, new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 4f), // xp
+            new ToastMessageInfo(EToastMessageSeverity.MINIOFFICERPTS, new Guid("5f695955-f0da-4d19-adac-ac39140da797"), 1, 4f), // ofp
+            new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 2, 5.5f), // big
+        };
+        private static readonly bool[] channels;
+        static PlaytimeComponent()
+        {
+            byte max = 0;
+            bool cont0 = false;
+            for (int i = 0; i < TOASTS.Length; i++)
+            {
+                ToastMessageInfo toast = TOASTS[i];
+                if (toast.channel == 0)
+                    cont0 = true;
+                else if (max < toast.channel)
+                    max = toast.channel;
+            }
+            if (cont0) max++;
+            channels = new bool[max];
+        }
+        public void QueueMessage(ToastMessage message, bool priority = false)
+        {
+            ToastMessageInfo info = ToastMessageInfo.Nil;
+            for (int i = 0; i < TOASTS.Length; i++)
+            {
+                if (TOASTS[i].type == message.Severity)
+                {
+                    info = TOASTS[i];
+                    break;
+                }
+            }
+            if (info.id == 0)
+            {
+                F.LogWarning("Undefined toast message type: " + message.Severity.ToString());
+                return;
+            }
+            if (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel])
+                SendToastMessage(message, info);
+            else if (priority)
+                pendingToastMessages.Add(new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
+            else
+                pendingToastMessages.Insert(0, new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
+        }
+
+        readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
+        private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
+        {
             if (message.Message != null)
             {
                 if (message.SecondaryMessage != null)
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen),
+                    EffectManager.sendUIEffect(info.id, unchecked((short)info.id),
                         player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
                 else
-                    EffectManager.sendUIEffect(toastMessageOpen, unchecked((short)toastMessageOpen),
+                    EffectManager.sendUIEffect(info.id, unchecked((short)info.id),
                         player.channel.owner.transportConnection, true, message.Message);
             }
-            StartCoroutine(ToastDelay(message.delay));
+            channels[info.channel] = true;
+            for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
+            {
+                KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[i];
+                if (t.Key == message)
+                {
+                    pendingToastMessages.RemoveAt(i);
+                    break;
+                }
+            }
+            StartCoroutine(ToastDelay(message, info));
         }
-        private IEnumerator<WaitForSeconds> ToastDelay(float delay)
+        private IEnumerator<WaitForSeconds> ToastDelay(ToastMessage message, ToastMessageInfo info)
         {
-            yield return new WaitForSeconds(delay);
-            EffectManager.askEffectClearByID(toastMessageOpen, player.channel.owner.transportConnection);
-            toastMessageOpen = 0;
-            if (toastMessages.Count > 0)
-                SendToastMessage(toastMessages.Dequeue());
+            yield return new WaitForSeconds(info.time);
+            channels[info.channel] = false;
+            EffectManager.askEffectClearByID(info.id, player.channel.owner.transportConnection);
+            for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
+            {
+                KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[i];
+                if (t.Value.channel == info.channel)
+                {
+                    SendToastMessage(t.Key, t.Value);
+                    break;
+                }
+            }
         }
         public void StartTracking(Player player)
         {
@@ -108,8 +170,8 @@ namespace Uncreated.Warfare.Components
             CurrentTimeSeconds = 0.0f;
             //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwner>();
-            toastMessageOpen = 0;
-            toastMessages = new Queue<ToastMessage>();
+            for (int i = 0; i < channels.Length; i++)
+                channels[i] = false;
             F.Log("Started tracking playtime of " + player.name);
         }
         public void Update()

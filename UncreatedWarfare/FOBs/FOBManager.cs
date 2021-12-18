@@ -33,6 +33,7 @@ namespace Uncreated.Warfare.FOBs
                 fobListId = fobList.id;
             if (Assets.find(Gamemode.Config.UI.NearbyResourcesGUID) is EffectAsset nbyrs)
                 nearbyResourceId = nbyrs.id;
+            F.Log("Found fobs UIs: " + fobListId + ", " + nearbyResourceId);
         }
 
         public static event PlayerEnteredFOBRadiusHandler OnPlayerEnteredFOBRadius;
