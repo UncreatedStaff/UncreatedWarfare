@@ -84,6 +84,7 @@ namespace Uncreated.Warfare.Components
             new ToastMessageInfo(EToastMessageSeverity.MINIXP, new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 4f), // xp
             new ToastMessageInfo(EToastMessageSeverity.MINIOFFICERPTS, new Guid("5f695955-f0da-4d19-adac-ac39140da797"), 1, 4f), // ofp
             new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 2, 5.5f), // big
+            new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 3, 1.5f), // progress
         };
         private static readonly bool[] channels;
         static PlaytimeComponent()
@@ -112,20 +113,18 @@ namespace Uncreated.Warfare.Components
                     break;
                 }
             }
-            if (info.id == 0)
+            if (info.guid == Guid.Empty)
             {
                 F.LogWarning("Undefined toast message type: " + message.Severity.ToString());
                 return;
             }
-            if (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel])
+            if (priority || (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel]))
                 SendToastMessage(message, info);
-            else if (priority)
-                pendingToastMessages.Add(new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
             else
                 pendingToastMessages.Insert(0, new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
-        }
-
+        }   
         readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
+        private Coroutine _toastDelay = null;
         private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
         {
             if (message.Message != null)
@@ -147,7 +146,9 @@ namespace Uncreated.Warfare.Components
                     break;
                 }
             }
-            StartCoroutine(ToastDelay(message, info));
+            if (_toastDelay != null)
+                StopCoroutine(_toastDelay);
+            _toastDelay = StartCoroutine(ToastDelay(message, info));
         }
         private IEnumerator<WaitForSeconds> ToastDelay(ToastMessage message, ToastMessageInfo info)
         {

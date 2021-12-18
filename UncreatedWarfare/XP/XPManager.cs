@@ -145,7 +145,7 @@ namespace Uncreated.Warfare.XP
                 );
             }
         }
-        private static string GetProgress(int currentPoints, int totalPoints, int barLength = 50)
+        public static string GetProgress(int currentPoints, int totalPoints, int barLength = 50)
         {
             float ratio = currentPoints / (float)totalPoints;
 

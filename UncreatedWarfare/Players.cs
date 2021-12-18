@@ -132,6 +132,7 @@ namespace Uncreated.Players
         SEVERE = 2,
         MINIXP = 3,
         MINIOFFICERPTS = 4,
-        BIG = 5
+        BIG = 5,
+        PROGRESS = 6
     }
 }

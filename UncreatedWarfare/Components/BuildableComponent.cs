@@ -44,7 +44,12 @@ namespace Uncreated.Warfare.Components
 
             EffectManager.sendEffect(38405, EffectManager.MEDIUM, builder.Position);
 
-            XPManager.AddXP(builder.Player, XPManager.config.Data.ShovelXP, Math.Round((float)Hits / Buildable.requiredHits * 100F).ToString() + "%", true);
+            //XPManager.AddXP(builder.Player, XPManager.config.Data.ShovelXP, Math.Round((float)Hits / Buildable.requiredHits * 100F).ToString() + "%", true);
+
+            if (builder.Player.TryGetPlaytimeComponent(out var component))
+            {
+                component.QueueMessage(new Players.ToastMessage(XPManager.GetProgress(Hits, Buildable.requiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
+            }
 
             if (Hits >= Buildable.requiredHits)
             {
@@ -57,7 +62,7 @@ namespace Uncreated.Warfare.Components
 
             if (Buildable.type != EbuildableType.EMPLACEMENT)
             {
-                Barricade barricade = new Barricade(UCAssetManager.FindItemBarricadeAsset(Buildable.structureID));
+                Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Buildable.structureID));
                 Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
                 BarricadeDrop structure = BarricadeManager.FindBarricadeByRootTransform(transform);
 
@@ -166,7 +171,7 @@ namespace Uncreated.Warfare.Components
             ulong team = placer.GetTeam();
 
             BarricadeDrop radio = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBRadioGUID, FOBManager.config.Data.FOBBuildPickupRadius, point, team, false).FirstOrDefault();
-            BarricadeDrop fob = radio ?? UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 30, radio.model.position, team, false).FirstOrDefault();
+            BarricadeDrop fob = radio == null ? null : UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 30, radio.model.position, team, false).FirstOrDefault();
 
             Vector3 center = Vector3.zero;
             float radius = 30;
@@ -232,20 +237,13 @@ namespace Uncreated.Warfare.Components
                 }
             }
 
-            if ((radio.model.position - point).sqrMagnitude > radius)
+            if (radio == null || (radio.model.position - point).sqrMagnitude > Math.Pow(radius, 2))
             {
                 // not in fob radius
                 if (useSmallRadius)
                     placer?.Message("build_error_radiustoosmall", "30");
                 else
                     placer?.Message("build_error_notinradius");
-                return false;
-            }
-
-            if (NearbyBuild < buildable.requiredBuild)
-            {
-                // not enough build
-                placer?.Message("build_error_notenoughbuild", NearbyBuild.ToString(), buildable.requiredBuild.ToString());
                 return false;
             }
 
@@ -270,6 +268,13 @@ namespace Uncreated.Warfare.Components
                 }
             }
 
+            if (NearbyBuild < buildable.requiredBuild)
+            {
+                // not enough build
+                placer?.Message("build_error_notenoughbuild", NearbyBuild.ToString(), buildable.requiredBuild.ToString());
+                return false;
+            }
+
             RemoveNearbyItemsByID(BuildID, buildable.requiredBuild, center, FOBManager.config.Data.FOBBuildPickupRadius);
 
             return true;
@@ -291,8 +296,8 @@ namespace Uncreated.Warfare.Components
             for (int i = 0; i < search.Count; i++)
             {
                 RegionCoordinate r = search[i];
-                if (ItemManager.regions[r.x, r.y] != null)
                 {
+                if (ItemManager.regions[r.x, r.y] != null)
                     for (int j = ItemManager.regions[r.x, r.y].items.Count - 1; j >= 0; j--)
                     {
                         if (removed_count < amount)
