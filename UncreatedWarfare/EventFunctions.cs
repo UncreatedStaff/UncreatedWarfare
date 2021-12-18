@@ -333,11 +333,11 @@ namespace Uncreated.Warfare
                 {
                     ulong team = player.GetTeam();
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), ToastMessageSeverity.INFO);
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO);
                 } else
                 {
                     ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), ToastMessageSeverity.INFO);
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO);
                 }
                 F.Broadcast("player_connected", names.CharacterName);
                 Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList

@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Vehicles
             }
             if (save) Save();
         }
-        public static void SetItems(Guid vehicleID, List<ushort> newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
+        public static void SetItems(Guid vehicleID, Guid[] newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
         public static void AddCrewmanSeat(Guid vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
         public static void RemoveCrewmanSeat(Guid vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
         /// <summary>Level must be loaded.</summary>
@@ -528,7 +528,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         [JsonIgnore]
         private Rank _rank;
-        public List<ushort> Items;
+        public Guid[] Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
         public int RequestCount;
@@ -548,7 +548,7 @@ namespace Uncreated.Warfare.Vehicles
             RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
-            Items = new List<ushort>();
+            Items = new Guid[0];
             CrewSeats = new List<byte>();
             Metadata = null;
             RequestCount = 0;
@@ -569,7 +569,7 @@ namespace Uncreated.Warfare.Vehicles
             RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
-            Items = new List<ushort>();
+            Items = new Guid[0];
             CrewSeats = new List<byte>();
             Metadata = null;
             RequestCount = 0;
@@ -596,19 +596,16 @@ namespace Uncreated.Warfare.Vehicles
                     barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
                         bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
                 }
-                if (barricades.Count > 0) Metadata = new MetaSave(vehicle.id, barricades);
+                if (barricades.Count > 0) Metadata = new MetaSave(barricades);
             }
         }
     }
 
     public class MetaSave
     {
-        public ushort VehicleID;
         public List<VBarricade> Barricades;
-
-        public MetaSave(ushort vehicleID, List<VBarricade> barricades)
+        public MetaSave(List<VBarricade> barricades)
         {
-            VehicleID = vehicleID;
             Barricades = barricades;
         }
     }

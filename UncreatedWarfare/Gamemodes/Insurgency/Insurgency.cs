@@ -150,7 +150,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
-                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), ToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG);
             }
             StatsManager.ModifyTeam(winner, t => t.Wins++, false);
             StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
@@ -330,9 +330,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, F.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", ToastMessageSeverity.BIG);
+                    ToastMessage.QueueMessage(player, F.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", EToastMessageSeverity.BIG);
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, F.Translate("cache_discovered_defense", player), "", ToastMessageSeverity.BIG);
+                    ToastMessage.QueueMessage(player, F.Translate("cache_discovered_defense", player), "", EToastMessageSeverity.BIG);
             }
             for (int i = 0; i < Caches.Count; i++)
             {
@@ -385,7 +385,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             {
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                     if (player.GetTeam() == DefendingTeam)
-                        ToastMessage.QueueMessage(player, F.Translate("cache_spawned_defense", player), "", ToastMessageSeverity.BIG);
+                        ToastMessage.QueueMessage(player, F.Translate("cache_spawned_defense", player), "", EToastMessageSeverity.BIG);
             }
 
             InsurgencyUI.ReplicateCacheUpdate(d);
@@ -444,9 +444,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == AttackingTeam)
-                        ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_attack", player), "", ToastMessageSeverity.BIG);
+                        ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_attack", player), "", EToastMessageSeverity.BIG);
                     else if (player.GetTeam() == DefendingTeam)
-                        ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_defense", player), "", ToastMessageSeverity.BIG);
+                        ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_defense", player), "", EToastMessageSeverity.BIG);
                 }
 
                 if (ActiveCachesCount == 0)

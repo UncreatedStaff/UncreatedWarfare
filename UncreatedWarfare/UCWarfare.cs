@@ -138,6 +138,11 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
+            // remove once effectmanager supports GUIDs
+            SquadManager.TempCacheEffectIDs();
+            CTFUI.TempCacheEffectIDs();
+            LeaderboardEx.TempCacheEffectIDs();
+            FOBManager.TempCacheEffectIDs();
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();

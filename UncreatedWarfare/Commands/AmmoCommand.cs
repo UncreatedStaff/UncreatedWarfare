@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
@@ -58,8 +59,9 @@ namespace Uncreated.Warfare.Commands
 
                     if (FOBManager.config.Data.AmmoCommandCooldown > 0)
                         CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.Data.AmmoCommandCooldown);
-                    foreach (ushort item in vehicleData.Items)
-                        ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
+                    foreach (Guid item in vehicleData.Items)
+                        if (Assets.find(item) is ItemAsset a)
+                            ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
 
                     player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
                     return;
@@ -91,7 +93,7 @@ namespace Uncreated.Warfare.Commands
                 
                 ulong team = player.GetTeam();
 
-                if (vehicleData.Items.Count == 0)
+                if (vehicleData.Items.Length == 0)
                 {
                     player.SendChat("ammo_vehicle_full_already");
                     return;
@@ -104,12 +106,13 @@ namespace Uncreated.Warfare.Commands
                 if (FOBManager.config.Data.AmmoCommandCooldown > 0)
                     CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.Data.AmmoCommandCooldown);
 
-                foreach (ushort item in vehicleData.Items)
-                    ItemManager.dropItem(new Item(item, true), player.Position, true, true, true);
+                foreach (Guid item in vehicleData.Items)
+                    if (Assets.find(item) is ItemAsset a)
+                        ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
 
                 int toRemove = vehicleData.RearmCost;
 
-                foreach (var a in NearbyAmmoStations)
+                foreach (BarricadeDrop a in NearbyAmmoStations)
                 {
                     if (a.interactable is InteractableStorage storage)
                     {

@@ -16,6 +16,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (Assets.find(Gamemode.Config.UI.CTFLeaderboardGUID) is EffectAsset ctfleaderboard)
                 ctfLeaderboardId = ctfleaderboard.id;
+            F.Log("Found lb UIs: " + ctfLeaderboardId);
         }
     }
 

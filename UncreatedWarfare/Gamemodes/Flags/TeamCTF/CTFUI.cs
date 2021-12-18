@@ -24,6 +24,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 captureID = capture.id;
             if (Assets.find(Gamemode.Config.UI.HeaderGUID) is EffectAsset header)
                 headerID = header.id;
+            F.Log("Found flags UIs: " + flagListID + ", " + captureID + ", " + headerID);
         }
         public static int FromMax(int cap) => Math.Abs(cap) >= Mathf.RoundToInt(Flag.MAX_POINTS) ? Gamemode.Config.UI.ProgressChars.Length - 1 : ((Gamemode.Config.UI.ProgressChars.Length - 1) / Mathf.RoundToInt(Flag.MAX_POINTS)) * Math.Abs(cap);
         public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UI.ProgressChars.Length - 1 : ((Gamemode.Config.UI.ProgressChars.Length - 1) / max) * Math.Abs(cap);

@@ -10,17 +10,20 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -1002,6 +1005,185 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
             CooldownManager.RemoveCooldown(ucplayer);
+        }
+        private void queuetest(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            ToastMessage.QueueMessage(player, "some info 1", EToastMessageSeverity.INFO);
+            ToastMessage.QueueMessage(player, "some info 2", EToastMessageSeverity.INFO);
+            ToastMessage.QueueMessage(player, "some severe info 3", EToastMessageSeverity.SEVERE);
+            ToastMessage.QueueMessage(player, "some warned info 4", EToastMessageSeverity.WARNING);
+            ToastMessage.QueueMessage(player, "some xp 5", "lots of xp", EToastMessageSeverity.MINIXP);
+            ToastMessage.QueueMessage(player, "some xp 6", "more xp", EToastMessageSeverity.MINIOFFICERPTS);
+            ToastMessage.QueueMessage(player, "some ofp 7", "lots of ofp", EToastMessageSeverity.MINIXP);
+            ToastMessage.QueueMessage(player, "some ofp 8", "more ofp", EToastMessageSeverity.MINIOFFICERPTS);
+            ToastMessage.QueueMessage(player, "BIG MESSAGE HOW COOL", "actually sick ngl", EToastMessageSeverity.BIG);
+            ToastMessage.QueueMessage(player, "ANOTHER BIG MESSAGE HOW COOL", "blown out of my socks because of this amazing advancement in queue technology made by siege pro league player.", EToastMessageSeverity.BIG);
+            ToastMessage.QueueMessagePriority(player, "some info 3", EToastMessageSeverity.INFO);
+        }
+        private void instid(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            Transform t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL | RayMasks.VEHICLE);
+            if (t == null)
+            {
+                player.SendChat("No transform found");
+                return;
+            }
+            BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(t);
+            if (bd != null)
+            {
+                player.SendChat(bd.instanceID.ToString());
+                return;
+            }
+            StructureDrop dp = StructureManager.FindStructureByRootTransform(t);
+            if (dp != null)
+            {
+                player.SendChat(dp.instanceID.ToString());
+                return;
+            }
+            for (int i = 0; i < VehicleManager.vehicles.Count; i++)
+            {
+                if (VehicleManager.vehicles[i].transform == t)
+                {
+                    player.SendChat(VehicleManager.vehicles[i].instanceID.ToString());
+                    return;
+                }
+            }
+            for (byte b = 0; b < Regions.WORLD_SIZE; b++)
+            {
+                for (byte b2 = 0; b2 < Regions.WORLD_SIZE; b2++)
+                {
+                    for (int i = 0; i < LevelObjects.objects[b, b2].Count; i++)
+                    {
+                        LevelObject obj = LevelObjects.objects[b, b2][i];
+                        if (obj.transform == t)
+                        {
+                            player.SendChat(obj.instanceID.ToString());
+                            return;
+                        }
+                    }
+                }
+            }
+            player.SendChat("No instanced object found");
+        }
+        private void linkto(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint instanceid))
+            {
+                player.SendChat("Command usage: /test linkto <spawn's expected vb instance id>");
+                return;
+            }
+            Transform t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE); 
+            if (t == null)
+            {
+                player.SendChat("No transform found");
+                return;
+            }
+            BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(t);
+            if (bd != null)
+            {
+                if (StructureSaver.StructureExists(bd.instanceID, EStructType.BARRICADE, out _))
+                {
+                    if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
+                    {
+                        BarricadeDrop oldd = F.GetBarricadeFromInstID(instanceid);
+                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
+                            UnityEngine.Object.Destroy(vsc);
+                        spawn.SpawnPadInstanceID = bd.instanceID;
+                        spawn.SpawnpadLocation = new SerializableTransform(bd.model);
+                        spawn.BarricadeData = bd.GetServersideData();
+                        spawn.BarricadeDrop = bd;
+                        spawn.initialized = true;
+                        spawn.IsActive = true;
+                        bd.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                        player.SendChat("Modified inst id from existing barricade.");
+                        VehicleSpawner.Save();
+                    }
+                    else
+                    {
+                        player.SendChat("No vehicle spawn by this instance id.");
+                    }
+                }
+                else if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
+                {
+                    BarricadeDrop oldd = F.GetBarricadeFromInstID(instanceid);
+                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
+                        UnityEngine.Object.Destroy(vsc);
+                    StructureSaver.AddStructure(bd, bd.GetServersideData(), out _);
+                    spawn.SpawnPadInstanceID = bd.instanceID;
+                    spawn.SpawnpadLocation = new SerializableTransform(bd.model);
+                    spawn.BarricadeData = bd.GetServersideData();
+                    spawn.BarricadeDrop = bd;
+                    spawn.initialized = true;
+                    spawn.IsActive = true;
+                    bd.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                    player.SendChat("Modified inst id from new barricade.");
+                    VehicleSpawner.Save();
+                }
+                else
+                    player.SendChat("No vehicle spawn by this instance id.");
+                return;
+            }
+            StructureDrop dp = StructureManager.FindStructureByRootTransform(t);
+            if (dp != null)
+            {
+                if (StructureSaver.StructureExists(dp.instanceID, EStructType.STRUCTURE, out _))
+                {
+                    if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
+                    {
+                        StructureDrop oldd = F.GetStructureFromInstID(instanceid);
+                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
+                            UnityEngine.Object.Destroy(vsc);
+                        spawn.SpawnPadInstanceID = dp.instanceID;
+                        spawn.SpawnpadLocation = new SerializableTransform(dp.model);
+                        spawn.StructureData = dp.GetServersideData();
+                        spawn.StructureDrop = dp;
+                        spawn.initialized = true;
+                        spawn.IsActive = true;
+                        dp.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                        player.SendChat("Modified inst id from existing barricade.");
+                        VehicleSpawner.Save();
+                    }
+                    else
+                    {
+                        player.SendChat("No vehicle spawn by this instance id.");
+                    }
+                }
+                else if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
+                {
+                    StructureDrop oldd = F.GetStructureFromInstID(instanceid);
+                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
+                        UnityEngine.Object.Destroy(vsc);
+                    StructureSaver.AddStructure(dp, dp.GetServersideData(), out _);
+                    spawn.SpawnPadInstanceID = dp.instanceID;
+                    spawn.SpawnpadLocation = new SerializableTransform(dp.model);
+                    spawn.StructureData = dp.GetServersideData();
+                    spawn.StructureDrop = dp;
+                    spawn.initialized = true;
+                    spawn.IsActive = true;
+                    dp.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                    player.SendChat("Modified inst id from new barricade.");
+                    VehicleSpawner.Save();
+                }
+                else
+                    player.SendChat("No vehicle spawn by this instance id.");
+                return;
+            }
+            player.SendChat("Found no structure or barricade.");
         }
     }
 #pragma warning restore IDE0051

@@ -253,7 +253,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
         }
     }
-    public abstract class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILongestShotTracker, IFobsTracker
+    public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILongestShotTracker, IFobsTracker
     {
         public int fobsPlacedT1;
         public int fobsPlacedT2;

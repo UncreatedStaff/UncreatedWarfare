@@ -28,6 +28,23 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
+        public void Tick()
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                VehicleSign sign = ActiveObjects[i];
+                if (sign == null || sign.save == null)
+                    continue;
+                BarricadeDrop signdrop = F.GetBarricadeFromInstID(sign.save.instance_id);
+                if (signdrop != null)
+                {
+                    if (signdrop.interactable is InteractableSign interact && Regions.tryGetCoordinate(signdrop.model.position, out byte x, out byte y))
+                    {
+                        F.InvokeSignUpdateForAll(interact, x, y, sign.placeholder_text);
+                    }
+                }
+            }
+        }
         internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
             for (int i = 0; i < ActiveObjects.Count; i++)
@@ -181,7 +198,7 @@ namespace Uncreated.Warfare.Vehicles
             this.bay_instance_id = bay.SpawnPadInstanceID;
             this.bay_type = bay.type;
             Asset asset = Assets.find(bay.VehicleID);
-            this.placeholder_text = $"sign_vbs_" + asset == null ? bay.VehicleID.ToString("N") : asset.id.ToString(Data.Locale);
+            this.placeholder_text = $"sign_vbs_" + (asset == null ? bay.VehicleID.ToString("N") : asset.id.ToString(Data.Locale));
             this.sign_transform = save.transform;
             if (StructureSaver.StructureExists(bay.SpawnPadInstanceID, bay.type, out Structure s))
                 this.bay_transform = s.transform;

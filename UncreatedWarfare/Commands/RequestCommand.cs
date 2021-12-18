@@ -361,9 +361,10 @@ namespace Uncreated.Warfare.Commands
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
                 }
-                foreach (ushort item in data.Items)
+                foreach (Guid item in data.Items)
                 {
-                    ItemManager.dropItem(new Item(item, true), ucplayer.Position, true, true, true);
+                    if (Assets.find(item) is ItemAsset a)
+                        ItemManager.dropItem(new Item(a.id, true), ucplayer.Position, true, true, true);
                 }
                 Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
