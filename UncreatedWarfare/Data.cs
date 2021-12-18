@@ -204,12 +204,6 @@ namespace Uncreated.Warfare
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 
-            // remove once effectmanager supports GUIDs
-            SquadManager.TempCacheEffectIDs();
-            CTFUI.TempCacheEffectIDs();
-            LeaderboardEx.TempCacheEffectIDs();
-            FOBManager.TempCacheEffectIDs();
-
             /* CONSTRUCT FRAMEWORK */
             F.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);

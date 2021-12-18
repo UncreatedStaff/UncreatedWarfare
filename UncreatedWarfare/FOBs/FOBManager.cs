@@ -972,10 +972,8 @@ namespace Uncreated.Warfare.FOBs
         public ushort AmmoCrateRequiredBuild;
         public ushort RepairStationRequiredBuild;
 
-        public List<Emplacement> Emplacements;
-        public List<Fortification> Fortifications;
+        public List<BuildableData> Buildables;
         public Guid[] LogiTruckIDs;
-        public Guid MortarEmplacementBase;
         public int AmmoBagMaxUses;
 
         public float DeloyMainDelay;
@@ -1008,8 +1006,6 @@ namespace Uncreated.Warfare.FOBs
             AmmoCrateRequiredBuild = 2;
             AmmoCommandCooldown = 0f;
 
-            MortarEmplacementBase = new Guid("c3eb4dd3-fd1d-4639-93ec-69c4c3de50d7");
-
             RepairStationRequiredBuild = 6;
 
             LogiTruckIDs = new Guid[4]
@@ -1023,96 +1019,199 @@ namespace Uncreated.Warfare.FOBs
 
             MortarBase = new Guid("6ff4826e-aeb1-4c7c-ac1c-f25a55d24bd3");
 
-            Fortifications = new List<Fortification>() {
-                new Fortification
+            Buildables = new List<BuildableData>()
+            {
+                new BuildableData
                 {
-                    base_id = new Guid("15f674dc-af3f-44e1-9a12-4c8bf7e19ca2"), // D_Sandbag_Line
-                    barricade_id = new Guid("ab702192-eab4-456e-bb9f-6d7cc74d4ba2"),
-                    required_build = 1
+                    structureID = new Guid("61c349f1-0000-498f-a2b9-2c029d38e523"),
+                    foundationID = new Guid("1bb17277-dd81-48df-9f4c-53d1a19b2503"),
+                    type = EbuildableType.FOB,
+                    requiredHits = 40,
+                    requiredBuild = 20,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Fortification
+                new BuildableData
                 {
-                    base_id = new Guid("a9294335-d8e8-4b76-b1cb-cb7d70f66aaa"), // D_Sandbag_Pillbox
-                    barricade_id = new Guid("f3bd9ee2-fa33-4faa-bc8f-d9d5a3b84424"),
-                    required_build = 1
+                    structureID = new Guid("6fe20851-9d7c-45b0-be38-273118eea7fd"),
+                    foundationID = new Guid("eccfe06e-53d0-41d5-b83c-614ffa62ee59"),
+                    type = EbuildableType.AMMO_CRATE,
+                    requiredHits = 8,
+                    requiredBuild = 20,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Fortification
+                new BuildableData
                 {
-                    base_id = new Guid("920f8b30-ae31-4406-ab03-2a0c2efa753d"), // D_Sandbag_Crescent
-                    barricade_id = new Guid("eefee76f-0773-49e5-8359-f5fd03cf311d"),
-                    required_build = 1
+                    structureID = new Guid("c0d11e06-6669-4dde-a667-377b4c0580be"),
+                    foundationID = new Guid("26a6b91c-d194-4730-a0f2-8e5f299cebf9"),
+                    type = EbuildableType.AMMO_CRATE,
+                    requiredHits = 30,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Fortification
+                new BuildableData
                 {
-                    base_id = new Guid("12ea830d-d9ab-4f94-9893-bbbbc5e9a5f6"), // D_Sandbag_Foxhole
-                    barricade_id = new Guid("a71e3e3d-6bb5-4a36-b7bd-8bf5f25160aa"),
-                    required_build = 2
+                    // sandbag line
+                    structureID = new Guid("ab702192-eab4-456e-bb9f-6d7cc74d4ba2"),
+                    foundationID = new Guid("15f674dc-af3f-44e1-9a12-4c8bf7e19ca2"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 8,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Fortification
+                new BuildableData
                 {
-                    base_id = new Guid("a2a8a01a-5845-4816-a6c9-a047df0558ad"), // D_Razorwire
-                    barricade_id = new Guid("bc24bd85-ff71-4ff7-bb2f-8b2dd5056395"),
-                    required_build = 1
+                    // sandbag pillbox
+                    structureID = new Guid("a9294335-d8e8-4b76-b1cb-cb7d70f66aaa"),
+                    foundationID = new Guid("f3bd9ee2-fa33-4faa-bc8f-d9d5a3b84424"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 8,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Fortification
+                new BuildableData
                 {
-                    base_id = new Guid("baf23a8b-5144-41ee-8db8-91a3ddf32ef4"), // D_Hesco_Wall
-                    barricade_id = new Guid("e1af3a3a-f31e-4996-bc5d-6ffd9a0773ec"),
-                    required_build = 3
+                    // sandbag crescent
+                    structureID = new Guid("920f8b30-ae31-4406-ab03-2a0c2efa753d"),
+                    foundationID = new Guid("eefee76f-0773-49e5-8359-f5fd03cf311d"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 8,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Fortification
+                new BuildableData
                 {
-                    base_id = new Guid("827d0ca8-bfff-43a3-9f75-0f191e16ea71"), // D_Hesco_Tower
-                    barricade_id = new Guid("857c8516-1f25-4964-a921-700a69e215a9"),
-                    required_build = 3
-                }
-            };
-
-            Emplacements = new List<Emplacement>() {
-                new Emplacement
-                {
-                    baseID = new Guid("80396c36-1d30-40d7-beb3-921964ec2997"), // M2A1
-                    vehicleID = new Guid("aa3c6af4-9112-43b5-b5c9-dc95ca1263bf"),
-                    ammoID = new Guid("523c49ce-4df4-4d46-ba37-be0dd6b4504b"),
-                    ammoAmount = 2,
-                    requiredBuild = 4,
-                    allowed_vehicles = 2
+                    // sandbag foxhole
+                    structureID = new Guid("12ea830d-d9ab-4f94-9893-bbbbc5e9a5f6"),
+                    foundationID = new Guid("a71e3e3d-6bb5-4a36-b7bd-8bf5f25160aa"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 12,
+                    requiredBuild = 2,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Emplacement
+                new BuildableData
                 {
-                    baseID = new Guid("e44ba62f-763c-432e-882d-dc7eabaa9c77"), // Kord
-                    vehicleID = new Guid("86cfe1eb-8be1-44ae-ae76-59c9c74ff11a"),
-                    ammoID = new Guid("6e9bc208-3a12-46b4-9b16-56c2ec6f535a"),
-                    ammoAmount = 2,
-                    requiredBuild = 4,
-                    allowed_vehicles = 2
+                    // razorwire
+                    structureID = new Guid("a2a8a01a-5845-4816-a6c9-a047df0558ad"),
+                    foundationID = new Guid("bc24bd85-ff71-4ff7-bb2f-8b2dd5056395"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 8,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Emplacement
+                new BuildableData
                 {
-                    baseID = new Guid("a68ae466-fb80-4829-a0eb-0d4556071801"), // TOW
-                    vehicleID = new Guid("9d305050-a6a1-4234-9376-d6c49fb38362"),
-                    ammoID = new Guid("3128a69d-06ac-4bbb-bfdd-c992aa7185a6"),
-                    ammoAmount = 1,
-                    requiredBuild = 8,
-                    allowed_vehicles = 1
+                    // hesco wall
+                    structureID = new Guid("baf23a8b-5144-41ee-8db8-91a3ddf32ef4"),
+                    foundationID = new Guid("e1af3a3a-f31e-4996-bc5d-6ffd9a0773ec"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 20,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Emplacement
+                new BuildableData
                 {
-                    baseID = new Guid("37811b18-4774-4c95-8fcb-30a0b759874b"), // Kornet
-                    vehicleID = new Guid("677b1084-dffa-4633-84d2-9167a3fae25b"),
-                    ammoID = new Guid("d7774b01-7c40-4adb-b0a0-fe8e902b9689"),
-                    ammoAmount = 1,
-                    requiredBuild = 8,
-                    allowed_vehicles = 1
+                    // hesco tower
+                    structureID = new Guid("827d0ca8-bfff-43a3-9f75-0f191e16ea71"),
+                    foundationID = new Guid("857c8516-1f25-4964-a921-700a69e215a9"),
+                    type = EbuildableType.FORTIFICATION,
+                    requiredHits = 20,
+                    requiredBuild = 1,
+                    team = 0,
+                    emplacementData = null
                 },
-                new Emplacement
+                new BuildableData
                 {
-                    baseID = new Guid("6ff4826e-aeb1-4c7c-ac1c-f25a55d24bd3"), // Mortar
-                    vehicleID = new Guid("94bf8feb-05bc-4680-ac26-464bc175460c"),
-                    ammoID = new Guid("66f4c76a-119e-4d6c-a9d0-b1a866c4d901"),
-                    ammoAmount = 3,
-                    requiredBuild = 6,
-                    allowed_vehicles = 2
+                    // M2A1
+                    structureID = new Guid("aa3c6af4-9112-43b5-b5c9-dc95ca1263bf"),
+                    foundationID = new Guid("80396c36-1d30-40d7-beb3-921964ec2997"),
+                    type = EbuildableType.EMPLACEMENT,
+                    requiredHits = 12,
+                    requiredBuild = 10,
+                    team = 1,
+                    emplacementData = new EmplacementData
+                    {
+                        baseID = Guid.Empty,
+                        ammoID = new Guid("523c49ce-4df4-4d46-ba37-be0dd6b4504b"),
+                        ammoAmount = 2,
+                        allowedPerFob = 2
+                    }
+                },
+                new BuildableData
+                {
+                    // Kord
+                    structureID = new Guid("86cfe1eb-8be1-44ae-ae76-59c9c74ff11a"),
+                    foundationID = new Guid("e44ba62f-763c-432e-882d-dc7eabaa9c77"),
+                    type = EbuildableType.EMPLACEMENT,
+                    requiredHits = 12,
+                    requiredBuild = 10,
+                    team = 2,
+                    emplacementData = new EmplacementData
+                    {
+                        baseID = Guid.Empty,
+                        ammoID = new Guid("6e9bc208-3a12-46b4-9b16-56c2ec6f535a"),
+                        ammoAmount = 2,
+                        allowedPerFob = 2
+                    }
+                },
+                new BuildableData
+                {
+                    // TOW
+                    structureID = new Guid("9d305050-a6a1-4234-9376-d6c49fb38362"),
+                    foundationID = new Guid("a68ae466-fb80-4829-a0eb-0d4556071801"),
+                    type = EbuildableType.EMPLACEMENT,
+                    requiredHits = 20,
+                    requiredBuild = 15,
+                    team = 1,
+                    emplacementData = new EmplacementData
+                    {
+                        baseID = Guid.Empty,
+                        ammoID = new Guid("3128a69d-06ac-4bbb-bfdd-c992aa7185a6"),
+                        ammoAmount = 1,
+                        allowedPerFob = 1
+                    }
+                },
+                new BuildableData
+                {
+                    // Kornet
+                    structureID = new Guid("677b1084-dffa-4633-84d2-9167a3fae25b"),
+                    foundationID = new Guid("37811b18-4774-4c95-8fcb-30a0b759874b"),
+                    type = EbuildableType.EMPLACEMENT,
+                    requiredHits = 20,
+                    requiredBuild = 15,
+                    team = 2,
+                    emplacementData = new EmplacementData
+                    {
+                        baseID = Guid.Empty,
+                        ammoID = new Guid("d7774b01-7c40-4adb-b0a0-fe8e902b9689"),
+                        ammoAmount = 1,
+                        allowedPerFob = 1
+                    }
+                },
+                new BuildableData
+                {
+                    // Mortar
+                    structureID = new Guid("94bf8feb-05bc-4680-ac26-464bc175460c"),
+                    foundationID = new Guid("6ff4826e-aeb1-4c7c-ac1c-f25a55d24bd3"),
+                    type = EbuildableType.EMPLACEMENT,
+                    requiredHits = 20,
+                    requiredBuild = 10,
+                    team = 0,
+                    emplacementData = new EmplacementData
+                    {
+                        baseID = new Guid("c3eb4dd3-fd1d-4639-93ec-69c4c3de50d7"), // Mortar
+                        ammoID = new Guid("66f4c76a-119e-4d6c-a9d0-b1a866c4d901"),
+                        ammoAmount = 3,
+                        allowedPerFob = 2
+                    }
                 },
             };
 
@@ -1131,20 +1230,32 @@ namespace Uncreated.Warfare.FOBs
         public FOBConfig() { }
     }
 
-    public class Emplacement
+    public class BuildableData
+    {
+        public Guid foundationID;
+        public Guid structureID;
+        public EbuildableType type;
+        public int requiredHits;
+        public int requiredBuild;
+        public int team;
+        public EmplacementData emplacementData;
+    }
+
+    public class EmplacementData
     {
         public Guid vehicleID;
         public Guid baseID;
         public Guid ammoID;
         public int ammoAmount;
-        public int requiredBuild;
-        public int allowed_vehicles;
+        public int allowedPerFob;
     }
 
-    public class Fortification
+    public enum EbuildableType
     {
-        public Guid barricade_id;
-        public Guid base_id;
-        public int required_build;
+        FOB,
+        AMMO_CRATE,
+        REPAIR_STATION,
+        FORTIFICATION,
+        EMPLACEMENT
     }
 }

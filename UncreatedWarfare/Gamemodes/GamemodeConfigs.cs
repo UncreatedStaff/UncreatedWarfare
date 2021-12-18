@@ -155,6 +155,7 @@ namespace Uncreated.Warfare.Gamemodes
     public struct BARRICADE_IDS
     {
         public Guid InsurgencyCacheGUID;
+        public Guid FOBRadioGUID;
         public Guid FOBGUID;
         public Guid FOBBaseGUID;
         public Guid AmmoCrateGUID;
@@ -169,6 +170,7 @@ namespace Uncreated.Warfare.Gamemodes
         public void SetDefaults()
         {
             InsurgencyCacheGUID = new Guid("39051f33-f244-49b4-b341-7d0d666a4f27");
+            FOBRadioGUID = new Guid("72fae83175f34bde94bd52d40c7a9ebc");
             FOBGUID = new Guid("61c349f1-0000-498f-a2b9-2c029d38e523");
             FOBBaseGUID = new Guid("1bb17277-dd81-48df-9f4c-53d1a19b2503");
             AmmoCrateGUID = new Guid("6fe20851-9d7c-45b0-be38-273118eea7fd");
@@ -194,12 +196,14 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid T2Build;
         public Guid T1Ammo;
         public Guid T2Ammo;
+        public Guid EntrenchingTool;
         public void SetDefaults()
         {
             T1Build = new Guid("a70978a0-b47e-4017-a026-1e676af57042");
             T2Build = new Guid("6a8b8b3c-7960-4aee-a97f-53c235947a1f");
             T1Ammo = new Guid("51e1e372-bf53-41e1-b4b1-6a0eacce37eb");
             T2Ammo = new Guid("8dd66da5-affa-480b-a324-e270e52a46d7");
+            EntrenchingTool = new Guid("6cee2662e8884d7bad3a5d743f8222da");
         }
     }
 

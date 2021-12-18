@@ -54,7 +54,7 @@ namespace Uncreated.Warfare.XP
             }
             else return ucplayer.CachedXp;
         }
-        public static void AddXP(Player player, int amount, string message = "")
+        public static void AddXP(Player player, int amount, string message = "", bool ignoreToastQueue = false)
         {
             if (!Data.TrackStats) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -73,7 +73,12 @@ namespace Uncreated.Warfare.XP
             }
 
             if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
-                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
+            {
+                if (ignoreToastQueue)
+                    ToastMessage.SendMessage(player, new ToastMessage(F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP));
+                else
+                    ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, ToastMessageSeverity.MINIXP);
+            }
 
             UpdateUI(player, newBalance, out Rank rank);
 
@@ -300,6 +305,7 @@ namespace Uncreated.Warfare.XP
         public int FlagNeutralizedXP;
         public int TransportPlayerXP;
         public float TimeBetweenXpAndOfpAwardForTransport;
+        public int ShovelXP;
         public int BuiltFOBXP;
         public int BuiltAmmoCrateXP;
         public int BuiltRepairStationXP;
@@ -329,6 +335,7 @@ namespace Uncreated.Warfare.XP
             FlagNeutralizedXP = 40;
             TransportPlayerXP = 10;
             TimeBetweenXpAndOfpAwardForTransport = 10f;
+            ShovelXP = 3;
             BuiltFOBXP = 50;
             BuiltAmmoCrateXP = 10;
             BuiltRepairStationXP = 25;

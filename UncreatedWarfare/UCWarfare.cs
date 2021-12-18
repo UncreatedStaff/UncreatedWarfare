@@ -142,6 +142,13 @@ namespace Uncreated.Warfare
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
             F.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
+
+            // remove once effectmanager supports GUIDs
+            SquadManager.TempCacheEffectIDs();
+            CTFUI.TempCacheEffectIDs();
+            LeaderboardEx.TempCacheEffectIDs();
+            FOBManager.TempCacheEffectIDs();
+
             Data.Gamemode.OnLevelLoaded();
         }
         private void SubscribeToEvents()

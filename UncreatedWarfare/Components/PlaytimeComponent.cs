@@ -50,9 +50,9 @@ namespace Uncreated.Warfare.Components
         public Guid lastRoadkilled;
         private Coroutine _currentTeleportRequest;
         public Vehicles.VehicleSpawn currentlylinking;
-        public void QueueMessage(ToastMessage message)
+        public void QueueMessage(ToastMessage message, bool ignoreQueue)
         {
-            if (toastMessages.Count == 0 && toastMessageOpen == 0)
+            if (ignoreQueue || (toastMessages.Count == 0 && toastMessageOpen == 0))
                 SendToastMessage(message);
             else
                 toastMessages.Enqueue(message);

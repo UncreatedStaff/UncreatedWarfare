@@ -115,6 +115,9 @@ namespace Uncreated.Warfare
             SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
             owner.Player = player?.player;
             owner.BarricadeGUID = data.barricade.asset.GUID;
+
+            
+
             RallyManager.OnBarricadePlaced(drop, region);
 
             RepairManager.OnBarricadePlaced(drop, region);
@@ -123,6 +126,12 @@ namespace Uncreated.Warfare
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
             {
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
+            }
+
+            var buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
+            if (buildable != null)
+            {
+                drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
 
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is(out Insurgency insurgency) && data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
@@ -202,28 +211,8 @@ namespace Uncreated.Warfare
                 }
                 RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
                 if (!shouldAllow) return;
-                if (barricade.asset.GUID == Gamemode.Config.Barricades.FOBBaseGUID && FOBManager.config.Data.RestrictFOBPlacement)
-                {
-                    if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
-                    {
-                        shouldAllow = false;
-                        player?.SendChat("no_placement_fobs_underwater");
-                        return;
-                    }
-                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
-                    {
-                        shouldAllow = false;
-                        player?.SendChat("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
-                        return;
-                    }
-                    else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
-                    {
-                        shouldAllow = false;
-                        player?.SendChat("no_placement_fobs_too_near_base");
-                        return;
-                    }
-                }
-                else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
+                
+                if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
                 {
                     if (player != null && player.OffDuty() && player.KitClass != EClass.RIFLEMAN)
                     {
@@ -253,6 +242,20 @@ namespace Uncreated.Warfare
                         player.Message("whitelist_noplace");
                         return;
                     }
+                }
+
+                if (barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
+                {
+                    shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
+                    return;
+                }
+
+                var buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
+
+                if (buildable != null)
+                {
+                    shouldAllow = BuildableComponent.TryPlaceBuildable(barricade, buildable, player, point);
+                    return;
                 }
             }
             catch (Exception ex)
@@ -410,6 +413,7 @@ namespace Uncreated.Warfare
                     shouldAllow = false;
                 }
             }
+
             if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c))
             {
                 c.LastDamager = instigatorSteamID.m_SteamID;

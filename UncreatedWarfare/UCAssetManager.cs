@@ -21,5 +21,10 @@ namespace Uncreated.Warfare
 
             return asset;
         }
+
+        public static ItemBarricadeAsset FindItemBarricadeAsset(Guid guid)
+        {
+            return Assets.find(EAssetType.ITEM).Cast<ItemBarricadeAsset>().Where(k => k.GUID == guid).FirstOrDefault();
+        }
     }
 }

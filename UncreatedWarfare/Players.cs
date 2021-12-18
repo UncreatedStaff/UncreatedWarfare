@@ -125,7 +125,12 @@ namespace Uncreated.Players
         public static void QueueMessage(Player player, ToastMessage message)
         {
             if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
-                c.QueueMessage(message);
+                c.QueueMessage(message, false);
+        }
+        public static void SendMessage(Player player, ToastMessage message)
+        {
+            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
+                c.QueueMessage(message, true);
         }
         public static void Write(ByteWriter W, ToastMessage M)
         {

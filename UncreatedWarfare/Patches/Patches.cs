@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -321,6 +322,39 @@ namespace Uncreated.Warfare
                 bool allow = true;
                 OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
                 return allow;
+            }
+
+            // SDG.Unturned.UseableGun
+            /// <summary>
+            /// prefix of <see cref="UseableMelee.fire()"/> to determine hits with the Entrenching Tool.
+            /// </summary>
+            [HarmonyPatch(typeof(UseableMelee), "fire")]
+            [HarmonyPrefix]
+            static void OnPreMeleeHit(UseableMelee __instance)
+            {
+                F.Log("Hit with: " + __instance.equippedMeleeAsset.itemName);
+
+                RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), ((ItemWeaponAsset)__instance.player.equipment.asset).range, RayMasks.BARRICADE, __instance.player);
+                if (info.transform != null)
+                {
+                    var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+                    if (drop != null)
+                    {
+                        F.Log("     BarricadeDrop found");
+
+                        if (drop.model.TryGetComponent(out BuildableComponent buildable))
+                        {
+                            F.Log("     BuildableComponent found");
+                            UCPlayer builder = UCPlayer.FromPlayer(__instance.player);
+                            if (builder.GetTeam() == drop.GetServersideData().group)
+                            {
+                                F.Log("     Group was equal");
+                                if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
+                                    buildable.IncrementBuildPoints(builder);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

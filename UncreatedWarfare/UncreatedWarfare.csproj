@@ -3,7 +3,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-    <OutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</OutputPath>
+    <OutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins</OutputPath>
 	<Version>3.21.4.1</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
@@ -27,7 +27,7 @@
     <FileVersion>3.21.4.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <BaseOutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</BaseOutputPath>
+    <BaseOutputPath>C:\Users\ben\Desktop\SteamCMD\steamapps\common\U3DS\Servers\Playground\Rocket\Plugins</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -50,16 +50,16 @@
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="com.rlabrecque.steamworks.net">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
     </Reference>
     <Reference Include="Rocket.API">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Extras\Rocket.Unturned\Rocket.API.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.API.dll</HintPath>
     </Reference>
     <Reference Include="Rocket.Core">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Extras\Rocket.Unturned\Rocket.Core.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.Core.dll</HintPath>
     </Reference>
     <Reference Include="Rocket.Unturned">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\unturned\Extras\Rocket.Unturned\Rocket.Unturned.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.Unturned.dll</HintPath>
     </Reference>
     <Reference Include="SDG.NetPak.Runtime">
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\SDG.NetPak.Runtime.dll</HintPath>
