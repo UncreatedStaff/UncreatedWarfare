@@ -183,7 +183,8 @@ namespace Uncreated.Warfare.Components
         }
         public void UpdateBunker(BarricadeDrop bunker)
         {
-            F.Log("Bunker updated: " + bunker?.GetType());
+            if (UCWarfare.Config.Debug)
+                L.Log("Bunker updated: " + bunker?.GetType());
 
             Bunker = bunker;
 
