@@ -157,6 +157,7 @@ namespace Uncreated.Warfare.Gamemodes
     {
         public Guid InsurgencyCacheGUID;
         public Guid FOBRadioGUID;
+        public Guid FOBRadioDamagedGUID;
         public Guid FOBGUID;
         public Guid FOBBaseGUID;
         public Guid AmmoCrateGUID;
@@ -172,6 +173,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             InsurgencyCacheGUID = new Guid("39051f33-f244-49b4-b341-7d0d666a4f27");
             FOBRadioGUID = new Guid("72fae83175f34bde94bd52d40c7a9ebc");
+            FOBRadioDamagedGUID = new Guid("be8da1aa6deb44ecb4546ce7102fae41");
             FOBGUID = new Guid("61c349f1-0000-498f-a2b9-2c029d38e523");
             FOBBaseGUID = new Guid("1bb17277-dd81-48df-9f4c-53d1a19b2503");
             AmmoCrateGUID = new Guid("6fe20851-9d7c-45b0-be38-273118eea7fd");

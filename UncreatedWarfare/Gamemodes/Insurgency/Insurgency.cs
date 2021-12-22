@@ -18,6 +18,8 @@ using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Components;
+using Cache = Uncreated.Warfare.Components.Cache;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency
 {
@@ -100,7 +102,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             _vehicleSigns = new VehicleSigns();
             _requestSigns = new RequestSigns();
             _gameStats = UCWarfare.I.gameObject.AddComponent<InsurgencyTracker>();
-            FOBManager.LoadFobsFromMap();
+            //FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             VehicleSpawner.OnLevelLoaded();
             RallyManager.WipeAllRallies();
@@ -323,9 +325,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             return false;
         }
-        public void OnCacheDiscovered(FOB cache)
+        public void OnCacheDiscovered(Cache cache)
         {
-            cache.isDiscovered = true;
+            cache.IsDiscovered = true;
 
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
@@ -370,7 +372,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 L.LogWarning("Foundation drop is null.");
                 return;
             }
-            FOB cache = FOBManager.RegisterNewFOB(foundationDrop, UCWarfare.GetColorHex("insurgency_cache_color"), true);
+            Cache cache = FOBManager.RegisterNewCache(foundationDrop);
             CacheData d = Caches[CachesDestroyed];
             CacheData d2 = Caches[CachesDestroyed + 1];
             if (!d.IsActive)
@@ -393,7 +395,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 
             SpawnCacheItems(cache);
         }
-        void SpawnCacheItems(FOB cache)
+        void SpawnCacheItems(Cache cache)
         {
             Guid ammoID;
             Guid buildID;
@@ -430,7 +432,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             yield return new WaitForSeconds(60);
             SpawnNewCache(true);
         }
-        public void OnCacheDestroyed(FOB cache, UCPlayer destroyer)
+        public void OnCacheDestroyed(Cache cache, UCPlayer destroyer)
         {
             CachesDestroyed++;
             CachesLeft--;
@@ -521,14 +523,14 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             public int Number { get => Cache != null ? Cache.Number : 0;  }
             public bool IsActive { get => Cache != null;  }
             public bool IsDestroyed { get => Cache != null && Cache.Structure.GetServersideData().barricade.isDead; }
-            public bool IsDiscovered { get => Cache != null && Cache.isDiscovered; }
-            public FOB Cache { get; private set; }
+            public bool IsDiscovered { get => Cache != null && Cache.IsDiscovered; }
+            public Cache Cache { get; private set; }
 
             public CacheData()
             {
                 Cache = null;
             }
-            public void Activate(FOB cache)
+            public void Activate(Cache cache)
             {
                 Cache = cache;
             }

@@ -3,7 +3,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -147,28 +146,6 @@ namespace Uncreated.Warfare
             }
             drop = null;
             return false;
-        }
-        public static IEnumerable<BarricadeDrop> GetAllFobs(ulong team = 0)
-        {
-            List<BarricadeDrop> list = new List<BarricadeDrop>();
-            ulong group = TeamManager.GetGroupID(team);
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID && (!(team == 1 || team == 2) || region.drops[i].GetServersideData().group == group))
-                        {
-                            list.Add(region.drops[i]);
-                        }
-                    }
-                }
-            }
-
-            return list;
         }
         [Obsolete]
         public static IEnumerable<BarricadeDrop> GetBarricadesByID(ushort ID)
@@ -730,6 +707,43 @@ namespace Uncreated.Warfare
                 }
             }
             return null;
+        }
+
+        public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius)
+        {
+            List<RegionCoordinate> regions = new List<RegionCoordinate>();
+            Regions.getRegionsInRadius(center, radius, regions);
+            return RemoveNearbyItemsByID(id, amount, center, radius, regions);
+        }
+        public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
+        {
+            if (!(Assets.find(id) is ItemAsset asset))
+                return false;
+            float sqrRadius = radius * radius;
+            if (ItemManager.regions == null || sqrRadius == 0 || sqrRadius < 0) return true;
+            int removed_count = 0;
+            for (int i = 0; i < search.Count; i++)
+            {
+                RegionCoordinate r = search[i];
+                {
+                    if (ItemManager.regions[r.x, r.y] != null)
+                        for (int j = ItemManager.regions[r.x, r.y].items.Count - 1; j >= 0; j--)
+                        {
+                            if (removed_count < amount)
+                            {
+                                SDG.Unturned.ItemData item = ItemManager.regions[r.x, r.y].items[j];
+                                if (item.item.id == asset.id && (item.point - center).sqrMagnitude <= sqrRadius)
+                                {
+                                    Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
+                                        Regions.EnumerateClients(r.x, r.y, ItemManager.ITEM_REGIONS), r.x, r.y, item.instanceID);
+                                    ItemManager.regions[r.x, r.y].items.RemoveAt(j);
+                                    removed_count++;
+                                }
+                            }
+                        }
+                }
+            }
+            return removed_count >= amount;
         }
     }
 }

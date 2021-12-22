@@ -93,7 +93,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             _vehicleSpawner = new VehicleSpawner();
             _vehicleSigns = new VehicleSigns();
             _requestSigns = new RequestSigns();
-            FOBManager.LoadFobsFromMap();
             RepairManager.LoadRepairStations();
             VehicleSpawner.OnLevelLoaded();
             RallyManager.WipeAllRallies();

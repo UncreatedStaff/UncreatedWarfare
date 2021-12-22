@@ -84,7 +84,7 @@ namespace Uncreated.Warfare.Components
             new ToastMessageInfo(EToastMessageSeverity.MINIXP, new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 4f), // xp
             new ToastMessageInfo(EToastMessageSeverity.MINIOFFICERPTS, new Guid("5f695955-f0da-4d19-adac-ac39140da797"), 1, 4f), // ofp
             new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 2, 5.5f), // big
-            new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 3, 1.5f), // progress
+            new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 3, 1.6f), // progress
         };
         private static readonly bool[] channels;
         static PlaytimeComponent()
@@ -169,7 +169,6 @@ namespace Uncreated.Warfare.Components
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
-            //L.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwner>();
             for (int i = 0; i < channels.Length; i++)
                 channels[i] = false;
@@ -180,21 +179,6 @@ namespace Uncreated.Warfare.Components
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
         }
-        /// <summary>Start a delayed teleport on the player.</summary>
-        /// <returns>True if there were no requests pending, false if there were.</returns>
-        public bool TeleportDelayed(Vector3 position, float angle, float seconds, bool shouldCancelOnMove = false, bool shouldCancelOnDamage = false, bool shouldMessagePlayer = false, string locationName = "", object deployable = null)
-        {
-            if (_currentTeleportRequest == default)
-            {
-                if (shouldMessagePlayer)
-                    player.Message("deploy_standby", locationName, seconds.ToString(Data.Locale));
-                _currentTeleportRequest = StartCoroutine(TeleportDelayedCoroutine(position, angle, seconds, shouldCancelOnMove, shouldCancelOnDamage, shouldMessagePlayer, locationName, deployable));
-                return true;
-            }
-            else
-                player.Message("deploy_e_alreadydeploying");
-            return false;
-        }
         public void CancelTeleport()
         {
             if (_currentTeleportRequest != default)
@@ -203,67 +187,111 @@ namespace Uncreated.Warfare.Components
                 _currentTeleportRequest = default;
             }
         }
-        public object PendingFOB;
-        private IEnumerator<WaitForSeconds> TeleportDelayedCoroutine(Vector3 position, float angle, float seconds, bool shouldCancelOnMove, bool shouldCancelOnDamage, bool shouldMessagePlayer, string locationName, object deployable)
+        public bool TeleportTo(object location, float delay, bool shouldCancelOnMove, bool startCoolDown = true, float yawOverride = -1)
         {
-            PendingFOB = deployable;
-            byte originalhealth = player.life.health;
-            Vector3 originalPosition = new Vector3(player.transform.position.x, player.transform.position.y, player.transform.position.z);
+            UCPlayer player = UCPlayer.FromPlayer(this.player);
 
-            int counter = 0;
-            while (counter < seconds * 2)
+            if (_currentTeleportRequest == default)
             {
+                _currentTeleportRequest = StartCoroutine(TeleportCoroutine(player, location, delay, shouldCancelOnMove, startCoolDown, yawOverride));
+                return true;
+            }
+            else
+                player.Message("deploy_e_alreadydeploying");
+            return false;
+        }
+
+        private IEnumerator<WaitForSeconds> TeleportCoroutine(UCPlayer player, object structure, float delay, bool shouldCancelOnMove = false, bool startCoolDown = true, float yawOverride = -1)
+        {
+            bool isFOB = structure is FOB;
+            bool isSpecialFOB = structure is SpecialFOB;
+            bool isCache = structure is Cache;
+            bool isTransform = structure is SerializableTransform;
+
+            PendingFOB = structure;
+
+            FOB fob = null;
+            SpecialFOB special = null;
+            Cache cache = null;
+
+            if (isFOB)
+                fob = structure as FOB;
+            else if (isSpecialFOB)
+                special = structure as SpecialFOB;
+            else if (isFOB)
+                cache = structure as Cache;
+
+
+            if (isFOB)
+                player.Message("deploy_fob_standby", fob.UIColor, fob.Name, delay.ToString());
+            if (isSpecialFOB)
+                player.Message("deploy_fob_standby", special.UIColor, special.Name, delay.ToString());
+            if (isCache)
+                player.Message("deploy_fob_standby", cache.UIColor, cache.Name, delay.ToString());
+                
+            int counter = 0;
+
+            Vector3 originalPosition = player.Position;
+
+            while (counter < delay * 4)
+            {
+                yield return new WaitForSeconds(0.25F);
+
                 try
                 {
-                    if (player.life.isDead)
+                    if (player.Player.life.isDead)
                     {
-                        if (shouldMessagePlayer)
-                            player.Message("deploy_c_dead");
+                        player.Message("deploy_c_dead");
 
                         CancelTeleport();
                         yield break;
                     }
-                    if (shouldCancelOnMove && player.transform.position != originalPosition)
+                    if (shouldCancelOnMove && player.Position != originalPosition)
                     {
-                        if (shouldMessagePlayer)
-                            player.Message("deploy_c_moved");
+                        player.Message("deploy_c_moved");
 
                         CancelTeleport();
                         yield break;
                     }
-                    if (shouldCancelOnDamage && player.life.health != originalhealth)
+                    if (isFOB)
                     {
-                        if (shouldMessagePlayer)
-                            player.Message("deploy_c_damaged");
-
-                        CancelTeleport();
-                        yield break;
-                    }
-                    if (deployable is FOB fob)
-                    {
-                        if (fob.nearbyEnemies.Count != 0)
+                        if (fob.NearbyEnemies.Count != 0)
                         {
-                            if (shouldMessagePlayer)
-                                player.Message("deploy_c_enemiesNearby");
+                            player.Message("deploy_c_enemiesNearby");
 
                             CancelTeleport();
                             yield break;
                         }
-                        if (fob.Structure.GetServersideData().barricade.isDead)
+                        if (!fob.IsSpawnable)
                         {
-                            if (shouldMessagePlayer)
-                                player.Message("deploy_c_fobdead");
+                            player.Message("deploy_c_notspawnable");
 
                             CancelTeleport();
                             yield break;
                         }
                     }
-                    if (deployable is SpecialFOB special)
+                    else if (isCache)
                     {
-                        if (!special.IsActive)
+                        if (cache.NearbyAttackers.Count != 0)
                         {
-                            if (shouldMessagePlayer)
-                                player.Message("deploy_c_notactive");
+                            player.Message("deploy_c_enemiesNearby");
+
+                            CancelTeleport();
+                            yield break;
+                        }
+                        if (cache == null || cache.Structure.GetServersideData().barricade.isDead)
+                        {
+                            player.Message("deploy_c_cachedead");
+
+                            CancelTeleport();
+                            yield break;
+                        }
+                    }
+                    else if (isSpecialFOB)
+                    {
+                        if (special == null || !special.IsActive)
+                        {
+                            player.Message("deploy_c_notactive");
 
                             CancelTeleport();
                             yield break;
@@ -272,58 +300,54 @@ namespace Uncreated.Warfare.Components
                 }
                 catch (Exception ex)
                 {
-                    L.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
+                    L.LogError("Failed to teleport to FOB: " + player.Player.channel.owner.playerID.playerName);
                     L.LogError(ex);
 
                     CancelTeleport();
                 }
+
                 counter++;
-                yield return new WaitForSeconds(0.5F);
             }
-            try
+
+            Vector3 position = Vector3.zero;
+            float rotation = player.Player.transform.eulerAngles.y;
+            if (isFOB)
             {
-                if (deployable is FOB fob)
-                {
-                    if (fob.IsCache)
-                    {
-                        position = fob.Structure.model.TransformPoint(new Vector3(0, 3, 0));
-                    }
-                    else
-                    {
-                        UCPlayer FOBowner = UCPlayer.FromID(fob.Structure.GetServersideData().owner);
-                        if (FOBowner != null)
-                        {
-                            if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
-                            {
-                                XP.XPManager.AddXP(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP,
-                                    Translation.Translate("xp_deployed_fob", FOBowner));
-
-                                if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
-                                {
-                                    Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, Translation.Translate("ofp_deployed_fob", FOBowner));
-                                }
-                            }
-                        }
-                        else
-                            Data.DatabaseManager.AddXP(fob.Structure.GetServersideData().owner, XP.XPManager.config.Data.FOBDeployedXP);
-                    }
-                }
-
-                player.teleportToLocationUnsafe(position, angle);
-
-                _currentTeleportRequest = default;
-
-                if (shouldMessagePlayer)
-                    player.Message("deploy_s", locationName);
-                CooldownManager.StartCooldown(UCPlayer.FromPlayer(player), ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
-
-                yield break;
+                position = fob.Bunker.model.position;
+                rotation = fob.Bunker.model.eulerAngles.y;
             }
-            catch (Exception ex)
+            else if (isCache)
             {
-                L.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
-                L.LogError(ex);
+                position = cache.Structure.model.TransformPoint(new Vector3(0, 4, 0));
+                rotation = cache.Structure.model.eulerAngles.y;
             }
+            else if (isSpecialFOB)
+            {
+                position = special.Point;
+            }
+            else if (structure is Vector3)
+            {
+                position = (Vector3)structure;
+            }
+
+            if (yawOverride != -1)
+                rotation = yawOverride;
+
+            player.Player.teleportToLocationUnsafe(position, rotation);
+
+            _currentTeleportRequest = default;
+
+            if (isFOB)
+                player.Message("deploy_s", fob.UIColor, fob.Name);
+            if (isSpecialFOB)
+                player.Message("deploy_s", special.UIColor, special.Name);
+            if (isCache)
+                player.Message("deploy_s", cache.UIColor, cache.Name);
+
+            if (startCoolDown)
+                CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
         }
+
+        public object PendingFOB;
     }
 }

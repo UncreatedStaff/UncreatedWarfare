@@ -106,36 +106,36 @@ namespace Uncreated.Warfare
                 }
             }
 
-            [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
-            [HarmonyPostfix]
-            static void OnItemDropRemovedPostfix(
-                SDG.Unturned.ItemData __state,
-                in ServerInvocationContext context,
-                byte x,
-                byte y,
-                uint instanceID,
-                byte to_x,
-                byte to_y,
-                byte to_rot,
-                byte to_page)
-            {
-                if (__state != null)
-                {
-                    FOBs.FOBManager.OnItemRemoved(__state);
-                }
-            }
+            //[HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
+            //[HarmonyPostfix]
+            //static void OnItemDropRemovedPostfix(
+            //    SDG.Unturned.ItemData __state,
+            //    in ServerInvocationContext context,
+            //    byte x,
+            //    byte y,
+            //    uint instanceID,
+            //    byte to_x,
+            //    byte to_y,
+            //    byte to_rot,
+            //    byte to_page)
+            //{
+            //    if (__state != null)
+            //    {
+            //        FOBs.FOBManager.OnItemRemoved(__state);
+            //    }
+            //}
 
-            [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.dropItem))]
-            [HarmonyPostfix]
-            static void OnItemDropDropped(
-                Item item,
-                Vector3 point,
-                bool playEffect,
-                bool isDropped,
-                bool wideSpread)
-            {
-                FOBs.FOBManager.OnItemDropped(item, point);
-            }
+            //[HarmonyPatch(typeof(ItemManager), nameof(ItemManager.dropItem))]
+            //[HarmonyPostfix]
+            //static void OnItemDropDropped(
+            //    Item item,
+            //    Vector3 point,
+            //    bool playEffect,
+            //    bool isDropped,
+            //    bool wideSpread)
+            //{
+            //    FOBs.FOBManager.OnItemDropped(item, point);
+            //}
 
             // SDG.Unturned.BarricadeManager
             /// <summary>

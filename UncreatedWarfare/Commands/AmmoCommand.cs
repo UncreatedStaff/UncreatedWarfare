@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -67,32 +68,28 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                IEnumerable<BarricadeDrop> NearbyAmmoStations = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, 100, vehicle.transform.position, player.GetTeam(), true);
+                var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, 10, vehicle.transform.position, player.GetTeam(), false).FirstOrDefault();
 
-                if (NearbyAmmoStations.Count() == 0)
+                if (repairStation == null)
                 {
-                    player.SendChat("ammo_vehicle_not_near_ammo_crate");
+                    player.SendChat("ammo_not_near_repair_station");
                     return;
                 }
 
-                int ammo_count = 0;
+                var fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
 
-                foreach (BarricadeDrop a in NearbyAmmoStations)
+                if (fob == null)
                 {
-                    if (a.interactable is InteractableStorage storage)
-                    {
-                        ammo_count += FOBManager.CountAmmo(storage, player.GetTeam());
-                    }
+                    player.SendChat("ammo_not_near_fob");
+                    return;
                 }
 
-                if (ammo_count < vehicleData.RearmCost)
+                if (fob.Ammo < vehicleData.RearmCost)
                 {
-                    player.SendChat("ammo_not_enough_stock", ammo_count.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
+                    player.SendChat("ammo_not_enough_stock", fob.Ammo.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
                     return;
                 }
                 
-                ulong team = player.GetTeam();
-
                 if (vehicleData.Items.Length == 0)
                 {
                     player.SendChat("ammo_vehicle_full_already");
@@ -110,24 +107,7 @@ namespace Uncreated.Warfare.Commands
                     if (Assets.find(item) is ItemAsset a)
                         ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
 
-                int toRemove = vehicleData.RearmCost;
-
-                foreach (BarricadeDrop a in NearbyAmmoStations)
-                {
-                    if (a.interactable is InteractableStorage storage)
-                    {
-                        int removed = 0;
-                        if (player.IsTeam1())
-                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, Gamemode.Config.Items.T1Ammo, toRemove);
-                        else if (player.IsTeam2())
-                            removed = UCBarricadeManager.RemoveNumberOfItemsFromStorage(storage, Gamemode.Config.Items.T2Ammo, toRemove);
-
-                        if (removed >= toRemove)
-                            break;
-                        else
-                            toRemove -= removed;
-                    }
-                }
+                fob.ReduceAmmo(vehicleData.RearmCost);
 
                 return;
             }
@@ -145,11 +125,6 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (barricade.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
                 {
-                    if (!(drop.interactable is InteractableStorage storage))
-                    {
-                        player.SendChat("ammo_crate_has_no_storage");
-                        return;
-                    }
                     if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
                     {
                         player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
@@ -160,7 +135,13 @@ namespace Uncreated.Warfare.Commands
                         L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
                         return;
                     }
-                    if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == t1ammo.id)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == t2ammo.id)))
+                    
+                    if (!player.IsOnFOB(out var fob))
+                    {
+                        player.SendChat("ammo_not_near_fob");
+                        return;
+                    }
+                    if (fob.Ammo == 0)
                     {
                         player.SendChat("ammo_no_stock");
                         return;
@@ -175,10 +156,8 @@ namespace Uncreated.Warfare.Commands
 
                     if (FOBManager.config.Data.AmmoCommandCooldown > 0)
                         CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
-                    if (player.IsTeam1())
-                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, Gamemode.Config.Items.T1Ammo);
-                    else if (player.IsTeam2())
-                        UCBarricadeManager.RemoveSingleItemFromStorage(storage, Gamemode.Config.Items.T2Ammo);
+
+                    fob.ReduceAmmo(1);
                 }
                 else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.barricade.asset.GUID)
                 {

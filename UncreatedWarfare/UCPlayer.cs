@@ -10,6 +10,7 @@ using System.Linq;
 using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Kits;
@@ -264,48 +265,9 @@ namespace Uncreated.Warfare
             }
 
         }
-        const float IS_NEAR_FOB_DISTANCE = 20f; 
-        public bool IsNearFOB()
+        public bool IsOnFOB(out FOB fob)
         {
-            if (Player.life.isDead || Player.transform is null)
-                return false;
-
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == default) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        BarricadeDrop b = region.drops[i];
-                        if (b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID &&
-                            b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
-                            (b.model.position - Position).sqrMagnitude <= IS_NEAR_FOB_DISTANCE * IS_NEAR_FOB_DISTANCE)
-                            return true;
-                    }
-                }
-            }
-            if (Data.Is<Insurgency>(out _))
-            {
-                for (int x = 0; x < Regions.WORLD_SIZE; x++)
-                {
-                    for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                    {
-                        BarricadeRegion region = BarricadeManager.regions[x, y];
-                        if (region == default) continue;
-                        for (int i = 0; i < region.drops.Count; i++)
-                        {
-                            BarricadeDrop b = region.drops[i];
-                            if (b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID &&
-                                b.GetServersideData().group.GetTeam() == Player.GetTeam() &&
-                                (b.model.position - Position).sqrMagnitude <= IS_NEAR_FOB_DISTANCE * IS_NEAR_FOB_DISTANCE)
-                                return true;
-                        }
-                    }
-                }
-            }
-            return false;
+            return FOB.IsOnFOB(this, out fob);
         }
 
         public bool IsNearOtherPlayer(UCPlayer player, float distance)

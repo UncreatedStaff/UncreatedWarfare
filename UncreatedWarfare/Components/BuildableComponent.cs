@@ -24,12 +24,14 @@ namespace Uncreated.Warfare.Components
 
         public int Hits { get; private set;}
 
+        private Dictionary<ulong, int> PlayerHits;
+
         public void Initialize(BarricadeDrop foundation, BuildableData buildable)
         {
             Foundation = foundation;
             Buildable = buildable;
-
             Hits = 0;
+            PlayerHits = new Dictionary<ulong, int>();
         }
 
         public void IncrementBuildPoints(UCPlayer builder)
@@ -51,6 +53,11 @@ namespace Uncreated.Warfare.Components
                 component.QueueMessage(new Players.ToastMessage(XPManager.GetProgress(Hits, Buildable.requiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
             }
 
+            if (PlayerHits.ContainsKey(builder.Steam64))
+                PlayerHits[builder.Steam64] += amount;
+            else
+                PlayerHits.Add(builder.Steam64, amount);
+
             if (Hits >= Buildable.requiredHits)
             {
                 Build();
@@ -60,15 +67,23 @@ namespace Uncreated.Warfare.Components
         {
             var data = Foundation.GetServersideData();
 
+            string structureName = "";
+
             if (Buildable.type != EbuildableType.EMPLACEMENT)
             {
                 Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Buildable.structureID));
                 Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
                 BarricadeDrop structure = BarricadeManager.FindBarricadeByRootTransform(transform);
 
-                if (Buildable.type == EbuildableType.FOB)
+                structureName = Assets.find<ItemBarricadeAsset>(Buildable.foundationID).itemName;
+
+                if (Buildable.type == EbuildableType.FOB_BUNKER)
                 {
-                    FOBManager.RegisterNewFOB(structure, UCWarfare.GetColorHex("default_fob_color"));
+                    var fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
+                    fob.UpdateBunker(structure);
+
+                    FOBManager.SendFOBListToTeam(fob.Team);
+
                     //StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
                     StatsManager.ModifyTeam(data.group, t => t.FobsBuilt++, false);
                 }
@@ -90,6 +105,9 @@ namespace Uncreated.Warfare.Components
                 Quaternion rotation = Foundation.model.rotation;
                 rotation.eulerAngles = new Vector3(rotation.eulerAngles.x + 90, rotation.eulerAngles.y, rotation.eulerAngles.z);
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleasset.id, new Vector3(data.point.x, data.point.y + 1, data.point.z), rotation);
+
+                structureName = vehicle.asset.vehicleName;
+
                 if (vehicle.asset.canBeLocked)
                 {
                     CSteamID group = new CSteamID(data.group);
@@ -112,11 +130,21 @@ namespace Uncreated.Warfare.Components
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, data.point);
 
+            foreach (var entry in PlayerHits)
+            {
+                if ((float)entry.Value / Buildable.requiredHits >= 0.1F)
+                    XPManager.AddXP(UCPlayer.FromID(entry.Key).Player, entry.Value * XPManager.config.Data.ShovelXP, structureName.ToUpper() + " BUILT");
+            }
+
             if (Regions.tryGetCoordinate(Foundation.model.position, out byte x, out byte y))
             {
                 BarricadeManager.destroyBarricade(Foundation, x, y, ushort.MaxValue);
                 Destroy(gameObject);
             }
+        }
+        public void Destroy()
+        {
+            Destroy(gameObject);
         }
         public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)
         {
@@ -141,7 +169,7 @@ namespace Uncreated.Warfare.Components
                     return false;
                 }
             }
-            if (UCBarricadeManager.GetBarricadesByGUID(radio.asset.GUID).Count(b => b.GetServersideData().group == team) >= FOBManager.config.Data.FobLimit)
+            if (FOB.GetFOBs(team).Count >= FOBManager.config.Data.FobLimit)
             {
                 // fob limit reached
                 placer?.Message("build_error_too_many_fobs");
@@ -149,18 +177,18 @@ namespace Uncreated.Warfare.Components
             }
 
             int logis = UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.LogiTruckIDs.AsEnumerable(), 30, placer.Position).Count(l => l.lockedGroup.m_SteamID == placer.GetTeam());
-            if (logis == 0)
-            {
-                // no logis nearby
-                placer?.Message("fob_error_nologi");
-                return false;
-            }
+            //if (logis == 0)
+            //{
+            //    // no logis nearby
+            //    placer?.Message("fob_error_nologi");
+            //    return false;
+            //}
 
-            BarricadeDrop nearbyRadio = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBRadioGUID, radius * 2, point, team, false).FirstOrDefault();
-            if (nearbyRadio != null)
+            FOB nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
+            if (nearbyFOB != null)
             {
                 // another FOB radio is too close
-                placer?.Message("fob_error_fobtooclose", Math.Round((nearbyRadio.model.position - point).magnitude).ToString(), Math.Round(radius * 2).ToString());
+                placer?.Message("fob_error_fobtooclose", Math.Round((nearbyFOB.Position - point).magnitude).ToString(), Math.Round(radius * 2).ToString());
                 return false;
             }
 
@@ -170,34 +198,9 @@ namespace Uncreated.Warfare.Components
         {
             ulong team = placer.GetTeam();
 
-            BarricadeDrop radio = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBRadioGUID, FOBManager.config.Data.FOBBuildPickupRadius, point, team, false).FirstOrDefault();
-            BarricadeDrop fob = radio == null ? null : UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 30, radio.model.position, team, false).FirstOrDefault();
+            FOB fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);
 
-            Vector3 center = Vector3.zero;
-            float radius = 30;
-            bool useSmallRadius = true;
-            
-            if (radio != null)
-            {
-                center = radio.model.position;
-
-                if (fob != null)
-                {
-                    radius = FOBManager.config.Data.FOBBuildPickupRadius;
-                    useSmallRadius = false;
-                }
-            }
-
-            Guid BuildID;
-            if (team == 1)
-                BuildID = Gamemode.Config.Items.T1Build;
-            else if (team == 2)
-                BuildID = Gamemode.Config.Items.T2Build;
-            else return false;
-
-            int NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, radius, point).Count();
-
-            if (buildable.type == EbuildableType.FOB)
+            if (buildable.type == EbuildableType.FOB_BUNKER)
             {
                 if (FOBManager.config.Data.RestrictFOBPlacement)
                 {
@@ -218,103 +221,66 @@ namespace Uncreated.Warfare.Components
                     }
                 }
 
-                var radioClose = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBRadioGUID, 30, point, team, false).FirstOrDefault();
-
-                if (radioClose == null)
+                if (fob == null || (fob.Position - point).sqrMagnitude > Math.Pow(30, 2))
                 {
                     // no radio nearby, radio must be within 30m
                     placer?.Message("build_error_noradio", "30");
                     return false;
                 }
-
-                var fobClose = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 30, radioClose.model.position, team, false).FirstOrDefault();
-
-                if (fobClose != null)
+                if (fob.Bunker != null)
                 {
                     // this fob already has a bunker
                     placer?.Message("build_error_structureexists", "a", "FOB Bunker");
                     return false;
                 }
             }
-
-            if (radio == null || (radio.model.position - point).sqrMagnitude > Math.Pow(radius, 2))
+            else
             {
-                // not in fob radius
-                if (useSmallRadius)
-                    placer?.Message("build_error_radiustoosmall", "30");
-                else
+                if (fob == null)
+                {
+                    // no fob nearby
                     placer?.Message("build_error_notinradius");
-                return false;
-            }
-
-            if (buildable.type == EbuildableType.REPAIR_STATION)
-            {
-                int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, radius, center, team, false).Count();
-                if (existing >= 1)
-                {
-                    // repair station already exists
-                    placer?.Message("build_error_structureexists", "a", "Repair Station");
                     return false;
                 }
-            }
-            if (buildable.type == EbuildableType.EMPLACEMENT)
-            {
-                int existing = UCVehicleManager.GetNearbyVehicles(buildable.structureID, 30f, center).Count();
-                if (existing >= buildable.emplacementData.allowedPerFob)
+                else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
                 {
-                    // max emplacements of this type reached
-                    placer?.Message("build_error_structureexists", buildable.emplacementData.allowedPerFob.ToString(), foundation.asset.itemName + (buildable.emplacementData.allowedPerFob == 1 ? "" : "s"));
+                    // radius is constrained because there is no bunker
+                    placer?.Message("build_error_radiustoosmall", "30");
                     return false;
                 }
-            }
 
-            if (NearbyBuild < buildable.requiredBuild)
-            {
-                // not enough build
-                placer?.Message("build_error_notenoughbuild", NearbyBuild.ToString(), buildable.requiredBuild.ToString());
-                return false;
-            }
-
-            RemoveNearbyItemsByID(BuildID, buildable.requiredBuild, center, FOBManager.config.Data.FOBBuildPickupRadius);
-
-            return true;
-        }
-
-        public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius)
-        {
-            List<RegionCoordinate> regions = new List<RegionCoordinate>();
-            Regions.getRegionsInRadius(center, radius, regions);
-            return RemoveNearbyItemsByID(id, amount, center, radius, regions);
-        }
-        public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
-        {
-            if (!(Assets.find(id) is ItemAsset asset))
-                return false;
-            float sqrRadius = radius * radius;
-            if (ItemManager.regions == null || sqrRadius == 0 || sqrRadius < 0) return true;
-            int removed_count = 0;
-            for (int i = 0; i < search.Count; i++)
-            {
-                RegionCoordinate r = search[i];
+                if (buildable.type == EbuildableType.REPAIR_STATION)
                 {
-                if (ItemManager.regions[r.x, r.y] != null)
-                    for (int j = ItemManager.regions[r.x, r.y].items.Count - 1; j >= 0; j--)
+                    int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, fob.Radius, fob.Position, team, false).Count();
+                    if (existing >= 1)
                     {
-                        if (removed_count < amount)
-                        {
-                            SDG.Unturned.ItemData item = ItemManager.regions[r.x, r.y].items[j];
-                            if (item.item.id == asset.id && (item.point - center).sqrMagnitude <= sqrRadius)
-                            {
-                                Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
-                                    Regions.EnumerateClients(r.x, r.y, ItemManager.ITEM_REGIONS), r.x, r.y, item.instanceID);
-                                ItemManager.regions[r.x, r.y].items.RemoveAt(j);
-                                removed_count++;
-                            }
-                        }
+                        // repair station already exists
+                        placer?.Message("build_error_structureexists", "a", "Repair Station");
+                        return false;
+                    }
+                }
+                if (buildable.type == EbuildableType.EMPLACEMENT)
+                {
+                    int existing = UCVehicleManager.GetNearbyVehicles(buildable.structureID, fob.Radius, fob.Position).Count();
+                    if (existing >= buildable.emplacementData.allowedPerFob)
+                    {
+                        // max emplacements of this type reached
+                        placer?.Message("build_error_structureexists", buildable.emplacementData.allowedPerFob.ToString(), foundation.asset.itemName + (buildable.emplacementData.allowedPerFob == 1 ? "" : "s"));
+                        return false;
                     }
                 }
             }
-            return removed_count >= amount;
+
+            if (fob.Build < buildable.requiredBuild)
+            {
+                // not enough build
+                placer?.Message("build_error_notenoughbuild", fob.Build.ToString(), buildable.requiredBuild.ToString());
+                return false;
+            }
+
+            fob.ReduceBuild(buildable.requiredBuild);
+
+            return true;
         }
     }
     
