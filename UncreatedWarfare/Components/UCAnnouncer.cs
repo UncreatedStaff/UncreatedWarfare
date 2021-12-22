@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                F.LogWarning("Announcer has no messages set up.");
+                L.LogWarning("Announcer has no messages set up.");
             }
         }
 
@@ -70,12 +70,12 @@ namespace Uncreated.Warfare.Components
                 ulong player = steamplayer.playerID.steamID.m_SteamID;
                 if (key == null)
                 {
-                    F.LogWarning($"Message to be broadcasted by announcer was null ({key})");
+                    L.LogWarning($"Message to be broadcasted by announcer was null ({key})");
                     return;
                 }
                 if (key.Length == 0)
                 {
-                    F.LogWarning($"Message to be broadcasted by announcer was empty ({key})");
+                    L.LogWarning($"Message to be broadcasted by announcer was empty ({key})");
                     return;
                 }
                 if (player == 0)
@@ -86,27 +86,27 @@ namespace Uncreated.Warfare.Components
                         {
                             if (Messages.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
                             {
-                                F.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
+                                Chat.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
                             }
                             else
                             {
-                                F.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
+                                Chat.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
                             }
                         }
                         else
                         {
-                            F.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
+                            Chat.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
                         }
                     }
                     else
                     {
                         if (data.TryGetValue(key, out TranslationData translation))
                         {
-                            F.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
+                            Chat.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
                         }
                         else
                         {
-                            F.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
+                            Chat.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
                         }
                     }
                 }
@@ -124,25 +124,25 @@ namespace Uncreated.Warfare.Components
                         {
                             if (Messages.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
                             {
-                                F.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
+                                Chat.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
                             }
                             else
                             {
-                                F.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
+                                Chat.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
                             }
                         }
                         else
                         {
-                            F.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
+                            Chat.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
                         }
                     }
                     else if (data.TryGetValue(key, out TranslationData translation))
                     {
-                        F.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
+                        Chat.SendSingleMessage(translation.Message, translation.Color, EChatMode.SAY, null, translation.Message.Contains("</"), steamplayer);
                     }
                     else
                     {
-                        F.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
+                        Chat.SendSingleMessage(key, UCWarfare.GetColor("default"), EChatMode.SAY, null, false, steamplayer);
                     }
                 }
             }
@@ -192,10 +192,10 @@ namespace Uncreated.Warfare.Components
                     string[] stuff = ex.Message.Split(':');
                     string badKey = "unknown";
                     if (stuff.Length >= 2) badKey = stuff[1].Trim();
-                    F.LogError("\"" + badKey + "\" has a duplicate key in message announcer default translations, unable to load them. Unloading...");
-                    F.LogError(ex);
+                    L.LogError("\"" + badKey + "\" has a duplicate key in message announcer default translations, unable to load them. Unloading...");
+                    L.LogError(ex);
                     if (ex.InnerException != default)
-                        F.LogError(ex.InnerException);
+                        L.LogError(ex.InnerException);
                 }
             }
         }

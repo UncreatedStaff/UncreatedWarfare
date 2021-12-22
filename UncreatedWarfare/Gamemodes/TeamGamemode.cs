@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.Gamemodes
                                 InAMC.Add(players.Current.playerID.steamID.m_SteamID);
                                 int a = Mathf.RoundToInt(AMC_TIME);
                                 ToastMessage.QueueMessage(players.Current,
-                                    F.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
+                                    Translation.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
                                     EToastMessageSeverity.WARNING);
                                 UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
                             }
@@ -86,9 +86,9 @@ namespace Uncreated.Warfare.Gamemodes
                     }
                     catch (Exception ex)
                     {
-                        F.LogError("Error checking for duty players on player " + players.Current.playerID.playerName);
+                        L.LogError("Error checking for duty players on player " + players.Current.playerID.playerName);
                         if (UCWarfare.Config.Debug)
-                            F.LogError(ex);
+                            L.LogError(ex);
                     }
                 }
                 players.Dispose();

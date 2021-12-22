@@ -167,7 +167,7 @@ namespace Uncreated.Warfare.Networking
             internal static void ReceiveRequestFullLog(in IConnection connection)
             {
                 SendFullLog.Invoke(connection, Data.Logs.ToArray(), 0);
-                F.Log(Data.Logs.Count.ToString());
+                L.Log(Data.Logs.Count.ToString());
             }
             internal static readonly NetCallRaw<Log, byte> SendLogMessage =
                 new NetCallRaw<Log, byte>(1030, Log.Read, R => R.ReadUInt8(), Log.Write, (W, B) => W.Write(B));
@@ -184,7 +184,7 @@ namespace Uncreated.Warfare.Networking
             }
             private static void RunCommand(string command)
             {
-                F.Log(command, ConsoleColor.White);
+                L.Log(command, ConsoleColor.White);
                 bool shouldExecuteCommand = true;
                 try
                 {
@@ -192,12 +192,12 @@ namespace Uncreated.Warfare.Networking
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Plugin threw an exception from onCommandWindowInputted:");
-                    F.LogError(ex);
+                    L.LogError("Plugin threw an exception from onCommandWindowInputted:");
+                    L.LogError(ex);
                 }
                 if (!shouldExecuteCommand || Commander.execute(Steamworks.CSteamID.Nil, command))
                     return;
-                F.LogError($"Unable to match \"{command}\" with any built-in commands");
+                L.LogError($"Unable to match \"{command}\" with any built-in commands");
             }
 
         }
@@ -464,8 +464,8 @@ namespace Uncreated.Warfare.Networking
                 }
                 catch (Exception ex)
                 {
-                    F.LogError($"Error converting asset of type {assets[i].GetType().FullName} to ItemData ({assets[i].name}).");
-                    F.LogError(ex);
+                    L.LogError($"Error converting asset of type {assets[i].GetType().FullName} to ItemData ({assets[i].name}).");
+                    L.LogError(ex);
                     rtn[i] = null;
                 }
             }
@@ -480,7 +480,7 @@ namespace Uncreated.Warfare.Networking
         {
             if (!(Assets.find(EAssetType.ITEM, id) is ItemAsset asset)) return;
             Item item = new Item(id, asset.amount, asset.qualityMax, state);
-            F.Log("starting");
+            L.Log("starting");
             DateTime dt = DateTime.Now;
             ItemTool.getIcon(id, asset.qualityMax, state, (txt) => SendRenderedIcon(id, state, txt, dt));
         }
@@ -511,7 +511,7 @@ namespace Uncreated.Warfare.Networking
                 png = newText.EncodeToPNG();
                 UnityEngine.Object.Destroy(newText);
             }
-            F.Log($"done rendering {png.Length} bytes in {(DateTime.Now - start).TotalMilliseconds}ms");
+            L.Log($"done rendering {png.Length} bytes in {(DateTime.Now - start).TotalMilliseconds}ms");
             System.IO.File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\txt.png", png);
         }
     }

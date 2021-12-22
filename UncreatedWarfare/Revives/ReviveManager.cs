@@ -121,7 +121,7 @@ namespace Uncreated.Warfare.Revives
             if (Data.PrivateStance == null || Data.ReplicateStance == null)
             {
                 player.stance.checkStance(stance);
-                F.LogWarning("Unable to set stance properly, fell back to checkStance.");
+                L.LogWarning("Unable to set stance properly, fell back to checkStance.");
             }
             Data.PrivateStance.SetValue(player.stance, stance);
             Data.ReplicateStance.Invoke(player.stance, new object[] { false });
@@ -136,7 +136,7 @@ namespace Uncreated.Warfare.Revives
                 if (team == tteam)
                 {
                     XPManager.AddXP(medic, XPManager.config.Data.FriendlyRevivedXP,
-                        F.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                        Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
                     if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IRevivesStats r2)
                         r2.AddRevive();
 
@@ -195,7 +195,7 @@ namespace Uncreated.Warfare.Revives
                     return;
                 }
                 if (UCWarfare.Config.Debug)
-                    F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.", ConsoleColor.DarkGray);
+                    L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.", ConsoleColor.DarkGray);
 
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
@@ -211,7 +211,7 @@ namespace Uncreated.Warfare.Revives
                 parameters = p;
                 parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
                 if (UCWarfare.Config.Debug)
-                    F.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
+                    L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
             }
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
@@ -225,15 +225,15 @@ namespace Uncreated.Warfare.Revives
 
             // times per second FixedUpdate() is ran times bleed damage ticks = how many seconds it will take to lose 1 hp
             float bleedsPerSecond = (Time.timeScale / SIM_TIME) / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-            //F.Log(bleedsPerSecond + " bleed times per second");
+            //L.Log(bleedsPerSecond + " bleed times per second");
             parameters.player.life.serverModifyHealth(UCWarfare.Config.InjuredLifeTimeSeconds * bleedsPerSecond - parameters.player.life.health);
             parameters.player.life.serverSetBleeding(true);
             ulong team = parameters.player.GetTeam();
             parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
             parameters.player.movement.sendPluginJumpMultiplier(0);
             EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI),
-                parameters.player.channel.owner.transportConnection, true, F.Translate("injured_ui_header", parameters.player),
-                F.Translate("injured_ui_give_up", parameters.player));
+                parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player),
+                Translation.Translate("injured_ui_give_up", parameters.player));
             parameters.player.SendChat("injured_chat");
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Revives
                     byte kteam = killer.GetTeamByte();
                     if (kteam != team)
                     {
-                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINIXP);
+                        ToastMessage.QueueMessage(killer, "", Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINIXP);
 
                         Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
                         if (KitManager.HasKit(killer, out Kit kit))
@@ -294,7 +294,7 @@ namespace Uncreated.Warfare.Revives
                             Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
                     }
                     else
-                        ToastMessage.QueueMessage(killer, "", F.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINIXP);
+                        ToastMessage.QueueMessage(killer, "", Translation.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINIXP);
                 }
             }
             if (parameters.player.transform.TryGetComponent(out Reviver reviver))
@@ -305,7 +305,7 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
-            //F.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
+            //L.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
             SetStanceBetter(player.Player, EPlayerStance.STAND);
             if (DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
             {
@@ -329,7 +329,7 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {
-            //F.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
+            //L.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
             if (DownedPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
             {
                 shouldAllow = false;
@@ -540,7 +540,7 @@ namespace Uncreated.Warfare.Revives
             {
                 yield return new WaitForSeconds(time);
                 TellStanceNoDelay(stance);
-                //F.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
+                //L.Log("Checked stance of " + Player.Player.channel.owner.playerID.playerName + " to " + stance.ToString() + ".", ConsoleColor.DarkRed);
                 this.stance = null;
             }
             public static void TellStandDelayed(Player player, float time = 0.5f)

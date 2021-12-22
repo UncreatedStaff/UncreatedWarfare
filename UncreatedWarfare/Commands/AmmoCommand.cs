@@ -157,7 +157,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     if (!(Assets.find(Gamemode.Config.Items.T1Ammo) is ItemAsset t1ammo) || !(Assets.find(Gamemode.Config.Items.T2Ammo) is ItemAsset t2ammo))
                     {
-                        F.LogError("Either t1ammo or t2ammo guid isn't a valid item");
+                        L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
                         return;
                     }
                     if ((player.IsTeam1() && !storage.items.items.Exists(j => j.item.id == t1ammo.id)) || (player.IsTeam2() && !storage.items.items.Exists(j => j.item.id == t2ammo.id)))
@@ -217,6 +217,10 @@ namespace Uncreated.Warfare.Commands
         {
             if (!EventFunctions.droppeditems.TryGetValue(player.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
                 return;
+            ushort build1 = Assets.find(Gamemode.Config.Items.T1Build)?.id ?? 0;
+            ushort build2 = Assets.find(Gamemode.Config.Items.T2Build)?.id ?? 0;
+            ushort ammo1 = Assets.find(Gamemode.Config.Items.T1Ammo)?.id ?? 0;
+            ushort ammo2 = Assets.find(Gamemode.Config.Items.T2Ammo)?.id ?? 0;
             for (byte x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (byte y = 0; y < Regions.WORLD_SIZE; y++)
@@ -227,6 +231,8 @@ namespace Uncreated.Warfare.Commands
                         for (int i = 0; i < instances.Count; i++)
                         {
                             int index = region.items.FindIndex(r => r.instanceID == instances[i]);
+                            SDG.Unturned.ItemData it = ItemManager.regions[x, y].items[index];
+                            if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
                             if (index != -1)
                             {
                                 Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);

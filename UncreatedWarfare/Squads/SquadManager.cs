@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Squads
                 squadMenuID = squadMenu.id;
             if (Assets.find(Gamemode.Config.UI.RallyGUID) is EffectAsset rally)
                 rallyID = rally.id;
-            F.Log("Found squad UIs: " + squadListID + ", " + squadMenuID + ", " + rallyID);
+            L.Log("Found squad UIs: " + squadListID + ", " + squadMenuID + ", " + rallyID);
         }
         public static readonly string[] NAMES =
         {
@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Squads
         {
             ITransportConnection c = player.Player.channel.owner.transportConnection;
             EffectManager.sendUIEffect(squadMenuID, squadMenuKey, c, true);
-            EffectManager.sendUIEffectText(squadMenuKey, c, true, "Heading", F.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
+            EffectManager.sendUIEffectText(squadMenuKey, c, true, "Heading", Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
             EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "Locked", squad.IsLocked);
             int i = 0;
             for (; i < squad.Members.Count; i++)
@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Squads
                 string i2 = i.ToString();
                 EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
                 EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
-                    F.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
+                    Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
                 EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
             }
             for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
@@ -110,14 +110,14 @@ namespace Uncreated.Warfare.Squads
             {
                 int s2 = 1;
                 EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S0", true);
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN0", F.Translate("squad_ui_expanded", player));
+                EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN0", Translation.Translate("squad_ui_expanded", player));
                 for (int s = 0; s < Squads.Count; s++)
                 {
                     if (Squads[s] == squad || Squads[s].Team != squad.Team) continue;
                     string s22 = s2.ToString();
                     EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S" + s22, true);
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN" + s22,
-                        F.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                        Translation.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
                     s2++;
                 }
                 for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
@@ -138,14 +138,14 @@ namespace Uncreated.Warfare.Squads
                 {
                     int s2 = 1;
                     EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S0", true);                                //  ... box
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "S0", F.Translate("squad_ui_expanded", player));  //  "     "
+                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "S0", Translation.Translate("squad_ui_expanded", player));  //  "     "
                     for (int s = 0; s < Squads.Count; s++)
                     {
                         if (Squads[s] == player.Squad) continue;
                         string s22 = s2.ToString();
                         EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S" + s22, true);
                         EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN" + s22,
-                            F.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                            Translation.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
                         s2++;
                     }
                     for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
@@ -163,9 +163,9 @@ namespace Uncreated.Warfare.Squads
                         string s22 = s2.ToString();
                         EffectManager.sendUIEffectVisibility(squadListKey, c, true, s22, true);
                         EffectManager.sendUIEffectText(squadListKey, c, true, "N" + s22,
-                            RallyManager.HasRally(sq, out _) ? F.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : F.Translate("squad_ui_leader_name", player, sq.Name));
+                            RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
                         EffectManager.sendUIEffectText(squadListKey, c, true, "M" + s22, 
-                            F.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
+                            Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
                         s2++;
                     }
                     for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
@@ -205,9 +205,9 @@ namespace Uncreated.Warfare.Squads
                 string s22 = s2.ToString();
                 EffectManager.sendUIEffectVisibility(squadListKey, c, true, s22, true);
                 EffectManager.sendUIEffectText(squadListKey, c, true, "N" + s22, 
-                    RallyManager.HasRally(sq, out _) ? F.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : F.Translate("squad_ui_leader_name", player, sq.Name));
+                    RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
                 EffectManager.sendUIEffectText(squadListKey, c, true, "M" + s22,
-                    F.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
+                    Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
                 s2++;
             }
             for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
@@ -247,12 +247,12 @@ namespace Uncreated.Warfare.Squads
                 if (player.Squad == null)
                 {
                     EffectManager.sendUIEffectText(squadListKey, c, true, m,
-                        F.Translate("squad_ui_player_count", player, squad.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", squad.Members.Count.ToString(Data.Locale)));
+                        Translation.Translate("squad_ui_player_count", player, squad.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", squad.Members.Count.ToString(Data.Locale)));
                 }
                 else
                 {
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, sn,
-                        F.Translate(squad.IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, squad.Members.Count.ToString(Data.Locale)));
+                        Translation.Translate(squad.IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, squad.Members.Count.ToString(Data.Locale)));
                 }
             }
         }
@@ -274,7 +274,7 @@ namespace Uncreated.Warfare.Squads
                     string i2 = i.ToString();
                     EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
-                        F.Translate("squad_ui_player_name", squad.Members[m], F.GetPlayerOriginalNames(squad.Members[i]).NickName));
+                        Translation.Translate("squad_ui_player_name", squad.Members[m], F.GetPlayerOriginalNames(squad.Members[i]).NickName));
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
                 }
                 for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)

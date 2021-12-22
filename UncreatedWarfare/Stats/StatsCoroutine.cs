@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Stats
                         UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
                         if (XP.XPManager.config.Data.OnDutyXP > 0 && player.OnDuty())
                         {
-                            XP.XPManager.AddXP(player.Player, XP.XPManager.config.Data.OnDutyXP, F.Translate("xp_on_duty", player));
+                            XP.XPManager.AddXP(player.Player, XP.XPManager.config.Data.OnDutyXP, Translation.Translate("xp_on_duty", player));
                         }
                     }
                     players.Dispose();
@@ -66,14 +66,14 @@ namespace Uncreated.Warfare.Stats
                                 if (afk.time == n)
                                 {
                                     FPlayerName names = F.GetPlayerOriginalNames(player);
-                                    F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
+                                    L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
                                         player.playerID.steamID.m_SteamID.ToString(Data.Locale), "AFK Auto-Kick"), ConsoleColor.Cyan);
                                     Provider.kick(player.playerID.steamID, "Auto-kick for being AFK.");
                                     previousPositions.Remove(player.playerID.steamID.m_SteamID);
                                 }
                                 else if (afk.time == Afk.Clamp(n + 1)) // one cycle left
                                 {
-                                    player.SendChat("afk_warning", F.GetTimeFromMinutes((uint)UCWarfare.Config.StatsInterval, player.playerID.steamID.m_SteamID));
+                                    player.SendChat("afk_warning", Translation.GetTimeFromMinutes((uint)UCWarfare.Config.StatsInterval, player.playerID.steamID.m_SteamID));
                                 }
                             }
                             else
@@ -100,8 +100,8 @@ namespace Uncreated.Warfare.Stats
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Error in Stats Coroutine:");
-                    F.LogError(ex);
+                    L.LogError("Error in Stats Coroutine:");
+                    L.LogError(ex);
                 }
 
                 // stats interval is in minutes here

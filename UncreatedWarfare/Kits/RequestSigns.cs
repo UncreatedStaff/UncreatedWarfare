@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Kits
             {
                 sign.SpawnCheck(false);
                 if (!sign.exists)
-                    F.LogError("Failed to spawn sign " + sign.kit_name);
+                    L.LogError("Failed to spawn sign " + sign.kit_name);
             }
             Save();
         }
@@ -220,19 +220,19 @@ namespace Uncreated.Warfare.Kits
                 {
                     F.InvokeSignUpdateFor(player, sign, SignText);
                 }
-                else F.LogError("Failed to find barricade from saved transform!");
+                else L.LogError("Failed to find barricade from saved transform!");
             }
             else
             {
-                SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
                     if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign))
                         F.InvokeSignUpdateFor(player, sign, true, SignText);
-                    else F.LogError("Failed to find barricade after respawning again!");
+                    else L.LogError("Failed to find barricade after respawning again!");
                 }
-                else F.LogError("Failed to find barricade after respawn!");
+                else L.LogError("Failed to find barricade after respawn!");
             }
         }
         public void InvokeUpdate()
@@ -244,30 +244,30 @@ namespace Uncreated.Warfare.Kits
                 {
                     F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
                 }
-                else F.LogError("Failed to find barricade from saved transform!");
+                else L.LogError("Failed to find barricade from saved transform!");
             }
             else
             {
-                SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
                     if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
                         F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
-                    else F.LogError("Failed to find barricade after respawning again!");
+                    else L.LogError("Failed to find barricade after respawning again!");
                 }
-                else F.LogError("Failed to find barricade after respawn!");
+                else L.LogError("Failed to find barricade after respawn!");
             }
         }
         /// <summary>Spawns the sign if it is not already placed.</summary>
         public void SpawnCheck(bool save)
         {
-            SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+            SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (drop == null || data == null)
             {
                 if (!(Assets.find(sign_id) is ItemBarricadeAsset asset))
                 {
-                    F.LogError("Failed to find barricade with " + sign_id.ToString("N"));
+                    L.LogError("Failed to find barricade with " + sign_id.ToString("N"));
                     return;
                 }
                 this.barricadetransform = BarricadeManager.dropNonPlantedBarricade(
@@ -277,7 +277,7 @@ namespace Uncreated.Warfare.Kits
                 drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
                 if (drop != null)
                 {
-                    F.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Black);
+                    L.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Black);
                     instance_id = drop.instanceID;
                     exists = true;
                     InvokeUpdate();

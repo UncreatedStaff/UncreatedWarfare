@@ -23,19 +23,19 @@ namespace Uncreated.Warfare.Commands
             if (caller.DisplayName == "Console")
             {
                 if (!Provider.isServer)
-                    F.LogError(F.Translate("server_not_running", 0, out _));
+                    L.LogError(Translation.Translate("server_not_running", 0, out _));
                 else
                 {
                     if (command.Length < 1)
-                        F.LogError(F.Translate("kick_syntax", 0, out _));
+                        L.LogError(Translation.Translate("kick_syntax", 0, out _));
                     else
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer player))
-                            F.LogError(F.Translate("kick_no_player_found_console", 0, out _, command[0]));
+                            L.LogError(Translation.Translate("kick_no_player_found_console", 0, out _, command[0]));
                         else
                         {
                             if (command.Length == 1)
-                                F.LogError(F.Translate("kick_no_reason_provided", 0, out _));
+                                L.LogError(Translation.Translate("kick_no_reason_provided", 0, out _));
                             else if (command.Length > 1)
                             {
                                 string reason = command.MakeRemainder(1);
@@ -46,9 +46,9 @@ namespace Uncreated.Warfare.Commands
                                     Invocations.Shared.LogKicked.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
                                 }
-                                F.Log(F.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
+                                L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
                                     player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-                                F.Broadcast("kick_kicked_broadcast_operator", names.PlayerName);
+                                Chat.Broadcast("kick_kicked_broadcast_operator", names.PlayerName);
                             }
                         }
                     }
@@ -58,19 +58,19 @@ namespace Uncreated.Warfare.Commands
             {
                 UnturnedPlayer player = caller as UnturnedPlayer;
                 if (!Provider.isServer)
-                    F.SendChat(player, "server_not_running");
+                    Chat.SendChat(player, "server_not_running");
                 else
                 {
                     if (command.Length < 1)
-                        F.SendChat(player, "kick_syntax");
+                        Chat.SendChat(player, "kick_syntax");
                     else
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
-                            F.SendChat(player, "kick_no_player_found", command[0]);
+                            Chat.SendChat(player, "kick_no_player_found", command[0]);
                         else
                         {
                             if (command.Length == 1)
-                                F.SendChat(player, "kick_no_reason_provided");
+                                Chat.SendChat(player, "kick_no_reason_provided");
                             else if (command.Length > 1)
                             {
                                 string reason = command.MakeRemainder(1);
@@ -82,11 +82,11 @@ namespace Uncreated.Warfare.Commands
                                     Invocations.Shared.LogKicked.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
                                 }
-                                F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
+                                L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                     callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-                                F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
-                                F.SendChat(player.CSteamID, "kick_kicked_feedback", names.CharacterName);
+                                Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
+                                Chat.SendChat(player.CSteamID, "kick_kicked_feedback", names.CharacterName);
                             }
                         }
                     }
@@ -119,12 +119,12 @@ namespace Uncreated.Warfare.Commands
                     Invocations.Shared.LogKicked.NetInvoke(Violator, Admin, Reason, DateTime.Now);
                     Data.DatabaseManager.AddKick(Violator, Admin, Reason);
                 }
-                F.LogWarning(F.Translate("kick_kicked_console", 0, out _,
+                L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
                     names.PlayerName, Violator.ToString(Data.Locale),
                     callerName.PlayerName, Admin.ToString(Data.Locale), Reason), ConsoleColor.Cyan);
-                F.BroadcastToAllExcept(new List<CSteamID> { admin == null ? new CSteamID(Admin) : admin.playerID.steamID }, "kick_kicked_broadcast", names.CharacterName, callerName.CharacterName);
+                Chat.BroadcastToAllExcept(new List<CSteamID> { admin == null ? new CSteamID(Admin) : admin.playerID.steamID }, "kick_kicked_broadcast", names.CharacterName, callerName.CharacterName);
                 if (admin != null)
-                    F.SendChat(admin, "kick_kicked_feedback", names.CharacterName);
+                    Chat.SendChat(admin, "kick_kicked_feedback", names.CharacterName);
             }
         }
     }

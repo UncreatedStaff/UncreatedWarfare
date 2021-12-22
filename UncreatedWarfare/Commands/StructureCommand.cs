@@ -393,7 +393,7 @@ namespace Uncreated.Warfare.Commands
                     string teamname = TeamManager.TranslateName(team, player);
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _,
                             Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
                             F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, teamname), vehicle.lockedOwner.m_SteamID);
                     }
@@ -412,7 +412,7 @@ namespace Uncreated.Warfare.Commands
                     ulong grp = plr == null ? 0 : plr.quests.groupID.m_SteamID;
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _,
                             Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
                             F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, grp.ToString()), vehicle.lockedOwner.m_SteamID);
                     }
@@ -444,7 +444,7 @@ namespace Uncreated.Warfare.Commands
                     string teamname = TeamManager.TranslateName(data.group, player);
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                     }
                     else
                     {
@@ -458,7 +458,7 @@ namespace Uncreated.Warfare.Commands
                     ulong grp = data.group;
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
                     }
                     else
                     {
@@ -490,7 +490,7 @@ namespace Uncreated.Warfare.Commands
                     string teamname = TeamManager.TranslateName(data.group, player);
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                     }
                     else
                     {
@@ -504,7 +504,7 @@ namespace Uncreated.Warfare.Commands
                     ulong grp = data.group;
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
                     }
                     else
                     {
@@ -537,7 +537,7 @@ namespace Uncreated.Warfare.Commands
                     string teamname = TeamManager.TranslateName(team, player);
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _,
                             Assets.find(data.BarricadeGUID) is ItemAsset asset ? asset.itemName : data.BarricadeGUID.ToString("N"),
                             F.GetPlayerOriginalNames(data.Owner).CharacterName, teamname), data.Owner);
                     }
@@ -557,7 +557,7 @@ namespace Uncreated.Warfare.Commands
                     ulong grp = owner == null ? 0 : owner.player.quests.groupID.m_SteamID;
                     if (sendurl)
                     {
-                        player.channel.owner.SendSteamURL(F.Translate("structure_last_owner_web_prompt", player, out _,
+                        player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _,
                             Assets.find(data.BarricadeGUID) is ItemAsset asset ? asset.itemName : data.BarricadeGUID.ToString("N"),
                             F.GetPlayerOriginalNames(data.Owner).CharacterName, grp.ToString()), data.Owner);
                     }

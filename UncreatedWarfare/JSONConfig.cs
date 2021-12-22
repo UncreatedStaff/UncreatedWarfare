@@ -97,16 +97,16 @@ namespace Uncreated
                     }
                     catch (Exception ex)
                     {
-                        F.LogError($"Error upgrading config for field {fields[i].FieldType.Name}::{fields[i].Name} in {Type.Name} config.");
-                        F.LogError(ex);
+                        L.LogError($"Error upgrading config for field {fields[i].FieldType.Name}::{fields[i].Name} in {Type.Name} config.");
+                        L.LogError(ex);
                     }
                 }
                 if (needsSaving) Save();
             }
             catch (Exception ex)
             {
-                F.LogError("Error upgrading config: " + Type.Name);
-                F.LogError(ex);
+                L.LogError("Error upgrading config: " + Type.Name);
+                L.LogError(ex);
             }
         }
         public void LoadDefaults()

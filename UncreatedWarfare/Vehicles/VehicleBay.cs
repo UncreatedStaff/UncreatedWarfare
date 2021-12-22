@@ -64,7 +64,7 @@ namespace Uncreated.Warfare.Vehicles
                 {
                     if (!(Assets.find(vehicleID) is VehicleAsset asset))
                     {
-                        F.LogError("SpawnLockedVehicle: Unable to find vehicle asset of " + vehicleID.ToString());
+                        L.LogError("SpawnLockedVehicle: Unable to find vehicle asset of " + vehicleID.ToString());
                         return null;
                     }
                     InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(asset.id, position, rotation);
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             if (!(Assets.find(vb.BarricadeID) is ItemBarricadeAsset basset))
                             {
-                                F.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
+                                L.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
                                 continue;
                             }
                             Barricade barricade = new Barricade(basset, asset.health, Convert.FromBase64String(vb.State));
@@ -99,14 +99,14 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 else
                 {
-                    F.Log($"VEHICLE SPAWN ERROR: {(Assets.find(vehicleID) is VehicleAsset va ? va.vehicleName : vehicleID.ToString("N"))} has not been registered in the VehicleBay.");
+                    L.Log($"VEHICLE SPAWN ERROR: {(Assets.find(vehicleID) is VehicleAsset va ? va.vehicleName : vehicleID.ToString("N"))} has not been registered in the VehicleBay.");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                F.LogError("Error spawning vehicle: ");
-                F.LogError(ex);
+                L.LogError("Error spawning vehicle: ");
+                L.LogError(ex);
                 instanceID = 0;
                 return null;
             }
@@ -136,7 +136,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 else
                 {
-                    F.LogError("ResupplyVehicleBarricades: Unable to find barricade asset of " + vb.BarricadeID.ToString());
+                    L.LogError("ResupplyVehicleBarricades: Unable to find barricade asset of " + vb.BarricadeID.ToString());
                     continue;
                 }
                 Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
@@ -320,8 +320,8 @@ namespace Uncreated.Warfare.Vehicles
             }
             catch (Exception ex)
             {
-                F.LogError("Error in OnVehicleEnterRequested: ");
-                F.LogError(ex);
+                L.LogError("Error in OnVehicleEnterRequested: ");
+                L.LogError(ex);
                 if (shouldAllow)
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
             }
@@ -457,8 +457,8 @@ namespace Uncreated.Warfare.Vehicles
             }
             catch (Exception ex)
             {
-                F.LogError("Error in OnVehicleSeatChanged: ");
-                F.LogError(ex);
+                L.LogError("Error in OnVehicleSeatChanged: ");
+                L.LogError(ex);
                 if (shouldAllow)
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
             }

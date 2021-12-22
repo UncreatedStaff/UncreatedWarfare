@@ -78,17 +78,17 @@ namespace Uncreated.Warfare.Officers
                 ucplayer.CachedOfp = newBalance;
 
             if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
-                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, EToastMessageSeverity.MINIOFFICERPTS);
+                ToastMessage.QueueMessage(player, Translation.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale)), message, EToastMessageSeverity.MINIOFFICERPTS);
 
             UpdateUI(player, newBalance, out int stars);
 
             if (stars > oldStars && !(Data.Gamemode is IEndScreen l && l.isScreenUp))
             {
-                string startString = F.Colorize(F.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), UCWarfare.GetColorHex("star_color"));
+                string startString = F.Colorize(Translation.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), UCWarfare.GetColorHex("star_color"));
 
-                ToastMessage.QueueMessage(player, F.Translate("gain_star", player), startString, EToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(player, Translation.Translate("gain_star", player), startString, EToastMessageSeverity.BIG);
 
-                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
+                Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
             }
 
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
@@ -111,14 +111,14 @@ namespace Uncreated.Warfare.Officers
 
                 if (branch != officer.branch || newRank.level >= officer.officerLevel)
                 {
-                    player.Message("officer_promoted", newRank.TranslateName(player.Steam64), F.TranslateBranch(branch, player));
+                    player.Message("officer_promoted", newRank.TranslateName(player.Steam64), Translation.TranslateBranch(branch, player));
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), Translation.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
                         }
                     }
                 }
@@ -140,14 +140,14 @@ namespace Uncreated.Warfare.Officers
             {
                 AddObjectToSave(new Officer(player.CSteamID.m_SteamID, newRank.level, branch));
 
-                player.Message("officer_promoted", newRank.TranslateName(player.Steam64), F.TranslateBranch(branch, player));
+                player.Message("officer_promoted", newRank.TranslateName(player.Steam64), Translation.TranslateBranch(branch, player));
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
                     if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                     {
-                        PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                        PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), Translation.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
                     }
                 }
             }
@@ -164,13 +164,13 @@ namespace Uncreated.Warfare.Officers
 
                 if (branch != officer.branch || newRank.level >= officer.officerLevel)
                 {
-                    ucplayer?.Message("officer_promoted", newRank.TranslateName(player), F.TranslateBranch(branch, player));
+                    ucplayer?.Message("officer_promoted", newRank.TranslateName(player), Translation.TranslateBranch(branch, player));
                     FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player)
                         {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), Translation.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
                         }
                     }
                 }
@@ -191,13 +191,13 @@ namespace Uncreated.Warfare.Officers
             {
                 AddObjectToSave(new Officer(player, newRank.level, branch));
 
-                ucplayer?.Message("officer_promoted", newRank.TranslateName(player), F.TranslateBranch(branch, player));
+                ucplayer?.Message("officer_promoted", newRank.TranslateName(player), Translation.TranslateBranch(branch, player));
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
                     if (PlayerManager.OnlinePlayers[i].Steam64 != player)
                     {
-                        PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), F.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
+                        PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, newRank.TranslateName(PlayerManager.OnlinePlayers[i].Steam64), Translation.TranslateBranch(branch, PlayerManager.OnlinePlayers[i]));
                     }
                 }
             }
@@ -252,7 +252,7 @@ namespace Uncreated.Warfare.Officers
                 stars < 2 ? string.Empty : stars.ToString()
             );
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Info",
-                stars == 0 ? $"<color=#{UCWarfare.GetColorHex("officer_ui_no_stars")}>{F.Translate("officer_ui_no_stars", player)}</color>" : F.Translate("officer_ui_stars", player, stars.ToString(Data.Locale), stars.S())
+                stars == 0 ? $"<color=#{UCWarfare.GetColorHex("officer_ui_no_stars")}>{Translation.Translate("officer_ui_no_stars", player)}</color>" : Translation.Translate("officer_ui_stars", player, stars.ToString(Data.Locale), stars.S())
             );
             EffectManager.sendUIEffectText((short)config.Data.StarsUI, player.channel.owner.transportConnection, true, "Points",
                 currentPoints + "/" + requiredPoints

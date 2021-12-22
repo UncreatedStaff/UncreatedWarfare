@@ -53,7 +53,7 @@ namespace Uncreated.Warfare
             {
                 whitelistedItem = null;
                 isWhitelisted = false;
-                F.LogError("Unknown asset on item " + itemData.item.id.ToString());
+                L.LogError("Unknown asset on item " + itemData.item.id.ToString());
             }
             else
             {
@@ -204,8 +204,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Error verifying barricade place with the whitelist: ");
-                F.LogError(ex);
+                L.LogError("Error verifying barricade place with the whitelist: ");
+                L.LogError(ex);
             }
         }
         private void OnStructurePlaceRequested(
@@ -247,8 +247,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Error verifying structure place with the whitelist: ");
-                F.LogError(ex);
+                L.LogError("Error verifying structure place with the whitelist: ");
+                L.LogError(ex);
             }
         }
         public static void AddItem(Guid ID) => AddObjectToSave(new WhitelistItem(ID, 255));

@@ -146,7 +146,7 @@ namespace Uncreated.Warfare.Gamemodes
             FlagUICount = 10;
             EnablePlayerCount = true;
             ShowPointsOnUI = false;
-            ProgressChars = "¶·¸¹º»:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            ProgressChars = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";
             PlayerIcon = '³';
             AttackIcon = 'µ';
             DefendIcon = '´';

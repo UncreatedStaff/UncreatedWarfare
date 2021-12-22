@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Kits
                                 }
                                 else
                                 {
-                                    F.Log("Couldn't get sign from " + barricade.barricade.asset.GUID);
+                                    L.Log("Couldn't get sign from " + barricade.barricade.asset.GUID);
                                     player.SendChat("vehiclebay_e_spawnnoexist");
                                 }
                             }

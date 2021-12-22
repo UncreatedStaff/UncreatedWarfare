@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.FOBs
                 fobListId = fobList.id;
             if (Assets.find(Gamemode.Config.UI.NearbyResourcesGUID) is EffectAsset nbyrs)
                 nearbyResourceId = nbyrs.id;
-            F.Log("Found fobs UIs: " + fobListId + ", " + nearbyResourceId);
+            L.Log("Found fobs UIs: " + fobListId + ", " + nearbyResourceId);
         }
 
         public static event PlayerEnteredFOBRadiusHandler OnPlayerEnteredFOBRadius;
@@ -704,11 +704,11 @@ namespace Uncreated.Warfare.FOBs
             {
                 if (ucplayer.GetTeam() == team)
                 {
-                    XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, F.Translate("xp_fob_teamkilled", player));
+                    XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", player));
                 }
                 else
                 {
-                    XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBKilledXP, F.Translate("xp_fob_killed", player));
+                    XP.XPManager.AddXP(ucplayer.Player, XP.XPManager.config.Data.FOBKilledXP, Translation.Translate("xp_fob_killed", player));
                     Stats.StatsManager.ModifyStats(player, x => x.FobsDestroyed++, false);
                     Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                 }
@@ -843,7 +843,7 @@ namespace Uncreated.Warfare.FOBs
                         i++;
                 }
                 EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(),
-                    F.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].nearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].ClosestLocation));
+                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].nearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].ClosestLocation));
             }
         }
         public static void UpdateFOBList(UCPlayer player, SpecialFOB fob = null)
@@ -868,7 +868,7 @@ namespace Uncreated.Warfare.FOBs
                     UpdateUIList(team, c, FOBList, player);
                     return;
                 }
-                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), F.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].ClosestLocation));
+                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].ClosestLocation));
             }
         }
         private static void UpdateUIList(ulong team, ITransportConnection c, List<FOB> FOBList, UCPlayer player)
@@ -881,7 +881,7 @@ namespace Uncreated.Warfare.FOBs
                 {
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
-                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, F.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].ClosestLocation));
+                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].ClosestLocation));
                     i2++;
                 }
             }
@@ -891,7 +891,7 @@ namespace Uncreated.Warfare.FOBs
                 string i22 = i2.ToString();
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
                 EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22,
-                    F.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].nearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].ClosestLocation));
+                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].nearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].ClosestLocation));
                 i2++;
             }
             for (; i2 < config.Data.FobLimit; i2++)
@@ -900,7 +900,6 @@ namespace Uncreated.Warfare.FOBs
             }
         }
     }
-
     public class FOB
     {
         public string Name;

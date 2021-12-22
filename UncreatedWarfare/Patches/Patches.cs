@@ -147,13 +147,13 @@ namespace Uncreated.Warfare
                     switch (mode)
                     {
                         case EChatMode.GLOBAL:
-                            F.Log($"[ALL]  {name} \"{text}\"", ConsoleColor.DarkGray);
+                            L.Log($"[ALL]  {name} \"{text}\"", ConsoleColor.DarkGray);
                             break;
                         case EChatMode.LOCAL:
-                            F.Log($"[A/S]  {name} \"{text}\"", ConsoleColor.DarkGray);
+                            L.Log($"[A/S]  {name} \"{text}\"", ConsoleColor.DarkGray);
                             break;
                         case EChatMode.GROUP:
-                            F.Log($"[TEAM] {name} \"{text}\"", ConsoleColor.DarkGray);
+                            L.Log($"[TEAM] {name} \"{text}\"", ConsoleColor.DarkGray);
                             break;
                         default:
                             return false;
@@ -161,7 +161,7 @@ namespace Uncreated.Warfare
                 }
                 else if (mode != EChatMode.GLOBAL || mode != EChatMode.LOCAL || mode != EChatMode.GROUP) return false;
                 if (fromUnityEvent)
-                    F.Log($"UnityEventMsg {callingPlayer.playerID.steamID}: \"{text}\"", ConsoleColor.DarkCyan);
+                    L.Log($"UnityEventMsg {callingPlayer.playerID.steamID}: \"{text}\"", ConsoleColor.DarkCyan);
                 Color chatted = Color.white;
                 ulong team = callingPlayer.GetTeam();
                 chatted = Teams.TeamManager.GetTeamColor(team);
@@ -332,7 +332,7 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void OnPreMeleeHit(UseableMelee __instance)
             {
-                F.Log("Hit with: " + __instance.equippedMeleeAsset.itemName);
+                L.Log("Hit with: " + __instance.equippedMeleeAsset.itemName);
 
                 RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), ((ItemWeaponAsset)__instance.player.equipment.asset).range, RayMasks.BARRICADE, __instance.player);
                 if (info.transform != null)
@@ -340,15 +340,15 @@ namespace Uncreated.Warfare
                     var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                     if (drop != null)
                     {
-                        F.Log("     BarricadeDrop found");
+                        L.Log("     BarricadeDrop found");
 
                         if (drop.model.TryGetComponent(out BuildableComponent buildable))
                         {
-                            F.Log("     BuildableComponent found");
+                            L.Log("     BuildableComponent found");
                             UCPlayer builder = UCPlayer.FromPlayer(__instance.player);
                             if (builder.GetTeam() == drop.GetServersideData().group)
                             {
-                                F.Log("     Group was equal");
+                                L.Log("     Group was equal");
                                 if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
                                     buildable.IncrementBuildPoints(builder);
                             }

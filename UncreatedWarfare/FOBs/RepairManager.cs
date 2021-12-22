@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.FOBs
                 stations.Add(station);
                 if (UCWarfare.Config.Debug)
                     foreach (RepairStation s in stations)
-                        F.Log($"Repair station: Active: {s.IsActive}, Structure: {s.structure.instanceID}, Drop: {s.drop.instanceID}.", ConsoleColor.DarkGray);
+                        L.Log($"Repair station: Active: {s.IsActive}, Structure: {s.structure.instanceID}, Drop: {s.drop.instanceID}.", ConsoleColor.DarkGray);
             }
         }
 
@@ -118,7 +118,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (storage is null)
             {
-                F.LogWarning("REPAIR STATION ERROR: Repair station was not a barricade with storage");
+                L.LogWarning("REPAIR STATION ERROR: Repair station was not a barricade with storage");
                 IsActive = false;
             }
         }

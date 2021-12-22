@@ -590,5 +590,146 @@ namespace Uncreated.Warfare
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             return barricadeRegions.SelectMany(brd => brd.drops).Where(d => d.instanceID == data.instanceID).FirstOrDefault();
         }
+        public static SDG.Unturned.BarricadeData GetBarricadeFromInstID(uint instanceID, out BarricadeDrop drop)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
+                        {
+                            drop = region.drops[i];
+                            return region.drops[i].GetServersideData();
+                        }
+                    }
+                }
+            }
+            for (int vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
+            {
+                VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[vr];
+                for (int i = 0; i < region.drops.Count; i++)
+                {
+                    if (region.drops[i].instanceID == instanceID)
+                    {
+                        drop = region.drops[i];
+                        return region.drops[i].GetServersideData();
+                    }
+                }
+            }
+            drop = default;
+            return default;
+        }
+        public static BarricadeDrop GetBarricadeFromInstID(uint instanceID)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
+                        {
+                            return region.drops[i];
+                        }
+                    }
+                }
+            }
+            for (int vr = 0; vr < BarricadeManager.vehicleRegions.Count; vr++)
+            {
+                VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[vr];
+                for (int i = 0; i < region.drops.Count; i++)
+                {
+                    if (region.drops[i].instanceID == instanceID)
+                    {
+                        return region.drops[i];
+                    }
+                }
+            }
+            return default;
+        }
+        public static SDG.Unturned.StructureData GetStructureFromInstID(uint instanceID, out StructureDrop drop)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    StructureRegion region = StructureManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
+                        {
+                            drop = region.drops[i];
+                            return region.drops[i].GetServersideData();
+                        }
+                    }
+                }
+            }
+            drop = default;
+            return default;
+        }
+        public static StructureDrop GetStructureFromInstID(uint instanceID)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    StructureRegion region = StructureManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().instanceID == instanceID)
+                        {
+                            return region.drops[i];
+                        }
+                    }
+                }
+            }
+            return default;
+        }
+        public static BarricadeDrop GetBarriadeBySerializedTransform(SerializableTransform t)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (t == region.drops[i].model)
+                        {
+                            return region.drops[i];
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+        public static StructureDrop GetStructureBySerializedTransform(SerializableTransform t)
+        {
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    StructureRegion region = StructureManager.regions[x, y];
+                    if (region == default) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (t == region.drops[i].model)
+                        {
+                            return region.drops[i];
+                        }
+                    }
+                }
+            }
+            return null;
+        }
     }
 }

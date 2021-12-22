@@ -167,14 +167,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void DeclareWin(ulong winner)
         {
-            F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
+            L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
             foreach (SteamPlayer client in Provider.clients)
             {
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
-                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(client.player, "", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG);
             }
             StatsManager.ModifyTeam(winner, t => t.Wins++, false);
             StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
@@ -245,13 +245,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             LoadFlagsIntoRotation();
             if (_rotation.Count < 1)
             {
-                F.LogError("No flags were put into rotation!!");
+                L.LogError("No flags were put into rotation!!");
             }
             _objectiveT1Index = 0;
             _objectiveT2Index = _rotation.Count - 1;
             if (Config.TeamCTF.DiscoveryForesight < 1)
             {
-                F.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
+                L.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
             }
             else
             {
@@ -280,7 +280,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void PrintFlagRotation()
         {
-            F.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
+            L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
             base.PrintFlagRotation();
         }
         protected virtual void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
@@ -289,7 +289,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 if (GameStats != null)
                     GameStats.flagOwnerChanges++;
-                F.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
+                L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
                 if (Config.TeamCTF.DiscoveryForesight > 0)
                 {
                     if (Team == 1)
@@ -369,7 +369,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             ulong team = player.GetTeam();
             if (UCWarfare.Config.Debug)
-                F.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
+                L.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
@@ -407,7 +407,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             ITransportConnection channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
             if (UCWarfare.Config.Debug)
-                F.Log("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+                L.Log("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
             player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             CTFUI.ClearCaptureUI(channel);
             SendUIParameters t1 = SendUIParameters.Nil;
@@ -528,7 +528,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 {
                     ulong team = player.GetTeam();
                     player.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
-                        flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", player),
+                        flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", player),
                         flag.TeamSpecificHexColor);
                 }
             }
@@ -538,7 +538,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 {
                     ulong team = player.GetTeam();
                     player.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(NewOwner, player.Player),
-                        TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", player),
+                        TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", player),
                         flag.TeamSpecificHexColor);
                 }
             }
@@ -597,7 +597,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
                     KitManager.GiveKit(player, unarmed);
                 else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-                else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
             }
             _reviveManager.OnPlayerConnected(player);
             if (!AllowCosmetics)

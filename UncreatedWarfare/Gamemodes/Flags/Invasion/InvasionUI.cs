@@ -225,7 +225,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 List<Flag> rotation = gm.Rotation;
                 EffectManager.sendUIEffect(CTFUI.flagListID, CTFUI.flagListKey, c, true);
                 EffectManager.sendUIEffectVisibility(CTFUI.flagListKey, c, true, "Header", true);
-                EffectManager.sendUIEffectText(CTFUI.flagListKey, c, true, "Header", F.Translate("flag_header", player));
+                EffectManager.sendUIEffectText(CTFUI.flagListKey, c, true, "Header", Translation.Translate("flag_header", player));
                 if (team == 1 || team == 2)
                 {
                     for (int i = 0; i < Gamemode.Config.UI.FlagUICount; i++)
@@ -258,7 +258,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                             EffectManager.sendUIEffectText(CTFUI.flagListKey, c, true, "N" + i2,
                                 flag.Discovered(team) ?
                                 $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
-                                $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{F.Translate("undiscovered_flag", player)}</color>");
+                                $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{Translation.Translate("undiscovered_flag", player)}</color>");
                             EffectManager.sendUIEffectText(CTFUI.flagListKey, c, true, "I" + i2, objective);
                         }
                     }

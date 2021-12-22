@@ -29,8 +29,8 @@ namespace Uncreated.Warfare
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
         private void Teamkill(KillEventArgs parameters)
         {
-            //F.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
-            F.Log(F.Translate("teamkilled_console_log", 0,
+            //L.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
+            L.Log(Translation.Translate("teamkilled_console_log", 0,
                 F.GetPlayerOriginalNames(parameters.killer).PlayerName,
                 parameters.killer.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
                 F.GetPlayerOriginalNames(parameters.dead).PlayerName,
@@ -98,25 +98,25 @@ namespace Uncreated.Warfare
                 {
                     if (LandmineLinkedAssistant == null)
                     {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
+                        Chat.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
                             new FPlayerName() { CharacterName = "Unknown", NickName = "Unknown", PlayerName = "Unknown", Steam64 = 0 }, 0, limb, itemName, out msg, false);
                     }
                     else
                     {
-                        F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
+                        Chat.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), killer.GetTeam(),
                             F.GetPlayerOriginalNames(LandmineLinkedAssistant), LandmineLinkedAssistant.GetTeam(), limb, itemName, out msg, false);
                     }
                 }
                 else
                 {
-                    F.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), false, killer.GetTeam(), limb, itemName, distance, out msg, false);
+                    Chat.BroadcastDeath(key, cause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), F.GetPlayerOriginalNames(killer), false, killer.GetTeam(), limb, itemName, distance, out msg, false);
                 }
                 return msg;
             }
         }
         private void Kill(KillEventArgs parameters)
         {
-            //F.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
+            //L.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -190,8 +190,8 @@ namespace Uncreated.Warfare
                     }
                     catch (Exception ex)
                     {
-                        F.LogError("Error checking defending/attacking status on kill.");
-                        F.LogError(ex);
+                        L.LogError("Error checking defending/attacking status on kill.");
+                        L.LogError(ex);
                     }
                 }
                 StatsManager.ModifyTeam(team, t => t.Kills++, false);
@@ -269,9 +269,9 @@ namespace Uncreated.Warfare
                 FPlayerName name = F.GetPlayerOriginalNames(dead);
                 ulong team = dead.GetTeam();
                 if (cause == EDeathCause.LANDMINE)
-                    F.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                    Chat.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
                 else
-                    F.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
+                    Chat.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
                 return msg;
             }
             public DeathEventArgs DeadArgs
@@ -291,7 +291,7 @@ namespace Uncreated.Warfare
         }
         public void Suicide(SuicideEventArgs parameters)
         {
-            //F.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
+            //L.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             DeathEventArgs args = new DeathEventArgs
             {
                 cause = parameters.cause,
@@ -368,7 +368,7 @@ namespace Uncreated.Warfare
                 {
                     if (killerargs == default)
                     {
-                        F.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                        Chat.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
                     }
                     else
                     {
@@ -378,16 +378,16 @@ namespace Uncreated.Warfare
                             {
                                 FPlayerName name2 = F.GetPlayerOriginalNames(killerargs.killer);
                                 ulong team2 = killerargs.killer.GetTeam();
-                                F.BroadcastLandmineDeath(key, name, team, name2, team2, name2, team2, limb, itemName, out msg, false);
+                                Chat.BroadcastLandmineDeath(key, name, team, name2, team2, name2, team2, limb, itemName, out msg, false);
                             }
                             else
                             {
-                                F.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                                Chat.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
                             }
                         }
                         else
                         {
-                            F.BroadcastLandmineDeath(key, name, team, F.GetPlayerOriginalNames(killerargs.killer ?? dead), (killerargs.killer ?? dead).GetTeam(),
+                            Chat.BroadcastLandmineDeath(key, name, team, F.GetPlayerOriginalNames(killerargs.killer ?? dead), (killerargs.killer ?? dead).GetTeam(),
                             F.GetPlayerOriginalNames(killerargs.LandmineLinkedAssistant), killerargs.LandmineLinkedAssistant.GetTeam(), limb, itemName, out msg, false);
                         }
                     }
@@ -396,11 +396,11 @@ namespace Uncreated.Warfare
                 {
                     if (killerargs == default || killerargs.killer == default)
                     {
-                        F.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
+                        Chat.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
                     }
                     else
                     {
-                        F.BroadcastDeath(key, cause, name, team, F.GetPlayerOriginalNames(killerargs.killer), false, killerargs.killer.GetTeam(), limb, itemName, distance, out msg, false);
+                        Chat.BroadcastDeath(key, cause, name, team, F.GetPlayerOriginalNames(killerargs.killer), false, killerargs.killer.GetTeam(), limb, itemName, distance, out msg, false);
                     }
                 }
                 return msg;
@@ -408,7 +408,7 @@ namespace Uncreated.Warfare
         }
         public void DeathNotSuicide(DeathEventArgs parameters)
         {
-            //F.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
+            //L.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
 
             byte team = parameters.dead.GetTeamByte();
             Data.Gamemode?.OnPlayerDeath(parameters);
@@ -481,7 +481,7 @@ namespace Uncreated.Warfare
                 string landmineName;
                 if (placer == null)
                 {
-                    F.Log("placer is null");
+                    L.Log("placer is null");
                     placer = dead.Player.channel.owner;
                     placerName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                     foundPlacer = false;
@@ -552,7 +552,7 @@ namespace Uncreated.Warfare
                         triggererName = new FPlayerName() { CharacterName = "Unknown", PlayerName = "Unknown", NickName = "Unknown", Steam64 = 0 };
                         foundTriggerer = false;
                     }
-                    F.Log($"Triggerer: {(foundTriggerer ? "not found" : triggererName.PlayerName)}");
+                    L.Log($"Triggerer: {(foundTriggerer ? "not found" : triggererName.PlayerName)}");
                 }
                 string key = "LANDMINE";
                 string itemkey = landmineID.ToString("N");
@@ -572,7 +572,7 @@ namespace Uncreated.Warfare
                 {
                     key += "_UNKNOWNKILLER";
                 }
-                F.Log(key);
+                L.Log(key);
                 if (foundPlacer && foundTriggerer)
                 {
                     if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
@@ -1098,13 +1098,13 @@ namespace Uncreated.Warfare
         }
         private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
         {
-            F.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
-            F.Log(message, ConsoleColor.Cyan);
+            Chat.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
+            L.Log(message, ConsoleColor.Cyan);
         }
         private void LogLandmineMessage(string key, Player dead, FPlayerName killerName, ulong killerGroup, ELimb limb, string landmineName, FPlayerName triggererName, ulong triggererTeam)
         {
-            F.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
-            F.Log(message, ConsoleColor.Cyan);
+            Chat.BroadcastLandmineDeath(key, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, killerGroup, triggererName, triggererTeam, limb, landmineName, out string message, true);
+            L.Log(message, ConsoleColor.Cyan);
         }
         internal void GetKillerInfo(out Guid item, out float distance, out FPlayerName killernames, out ulong KillerTeam, out string kitname, out ushort vehicle, EDeathCause cause, SteamPlayer killer, Player dead)
         {
@@ -1150,13 +1150,13 @@ namespace Uncreated.Warfare
                     {
                         item = g.ThrowableID;
                         if (Config.Debug)
-                            F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
+                            L.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }
                     else if (c.thrown[0] != null)
                     {
                         item = c.thrown[0].ThrowableID;
                         if (Config.Debug)
-                            F.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
+                            L.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }
                     else item = killer.player.equipment.asset.GUID;
                 }

@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 _allFlags.Add(new Flag(flags[i], this) { index = i });
             }
-            F.Log("Loaded " + i.ToString(Data.Locale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
+            L.Log("Loaded " + i.ToString(Data.Locale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
         }
         public virtual void PrintFlagRotation()
         {
@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 sb.Append(i.ToString(Data.Locale) + ") " + _rotation[i].Name + '\n');
             }
-            F.Log(sb.ToString(), ConsoleColor.Green);
+            L.Log(sb.ToString(), ConsoleColor.Green);
         }
         public abstract void LoadRotation();
         protected virtual void EvaluatePoints()

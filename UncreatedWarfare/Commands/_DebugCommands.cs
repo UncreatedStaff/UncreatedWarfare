@@ -50,7 +50,7 @@ namespace Uncreated.Warfare.Commands
                     MethodInfo info = type.GetMethod(command[0], BindingFlags.NonPublic | BindingFlags.Instance);
                     if (info == null)
                     {
-                        if (isConsole) F.LogError(F.Translate("test_no_method", 0, out _, command[0]));
+                        if (isConsole) L.LogError(Translation.Translate("test_no_method", 0, out _, command[0]));
                         else player.SendChat("test_no_method", command[0]);
                     }
                     else
@@ -61,21 +61,21 @@ namespace Uncreated.Warfare.Commands
                         }
                         catch (Exception ex)
                         {
-                            F.LogError(ex.InnerException ?? ex);
-                            if (isConsole) F.LogError(F.Translate("test_error_executing", 0, out _, info.Name, (ex.InnerException ?? ex).GetType().Name));
+                            L.LogError(ex.InnerException ?? ex);
+                            if (isConsole) L.LogError(Translation.Translate("test_error_executing", 0, out _, info.Name, (ex.InnerException ?? ex).GetType().Name));
                             else player.SendChat("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
                         }
                     }
                 }
                 catch (AmbiguousMatchException)
                 {
-                    if (isConsole) F.LogError(F.Translate("test_multiple_matches", 0, out _, command[0]));
+                    if (isConsole) L.LogError(Translation.Translate("test_multiple_matches", 0, out _, command[0]));
                     else player.SendChat("test_multiple_matches", command[0]);
                 }
             }
             else
             {
-                if (isConsole) F.LogError("Usage: /test <operation> [parameters...]");
+                if (isConsole) L.LogError("Usage: /test <operation> [parameters...]");
                 else player.SendChat("Usage: /test <operation> [parameters...]", Color.red);
             }
         }
@@ -88,7 +88,7 @@ namespace Uncreated.Warfare.Commands
             if (command.Length < 3)
             {
                 if (player == null)
-                    F.LogWarning(F.Translate("test_givexp_syntax", 0, out _));
+                    L.LogWarning(Translation.Translate("test_givexp_syntax", 0, out _));
                 else
                     player.SendChat("test_givexp_syntax");
                 return;
@@ -99,20 +99,20 @@ namespace Uncreated.Warfare.Commands
                 if (target == default)
                 {
                     if (player == null)
-                        F.LogWarning(F.Translate("test_givexp_player_not_found", 0, out _, command[1]));
+                        L.LogWarning(Translation.Translate("test_givexp_player_not_found", 0, out _, command[1]));
                     else
                         player.SendChat("test_givexp_player_not_found", command[1]);
                     return;
                 }
-                XPManager.AddXP(target.Player, amount, player == null ? F.Translate("xp_from_operator", target.Steam64) :
-                    F.Translate("xp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
+                XPManager.AddXP(target.Player, amount, player == null ? Translation.Translate("xp_from_operator", target.Steam64) :
+                    Translation.Translate("xp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                 if (player == null)
-                    F.Log(F.Translate("test_givexp_success", 0, out _, amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName));
+                    L.Log(Translation.Translate("test_givexp_success", 0, out _, amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName));
                 else
                     player.SendChat("test_givexp_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
             }
             else if (player == null)
-                F.LogWarning(F.Translate("test_givexp_invalid_amount", 0, out _, command[2]));
+                L.LogWarning(Translation.Translate("test_givexp_invalid_amount", 0, out _, command[2]));
             else
                 player.SendChat("test_givexp_invalid_amount", command[2]);
         }
@@ -121,7 +121,7 @@ namespace Uncreated.Warfare.Commands
             if (command.Length < 3)
             {
                 if (player == null)
-                    F.LogWarning(F.Translate("test_giveof_syntax", 0, out _));
+                    L.LogWarning(Translation.Translate("test_giveof_syntax", 0, out _));
                 else
                     player.SendChat("test_giveof_syntax");
                 return;
@@ -132,20 +132,20 @@ namespace Uncreated.Warfare.Commands
                 if (target == default)
                 {
                     if (player == null)
-                        F.LogWarning(F.Translate("test_giveof_player_not_found", 0, out _, command[1]));
+                        L.LogWarning(Translation.Translate("test_giveof_player_not_found", 0, out _, command[1]));
                     else
                         player.SendChat("test_giveof_player_not_found", command[1]);
                     return;
                 }
-                OfficerManager.AddOfficerPoints(target.Player, amount, player == null ? F.Translate("ofp_from_operator", target.Steam64) :
-                    F.Translate("ofp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
+                OfficerManager.AddOfficerPoints(target.Player, amount, player == null ? Translation.Translate("ofp_from_operator", target.Steam64) :
+                    Translation.Translate("ofp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                 if (player == null)
-                    F.Log(F.Translate("test_giveof_success", 0, out _, amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName));
+                    L.Log(Translation.Translate("test_giveof_success", 0, out _, amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName));
                 else
                     player.SendChat("test_giveof_success", amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName);
             }
             else if (player == null)
-                F.LogWarning(F.Translate("test_giveof_invalid_amount", 0, out _, command[2]));
+                L.LogWarning(Translation.Translate("test_giveof_invalid_amount", 0, out _, command[2]));
             else
                 player.SendChat("test_giveof_invalid_amount", command[2]);
         }
@@ -153,7 +153,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == null)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             if (Data.Is(out IFlagRotation fg))
@@ -203,7 +203,7 @@ namespace Uncreated.Warfare.Commands
             if (team != 1 && team != 2)
             {
                 if (player == null)
-                    F.LogError(F.Translate("gamemode_flag_not_on_cap_team_console", 0, out _));
+                    L.LogError(Translation.Translate("gamemode_flag_not_on_cap_team_console", 0, out _));
                 else
                     player.SendChat("gamemode_flag_not_on_cap_team");
                 return;
@@ -225,11 +225,11 @@ namespace Uncreated.Warfare.Commands
                     ReloadCommand.ReloadFlags();
                     fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
                     ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, true, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
-                    F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                    L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
                 }
             }
             else if (player == null)
-                F.LogWarning(F.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+                L.LogWarning(Translation.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
             else
                 player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
@@ -248,11 +248,11 @@ namespace Uncreated.Warfare.Commands
                     ReloadCommand.ReloadFlags();
                     fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
                     ZoneDrawing.DrawZoneMap(fg, Data.FlagStorage + @"GraphExport\zonegraph_" + i.ToString(Data.Locale));
-                    F.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+                    L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
                 }
             }
             else if (player == null)
-                F.LogWarning(F.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+                L.LogWarning(Translation.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
             else
                 player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
@@ -260,7 +260,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             if (Data.Is(out IFlagRotation fg))
@@ -286,7 +286,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.look);
@@ -294,14 +294,14 @@ namespace Uncreated.Warfare.Commands
             else
             {
                 player.SendChat("test_sign_success", sign.text);
-                F.Log(F.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
+                L.Log(Translation.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
             }
         }
         private void visualize(string[] command, Player player)
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             Zone zone;
@@ -410,7 +410,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             if (command.Length == 1)
@@ -497,9 +497,9 @@ namespace Uncreated.Warfare.Commands
             if (player == default)
             {
                 if (UCWarfare.I.CoroutineTiming)
-                    F.Log(F.Translate("test_time_enabled_console", 0, out _));
+                    L.Log(Translation.Translate("test_time_enabled_console", 0, out _));
                 else
-                    F.Log(F.Translate("test_time_disabled_console", 0, out _));
+                    L.Log(Translation.Translate("test_time_disabled_console", 0, out _));
             }
             else
             {
@@ -538,7 +538,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player == default)
                     {
-                        F.LogError(F.Translate("test_zonearea_syntax", 0, out _));
+                        L.LogError(Translation.Translate("test_zonearea_syntax", 0, out _));
                         return;
                     }
                     player.SendChat("test_zonearea_syntax");
@@ -554,7 +554,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (player != default)
                     player.SendChat("test_zonearea_started");
-                else F.Log(F.Translate("test_zonearea_started", 0, out _));
+                else L.Log(Translation.Translate("test_zonearea_started", 0, out _));
                 ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, path, range, drawIn, drawAngles, true);
             }
             else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
@@ -563,7 +563,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             Zone zone;
@@ -596,7 +596,7 @@ namespace Uncreated.Warfare.Commands
             {
                 ZoneDrawing.DrawZoneMap(fg, null);
             }
-            else if (player == null) F.LogError(F.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+            else if (player == null) L.LogError(Translation.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
             else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
         private void rotation(string[] command, Player player)
@@ -609,7 +609,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             DamageTool.damage(player, EDeathCause.KILL, ELimb.SPINE, player.channel.owner.playerID.steamID, Vector3.down, DOWN_DAMAGE, 1, out _, false, false);
@@ -620,16 +620,16 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            F.Log(F.GetLayer(player.look.aim.position, player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
+            L.Log(F.GetLayer(player.look.aim.position, player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
         }
         private void dumpzone(string[] command, Player player)
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             Zone zone;
@@ -689,7 +689,7 @@ namespace Uncreated.Warfare.Commands
                     zoneColor = UCWarfare.GetColorHex("default");
                 }
             }
-            F.Log(zone.Dump(), ConsoleColor.Green);
+            L.Log(zone.Dump(), ConsoleColor.Green);
             player.SendChat("test_check_console");
         }
         private void clearui(string[] command, Player player)
@@ -709,12 +709,12 @@ namespace Uncreated.Warfare.Commands
                         .Append(string.Join(",", fg.Rotation[f].PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
                         .Append("\nPoints: ").Append(fg.Rotation[f].Points).Append(" State: ").Append(fg.Rotation[f].LastDeltaPoints).Append('\n');
                 }
-                F.Log(
+                L.Log(
                     $"Game {fg.GameID}: " +
                     $"Tickets: 1: {Tickets.TicketManager.Team1Tickets}, 2: {Tickets.TicketManager.Team2Tickets}\n" +
                     $"Starting Tickets: 1: {Tickets.TicketManager._Team1previousTickets}, 2: {Tickets.TicketManager._Team2previousTickets}\n" +
                     $"{fg.Rotation.Count} Flags: {flags}Players:\n" +
-                    $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (F.TryGetPlaytimeComponent(x.player, out PlaytimeComponent c) ? F.GetTimeFromSeconds((uint)Mathf.RoundToInt(c.CurrentTimeSeconds), 0) : "unknown pt")))}"// ends with \n
+                    $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (F.TryGetPlaytimeComponent(x.player, out PlaytimeComponent c) ? Translation.GetTimeFromSeconds((uint)Mathf.RoundToInt(c.CurrentTimeSeconds), 0) : "unknown pt")))}"// ends with \n
                     );
             }
         }
@@ -773,7 +773,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (command.Length != 4)
             {
-                if (player == null) F.LogWarning("Syntax: /test playersave <Steam64> <Property> <Value>.");
+                if (player == null) L.LogWarning("Syntax: /test playersave <Steam64> <Property> <Value>.");
                 else player.SendChat("Syntax: /test playersave <Steam64> <Property> <Value>.");
                 return;
             }
@@ -784,34 +784,34 @@ namespace Uncreated.Warfare.Commands
                     PlayerManager.SetProperty(save, command[2], command[3], out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
                     if (!allowedToChange) // error - invalid argument value
                     {
-                        if (player == null) F.LogWarning($"Couldn't change {command[2].ToUpper()} to {command[3]}, not allowed.");
+                        if (player == null) L.LogWarning($"Couldn't change {command[2].ToUpper()} to {command[3]}, not allowed.");
                         else player.SendChat($"Couldn't change {command[2].ToUpper()} to {command[3]}, not allowed.");
                         return;
                     }
                     if (!parsed) // error - invalid argument value
                     {
-                        if (player == null) F.LogWarning($"Couldn't change {command[2].ToUpper()} to {command[3]}, invalid type.");
+                        if (player == null) L.LogWarning($"Couldn't change {command[2].ToUpper()} to {command[3]}, invalid type.");
                         else player.SendChat($"Couldn't change {command[2].ToUpper()} to {command[3]}, invalid type.");
                         return;
                     }
                     if (!foundproperty || !set) // error - invalid property name
                     {
-                        if (player == null) F.LogWarning($"There is no property in [PlayerSave] called {command[2].ToUpper()}.");
+                        if (player == null) L.LogWarning($"There is no property in [PlayerSave] called {command[2].ToUpper()}.");
                         else player.SendChat($"There is no property in PlayerSave called {command[2].ToUpper()}.");
                         return;
                     }
                     Players.FPlayerName names = Data.DatabaseManager.GetUsernames(Steam64);
-                    if (player == null) F.Log($"Changed {command[2].ToUpper()} in player {names.PlayerName} to {command[3]}.");
+                    if (player == null) L.Log($"Changed {command[2].ToUpper()} in player {names.PlayerName} to {command[3]}.");
                     else player.SendChat($"Changed {command[2].ToUpper()} in player {names.PlayerName} to {command[3]}.");
                 }
                 else
                 {
-                    if (player == null) F.LogWarning("Couldn't find a save by that ID.");
+                    if (player == null) L.LogWarning("Couldn't find a save by that ID.");
                     else player.SendChat("Couldn't find a save by that ID.");
                 }
             } else
             {
-                if (player == null) F.LogWarning("Couldn't parse argument [Steam64] as a [UInt64].");
+                if (player == null) L.LogWarning("Couldn't parse argument [Steam64] as a [UInt64].");
                 else player.SendChat("Couldn't parse to Steam64.");
             }
         }
@@ -820,7 +820,7 @@ namespace Uncreated.Warfare.Commands
             string dir = Data.KitsStorage + "playersaves.json";
             if (!File.Exists(dir))
             {
-                if (player == null) F.LogWarning("No playersaves to append.");
+                if (player == null) L.LogWarning("No playersaves to append.");
                 else player.SendChat("No playersaves to append.");
             }
             else
@@ -842,7 +842,7 @@ namespace Uncreated.Warfare.Commands
                         }
                     }
                     PlayerManager.Write();
-                    if (player == null) F.Log(i + " playersaves appended.");
+                    if (player == null) L.Log(i + " playersaves appended.");
                     else player.SendChat(i + " playersaves appended.");
                 }
                 catch (Exception ex)
@@ -852,7 +852,7 @@ namespace Uncreated.Warfare.Commands
                         r.Close();
                         r.Dispose();
                     }
-                    if (player == null) F.LogError(ex.GetType().Name + " exception during execution.");
+                    if (player == null) L.LogError(ex.GetType().Name + " exception during execution.");
                     else player.SendChat(ex.GetType().Name + " exception during execution.");
                     throw;
                 }
@@ -862,7 +862,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (command.Length != 2)
             {
-                if (player == null) F.LogWarning("Syntax: /test gamemode <GamemodeName>");
+                if (player == null) L.LogWarning("Syntax: /test gamemode <GamemodeName>");
                 else player.SendChat("Syntax:  <i>/test gamemode <GamemodeName>.</i>");
                 return;
             }
@@ -879,7 +879,7 @@ namespace Uncreated.Warfare.Commands
                     Data.Gamemode = newGamemode;
                     Data.Gamemode.Init();
                     Data.Gamemode.OnLevelLoaded();
-                    F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+                    Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
                     for (int i = 0; i < Provider.clients.Count; i++)
                     {
                         Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
@@ -887,14 +887,14 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
-                    if (player == null) F.LogWarning("Failed to find gamemode: \"" + command[1] + "\".");
+                    if (player == null) L.LogWarning("Failed to find gamemode: \"" + command[1] + "\".");
                     else player.SendChat("Failed to find gamemode: \"<i>" + command[1] + "</i>\".");
                 }
             }
             catch (Exception ex)
             {
-                F.LogError("Error loading gamemode, falling back to TeamCTF:");
-                F.LogError(ex);
+                L.LogError("Error loading gamemode, falling back to TeamCTF:");
+                L.LogError(ex);
                 if (Data.Gamemode != null)
                 {
                     Data.Gamemode.Dispose();
@@ -909,7 +909,7 @@ namespace Uncreated.Warfare.Commands
         private void trackstats(string[] command, Player player)
         {
             Data.TrackStats = !Data.TrackStats;
-            if (player == null) F.LogWarning("Stat tracking " + (Data.TrackStats ? "enabled." : "disabled."));
+            if (player == null) L.LogWarning("Stat tracking " + (Data.TrackStats ? "enabled." : "disabled."));
             else player.SendChat("Stat tracking " + (Data.TrackStats ? "<b>enabled</b>." : "<b>disabled</b>."));
         }
         private void destroyblocker(string[] command, Player player)
@@ -933,11 +933,11 @@ namespace Uncreated.Warfare.Commands
         {
             if (Data.Is(out IStagingPhase gm))
             {
-                if (player == null) F.Log("Skipped staging phase.");
+                if (player == null) L.Log("Skipped staging phase.");
                 else player.SendChat("Skipped staging phase.");
                 gm.SkipStagingPhase();
             }
-            else if (player == null) F.Log("Staging phase is disabled.");
+            else if (player == null) L.Log("Staging phase is disabled.");
             else player.SendChat("Staging phase is disabled.");
         }
         private void render(string[] command, Player player)
@@ -953,12 +953,12 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
-                    F.Log("not equipped");
+                    L.Log("not equipped");
                 }
             }
             else
             {
-                F.Log("something null");
+                L.Log("something null");
             }
         }
         private void resetlobby(string[] command, Player player)
@@ -968,7 +968,7 @@ namespace Uncreated.Warfare.Commands
                 if (command.Length < 1)
                 {
                     if (player == null)
-                        F.Log("Syntax: /resetlobby <Player>", ConsoleColor.Yellow);
+                        L.Log("Syntax: /resetlobby <Player>", ConsoleColor.Yellow);
                     else
                         player.SendChat("Syntax: /resetlobby <Player>", Color.red);
                     return;
@@ -977,7 +977,7 @@ namespace Uncreated.Warfare.Commands
                 if (ucplayer == null)
                 {
                     if (player == null)
-                        F.Log("Unable to find a player by that name.", ConsoleColor.Yellow);
+                        L.Log("Unable to find a player by that name.", ConsoleColor.Yellow);
                     else
                         player.SendChat("Unable to find a player by that name.", Color.red);
                     return;
@@ -987,7 +987,7 @@ namespace Uncreated.Warfare.Commands
                 t.JoinManager.OnPlayerConnected(ucplayer, false, false);
             }
             else if (player == null)
-                F.Log(F.Translate("gamemode_not_team_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
+                L.Log(Translation.Translate("gamemode_not_team_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
             else
                 player.SendChat("gamemode_not_team_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
@@ -995,7 +995,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == null)
             {
-                F.Log("This command can only be called by a player.");
+                L.Log("This command can only be called by a player.");
                 return;
             }
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -1010,7 +1010,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             ToastMessage.QueueMessage(player, "some info 1", EToastMessageSeverity.INFO);
@@ -1029,7 +1029,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             Transform t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL | RayMasks.VEHICLE);
@@ -1079,7 +1079,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (player == default)
             {
-                F.LogError(F.Translate("test_no_players_console", 0, out _));
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
             if (command.Length < 2 || !uint.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out uint instanceid))
@@ -1100,7 +1100,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                     {
-                        BarricadeDrop oldd = F.GetBarricadeFromInstID(instanceid);
+                        BarricadeDrop oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
                         if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                             UnityEngine.Object.Destroy(vsc);
                         spawn.SpawnPadInstanceID = bd.instanceID;
@@ -1120,7 +1120,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                 {
-                    BarricadeDrop oldd = F.GetBarricadeFromInstID(instanceid);
+                    BarricadeDrop oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
                     if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                         UnityEngine.Object.Destroy(vsc);
                     StructureSaver.AddStructure(bd, bd.GetServersideData(), out _);
@@ -1145,7 +1145,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                     {
-                        StructureDrop oldd = F.GetStructureFromInstID(instanceid);
+                        StructureDrop oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
                         if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                             UnityEngine.Object.Destroy(vsc);
                         spawn.SpawnPadInstanceID = dp.instanceID;
@@ -1165,7 +1165,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                 {
-                    StructureDrop oldd = F.GetStructureFromInstID(instanceid);
+                    StructureDrop oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
                     if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                         UnityEngine.Object.Destroy(vsc);
                     StructureSaver.AddStructure(dp, dp.GetServersideData(), out _);

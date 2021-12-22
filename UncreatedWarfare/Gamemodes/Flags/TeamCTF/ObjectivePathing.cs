@@ -64,13 +64,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             ObjectivePathing.MIN_FLAGS = MIN_FLAGS;
             ObjectivePathing.MAX_REDOS = MAX_REDOS;
             ObjectivePathing.MAIN_BASE_ANGLE_OFFSET = GetObjectiveAngleDifferenceRad();
-            F.Log(MAIN_BASE_ANGLE_OFFSET.ToString(Data.Locale));
+            L.Log(MAIN_BASE_ANGLE_OFFSET.ToString(Data.Locale));
             ObjectivePathing.SIDE_ANGLE_LEFT_END = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_LEFT_END_DEFAULT);
             ObjectivePathing.SIDE_ANGLE_LEFT_START = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_LEFT_START_DEFAULT);
             ObjectivePathing.SIDE_ANGLE_RIGHT_END = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_RIGHT_END_DEFAULT);
             ObjectivePathing.SIDE_ANGLE_RIGHT_START = RotateAngleFromOriginal(ObjectivePathing.SIDE_ANGLE_RIGHT_START_DEFAULT);
 
-            F.Log($"angle offset: {MAIN_BASE_ANGLE_OFFSET * 180 / Mathf.PI}: \n" +
+            L.Log($"angle offset: {MAIN_BASE_ANGLE_OFFSET * 180 / Mathf.PI}: \n" +
                 $"side left end: {SIDE_ANGLE_LEFT_END * 180 / Mathf.PI}, \n" +
                 $"side left start: {SIDE_ANGLE_LEFT_START * 180 / Mathf.PI}, \n" +
                 $"side right end: {SIDE_ANGLE_RIGHT_END * 180 / Mathf.PI}, \n" +
@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 redoCounter++;
             }
             if (redoCounter >= MAX_REDOS)
-                F.LogError("Unable to correct bad path after " + MAX_REDOS.ToString(Data.Locale) + " tries.");
+                L.LogError("Unable to correct bad path after " + MAX_REDOS.ToString(Data.Locale) + " tries.");
             return path;
         }
         private static void StartLoop(ref List<Flag> list, List<Flag> rotation)
@@ -112,13 +112,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             List<Flag> StarterFlags = GetFlagsInRadius(TeamManager.Team1Main.Center, MAIN_SEARCH_RADIUS, rotation);
             if (StarterFlags.Count == 0)
             {
-                F.LogError("Objective Pathing was unable to find the first flags around main in a " + MAIN_SEARCH_RADIUS + "m radius of " + TeamManager.Team1Main.Center + " out of " + rotation.Count + " flags.");
+                L.LogError("Objective Pathing was unable to find the first flags around main in a " + MAIN_SEARCH_RADIUS + "m radius of " + TeamManager.Team1Main.Center + " out of " + rotation.Count + " flags.");
                 return;
             }
             Flag first = PickRandomFlagWithBias(TeamManager.Team1Main.Center, StarterFlags);
             first.index = 0;
             list.Add(first);
-            //F.Log(list.Count + ". " + list[0].Name, ConsoleColor.Green);
+            //L.Log(list.Count + ". " + list[0].Name, ConsoleColor.Green);
             int counter = 0;
             FlagLoop(ref list, ref counter, rotation);
         }
@@ -145,21 +145,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 uppingCounter++;
                 FLAG_RADIUS_SEARCH = oldradius + RADIUS_TUNING_RESOLUTION * uppingCounter;
                 candidates = GetFlagsInRadiusExclude(lastFlag.Position2D, FLAG_RADIUS_SEARCH, rotation, lastFlag.ID, list);
-                //F.Log(uppingCounter.ToString(Data.Locale) + "th search: " + candidates.Count + " results in " + FLAG_RADIUS_SEARCH.ToString(Data.Locale) + 'm');
+                //L.Log(uppingCounter.ToString(Data.Locale) + "th search: " + candidates.Count + " results in " + FLAG_RADIUS_SEARCH.ToString(Data.Locale) + 'm');
                 if (candidates.Count < 1) continue;
                 lastFlag = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
             }
-            //if (uppingCounter != 0) F.Log("Had to raise \"FLAG_RADIUS_SEARCH\" to " + FLAG_RADIUS_SEARCH + " until a flag was found.");
+            //if (uppingCounter != 0) L.Log("Had to raise \"FLAG_RADIUS_SEARCH\" to " + FLAG_RADIUS_SEARCH + " until a flag was found.");
             if (candidates.Count == 0)
             {
-                F.LogError("Ran out of flags before reaching the team 2 base.");
+                L.LogError("Ran out of flags before reaching the team 2 base.");
                 return;
             }
             FLAG_RADIUS_SEARCH = oldradius;
             Flag pick = PickRandomFlagWithBias(lastFlag.Position2D, candidates);
             pick.index = list.Count;
             list.Add(pick);
-            //F.Log(list.Count + ". " + pick.Name, ConsoleColor.Green);
+            //L.Log(list.Count + ". " + pick.Name, ConsoleColor.Green);
             counter++;
             if (counter < MAX_FLAGS - 1 && (TeamManager.Team2Main.Center - pick.Position2D).sqrMagnitude > MAIN_STOP_RADIUS * MAIN_STOP_RADIUS) // if the picked flag is not in range of team 2 main base. 
             {
@@ -256,7 +256,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             Flag first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
             if (first == null)
             {
-                F.LogError("Unable to pick the first flag.");
+                L.LogError("Unable to pick the first flag.");
                 return;
             }
             flags.Add(first);
@@ -268,7 +268,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             Flag lastFlag = flags.Last();
             if (lastFlag == null)
             {
-                F.LogError("Last flag was null, breaking loop.");
+                L.LogError("Last flag was null, breaking loop.");
                 return;
             }
             Dictionary<Flag, float> initBiases = InstantiateFlags(lastFlag.Adjacencies, selection, flags, lastFlag);
@@ -282,7 +282,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
                 else
                 {
-                    F.LogError("Pick was null after " + lastFlag.Name);
+                    L.LogError("Pick was null after " + lastFlag.Name);
                     return;
                 }
                 AdjacentsFlagLoop(flags, selection, t2adjacents);
@@ -310,11 +310,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
                 else if (current != null)
                 {
-                    F.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
+                    L.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
                 }
                 else
                 {
-                    F.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
+                    L.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
                 }
             }
             return rtn;
@@ -324,7 +324,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         {
             if (biases.Count < 1)
             {
-                F.LogError("Biases was empty.");
+                L.LogError("Biases was empty.");
                 return default;
             }
             float total = 0;

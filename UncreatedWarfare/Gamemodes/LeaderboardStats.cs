@@ -16,7 +16,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (Assets.find(Gamemode.Config.UI.CTFLeaderboardGUID) is EffectAsset ctfleaderboard)
                 ctfLeaderboardId = ctfleaderboard.id;
-            F.Log("Found lb UIs: " + ctfLeaderboardId);
+            L.Log("Found lb UIs: " + ctfLeaderboardId);
         }
     }
 
@@ -81,7 +81,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             foreach (SteamPlayer player in Provider.clients)
             {
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, player.transportConnection, true, "NextGameSeconds", F.ObjectTranslate("next_game_starting_format",
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, player.transportConnection, true, "NextGameSeconds", Translation.ObjectTranslate("next_game_starting_format",
                     player.playerID.steamID.m_SteamID, TimeSpan.FromSeconds(secondsLeft)));
                 int time = Mathf.RoundToInt(Gamemode.Config.GeneralConfig.LeaderboardTime);
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, player.transportConnection, true, "NextGameCircleForeground",
@@ -129,7 +129,7 @@ namespace Uncreated.Warfare.Gamemodes
                 SteamPlayer player = PlayerTool.getSteamPlayer(c.Key);
                 if (player == null) stats.Remove(c.Key);
             }
-            F.Log("Reset game stats, " + stats.Count + " trackers");
+            L.Log("Reset game stats, " + stats.Count + " trackers");
         }
         public void OnPlayerJoin(Player player)
         {
@@ -147,7 +147,7 @@ namespace Uncreated.Warfare.Gamemodes
                     c.stats = s;
             }
             if (UCWarfare.Config.Debug)
-                F.Log(player.name + " added to playerstats, " + stats.Count + " trackers");
+                L.Log(player.name + " added to playerstats, " + stats.Count + " trackers");
         }
         public virtual void StartTracking()
         {

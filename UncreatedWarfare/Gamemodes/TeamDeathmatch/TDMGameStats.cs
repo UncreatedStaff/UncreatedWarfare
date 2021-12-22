@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
                 if (F.TryGetPlaytimeComponent(player, out Components.PlaytimeComponent c))
                     c.stats = s;
             }
-            F.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");
+            L.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");
         }
         public void Start() => Reset(true);
         public void Reset(bool start = false)

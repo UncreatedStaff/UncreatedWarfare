@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.FOBs
 
             UCPlayer owner = UCPlayer.FromID(data.owner);
             if (owner != null && owner.Steam64 != player.Steam64)
-                XP.XPManager.AddXP(owner.Player, XP.XPManager.config.Data.RessupplyFriendlyXP, F.Translate("xp_resupplied_teammate", owner));
+                XP.XPManager.AddXP(owner.Player, XP.XPManager.config.Data.RessupplyFriendlyXP, Translation.Translate("xp_resupplied_teammate", owner));
 
             if (uses >= FOBManager.config.Data.AmmoBagMaxUses && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {

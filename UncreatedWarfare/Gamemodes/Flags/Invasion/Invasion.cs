@@ -76,7 +76,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             LoadFlagsIntoRotation();
             if (_rotation.Count < 1)
             {
-                F.LogError("No flags were put into rotation!!");
+                L.LogError("No flags were put into rotation!!");
             }
             if (_attackTeam == 1)
             {
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             if (Config.Invasion.DiscoveryForesight < 1)
             {
-                F.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
+                L.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
             }
             else
             {
@@ -220,7 +220,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             ulong team = player.GetTeam();
             if (UCWarfare.Config.Debug)
-                F.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
+                L.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
@@ -259,7 +259,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             ITransportConnection Channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
             if (UCWarfare.Config.Debug)
-                F.Log("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+                L.Log("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
             player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
             SendUIParameters t1 = SendUIParameters.Nil;
@@ -385,7 +385,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 {
                     ulong team = client.GetTeam();
                     client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
-                        flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                        flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
                 }
             }
@@ -395,7 +395,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 {
                     ulong team = client.GetTeam();
                     client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), Teams.TeamManager.TranslateName(NewOwner, client.playerID.steamID.m_SteamID),
-                        TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : F.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                        TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                         flag.TeamSpecificHexColor);
                 }
             }
@@ -453,9 +453,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", F.Translate("phases_briefing", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
             else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", F.Translate("phases_preparation", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_preparation", player));
         }
         protected override void EndStagingPhase()
         {

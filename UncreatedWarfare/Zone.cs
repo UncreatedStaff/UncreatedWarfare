@@ -100,7 +100,7 @@ namespace Uncreated.Warfare
             string[] size = data.data.Split(',');
             if (size.Length != 2)
             {
-                F.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid rectangle data. Format is: \"size x,size y\".");
+                L.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid rectangle data. Format is: \"size x,size y\".");
                 return;
             }
             else
@@ -130,7 +130,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    F.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
+                    L.LogError($"Zone at ({Center.x}, {Center.y}) has invalid rectangle data. Format is: \"size x,size y\".");
                     return;
                 }
             }
@@ -188,7 +188,7 @@ namespace Uncreated.Warfare
             string[] size = data.data.Split(',');
             if (size.Length != 1)
             {
-                F.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid circle data. Format is: \"radius\".");
+                L.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid circle data. Format is: \"radius\".");
                 return;
             }
             else
@@ -204,7 +204,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    F.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid circle data. Format is: \"radius\".");
+                    L.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid circle data. Format is: \"radius\".");
                     return;
                 }
             }
@@ -357,7 +357,7 @@ namespace Uncreated.Warfare
             string[] size = data.data.Split(',');
             if (size.Length < 6 || size.Length % 2 == 1)
             {
-                F.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid polygon data - \"{Name}\". Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
+                L.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid polygon data - \"{Name}\". Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
                 return;
             }
             Points = new Vector2[size.Length / 2];
@@ -369,8 +369,8 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    F.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid polygon data - \"{Name}\". Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
-                    F.LogError($"Couldn't parse ({size[i]}, {size[i + 1]}).");
+                    L.LogError($"Zone at ({Center.x}, {Center.y}), {Name}, has invalid polygon data - \"{Name}\". Format is: \"x1,y1,x2,y2,x3,y3,...\" with at least 3 points.\n{data.data}");
+                    L.LogError($"Couldn't parse ({size[i]}, {size[i + 1]}).");
                     return;
                 }
             }
@@ -395,7 +395,7 @@ namespace Uncreated.Warfare
         {
             if (!this.SucessfullyParsed)
             {
-                F.LogError(Name + " DIDN'T PARSE CORRECTLY");
+                L.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
             }
             int intersects = 0;
@@ -411,7 +411,7 @@ namespace Uncreated.Warfare
             if ((MinHeight != -1 && location.y < MinHeight) || (MaxHeight != -1 && location.y > MaxHeight)) return false;
             if (!this.SucessfullyParsed)
             {
-                F.LogError(Name + " DIDN'T PARSE CORRECTLY");
+                L.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
             }
             int intersects = 0;

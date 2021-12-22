@@ -434,8 +434,8 @@ namespace Uncreated.Warfare
                                 }
                                 catch (Exception ex)
                                 {
-                                    F.LogError("Error reading localization file in " + directoryInfo.Name);
-                                    F.LogError(ex);
+                                    L.LogError("Error reading localization file in " + directoryInfo.Name);
+                                    L.LogError(ex);
                                 }
                                 finally
                                 {
@@ -462,7 +462,7 @@ namespace Uncreated.Warfare
                                     if (data.Length > 1)
                                         rtn.Add(data[0], string.Join(" ", data, 1, data.Length - 1));
                                     else
-                                        F.LogWarning($"Error parsing death translation in \".\\{Data.LangStorage}{directoryInfo.Name}\\{info.Name}\":\n{p}");
+                                        L.LogWarning($"Error parsing death translation in \".\\{Data.LangStorage}{directoryInfo.Name}\\{info.Name}\":\n{p}");
                                 }
                             }
                             if (!deathloc.ContainsKey(directoryInfo.Name))
@@ -485,10 +485,10 @@ namespace Uncreated.Warfare
                                         if (Enum.TryParse(data[0], out ELimb result))
                                             rtn.Add(result, string.Join(" ", data, 1, data.Length - 1));
                                         else
-                                            F.LogWarning("Invalid line, must match SDG.Unturned.ELimb enumerator list (LEFT|RIGHT)_(ARM|LEG|BACK|FOOT|FRONT|HAND), SPINE, SKULL. Line:\n" + p);
+                                            L.LogWarning("Invalid line, must match SDG.Unturned.ELimb enumerator list (LEFT|RIGHT)_(ARM|LEG|BACK|FOOT|FRONT|HAND), SPINE, SKULL. Line:\n" + p);
                                     }
                                     else
-                                        F.LogWarning($"Error parsing limb translation in \".\\{Data.LangStorage}{directoryInfo.Name}\\{info.Name}\":\n{p}");
+                                        L.LogWarning($"Error parsing limb translation in \".\\{Data.LangStorage}{directoryInfo.Name}\\{info.Name}\":\n{p}");
                                 }
                             }
                             if (!limbloc.ContainsKey(directoryInfo.Name))
@@ -498,11 +498,11 @@ namespace Uncreated.Warfare
                     }
 
                 }
-                F.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
+                L.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
             }
             else
             {
-                F.LogError("Failed to load translations, see above.");
+                L.LogError("Failed to load translations, see above.");
                 languages.Add(DefaultLanguage, ConvertTranslations(DefaultTranslations, DefaultLanguage));
                 limbloc.Add(DefaultLanguage, DefaultLimbTranslations);
                 deathloc.Add(DefaultLanguage, DefaultDeathTranslations);
@@ -525,8 +525,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError($"Error converting translation {current} for language {language ?? "unknown"}: ");
-                F.LogError(ex);
+                L.LogError($"Error converting translation {current} for language {language ?? "unknown"}: ");
+                L.LogError(ex);
             }
             finally
             {
@@ -578,7 +578,7 @@ namespace Uncreated.Warfare
             }
             else
             {
-                F.LogError("Failed to load extra zones, see above. Loading default zones.");
+                L.LogError("Failed to load extra zones, see above. Loading default zones.");
                 Dictionary<int, Zone> NewDefaultZones = new Dictionary<int, Zone>();
                 foreach (FlagData zone in DefaultExtraZones)
                     NewDefaultZones.Add(zone.id, Flag.ComplexifyZone(zone));
@@ -629,7 +629,7 @@ namespace Uncreated.Warfare
             }
             else
             {
-                F.LogError("Failed to load extra points, see above. Loading default points.");
+                L.LogError("Failed to load extra points, see above. Loading default points.");
                 Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
                 foreach (Point3D point in DefaultExtraPoints)
                     NewDefaultPoints.Add(point.name, point.Vector3);

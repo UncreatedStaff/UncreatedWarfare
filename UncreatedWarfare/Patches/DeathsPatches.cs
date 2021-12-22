@@ -59,17 +59,17 @@ namespace Uncreated.Warfare
                             if (owner.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                                 c.LastLandmineExploded = new LandmineData(__instance, owner);
                             if (UCWarfare.Config.Debug)
-                                F.Log(F.GetPlayerOriginalNames(owner.Player).PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
+                                L.Log(F.GetPlayerOriginalNames(owner.Player).PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
                         }
                         else if (UCWarfare.Config.Debug && owner.Owner != 0)
                         {
                             FPlayerName names = Data.DatabaseManager.GetUsernames(owner.Owner);
-                            F.Log("[OFFLINE] " + names.PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
+                            L.Log("[OFFLINE] " + names.PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
                         }
                     }
                     else if (UCWarfare.Config.Debug)
                     {
-                        F.Log("Unknown owner's trap was triggered", ConsoleColor.DarkGray);
+                        L.Log("Unknown owner's trap was triggered", ConsoleColor.DarkGray);
                     }
 
                     if (___isExplosive)
@@ -161,8 +161,8 @@ namespace Uncreated.Warfare
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Error in patched Landmine Trigger Override.");
-                    F.LogError(ex);
+                    L.LogError("Error in patched Landmine Trigger Override.");
+                    L.LogError(ex);
                     return true; // run original code to cleanup.
                 }
             }
@@ -260,7 +260,7 @@ namespace Uncreated.Warfare
                     if (passenger != null && passenger.player != null && passenger.player.player != null && !passenger.player.player.life.isDead)
                     {
                         if (UCWarfare.Config.Debug)
-                            F.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}", ConsoleColor.DarkGray);
+                            L.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}", ConsoleColor.DarkGray);
                         passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SKULL, instigator, out _);
                     }
                 }
@@ -320,7 +320,7 @@ namespace Uncreated.Warfare
                                                 (new Vector2(players.Current.player.transform.position.x, players.Current.player.transform.position.z) - dest2d).sqrMagnitude <
                                                 UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance)
                                             {
-                                                ToastMessage.QueueMessage(players.Current, F.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING);
+                                                ToastMessage.QueueMessage(players.Current, Translation.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING);
                                                 warned.Add(players.Current.playerID.steamID.m_SteamID);
                                             }
                                         }

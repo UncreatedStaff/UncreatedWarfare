@@ -44,7 +44,7 @@ namespace Uncreated.Warfare.Commands
                     ReloadTCPServer();
                     ReloadSQLServer();
 
-                    if (isConsole) F.Log(F.Translate("reload_reloaded_all", 0, out _));
+                    if (isConsole) L.Log(Translation.Translate("reload_reloaded_all", 0, out _));
                     else player.SendChat("reload_reloaded_all");
                 }
                 else
@@ -56,7 +56,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (isConsole || player.HasPermission("uc.reload.config") || player.HasPermission("uc.reload.all"))
                     {
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_config", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_config", 0, out _));
                         else player.SendChat("reload_reloaded_config");
                         if (command.Length > 1 && command[1].ToLower() == "all") ReloadAllConfigFiles();
                         else ReloadConfig();
@@ -69,7 +69,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.translations") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadTranslations();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_lang", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_lang", 0, out _));
                         else player.SendChat("reload_reloaded_lang");
                     }
                     else
@@ -80,7 +80,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.flags") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadFlags();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_flags", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_flags", 0, out _));
                         else player.SendChat("reload_reloaded_flags");
                     }
                     else
@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.gameconfig") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadGamemodeConfig();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_gameconfig", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_gameconfig", 0, out _));
                         else player.SendChat("reload_reloaded_gameconfig");
                     }
                     else
@@ -102,7 +102,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.tcp") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadTCPServer();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_tcp", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_tcp", 0, out _));
                         else player.SendChat("reload_reloaded_tcp");
                     }
                     else
@@ -113,7 +113,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.sql") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadSQLServer();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_sql", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_sql", 0, out _));
                         else player.SendChat("reload_reloaded_sql");
                     }
                     else
@@ -124,7 +124,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.kits") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadKits();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_kits", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_kits", 0, out _));
                         else player.SendChat("reload_reloaded_kits");
                     }
                     else
@@ -135,7 +135,7 @@ namespace Uncreated.Warfare.Commands
                     if (isConsole || player.HasPermission("uc.reload.kits") || player.HasPermission("uc.reload.all"))
                     {
                         ReloadAllConfigFiles();
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_config", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_config", 0, out _));
                         else player.SendChat("reload_reloaded_config");
                     }
                     else
@@ -147,7 +147,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (!UCWarfare.Config.UsePatchForPlayerCap)
                         {
-                            if (isConsole) F.Log(F.Translate("reload_reloaded_slots_not_enabled", 0, out _, nameof(Config.UsePatchForPlayerCap)));
+                            if (isConsole) L.Log(Translation.Translate("reload_reloaded_slots_not_enabled", 0, out _, nameof(Config.UsePatchForPlayerCap)));
                             else player.SendChat("reload_reloaded_slots_not_enabled", nameof(Config.UsePatchForPlayerCap));
                             return;
                         }
@@ -155,7 +155,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
                         }
-                        if (isConsole) F.Log(F.Translate("reload_reloaded_slots", 0, out _));
+                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_slots", 0, out _));
                         else player.SendChat("reload_reloaded_slots");
                     }
                     else
@@ -181,8 +181,8 @@ namespace Uncreated.Warfare.Commands
             }
             catch (Exception ex)
             {
-                F.LogError("Execption when reloading config.");
-                F.LogError(ex);
+                L.LogError("Execption when reloading config.");
+                L.LogError(ex);
             }
         }
         internal static void ReloadTranslations()
@@ -198,8 +198,8 @@ namespace Uncreated.Warfare.Commands
             }
             catch (Exception ex)
             {
-                F.LogError("Execption when reloading translations.");
-                F.LogError(ex);
+                L.LogError("Execption when reloading translations.");
+                L.LogError(ex);
             }
         }
         internal static void ReloadGamemodeConfig()
@@ -227,8 +227,8 @@ namespace Uncreated.Warfare.Commands
             }
             catch (Exception ex)
             {
-                F.LogError("Execption when reloading flags.");
-                F.LogError(ex);
+                L.LogError("Execption when reloading flags.");
+                L.LogError(ex);
             }
         }
         internal static void ReloadKits()
@@ -272,8 +272,8 @@ namespace Uncreated.Warfare.Commands
             }
             catch (Exception ex)
             {
-                F.LogError("Failed to find all objects in type " + typeof(Data).Name);
-                F.LogError(ex);
+                L.LogError("Failed to find all objects in type " + typeof(Data).Name);
+                L.LogError(ex);
             }
         }
         internal static void ReloadTCPServer()

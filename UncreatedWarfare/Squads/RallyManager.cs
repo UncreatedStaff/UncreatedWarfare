@@ -142,7 +142,7 @@ namespace Uncreated.Warfare.Squads
 
                 if (UCWarfare.Config.Debug)
                     foreach (RallyPoint rally in rallypoints)
-                        F.Log($"Rally point: Squad: {rally.squad.Name}, Active: {rally.IsActive}, Structure: {rally.structure.instanceID}, Drop: {rally.drop.instanceID}." + rally.squad.Name, ConsoleColor.DarkGray);
+                        L.Log($"Rally point: Squad: {rally.squad.Name}, Active: {rally.IsActive}, Structure: {rally.structure.instanceID}, Drop: {rally.drop.instanceID}." + rally.squad.Name, ConsoleColor.DarkGray);
             }
         }
         public static bool HasRally(UCPlayer player, out RallyPoint rallypoint)
@@ -197,7 +197,7 @@ namespace Uncreated.Warfare.Squads
             {
                 if (AwaitingPlayers.Contains(member))
                 {
-                    string line = F.Translate("rally_ui", member.Steam64, timer >= 0 ? F.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
+                    string line = Translation.Translate("rally_ui", member.Steam64, timer >= 0 ? Translation.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
                     EffectManager.sendUIEffect(SquadManager.rallyID, SquadManager.rallyKey, member.Player.channel.owner.transportConnection, true,
                     line);
                 }
@@ -206,7 +206,7 @@ namespace Uncreated.Warfare.Squads
         public void ShowUIForPlayer(UCPlayer player)
         {
             EffectManager.sendUIEffect(SquadManager.rallyID, SquadManager.rallyKey, player.Player.channel.owner.transportConnection, true,
-                        F.Translate("rally_ui", player.Steam64, $"({nearestLocation})"
+                        Translation.Translate("rally_ui", player.Steam64, $"({nearestLocation})"
                         ));
         }
         public void ShowUIForSquad()
@@ -234,7 +234,7 @@ namespace Uncreated.Warfare.Squads
 
             ShowUIForPlayer(player);
 
-            OfficerManager.AddOfficerPoints(squad.Leader.Player, OfficerManager.config.Data.SpawnOnRallyPoints, F.Translate("ofp_rally_used", squad.Leader.Steam64));
+            OfficerManager.AddOfficerPoints(squad.Leader.Player, OfficerManager.config.Data.SpawnOnRallyPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
         }
     }
 

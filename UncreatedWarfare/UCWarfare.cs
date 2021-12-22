@@ -57,26 +57,26 @@ namespace Uncreated.Warfare
             if (Config.UsePatchForPlayerCap)
                 Provider.maxPlayers = 24;
             Data.LoadColoredConsole();
-            F.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
+            L.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
 
             /* PLAYER COUNT VERIFICATION */
             if (!Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
             {
                 Provider.maxPlayers = Config.MaxPlayerCount;
-                F.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
+                L.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
             }
 
             /* PATCHES */
-            F.Log("Patching methods...", ConsoleColor.Magenta);
+            L.Log("Patching methods...", ConsoleColor.Magenta);
             try
             {
                 Patches.DoPatching();
             }
             catch (Exception ex)
             {
-                F.LogError("Patching Error, perhaps Nelson changed something:");
-                F.LogError(ex);
+                L.LogError("Patching Error, perhaps Nelson changed something:");
+                L.LogError(ex);
             }
 
 
@@ -146,7 +146,7 @@ namespace Uncreated.Warfare
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
-            F.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
+            L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
 
             // remove once effectmanager supports GUIDs
             SquadManager.TempCacheEffectIDs();
@@ -237,7 +237,7 @@ namespace Uncreated.Warfare
         }
         private void OnPluginsLoaded()
         {
-            F.Log("Subscribing to events...", ConsoleColor.Magenta);
+            L.Log("Subscribing to events...", ConsoleColor.Magenta);
             SubscribeToEvents();
         }
         internal void UpdateLangs(SteamPlayer player)
@@ -298,8 +298,8 @@ namespace Uncreated.Warfare
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Error running on main thread:");
-                    F.LogError(ex);
+                    L.LogError("Error running on main thread:");
+                    L.LogError(ex);
                 }
             }
         }
@@ -311,31 +311,31 @@ namespace Uncreated.Warfare
                 StatsRoutine = null;
             }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
-            F.Log("Unloading " + Name, ConsoleColor.Magenta);
+            L.Log("Unloading " + Name, ConsoleColor.Magenta);
             if (Announcer != null)
                 Destroy(Announcer);
             //if (Queue != null)
             //Destroy(Queue);
             Data.Gamemode?.Dispose();
             Data.DatabaseManager?.Dispose();
-            F.Log("Stopping Coroutines...", ConsoleColor.Magenta);
+            L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
-            F.Log("Unsubscribing from events...", ConsoleColor.Magenta);
+            L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
             Data.NetClient.Dispose();
-            Logging.OnLog -= F.Log;
-            Logging.OnLogWarning -= F.LogWarning;
-            Logging.OnLogError -= F.LogError;
-            Logging.OnLogException -= F.LogError;
+            Logging.OnLog -= L.Log;
+            Logging.OnLogWarning -= L.LogWarning;
+            Logging.OnLogError -= L.LogError;
+            Logging.OnLogException -= L.LogError;
             try
             {
                 Patches.Unpatch();
             }
             catch (Exception ex)
             {
-                F.LogError("Unpatching Error, perhaps Nelson changed something:");
-                F.LogError(ex);
+                L.LogError("Unpatching Error, perhaps Nelson changed something:");
+                L.LogError(ex);
             }
             for (int i = 0; i < StatsManager.OnlinePlayers.Count; i++)
             {

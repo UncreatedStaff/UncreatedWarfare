@@ -516,12 +516,12 @@ namespace Uncreated.Warfare
             else return ip;
         }
         public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
-            => F.Log(message, color);
+            => L.Log(message, color);
         public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
-            => F.LogWarning(message, color);
+            => L.LogWarning(message, color);
         public override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
-            => F.LogError(message, color);
+            => L.LogError(message, color);
         public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
-            => F.LogError(ex, color);
+            => L.LogError(ex, color);
     }
 }

@@ -65,7 +65,7 @@ namespace Uncreated.Warfare.Commands
                         GroupManager.save();
                         player.Player.SendChat("created_group",
                             command[1], player.Player.quests.groupID.m_SteamID.ToString(Data.Locale));
-                        F.Log(F.Translate("created_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
+                        L.Log(Translation.Translate("created_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                             player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
                             player.Player.quests.groupID.m_SteamID.ToString(Data.Locale), command[1]), ConsoleColor.Cyan);
                     }
@@ -105,7 +105,7 @@ namespace Uncreated.Warfare.Commands
                             {
                                 player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.Team1ID, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
-                                F.Log(F.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
+                                L.Log(Translation.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.Team1ID, 0),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                             }
@@ -113,7 +113,7 @@ namespace Uncreated.Warfare.Commands
                             {
                                 player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.Team2ID, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
-                                F.Log(F.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
+                                L.Log(Translation.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.Team2ID, 0),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                             }
@@ -121,7 +121,7 @@ namespace Uncreated.Warfare.Commands
                             {
                                 player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.AdminID, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
-                                F.Log(F.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
+                                L.Log(Translation.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.AdminID, 0),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                             }

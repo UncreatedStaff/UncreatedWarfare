@@ -22,11 +22,11 @@ namespace Uncreated.Warfare.Teams
         public TeamManager()
         {
             if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _))
-                F.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                L.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(_data.Data.team2unarmedkit, out _))
-                F.LogError("Team 2's unarmed kit, \"" + _data.Data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                L.LogError("Team 2's unarmed kit, \"" + _data.Data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(_data.Data.defaultkit, out _))
-                F.LogError("The default kit, \"" + _data.Data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                L.LogError("The default kit, \"" + _data.Data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
 
         }
         public static ulong Team1ID { get => _data.Data.team1id; }
@@ -189,11 +189,11 @@ namespace Uncreated.Warfare.Teams
         public static string TranslateName(ulong team, ulong player, bool colorize = false)
         {
             string uncolorized;
-            if (team == 1) uncolorized = F.Translate("team_1", player);
-            else if (team == 2) uncolorized = F.Translate("team_2", player);
-            else if (team == 3) uncolorized = F.Translate("team_3", player);
-            else if (team == ZOMBIE_TEAM_ID) uncolorized = F.Translate("zombie", player);
-            else if (team == 0) uncolorized = F.Translate("neutral", player);
+            if (team == 1) uncolorized = Translation.Translate("team_1", player);
+            else if (team == 2) uncolorized = Translation.Translate("team_2", player);
+            else if (team == 3) uncolorized = Translation.Translate("team_3", player);
+            else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", player);
+            else if (team == 0) uncolorized = Translation.Translate("neutral", player);
             else uncolorized = team.ToString(Data.Locale);
             if (!colorize) return uncolorized;
             return F.ColorizeName(uncolorized, team);

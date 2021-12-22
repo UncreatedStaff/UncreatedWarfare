@@ -196,7 +196,7 @@ namespace Uncreated.Warfare.Teams
         {
             if (!player.IsInLobby) return;
 
-            //F.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
+            //L.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
 
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
@@ -321,7 +321,7 @@ namespace Uncreated.Warfare.Teams
             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, newTeam);
 
             FPlayerName names = F.GetPlayerOriginalNames(player.Player);
-            F.Log(F.Translate("join_player_joined_console", 0, out _,
+            L.Log(Translation.Translate("join_player_joined_console", 0, out _,
                 names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)),
                 ConsoleColor.Cyan);
 

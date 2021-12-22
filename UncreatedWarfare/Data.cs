@@ -132,7 +132,7 @@ namespace Uncreated.Warfare
                 FieldInfo defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
                 defaultIOHandler = (ConsoleInputOutputBase)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
                 AppendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
-                F.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
+                L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
             }
             catch (Exception ex)
             {
@@ -150,7 +150,7 @@ namespace Uncreated.Warfare
                     NetClient.connection.Close();
                     NetClient.Dispose();
                 }
-                F.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
+                L.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 NetClient = new Client(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
                 NetClient.AssertConnected();
                 NetClient.connection.OnReceived += ClientReceived;
@@ -166,14 +166,14 @@ namespace Uncreated.Warfare
         public static void LoadVariables()
         {
             /* INITIALIZE UNCREATED NETWORKING */
-            Logging.OnLog += F.Log;
-            Logging.OnLogWarning += F.LogWarning;
-            Logging.OnLogError += F.LogError;
-            Logging.OnLogException += F.LogError;
+            Logging.OnLog += L.Log;
+            Logging.OnLogWarning += L.LogWarning;
+            Logging.OnLogError += L.LogError;
+            Logging.OnLogException += L.LogError;
             NetFactory.RegisterNetMethods(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
 
             /* CREATE DIRECTORIES */
-            F.Log("Validating directories...", ConsoleColor.Magenta);
+            L.Log("Validating directories...", ConsoleColor.Magenta);
             F.CheckDir(StatsDirectory, out _, true);
             F.CheckDir(DATA_DIRECTORY, out _, true);
             F.CheckDir(LangStorage, out _, true);
@@ -183,7 +183,7 @@ namespace Uncreated.Warfare
             F.CheckDir(OfficerStorage, out _, true);
 
             /* LOAD LOCALIZATION ASSETS */
-            F.Log("Loading JSON Data...", ConsoleColor.Magenta);
+            L.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
             {
                 JSONMethods.CreateDefaultTranslations();
@@ -205,7 +205,7 @@ namespace Uncreated.Warfare
             LanguageAliases = JSONMethods.LoadLangAliases();
 
             /* CONSTRUCT FRAMEWORK */
-            F.Log("Instantiating Framework...", ConsoleColor.Magenta);
+            L.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             DatabaseManager.Open();
             CommandWindow.shouldLogDeaths = false;
@@ -219,16 +219,16 @@ namespace Uncreated.Warfare
                 Gamemode.Init();
                 for (int i = 0; i < Provider.clients.Count; i++)
                     Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
-                F.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
-                F.Log("Initialized gamemode.", ConsoleColor.Magenta);
+                L.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
+                L.Log("Initialized gamemode.", ConsoleColor.Magenta);
             } else
             {
-                F.LogError("Failed to Initialize Gamemode");
+                L.LogError("Failed to Initialize Gamemode");
             }
             ReloadTCP();
             
             /* REFLECT PRIVATE VARIABLES */
-            F.Log("Getting client calls...", ConsoleColor.Magenta);
+            L.Log("Getting client calls...", ConsoleColor.Magenta);
             FieldInfo updateSignInfo;
             FieldInfo sendRegionInfo;
             FieldInfo sendChatInfo;
@@ -241,9 +241,9 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Couldn't get SendUpdateSign from BarricadeManager:");
-                F.LogError(ex);
-                F.LogError("The sign translation system will likely not work!");
+                L.LogError("Couldn't get SendUpdateSign from BarricadeManager:");
+                L.LogError(ex);
+                L.LogError("The sign translation system will likely not work!");
             }
             try
             {
@@ -252,9 +252,9 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Couldn't get SendMultipleBarricades from BarricadeManager:");
-                F.LogError(ex);
-                F.LogError("The sign translation system will likely not work!");
+                L.LogError("Couldn't get SendMultipleBarricades from BarricadeManager:");
+                L.LogError(ex);
+                L.LogError("The sign translation system will likely not work!");
             }
             try
             {
@@ -263,7 +263,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get SendChatEntry from ChatManager, the chat message will default to the vanilla implementation. (" + ex.Message + ").");
+                L.LogWarning("Couldn't get SendChatEntry from ChatManager, the chat message will default to the vanilla implementation. (" + ex.Message + ").");
             }
             try
             {
@@ -272,7 +272,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get SendEffectClearAll from EffectManager, failed to get send effect clear all. (" + ex.Message + ").");
+                L.LogWarning("Couldn't get SendEffectClearAll from EffectManager, failed to get send effect clear all. (" + ex.Message + ").");
             }
             try
             {
@@ -281,7 +281,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get SendTakeItem from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
+                L.LogWarning("Couldn't get SendTakeItem from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
             }
             try
             {
@@ -289,7 +289,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
+                L.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
             }
             try
             {
@@ -297,7 +297,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get instanceCount from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
+                L.LogWarning("Couldn't get instanceCount from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
             }
             try
             {
@@ -305,7 +305,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
+                L.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
             }
 
             /* SET UP ROCKET GROUPS */
@@ -367,7 +367,7 @@ namespace Uncreated.Warfare
         {
             if (UCWarfare.Config.Debug)
             {
-                F.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
+                L.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
             }
         }
         private static void ClientSent(byte[] bytes, IConnection connection, ref bool Allow)
@@ -378,7 +378,7 @@ namespace Uncreated.Warfare
                 {
                     ushort id = BitConverter.ToUInt16(bytes, 0);
                     if (id != Invocations.Shared.SendLogMessage.ID)
-                        F.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
+                        L.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
                 } 
                 catch { }
             }
@@ -388,14 +388,14 @@ namespace Uncreated.Warfare
             string[] stuff = ex.Message.Split(':');
             string badKey = "unknown";
             if (stuff.Length >= 2) badKey = stuff[1].Trim();
-            F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
-            F.LogError(ex);
+            L.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
+            L.LogError(ex);
             if (ex.InnerException != default)
-                F.LogError(ex.InnerException);
+                L.LogError(ex.InnerException);
             Level.onLevelLoaded += (int level) =>
             {
-                F.LogError("!!UNCREATED WARFARE DID NOT LOAD!!!");
-                F.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
+                L.LogError("!!UNCREATED WARFARE DID NOT LOAD!!!");
+                L.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
             };
             UCWarfare.I.UnloadPlugin();
         }

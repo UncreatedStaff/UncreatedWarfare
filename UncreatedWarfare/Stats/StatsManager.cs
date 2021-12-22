@@ -112,7 +112,7 @@ namespace Uncreated.Warfare.Stats
             {
                 BackupWeapon.NetInvoke(Weapons[weaponCounter]);
                 if (UCWarfare.Config.Debug)
-                    F.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ? 
+                    L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ? 
                         (asset.itemName + " - " + Weapons[weaponCounter].KitID) : 
                         (Weapons[weaponCounter].ID.ToString() + " - " + Weapons[weaponCounter].KitID)));
             }
@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.Stats
             {
                 BackupVehicle.NetInvoke(Vehicles[vehicleCounter]);
                 if (UCWarfare.Config.Debug)
-                    F.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[vehicleCounter].ID) is VehicleAsset asset ?
+                    L.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[vehicleCounter].ID) is VehicleAsset asset ?
                         asset.vehicleName :
                         Vehicles[vehicleCounter].ID.ToString()));
             }
@@ -128,19 +128,19 @@ namespace Uncreated.Warfare.Stats
             {
                 BackupKit.NetInvoke(Kits[kitCounter]);
                 if (UCWarfare.Config.Debug)
-                    F.Log("[KITS] Backed up: " + Kits[kitCounter].KitID);
+                    L.Log("[KITS] Backed up: " + Kits[kitCounter].KitID);
             }
             if (teamBackupCounter == 30)
             {
                 BackupTeam.NetInvoke(Team1Stats);
                 if (UCWarfare.Config.Debug)
-                    F.Log("[TEAMS] Backed up: TEAM 1");
+                    L.Log("[TEAMS] Backed up: TEAM 1");
             }
             else if (teamBackupCounter == 60)
             {
                 BackupTeam.NetInvoke(Team2Stats);
                 if (UCWarfare.Config.Debug)
-                    F.Log("[TEAMS] Backed up: TEAM 2");
+                    L.Log("[TEAMS] Backed up: TEAM 2");
             }
             weaponCounter++;
             vehicleCounter++;
@@ -201,7 +201,7 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
-                    F.LogWarning("Invalid weapon file: " + file.FullName);
+                    L.LogWarning("Invalid weapon file: " + file.FullName);
                 }
             }
         }
@@ -225,7 +225,7 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
-                    F.LogWarning("Invalid vehicle file: " + file.FullName);
+                    L.LogWarning("Invalid vehicle file: " + file.FullName);
                 }
             }
         }
@@ -249,7 +249,7 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
-                    F.LogWarning("Invalid kit file: " + file.FullName);
+                    L.LogWarning("Invalid kit file: " + file.FullName);
                 }
             }
         }
@@ -408,7 +408,7 @@ namespace Uncreated.Warfare.Stats
                             fs.Close();
                             fs.Dispose();
                         }
-                        F.LogWarning("Failed to read " + Steam64.ToString(Data.Locale) + "'s stat file, creating a backup and resetting it.");
+                        L.LogWarning("Failed to read " + Steam64.ToString(Data.Locale) + "'s stat file, creating a backup and resetting it.");
                         WarfareStats reset = new WarfareStats()
                         {
                             DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
@@ -610,7 +610,7 @@ namespace Uncreated.Warfare.Stats
                 }
                 else
                 {
-                    F.LogWarning("Invalid vehicle file: " + file.FullName);
+                    L.LogWarning("Invalid vehicle file: " + file.FullName);
                 }
             }
             SendEveryPlayer.NetInvoke(rtn.ToArray());

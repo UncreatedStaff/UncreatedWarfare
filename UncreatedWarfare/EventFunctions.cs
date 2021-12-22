@@ -79,7 +79,7 @@ namespace Uncreated.Warfare
                 }
                 catch
                 {
-                    F.LogError("Unable to get ItemManager.instanceCount.");
+                    L.LogError("Unable to get ItemManager.instanceCount.");
                     itemstemp.Remove(item);
                     return;
                 }
@@ -109,7 +109,7 @@ namespace Uncreated.Warfare
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (UCWarfare.Config.Debug)
-                F.Log($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}", ConsoleColor.DarkGray);
+                L.Log($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}", ConsoleColor.DarkGray);
             BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
             owner.Owner = data.owner;
             SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
@@ -158,15 +158,15 @@ namespace Uncreated.Warfare
                 PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
                 t.Set(useable, throwable, c);
                 if (UCWarfare.Config.Debug)
-                    F.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
+                    L.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
                         useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
                 if (success)
                     c.thrown.Add(t);
             }
             catch (Exception ex)
             {
-                F.LogError("Exception in ThrowableSpawned:");
-                F.LogError(ex);
+                L.LogError("Exception in ThrowableSpawned:");
+                L.LogError(ex);
             }
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
@@ -260,8 +260,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Error in OnBarricadeTryPlaced:");
-                F.LogError(ex);
+                L.LogError("Error in OnBarricadeTryPlaced:");
+                L.LogError(ex);
             }
         }
 
@@ -277,8 +277,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Error in the main OnPostPlayerConnected loading player into OnlinePlayers:");
-                F.LogError(ex);
+                L.LogError("Error in the main OnPostPlayerConnected loading player into OnlinePlayers:");
+                L.LogError(ex);
             }
             try
             {
@@ -332,14 +332,14 @@ namespace Uncreated.Warfare
                 if (Data.Gamemode is ITeams)
                 {
                     ulong team = player.GetTeam();
-                    ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                    ToastMessage.QueueMessage(player, Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO);
                 } else
                 {
-                    ToastMessage.QueueMessage(player, F.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                    ToastMessage.QueueMessage(player, Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO);
                 }
-                F.Broadcast("player_connected", names.CharacterName);
+                Chat.Broadcast("player_connected", names.CharacterName);
                 Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
                 {
                     Duty = ucplayer.OnDuty(),
@@ -350,8 +350,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Error in the main OnPostPlayerConnected:");
-                F.LogError(ex);
+                L.LogError("Error in the main OnPostPlayerConnected:");
+                L.LogError(ex);
             }
         }
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
@@ -369,8 +369,8 @@ namespace Uncreated.Warfare
         {
             FPlayerName names = F.GetPlayerOriginalNames(client.player);
             ulong team = client.GetTeam();
-            F.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
-            F.Log(F.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
+            Chat.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
+            L.Log(Translation.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
             if (UCWarfare.Config.AdminLoggerSettings.LogBattleyeKick &&
                 UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions != null &&
                 !UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions.Contains(reason))
@@ -618,7 +618,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            F.GetBarricadeFromInstID(instanceID, out BarricadeDrop drop);
+            UCBarricadeManager.GetBarricadeFromInstID(instanceID, out BarricadeDrop drop);
             if (drop != default)
             {
                 if (drop.model.TryGetComponent(out InteractableSign sign))
@@ -686,7 +686,7 @@ namespace Uncreated.Warfare
                 PlaytimeComponent c = F.GetPlaytimeComponent(player.CSteamID, out bool gotptcomp);
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
-                F.Broadcast("player_disconnected", names.CharacterName);
+                Chat.Broadcast("player_disconnected", names.CharacterName);
                 if (gotptcomp)
                 {
                     UnityEngine.Object.Destroy(c);
@@ -696,8 +696,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Error in the main OnPlayerDisconnected:");
-                F.LogError(ex);
+                L.LogError("Error in the main OnPlayerDisconnected:");
+                L.LogError(ex);
             }
             try
             {
@@ -705,8 +705,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Failed to remove a player from the list:");
-                F.LogError(ex);
+                L.LogError("Failed to remove a player from the list:");
+                L.LogError(ex);
             }
             try
             {
@@ -715,8 +715,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError("Failed to update kit sign for leaving player:");
-                F.LogError(ex);
+                L.LogError("Failed to update kit sign for leaving player:");
+                L.LogError(ex);
             }
         }
         internal static void LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
@@ -733,7 +733,7 @@ namespace Uncreated.Warfare
                     if (duration != 0)
                     {
                         isValid = false;
-                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + F.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
+                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + Translation.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
                         return;
                     }
                 }
@@ -744,7 +744,7 @@ namespace Uncreated.Warfare
                     return;
                 }
                 if (UCWarfare.Config.Debug)
-                    F.Log(player.playerID.playerName, ConsoleColor.DarkGray);
+                    L.Log(player.playerID.playerName, ConsoleColor.DarkGray);
                 if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
                     Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
                 else
@@ -787,7 +787,7 @@ namespace Uncreated.Warfare
                 if (kick)
                 {
                     isValid = false;
-                    explanation = F.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
+                    explanation = Translation.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
                     return;
                 }
                 else
@@ -798,8 +798,8 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                F.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
-                F.LogError(ex);
+                L.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
+                L.LogError(ex);
                 isValid = false;
                 explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
             }

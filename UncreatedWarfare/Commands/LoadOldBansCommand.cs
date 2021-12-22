@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             if (SteamBlacklist.list.Count == 0)
-                F.LogError(F.Translate("loadbans_NoBansErrorText", 0));
+                L.LogError(Translation.Translate("loadbans_NoBansErrorText", 0));
             else
             {
                 if (UCWarfare.Config.AdminLoggerSettings.LogBans)
@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
                 else
-                    F.LogError(F.Translate("loadbans_LogBansDisabled", 0));
+                    L.LogError(Translation.Translate("loadbans_LogBansDisabled", 0));
             }
         }
     }

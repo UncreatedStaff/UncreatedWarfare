@@ -61,7 +61,7 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    F.Log("Team ID: " + newTeam);
+                    L.Log("Team ID: " + newTeam);
 
                     GroupInfo group = GroupManager.getGroupInfo(new CSteamID(newTeam));
                     if (group == null)
@@ -97,7 +97,7 @@ namespace Uncreated.Warfare.Commands
                     EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, newTeam);
 
                     Players.FPlayerName names = F.GetPlayerOriginalNames(player);
-                    F.Log(F.Translate("join_player_joined_console", 0, out _,
+                    L.Log(Translation.Translate("join_player_joined_console", 0, out _,
                         names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)),
                         ConsoleColor.Cyan);
 

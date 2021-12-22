@@ -143,14 +143,14 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void DeclareWin(ulong winner)
         {
-            F.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
+            L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
             foreach (SteamPlayer client in Provider.clients)
             {
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
-                ToastMessage.QueueMessage(client.player, "", F.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG);
+                ToastMessage.QueueMessage(client.player, "", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG);
             }
             StatsManager.ModifyTeam(winner, t => t.Wins++, false);
             StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
                     KitManager.GiveKit(player, unarmed);
                 else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-                else F.LogWarning("Unable to give " + names.PlayerName + " a kit.");
+                else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
             }
             _reviveManager.OnPlayerConnected(player);
             if (!AllowCosmetics)
@@ -330,9 +330,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, F.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", EToastMessageSeverity.BIG);
+                    ToastMessage.QueueMessage(player, Translation.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", EToastMessageSeverity.BIG);
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, F.Translate("cache_discovered_defense", player), "", EToastMessageSeverity.BIG);
+                    ToastMessage.QueueMessage(player, Translation.Translate("cache_discovered_defense", player), "", EToastMessageSeverity.BIG);
             }
             for (int i = 0; i < Caches.Count; i++)
             {
@@ -350,14 +350,14 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 
             if (viableSpawns.Count() == 0)
             {
-                F.LogWarning("NO VIABLE CACHE SPAWNS");
+                L.LogWarning("NO VIABLE CACHE SPAWNS");
                 return;
             }
             SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
 
             if (!(Assets.find(Config.Barricades.InsurgencyCacheGUID) is ItemBarricadeAsset barricadeAsset))
             {
-                F.LogWarning("Invalid barricade GUID for Insurgency Cache!");
+                L.LogWarning("Invalid barricade GUID for Insurgency Cache!");
                 return;
             }
             Barricade barricade = new Barricade(barricadeAsset);
@@ -367,7 +367,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
             if (foundationDrop == null)
             {
-                F.LogWarning("Foundation drop is null.");
+                L.LogWarning("Foundation drop is null.");
                 return;
             }
             FOB cache = FOBManager.RegisterNewFOB(foundationDrop, UCWarfare.GetColorHex("insurgency_cache_color"), true);
@@ -385,7 +385,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             {
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                     if (player.GetTeam() == DefendingTeam)
-                        ToastMessage.QueueMessage(player, F.Translate("cache_spawned_defense", player), "", EToastMessageSeverity.BIG);
+                        ToastMessage.QueueMessage(player, Translation.Translate("cache_spawned_defense", player), "", EToastMessageSeverity.BIG);
             }
 
             InsurgencyUI.ReplicateCacheUpdate(d);
@@ -444,9 +444,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == AttackingTeam)
-                        ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_attack", player), "", EToastMessageSeverity.BIG);
+                        ToastMessage.QueueMessage(player, Translation.Translate("cache_destroyed_attack", player), "", EToastMessageSeverity.BIG);
                     else if (player.GetTeam() == DefendingTeam)
-                        ToastMessage.QueueMessage(player, F.Translate("cache_destroyed_defense", player), "", EToastMessageSeverity.BIG);
+                        ToastMessage.QueueMessage(player, Translation.Translate("cache_destroyed_defense", player), "", EToastMessageSeverity.BIG);
                 }
 
                 if (ActiveCachesCount == 0)
@@ -459,7 +459,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             {
                 if (destroyer.GetTeam() == AttackingTeam)
                 {
-                    XP.XPManager.AddXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, F.Translate("xp_cache_killed", destroyer));
+                    XP.XPManager.AddXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, Translation.Translate("xp_cache_killed", destroyer));
                     StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                     StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                     if (_gameStats != null)
@@ -476,7 +476,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 }
                 else
                 {
-                    XP.XPManager.AddXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, F.Translate("xp_cache_teamkilled", destroyer));
+                    XP.XPManager.AddXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, Translation.Translate("xp_cache_teamkilled", destroyer));
                 }
             }
             for (int i = 0; i < Caches.Count; i++)
@@ -492,9 +492,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         {
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", F.Translate("phases_briefing", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
             else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", F.Translate("phases_preparation", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_preparation", player));
         }
         protected override void EndStagingPhase()
         {

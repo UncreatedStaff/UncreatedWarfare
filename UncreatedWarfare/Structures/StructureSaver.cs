@@ -16,7 +16,7 @@ namespace Uncreated.Warfare.Structures
             {
                 structure.SpawnCheck();
                 if (!structure.exists)
-                    F.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
+                    L.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
             }
         }
         public static bool AddStructure(StructureDrop drop, SDG.Unturned.StructureData data, out Structure structureadded)
@@ -125,7 +125,7 @@ namespace Uncreated.Warfare.Structures
             this.instance_id = instance_id;
             if (type == EStructType.BARRICADE)
             {
-                F.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
                 if (drop == default)
                 {
                     this.transform = transform;
@@ -139,7 +139,7 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                F.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop drop);
                 if (drop == default)
                 {
                     this.transform = transform;
@@ -171,13 +171,13 @@ namespace Uncreated.Warfare.Structures
         {
             if (type == EStructType.BARRICADE)
             {
-                SDG.Unturned.BarricadeData data = F.GetBarricadeFromInstID(instance_id, out _);
+                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out _);
                 if (data == default)
                 {
                     ItemBarricadeAsset asset = Asset as ItemBarricadeAsset;
                     if (asset == null)
                     {
-                        F.LogError("Failed to find barricade asset in Structure Saver");
+                        L.LogError("Failed to find barricade asset in Structure Saver");
                         exists = false;
                         return;
                     }
@@ -215,7 +215,7 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                SDG.Unturned.StructureData data = F.GetStructureFromInstID(instance_id, out _);
+                SDG.Unturned.StructureData data = UCBarricadeManager.GetStructureFromInstID(instance_id, out _);
                 if (data == default)
                 {
                     ItemStructureAsset asset = Asset as ItemStructureAsset;
@@ -224,7 +224,7 @@ namespace Uncreated.Warfare.Structures
                         transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
                         transform.euler_angles.z, owner, group))
                     {
-                        F.LogWarning("Error in StructureSaver SpawnCheck(): Structure could not be placed, unknown error.");
+                        L.LogWarning("Error in StructureSaver SpawnCheck(): Structure could not be placed, unknown error.");
                         exists = false;
                     }
                     else
@@ -234,12 +234,12 @@ namespace Uncreated.Warfare.Structures
                             StructureDrop newdrop = StructureManager.regions[x, y].drops.LastOrDefault(nd => nd.model.position == transform.position.Vector3);
                             if (newdrop == null)
                             {
-                                F.LogWarning("Error in StructureSaver SpawnCheck(): Spawned structure could be placed but was not able to locate a structure at that position.");
+                                L.LogWarning("Error in StructureSaver SpawnCheck(): Spawned structure could be placed but was not able to locate a structure at that position.");
                                 exists = false;
                             }
                             else
                             {
-                                F.Log("Respawned structure", ConsoleColor.DarkGray);
+                                L.Log("Respawned structure", ConsoleColor.DarkGray);
                                 if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.STRUCTURE, out Vehicles.VehicleSpawn vbspawn))
                                 {
                                     vbspawn.SpawnPadInstanceID = newdrop.instanceID;

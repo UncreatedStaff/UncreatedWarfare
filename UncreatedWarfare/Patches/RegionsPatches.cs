@@ -209,7 +209,7 @@ namespace Uncreated.Warfare
                                     string newtext = sign.text;
                                     if (newtext.StartsWith("sign_"))
                                     {
-                                        newtext = F.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
+                                        newtext = Translation.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
                                         // size is not allowed in signs.
                                         newtext.Replace("<size=", "");
                                         newtext.Replace("</size>", "");
@@ -218,11 +218,11 @@ namespace Uncreated.Warfare
                                     byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);
                                     /*if (requiredClamping)
                                     {
-                                        F.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
+                                        L.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
                                     }*/
                                     if (textbytes.Length > byte.MaxValue - 18)
                                     {
-                                        F.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
+                                        L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
                                         textbytes = Encoding.UTF8.GetBytes(sign.text);
                                     }
                                     byte[] numArray1 = new byte[17 + textbytes.Length];

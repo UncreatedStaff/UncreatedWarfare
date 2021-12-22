@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
                 if (player != null)
                     player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
-                else F.Log("Picture finished generating, check the Config\\Maps\\Flags folder menu");
+                else L.Log("Picture finished generating, check the Config\\Maps\\Flags folder menu");
             }
             else
             {
@@ -110,7 +110,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename, bool drawAngles)
         {
             complete = false;
-            F.Log("STEP " + step.ToString(Data.Locale));
+            L.Log("STEP " + step.ToString(Data.Locale));
             if (step == 0)
             {
                 if (File.Exists(Level.info.path + @"\Map.png"))
@@ -129,20 +129,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         PolygonZone pzone = (PolygonZone)zone;
                         for (int i = 0; i < pzone.PolygonInverseZone.Lines.Length; i++)
                         {
-                            F.DrawLine(img, pzone.PolygonInverseZone.Lines[i], Color.black, false);
+                            DrawLine(img, pzone.PolygonInverseZone.Lines[i], Color.black, false);
                         }
                     }
                     else if (zone.GetType() == typeof(CircleZone))
                     {
                         CircleZone czone = (CircleZone)zone;
-                        F.FillCircle(img, czone.InverseZone.Center.x + img.width / 2, czone.InverseZone.Center.y + img.height / 2, czone.CircleInverseZone.Radius, Color.black, false);
+                        FillCircle(img, czone.InverseZone.Center.x + img.width / 2, czone.InverseZone.Center.y + img.height / 2, czone.CircleInverseZone.Radius, Color.black, false);
                     }
                     else if (zone.GetType() == typeof(RectZone))
                     {
                         RectZone rzone = (RectZone)zone;
                         for (int i = 0; i < rzone.RectInverseZone.lines.Length; i++)
                         {
-                            F.DrawLine(img, rzone.RectInverseZone.lines[i], Color.black, false);
+                            DrawLine(img, rzone.RectInverseZone.lines[i], Color.black, false);
                         }
                     }
                 }
@@ -180,7 +180,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 for (int i = 0; i <= gamemode.Rotation.Count; i++)
                 {
-                    F.DrawLine(img, new Line(i == gamemode.Rotation.Count ? TeamManager.Team2Main.InverseZone.Center : gamemode.Rotation[i].ZoneData.InverseZone.Center,
+                    DrawLine(img, new Line(i == gamemode.Rotation.Count ? TeamManager.Team2Main.InverseZone.Center : gamemode.Rotation[i].ZoneData.InverseZone.Center,
                         i == 0 ? TeamManager.Team1Main.InverseZone.Center : gamemode.Rotation[i - 1].ZoneData.InverseZone.Center), Color.cyan, false, 8);
                 }
                 img.Apply();
@@ -191,38 +191,38 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 for (int i = 0; i < zones.Count; i++)
                 {
                     Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
-                    F.DrawCircle(img, zones[i].InverseZone.Center.x, zones[i].InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier, zonecolor, 5, false, true);
+                    DrawCircle(img, zones[i].InverseZone.Center.x, zones[i].InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier, zonecolor, 5, false, true);
                     if (drawAngles)
                     {
-                        F.DrawLine(img,
+                        DrawLine(img,
                             new Line(
                                 new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
                                 new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
                             zonecolor, false, 3);
-                        F.DrawLine(img,
+                        DrawLine(img,
                             new Line(
                                 new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
                                 new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
                             zonecolor, false, 3);
-                        F.DrawLine(img,
+                        DrawLine(img,
                             new Line(
                                 new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
                                 new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
                             zonecolor, false, 3);
-                        F.DrawLine(img,
+                        DrawLine(img,
                             new Line(
                                 new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
                                 new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
                                 zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
                             zonecolor, false, 3);
-                        F.DrawLine(img,
+                        DrawLine(img,
                              new Line(
                                  zones[i].InverseZone.Center,
                                  new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.MAIN_BASE_ANGLE_OFFSET) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
@@ -230,8 +230,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                              zonecolor, false, 3);
                     }
                 }
-                F.DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
-                F.DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
+                DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
+                DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
                 img.Apply();
             }
         }
@@ -319,15 +319,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
 
         public static void DrawArrow(Texture2D Texture, Line line, Color color, bool apply = true, float thickness = 1, float arrowHeadLength = 12)
         {
-            F.DrawLine(Texture, line, color, false, thickness);
+            DrawLine(Texture, line, color, false, thickness);
             float mult = line.length / arrowHeadLength;
             Vector2 d = (line.pt1 - line.pt2) * mult;
             Vector2 endLeft = line.pt1 - d;
             Vector2 endRight = line.pt1 + d;
             Line left = new Line(line.pt1, endLeft);
             Line right = new Line(line.pt1, endRight);
-            F.DrawLine(Texture, left, color, false, thickness);
-            F.DrawLine(Texture, right, color, false, thickness);
+            DrawLine(Texture, left, color, false, thickness);
+            DrawLine(Texture, right, color, false, thickness);
             if (apply) Texture.Apply();
         }
         public static void DrawLineGradient(Line line, float thickness, Texture2D texture, Color color1, Color color2, bool apply = true)
@@ -355,5 +355,72 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (apply)
                 texture.Apply();
         }
+        // https://answers.unity.com/questions/244417/create-line-on-a-texture.html
+        public static void DrawLine(Texture2D texture, Line line, Color color, bool apply = true, float thickness = 1)
+        {
+            if (thickness == 0) return;
+            Vector2 point1 = new Vector2(line.pt1.x + texture.width / 2, line.pt1.y + texture.height / 2);
+            Vector2 point2 = new Vector2(line.pt2.x + texture.width / 2, line.pt2.y + texture.height / 2);
+            Vector2 t = point1;
+            float frac = 1 / Mathf.Sqrt(Mathf.Pow(point2.x - point1.x, 2) + Mathf.Pow(point2.y - point1.y, 2));
+            float ctr = 0;
+
+            while ((int)t.x != (int)point2.x || (int)t.y != (int)point2.y)
+            {
+                t = Vector2.Lerp(point1, point2, ctr);
+                ctr += frac;
+                texture.SetPixelClamp((int)t.x, (int)t.y, color);
+                if (thickness > 1)
+                {
+                    float distance = thickness / 2f;
+                    for (float i = -distance; i <= distance; i += 0.5f)
+                        texture.SetPixelClamp(Mathf.RoundToInt(t.x + i), Mathf.RoundToInt(t.y + i), color);
+                }
+            }
+            if (apply)
+                texture.Apply();
+        }
+        // https://stackoverflow.com/questions/30410317/how-to-draw-circle-on-texture-in-unity
+        public static void FillCircle(Texture2D texture, float x, float y, float radius, Color color, bool apply = true)
+        {
+            float rSquared = radius * radius;
+
+            for (float u = x - radius; u < x + radius + 1; u++)
+                for (float v = y - radius; v < y + radius + 1; v++)
+                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
+                        texture.SetPixelClamp((int)Math.Round(u), (int)Math.Round(v), color);
+            if (apply)
+                texture.Apply();
+        }
+        public static void SetPixelClamp(this Texture2D texture, int x, int y, Color color)
+        {
+            if (x <= texture.width && x >= 0 && y <= texture.height && y >= 0) texture.SetPixel(x, y, color);
+        }
+        public static void DrawCircle(Texture2D texture, float x, float y, float radius, Color color, float thickness = 1, bool apply = true, bool drawLineToOutside = false, float polygonResolutionScale = 1f)
+        {
+            if (thickness == 0) return;
+            float sides_radians = (Mathf.PI / 180) * polygonResolutionScale;
+            float increment = (Mathf.PI * 2) * sides_radians;
+            int x1;
+            int y1;
+            x1 = Mathf.RoundToInt(x + radius);
+            y1 = Mathf.RoundToInt(y);
+            for (float r = 0; r < sides_radians; r += increment)
+            {
+                Vector2 p = GetPositionOnCircle(r, radius);
+                int x2 = Mathf.RoundToInt(p.x + x);
+                int y2 = Mathf.RoundToInt(p.y + y);
+                DrawLine(texture, new Line(new Vector2(x1, y1), new Vector2(x2, y2)), color, false, thickness);
+                x1 = x2;
+                y1 = y2;
+            }
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x + radius, y)), color, false, thickness);
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x - radius, y)), color, false, thickness);
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y + radius)), color, false, thickness);
+            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y - radius)), color, false, thickness);
+            if (apply)
+                texture.Apply();
+        }
+        public static Vector2 GetPositionOnCircle(float radians, float radius = 1) => new Vector2(Mathf.Cos(radians) * radius, Mathf.Sin(radians) * radius);
     }
 }

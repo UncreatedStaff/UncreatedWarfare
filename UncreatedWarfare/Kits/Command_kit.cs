@@ -21,11 +21,11 @@ namespace Uncreated.Warfare.Kits
         {
             if (player == null)
             {
-                F.Log(F.Translate(key, 0, out _, formatting), ConsoleColor.Yellow);
+                L.Log(Translation.Translate(key, 0, out _, formatting), ConsoleColor.Yellow);
             }
             else
             {
-                player.SendChat(F.Translate(key, player.Steam64, formatting));
+                player.SendChat(Translation.Translate(key, player.Steam64, formatting));
             }
         }
         public void Execute(IRocketPlayer caller, string[] command)
@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Kits
             if (!Data.Is(out IKitRequests ctf))
             {
                 if (ucplayer == null)
-                    F.LogWarning(F.Translate("command_e_gamemode", 0));
+                    L.LogWarning(Translation.Translate("command_e_gamemode", 0));
                 else
                     player.SendChat("command_e_gamemode");
                 return;
@@ -59,7 +59,7 @@ namespace Uncreated.Warfare.Kits
             {
                 if (ucplayer == null)
                 {
-                    F.Log("This command can not be called from console.", ConsoleColor.Red);
+                    L.Log("This command can not be called from console.", ConsoleColor.Red);
                     return;
                 }
                 kitName = command[0];
@@ -82,7 +82,7 @@ namespace Uncreated.Warfare.Kits
                                 if (branchChanged)
                                 {
                                     ucplayer.Branch = kit.Branch;
-                                    Reply(ucplayer, "branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                                    Reply(ucplayer, "branch_changed", Translation.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                                 }
                                 PlayerManager.ApplyToOnline();
                                 return;
@@ -147,8 +147,8 @@ namespace Uncreated.Warfare.Kits
                     }
                     catch (Exception ex)
                     {
-                        F.LogError("Error searching for kit names.");
-                        F.LogError(ex);
+                        L.LogError("Error searching for kit names.");
+                        L.LogError(ex);
                         sb.Append("<color=#dd1111>ERROR</color>");
                     }
                     if (sb.Length == 0)
@@ -162,7 +162,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (ucplayer == null)
                     {
-                        F.Log("This command can not be called from console.", ConsoleColor.Red);
+                        L.Log("This command can not be called from console.", ConsoleColor.Red);
                         return;
                     }
                     if (!KitManager.KitExists(kitName, out var kit)) // create kit
@@ -202,7 +202,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (ucplayer == null)
                     {
-                        F.Log("This command can not be called from console.", ConsoleColor.Red);
+                        L.Log("This command can not be called from console.", ConsoleColor.Red);
                         return;
                     }
                     if (KitManager.KitExists(kitName, out Kit kit))
@@ -217,7 +217,7 @@ namespace Uncreated.Warfare.Kits
                         if (branchChanged)
                         {
                             ucplayer.Branch = kit.Branch;
-                            Reply(ucplayer, "branch_changed", F.TranslateBranch(kit.Branch, ucplayer).ToUpper());
+                            Reply(ucplayer, "branch_changed", Translation.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                         }
 
                         PlayerManager.ApplyToOnline();
@@ -247,7 +247,7 @@ namespace Uncreated.Warfare.Kits
                             }
                             string text = sb.ToString();
                             text.Replace("\\n", "\n");
-                            F.Log(text);
+                            L.Log(text);
                             if (KitManager.UpdateText(command[2], text, command[3]))
                                 Reply(ucplayer, "kit_setprop", "sign text", command[2], command[3] + " : " + text);
                             else

@@ -260,7 +260,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 case "polygon":
                     return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
                 default:
-                    F.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString(Data.Locale) + ", name: " + data.name);
+                    L.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString(Data.Locale) + ", name: " + data.name);
                     return new CircleZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
             }
         }

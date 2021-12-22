@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.XP
         public static Config<XPData> config = new Config<XPData>(Data.XPStorage, "config.json");
         public static void OnPlayerJoined(UCPlayer player)
         {
-            F.Log(player.CharacterName);
+            L.Log(player.CharacterName);
             if (player.IsTeam1() || player.IsTeam2())
             {
                 int amt = GetXP(player.Player, true);
@@ -73,19 +73,19 @@ namespace Uncreated.Warfare.XP
             }
 
             if (message != "" && amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
-                ToastMessage.QueueMessage(player, F.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, EToastMessageSeverity.MINIXP);
+                ToastMessage.QueueMessage(player, Translation.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale)), message, EToastMessageSeverity.MINIXP);
 
             UpdateUI(player, newBalance, out Rank rank);
 
             if (rank.level > oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
-                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                ToastMessage.QueueMessage(player, Translation.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
+                Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
             else if (rank.level < oldRank?.level)
             {
-                ToastMessage.QueueMessage(player, F.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
-                F.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                ToastMessage.QueueMessage(player, Translation.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
+                Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
             }
 
             for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
@@ -112,13 +112,13 @@ namespace Uncreated.Warfare.XP
                     "Rank", player.OfficerRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Level", rank.level == 0 ? "" : F.Translate("ui_ofp_level", player, player.OfficerRank.level.ToString(Data.Locale))
+                    "Level", rank.level == 0 ? "" : Translation.Translate("ui_ofp_level", player, player.OfficerRank.level.ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString(Data.Locale)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Next", nextRank != null ? F.Translate("ui_ofp_equivalent", player, nextRank.level.ToString(Data.Locale)) : ""
+                    "Next", nextRank != null ? Translation.Translate("ui_ofp_equivalent", player, nextRank.level.ToString(Data.Locale)) : ""
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Progress", GetProgress(currentXP, rank.XP)
@@ -131,14 +131,14 @@ namespace Uncreated.Warfare.XP
                     "Rank", rank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
-                    "Level", rank.level == 0 ? "" : F.Translate("ui_xp_level", player, rank.level.ToString(Data.Locale))
+                    "Level", rank.level == 0 ? "" : Translation.Translate("ui_xp_level", player, rank.level.ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "XP", nextRank != null ? currentXP + "/" + rank.XP : currentXP.ToString()
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Next", nextRank != null ?
-                    F.Translate("ui_xp_next_level", player, nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID), nextRank.level.ToString(Data.Locale)) : string.Empty
+                    Translation.Translate("ui_xp_next_level", player, nextRank.TranslateName(nelsonplayer.channel.owner.playerID.steamID.m_SteamID), nextRank.level.ToString(Data.Locale)) : string.Empty
                 );
                 EffectManager.sendUIEffectText(key, player.Player.channel.owner.transportConnection, true,
                     "Progress", GetProgress(currentXP, rank.XP)

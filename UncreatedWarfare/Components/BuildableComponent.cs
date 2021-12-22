@@ -77,12 +77,12 @@ namespace Uncreated.Warfare.Components
             {
                 if (!(Assets.find(Buildable.emplacementData.ammoID) is ItemAsset ammoasset))
                 {
-                    F.LogError($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
+                    L.LogError($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
                     return;
                 }
                 if (!(Assets.find(Buildable.structureID) is VehicleAsset vehicleasset))
                 {
-                    F.LogError($"Emplacement {Assets.find(Buildable.structureID)?.name?.Replace("_Base", "") ?? Buildable.structureID.ToString("N")}'s vehicle id is not a valid vehicle.");
+                    L.LogError($"Emplacement {Assets.find(Buildable.structureID)?.name?.Replace("_Base", "") ?? Buildable.structureID.ToString("N")}'s vehicle id is not a valid vehicle.");
                     return;
                 }
                 for (int i = 0; i < Buildable.emplacementData.ammoAmount; i++)
@@ -102,7 +102,7 @@ namespace Uncreated.Warfare.Components
                 {
                     if (!(Assets.find(Buildable.emplacementData.baseID) is ItemBarricadeAsset emplacementBase))
                     {
-                        F.LogError($"Emplacement base was not a valid barricade.");
+                        L.LogError($"Emplacement base was not a valid barricade.");
                         return;
                     }
                     Barricade barricade = new Barricade(emplacementBase);

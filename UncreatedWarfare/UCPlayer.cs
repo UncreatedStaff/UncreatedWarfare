@@ -64,18 +64,18 @@ namespace Uncreated.Warfare
                 {
                     if (Player.transform == null)
                     {
-                        F.LogWarning("ERROR: Player transform was null");
-                        F.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(Player.channel.owner.playerID.steamID, F.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                        L.LogWarning("ERROR: Player transform was null");
+                        L.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
+                        Provider.kick(Player.channel.owner.playerID.steamID, Translation.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
                         return Vector3.zero;
                     }
                     return Player.transform.position;
                 }
                 catch (NullReferenceException)
                 {
-                    F.LogWarning("ERROR: Player transform was null");
-                    F.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(Player.channel.owner.playerID.steamID, F.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                    L.LogWarning("ERROR: Player transform was null");
+                    L.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
+                    Provider.kick(Player.channel.owner.playerID.steamID, Translation.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
                     return Vector3.zero;
                 }
             }

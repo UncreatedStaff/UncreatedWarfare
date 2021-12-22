@@ -214,7 +214,7 @@ namespace Uncreated
             }
             if (!type.IsPrimitive)
             {
-                F.LogError("Can not parse non-primitive types except for strings and enums.");
+                L.LogError("Can not parse non-primitive types except for strings and enums.");
                 parsed = false;
                 return default;
             }
@@ -349,19 +349,19 @@ namespace Uncreated
                     }
                     catch (FieldAccessException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         set = false;
                         return obj;
                     }
                     catch (TargetException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         set = false;
                         return obj;
                     }
                     catch (ArgumentException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         set = false;
                         return obj;
                     }
@@ -383,19 +383,19 @@ namespace Uncreated
         {
             if (field == default)
             {
-                F.LogError(Type.Name + " saver: field not found.");
+                L.LogError(Type.Name + " saver: field not found.");
                 reason = 1;
                 return false;
             }
             if (field.IsStatic)
             {
-                F.LogError(Type.Name + " saver tried to save to a static property.");
+                L.LogError(Type.Name + " saver tried to save to a static property.");
                 reason = 2;
                 return false;
             }
             if (field.IsInitOnly)
             {
-                F.LogError(Type.Name + " saver tried to save to a readonly property.");
+                L.LogError(Type.Name + " saver tried to save to a readonly property.");
                 reason = 2;
                 return false;
             }
@@ -412,7 +412,7 @@ namespace Uncreated
             attributes.Dispose();
             if (!settable)
             {
-                F.LogError(Type.Name + " saver tried to save to a non json-savable property.");
+                L.LogError(Type.Name + " saver tried to save to a non json-savable property.");
                 reason = 3;
                 return false;
             }
@@ -490,19 +490,19 @@ namespace Uncreated
                     }
                     catch (FieldAccessException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         success = false;
                         return obj;
                     }
                     catch (TargetException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         success = false;
                         return obj;
                     }
                     catch (ArgumentException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         success = false;
                         return obj;
                     }
@@ -592,8 +592,8 @@ namespace Uncreated
             }
             catch (Exception ex)
             {
-                F.LogError("Error upgrading in JsonSaver:");
-                F.LogError(ex);
+                L.LogError("Error upgrading in JsonSaver:");
+                L.LogError(ex);
             }
         }
         protected class TypeArgumentException : Exception

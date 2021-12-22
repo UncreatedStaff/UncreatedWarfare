@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.Gamemodes
             if (EventLoopCoroutine == null)
                 return;
             StopCoroutine(EventLoopCoroutine);
-            F.Log("Event loop stopped", ConsoleColor.DarkGray);
+            L.Log("Event loop stopped", ConsoleColor.DarkGray);
         }
         public virtual void Init()
         {
@@ -110,14 +110,14 @@ namespace Uncreated.Warfare.Gamemodes
                     {
                         if (Provider.clients[i].player.transform == null)
                         {
-                            F.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                            Provider.kick(Provider.clients[i].playerID.steamID, F.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
+                            L.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                            Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
                         }
                     }
                     catch (NullReferenceException)
                     {
-                        F.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(Provider.clients[i].playerID.steamID, F.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
+                        L.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                        Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
                     }
                 }
                 try
@@ -126,11 +126,11 @@ namespace Uncreated.Warfare.Gamemodes
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Error in " + Name + " gamemode in the event loop:");
-                    F.LogError(ex);
+                    L.LogError("Error in " + Name + " gamemode in the event loop:");
+                    L.LogError(ex);
                 }
                 if (UCWarfare.I.CoroutineTiming)
-                    F.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
+                    L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
             }
         }
         public void ShutdownAfterGame(string reason, ulong player)
@@ -157,10 +157,10 @@ namespace Uncreated.Warfare.Gamemodes
                 {
                     gamemode.Init();
                     gamemode.OnLevelLoaded();
-                    //F.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+                    //Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
                     for (int i = 0; i < Provider.clients.Count; i++)
                         gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
-                    F.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
+                    L.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
                     Data.Gamemode = gamemode;
                     _state = EState.DISCARD;
                     Destroy(this);
@@ -177,7 +177,7 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void StartNextGame(bool onLoad = false)
         {
             CooldownManager.OnGameStarting();
-            F.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
+            L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             _state = EState.ACTIVE;
             _gameID = DateTime.Now.Ticks;
             for (int i = 0; i < Provider.clients.Count; i++)
@@ -229,8 +229,8 @@ namespace Uncreated.Warfare.Gamemodes
             }
             catch (Exception ex)
             {
-                F.LogWarning("Exception when finding gamemode: \"" + name + '\"');
-                F.LogError(ex, ConsoleColor.Yellow);
+                L.LogWarning("Exception when finding gamemode: \"" + name + '\"');
+                L.LogError(ex, ConsoleColor.Yellow);
                 return null;
             }
         }
@@ -274,7 +274,7 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void ShowStagingUI(UCPlayer player)
         {
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
-            EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", F.Translate("phases_briefing", player));
+            EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
         }
         public void ClearStagingUI(UCPlayer player)
         {
@@ -344,8 +344,8 @@ namespace Uncreated.Warfare.Gamemodes
                         }
                         catch (Exception ex)
                         {
-                            F.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
-                            F.LogError(ex);
+                            L.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
+                            L.LogError(ex);
                         }
                     }
                 }
@@ -354,8 +354,8 @@ namespace Uncreated.Warfare.Gamemodes
             }
             catch (Exception ex)
             {
-                F.LogError($"Failed to clear barricades/structures:");
-                F.LogError(ex);
+                L.LogError($"Failed to clear barricades/structures:");
+                L.LogError(ex);
             }
         }
         public static void ReadGamemodes()

@@ -43,12 +43,12 @@ namespace Uncreated.Warfare
                 if (IO.ReadFrom(Path, out List<PlayerSave> saves))
                 {
                     ActiveObjects = saves;
-                    F.Log($"Read {saves.Count} saves.", ConsoleColor.Magenta);
+                    L.Log($"Read {saves.Count} saves.", ConsoleColor.Magenta);
                 }
                 else
                 {
                     ActiveObjects = new List<PlayerSave>();
-                    F.LogError("Failed to read saves!!!");
+                    L.LogError("Failed to read saves!!!");
                 }
                 bool needwrite = ActiveObjects.Count == 0;
                 for (int i = 0; i < ActiveObjects.Count; i++)
@@ -176,7 +176,7 @@ namespace Uncreated.Warfare
             UCPlayer player = OnlinePlayers.Find(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
             if (player == default)
             {
-                F.LogError("Failed to get UCPlayer instance of " + nelsonplayer.name);
+                L.LogError("Failed to get UCPlayer instance of " + nelsonplayer.name);
                 return;
             }
 
@@ -324,7 +324,7 @@ namespace Uncreated.Warfare
             }
             if (!type.IsPrimitive)
             {
-                F.LogError("Can not parse non-primitive types except for strings and enums.");
+                L.LogError("Can not parse non-primitive types except for strings and enums.");
                 parsed = false;
                 return default;
             }
@@ -459,19 +459,19 @@ namespace Uncreated.Warfare
                     }
                     catch (FieldAccessException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         set = false;
                         return obj;
                     }
                     catch (TargetException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         set = false;
                         return obj;
                     }
                     catch (ArgumentException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         set = false;
                         return obj;
                     }
@@ -493,19 +493,19 @@ namespace Uncreated.Warfare
         {
             if (field == default)
             {
-                F.LogError("PlayerSave saver: field not found.");
+                L.LogError("PlayerSave saver: field not found.");
                 reason = 1;
                 return false;
             }
             if (field.IsStatic)
             {
-                F.LogError("PlayerSave saver tried to save to a static property.");
+                L.LogError("PlayerSave saver tried to save to a static property.");
                 reason = 2;
                 return false;
             }
             if (field.IsInitOnly)
             {
-                F.LogError("PlayerSave saver tried to save to a readonly property.");
+                L.LogError("PlayerSave saver tried to save to a readonly property.");
                 reason = 2;
                 return false;
             }
@@ -522,7 +522,7 @@ namespace Uncreated.Warfare
             attributes.Dispose();
             if (!settable)
             {
-                F.LogError("PlayerSave saver tried to save to a non json-savable property.");
+                L.LogError("PlayerSave saver tried to save to a non json-savable property.");
                 reason = 3;
                 return false;
             }
@@ -600,19 +600,19 @@ namespace Uncreated.Warfare
                     }
                     catch (FieldAccessException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         success = false;
                         return obj;
                     }
                     catch (TargetException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         success = false;
                         return obj;
                     }
                     catch (ArgumentException ex)
                     {
-                        F.LogError(ex);
+                        L.LogError(ex);
                         success = false;
                         return obj;
                     }

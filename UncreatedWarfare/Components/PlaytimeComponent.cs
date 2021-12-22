@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Components
             public void ReloadAsset()
             {
                 if (!(Assets.find(this.guid) is EffectAsset ea))
-                    F.Log("Unable to find effect asset with GUID " + this.guid.ToString("N") + " in toast messages.");
+                    L.Log("Unable to find effect asset with GUID " + this.guid.ToString("N") + " in toast messages.");
                 else 
                     this.id = ea.id;
             }
@@ -115,7 +115,7 @@ namespace Uncreated.Warfare.Components
             }
             if (info.guid == Guid.Empty)
             {
-                F.LogWarning("Undefined toast message type: " + message.Severity.ToString());
+                L.LogWarning("Undefined toast message type: " + message.Severity.ToString());
                 return;
             }
             if (priority || (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel]))
@@ -169,11 +169,11 @@ namespace Uncreated.Warfare.Components
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
-            //F.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
+            //L.Log("Started tracking " + F.GetPlayerOriginalNames(player).PlayerName + "'s playtime.", ConsoleColor.Magenta);
             this.thrown = new List<ThrowableOwner>();
             for (int i = 0; i < channels.Length; i++)
                 channels[i] = false;
-            F.Log("Started tracking playtime of " + player.name);
+            L.Log("Started tracking playtime of " + player.name);
         }
         public void Update()
         {
@@ -272,8 +272,8 @@ namespace Uncreated.Warfare.Components
                 }
                 catch (Exception ex)
                 {
-                    F.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
-                    F.LogError(ex);
+                    L.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
+                    L.LogError(ex);
 
                     CancelTeleport();
                 }
@@ -296,11 +296,11 @@ namespace Uncreated.Warfare.Components
                             if (FOBowner.CSteamID != player.channel.owner.playerID.steamID)
                             {
                                 XP.XPManager.AddXP(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP,
-                                    F.Translate("xp_deployed_fob", FOBowner));
+                                    Translation.Translate("xp_deployed_fob", FOBowner));
 
                                 if (FOBowner.IsSquadLeader() && FOBowner.Squad.Members.Exists(p => p.CSteamID == player.channel.owner.playerID.steamID))
                                 {
-                                    Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, F.Translate("ofp_deployed_fob", FOBowner));
+                                    Officers.OfficerManager.AddOfficerPoints(FOBowner.Player, XP.XPManager.config.Data.FOBDeployedXP, Translation.Translate("ofp_deployed_fob", FOBowner));
                                 }
                             }
                         }
@@ -321,8 +321,8 @@ namespace Uncreated.Warfare.Components
             }
             catch (Exception ex)
             {
-                F.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
-                F.LogError(ex);
+                L.LogError("Failed to teleport " + player.channel.owner.playerID.playerName);
+                L.LogError(ex);
             }
         }
     }

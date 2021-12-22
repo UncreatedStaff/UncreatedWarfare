@@ -42,21 +42,21 @@ namespace Uncreated.Warfare.Commands
         }
         public static void AdminOffToOn(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_admin_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+            L.Log(Translation.Translate("duty_admin_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             player.Player.look.sendFreecamAllowed(true);
             player.Player.look.sendWorkzoneAllowed(true);
             player.SendChat("duty_on_feedback");
-            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
+            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_admin_off_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+            L.Log(Translation.Translate("duty_admin_off_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
-            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_off_broadcast", names.CharacterName);
+            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_off_broadcast", names.CharacterName);
             if (player == null)
                 return;
             if (player.Features != null && player.Features.gameObject != null)
@@ -74,19 +74,19 @@ namespace Uncreated.Warfare.Commands
         }
         public static void InternOffToOn(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_intern_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+            L.Log(Translation.Translate("duty_intern_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             player.SendChat("duty_on_feedback");
-            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
+            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
         {
-            F.Log(F.Translate("duty_intern_off_console", 0, out _, names.PlayerName, names.Steam64.ToString(Data.Locale)), ConsoleColor.Cyan);
+            L.Log(Translation.Translate("duty_intern_off_console", 0, out _, names.PlayerName, names.Steam64.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
-            F.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_off_broadcast", names.CharacterName);
+            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_off_broadcast", names.CharacterName);
             if (player == null)
                 return;
             if (player.Features != null && player.Features.gameObject != null)
