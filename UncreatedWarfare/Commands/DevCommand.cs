@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using UnityEngine;
@@ -29,10 +30,10 @@ namespace Uncreated.Warfare.Commands
                 {
                     SerializableTransform transform = new SerializableTransform(player.Player.transform);
                     Gamemode.Config.MapConfig.AddCacheSpawn(transform);
-                    player.Message("Added new cache spawn: " + transform.ToString().Colorize("dbc39e"));
+                    player.Message("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
                 }
                 else
-                    player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));
+                    player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("c7a29f"));
             }
             else if (command.Length > 1 && command[0].ToLower() == "addintel")
             {
@@ -42,13 +43,25 @@ namespace Uncreated.Warfare.Commands
                     {
                         insurgency.AddIntelligencePoints(points);
 
-                        player.Message($"Added {points} intelligence points.".Colorize("dbc39e"));
+                        player.Message($"Added {points} intelligence points.".Colorize("ebd491"));
                     }
                     else
-                        player.Message($"'{command[1]}' is not a valid number of intelligence points.".Colorize("dba29e"));
+                        player.Message($"'{command[1]}' is not a valid number of intelligence points.".Colorize("c7a29f"));
                 }
                 else
-                    player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("dba29e"));
+                    player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("c7a29f"));
+            }
+            else if (command.Length == 1 && command[0].ToLower() == "quickbuild" || command[0].ToLower() == "qb")
+            {
+                var barricade = BarricadeManager.FindBarricadeByRootTransform(UCBarricadeManager.GetBarricadeTransformFromLook(player.Player.look));
+
+                if (barricade.model.TryGetComponent<BuildableComponent>(out var buildable))
+                {
+                    buildable.Build();
+                    player.Message($"Successfully built {barricade.asset.itemName}".Colorize("ebd491"));
+                }
+                else
+                    player.Message($"This barricade ({barricade.asset.itemName}) is not buildable.".Colorize("c7a29f"));
             }
             else
                 player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));

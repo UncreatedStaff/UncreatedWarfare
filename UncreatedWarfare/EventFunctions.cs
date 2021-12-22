@@ -122,6 +122,13 @@ namespace Uncreated.Warfare
 
             RepairManager.OnBarricadePlaced(drop, region);
 
+            // FOB radio
+            if (Gamemode.Config.Barricades.FOBRadioGUID == data.barricade.asset.GUID)
+            {
+                if (!FOBManager.AllFOBs.Exists(f => f.Position == drop.model.position))
+                    FOBManager.RegisterNewFOB(drop, false);
+            }
+
             // ammo bag
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
             {
@@ -133,21 +140,10 @@ namespace Uncreated.Warfare
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
-
-            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is(out Insurgency insurgency) && data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
+            var repairable = FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EbuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
+            if (repairable != null || drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
             {
-                if (drop.interactable is InteractableStorage storage)
-                {
-                    storage.onStateRebuilt = (InteractableStorage s, byte[] state, int size) =>
-                    {
-                        FOBManager.OnAmmoCrateUpdated(s, drop);
-                    };
-                }
-            }
-
-            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBBaseGUID)
-            {
-                drop.model.gameObject.AddComponent<FOBBaseComponent>().Initialize(drop, data);
+                drop.model.gameObject.AddComponent<RepairableComponent>();
             }
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
@@ -408,6 +404,12 @@ namespace Uncreated.Warfare
             else
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
+
+                if (drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID && instigatorSteamID != default)
+                {
+                    shouldAllow = false;
+                }
+
                 if (drop != null && (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.BARRICADE, out Structures.Structure s) && s.transform == barricadeTransform))
                 {
                     shouldAllow = false;
@@ -816,6 +818,12 @@ namespace Uncreated.Warfare
                 FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
                 RepairManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
             }
+
+            if (drop.model.TryGetComponent<BuildableComponent>(out var buildable))
+                buildable.Destroy();
+            if (drop.model.TryGetComponent<RepairableComponent>(out var repairable))
+                repairable.Destroy();
+
             if (Data.Is<ISquads>(out _))
                 RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
             if (Data.Is(out IVehicles v))

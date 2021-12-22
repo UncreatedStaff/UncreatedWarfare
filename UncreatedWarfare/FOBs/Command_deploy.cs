@@ -41,78 +41,66 @@ namespace Uncreated.Warfare.Commands
                 bool IsInLobby = TeamManager.LobbyZone.IsInside(player.Player.transform.position);
                 bool shouldCancelOnMove = !IsInMain;
                 bool shouldCancelOnDamage = !IsInMain;
+
+                if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
+                {
+                    player.Message("deploy_e_cooldown", cooldown.ToString());
+                    return;
+                }
+                if (!(IsInMain || IsInLobby))
+                {
+                    if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out Cooldown combatlog))
+                    {
+                        player.Message("deploy_e_incombat", combatlog.ToString());
+                        return;
+                    }
+                    if (!player.IsOnFOB(out _))
+                    {
+                        player.Message("deploy_e_notnearfob");
+                        return;
+                    }
+                }
+
                 if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object deployable))
                 {
                     if (command[0] == "main")
-                        c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
+                        c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
                     else if (command[0] == "lobby")
                         player.SendChat("deploy_lobby_removed");
-                    else 
+                    else
                         player.Message("deploy_e_fobnotfound", command[0]);
                     return;
                 }
 
-
-
                 if (deployable is FOB FOB)
                 {
-                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
+                    if (FOB.Bunker == null)
                     {
-                        player.Message("deploy_e_cooldown", cooldown.ToString());
+                        player.Message("deploy_e_nobunker", command[0]);
                         return;
                     }
-                    if (!(IsInMain || IsInLobby))
+                    if (FOB.NearbyEnemies.Count != 0)
                     {
-                        if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out Cooldown combatlog))
-                        {
-                            player.Message("deploy_e_incombat", combatlog.ToString());
-                            return;
-                        }
-                        if (!player.IsNearFOB())
-                        {
-                            player.Message("deploy_e_notnearfob");
-                            return;
-                        }
+                        player.Message("deploy_e_enemiesnearby", command[0]);
+                        return;
                     }
-                    else
-                    {
-                        if (FOB.nearbyEnemies.Count != 0)
-                        {
-                            player.Message("deploy_e_enemiesnearby", command[0]);
-                            return;
-                        }
 
-                        c.TeleportDelayed(FOB.Structure.model.position, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{FOB.Name}</color>", FOB);
-                    }
+                    c.TeleportTo(FOB, FOBManager.config.Data.DeloyFOBDelay, shouldCancelOnMove);
+ 
                 }
                 else if (deployable is SpecialFOB special)
                 {
-                    if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
+                    c.TeleportTo(special, FOBManager.config.Data.DeloyFOBDelay, shouldCancelOnMove);
+                }
+                else if (deployable is Cache cache)
+                {
+                    if (cache.NearbyAttackers.Count != 0)
                     {
-                        player.Message("deploy_e_cooldown", cooldown.ToString());
+                        player.Message("deploy_e_enemiesnearby", command[0]);
                         return;
                     }
-                    if (!(IsInMain || IsInLobby))
-                    {
-                        if (!player.IsNearFOB())
-                        {
-                            player.Message("deploy_e_notnearfob");
-                            return;
-                        }
-                        if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out Cooldown combatlog))
-                        {
-                            player.Message("deploy_e_incombat", combatlog.ToString());
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        c.TeleportDelayed(special.Point, 0, FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, $"<color=#54e3ff>{special.Name}</color>", special);
-                    }
-                }
-                else if (command[0].ToLower() == "main")
-                {
-                    c.TeleportDelayed(team.GetBaseSpawnFromTeam(), team.GetBaseAngle(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#d1b780>main</color>");
+
+                    c.TeleportTo(cache, FOBManager.config.Data.DeloyFOBDelay, shouldCancelOnMove);
                 }
 #if false
                 else if (command[0].ToLower() == "lobby")

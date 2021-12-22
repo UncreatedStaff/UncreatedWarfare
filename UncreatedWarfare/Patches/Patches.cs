@@ -332,25 +332,24 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void OnPreMeleeHit(UseableMelee __instance)
             {
-                F.Log("Hit with: " + __instance.equippedMeleeAsset.itemName);
-
                 RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), ((ItemWeaponAsset)__instance.player.equipment.asset).range, RayMasks.BARRICADE, __instance.player);
                 if (info.transform != null)
                 {
                     var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                     if (drop != null)
                     {
-                        F.Log("     BarricadeDrop found");
+                        UCPlayer builder = UCPlayer.FromPlayer(__instance.player);
 
-                        if (drop.model.TryGetComponent(out BuildableComponent buildable))
+                        if (builder.GetTeam() == drop.GetServersideData().group)
                         {
-                            F.Log("     BuildableComponent found");
-                            UCPlayer builder = UCPlayer.FromPlayer(__instance.player);
-                            if (builder.GetTeam() == drop.GetServersideData().group)
+                            if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
                             {
-                                F.Log("     Group was equal");
-                                if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
+                                if (drop.model.TryGetComponent(out RepairableComponent repairable))
+                                    repairable.Repair(builder);
+                                else if (drop.model.TryGetComponent(out BuildableComponent buildable))
                                     buildable.IncrementBuildPoints(builder);
+                                else if (drop.model.TryGetComponent(out FOBComponent radio))
+                                    radio.parent.Repair(builder);
                             }
                         }
                     }
