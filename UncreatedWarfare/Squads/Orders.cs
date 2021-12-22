@@ -22,7 +22,5 @@ namespace Uncreated.Warfare.Squads
             Squad = squad;
             Commander = commander;
         }
-
-        
     }
 }

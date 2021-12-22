@@ -156,7 +156,7 @@ namespace Uncreated.Warfare
                         int num = 0;
                         while (count < region.drops.Count)
                         {
-                            num += 38 + region.drops[count].GetServersideData().barricade.state.Length;
+                            num += 44 + region.drops[count].GetServersideData().barricade.state.Length;
                             count++;
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;

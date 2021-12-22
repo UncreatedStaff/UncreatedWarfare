@@ -98,11 +98,11 @@ namespace Uncreated.Warfare
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
         {
-            if (!UCWarfare.Config.AllowCosmetics) allow = UnturnedPlayer.FromSteamPlayer(player).OnDuty();
+            if (!UCWarfare.Config.AllowCosmetics) allow = false;
         }
         internal static void StopCosmeticsSetStateEvent(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow)
         {
-            if (!UCWarfare.Config.AllowCosmetics && UnturnedPlayer.FromSteamPlayer(player).OffDuty()) state = false;
+            if (!UCWarfare.Config.AllowCosmetics) state = false;
         }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
