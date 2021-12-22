@@ -108,8 +108,7 @@ namespace Uncreated.Warfare
         {
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-            if (UCWarfare.Config.Debug)
-                L.Log($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}", ConsoleColor.DarkGray);
+            L.LogDebug($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}");
             BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
             owner.Owner = data.owner;
             SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
@@ -153,9 +152,8 @@ namespace Uncreated.Warfare
                 ThrowableOwner t = throwable.AddComponent<ThrowableOwner>();
                 PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
                 t.Set(useable, throwable, c);
-                if (UCWarfare.Config.Debug)
-                    L.Log(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
-                        useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
+                L.LogDebug(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
+                    useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
                 if (success)
                     c.thrown.Add(t);
             }
@@ -745,8 +743,7 @@ namespace Uncreated.Warfare
                     explanation = "Uncreated Network was unable to check your ban status, try again later or contact a Director if this keeps happening.";
                     return;
                 }
-                if (UCWarfare.Config.Debug)
-                    L.Log(player.playerID.playerName, ConsoleColor.DarkGray);
+                L.LogDebug(player.playerID.playerName, ConsoleColor.DarkGray);
                 if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
                     Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
                 else

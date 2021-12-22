@@ -67,10 +67,7 @@ namespace Uncreated.Warfare
                             L.Log("[OFFLINE] " + names.PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
                         }
                     }
-                    else if (UCWarfare.Config.Debug)
-                    {
-                        L.Log("Unknown owner's trap was triggered", ConsoleColor.DarkGray);
-                    }
+                    else L.LogDebug("Unknown owner's trap was triggered", ConsoleColor.DarkGray);
 
                     if (___isExplosive)
                     {
@@ -259,8 +256,7 @@ namespace Uncreated.Warfare
                     Passenger passenger = __instance.passengers[index];
                     if (passenger != null && passenger.player != null && passenger.player.player != null && !passenger.player.player.life.isDead)
                     {
-                        if (UCWarfare.Config.Debug)
-                            L.Log($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}", ConsoleColor.DarkGray);
+                        L.LogDebug($"Damaging passenger {F.GetPlayerOriginalNames(passenger.player).PlayerName}: {instigator}", ConsoleColor.DarkGray);
                         passenger.player.player.life.askDamage(101, Vector3.up * 101f, EDeathCause.VEHICLE, ELimb.SKULL, instigator, out _);
                     }
                 }

@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Components
 
             while (true)
             {
-                foreach (var player in PlayerManager.OnlinePlayers)
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == parent.Team)
                     {
@@ -183,8 +183,7 @@ namespace Uncreated.Warfare.Components
         }
         public void UpdateBunker(BarricadeDrop bunker)
         {
-            if (UCWarfare.Config.Debug)
-                L.Log("Bunker updated: " + bunker?.GetType());
+            L.LogDebug("Bunker updated: " + bunker?.GetType());
 
             Bunker = bunker;
 

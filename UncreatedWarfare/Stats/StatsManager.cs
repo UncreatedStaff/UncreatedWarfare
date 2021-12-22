@@ -133,14 +133,12 @@ namespace Uncreated.Warfare.Stats
             if (teamBackupCounter == 30)
             {
                 BackupTeam.NetInvoke(Team1Stats);
-                if (UCWarfare.Config.Debug)
-                    L.Log("[TEAMS] Backed up: TEAM 1");
+                L.LogDebug("[TEAMS] Backed up: TEAM 1");
             }
             else if (teamBackupCounter == 60)
             {
                 BackupTeam.NetInvoke(Team2Stats);
-                if (UCWarfare.Config.Debug)
-                    L.Log("[TEAMS] Backed up: TEAM 2");
+                L.LogDebug("[TEAMS] Backed up: TEAM 2");
             }
             weaponCounter++;
             vehicleCounter++;

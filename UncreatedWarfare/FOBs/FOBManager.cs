@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -9,7 +7,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 
@@ -34,7 +31,6 @@ namespace Uncreated.Warfare.FOBs
                 fobListId = fobList.id;
             if (Assets.find(Gamemode.Config.UI.NearbyResourcesGUID) is EffectAsset nbyrs)
                 nearbyResourceId = nbyrs.id;
-            L.Log("Found fobs UIs: " + fobListId + ", " + nearbyResourceId);
         }
 
         public FOBManager()
@@ -125,8 +121,7 @@ namespace Uncreated.Warfare.FOBs
 
                 if (drop.model.TryGetComponent(out FOBComponent fob))
                 {
-                    if (UCWarfare.Config.Debug)
-                        L.Log("Starting fob bleed");
+                    L.LogDebug("Starting fob bleed");
 
                     fob.parent.StartBleed();
 
@@ -540,8 +535,7 @@ namespace Uncreated.Warfare.FOBs
             int min = Math.Min(SpecialFOBs.Count, config.Data.FobLimit);
             for (int i = 0; i < min; i++)
             {
-                if (UCWarfare.Config.Debug)
-                    L.Log($"    s: {i}");
+                L.LogDebug($"    s: {i}");
                 if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == team)
                 {
                     string i22 = i2.ToString();
@@ -551,13 +545,12 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
 
-            if (Data.Is(out Insurgency ins))
+            if (Data.Is<Insurgency>(out _))
             {
                 min = Math.Min(Caches.Count, config.Data.FobLimit);
                 for (int i = 0; i < min; i++)
                 {
-                    if (UCWarfare.Config.Debug)
-                        L.Log($"    i: {i}");
+                    L.LogDebug($"    i: {i}");
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
                     EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].ClosestLocation));
@@ -568,8 +561,7 @@ namespace Uncreated.Warfare.FOBs
             min = Math.Min(FOBList.Count, config.Data.FobLimit - i2);
             for (int i = 0; i < min; i++)
             {
-                if (UCWarfare.Config.Debug)
-                    L.Log($"    f: {i}");
+                L.LogDebug($"    f: {i}");
                 string i22 = i2.ToString();
 
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
@@ -579,8 +571,7 @@ namespace Uncreated.Warfare.FOBs
             }
             for (; i2 < config.Data.FobLimit; i2++)
             {
-                if (UCWarfare.Config.Debug)
-                    L.Log($"    c: {i2}");
+                L.LogDebug($"    c: {i2}");
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i2.ToString(), false);
             }
         }

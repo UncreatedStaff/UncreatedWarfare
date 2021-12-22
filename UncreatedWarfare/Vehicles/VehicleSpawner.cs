@@ -44,8 +44,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
                 {
-                    if (UCWarfare.Config.Debug)
-                        L.Log("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.", ConsoleColor.DarkGray);
+                    L.LogDebug("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.");
                     DeleteSpawn(data.instanceID, EStructType.BARRICADE);
                 }
             }
@@ -56,8 +55,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
                 {
-                    if (UCWarfare.Config.Debug)
-                        L.Log("Vehicle spawn was deregistered because the structure was salvaged or destroyed.", ConsoleColor.DarkGray);
+                    L.LogDebug("Vehicle spawn was deregistered because the structure was salvaged or destroyed.");
                     DeleteSpawn(data.instanceID, EStructType.STRUCTURE);
                 }
             }

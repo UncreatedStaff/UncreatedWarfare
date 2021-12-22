@@ -367,8 +367,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
         {
             ulong team = player.GetTeam();
-            if (UCWarfare.Config.Debug)
-                L.Log("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
+            L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
@@ -405,8 +404,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             ITransportConnection channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
-            if (UCWarfare.Config.Debug)
-                L.Log("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+            L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
             player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
             CTFUI.ClearCaptureUI(channel);
             SendUIParameters t1 = SendUIParameters.Nil;

@@ -365,10 +365,7 @@ namespace Uncreated.Warfare
         }
         private static void ClientReceived(byte[] bytes, IConnection connection)
         {
-            if (UCWarfare.Config.Debug)
-            {
-                L.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
-            }
+            L.LogDebug("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes));
         }
         private static void ClientSent(byte[] bytes, IConnection connection, ref bool Allow)
         {

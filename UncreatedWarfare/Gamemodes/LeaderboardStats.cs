@@ -146,8 +146,7 @@ namespace Uncreated.Warfare.Gamemodes
                 if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c))
                     c.stats = s;
             }
-            if (UCWarfare.Config.Debug)
-                L.Log(player.name + " added to playerstats, " + stats.Count + " trackers");
+            L.LogDebug(player.name + " added to playerstats, " + stats.Count + " trackers");
         }
         public virtual void StartTracking()
         {

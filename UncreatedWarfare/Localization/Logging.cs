@@ -35,6 +35,11 @@ namespace Uncreated.Warfare
                 }
             }
         }
+        public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
+        {
+            if (UCWarfare.Config.Debug)
+                Log(info, color);
+        }
         public static void Log(string info, ConsoleColor color = ConsoleColor.Gray)
         {
             try
