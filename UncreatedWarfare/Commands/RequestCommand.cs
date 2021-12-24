@@ -342,7 +342,9 @@ namespace Uncreated.Warfare.Commands
                     if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
                     {
                         c.hasBeenRequested = true;
+                        c.nextIdleSecond = data.RespawnTime - 10f;
                         c.StartIdleRespawnTimer();
+                        c.isIdle = false;
                     }
                     spawn.UpdateSign();
                 }

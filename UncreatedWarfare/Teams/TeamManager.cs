@@ -332,32 +332,36 @@ namespace Uncreated.Warfare.Teams
                 if (Team1Main.IsInside(pl.player.transform.position))
                 {
                     if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                    {
                         if (x != 1)
                         {
                             PlayerBaseStatus[pl.playerID.steamID.m_SteamID] = 1;
                             OnPlayerLeftMainBase?.Invoke(pl, x);
                             OnPlayerEnteredMainBase?.Invoke(pl, 1);
                         }
-                        else
-                        {
-                            PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 1);
-                            OnPlayerEnteredMainBase?.Invoke(pl, 1);
-                        }
+                    }
+                    else
+                    {
+                        PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 1);
+                        OnPlayerEnteredMainBase?.Invoke(pl, 1);
+                    }
                 }
                 else if (Team2Main.IsInside(pl.player.transform.position))
                 {
                     if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                    {
                         if (x != 2)
                         {
                             PlayerBaseStatus[pl.playerID.steamID.m_SteamID] = 2;
                             OnPlayerLeftMainBase?.Invoke(pl, x);
                             OnPlayerEnteredMainBase?.Invoke(pl, 2);
                         }
-                        else
-                        {
-                            PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 2);
-                            OnPlayerEnteredMainBase?.Invoke(pl, 2);
-                        }
+                    }
+                    else
+                    {
+                        PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 2);
+                        OnPlayerEnteredMainBase?.Invoke(pl, 2);
+                    }
                 }
                 else if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
                 {

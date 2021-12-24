@@ -1102,26 +1102,22 @@ namespace Uncreated.Warfare
             string finalformat =
                 $"<color=#{UCWarfare.GetColorHex("vbs_name")}>{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}</color>\n" +
                 $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{Translate("vbs_branch_" + data.Branch.ToString().ToLower(), language)}</color>\n" +
-                (data.TicketCost <= 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>" : string.Empty) +
+                (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>" : string.Empty) +
                 $"\n<color=#{{0}}>{(data.RequiredLevel <= 0 ? string.Empty : Translate("vbs_level_prefix", language) + " " + data.RequiredLevel.ToString(Data.Locale))}</color>\n";
             if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle) || !vehicle.TryGetComponent(out SpawnedVehicleComponent vehcomp)) // vehicle is dead
             {
-                L.Log("dead");
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.RoundToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";
             }
             else if (vehcomp.hasBeenRequested)
             {
-                L.Log("out");
                 if (vehcomp.isIdle)
                 {
-                    L.Log("idle");
-                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_idle")}>{Translate("vbs_state_idle", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.RoundToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";
+                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_idle")}>{Translate("vbs_state_idle", language, Mathf.FloorToInt(vehcomp.idleSecondsRemaining / 60f).ToString(), (Mathf.RoundToInt(vehcomp.idleSecondsRemaining) % 60).ToString("D2"))}</color>";
                 }
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_active")}>{Translate("vbs_state_active", language, F.GetClosestLocation(vehicle.transform.position))}</color>";
             }
             else
             {
-                L.Log("ready");
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_ready")}>{Translate("vbs_state_ready", language)}</color>";
             }
         }

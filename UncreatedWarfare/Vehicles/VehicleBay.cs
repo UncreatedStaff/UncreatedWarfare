@@ -35,9 +35,16 @@ namespace Uncreated.Warfare.Vehicles
         public static void RemoveRequestableVehicle(Guid vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static bool VehicleExists(Guid vehicleID, out VehicleData vehicleData)
         {
-            bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
-            vehicleData = v;
-            return result;
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                if (ActiveObjects[i].VehicleID == vehicleID)
+                {
+                    vehicleData = ActiveObjects[i];
+                    return true;
+                }
+            }
+            vehicleData = null;
+            return false;
         }
         public static void IncrementRequestCount(Guid vehicleID, bool save)
         {
@@ -147,7 +154,6 @@ namespace Uncreated.Warfare.Vehicles
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
             BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
-            uint instid = vehicle.instanceID;
             if (reg != null)
                 for (int b = 0; b < reg.drops.Count; b++)
                 {

@@ -444,6 +444,7 @@ namespace Uncreated.Warfare
                 if (p.status != EFlagStatus.BLANK && p.status != EFlagStatus.DONT_DISPLAY)
                     p.SendToPlayer(player.channel.owner);
             }
+#if false
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
             {
                 if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null &&
@@ -458,6 +459,7 @@ namespace Uncreated.Warfare
                     c.StopIdleRespawnTimer();
                 }
             }
+#endif
         }
         static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
         internal static void RemoveDamageMessageTicks(ulong player)

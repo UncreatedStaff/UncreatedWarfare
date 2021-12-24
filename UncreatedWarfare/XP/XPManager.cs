@@ -55,7 +55,7 @@ namespace Uncreated.Warfare.XP
             }
             else return ucplayer.CachedXp;
         }
-        public static void AddXP(Player player, int amount, string message = "", bool ignoreToastQueue = false)
+        public static void AddXP(Player player, int amount, string message = "")
         {
             if (!Data.TrackStats) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -82,19 +82,20 @@ namespace Uncreated.Warfare.XP
             {
                 ToastMessage.QueueMessage(player, Translation.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
                 Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
+                for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                    Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
             }
             else if (rank.level < oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, Translation.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
                 Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
+                for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                    Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
             }
-
-            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
-            // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
-            for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
-            // update the color of the ranks on all the request signs in case the player unlocked a new rank.
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
                 ex.AddXP(amount);

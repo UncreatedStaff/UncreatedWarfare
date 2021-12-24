@@ -68,8 +68,9 @@ namespace Uncreated.Warfare.Vehicles
         public static void RespawnAllVehicles()
         {
             L.Log("Respawning vehicles...", ConsoleColor.Magenta);
-            foreach (InteractableVehicle v in VehicleManager.vehicles.ToList())
+            for (int i = VehicleManager.vehicles.Count - 1; i >= 0; i--)
             {
+                InteractableVehicle v = VehicleManager.vehicles[i];
                 if (HasLinkedSpawn(v.instanceID, out _))
                 {
                     if (v.TryGetComponent(out SpawnedVehicleComponent component))
@@ -161,10 +162,12 @@ namespace Uncreated.Warfare.Vehicles
         }
         internal static void OnPlayerLeaveVehicle(Player player, InteractableVehicle vehicle)
         {
+#if false
             if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
             {
                 c.StartIdleRespawnTimer();
             }
+#endif
         }
         private static void OnPlayerEnterMain(SteamPlayer player, ulong team)
         {
@@ -516,24 +519,20 @@ namespace Uncreated.Warfare.Vehicles
         {
             L.LogDebug("Updating sign " + (Assets.find(VehicleID)?.name ?? VehicleID.ToString("N")));
             if (this.LinkedSign == null || this.LinkedSign.SignInteractable == null || this.LinkedSign.SignDrop == null) return;
-            L.LogDebug("again");
             if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
             {
                 IEnumerator<SteamPlayer> t1Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 1);
-                L.LogDebug("Updating sign for team 1 base");
                 UpdateSignInternal(t1Main, this);
             }
             else if (TeamManager.Team2Main.IsInside(LinkedSign.SignDrop.model.transform.position))
             {
                 IEnumerator<SteamPlayer> t2Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 2);
-                L.LogDebug("Updating sign for team 2 base");
                 UpdateSignInternal(t2Main, this);
             }
             else if (Regions.tryGetCoordinate(LinkedSign.SignDrop.model.transform.position, out byte x, out byte y))
             {
                 IEnumerator<SteamPlayer> t2Main = F.EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
                 UpdateSignInternal(t2Main, this);
-                L.LogDebug("not in a base wtf");
             }
             else
             {
@@ -546,6 +545,7 @@ namespace Uncreated.Warfare.Vehicles
                 return;
             foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
             {
+                L.Log("Updating sign for " + set.Language);
                 string val = Translation.TranslateVBS(spawn, data, set.Language);
                 NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
                 while (set.MoveNext())
@@ -641,6 +641,9 @@ namespace Uncreated.Warfare.Vehicles
         public bool hasBeenRequested = false;
         public bool isIdle = false;
         public float idleSecondsRemaining = -1f;
+        public float nextIdleSecond = 0f;
+        private Vector3 lastLoc;
+        private bool lastIdleState;
 
         public void Initialize(InteractableVehicle vehicle, VehicleSpawn spawn)
         {
@@ -684,24 +687,31 @@ namespace Uncreated.Warfare.Vehicles
             while (idleSecondsRemaining > 0f)
             {
                 yield return new WaitForSeconds(1f);
-                spawn.UpdateSign();
                 idleSecondsRemaining--;
-                if (idleSecondsRemaining % 4 == 0 && Owner.anySeatsOccupied)
+                if ((isIdle || idleSecondsRemaining % 4 == 0) && Owner.anySeatsOccupied || PlayerManager.IsPlayerNearby(Owner.lockedOwner.m_SteamID, 150, Owner.transform.position))
                 {
                     isIdle = false;
                     idleSecondsRemaining = data.RespawnTime;
-                    yield break;
+                    nextIdleSecond = data.RespawnTime - 10f;
                 }
-                if (idleSecondsRemaining % 4 == 0 && PlayerManager.IsPlayerNearby(Owner.lockedOwner.m_SteamID, 150, Owner.transform.position))
+                else if (!isIdle && (idleSecondsRemaining <= nextIdleSecond || idleSecondsRemaining <= 1f))
                 {
-                    if (idleSecondsRemaining < 60) idleSecondsRemaining = 60;
-                    isIdle = false;
-                }
-                else
                     isIdle = true;
+                    nextIdleSecond = 0f;
+                }
+                if (lastLoc != transform.position || lastIdleState != isIdle)
+                {
+                    spawn.UpdateSign();
+                    lastLoc = transform.position;
+                    lastIdleState = isIdle;
+                }
+                else if (isIdle)
+                {
+                    spawn.UpdateSign();
+                }
             }
-            VehicleBay.DeleteVehicle(Owner);
             spawn.SpawnVehicle();
+            VehicleBay.DeleteVehicle(Owner);
             isIdle = false;
         }
         private IEnumerator<WaitForSeconds> XPLoop()
