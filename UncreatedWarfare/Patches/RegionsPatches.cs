@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -52,7 +53,7 @@ namespace Uncreated.Warfare
                     if (trimmedText.Length > 5)
                     {
                         if (Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            F.InvokeSignUpdateForAllKits(sign, x, y, trimmedText);
+                            F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
                         else
                             F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
                     }
@@ -146,6 +147,7 @@ namespace Uncreated.Warfare
             static bool SendRegion(SteamPlayer client, BarricadeRegion region, byte x, byte y, NetId parentNetId, float sortOrder)
             {
                 if (!UCWarfare.Config.Patches.SendRegion) return true;
+                UCPlayer pl = UCPlayer.FromSteamPlayer(client);
                 if (region.drops.Count > 0)
                 {
                     byte packet = 0;
@@ -154,13 +156,22 @@ namespace Uncreated.Warfare
                     while (index < region.drops.Count)
                     {
                         int num = 0;
+                        bool hasSign = false;
                         while (count < region.drops.Count)
                         {
                             num += 44 + region.drops[count].GetServersideData().barricade.state.Length;
+                            hasSign |= !hasSign && region.drops[count].interactable is InteractableSign;
                             count++;
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;
                         }
+                        string lang;
+                        if (hasSign)
+                        {
+                            if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
+                                lang = JSONMethods.DefaultLanguage;
+                        }
+                        else lang = null;
                         Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
                         {
                             writer.WriteUInt8(x);
@@ -207,30 +218,54 @@ namespace Uncreated.Warfare
                                 else if (drop.interactable is InteractableSign sign)
                                 {
                                     string newtext = sign.text;
-                                    if (newtext.StartsWith("sign_"))
+                                    if (lang == null)
                                     {
-                                        newtext = Translation.TranslateSign(newtext, client.playerID.steamID.m_SteamID, false);
-                                        // size is not allowed in signs.
-                                        newtext.Replace("<size=", "");
-                                        newtext.Replace("</size>", "");
+                                        writer.WriteUInt8((byte)serversideData.barricade.state.Length);
+                                        writer.WriteBytes(serversideData.barricade.state);
                                     }
-                                    byte[] state = region.drops[index].GetServersideData().barricade.state;
-                                    byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);
-                                    /*if (requiredClamping)
+                                    else
                                     {
-                                        L.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
-                                    }*/
-                                    if (textbytes.Length > byte.MaxValue - 18)
-                                    {
-                                        L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
-                                        textbytes = Encoding.UTF8.GetBytes(sign.text);
+                                        if (newtext.StartsWith("sign_"))
+                                        {
+                                            if (newtext.StartsWith("sign_vbs_") && VehicleSigns.SignExists(sign, out VehicleSign vbsign))
+                                            {
+                                                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                                                {
+                                                    if (VehicleSpawner.ActiveObjects[i].LinkedSign == vbsign)
+                                                    {
+                                                        if (VehicleBay.VehicleExists(VehicleSpawner.ActiveObjects[i].VehicleID, out VehicleData data))
+                                                            newtext = string.Format(Translation.TranslateVBS(VehicleSpawner.ActiveObjects[i], data, lang),
+                                                                UCWarfare.GetColorHex(pl != null && pl.XPRank().level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                                                        else
+                                                            newtext = Translation.TranslateSign(newtext, lang, pl, false);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            else
+                                                newtext = Translation.TranslateSign(newtext, lang, pl, false);
+                                            // size is not allowed in signs.
+                                            newtext.Replace("<size=", "");
+                                            newtext.Replace("</size>", "");
+                                        }
+                                        byte[] state = region.drops[index].GetServersideData().barricade.state;
+                                        byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);
+                                        /*if (requiredClamping)
+                                        {
+                                            L.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
+                                        }*/
+                                        if (textbytes.Length > byte.MaxValue - 18)
+                                        {
+                                            L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
+                                            textbytes = Encoding.UTF8.GetBytes(sign.text);
+                                        }
+                                        byte[] numArray1 = new byte[17 + textbytes.Length];
+                                        numArray1[16] = (byte)textbytes.Length;
+                                        if (textbytes.Length != 0)
+                                            Buffer.BlockCopy(textbytes, 0, numArray1, 17, textbytes.Length);
+                                        writer.WriteUInt8((byte)numArray1.Length);
+                                        writer.WriteBytes(numArray1);
                                     }
-                                    byte[] numArray1 = new byte[17 + textbytes.Length];
-                                    numArray1[16] = (byte)textbytes.Length;
-                                    if (textbytes.Length != 0)
-                                        Buffer.BlockCopy(textbytes, 0, numArray1, 17, textbytes.Length);
-                                    writer.WriteUInt8((byte)numArray1.Length);
-                                    writer.WriteBytes(numArray1);
                                 }
                                 else
                                 {
@@ -241,7 +276,7 @@ namespace Uncreated.Warfare
                                 writer.WriteUInt8(serversideData.angle_x);
                                 writer.WriteUInt8(serversideData.angle_y);
                                 writer.WriteUInt8(serversideData.angle_z);
-                                writer.WriteUInt8((byte)Mathf.RoundToInt((float)((double)serversideData.barricade.health / (double)serversideData.barricade.asset.health * 100.0)));
+                                writer.WriteUInt8((byte)Mathf.RoundToInt(serversideData.barricade.health / (float)serversideData.barricade.asset.health * 100f));
                                 writer.WriteUInt64(serversideData.owner);
                                 writer.WriteUInt64(serversideData.group);
                                 writer.WriteNetId(drop.GetNetId());

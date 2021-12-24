@@ -17,6 +17,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Color = UnityEngine.Color;
@@ -220,47 +221,11 @@ namespace Uncreated.Warfare
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
-                newtext = Translation.TranslateSign(text, client.playerID.steamID.m_SteamID, false);
+                newtext = Translation.TranslateSign(text, UCPlayer.FromSteamPlayer(client), false);
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
-        public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
-        {
-            Dictionary<string, List<SteamPlayer>> playergroups = new Dictionary<string, List<SteamPlayer>>();
-            IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
-            while (connections.MoveNext())
-            {
-                SteamPlayer client = connections.Current;
-                if (Data.Languages.ContainsKey(client.playerID.steamID.m_SteamID))
-                {
-                    if (playergroups.TryGetValue(Data.Languages[client.playerID.steamID.m_SteamID], out List<SteamPlayer> players))
-                        players.Add(client);
-                    else
-                        playergroups.Add(Data.Languages[client.playerID.steamID.m_SteamID], new List<SteamPlayer> { client });
-                }
-                else
-                {
-                    if (playergroups.TryGetValue(JSONMethods.DefaultLanguage, out List<SteamPlayer> players))
-                        players.Add(client);
-                    else
-                        playergroups.Add(JSONMethods.DefaultLanguage, new List<SteamPlayer> { client });
-                }
-            }
-            connections.Dispose();
-            foreach (KeyValuePair<string, List<SteamPlayer>> languageGroup in playergroups)
-            {
-                if (languageGroup.Value.Count > 0)
-                {
-                    string newtext = text;
-                    if (text.StartsWith("sign_"))
-                        newtext = Translation.TranslateSign(text, languageGroup.Value[0].playerID.steamID.m_SteamID, false);
-                    List<ITransportConnection> toSendTo = new List<ITransportConnection>();
-                    languageGroup.Value.ForEach(l => toSendTo.Add(l.transportConnection));
-                    Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, toSendTo, newtext);
-                }
-            }
-        }
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-        public static void InvokeSignUpdateForAllKits(InteractableSign sign, byte x, byte y, string text)
+        public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
         {
             if (text == null) return;
             IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
@@ -268,15 +233,16 @@ namespace Uncreated.Warfare
             {
                 string newtext = text;
                 if (text.StartsWith("sign_"))
-                    newtext = Translation.TranslateSign(text, connections.Current.playerID.steamID.m_SteamID, false);
+                    newtext = Translation.TranslateSign(text, UCPlayer.FromSteamPlayer(connections.Current), false);
                 Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, connections.Current.transportConnection, newtext);
             }
             connections.Dispose();
         }
         public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
         {
-            foreach (SteamPlayer client in Provider.clients)
+            for (int i = 0; i < Provider.clients.Count; i++)
             {
+                SteamPlayer client = Provider.clients[i];
                 if (client.player != null && Regions.checkArea(x, y, client.player.movement.region_x, client.player.movement.region_y, distance))
                     yield return client;
             }
@@ -289,7 +255,7 @@ namespace Uncreated.Warfare
                 newtext = sign.text;
             else newtext = text;
             if (newtext.StartsWith("sign_"))
-                newtext = Translation.TranslateSign(newtext ?? "", client.playerID.steamID.m_SteamID, false);
+                newtext = Translation.TranslateSign(newtext, UCPlayer.FromSteamPlayer(client), false);
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
         public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
@@ -619,6 +585,24 @@ namespace Uncreated.Warfare
             return Physics.OverlapCapsuleNonAlloc(source + new Vector3(0.0f, PlayerStance.RADIUS + 0.01f, 0.0f), source +
                 new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders,
                 RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
+        }
+        public static string GetClosestLocation(Vector3 point)
+        {
+            string closest = null;
+            float smallest = -1f;
+            for (int i = 0; i < LevelNodes.nodes.Count; i++)
+            {
+                if (LevelNodes.nodes[i] is LocationNode node)
+                {
+                    float amt = (point - node.point).sqrMagnitude;
+                    if (smallest == -1 || amt < smallest)
+                    {
+                        closest = node.name;
+                        smallest = amt;
+                    }
+                }
+            }
+            return closest;
         }
         public static void NetInvoke(this NetCall call) =>
             call.Invoke(Data.NetClient.connection);

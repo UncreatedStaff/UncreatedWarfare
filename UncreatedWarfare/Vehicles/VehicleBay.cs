@@ -147,6 +147,7 @@ namespace Uncreated.Warfare.Vehicles
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
             BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
+            uint instid = vehicle.instanceID;
             if (reg != null)
                 for (int b = 0; b < reg.drops.Count; b++)
                 {
@@ -507,6 +508,8 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public EBranch RequiredBranch;
         [JsonSettable]
+        public EBranch Branch;
+        [JsonSettable]
         public EClass RequiredClass;
         [JsonSettable]
         public byte RearmCost;
@@ -543,6 +546,16 @@ namespace Uncreated.Warfare.Vehicles
             TicketCost = 0;
             Cooldown = 0;
             RequiredBranch = EBranch.DEFAULT;
+            if (Assets.find(vehicleID) is VehicleAsset va)
+            {
+                if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
+                    Branch = EBranch.AIRFORCE;
+                else if (va.engine == EEngine.BOAT)
+                    Branch = (EBranch)5; // navy
+                else
+                    Branch = EBranch.DEFAULT;
+            }
+            else Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;
@@ -564,6 +577,7 @@ namespace Uncreated.Warfare.Vehicles
             TicketCost = 0;
             Cooldown = 0;
             RequiredBranch = EBranch.DEFAULT;
+            Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;

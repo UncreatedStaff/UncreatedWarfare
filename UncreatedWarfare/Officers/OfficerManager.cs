@@ -72,8 +72,8 @@ namespace Uncreated.Warfare.Officers
             int oldStars = int.MaxValue;
             if (ucplayer != null)
                 oldStars = GetStars(ucplayer.CachedOfp);
-
-            int newBalance = Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, Mathf.RoundToInt(amount * config.Data.PointsMultiplier));
+            amount = Mathf.RoundToInt(amount * config.Data.PointsMultiplier);
+            int newBalance = Data.DatabaseManager.AddOfficerPoints(player.channel.owner.playerID.steamID.m_SteamID, amount);
             if (ucplayer != null)
                 ucplayer.CachedOfp = newBalance;
 

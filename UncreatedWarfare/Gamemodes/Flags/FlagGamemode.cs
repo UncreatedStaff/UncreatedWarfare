@@ -48,9 +48,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 if (EnableAMC)
                     CheckPlayersAMC();
                 OnEvaluate();
+                Teams.TeamManager.EvaluateBases();
             }
         }
-        protected uint TicketCounter = 0;
         public virtual void OnEvaluate()
         { }
         public void LoadAllFlags()

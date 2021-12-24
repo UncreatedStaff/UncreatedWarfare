@@ -101,16 +101,17 @@ namespace Uncreated.Warfare.Commands
                     }
                     if (vbsign.bay != default && vbsign.bay.HasLinkedVehicle(out InteractableVehicle veh))
                     {
-                        if (Data.Gamemode is IVehicles)
+                        if (Data.Is<IVehicles>(out _))
                         {
                             if (veh != default)
                                 RequestVehicle(ucplayer, veh, team);
-                        } else
+                        }
+                        else
                         {
                             ucplayer.SendChat("command_e_gamemode");
-                            return;
                         }
                     }
+                            return;
                 }
                 if (!(Data.Gamemode is IKitRequests))
                 {
@@ -336,19 +337,14 @@ namespace Uncreated.Warfare.Commands
 
                 VehicleBay.IncrementRequestCount(vehicle.asset.GUID, true);
 
-                if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
+                if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
                 {
-                    if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null &&
-                        spawn.BarricadeDrop.model.TryGetComponent(out SpawnedVehicleComponent c))
+                    if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
                     {
+                        c.hasBeenRequested = true;
                         c.StartIdleRespawnTimer();
                     }
-                    else if
-                       (spawn.type == Structures.EStructType.STRUCTURE && spawn.StructureDrop != null &&
-                        spawn.StructureDrop.model.TryGetComponent(out c))
-                    {
-                        c.StartIdleRespawnTimer();
-                    }
+                    spawn.UpdateSign();
                 }
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
@@ -375,7 +371,6 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_alreadyrequested");
                 return;
             }
-            return;
         }
     }
 }

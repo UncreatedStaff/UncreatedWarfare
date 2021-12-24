@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using SDG.NetTransport;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -42,6 +43,15 @@ namespace Uncreated.Warfare
         public abstract bool IsInside(Vector2 location);
         public abstract bool IsInside(Vector3 location);
         public virtual string Dump() => $"{Name}: {data.type}, {data.data}. ({Center}).{(MaxHeight != -1 ? $" Max Height: {MaxHeight}." : string.Empty)}{(MinHeight != -1 ? $" Min Height: {MinHeight}." : string.Empty)}";
+        public IEnumerator<SteamPlayer> EnumerateClients()
+        {
+            for (int i = 0; i < Provider.clients.Count; i++)
+            {
+                SteamPlayer player = Provider.clients[i];
+                if (IsInside(player.player.transform.position))
+                    yield return player;
+            }
+        }
         public override string ToString() => Dump();
         public abstract Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1);
         public abstract void Init();

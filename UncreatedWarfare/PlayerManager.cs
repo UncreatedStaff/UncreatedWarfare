@@ -166,8 +166,8 @@ namespace Uncreated.Warfare
 
             SquadManager.OnPlayerDisconnected(player);
         }
-        public static List<UCPlayer> GetNearbyPlayers(float range, Vector3 point) => OnlinePlayers.Where(p => !p.Player.life.isDead && (p.Position - point).sqrMagnitude < Math.Pow(range, 2)).ToList();
-        public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point) => OnlinePlayers.Find(p => p.Steam64 == playerID && !p.Player.life.isDead && (p.Position - point).sqrMagnitude < Math.Pow(range, 2)) != null;
+        public static List<UCPlayer> GetNearbyPlayers(float range, Vector3 point) => OnlinePlayers.Where(p => !p.Player.life.isDead && (p.Position - point).sqrMagnitude < range * range).ToList();
+        public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point) => OnlinePlayers.Find(p => p.Steam64 == playerID && !p.Player.life.isDead && (p.Position - point).sqrMagnitude < range * range) != null;
 
         public static void VerifyTeam(Player nelsonplayer)
         {

@@ -132,28 +132,28 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 TicketManager.GetTeamBleed(1, out int Team1Bleed, out _);
                 TicketManager.GetTeamBleed(2, out int Team2Bleed, out _);
 
-                if (TicketCounter % 60 == 0)
+                if (_ticks % 60 == 0)
                 {
                     if (Team1Bleed == -1)
                         TicketManager.Team1Tickets--;
                     if (Team2Bleed == -1)
                         TicketManager.Team2Tickets--;
                 }
-                if (TicketCounter % 30 == 0)
+                if (_ticks % 30 == 0)
                 {
                     if (Team1Bleed == -2)
                         TicketManager.Team1Tickets--;
                     if (Team2Bleed == -2)
                         TicketManager.Team2Tickets--;
                 }
-                if (TicketCounter % 10 == 0)
+                if (_ticks % 10 == 0)
                 {
                     if (Team1Bleed == -3)
                         TicketManager.Team1Tickets--;
                     if (Team2Bleed == -3)
                         TicketManager.Team2Tickets--;
                 }
-                if (TicketCounter % Config.TeamCTF.TicketXPInterval == 0)
+                if (_ticks % Config.TeamCTF.TicketXPInterval == 0)
                 {
                     TicketManager.OnFlagTick();
                 }
@@ -638,7 +638,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected override void EventLoopAction()
         {
             base.EventLoopAction();
-            FOBManager.OnGameTick(TicketCounter);
+            FOBManager.OnGameTick(_ticks);
         }
         public override void Dispose()
         {

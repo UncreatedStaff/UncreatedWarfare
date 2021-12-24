@@ -696,6 +696,11 @@ namespace Uncreated.Warfare.Commands
         {
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.channel.owner.transportConnection });
         }
+
+        private void reloadui(string[] command, Player player)
+        {
+            UCWarfare.I.UpdateLangs(player.channel.owner);
+        }
         private void game(string[] command, Player player)
         {
             if (Data.Is(out IFlagRotation fg))

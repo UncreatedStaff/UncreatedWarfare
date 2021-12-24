@@ -12,13 +12,21 @@ using Cache = Uncreated.Warfare.Components.Cache;
 
 namespace Uncreated.Warfare.FOBs
 {
+    [Flags]
+    public enum EFOBStatus : byte
+    {
+        RADIO = 0,
+        AMMO_CRATE = 1,
+        REPAIR_STATION = 2,
+        HAB = 4
+    }
 
     public class FOBManager
     {
         public static Config<FOBConfig> config;
+        public static EffectAsset[] effects = new EffectAsset[8];
         public static readonly List<FOB> Team1FOBs = new List<FOB>();
         public static readonly List<FOB> Team2FOBs = new List<FOB>();
-        public static List<FOB> AllFOBs { get => Team1FOBs.Concat(Team2FOBs).ToList(); }
         public static readonly List<SpecialFOB> SpecialFOBs = new List<SpecialFOB>();
         public static readonly List<Cache> Caches = new List<Cache>();
         public static ushort fobListId;
@@ -36,8 +44,35 @@ namespace Uncreated.Warfare.FOBs
         public FOBManager()
         {
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
+            for (int i = 0; i < effects.Length; i++)
+            {
+                if (!(Assets.find(new Guid(config.Data.BaseEffectGUID + i.ToString(Data.Locale))) is EffectAsset asset))
+                {
+                    L.LogWarning("Failed to find FOB Marker Effect #" + i.ToString(Data.Locale));
+                    effects[i] = null;
+                }
+                else effects[i] = asset;
+            }
         }
-
+        private static void SendFOBEffect(ulong team, EFOBStatus fob, Vector3 position)
+        {
+            int index = (int)fob;
+            if (index < 0 || index >= effects.Length)
+            {
+                L.LogWarning("Failed to get FOB Marker Effect #" + index.ToString(Data.Locale) + " from enum.");
+                return;
+            }
+            ushort id = effects[index].id;
+            for (int i = 0; i < Provider.clients.Count; i++)
+            {
+                SteamPlayer pl = Provider.clients[i];
+                if (pl.GetTeam() == team)
+                {
+                    EffectManager.askEffectClearByID(id, pl.transportConnection);
+                    EffectManager.sendEffectReliable(id, pl.transportConnection, position);
+                }
+            }
+        }
         public static void Reset()
         {
             Team1FOBs.Clear();
@@ -57,11 +92,21 @@ namespace Uncreated.Warfare.FOBs
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
         }
-        public static void OnGameTick(uint counter)
+        public static void OnGameTick(int counter)
         {
-
-            //if (counter % 60 == 0)
-            //    RefillMainStorages();
+            if (Data.Gamemode.EveryMinute)
+            {
+                for (int i = 0; i < Team1FOBs.Count; i++)
+                {
+                    FOB fob = Team1FOBs[i];
+                    SendFOBEffect(1, fob.Status, fob.Position);
+                }
+                for (int i = 0; i < Team2FOBs.Count; i++)
+                {
+                    FOB fob = Team2FOBs[i];
+                    SendFOBEffect(2, fob.Status, fob.Position);
+                }
+            }
         }
         public static void OnPlayerDisconnect(UCPlayer player)
         {
@@ -111,6 +156,7 @@ namespace Uncreated.Warfare.FOBs
                 if (fob != null)
                 {
                     fob.UpdateBunker(null);
+                    SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
 
                 SendFOBListToTeam(data.group);
@@ -118,7 +164,6 @@ namespace Uncreated.Warfare.FOBs
             else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
             {
                 //DeleteFOB(drop);
-
                 if (drop.model.TryGetComponent(out FOBComponent fob))
                 {
                     L.LogDebug("Starting fob bleed");
@@ -131,6 +176,24 @@ namespace Uncreated.Warfare.FOBs
             else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID)
             {
                 DeleteCache(drop);
+            }
+            else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID)
+            {
+                FOB fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);
+                if (fob != null)
+                {
+                    fob.Status &= ~EFOBStatus.AMMO_CRATE;
+                    SendFOBEffect(fob.Team, fob.Status, fob.Position);
+                }
+            }
+            else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
+            {
+                FOB fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);
+                if (fob != null)
+                {
+                    fob.Status &= ~EFOBStatus.REPAIR_STATION;
+                    SendFOBEffect(fob.Team, fob.Status, fob.Position);
+                }
             }
         }
         
@@ -607,6 +670,7 @@ namespace Uncreated.Warfare.FOBs
     public class FOBConfig : ConfigData
     {
         public Guid MortarBase;
+        public string BaseEffectGUID;
         public float FOBMaxHeightAboveTerrain;
         public bool RestrictFOBPlacement;
         public ushort FOBID;
@@ -653,6 +717,8 @@ namespace Uncreated.Warfare.FOBs
             AmmoCommandCooldown = 0f;
 
             RepairStationRequiredBuild = 6;
+
+            BaseEffectGUID = "ef01398f-b656-4e8b-b28b-5cf9552d149";
 
             LogiTruckIDs = new Guid[4]
             { 

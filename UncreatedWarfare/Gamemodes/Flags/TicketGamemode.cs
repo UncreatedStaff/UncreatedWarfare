@@ -23,9 +23,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             if (TimeToTicket())
                 EvaluateTickets();
-            TicketCounter++;
-            if (TicketCounter >= 60)
-                TicketCounter = 0;
             base.EventLoopAction();
         }
         protected abstract void EvaluateTickets();

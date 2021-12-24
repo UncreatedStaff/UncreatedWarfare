@@ -126,6 +126,10 @@ namespace Uncreated.Warfare.Kits
             BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
             byte[] bytes = Encoding.UTF8.GetBytes(text);
+            if (bytes.Length > byte.MaxValue)
+            {
+                L.LogWarning(text + " is too long to go on a sign! (SetSignTextSneaky)");
+            }
             byte[] numArray1 = new byte[17 + bytes.Length];
             byte[] numArray2 = numArray1;
             Buffer.BlockCopy(state, 0, numArray2, 0, 16);
@@ -133,6 +137,7 @@ namespace Uncreated.Warfare.Kits
             if (bytes.Length != 0)
                 Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
             barricadeByRootFast.GetServersideData().barricade.state = numArray1;
+            sign.updateState(barricadeByRootFast.asset, numArray1);
         }
     }
     public class RequestSign
@@ -242,7 +247,7 @@ namespace Uncreated.Warfare.Kits
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
                 if (drop != null && drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
                 {
-                    F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
+                    F.InvokeSignUpdateForAll(sign, x, y, SignText);
                 }
                 else L.LogError("Failed to find barricade from saved transform!");
             }
@@ -253,7 +258,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
                     if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                        F.InvokeSignUpdateForAllKits(sign, x, y, SignText);
+                        F.InvokeSignUpdateForAll(sign, x, y, SignText);
                     else L.LogError("Failed to find barricade after respawning again!");
                 }
                 else L.LogError("Failed to find barricade after respawn!");
