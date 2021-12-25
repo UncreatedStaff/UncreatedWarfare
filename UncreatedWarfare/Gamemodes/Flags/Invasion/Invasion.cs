@@ -46,7 +46,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             else 
                 SpawnBlockerOnT2();
 
-            SpawnBlockers();
             Flag firstFlag = null;
             if (DefendingTeam == 1)
                 firstFlag = Rotation.Last();
