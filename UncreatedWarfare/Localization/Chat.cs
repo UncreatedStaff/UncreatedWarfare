@@ -196,8 +196,41 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void Broadcast(string text, Color textColor, params string[] formatting)
         {
-            foreach (SteamPlayer player in Provider.clients)
-                SendChat(player, text, textColor, formatting);
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+            {
+                string localizedString = Translation.Translate(text, set.Language, formatting);
+                bool isRich = localizedString.Contains("</");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                    if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
+                        localizedString = text;
+                    else
+                    {
+                        try
+                        {
+                            localizedString = string.Format(localizedString, formatting);
+                        }
+                        catch (FormatException)
+                        {
+                            localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
+                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                        }
+                    }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    {
+                        L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = text;
+                    }
+                    else
+                        isRich = localizedString.Contains("</");
+                }
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
+                }
+            }
         }
         /// <summary>
         /// Send a message in chat to everyone.
@@ -207,8 +240,41 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void Broadcast(string text, params string[] formatting)
         {
-            foreach (SteamPlayer player in Provider.clients)
-                SendChat(player, text, formatting);
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+            {
+                string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+                bool isRich = localizedString.Contains("</");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                    if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
+                        localizedString = text;
+                    else
+                    {
+                        try
+                        {
+                            localizedString = string.Format(localizedString, formatting);
+                        }
+                        catch (FormatException)
+                        {
+                            localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
+                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                        }
+                    }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    {
+                        L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = text;
+                    }
+                    else
+                        isRich = localizedString.Contains("</");
+                }
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
+                }
+            }
         }
         /// <summary>
         /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
@@ -218,8 +284,41 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, Color textColor, params string[] formatting)
         {
-            foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
-                SendChat(player, text, textColor, formatting);
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets(x => Excluded.Exists(y => y.m_SteamID == x.Steam64)))
+            {
+                string localizedString = Translation.Translate(text, set.Language, formatting);
+                bool isRich = localizedString.Contains("</");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                    if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
+                        localizedString = text;
+                    else
+                    {
+                        try
+                        {
+                            localizedString = string.Format(localizedString, formatting);
+                        }
+                        catch (FormatException)
+                        {
+                            localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
+                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                        }
+                    }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    {
+                        L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = text;
+                    }
+                    else
+                        isRich = localizedString.Contains("</");
+                }
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
+                }
+            }
         }
         /// <summary>
         /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
@@ -229,10 +328,42 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, params string[] formatting)
         {
-            foreach (SteamPlayer player in Provider.clients.Where(x => !Excluded.Exists(y => y.m_SteamID == x.playerID.steamID.m_SteamID)))
-                SendChat(player, text, formatting);
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets(x => Excluded.Exists(y => y.m_SteamID == x.Steam64)))
+            {
+                string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+                bool isRich = localizedString.Contains("</");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                    if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
+                        localizedString = text;
+                    else
+                    {
+                        try
+                        {
+                            localizedString = string.Format(localizedString, formatting);
+                        }
+                        catch (FormatException)
+                        {
+                            localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
+                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                        }
+                    }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    {
+                        L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = text;
+                    }
+                    else
+                        isRich = localizedString.Contains("</");
+                }
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
+                }
+            }
         }
-
         public static void SendSingleMessage(string text, Color color, EChatMode mode, string iconURL, bool richText, SteamPlayer recipient)
         {
             try
@@ -280,82 +411,74 @@ namespace Uncreated.Warfare
         }/// <param name="backupcause">Used in case the key can not be found.</param>
         public static void BroadcastDeath(string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, bool translateKillerName, ulong killerTeam, ELimb limb, string itemName, float distance, out string message, bool broadcast = true)
         {
-            if (broadcast)
+            message = Translation.TranslateDeath(JSONMethods.DefaultLanguage, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
-                foreach (SteamPlayer player in Provider.clients)
+                string killer = translateKillerName ? Translation.Translate(killerName.CharacterName, set.Language) : killerName.CharacterName;
+                string localizedString = Translation.TranslateDeath(set.Language, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
+                Color color = UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
-                    string killer = translateKillerName ? Translation.Translate(killerName.CharacterName, player) : killerName.CharacterName;
-                    string localizedString = Translation.TranslateDeath(player.playerID.steamID.m_SteamID, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
-                    if (Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your death translation of {key}.");
+                    if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out localizedString) && !JSONMethods.DefaultDeathTranslations.TryGetValue(backupcause.ToString(), out localizedString))
+                        localizedString = key;
+                    try
                     {
-                        ChatManager.say(player.playerID.steamID, localizedString,
-                            UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), localizedString.Contains("</"));
+                        localizedString = string.Format(localizedString, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killer, killerTeam),
+                            Translation.TranslateLimb(set.Language, limb), itemName, Math.Round(distance).ToString(Data.Locale));
                     }
-                    else
+                    catch (FormatException)
                     {
-                        L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {key}.");
-                        string newMessage;
-                        if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out string defaultMessage) && !JSONMethods.DefaultDeathTranslations.TryGetValue(backupcause.ToString(), out defaultMessage))
-                            defaultMessage = key;
-                        try
-                        {
-                            newMessage = string.Format(defaultMessage, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killer, killerTeam),
-                                Translation.TranslateLimb(player.playerID.steamID.m_SteamID, limb), itemName, Math.Round(distance).ToString(Data.Locale));
-                        }
-                        catch (FormatException)
-                        {
-                            newMessage = key + $" ({F.ColorizeName(dead.CharacterName, deadTeam)}, {F.ColorizeName(killer, killerTeam)}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
-                        }
-                        if (Encoding.UTF8.GetByteCount(newMessage) <= MAX_CHAT_MESSAGE_SIZE)
-                            ChatManager.say(player.playerID.steamID, newMessage,
-                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
-                        else
-                            L.LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
-                                + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = key + $" ({F.ColorizeName(dead.CharacterName, deadTeam)}, {F.ColorizeName(killer, killerTeam)}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
+                        L.LogWarning("There's been an error sending a death message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                     }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                        L.LogError("There's been an error sending a death message. Default message for \"" + key + "\" is longer than "
+                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                }
+                bool isRich = localizedString.Contains("</");
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString,
+                        UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background"),
+                        EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
                 }
             }
-            message = Translation.TranslateDeath(0, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
         }
         public static void BroadcastLandmineDeath(string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, out string message, bool broadcast = true)
         {
-            if (broadcast)
+            message = Translation.TranslateLandmineDeath(JSONMethods.DefaultLanguage, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
-                foreach (SteamPlayer player in Provider.clients)
+                string localizedString = Translation.TranslateLandmineDeath(set.Language, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
+                Color color = UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
-                    string localizedString = Translation.TranslateLandmineDeath(player.playerID.steamID.m_SteamID, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
-                    if (Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your death translation of {key}.");
+                    if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out localizedString))
+                        localizedString = key;
+                    try
                     {
-                        ChatManager.say(player.playerID.steamID, localizedString,
-                            UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 ? "death_background_teamkill" : "death_background"), localizedString.Contains("</"));
+                        localizedString = string.Format(localizedString, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killerName.CharacterName, killerTeam),
+                        Translation.TranslateLimb(set.Language, limb), landmineName, "0", F.ColorizeName(triggererName.CharacterName, triggererTeam));
                     }
-                    else
+                    catch (FormatException)
                     {
-                        L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {key}.");
-                        string newMessage;
-                        if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out string defaultMessage))
-                            defaultMessage = key;
-                        try
-                        {
-                            newMessage = string.Format(defaultMessage, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killerName.CharacterName, killerTeam),
-                                Translation.TranslateLimb(player.playerID.steamID.m_SteamID, limb), landmineName, "0", F.ColorizeName(triggererName.CharacterName, triggererTeam));
-                        }
-                        catch (FormatException)
-                        {
-                            newMessage = key + $" ({F.ColorizeName(dead.CharacterName, deadTeam)}, {F.ColorizeName(killerName.CharacterName, killerTeam)}, {limb}, {landmineName}, {triggererName.CharacterName}";
-                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
-                        }
-                        if (Encoding.UTF8.GetByteCount(newMessage) <= MAX_CHAT_MESSAGE_SIZE)
-                            ChatManager.say(player.playerID.steamID, newMessage,
-                                UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background"), newMessage.Contains("</"));
-                        else
-                            L.LogError("There's been an error sending a chat message. Default message for \"" + key + "\" is longer than "
-                                + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = key + $" ({F.ColorizeName(dead.CharacterName, deadTeam)}, {F.ColorizeName(killerName.CharacterName, killerTeam)}, {limb}, {landmineName}, {triggererName.CharacterName}";
+                        L.LogWarning("There's been an error sending a death message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                     }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                        L.LogError("There's been an error sending a death message. Default message for \"" + key + "\" is longer than "
+                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                }
+                bool isRich = localizedString.Contains("</");
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString,
+                        UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background"),
+                        EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
                 }
             }
-            message = Translation.TranslateLandmineDeath(0, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
         }
     }
 }

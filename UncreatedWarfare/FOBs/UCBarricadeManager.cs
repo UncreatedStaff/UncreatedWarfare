@@ -11,6 +11,7 @@ namespace Uncreated.Warfare
 {
     public static class UCBarricadeManager
     {
+        private static readonly List<RegionCoordinate> regionBuffer = new List<RegionCoordinate>(48);
         [Obsolete]
         public static void TryAddItemToStorage(BarricadeDrop drop, ushort itemID)
         {
@@ -125,51 +126,6 @@ namespace Uncreated.Warfare
             drop = null;
             return false;
         }
-        public static bool IsBarricadeNearby(Guid id, float range, Vector3 origin, out BarricadeDrop drop)
-        {
-            float sqrRange = range * range;
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].GetServersideData().barricade.asset.GUID == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
-                        {
-                            drop = region.drops[i];
-                            return true;
-                        }
-                    }
-                }
-            }
-            drop = null;
-            return false;
-        }
-        [Obsolete]
-        public static IEnumerable<BarricadeDrop> GetBarricadesByID(ushort ID)
-        {
-            List<BarricadeDrop> list = new List<BarricadeDrop>();
-
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].GetServersideData().barricade.id == ID)
-                        {
-                            list.Add(region.drops[i]);
-                        }
-                    }
-                }
-            }
-
-            return list;
-        }
         public static IEnumerable<BarricadeDrop> GetBarricadesByGUID(Guid ID)
         {
             List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -213,6 +169,52 @@ namespace Uncreated.Warfare
 
             return list;
         }
+        public static List<BarricadeDrop> GetBarricadesWhere(float range, Vector3 origin, Predicate<BarricadeDrop> predicate)
+        {
+            lock (regionBuffer)
+            {
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                List<BarricadeDrop> list = new List<BarricadeDrop>();
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
+                {
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (predicate.Invoke(region.drops[i]))
+                        {
+                            list.Add(region.drops[i]);
+                        }
+                    }
+                }
+                return list;
+            }
+        }
+        public static int CountBarricadesWhere(float range, Vector3 origin, Predicate<BarricadeDrop> predicate)
+        {
+            lock (regionBuffer)
+            {
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                int rtn = 0;
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
+                {
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (predicate.Invoke(region.drops[i]))
+                        {
+                            rtn++;
+                        }
+                    }
+                }
+                return rtn;
+            }
+        }
         public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate)
         {
             int rtn = 0;
@@ -251,39 +253,18 @@ namespace Uncreated.Warfare
 
             return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
         }
-        [Obsolete]
-        public static IEnumerable<BarricadeDrop> GetNearbyBarricades(ushort id, float range, Vector3 origin, bool sortClosest)
-        {
-            float sqrRange = range * range;
-            List<BarricadeDrop> list = new List<BarricadeDrop>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].GetServersideData().barricade.id == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
-                        {
-                            list.Add(region.drops[i]);
-                        }
-                    }
-                }
-            }
-
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
-        }
         public static IEnumerable<BarricadeDrop> GetNearbyBarricades(Guid id, float range, Vector3 origin, bool sortClosest)
         {
-            float sqrRange = range * range;
-            List<BarricadeDrop> list = new List<BarricadeDrop>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            lock (regionBuffer)
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                List<BarricadeDrop> list = new List<BarricadeDrop>();
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
                 {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
                     for (int i = 0; i < region.drops.Count; i++)
                     {
                         if (region.drops[i].GetServersideData().barricade.asset.GUID == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
@@ -292,44 +273,22 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
+                return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
             }
-
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
-        }
-        [Obsolete]
-        public static IEnumerable<BarricadeDrop> GetNearbyBarricades(ushort id, float range, Vector3 origin, ulong team, bool sortClosest)
-        {
-            float sqrRange = range * range;
-            ulong group = TeamManager.GetGroupID(team);
-            List<BarricadeDrop> list = new List<BarricadeDrop>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].GetServersideData().group == group && region.drops[i].GetServersideData().barricade.id == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
-                        {
-                            list.Add(region.drops[i]);
-                        }
-                    }
-                }
-            }
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
         }
         public static IEnumerable<BarricadeDrop> GetNearbyBarricades(Guid id, float range, Vector3 origin, ulong team, bool sortClosest)
         {
-            float sqrRange = range * range;
-            ulong group = TeamManager.GetGroupID(team);
-            List<BarricadeDrop> list = new List<BarricadeDrop>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            lock (regionBuffer)
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                ulong group = TeamManager.GetGroupID(team);
+                List<BarricadeDrop> list = new List<BarricadeDrop>();
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
                 {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
                     for (int i = 0; i < region.drops.Count; i++)
                     {
                         if (region.drops[i].GetServersideData().group == group && region.drops[i].GetServersideData().barricade.asset.GUID == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
@@ -338,54 +297,97 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
+                return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
             }
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
         }
-        [Obsolete]
-        public static IEnumerable<BarricadeDrop>[] GetNearbyBarricades(ushort[] ids, float range, Vector3 origin, bool sortClosest)
+        public static int CountNearbyBarricades(Guid id, float range, Vector3 origin, ulong team)
         {
-            float sqrRange = range * range;
-            IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
-            if (ids.Length == 0 || range == 0) return lists;
-            for (int i = 0; i < lists.Length; i++)
-                lists[i] = new List<BarricadeDrop>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            lock (regionBuffer)
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                int rtn = 0;
+                ulong group = TeamManager.GetGroupID(team);
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
                 {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
                     for (int i = 0; i < region.drops.Count; i++)
                     {
-                        if ((region.drops[i].model.position - origin).sqrMagnitude > sqrRange) continue;
-                        for (int r = 0; r < ids.Length; r++)
+                        if (region.drops[i].GetServersideData().group == group && region.drops[i].GetServersideData().barricade.asset.GUID == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
                         {
-                            if (region.drops[i].GetServersideData().barricade.id == ids[r])
-                            {
-                                (lists[r] as List<BarricadeDrop>).Add(region.drops[i]);
-                            }
+                            rtn++;
                         }
                     }
                 }
+                return rtn;
             }
-            if (sortClosest)
-                for (int i = 0; i < lists.Length; i++)
-                    lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
-            return lists;
+        }
+        public static bool BarricadeExists(Guid id, float range, Vector3 origin, ulong team, out BarricadeDrop drop)
+        {
+            lock (regionBuffer)
+            {
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                ulong group = TeamManager.GetGroupID(team);
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
+                {
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        drop = region.drops[i];
+                        if (drop.GetServersideData().group == group && drop.GetServersideData().barricade.asset.GUID == id && (drop.model.position - origin).sqrMagnitude <= sqrRange)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                drop = null;
+                return false;
+            }
+        }
+        public static bool BarricadeExists(Guid id, float range, Vector3 origin, out BarricadeDrop drop)
+        {
+            lock (regionBuffer)
+            {
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
+                {
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        drop = region.drops[i];
+                        if (drop.asset.GUID == id && (drop.model.position - origin).sqrMagnitude <= sqrRange)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                drop = null;
+                return false;
+            }
         }
         public static IEnumerable<BarricadeDrop>[] GetNearbyBarricades(Guid[] ids, float range, Vector3 origin, bool sortClosest)
         {
-            float sqrRange = range * range;
-            IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
-            if (ids.Length == 0 || range == 0) return lists;
-            for (int i = 0; i < lists.Length; i++)
-                lists[i] = new List<BarricadeDrop>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            lock (regionBuffer)
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
+                if (ids.Length == 0 || range == 0) return lists;
+                for (int i = 0; i < lists.Length; i++)
+                    lists[i] = new List<BarricadeDrop>();
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r2 = 0; r2 < regionBuffer.Count; r2++)
                 {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
+                    RegionCoordinate rc = regionBuffer[r2];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
                     for (int i = 0; i < region.drops.Count; i++)
                     {
                         if ((region.drops[i].model.position - origin).sqrMagnitude > sqrRange) continue;
@@ -398,62 +400,33 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
+                if (sortClosest)
+                    for (int i = 0; i < lists.Length; i++)
+                        lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
+                return lists;
             }
-            if (sortClosest)
-                for (int i = 0; i < lists.Length; i++)
-                    lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
-            return lists;
-        }
-        [Obsolete]
-        public static IEnumerable<BarricadeDrop>[] GetNearbyBarricades(ushort[] ids, float[] ranges, Vector3 origin, bool sortClosest)
-        {
-            IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
-            if (ids.Length != ranges.Length) return lists;
-            float[] sqrRanges = new float[ranges.Length];
-            for (int i = 0; i < ids.Length; i++)
-            {
-                lists[i] = new List<BarricadeDrop>();
-                sqrRanges[i] = ranges[i] * ranges[i];
-            }
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        for (int r = 0; r < ids.Length; r++)
-                        {
-                            if (region.drops[i].GetServersideData().barricade.id == ids[r] && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRanges[r])
-                            {
-                                (lists[r] as List<BarricadeDrop>).Add(region.drops[i]);
-                            }
-                        }
-                    }
-                }
-            }
-            if (sortClosest)
-                for (int i = 0; i < lists.Length; i++)
-                    lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
-            return lists;
         }
         public static IEnumerable<BarricadeDrop>[] GetNearbyBarricades(Guid[] ids, float[] ranges, Vector3 origin, bool sortClosest)
         {
-            IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
-            if (ids.Length != ranges.Length) return lists;
-            float[] sqrRanges = new float[ranges.Length];
-            for (int i = 0; i < ids.Length; i++)
+            lock (regionBuffer)
             {
-                lists[i] = new List<BarricadeDrop>();
-                sqrRanges[i] = ranges[i] * ranges[i];
-            }
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                regionBuffer.Clear();
+                IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
+                if (ids.Length == 0) return lists;
+                float[] sqrRanges = new float[ranges.Length];
+                float maxRange = 0;
+                for (int i = 0; i < ids.Length; i++)
                 {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
+                    lists[i] = new List<BarricadeDrop>();
+                    sqrRanges[i] = ranges[i] * ranges[i];
+                    if (ranges[i] > maxRange) maxRange = ranges[i];
+                }
+                if (maxRange == 0) return lists;
+                Regions.getRegionsInRadius(origin, maxRange, regionBuffer);
+                for (int r2 = 0; r2 < regionBuffer.Count; r2++)
+                {
+                    RegionCoordinate rc = regionBuffer[r2];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
                     for (int i = 0; i < region.drops.Count; i++)
                     {
                         for (int r = 0; r < ids.Length; r++)
@@ -465,23 +438,26 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
+                if (sortClosest)
+                    for (int i = 0; i < lists.Length; i++)
+                        lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
+                return lists;
             }
-            if (sortClosest)
-                for (int i = 0; i < lists.Length; i++)
-                    lists[i] = lists[i].OrderBy(x => (origin - x.model.position).sqrMagnitude);
-            return lists;
         }
+#pragma warning disable CS0612 // Type or member is obsolete
         [Obsolete]
         public static List<SDG.Unturned.ItemData> GetNearbyItems(ushort id, float range, Vector3 origin)
         {
-            float sqrRange = range * range;
-            List<SDG.Unturned.ItemData> list = new List<SDG.Unturned.ItemData>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            lock (regionBuffer)
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                List<SDG.Unturned.ItemData> list = new List<SDG.Unturned.ItemData>();
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
                 {
-                    ItemRegion region = ItemManager.regions[x, y];
-                    if (region == null) continue;
+                    RegionCoordinate rc = regionBuffer[r];
+                    ItemRegion region = ItemManager.regions[rc.x, rc.y];
                     for (int i = 0; i < region.items.Count; i++)
                     {
                         if (region.items[i].item.id == id && (region.items[i].point - origin).sqrMagnitude <= sqrRange)
@@ -490,8 +466,8 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
+                return list;
             }
-            return list;
         }
         public static List<SDG.Unturned.ItemData> GetNearbyItems(Guid id, float range, Vector3 origin)
         {
@@ -564,6 +540,17 @@ namespace Uncreated.Warfare
 
         public static BarricadeDrop GetDropFromBarricadeData(SDG.Unturned.BarricadeData data)
         {
+            if (Regions.tryGetCoordinate(data.point, out byte x, out byte y))
+            {
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; i++)
+                {
+                    if (region.drops[i].instanceID == data.instanceID)
+                    {
+                        return region.drops[i];
+                    }
+                }
+            }
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             return barricadeRegions.SelectMany(brd => brd.drops).Where(d => d.instanceID == data.instanceID).FirstOrDefault();
         }
@@ -672,18 +659,15 @@ namespace Uncreated.Warfare
         }
         public static BarricadeDrop GetBarriadeBySerializedTransform(SerializableTransform t)
         {
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            if (Regions.tryGetCoordinate(t.Position, out byte x, out byte y))
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                if (region == default) return null;
+                for (int i = 0; i < region.drops.Count; i++)
                 {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == default) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
+                    if (t == region.drops[i].model)
                     {
-                        if (t == region.drops[i].model)
-                        {
-                            return region.drops[i];
-                        }
+                        return region.drops[i];
                     }
                 }
             }
@@ -691,18 +675,15 @@ namespace Uncreated.Warfare
         }
         public static StructureDrop GetStructureBySerializedTransform(SerializableTransform t)
         {
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            if (Regions.tryGetCoordinate(t.Position, out byte x, out byte y))
             {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                StructureRegion region = StructureManager.regions[x, y];
+                if (region == default) return null;
+                for (int i = 0; i < region.drops.Count; i++)
                 {
-                    StructureRegion region = StructureManager.regions[x, y];
-                    if (region == default) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
+                    if (t == region.drops[i].model)
                     {
-                        if (t == region.drops[i].model)
-                        {
-                            return region.drops[i];
-                        }
+                        return region.drops[i];
                     }
                 }
             }
@@ -745,5 +726,6 @@ namespace Uncreated.Warfare
             }
             return removed_count >= amount;
         }
+#pragma warning restore CS0612 // Type or member is obsolete
     }
 }

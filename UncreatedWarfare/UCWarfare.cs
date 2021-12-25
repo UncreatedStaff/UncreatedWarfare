@@ -243,7 +243,6 @@ namespace Uncreated.Warfare
         internal void UpdateLangs(SteamPlayer player)
         {
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
-
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
                 List<BarricadeDrop> signs = new List<BarricadeDrop>();
@@ -251,13 +250,25 @@ namespace Uncreated.Warfare
                 {
                     if (drop.interactable is InteractableSign sign)
                     {
-                        if (sign.text.StartsWith("sign_"))
+                        bool found = false;
+                        for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                        {
+                            Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
+                            if (spawn.LinkedSign != null && spawn.LinkedSign.SignInteractable == sign)
+                            {
+                                spawn.UpdateSign(player);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found && sign.text.StartsWith("sign_"))
                         {
                             F.InvokeSignUpdateFor(player, sign, false);
                         }
                     }
                 }
             }
+            if (ucplayer == null) return;
             if (Data.Is<TeamCTF>(out _))
             {
                 CTFUI.SendFlagList(ucplayer);
@@ -272,7 +283,6 @@ namespace Uncreated.Warfare
             }
             if (Data.Is<ISquads>(out _))
             {
-                ulong team = player.GetTeam();
                 if (ucplayer.Squad == null)
                     SquadManager.SendSquadList(ucplayer);
                 else
@@ -283,6 +293,8 @@ namespace Uncreated.Warfare
                         p.ShowUIForPlayer(ucplayer);
                 }
             }
+            if (Data.Is<IFOBs>(out _))
+                FOBManager.SendFOBList(ucplayer);
             if (Data.Gamemode.ShowXPUI)
                 XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, false), out _);
             if (Data.Gamemode.ShowOFPUI)

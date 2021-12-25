@@ -14,6 +14,8 @@ namespace Uncreated.Warfare
             {
                 { "correct_usage", "<color=#ff8c69>Correct usage: {0}</color>" },
                 { "correct_usage_c", "Correct usage: {0}" },
+                { "entered_main", "<color=#e6e3d5>You have entered the safety of {0} headquarters!</color>" },
+                { "left_main", "<color=#e6e3d5>You have left the safety of {0} headquarters.</color>" },
                 { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
                 { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
                 { "capturing", "Your team is capturing this point!" },
@@ -567,11 +569,7 @@ namespace Uncreated.Warfare
                 { "VEHICLE_DESTROYED", "{0} took out {1}'s {2}." },
                 { "VEHICLE_DESTROYED_UNKNOWN", "{0} took out a {2}." },
                 { "VEHICLE_TEAMKILLED", "{0} blew up a friendly {2}." },
-
-                // vehicle bay signs
-                { "vehiclebay_sign_no_min_level", "<color=#{4}><color=#{1}>{0}</color>\n\nTickets: <color=#{3}>{2}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: Ticket cost, 3: Ticket cost color , 4: background color
-                { "vehiclebay_sign_min_level", "<color=#{5}><color=#{1}>{0}</color>\n{2}\nTickets: <color=#{4}>{3}</color></color>" }, // 0: vehicle name, 1: vehicle color, 2: rank, 3: Ticket cost, 4: Ticket cost color, 5: background color
-
+                
                 // Officers
                 { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of the <color=#baccca>{1}</color>!</color>" },
                 { "officer_demoted", "<color=#9e9788>You have been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{0}</color>.</color>" },
@@ -650,7 +648,21 @@ namespace Uncreated.Warfare
                 { "sign_kit_request", "{0}\n{1}\n{2}\n{3}" },
                 { "loadout_name", "LOADOUT {0}\n" },
                 { "loadout_name_owned", "" },
-                // {0} = name, {1} = Lvl __ or '\n' if lvl == 0 or if premium cost, {2} = weapon list, {3} player count on team
+
+                // Vehicle bay signs
+                { "vbs_tickets_postfix", "Tickets" },
+                { "vbs_state_ready", "Ready!  <b>/request</b>" },
+                { "vbs_state_dead", "{0}:{1}" },
+                { "vbs_state_active", "{0}" },
+                { "vbs_state_idle", "Idle: {0}:{1}" },
+                { "vbs_level_prefix", "Lvl" },
+                { "vbs_branch_default", "" },
+                { "vbs_branch_infantry", "INFANTRY DIVISION" },
+                { "vbs_branch_armor", "ARMOR DIVISION" },
+                { "vbs_branch_airforce", "AIRFORCE DIVISION" },
+                { "vbs_branch_specops", "SPEC-OPS DIVISION" },
+                { "vbs_branch_navy", "NAVAL DIVISION" },
+
 
                 // revives
                 { "heal_e_notmedic", "<color=#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.</color>" },
@@ -984,11 +996,16 @@ namespace Uncreated.Warfare
             new ColorData("kit_player_counts_unavailable", "c2603e"),
 
             // Vehicle Sign
-            new ColorData("vbs_background", "222222"),
-            new ColorData("vbs_vehicle_name_color", "a0ad8e"),
-            new ColorData("vbs_locked_vehicle_color", "800000"),
-            new ColorData("vbs_rank_color", "e6e3d5"),
-            new ColorData("vbs_ticket_cost", "e6e3d5"),
+            new ColorData("vbs_level_low_enough", "ff974d"),
+            new ColorData("vbs_level_too_high", "222222"),
+            new ColorData("vbs_name", "ccffff"),
+            new ColorData("vbs_branch", "e6ffff"),
+            new ColorData("vbs_ticket_number", "ffffff"),
+            new ColorData("vbs_ticket_label", "f0f0f0"),
+            new ColorData("vbs_dead", "ff0000"),
+            new ColorData("vbs_idle", "ffcc00"),
+            new ColorData("vbs_active", "ff9933"),
+            new ColorData("vbs_ready", "33cc33"),
 
             // stars
             new ColorData("no_stars", "737373"),

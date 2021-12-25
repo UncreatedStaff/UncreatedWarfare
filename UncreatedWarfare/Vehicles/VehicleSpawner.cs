@@ -1,10 +1,12 @@
 ﻿using Newtonsoft.Json;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 
@@ -17,7 +19,10 @@ namespace Uncreated.Warfare.Vehicles
             : base(Data.VehicleStorage + "vehiclespawns.json")
         {
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
+            TeamManager.OnPlayerEnteredMainBase += OnPlayerEnterMain;
+            TeamManager.OnPlayerLeftMainBase += OnPlayerLeftMain;
         }
+
         protected override string LoadDefaults() => "[]";
         public void OnLevelLoaded()
         {
@@ -63,8 +68,9 @@ namespace Uncreated.Warfare.Vehicles
         public static void RespawnAllVehicles()
         {
             L.Log("Respawning vehicles...", ConsoleColor.Magenta);
-            foreach (InteractableVehicle v in VehicleManager.vehicles.ToList())
+            for (int i = VehicleManager.vehicles.Count - 1; i >= 0; i--)
             {
+                InteractableVehicle v = VehicleManager.vehicles[i];
                 if (HasLinkedSpawn(v.instanceID, out _))
                 {
                     if (v.TryGetComponent(out SpawnedVehicleComponent component))
@@ -151,12 +157,50 @@ namespace Uncreated.Warfare.Vehicles
         public void Dispose()
         {
             VehicleManager.OnVehicleExploded -= OnVehicleExploded;
+            TeamManager.OnPlayerEnteredMainBase -= OnPlayerEnterMain;
+            TeamManager.OnPlayerLeftMainBase -= OnPlayerLeftMain;
         }
         internal static void OnPlayerLeaveVehicle(Player player, InteractableVehicle vehicle)
         {
+#if false
             if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
             {
                 c.StartIdleRespawnTimer();
+            }
+#endif
+        }
+        private static void OnPlayerEnterMain(SteamPlayer player, ulong team)
+        {
+            player.SendChat("entered_main", TeamManager.TranslateName(team, player, true));
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                VehicleSpawn spawn = ActiveObjects[i];
+                if (spawn.LinkedSign != null && spawn.LinkedSign.SignDrop != null && (
+                    team == 1 && TeamManager.Team1Main.IsInside(spawn.LinkedSign.SignDrop.model.transform.position) || 
+                    team == 2 && TeamManager.Team2Main.IsInside(spawn.LinkedSign.SignDrop.model.transform.position)))
+                    spawn.UpdateSign(player);
+            }
+        }
+        private static void OnPlayerLeftMain(SteamPlayer player, ulong team)
+        {
+            player.SendChat("left_main", TeamManager.TranslateName(team, player, true));
+        }
+        public static void UpdateSigns(Guid vehicle)
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                VehicleSpawn spawn = ActiveObjects[i];
+                if (spawn.VehicleID == vehicle)
+                    spawn.UpdateSign();
+            }
+        }
+        public static void UpdateSigns(uint vehicle)
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                VehicleSpawn spawn = ActiveObjects[i];
+                if (spawn.VehicleInstanceID == vehicle)
+                    spawn.UpdateSign();
             }
         }
     }
@@ -180,6 +224,8 @@ namespace Uncreated.Warfare.Vehicles
         public bool IsActive;
         [JsonIgnore]
         public bool initialized = false;
+        [JsonIgnore]
+        public VehicleSign LinkedSign;
         public VehicleSpawn(uint spawnPadInstanceId, Guid vehicleID, EStructType type, SerializableTransform loc)
         {
             SpawnPadInstanceID = spawnPadInstanceId;
@@ -365,8 +411,9 @@ namespace Uncreated.Warfare.Vehicles
                         L.LogWarning("VEHICLE SPAWNER ERROR: " + (Assets.find(VehicleID) is VehicleAsset va ? (va.vehicleName + " - " + VehicleID.ToString("N")) : VehicleID.ToString("N")) + " returned null.");
                         return;
                     }
-                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
+                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh, this);
                     LinkNewVehicle(instanceID);
+                    UpdateSign();
                     if (UCWarfare.Config.Debug)
                         L.Log($"VEHICLE SPAWNER: spawned {(Assets.find(VehicleID) is VehicleAsset va ? (va.vehicleName + " - " + VehicleID.ToString("N")) : VehicleID.ToString("N"))} at spawn {BarricadeData.point}", ConsoleColor.DarkGray);
                 }
@@ -382,8 +429,9 @@ namespace Uncreated.Warfare.Vehicles
                         L.LogWarning("VEHICLE SPAWNER ERROR: " + (Assets.find(VehicleID) is VehicleAsset va ? (va.vehicleName + " - " + VehicleID.ToString("N")) : VehicleID.ToString("N")) + " returned null.");
                         return;
                     }
-                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh);
+                    veh.gameObject.AddComponent<SpawnedVehicleComponent>().Initialize(veh, this);
                     LinkNewVehicle(instanceID);
+                    UpdateSign();
                     if (UCWarfare.Config.Debug)
                         L.Log($"VEHICLE SPAWNER: spawned {(Assets.find(VehicleID) is VehicleAsset va ? (va.vehicleName + " - " + VehicleID.ToString("N")) : VehicleID.ToString("N"))} at spawn {StructureData.point}", ConsoleColor.DarkGray);
                 }
@@ -446,11 +494,101 @@ namespace Uncreated.Warfare.Vehicles
                 L.LogWarning($"VEHICLE SPAWNER ERROR: could not start respawn timer, unable to get {nameof(VehicleSpawnComponent)} component from drop");
             }
         }
+
+        public void UpdateSign(SteamPlayer player)
+        {
+            if (this.LinkedSign == null || this.LinkedSign.SignInteractable == null || this.LinkedSign.SignDrop == null) return;
+            UpdateSignInternal(player, this);
+        }
+        private static IEnumerator<SteamPlayer> BasesToPlayer(IEnumerator<KeyValuePair<ulong, byte>> b, byte team)
+        {
+            while (b.MoveNext())
+            {
+                if (b.Current.Value == team)
+                {
+                    for (int i = 0; i < Provider.clients.Count; i++)
+                    {
+                        if (Provider.clients[i].playerID.steamID.m_SteamID == b.Current.Key)
+                            yield return Provider.clients[i];
+                    }
+                }
+            }
+            b.Dispose();
+        }
+        public void UpdateSign()
+        {
+            L.LogDebug("Updating sign " + (Assets.find(VehicleID)?.name ?? VehicleID.ToString("N")));
+            if (this.LinkedSign == null || this.LinkedSign.SignInteractable == null || this.LinkedSign.SignDrop == null) return;
+            if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
+            {
+                IEnumerator<SteamPlayer> t1Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 1);
+                UpdateSignInternal(t1Main, this);
+            }
+            else if (TeamManager.Team2Main.IsInside(LinkedSign.SignDrop.model.transform.position))
+            {
+                IEnumerator<SteamPlayer> t2Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 2);
+                UpdateSignInternal(t2Main, this);
+            }
+            else if (Regions.tryGetCoordinate(LinkedSign.SignDrop.model.transform.position, out byte x, out byte y))
+            {
+                IEnumerator<SteamPlayer> t2Main = F.EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
+                UpdateSignInternal(t2Main, this);
+            }
+            else
+            {
+                L.LogWarning($"Vehicle sign not in main bases or any region!");
+            }
+        }
+        private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn)
+        {
+            if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                return;
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
+            {
+                L.Log("Updating sign for " + set.Language);
+                string val = Translation.TranslateVBS(spawn, data, set.Language);
+                NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
+                while (set.MoveNext())
+                {
+                    try
+                    {
+                        string val2 = string.Format(val, UCWarfare.GetColorHex(set.Next != null && set.Next.XPRank().level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                        Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
+                    }
+                    catch (FormatException)
+                    {
+                        Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val);
+                        L.LogError("Formatting error in send vbs!");
+                    }
+                }
+            }
+        }
+        private void UpdateSignInternal(SteamPlayer player, VehicleSpawn spawn)
+        {
+            if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                return;
+            if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
+                lang = JSONMethods.DefaultLanguage;
+            string val = Translation.TranslateVBS(spawn, data, lang);
+            try
+            {
+                UCPlayer pl = UCPlayer.FromSteamPlayer(player);
+                string val2 = string.Format(val, UCWarfare.GetColorHex(pl != null && pl.XPRank().level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable, player.transportConnection, val2);
+            }
+            catch (FormatException)
+            {
+                Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable, player.transportConnection, val);
+                L.LogError("Formatting error in send vbs!");
+            }
+        }
     }
     public class VehicleSpawnComponent : MonoBehaviour
     {
         VehicleSpawn parent;
         Coroutine timer;
+        public bool isRespawning = false;
+        public float respawnTimeRemaining = 0f;
         public void Initialize(VehicleSpawn parent)
         {
             this.parent = parent;
@@ -465,6 +603,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 catch { }
             }
+            isRespawning = false;
         }
         public void StartRespawnVehicleTimer()
         {
@@ -476,11 +615,19 @@ namespace Uncreated.Warfare.Vehicles
             if (VehicleBay.VehicleExists(parent.VehicleID, out VehicleData data))
             {
                 parent.Unlink();
-                yield return new WaitForSeconds(data.RespawnTime);
+                isRespawning = true;
+                respawnTimeRemaining = data.RespawnTime;
+                while (respawnTimeRemaining > 0)
+                {
+                    yield return new WaitForSeconds(1f);
+                    parent.UpdateSign();
+                    respawnTimeRemaining--;
+                }
                 if (parent.IsActive)
                 {
                     parent.SpawnVehicle();
                 }
+                isRespawning = false;
             }
         }
     }
@@ -489,12 +636,19 @@ namespace Uncreated.Warfare.Vehicles
         private Coroutine timer;
         private Coroutine xploop;
         private InteractableVehicle Owner;
+        private VehicleSpawn spawn;
         private VehicleData data;
+        public bool hasBeenRequested = false;
+        public bool isIdle = false;
+        public float idleSecondsRemaining = -1f;
+        public float nextIdleSecond = 0f;
+        private Vector3 lastLoc;
+        private bool lastIdleState;
 
-        public void Initialize(InteractableVehicle vehicle)
+        public void Initialize(InteractableVehicle vehicle, VehicleSpawn spawn)
         {
             Owner = vehicle;
-
+            this.spawn = spawn;
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 this.data = data;
@@ -514,12 +668,9 @@ namespace Uncreated.Warfare.Vehicles
         {
             if (timer != null)
             {
-                try
-                {
-                    StopCoroutine(timer);
-                }
-                catch { }
+                StopCoroutine(timer);
             }
+            isIdle = false;
         }
         public void StartXPLoop()
         {
@@ -531,26 +682,40 @@ namespace Uncreated.Warfare.Vehicles
         }
         private IEnumerator<WaitForSeconds> IdleRespawnVehicle(VehicleData data)
         {
-            yield return new WaitForSeconds(data.RespawnTime);
-            if (!Owner.anySeatsOccupied)
+            isIdle = true;
+            idleSecondsRemaining = data.RespawnTime;
+            while (idleSecondsRemaining > 0f)
             {
-                while (PlayerManager.IsPlayerNearby(Owner.lockedOwner.m_SteamID, 150, Owner.transform.position))
+                yield return new WaitForSeconds(1f);
+                idleSecondsRemaining--;
+                if ((isIdle || idleSecondsRemaining % 4 == 0) && Owner.anySeatsOccupied || PlayerManager.IsPlayerNearby(Owner.lockedOwner.m_SteamID, 150, Owner.transform.position))
                 {
-                    yield return new WaitForSeconds(60);
-                    if (Owner.anySeatsOccupied)
-                    {
-                        yield break;
-                    }
+                    isIdle = false;
+                    idleSecondsRemaining = data.RespawnTime;
+                    nextIdleSecond = data.RespawnTime - 10f;
                 }
-                VehicleBay.DeleteVehicle(Owner);
-                if (VehicleSpawner.HasLinkedSpawn(Owner.instanceID, out VehicleSpawn spawn))
-                    spawn.SpawnVehicle();
+                else if (!isIdle && (idleSecondsRemaining <= nextIdleSecond || idleSecondsRemaining <= 1f))
+                {
+                    isIdle = true;
+                    nextIdleSecond = 0f;
+                }
+                if (lastLoc != transform.position || lastIdleState != isIdle)
+                {
+                    spawn.UpdateSign();
+                    lastLoc = transform.position;
+                    lastIdleState = isIdle;
+                }
+                else if (isIdle)
+                {
+                    spawn.UpdateSign();
+                }
             }
+            spawn.SpawnVehicle();
+            VehicleBay.DeleteVehicle(Owner);
+            isIdle = false;
         }
         private IEnumerator<WaitForSeconds> XPLoop()
         {
-            if (data is null) yield break;
-
             while (!Owner.isDead)
             {
                 int count = 0;

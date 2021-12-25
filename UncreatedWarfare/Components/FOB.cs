@@ -108,6 +108,7 @@ namespace Uncreated.Warfare.Components
     {
         public BarricadeDrop Radio { get; private set; }
         private FOBComponent component;
+        public EFOBStatus Status;
         public int Number;
         public string Name;
         public string ClosestLocation;
@@ -121,7 +122,7 @@ namespace Uncreated.Warfare.Components
         public bool IsBleeding { get; private set; }
         public bool IsSpawnable { get => Radio != null || Bunker != null || !Radio.GetServersideData().barricade.isDead || !Bunker.GetServersideData().barricade.isDead; }
 
-    public string UIColor
+        public string UIColor
         {
             get
             {
@@ -137,11 +138,23 @@ namespace Uncreated.Warfare.Components
         }
         public BarricadeDrop RepairStation { get => UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, Radius, Position, Team, false).FirstOrDefault(); }
         public IEnumerable<BarricadeDrop> AmmoCrates { get => UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, Radius, Position, Team, true); }
+        public int AmmoCrateCount => UCBarricadeManager.CountNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, Radius, Position, Team);
         public IEnumerable<BarricadeDrop> Fortifications
         {
             get
             {
                 return UCBarricadeManager.GetBarricadesWhere(b =>
+                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EbuildableType.FORTIFICATION) &&
+                    (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
+                    b.GetServersideData().group == Team
+                    );
+            }
+        }
+        public int FortificationsCount
+        {
+            get
+            {
+                return UCBarricadeManager.CountBarricadesWhere(b =>
                     FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EbuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
                     b.GetServersideData().group == Team
@@ -163,13 +176,8 @@ namespace Uncreated.Warfare.Components
             Ammo = 0;
             Build = 0;
 
-            ClosestLocation =
-                (LevelNodes.nodes
-                .Where(n => n.type == ENodeType.LOCATION)
-                .Aggregate((n1, n2) =>
-                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)
-                .name;
-
+            ClosestLocation = F.GetClosestLocation(Position) ?? Provider.map;
+            Status = EFOBStatus.RADIO;
             IsBleeding = false;
 
             killer = 0;
@@ -187,10 +195,16 @@ namespace Uncreated.Warfare.Components
 
             Bunker = bunker;
 
-            if (Bunker is null)
+            if (Bunker == null)
+            {
                 Radius = 30;
+                Status &= ~EFOBStatus.HAB;
+            }
             else
+            {
                 Radius = FOBManager.config.Data.FOBBuildPickupRadius;
+                Status |= EFOBStatus.HAB;
+            }
         }
         public void ConsumeResources()
         {
@@ -208,18 +222,18 @@ namespace Uncreated.Warfare.Components
             }
             else return;
 
-            var NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
-            var NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
+            List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
+            List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
 
-            int buildCount = NearbyBuild.Count();
-            int ammoCount = NearbyAmmo.Count();
+            int buildCount = NearbyBuild.Count;
+            int ammoCount = NearbyAmmo.Count;
 
             if (buildCount > 0)
             {
                 Build += Math.Min(buildCount, 3);
                 UCBarricadeManager.RemoveNearbyItemsByID(BuildID, 3, Position, Radius);
-                EffectManager.sendEffect(25997, EffectManager.MEDIUM, NearbyBuild.First().point);
-                foreach (var player in FriendliesOnFOB)
+                EffectManager.sendEffect(25997, EffectManager.MEDIUM, NearbyBuild[0].point);
+                foreach (UCPlayer player in FriendliesOnFOB)
                     UpdateBuildUI(player);
                 return;
             }
@@ -227,8 +241,8 @@ namespace Uncreated.Warfare.Components
             {
                 Ammo += Math.Min(ammoCount, 3);
                 UCBarricadeManager.RemoveNearbyItemsByID(AmmoID, 3, Position, Radius);
-                EffectManager.sendEffect(25998, EffectManager.MEDIUM, NearbyAmmo.First().point);
-                foreach (var player in FriendliesOnFOB)
+                EffectManager.sendEffect(25998, EffectManager.MEDIUM, NearbyAmmo[0].point);
+                foreach (UCPlayer player in FriendliesOnFOB)
                     UpdateAmmoUI(player);
                 return;
             }
@@ -236,13 +250,13 @@ namespace Uncreated.Warfare.Components
         public void ReduceAmmo(int amount)
         {
             Ammo -= amount;
-            foreach (var player in FriendliesOnFOB)
+            foreach (UCPlayer player in FriendliesOnFOB)
                 UpdateAmmoUI(player);
         }
         public void ReduceBuild(int amount)
         {
             Build -= amount;
-            foreach (var player in FriendliesOnFOB)
+            foreach (UCPlayer player in FriendliesOnFOB)
                 UpdateBuildUI(player);
         }
         internal void OnPlayerEnteredFOB(UCPlayer player)
@@ -303,15 +317,15 @@ namespace Uncreated.Warfare.Components
         }
         public void StartBleed()
         {
-            if (Radio.model.TryGetComponent<BarricadeComponent>(out var component))
+            if (Radio.model.TryGetComponent(out BarricadeComponent component))
             {
                 killer = component.LastDamager;
             }
 
-            var data = Radio.GetServersideData();
+            SDG.Unturned.BarricadeData data = Radio.GetServersideData();
             Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Gamemode.Config.Barricades.FOBRadioDamagedGUID));
             Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
-            var newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
+            BarricadeDrop newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
 
             IsBleeding = true;
 
@@ -322,10 +336,10 @@ namespace Uncreated.Warfare.Components
         }
         public void Reactivate()
         {
-            var data = Radio.GetServersideData();
+            SDG.Unturned.BarricadeData data = Radio.GetServersideData();
             Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Gamemode.Config.Barricades.FOBRadioGUID));
             Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
-            var newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
+            BarricadeDrop newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
 
             IsBleeding = false;
 
@@ -353,9 +367,9 @@ namespace Uncreated.Warfare.Components
 
         public void Destroy()
         {
-            foreach (var player in FriendliesOnFOB)
+            foreach (UCPlayer player in FriendliesOnFOB)
                 OnPlayerLeftFOB(player);
-            foreach (var player in NearbyEnemies)
+            foreach (UCPlayer player in NearbyEnemies)
                 OnEnemyLeftFOB(player);
 
             FriendliesOnFOB.Clear();
@@ -378,7 +392,7 @@ namespace Uncreated.Warfare.Components
                 if (Regions.tryGetCoordinate(RepairStation.model.position, out byte x, out byte y))
                     BarricadeManager.destroyBarricade(RepairStation, x, y, ushort.MaxValue);
             }
-            foreach (var ammoCrate in AmmoCrates)
+            foreach (BarricadeDrop ammoCrate in AmmoCrates)
             {
                 if (Regions.tryGetCoordinate(ammoCrate.model.position, out byte x, out byte y))
                     BarricadeManager.destroyBarricade(ammoCrate, x, y, ushort.MaxValue);
@@ -388,16 +402,17 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetFOBs(ulong team)
         {
-            var barricades = UCBarricadeManager.GetBarricadesWhere(b =>
+            List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
                 b.model.TryGetComponent<FOBComponent>(out _)
             );
 
-            var fobs = new List<FOB>();
+            List<FOB> fobs = new List<FOB>();
 
-            foreach (var barricade in barricades)
+            foreach (BarricadeDrop barricade in barricades)
             {
-                if (team != 0 && barricade.GetServersideData().group == team)
-                    fobs.Add(barricade.model.GetComponent<FOBComponent>().parent);
+                if (team != 0 && barricade.GetServersideData().group.GetTeam() == team)
+                    if (barricade.model.TryGetComponent(out FOBComponent comp))
+                        fobs.Add(comp.parent);
             }
 
             return fobs;
@@ -414,14 +429,14 @@ namespace Uncreated.Warfare.Components
                 range = FOBManager.config.Data.FOBBuildPickupRadius * 2;
 
 
-            var barricades = UCBarricadeManager.GetBarricadesWhere(b =>
+            List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
                 (b.model.position - point).sqrMagnitude <= Math.Pow(range, 2) &&
                 b.model.TryGetComponent<FOBComponent>(out _)
             );
 
-            var fobs = new List<FOB>();
+            List<FOB> fobs = new List<FOB>();
 
-            foreach (var barricade in barricades)
+            foreach (BarricadeDrop barricade in barricades)
             {
                 if (team == 0 || (team != 0 && barricade.GetServersideData().group == team))
                     fobs.Add(barricade.model.GetComponent<FOBComponent>().parent);

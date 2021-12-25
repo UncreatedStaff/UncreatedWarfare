@@ -35,9 +35,16 @@ namespace Uncreated.Warfare.Vehicles
         public static void RemoveRequestableVehicle(Guid vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static bool VehicleExists(Guid vehicleID, out VehicleData vehicleData)
         {
-            bool result = ObjectExists(vd => vd.VehicleID == vehicleID, out var v);
-            vehicleData = v;
-            return result;
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                if (ActiveObjects[i].VehicleID == vehicleID)
+                {
+                    vehicleData = ActiveObjects[i];
+                    return true;
+                }
+            }
+            vehicleData = null;
+            return false;
         }
         public static void IncrementRequestCount(Guid vehicleID, bool save)
         {
@@ -507,6 +514,8 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public EBranch RequiredBranch;
         [JsonSettable]
+        public EBranch Branch;
+        [JsonSettable]
         public EClass RequiredClass;
         [JsonSettable]
         public byte RearmCost;
@@ -543,6 +552,16 @@ namespace Uncreated.Warfare.Vehicles
             TicketCost = 0;
             Cooldown = 0;
             RequiredBranch = EBranch.DEFAULT;
+            if (Assets.find(vehicleID) is VehicleAsset va)
+            {
+                if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
+                    Branch = EBranch.AIRFORCE;
+                else if (va.engine == EEngine.BOAT)
+                    Branch = (EBranch)5; // navy
+                else
+                    Branch = EBranch.DEFAULT;
+            }
+            else Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;
@@ -564,6 +583,7 @@ namespace Uncreated.Warfare.Vehicles
             TicketCost = 0;
             Cooldown = 0;
             RequiredBranch = EBranch.DEFAULT;
+            Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
             RepairCost = 3;

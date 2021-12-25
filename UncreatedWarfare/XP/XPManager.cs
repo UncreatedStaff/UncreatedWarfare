@@ -10,6 +10,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.XP
 {
@@ -54,7 +55,7 @@ namespace Uncreated.Warfare.XP
             }
             else return ucplayer.CachedXp;
         }
-        public static void AddXP(Player player, int amount, string message = "", bool ignoreToastQueue = false)
+        public static void AddXP(Player player, int amount, string message = "")
         {
             if (!Data.TrackStats) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -64,8 +65,8 @@ namespace Uncreated.Warfare.XP
             {
                 oldRank = ucplayer.XPRank();
             }
-
-            int newBalance = Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, (int)(amount * config.Data.XPMultiplier));
+            amount = Mathf.RoundToInt(amount * config.Data.XPMultiplier);
+            int newBalance = Data.DatabaseManager.AddXP(player.channel.owner.playerID.steamID.m_SteamID, amount);
 
             if (ucplayer != null)
             {
@@ -81,19 +82,20 @@ namespace Uncreated.Warfare.XP
             {
                 ToastMessage.QueueMessage(player, Translation.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
                 Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
+                for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                    Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
             }
             else if (rank.level < oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, Translation.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
                 Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
+                for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                    Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
             }
-
-            for (int i = 0; i < VehicleSigns.ActiveObjects.Count; i++)
-                VehicleSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
-            // update the color of the ranks on all the vehicle signs in case the player unlocked a new rank.
-            for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.channel.owner);
-            // update the color of the ranks on all the request signs in case the player unlocked a new rank.
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
                 ex.AddXP(amount);
@@ -186,6 +188,16 @@ namespace Uncreated.Warfare.XP
     }
     public static class RankEx
     {
+        public static string TranslateName(this Rank rank, string language)
+        {
+            if (!rank.name_translations.TryGetValue(language, out string name))
+                if (!rank.name_translations.TryGetValue(JSONMethods.DefaultLanguage, out name))
+                    if (rank.name_translations.Count > 0)
+                        name = rank.name_translations.First().Value;
+                    else
+                        name = rank.name ?? "L" + rank.level;
+            return name;
+        }
         public static string TranslateName(this Rank rank, ulong player)
         {
             if (player == 0)
@@ -234,6 +246,16 @@ namespace Uncreated.Warfare.XP
                     else return rank.name;
                 }
             }
+        }
+        public static string TranslateAbbreviation(this Rank rank, string language)
+        {
+            if (!rank.abbreviation_translations.TryGetValue(language, out string name))
+                if (!rank.abbreviation_translations.TryGetValue(JSONMethods.DefaultLanguage, out name))
+                    if (rank.abbreviation_translations.Count > 0)
+                        name = rank.abbreviation_translations.First().Value;
+                    else
+                        name = rank.abbreviation ?? "L" + rank.level;
+            return name;
         }
         public static string TranslateAbbreviation(this Rank rank, ulong player)
         {
@@ -356,7 +378,7 @@ namespace Uncreated.Warfare.XP
                 {EVehicleType.EMPLACEMENT, 30},
             };
 
-            XPMultiplier = 1;
+            XPMultiplier = 1f;
 
             RankUI = 36031;
 

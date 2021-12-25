@@ -35,7 +35,13 @@ namespace Uncreated.Warfare.Gamemodes
         public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
         protected readonly string _name;
         public string Name { get => _name; }
-        private float EventLoopSpeed;
+        private float _eventLoopSpeed;
+        public float EventLoopSpeed => _eventLoopSpeed;
+        public bool EveryMinute => _ticks % Mathf.RoundToInt(60f / _eventLoopSpeed) == 0;
+        public bool Every30Seconds => _ticks % Mathf.RoundToInt(30f / _eventLoopSpeed) == 0;
+        public bool Every15Seconds => _ticks % Mathf.RoundToInt(15f / _eventLoopSpeed) == 0;
+        public bool Every10Seconds => _ticks % Mathf.RoundToInt(10f / _eventLoopSpeed) == 0;
+        public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
         public OfficerManager OfficerManager;
@@ -55,7 +61,7 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual bool ShowXPUI { get => true; }
         public virtual bool ShowOFPUI { get => true; }
         public virtual bool AllowCosmetics { get => true; }
-
+        protected int _ticks = 0;
         protected int _stagingSeconds { get; set; }
         public int StagingSeconds { get => _stagingSeconds; }
 
@@ -64,13 +70,13 @@ namespace Uncreated.Warfare.Gamemodes
         public Gamemode(string Name, float EventLoopSpeed)
         {
             this._name = Name;
-            this.EventLoopSpeed = EventLoopSpeed;
+            this._eventLoopSpeed = EventLoopSpeed;
             this.useEventLoop = EventLoopSpeed > 0;
             this._state = EState.LOADING;
         }
         protected void SetTiming(float NewSpeed)
         {
-            this.EventLoopSpeed = NewSpeed;
+            this._eventLoopSpeed = NewSpeed;
             this.useEventLoop = NewSpeed > 0;
         }
         public void CancelCoroutine()
@@ -91,6 +97,7 @@ namespace Uncreated.Warfare.Gamemodes
             if (UseWhitelist)
                 Whitelister = new Whitelister();
             Subscribe();
+            _ticks = 0;
         }
         protected void InvokeOnTeamWin(ulong winner)
         {
@@ -102,7 +109,8 @@ namespace Uncreated.Warfare.Gamemodes
         {
             while (!isPendingCancel)
             {
-                yield return new WaitForSeconds(EventLoopSpeed);
+                _ticks++;
+                yield return new WaitForSeconds(_eventLoopSpeed);
                 DateTime start = DateTime.Now;
                 for (int i = 0; i < Provider.clients.Count; i++)
                 {

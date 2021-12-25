@@ -10,6 +10,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Teams
 {
+    public delegate void PlayerTeamDelegate(SteamPlayer player, ulong team);
     public class TeamManager
     {
         //private static TeamConfig _data;
@@ -53,60 +54,73 @@ namespace Uncreated.Warfare.Teams
         public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
         public static float TeamSwitchCooldown { get => _data.Data.team_switch_cooldown; }
         public static string DefaultKit { get => _data.Data.defaultkit; }
+        internal static void ResetLocations()
+        {
+            _t1main = null;
+            _t2main = null;
+            _t1amc = null;
+            _t2amc = null;
+            _lobbyZone = null;
+            _lobbySpawn = default;
+        }
+        private static Zone _t1main;
+        private static Zone _t1amc;
+        private static Zone _t2main;
+        private static Zone _t2amc;
+        private static Zone _lobbyZone;
+        private static Vector3 _lobbySpawn = default;
         public static Zone Team1Main
         {
             get
             {
-                if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(1))
-                    return Data.ExtraZones[1];
-                else
-                    return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[1]);
+                if (_t1main == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(1, out _t1main)))
+                    _t1main = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[1]);
+                return _t1main;
             }
         }
         public static Zone Team2Main
         {
             get
             {
-                if (Data.ExtraZones != default && Data.ExtraZones.ContainsKey(2))
-                    return Data.ExtraZones[2];
-                else
-                    return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[2]);
+                if (_t2main == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(2, out _t2main)))
+                        _t2main = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[2]);
+                return _t2main;
             }
         }
         public static Zone Team1AMC
         {
             get
             {
-                if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(101))
-                    return Data.ExtraZones[101];
-                else return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[101]);
+                if (_t1amc == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(101, out _t1amc)))
+                    _t1amc = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[101]);
+                return _t1amc;
             }
         }
         public static Zone Team2AMC
         {
             get
             {
-                if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(102))
-                    return Data.ExtraZones[102];
-                else return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[102]);
+                if (_t2amc == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(102, out _t2amc)))
+                    _t2amc = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[102]);
+                return _t2amc;
             }
         }
         public static Zone LobbyZone
         {
             get
             {
-                if (Data.ExtraZones != null && Data.ExtraZones.ContainsKey(-69))
-                    return Data.ExtraZones[-69];
-                else return Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[-69]);
+                if (_lobbyZone == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(-69, out _lobbyZone)))
+                    _lobbyZone = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[-69]);
+                return _lobbyZone;
             }
         }
         public static Vector3 LobbySpawn
         {
             get
             {
-                if (Data.ExtraPoints != default && Data.ExtraPoints.ContainsKey("lobby_spawn"))
-                    return Data.ExtraPoints["lobby_spawn"];
-                else return JSONMethods.DefaultExtraPoints.FirstOrDefault(x => x.name == "lobby_spawn").Vector3;
+                if (_lobbySpawn == default && (Data.ExtraPoints == null || !Data.ExtraPoints.TryGetValue("lobby_spawn", out _lobbySpawn)))
+                    _lobbySpawn = JSONMethods.DefaultExtraPoints.FirstOrDefault(x => x.name == "lobby_spawn").Vector3;
+                return _lobbySpawn;
             }
         }
         public static ulong Other(ulong team)
@@ -304,6 +318,57 @@ namespace Uncreated.Warfare.Teams
                 }
             }
             return true;
+        }
+        internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
+
+        public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
+        public static event PlayerTeamDelegate OnPlayerLeftMainBase;
+
+        public static void EvaluateBases()
+        {
+            for (int i = 0; i < Provider.clients.Count; i++)
+            {
+                SteamPlayer pl = Provider.clients[i];
+                if (Team1Main.IsInside(pl.player.transform.position))
+                {
+                    if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                    {
+                        if (x != 1)
+                        {
+                            PlayerBaseStatus[pl.playerID.steamID.m_SteamID] = 1;
+                            OnPlayerLeftMainBase?.Invoke(pl, x);
+                            OnPlayerEnteredMainBase?.Invoke(pl, 1);
+                        }
+                    }
+                    else
+                    {
+                        PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 1);
+                        OnPlayerEnteredMainBase?.Invoke(pl, 1);
+                    }
+                }
+                else if (Team2Main.IsInside(pl.player.transform.position))
+                {
+                    if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                    {
+                        if (x != 2)
+                        {
+                            PlayerBaseStatus[pl.playerID.steamID.m_SteamID] = 2;
+                            OnPlayerLeftMainBase?.Invoke(pl, x);
+                            OnPlayerEnteredMainBase?.Invoke(pl, 2);
+                        }
+                    }
+                    else
+                    {
+                        PlayerBaseStatus.Add(pl.playerID.steamID.m_SteamID, 2);
+                        OnPlayerEnteredMainBase?.Invoke(pl, 2);
+                    }
+                }
+                else if (PlayerBaseStatus.TryGetValue(pl.playerID.steamID.m_SteamID, out byte x))
+                {
+                    PlayerBaseStatus.Remove(pl.playerID.steamID.m_SteamID);
+                    OnPlayerLeftMainBase?.Invoke(pl, x);
+                }
+            }
         }
     }
 

@@ -1,12 +1,14 @@
 ﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Vehicles;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 
@@ -14,6 +16,69 @@ namespace Uncreated.Warfare
 {
     public static class Translation
     {
+        public static string ObjectTranslate(string key, string language, params object[] formatting)
+        {
+            if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        data = Data.Localization.First().Value;
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+            }
+            if (data.TryGetValue(key, out TranslationData translation))
+            {
+                try
+                {
+                    return string.Format(translation.Original, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else if (language != JSONMethods.DefaultLanguage)
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        data = Data.Localization.First().Value;
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                if (data.TryGetValue(key, out translation))
+                {
+                    try
+                    {
+                        return string.Format(translation.Original, formatting);
+                    }
+                    catch (FormatException ex)
+                    {
+                        L.LogError(ex);
+                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else
+            {
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
         public static string ObjectTranslate(string key, ulong player, params object[] formatting)
         {
             if (key == null)
@@ -352,6 +417,7 @@ namespace Uncreated.Warfare
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
         /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <param name="color">Color of the message.</param>
         /// <returns>A localized string based on the player's language.</returns>
         public static string Translate(string key, ulong player, out Color color, params string[] formatting)
         {
@@ -477,7 +543,155 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
+        /// </summary>
+        /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="language">The first language to translate with, pass null to use <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <param name="color">Color of the message.</param>
+        /// <returns>A localized string based on <paramref name="language"/>.</returns>
+        public static string Translate(string key, string language, out Color color, params string[] formatting)
+        {
+            if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        data = Data.Localization.First().Value;
+                    }
+                    else
+                    {
+                        color = UCWarfare.GetColor("default");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+            }
+            if (data.TryGetValue(key, out TranslationData translation))
+            {
+                color = translation.Color;
+                try
+                {
+                    return string.Format(translation.Message, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else if (language != JSONMethods.DefaultLanguage)
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        data = Data.Localization.First().Value;
+                    }
+                    else
+                    {
+                        color = UCWarfare.GetColor("default");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                if (data.TryGetValue(key, out translation))
+                {
+                    color = translation.Color;
+                    try
+                    {
+                        return string.Format(translation.Message, formatting);
+                    }
+                    catch (FormatException ex)
+                    {
+                        L.LogError(ex);
+                        return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    color = UCWarfare.GetColor("default");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else
+            {
+                color = UCWarfare.GetColor("default");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
+        /// <summary>
+        /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the message with color still in it.
+        /// </summary>
+        /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
+        /// <param name="language">The first language to translate with, pass null to use <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
+        /// <returns>A localized string based on <paramref name="language"/>.</returns>
+        public static string Translate(string key, string language, params string[] formatting)
+        {
+            if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        data = Data.Localization.First().Value;
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+            }
+            if (data.TryGetValue(key, out TranslationData translation))
+            {
+                try
+                {
+                    return string.Format(translation.Original, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else if (language != JSONMethods.DefaultLanguage)
+            {
+                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                {
+                    if (Data.Localization.Count > 0)
+                    {
+                        data = Data.Localization.First().Value;
+                    }
+                    else
+                    {
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                if (data.TryGetValue(key, out translation))
+                {
+                    try
+                    {
+                        return string.Format(translation.Original, formatting);
+                    }
+                    catch (FormatException ex)
+                    {
+                        L.LogError(ex);
+                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    }
+                }
+                else
+                {
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+            else
+            {
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
+
         public static string GetTimeFromSeconds(this uint seconds, ulong player)
         {
             if (seconds < 60) // < 1 minute
@@ -537,66 +751,20 @@ namespace Uncreated.Warfare
                 return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
-        public static string TranslateSign(string key, ulong player, bool important)
+        public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
         {
             try
             {
                 if (key == null) return string.Empty;
-                string norm = Translate(key, player);
-                if (!key.StartsWith("sign_") || norm != key) return norm;
-                string kitname = key.Substring(5);
-                if (kitname.StartsWith("vbs_") && ushort.TryParse(kitname.Substring(4), System.Globalization.NumberStyles.Any, Data.Locale, out ushort vehicleid))
+                if (!key.StartsWith("sign_")) return Translate(key, language);
+                string key2 = key.Substring(5);
+                if (key2.StartsWith("loadout_") && key2.Length > 8 && ushort.TryParse(key2.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
                 {
-                    if (!(Assets.find(EAssetType.VEHICLE, vehicleid) is VehicleAsset va)) return key;
-                    if (Vehicles.VehicleBay.VehicleExists(va.GUID, out Vehicles.VehicleData data))
-                    {
-                        VehicleAsset asset = UCAssetManager.FindVehicleAsset(vehicleid);
-                        if (asset == default) return norm;
-                        if (data.RequiredLevel > 0)
-                        {
-                            UCPlayer ucplayer = UCPlayer.FromID(player);
-                            Rank playerrank = null;
-                            if (ucplayer != null)
-                            {
-                                playerrank = ucplayer.XPRank();
-                            }
-                            Rank rank = data.RequiredRank;
-                            if (rank == default) return norm;
-                            string level;
-                            if (player != 0 && rank != null && rank.level > playerrank.level)
-                            {
-                                level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
-                                    UCWarfare.GetColorHex("kit_level_unavailable"),
-                                rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
-                            }
-                            else if (rank != null)
-                            {
-                                level = Translate("kit_required_level", player, data.RequiredLevel.ToString(Data.Locale),
-                                    UCWarfare.GetColorHex("kit_level_available"),
-                                rank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
-                            }
-                            else
-                            {
-                                level = "\n";
-                            }
-                            return Translate("vehiclebay_sign_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"),
-                                level, data.TicketCost.ToString(Data.Locale), UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
-                        }
-                        else
-                        {
-                            return Translate("vehiclebay_sign_no_min_level", player, asset.vehicleName, UCWarfare.GetColorHex("vbs_vehicle_name_color"), data.TicketCost.ToString(Data.Locale),
-                                UCWarfare.GetColorHex("vbs_ticket_cost"), UCWarfare.GetColorHex("vbs_background"));
-                        }
-                    }
-                    else return norm;
-                }
-                else if (kitname.StartsWith("loadout_") && ushort.TryParse(kitname.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
-                {
-                    UCPlayer ucplayer = UCPlayer.FromID(player);
                     if (ucplayer != null)
                     {
                         ulong team = ucplayer.GetTeam();
-                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(player)).ToList();
+                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
+                        loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
 
                         if (loadouts.Count > 0)
                         {
@@ -604,9 +772,12 @@ namespace Uncreated.Warfare
                             {
                                 Kit kit = loadouts[loadoutid - 1];
 
-                                string lang = DecideLanguage(player, kit.SignTexts);
-                                if (!kit.SignTexts.TryGetValue(lang, out string name))
-                                    name = kit.DisplayName ?? kit.Name;
+                                if (!kit.SignTexts.TryGetValue(language, out string name))
+                                    if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out name))
+                                        if (kit.SignTexts.Count > 0)
+                                            name = kit.SignTexts.First().Value;
+                                        else
+                                            name = kit.DisplayName ?? kit.Name;
                                 bool keepline = false;
                                 foreach (char @char in name)
                                 {
@@ -616,46 +787,45 @@ namespace Uncreated.Warfare
                                         break;
                                     }
                                 }
-                                string cost = Translate("loadout_name_owned", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                                string cost = Translate("loadout_name_owned", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                                 if (!keepline) cost = "\n" + cost;
 
-                                string playercount = "";
+                                string playercount = string.Empty;
 
                                 if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
                                 {
-                                    playercount = Translate("kit_unlimited", player).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                                    playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
                                 }
                                 else if (kit.IsClassLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
                                 {
-                                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                                    playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
                                         .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
                                 }
                                 else
                                 {
-                                    playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                                    playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
                                         .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
                                 }
 
-                                return Translate("sign_kit_request", player,
+                                return Translate("sign_kit_request", language,
                                     name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
                                     cost,
-                                    kit.Weapons == "" ? " " : Translate("kit_weapons", player, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
+                                    kit.Weapons == "" ? " " : Translate("kit_weapons", language, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
                                     playercount
                                     );
                             }
                         }
                     }
 
-                    return Translate("sign_kit_request", player,
-                                Translate("loadout_name", player, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                    return Translate("sign_kit_request", language,
+                                Translate("loadout_name", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
                                 string.Empty,
-                                ObjectTranslate("kit_price_dollars", player, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
+                                ObjectTranslate("kit_price_dollars", language, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
                                 string.Empty
                                 );
                 }
-                else if (KitManager.KitExists(kitname, out Kit kit))
+                else if (KitManager.KitExists(key2, out Kit kit))
                 {
-                    UCPlayer ucplayer = UCPlayer.FromID(player);
                     ulong playerteam = 0;
                     Rank playerrank = null;
                     if (ucplayer != null)
@@ -663,9 +833,14 @@ namespace Uncreated.Warfare
                         playerteam = ucplayer.GetTeam();
                         playerrank = ucplayer.XPRank();
                     }
-                    string lang = DecideLanguage(player, kit.SignTexts);
-                    if (!kit.SignTexts.TryGetValue(lang, out string name))
-                        name = kit.DisplayName ?? kit.Name;
+
+                    if (!kit.SignTexts.TryGetValue(language, out string name))
+                        if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out name))
+                            if (kit.SignTexts.Count > 0)
+                                name = kit.SignTexts.First().Value;
+                            else
+                                name = kit.DisplayName ?? kit.Name;
+
                     bool keepline = false;
                     foreach (char @char in name)
                     {
@@ -675,33 +850,33 @@ namespace Uncreated.Warfare
                             break;
                         }
                     }
-                    name = Translate("kit_name", player, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
+                    name = Translate("kit_name", language, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
                     string weapons = kit.Weapons ?? string.Empty;
                     if (weapons != string.Empty)
-                        weapons = Translate("kit_weapons", player, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
+                        weapons = Translate("kit_weapons", language, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
                     string cost;
                     string playercount;
                     if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
                     {
-                        if (kit.AllowedUsers.Contains(player))
-                            cost = ObjectTranslate("kit_owned", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                        if (kit.AllowedUsers.Contains(ucplayer.Steam64))
+                            cost = ObjectTranslate("kit_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
                         else if (kit.PremiumCost == -1)
-                            cost = Translate("kit_price_exclusive", player).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                            cost = Translate("kit_price_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
                         else
-                            cost = ObjectTranslate("kit_price_dollars", player, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                            cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                     }
                     else if (kit.RequiredLevel > 0)
                     {
                         Rank reqrank = kit.RequiredRank();
                         if (playerrank == null || playerrank.level < reqrank.level)
                         {
-                            cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
-                                reqrank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                            cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
+                                reqrank.TranslateAbbreviation(language), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
                         }
                         else
                         {
-                            cost = Translate("kit_required_level", player, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
-                                reqrank.TranslateAbbreviation(player), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                            cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
+                                reqrank.TranslateAbbreviation(language), UCWarfare.GetColorHex("kit_level_available_abbr"));
                         }
                     }
                     else
@@ -711,19 +886,19 @@ namespace Uncreated.Warfare
                     if (!keepline) cost = "\n" + cost;
                     if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
                     {
-                        playercount = Translate("kit_unlimited", player).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                        playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
                     }
                     else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
                     {
-                        playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                        playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
                             .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
                     }
                     else
                     {
-                        playercount = Translate("kit_player_count", player, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                        playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
                             .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
                     }
-                    return Translate("sign_kit_request", player, name, cost, weapons, playercount);
+                    return Translate("sign_kit_request", language, name, cost, weapons, playercount);
                 }
                 else return key;
             }
@@ -733,6 +908,12 @@ namespace Uncreated.Warfare
                 L.LogError(ex);
                 return ex.GetType().Name;
             }
+        }
+        public static string TranslateSign(string key, UCPlayer player, bool important = true)
+        {
+            if (!Data.Languages.TryGetValue(player.Steam64, out string lang))
+                lang = JSONMethods.DefaultLanguage;
+            return TranslateSign(key, lang, player, important);
         }
         public static string DecideLanguage<TVal>(ulong player, Dictionary<string, TVal> searcher)
         {
@@ -760,6 +941,16 @@ namespace Uncreated.Warfare
                 }
                 return lang;
             }
+        }
+        public static string TranslateLimb(string language, ELimb limb)
+        {
+            if ((!Data.LimbLocalization.TryGetValue(language, out Dictionary<ELimb, string> loc) || !loc.ContainsKey(limb)) && !Data.LimbLocalization.TryGetValue(JSONMethods.DefaultLanguage, out loc))
+            {
+                return limb.ToString().ToLower().Replace('_', ' ');
+            }
+            if (loc.TryGetValue(limb, out string lang))
+                return lang;
+            return limb.ToString().ToLower().Replace('_', ' ');
         }
         public static string TranslateLimb(ulong player, ELimb limb)
         {
@@ -814,142 +1005,29 @@ namespace Uncreated.Warfare
             }
         }
         /// <param name="backupcause">Used in case the key can not be found.</param>
-        public static string TranslateDeath(ulong player, string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, ELimb limb, string itemName, float distance, bool usePlayerName = false, bool translateKillerName = false, bool colorize = true)
+        public static string TranslateDeath(string language, string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, ELimb limb, string itemName, float distance, bool usePlayerName = false, bool translateKillerName = false, bool colorize = true)
         {
             string deadname = usePlayerName ? dead.PlayerName : dead.CharacterName;
             if (colorize) deadname = F.ColorizeName(deadname, deadTeam);
-            string murderername = translateKillerName ? Translate(killerName.PlayerName, player) : (usePlayerName ? killerName.PlayerName : killerName.CharacterName);
+            string murderername = translateKillerName ? Translate(killerName.PlayerName, language) : (usePlayerName ? killerName.PlayerName : killerName.CharacterName);
             if (colorize) murderername = F.ColorizeName(murderername, killerTeam);
-            string dis = Math.Round(distance).ToString(Data.Locale) + 'm';
-            if (player == 0)
+            string dis = Mathf.RoundToInt(distance).ToString(Data.Locale) + 'm';
+
+            if ((!Data.DeathLocalization.TryGetValue(language, out Dictionary<string, string> loc) || !loc.TryGetValue(key, out string v) || !loc.TryGetValue(backupcause.ToString(), out v)) && (language == JSONMethods.DefaultLanguage || !Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out loc) || !loc.TryGetValue(key, out v) || !loc.TryGetValue(backupcause.ToString(), out v)))
             {
-                if (!Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, string> loc))
-                {
-                    if (Data.DeathLocalization.Count > 0)
-                    {
-                        loc = Data.DeathLocalization.ElementAt(0).Value;
-                        if (loc.TryGetValue(key, out string v))
-                        {
-                            try
-                            {
-                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                            }
-                            catch (FormatException ex)
-                            {
-                                L.LogError(ex);
-                                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                            }
-                        }
-                        else if (loc.TryGetValue(backupcause.ToString(), out v))
-                        {
-                            try
-                            {
-                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                            }
-                            catch (FormatException ex)
-                            {
-                                L.LogError(ex);
-                                return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                            }
-                        }
-                        else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                    }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                }
-                else
-                {
-                    if (loc.TryGetValue(key, out string v))
-                    {
-                        try
-                        {
-                            return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                        }
-                    }
-                    else if (loc.TryGetValue(backupcause.ToString(), out v))
-                    {
-                        try
-                        {
-                            return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                        }
-                    }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                }
+                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Mathf.RoundToInt(distance).ToString(Data.Locale) + "m"}";
             }
-            else
+            try
             {
-                if (!Data.Languages.TryGetValue(player, out string lang) || !Data.DeathLocalization.TryGetValue(lang, out Dictionary<string, string> loc) || (!loc.ContainsKey(key) && !loc.ContainsKey(backupcause.ToString())))
-                    lang = JSONMethods.DefaultLanguage;
-                if (!Data.DeathLocalization.TryGetValue(lang, out loc))
-                {
-                    if (Data.DeathLocalization.Count > 0)
-                    {
-                        loc = Data.DeathLocalization.ElementAt(0).Value;
-                        if (loc.TryGetValue(key, out string v))
-                        {
-                            try
-                            {
-                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                            }
-                            catch (FormatException ex)
-                            {
-                                L.LogError(ex);
-                                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                            }
-                        }
-                        else if (loc.TryGetValue(backupcause.ToString(), out v))
-                        {
-                            try
-                            {
-                                return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                            }
-                            catch (FormatException ex)
-                            {
-                                L.LogError(ex);
-                                return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                            }
-                        }
-                        else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                    }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                }
-                else if (loc.TryGetValue(key, out string v))
-                {
-                    try
-                    {
-                        return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogError(ex);
-                        return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                    }
-                }
-                else if (loc.TryGetValue(backupcause.ToString(), out v))
-                {
-                    try
-                    {
-                        return string.Format(v, deadname, murderername, TranslateLimb(player, limb), itemName, dis);
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogError(ex);
-                        return backupcause.ToString() + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
-                    }
-                }
-                else return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
+                return string.Format(v, deadname, murderername, TranslateLimb(language, limb), itemName, dis);
+            }
+            catch (FormatException ex)
+            {
+                L.LogError(ex);
+                return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Mathf.RoundToInt(distance).ToString(Data.Locale) + "m"}";
             }
         }
-        public static string TranslateLandmineDeath(ulong player, string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, bool usePlayerName = false, bool colorize = true)
+        public static string TranslateLandmineDeath(string language, string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, bool usePlayerName = false, bool colorize = true)
         {
             string deadname = usePlayerName ? dead.PlayerName : dead.CharacterName;
             if (colorize) deadname = F.ColorizeName(deadname, deadTeam);
@@ -957,84 +1035,20 @@ namespace Uncreated.Warfare
             if (colorize) murderername = F.ColorizeName(murderername, killerTeam);
             string triggerername = usePlayerName ? triggererName.PlayerName : triggererName.CharacterName;
             if (colorize) triggerername = F.ColorizeName(triggerername, triggererTeam);
-            if (player == 0)
+
+
+            if ((!Data.DeathLocalization.TryGetValue(language, out Dictionary<string, string> loc) || !loc.TryGetValue(key, out string v)) && (language == JSONMethods.DefaultLanguage || !Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out loc) || !loc.TryGetValue(key, out v)))
             {
-                if (!Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, string> loc))
-                {
-                    if (Data.DeathLocalization.Count > 0)
-                    {
-                        loc = Data.DeathLocalization.ElementAt(0).Value;
-                        if (loc.TryGetValue(key, out string t))
-                        {
-                            try
-                            {
-                                return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
-                            }
-                            catch (FormatException ex)
-                            {
-                                L.LogError(ex);
-                                return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                            }
-                        }
-                        else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                    }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                }
-                else
-                {
-                    if (loc.TryGetValue(key, out string t))
-                    {
-                        try
-                        {
-                            return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                        }
-                    }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                }
+                return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
             }
-            else
+            try
             {
-                if (!Data.Languages.TryGetValue(player, out string lang) || !Data.DeathLocalization.TryGetValue(lang, out Dictionary<string, string> loc) || (!loc.ContainsKey(key) && !loc.ContainsKey("LANDMINE")))
-                    lang = JSONMethods.DefaultLanguage;
-                if (!Data.DeathLocalization.TryGetValue(lang, out loc))
-                {
-                    if (Data.DeathLocalization.Count > 0)
-                    {
-                        loc = Data.DeathLocalization.ElementAt(0).Value;
-                        if (loc.TryGetValue(key, out string t))
-                        {
-                            try
-                            {
-                                return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
-                            }
-                            catch (FormatException ex)
-                            {
-                                L.LogError(ex);
-                                return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                            }
-                        }
-                        else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                    }
-                    else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                }
-                else if (loc.TryGetValue(key, out string t))
-                {
-                    try
-                    {
-                        return string.Format(t, deadname, murderername, TranslateLimb(player, limb), landmineName, "0", triggerername);
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogError(ex);
-                        return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-                    }
-                }
-                else return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
+                return string.Format(v, deadname, murderername, TranslateLimb(language, limb), landmineName, "0", triggerername);
+            }
+            catch (FormatException ex)
+            {
+                L.LogError(ex);
+                return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
             }
         }
         public static string TranslateBranch(EBranch branch, UCPlayer player)
@@ -1058,5 +1072,295 @@ namespace Uncreated.Warfare
                 branchName += "2_";
             return Translate(branchName + branch.ToString().ToLower(), player, out _);
         }
+        public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, ulong player)
+        {
+            if (player == 0)
+            {
+                return TranslateVBS(spawn, data, JSONMethods.DefaultLanguage);
+            }
+            else
+            {
+                if (!Data.Languages.TryGetValue(player, out string lang))
+                    lang = JSONMethods.DefaultLanguage;
+                return TranslateVBS(spawn, data, lang);
+            }
+        }
+        public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language)
+        {
+            VehicleSpawnComponent comp;
+            if (spawn.type == Structures.EStructType.STRUCTURE)
+                if (spawn.StructureDrop != null)
+                    comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleSpawnComponent>();
+                else
+                    return spawn.VehicleID.ToString("N");
+            else if (spawn.BarricadeDrop != null)
+                comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleSpawnComponent>();
+            else return spawn.VehicleID.ToString("N");
+            if (comp == null) return spawn.VehicleID.ToString("N");
+
+
+            string finalformat =
+                $"<color=#{UCWarfare.GetColorHex("vbs_name")}>{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}</color>\n" +
+                $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{Translate("vbs_branch_" + data.Branch.ToString().ToLower(), language)}</color>\n" +
+                (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>" : string.Empty) +
+                $"\n<color=#{{0}}>{(data.RequiredLevel <= 0 ? string.Empty : Translate("vbs_level_prefix", language) + " " + data.RequiredLevel.ToString(Data.Locale))}</color>\n";
+            if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle) || !vehicle.TryGetComponent(out SpawnedVehicleComponent vehcomp)) // vehicle is dead
+            {
+                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.RoundToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";
+            }
+            else if (vehcomp.hasBeenRequested)
+            {
+                if (vehcomp.isIdle)
+                {
+                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_idle")}>{Translate("vbs_state_idle", language, Mathf.FloorToInt(vehcomp.idleSecondsRemaining / 60f).ToString(), (Mathf.RoundToInt(vehcomp.idleSecondsRemaining) % 60).ToString("D2"))}</color>";
+                }
+                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_active")}>{Translate("vbs_state_active", language, F.GetClosestLocation(vehicle.transform.position))}</color>";
+            }
+            else
+            {
+                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_ready")}>{Translate("vbs_state_ready", language)}</color>";
+            }
+        }
+        private static readonly List<LanguageSet> languages = new List<LanguageSet>(Data.Localization == null ? 3 : Data.Localization.Count);
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets()
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<SteamPlayer> players)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                while (players.MoveNext())
+                {
+                    UCPlayer pl = UCPlayer.FromSteamPlayer(players.Current);
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                players.Dispose();
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<UCPlayer> players)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                while (players.MoveNext())
+                {
+                    UCPlayer pl = players.Current;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                players.Dispose();
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(ulong team)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (pl.GetTeam() != team) continue;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(Squads.Squad squad)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (pl.Squad != squad) continue;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(Predicate<UCPlayer> selector)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (!selector(pl)) continue;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+    }
+    /// <summary>Disposing does nothing.</summary>
+    public struct LanguageSet : IEnumerator<UCPlayer>
+    {
+        public string Language;
+        public List<UCPlayer> Players;
+        private int nextIndex;
+        /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
+        public UCPlayer Next;
+
+        UCPlayer IEnumerator<UCPlayer>.Current => Next;
+
+        object IEnumerator.Current => Next;
+
+        public LanguageSet(string lang)
+        {
+            this.Language = lang;
+            this.Players = new List<UCPlayer>(Provider.clients.Count);
+            this.nextIndex = 0;
+            this.Next = null;
+        }
+        public LanguageSet(string lang, UCPlayer first)
+        {
+            this.Language = lang;
+            this.Players = new List<UCPlayer>(lang == JSONMethods.DefaultLanguage ? Provider.clients.Count : 4) { first };
+            this.nextIndex = 0;
+            this.Next = null;
+        }
+        public void Add(UCPlayer pl) => this.Players.Add(pl);
+        /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
+        public bool MoveNext()
+        {
+            if (nextIndex < this.Players.Count)
+            {
+                Next = this.Players[nextIndex];
+                nextIndex++;
+                return true;
+            }
+            else
+                return false;
+        }
+        /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
+        public void Reset()
+        {
+            Next = null;
+            nextIndex = 0;
+        }
+
+        public void Dispose() { }
     }
 }

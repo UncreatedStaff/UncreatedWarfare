@@ -106,12 +106,12 @@ namespace Uncreated.Warfare.Kits
 
                             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
                             {
-                                List<VehicleSpawn> spawners = data.GetSpawners();
-                                for (int i = 0; i < spawners.Count; i++)
+                                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                                 {
-                                    List<VehicleSign> signs = VehicleSigns.GetLinkedSigns(spawners[i]);
-                                    for (int s = 0; s < signs.Count; s++)
-                                        signs[s].InvokeUpdate();
+                                    if (VehicleSpawner.ActiveObjects[i].VehicleID == data.VehicleID)
+                                    {
+                                        VehicleSpawner.ActiveObjects[i].UpdateSign();
+                                    }
                                 }
                             }
                         }
@@ -324,23 +324,72 @@ namespace Uncreated.Warfare.Kits
                 }
                 else
                 {
-                    if (command.Length > 0 && command[0].ToLower() == "link")
+                    string l = command[0].ToLower();
+                    if (command.Length > 0 && (l == "link" || l == "set"))
                     {
                         if (player.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
                         {
-                            if (barricadeDrop.model.TryGetComponent(out InteractableSign sign))
+                            if (barricadeDrop.model.TryGetComponent(out InteractableSign sign)) // request sign interaction
                             {
-                                if (c.currentlylinking != null)
+                                if (l == "link")
                                 {
-                                    if (VehicleSigns.SignExists(sign, out _))
+                                    if (c.currentlylinking != null)
                                     {
-                                        VehicleSigns.UnlinkSign(sign);
+                                        if (VehicleSigns.SignExists(sign, out _))
+                                        {
+                                            VehicleSigns.UnlinkSign(sign);
+                                        }
+                                        VehicleSigns.LinkSign(sign, c.currentlylinking);
+                                        player.SendChat("vehiclebay_link_finished");
+                                        c.currentlylinking = null;
                                     }
-                                    VehicleSigns.LinkSign(sign, c.currentlylinking);
-                                    player.SendChat("vehiclebay_link_finished");
-                                    c.currentlylinking = null;
+                                    else player.SendChat("vehiclebay_link_not_started");
                                 }
-                                else player.SendChat("vehiclebay_link_not_started");
+                                else if (l == "set")
+                                {
+                                    if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
+                                    {
+                                        if (VehicleSpawner.SpawnExists(sign2.bay_instance_id, sign2.bay_type, out VehicleSpawn spawn))
+                                        {
+                                            string op = command[0].ToLower();
+                                            string property = command[1];
+                                            string newValue = command[2];
+
+                                            if (op == "set" || op == "s")
+                                            {
+                                                VehicleBay.SetProperty(x => x.VehicleID == spawn.VehicleID, property, newValue, out bool founditem, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
+                                                if (!founditem) // error - kit does not exist
+                                                {
+                                                    player.SendChat("vehiclebay_e_noexist");
+                                                }
+                                                else if (!foundproperty) // error - invalid property name
+                                                {
+                                                    player.SendChat("vehiclebay_e_invalidprop", property);
+                                                }
+                                                else if (!parsed) // error - invalid argument value
+                                                {
+                                                    player.SendChat("vehiclebay_e_invalidarg", newValue, property);
+                                                }
+                                                else if (!allowedToChange) // error - invalid argument value
+                                                {
+                                                    player.SendChat("vehiclebay_e_not_settable", property);
+                                                }
+                                                else if (!set) // error - invalid argument value
+                                                {
+                                                    player.SendChat("vehiclebay_e_noexist");
+                                                }
+                                                else
+                                                {
+                                                    player.SendChat("vehiclebay_setprop", property.ToUpper(), !(Assets.find(spawn.VehicleID) is VehicleAsset asset) || asset.vehicleName == null ? spawn.VehicleID.ToString("N") : asset.vehicleName, newValue.ToUpper());
+                                                    VehicleSpawner.UpdateSigns(spawn.VehicleID);
+                                                }
+                                            }
+                                        }
+                                        else player.SendChat("vehiclebay_e_novehicle");
+                                    }
+                                    else player.SendChat("vehiclebay_e_novehicle");
+                                }
+                                else player.SendChat("vehiclebay_e_novehicle");
                             }
                             else player.SendChat("vehiclebay_e_novehicle");
                         }

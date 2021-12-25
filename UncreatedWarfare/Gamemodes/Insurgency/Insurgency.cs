@@ -209,9 +209,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         protected override void EventLoopAction()
         {
-            FOBManager.OnGameTick(_counter);
-
+            FOBManager.OnGameTick(_ticks);
             CheckPlayersAMC();
+            TeamManager.EvaluateBases();
             _counter++;
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)

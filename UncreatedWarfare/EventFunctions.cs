@@ -22,7 +22,6 @@ using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using Item = SDG.Unturned.Item;
 
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Uncreated.Warfare
@@ -134,12 +133,12 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
             }
 
-            var buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
+            BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
             if (buildable != null)
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
-            var repairable = FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EbuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
+            BuildableData repairable = FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EbuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
             {
                 drop.model.gameObject.AddComponent<RepairableComponent>();
@@ -244,7 +243,7 @@ namespace Uncreated.Warfare
                     return;
                 }
 
-                var buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
+                BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
 
                 if (buildable != null)
                 {
@@ -321,8 +320,11 @@ namespace Uncreated.Warfare
                 bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Data.DatabaseManager.RegisterLogin(player.Player);
 
-
                 Data.Gamemode.OnPlayerJoined(ucplayer, false);
+                for (int i = 0; i < Vehicles.VehicleSpawner.ActiveObjects.Count; i++)
+                {
+                    Vehicles.VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
+                }
                 if (Data.Gamemode is ITeams)
                 {
                     ulong team = player.GetTeam();
@@ -442,6 +444,7 @@ namespace Uncreated.Warfare
                 if (p.status != EFlagStatus.BLANK && p.status != EFlagStatus.DONT_DISPLAY)
                     p.SendToPlayer(player.channel.owner);
             }
+#if false
             if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
             {
                 if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null &&
@@ -456,6 +459,7 @@ namespace Uncreated.Warfare
                     c.StopIdleRespawnTimer();
                 }
             }
+#endif
         }
         static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
         internal static void RemoveDamageMessageTicks(ulong player)
@@ -662,6 +666,7 @@ namespace Uncreated.Warfare
                 Provider.maxPlayers = 24;
             }
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = string.Empty;
