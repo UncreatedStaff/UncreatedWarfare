@@ -134,7 +134,7 @@ namespace Uncreated.Warfare.FOBs
             }
         }
         
-        public static FOB RegisterNewFOB(BarricadeDrop drop, bool isCache = false)
+        public static FOB RegisterNewFOB(BarricadeDrop drop)
         {
             FOB fob = new FOB(drop);
             

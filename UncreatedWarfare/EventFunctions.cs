@@ -125,7 +125,7 @@ namespace Uncreated.Warfare
             if (Gamemode.Config.Barricades.FOBRadioGUID == data.barricade.asset.GUID)
             {
                 if (!FOBManager.AllFOBs.Exists(f => f.Position == drop.model.position))
-                    FOBManager.RegisterNewFOB(drop, false);
+                    FOBManager.RegisterNewFOB(drop);
             }
 
             // ammo bag

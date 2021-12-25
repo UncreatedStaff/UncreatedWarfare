@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Components
                     }
                 }
 
-                if (count % (1.5 / tickFrequency) == 0) // every 1 second
+                if (count % (1 / tickFrequency) == 0) // every 1 second
                 {
                     if (!parent.IsBleeding)
                         parent.ConsumeResources();
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Components
                 }
 
                 count ++;
-                if (count >= (3 / tickFrequency))
+                if (count >= (2 / tickFrequency))
                     count = 0;
                 yield return new WaitForSeconds(tickFrequency);
             }
@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Components
         public void Destroy()
         {
             StopCoroutine(loop);
-            Destroy(gameObject);
+            Destroy(this);
         }
     }
     public class FOB

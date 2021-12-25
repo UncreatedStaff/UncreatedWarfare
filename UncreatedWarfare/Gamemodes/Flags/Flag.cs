@@ -346,6 +346,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else if (team == 2) return T2Obj;
             else return false;
         }
+        public bool IsAttackable(ulong team) => (team == 1 && T1Obj) || (team == 2 && T2Obj);
+        public bool IsDefendable(ulong team) => (team == 1 && team == 2 && Owner == 2) || (team == 2 && team == 1 && Owner == 1);
         public bool IsAnObj { get => T1Obj || T2Obj; }
         public bool HasBeenCapturedT1;
         public bool HasBeenCapturedT2;

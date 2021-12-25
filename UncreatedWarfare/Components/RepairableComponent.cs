@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Components
                 }
             }
 
-            Destroy(gameObject);
+            Destroy(this);
         }
     }
     
