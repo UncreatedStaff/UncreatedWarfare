@@ -123,8 +123,8 @@ namespace Uncreated.Warfare
             // FOB radio
             if (Gamemode.Config.Barricades.FOBRadioGUID == data.barricade.asset.GUID)
             {
-                if (!(FOBManager.Team1FOBs.Exists(f => f.Position == drop.model.position) || FOBManager.Team2FOBs.Exists(f => f.Position == drop.model.position)))
-                    FOBManager.RegisterNewFOB(drop, false);
+                if (!FOBManager.AllFOBs.Exists(f => f.Position == drop.model.position))
+                    FOBManager.RegisterNewFOB(drop);
             }
 
             // ammo bag

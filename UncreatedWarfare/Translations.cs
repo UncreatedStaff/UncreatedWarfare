@@ -168,6 +168,24 @@ namespace Uncreated.Warfare
                 { "squad_ui_leader_name", "{0}" },
                 { "squad_ui_expanded", "..." },
 
+                // orders
+
+                { "order_usage_1", "<color=#9fa1a6>To give orders: <color=#9dbccf>/order <i>squad_name action</i></color'. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
+                { "order_actions", "<color=#9fa1a6>Order actions: <color=#9dbccf>{0}</color></color>" },
+                { "order_usage_2", "<color=#9fa1a6>Try typing: <color=#9dbccf>/order <b>{0}</b> <i>action</i></color>" },
+                { "order_usage_3", "<color=#9fa1a6>Try typing: <color=#9dbccf>/order {0} <b>action</b></color>. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
+                { "order_e_squadnoexist", "<color=#9fa1a6>There is no friendly squad called '{0}'.</color>" },
+                { "order_e_actioninvalid", "<color=#9fa1a6>'{0}' is not a valid action. Try one of these: {1}</color>" },
+                { "order_e_alreadyhasorder_marker", "<color=#9fa1a6>{0} already has orders from <color=#d1ac90>{1}</color></color>" },
+                { "order_e_attack_marker", "<color=#9fa1a6>Place a map marker on a <color=#d1bd90>position</color> or <color=#d1bd90>flag</color> where you want {0} to attack.</color>" },
+                { "order_e_defend_marker", "<color=#9fa1a6>Place a map marker on the <color=#d1bd90>position</color> or <color=#d1bd90>flag</color> where you want {0} to attack.</color>" },
+                { "order_e_buildfob_marker", "<color=#9fa1a6>Place a map marker where you want {0} to build a <color=#d1bd90>FOB</color>.</color>" },
+                { "order_e_buildfob_fobexists", "<color=#9fa1a6>There is already a friendly FOB near that marker.</color>" },
+                { "order_e_buildfob_foblimit", "<color=#9fa1a6>The max FOB limit has been reached.</color>" },
+                { "order_e_raycast", "<color=#b58b86>Something went wrong while raycasting. Please contact the devs/admins about this.</color>" },
+                { "order_s_sent", "<color=#9fa1a6>Order sent to {0}: <color=#9dbccf>{1}</color></color>" },
+                { "order_s_received", "<color=#9fa1a6>{0} has given your squad new orders: <color=#9dbccf>{1}</color></color>" },
+
                 // rally
                 { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
                 { "rally_active", "<color=#959c8c>Squad <color=#5eff87>RALLY POINT</color> is now active. Do '<color=#bfbfbf>/rally</color>' to rally with your squad.</color>" },

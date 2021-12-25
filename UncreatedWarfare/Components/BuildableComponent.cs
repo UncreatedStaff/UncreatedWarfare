@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
@@ -17,14 +18,14 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Components
 {
-    internal class BuildableComponent : MonoBehaviour
+    public class BuildableComponent : MonoBehaviour
     {
         public BarricadeDrop Foundation { get; private set; }
         public BuildableData Buildable { get; private set; }
 
         public int Hits { get; private set;}
 
-        private Dictionary<ulong, int> PlayerHits;
+        public Dictionary<ulong, int> PlayerHits { get; private set; }
 
         public void Initialize(BarricadeDrop foundation, BuildableData buildable)
         {
@@ -84,6 +85,8 @@ namespace Uncreated.Warfare.Components
 
                     FOBManager.SendFOBListToTeam(fob.Team);
 
+                    Orders.OnFOBBunkerBuilt(fob, this);
+
                     //StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
                     StatsManager.ModifyTeam(data.group, t => t.FobsBuilt++, false);
                 }
@@ -139,12 +142,12 @@ namespace Uncreated.Warfare.Components
             if (Regions.tryGetCoordinate(Foundation.model.position, out byte x, out byte y))
             {
                 BarricadeManager.destroyBarricade(Foundation, x, y, ushort.MaxValue);
-                Destroy(gameObject);
+                Destroy(this);
             }
         }
         public void Destroy()
         {
-            Destroy(gameObject);
+            Destroy(this);
         }
         public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)
         {

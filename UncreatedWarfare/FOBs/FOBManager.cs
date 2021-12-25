@@ -27,6 +27,7 @@ namespace Uncreated.Warfare.FOBs
         public static EffectAsset[] effects = new EffectAsset[8];
         public static readonly List<FOB> Team1FOBs = new List<FOB>();
         public static readonly List<FOB> Team2FOBs = new List<FOB>();
+        public static List<FOB> AllFOBs { get => Team1FOBs.Concat(Team2FOBs).ToList(); }
         public static readonly List<SpecialFOB> SpecialFOBs = new List<SpecialFOB>();
         public static readonly List<Cache> Caches = new List<Cache>();
         public static ushort fobListId;
@@ -197,7 +198,7 @@ namespace Uncreated.Warfare.FOBs
             }
         }
         
-        public static FOB RegisterNewFOB(BarricadeDrop drop, bool isCache = false)
+        public static FOB RegisterNewFOB(BarricadeDrop drop)
         {
             FOB fob = new FOB(drop);
             
