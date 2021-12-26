@@ -20,8 +20,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "ammo";
         public string Help => "resupplies your kit";
         public string Syntax => "/ammo";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.ammo" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.ammo" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);

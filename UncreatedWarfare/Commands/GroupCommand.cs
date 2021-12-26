@@ -20,9 +20,9 @@ namespace Uncreated.Warfare.Commands
 
         public string Syntax => "/group <join [id]|create [name]|rename|delete> [name]";
 
-        public List<string> Aliases => new List<string>();
+        public List<string> Aliases => new List<string>(0);
 
-        public List<string> Permissions => new List<string> { "uc.group" }; //.join, .create, .current
+        public List<string> Permissions => new List<string>(1) { "uc.group" }; //.join, .create, .current
 
         public void Execute(IRocketPlayer caller, string[] command)
         {

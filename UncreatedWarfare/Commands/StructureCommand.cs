@@ -16,8 +16,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "structure";
         public string Help => "Managed saved structures.";
         public string Syntax => "/structure";
-        public List<string> Aliases => new List<string>() { "struct" };
-        public List<string> Permissions => new List<string>() { "uc.structure" };
+        public List<string> Aliases => new List<string>(1) { "struct" };
+        public List<string> Permissions => new List<string>(1) { "uc.structure" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;

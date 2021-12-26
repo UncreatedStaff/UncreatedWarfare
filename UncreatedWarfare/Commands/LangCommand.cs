@@ -14,8 +14,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "lang";
         public string Help => "Switch your language to some of our supported languages.";
         public string Syntax => "/lang";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.lang" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.lang" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;

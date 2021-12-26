@@ -16,8 +16,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "duty";
         public string Help => "Go on or off duty.";
         public string Syntax => "/duty";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string> { "uc.duty" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.duty" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;

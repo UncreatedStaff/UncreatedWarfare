@@ -18,8 +18,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "dev";
         public string Help => "Dev command for various server setup features.";
         public string Syntax => "/dev [arguments]";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.dev" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.dev" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);

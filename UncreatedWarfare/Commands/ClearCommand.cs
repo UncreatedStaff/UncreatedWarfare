@@ -16,8 +16,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "clear";
         public string Help => "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
         public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.clear" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.clear" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;

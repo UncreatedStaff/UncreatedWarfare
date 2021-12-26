@@ -23,8 +23,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "request";
         public string Help => "Request a kit by looking at a sign or request a vehicle by looking at the vehicle, then do /request.";
         public string Syntax => "/request";
-        public List<string> Aliases => new List<string>() { };
-        public List<string> Permissions => new List<string>() { "uc.request" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.request" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             // dont allow requesting between game end and leaderboard
@@ -347,10 +347,11 @@ namespace Uncreated.Warfare.Commands
                         c.isIdle = false;
                     }
                     spawn.UpdateSign();
+                    Data.Reporter.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.SpawnPadInstanceID);
                 }
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
-
+                
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 

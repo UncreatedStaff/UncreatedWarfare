@@ -15,8 +15,8 @@ namespace Uncreated.Warfare.FOBs
         public string Name => "build";
         public string Help => "Builds a FOB on an existing FOB base";
         public string Syntax => "/build";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.build" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.build" };
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;

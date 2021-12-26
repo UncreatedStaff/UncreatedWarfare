@@ -36,8 +36,8 @@ namespace Uncreated.Warfare.Commands
         public string Help => "Collection of test commands.";
         public static int currentstep = 0;
         public string Syntax => "/test <mode>";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string> { "uc.test" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.test" };
         private readonly Type type = typeof(_DebugCommand);
         public void Execute(IRocketPlayer caller, string[] command)
         {
@@ -696,7 +696,6 @@ namespace Uncreated.Warfare.Commands
         {
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.channel.owner.transportConnection });
         }
-
         private void reloadui(string[] command, Player player)
         {
             UCWarfare.I.UpdateLangs(player.channel.owner);

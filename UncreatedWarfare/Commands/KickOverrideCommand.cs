@@ -16,8 +16,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "kick";
         public string Help => "Kick players who are misbehaving.";
         public string Syntax => "/kick <player> <reason>";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string> { "uc.kick" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.kick" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             if (caller.DisplayName == "Console")

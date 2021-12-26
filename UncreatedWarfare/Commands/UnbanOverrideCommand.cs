@@ -20,13 +20,13 @@ namespace Uncreated.Warfare.Commands
 
         public string Syntax => "/unban <player ID>";
 
-        public List<string> Aliases => new List<string>();
+        public List<string> Aliases => new List<string>(0);
 
-        public List<string> Permissions => new List<string> { "uc.unban" };
+        public List<string> Permissions => new List<string>(1) { "uc.unban" };
 
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (caller.DisplayName == "Console")
+            if (!(caller is UnturnedPlayer player))
             {
                 if (!Provider.isServer)
                     L.LogError(Translation.Translate("server_not_running", 0, out _));
@@ -64,7 +64,6 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                UnturnedPlayer player = caller as UnturnedPlayer;
                 if (!Provider.isServer)
                     Chat.SendChat(player, "server_not_running");
                 else

@@ -336,6 +336,7 @@ namespace Uncreated.Warfare
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO);
                 }
                 Chat.Broadcast("player_connected", names.CharacterName);
+                Data.Reporter.OnPlayerJoin(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
                 {
                     Duty = ucplayer.OnDuty(),
@@ -404,21 +405,91 @@ namespace Uncreated.Warfare
             else
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
-
-                if (drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID && instigatorSteamID != default)
+                if (drop == null) return;
+                if (drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID && instigatorSteamID != CSteamID.Nil)
                 {
                     shouldAllow = false;
                 }
 
-                if (drop != null && (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.BARRICADE, out Structures.Structure s) && s.transform == barricadeTransform))
+                if (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.BARRICADE, out Structures.Structure s) && s.transform == barricadeTransform)
                 {
                     shouldAllow = false;
+                }
+                else if (instigatorSteamID != CSteamID.Nil && instigatorSteamID != Provider.server)
+                {
+                    Guid weapon;
+                    SteamPlayer pl = PlayerTool.getSteamPlayer(instigatorSteamID);
+                    ulong team = drop.GetServersideData().group.GetTeam();
+                    if (team == 0 || pl == null || pl.GetTeam() != team) return;
+                    if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.lastProjected;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Useable_Gun)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.lastProjected;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.thrown.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.ThrowableID)?.isExplosive ?? false)?.ThrowableID ?? Guid.Empty;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Trap_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.LastLandmineTriggered.barricadeGUID;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (pl.player.equipment.asset != null)
+                    {
+                        weapon = pl.player.equipment.asset.GUID;
+                    }
+                    else weapon = Guid.Empty;
+                    Data.Reporter.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
+                    {
+                        broke = false,
+                        damage = pendingTotalDamage,
+                        instId = drop.instanceID,
+                        origin = damageOrigin,
+                        structure = drop.asset.GUID,
+                        time = Time.realtimeSinceStartup,
+                        weapon = weapon
+                    });
                 }
             }
 
-            if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c))
+            if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c2))
             {
-                c.LastDamager = instigatorSteamID.m_SteamID;
+                c2.LastDamager = instigatorSteamID.m_SteamID;
             }
         }
         internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
@@ -430,9 +501,80 @@ namespace Uncreated.Warfare
             else
             {
                 StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
-                if (drop != null && (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure s) && s.transform == structureTransform))
+                if (drop == null) return;
+                if (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure s) && s.transform == structureTransform)
                 {
                     shouldAllow = false;
+                }
+                else if (instigatorSteamID != CSteamID.Nil && instigatorSteamID != Provider.server)
+                {
+                    Guid weapon;
+                    SteamPlayer pl = PlayerTool.getSteamPlayer(instigatorSteamID);
+                    ulong team = drop.GetServersideData().group.GetTeam();
+                    if (team == 0 || pl == null || pl.GetTeam() != team) return;
+                    if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.lastProjected;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Useable_Gun)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.lastProjected;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.thrown.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.ThrowableID)?.isExplosive ?? false)?.ThrowableID ?? Guid.Empty;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if (damageOrigin == EDamageOrigin.Trap_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        {
+                            weapon = c.LastLandmineTriggered.barricadeGUID;
+                        }
+                        else if (pl.player.equipment.asset != null)
+                        {
+                            weapon = pl.player.equipment.asset.GUID;
+                        }
+                        else weapon = Guid.Empty;
+                    }
+                    else if(pl.player.equipment.asset != null)
+                    {
+                        weapon = pl.player.equipment.asset.GUID;
+                    }
+                    else weapon = Guid.Empty;
+                    Data.Reporter.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
+                    {
+                        broke = false,
+                        damage = pendingTotalDamage,
+                        instId = drop.instanceID,
+                        origin = damageOrigin,
+                        structure = drop.asset.GUID,
+                        time = Time.realtimeSinceStartup,
+                        weapon = weapon
+                    });
                 }
             }
         }
@@ -812,6 +954,14 @@ namespace Uncreated.Warfare
         {
             if (Data.Is(out IVehicles v))
                 v.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
+            if (drop.model.TryGetComponent(out BarricadeComponent c))
+            {
+                SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
+                if (damager != null && data.group.GetTeam() == damager.GetTeam())
+                {
+                    Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
+                }
+            }
         }
         internal static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
@@ -821,9 +971,9 @@ namespace Uncreated.Warfare
                 RepairManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
             }
 
-            if (drop.model.TryGetComponent<BuildableComponent>(out var buildable))
+            if (drop.model.TryGetComponent(out BuildableComponent buildable))
                 buildable.Destroy();
-            if (drop.model.TryGetComponent<RepairableComponent>(out var repairable))
+            if (drop.model.TryGetComponent(out BuildableComponent repairable))
                 repairable.Destroy();
 
             if (Data.Is<ISquads>(out _))
@@ -832,6 +982,14 @@ namespace Uncreated.Warfare
             {
                 v.VehicleSpawner.OnBarricadeDestroyed(data, drop, instanceID, plant);
                 v.VehicleSigns.OnBarricadeDestroyed(data, drop, instanceID, plant);
+            }
+            if (drop.model.TryGetComponent(out BarricadeComponent c))
+            {
+                SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
+                if (damager != null && data.group.GetTeam() == damager.GetTeam())
+                {
+                    Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
+                }
             }
         }
         internal static void OnPostHealedPlayer(Player instigator, Player target)

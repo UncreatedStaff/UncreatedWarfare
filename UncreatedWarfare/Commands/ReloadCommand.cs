@@ -24,8 +24,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "reload";
         public string Help => "Reload certain parts of UCWarfare.";
         public string Syntax => "/reload [module]";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.reload" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.reload" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = caller as UnturnedPlayer;

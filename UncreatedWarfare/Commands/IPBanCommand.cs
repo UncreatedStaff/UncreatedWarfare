@@ -16,8 +16,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "ipban";
         public string Help => "Ban players who are misbehaving by IP.";
         public string Syntax => "/ipban <player> <duration minutes> [reason]";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string> { "uc.ipban" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.ipban" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             if (caller.DisplayName == "Console")

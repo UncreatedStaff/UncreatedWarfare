@@ -38,9 +38,10 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
-            if (HasLinkedSpawn(vehicle.instanceID, out var spawn) && spawn.IsActive)
+            if (HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn) && spawn.IsActive)
             {
                 spawn.StartVehicleRespawnTimer();
+                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID);
             }
         }
         internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
