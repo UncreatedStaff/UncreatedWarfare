@@ -164,6 +164,10 @@ namespace Uncreated.Warfare.Tickets
                             XPManager.AddXP(player.Player, -amount, Translation.Translate(message, player.Steam64));
                             Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
+                        if (vehicle.TryGetComponent(out SpawnedVehicleComponent comp))
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, comp.spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                        else
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
                     }
                 }
             }

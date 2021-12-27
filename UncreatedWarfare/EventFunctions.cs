@@ -258,6 +258,53 @@ namespace Uncreated.Warfare
             }
         }
 
+        internal static void OnPreVehicleDamage(CSteamID instigatorSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        {
+            if (F.IsInMain(vehicle.transform.position))
+            {
+                shouldAllow = false;
+                return;
+            }
+            if (shouldAllow)
+            {
+                if (!vehicle.TryGetComponent(out VehicleComponent c))
+                {
+                    c = vehicle.gameObject.AddComponent<VehicleComponent>();
+                    c.owner = vehicle.lockedOwner;
+                }
+                if (instigatorSteamID != CSteamID.Nil)
+                {
+                    c.item = Guid.Empty;
+                    if (damageOrigin == EDamageOrigin.Grenade_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c2))
+                        {
+                            ThrowableOwner a = c2.thrown.FirstOrDefault(x =>
+                                Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
+                            if (a != null)
+                                c.item = a.ThrowableID;
+                        }
+                    }
+                    else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                    {
+                        if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c2))
+                        {
+                            c.item = c2.lastProjected;
+                        }
+                    }
+                    else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
+                    {
+                        if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c2))
+                        {
+                            c.item = c2.lastExplodedVehicle;
+                        }
+                    }
+                }
+                c.lastDamageOrigin = damageOrigin;
+                c.lastDamager = instigatorSteamID.m_SteamID;
+            }
+        }
+
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
             if (!UCWarfare.Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
@@ -336,7 +383,7 @@ namespace Uncreated.Warfare
                         UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO);
                 }
                 Chat.Broadcast("player_connected", names.CharacterName);
-                Data.Reporter.OnPlayerJoin(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
                 Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
                 {
                     Duty = ucplayer.OnDuty(),

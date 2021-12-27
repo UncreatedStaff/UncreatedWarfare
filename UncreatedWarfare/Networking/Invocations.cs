@@ -180,7 +180,7 @@ namespace Uncreated.Warfare.Networking
                 if (Thread.CurrentThread == ThreadUtil.gameThread)
                     RunCommand(command);
                 else
-                    UCWarfare.I.RunOnMainThread.Enqueue(() => RunCommand(command));
+                    UCWarfare.RunOnMainThread(() => RunCommand(command));
             }
             private static void RunCommand(string command)
             {

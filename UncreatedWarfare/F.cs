@@ -1,4 +1,5 @@
 ﻿using Rocket.API;
+using Rocket.API.Serialisation;
 using Rocket.Core;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
@@ -46,10 +47,13 @@ namespace Uncreated.Warfare
         }
         public static string MakeRemainder(this string[] array, int startIndex = 0, int length = -1, string deliminator = " ")
         {
-            string temp = string.Empty;
+            StringBuilder builder = new StringBuilder();
             for (int i = startIndex; i < (length == -1 ? array.Length : length); i++)
-                temp += (i == startIndex ? "" : deliminator) + array[i];
-            return temp;
+            {
+                if (i > startIndex) builder.Append(deliminator);
+                builder.Append(array[i]);
+            }
+            return builder.ToString();
         }
         public static string[] ReadStringArray(ByteReader R)
         {
@@ -83,14 +87,71 @@ namespace Uncreated.Warfare
             remainder = (uint)Math.Round((answer - Math.Floor(answer)) * dividend);
             return (uint)Math.Floor(answer);
         }
-        
-        
-        public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
-        public static bool OnDuty(this IRocketPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
-        public static bool OffDutyAndNotAdmin(this IRocketPlayer player) => !OnDutyOrAdmin(player);
+
+        public static bool PermissionCheck(this IRocketPlayer player, EAdminType type)
+        {
+            List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
+            for (int i = 0; i < groups.Count; i++)
+            {
+                RocketPermissionsGroup grp = groups[i];
+                if (grp.Id == "default") continue;
+                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup)
+                {
+                    if ((type & EAdminType.ADMIN_OFF_DUTY) == EAdminType.ADMIN_OFF_DUTY) return true;
+                    continue;
+                }
+                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup)
+                {
+                    if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY) return true;
+                    continue;
+                }
+                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup)
+                {
+                    if ((type & EAdminType.TRIAL_ADMIN_OFF_DUTY) == EAdminType.TRIAL_ADMIN_OFF_DUTY) return true;
+                    continue;
+                }
+                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup)
+                {
+                    if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY) return true;
+                    continue;
+                }
+                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.HelperGroup)
+                {
+                    if ((type & EAdminType.HELPER) == EAdminType.HELPER) return true;
+                    continue;
+                }
+            }
+            return false;
+        }
+        public static EAdminType GetPermissions(this IRocketPlayer player)
+        {
+            List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
+            EAdminType perms = 0;
+            for (int i = 0; i < groups.Count; i++)
+            {
+                RocketPermissionsGroup grp = groups[i];
+                if (grp.Id == "default") continue;
+                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup)
+                {
+                    perms |= EAdminType.ADMIN;
+                }
+                else if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup)
+                {
+                    perms |= EAdminType.TRIAL_ADMIN;
+                }
+                else if (grp.Id == UCWarfare.Config.AdminLoggerSettings.HelperGroup)
+                {
+                    perms |= EAdminType.HELPER;
+                }
+            }
+            return perms;
+        }
+        public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
+        public static bool OnDuty(this IRocketPlayer player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
         public static bool OffDuty(this IRocketPlayer player) => !OnDuty(player);
-        public static bool IsIntern(this IRocketPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup);
-        public static bool IsAdmin(this IRocketPlayer player) => R.Permissions.GetGroups(player, false).Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup);
+        public static bool IsIntern(this IRocketPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
+        public static bool IsAdmin(this IRocketPlayer player) => player.PermissionCheck(EAdminType.ADMIN);
+        public static bool IsHelper(this IRocketPlayer player) => player.PermissionCheck(EAdminType.HELPER);
         /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
         /// <param name="duration">Duration of ban IN SECONDS</param>
         public static void OfflineBan(ulong BannedID, uint IPAddress, CSteamID BannerID, string reason, uint duration)
@@ -671,5 +732,7 @@ namespace Uncreated.Warfare
             final = original;
             return alphanumcount != original.Length;
         }
+        public static DateTime FromUnityTime(this float realtimeSinceStartup) => 
+            DateTime.Now - TimeSpan.FromSeconds(Time.realtimeSinceStartup) + TimeSpan.FromSeconds(realtimeSinceStartup);
     }
 }

@@ -120,7 +120,7 @@ namespace Uncreated.Warfare
                                 c.LastLandmineTriggered = new LandmineData(__instance, owner);
                             }
 
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, CSteamID.Nil)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -182,7 +182,7 @@ namespace Uncreated.Warfare
                                     }
                                 }
                             }
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, CSteamID.Nil)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -261,61 +261,6 @@ namespace Uncreated.Warfare
                     L.LogError(ex);
                     return true; // run original code to cleanup.
                 }
-            }
-
-            // SDG.Unturned.VehicleManager
-            [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.damage))]
-            [HarmonyPrefix]
-            static bool DamageVehicle(InteractableVehicle vehicle, float damage, float times, bool canRepair, CSteamID instigatorSteamID, EDamageOrigin damageOrigin)
-            {
-                if (!UCWarfare.Config.Patches.damageVehicleTool) return true;
-                if (vehicle == null || vehicle.asset == null || vehicle.isDead) return false;
-                if (!vehicle.asset.isVulnerable && !vehicle.asset.isVulnerableToExplosions && !vehicle.asset.isVulnerableToEnvironment)
-                {
-                    UnturnedLog.error("Somehow tried to damage completely invulnerable vehicle: " + vehicle + " " + damage + " " + times + " " + canRepair.ToString());
-                    return false;
-                }
-                float newtimes = times * Provider.modeConfigData.Vehicles.Armor_Multiplier;
-                if (Mathf.RoundToInt(damage * newtimes) >= vehicle.health)
-                {
-                    if (instigatorSteamID != default && instigatorSteamID != CSteamID.Nil)
-                    {
-                        VehicleComponent vc = vehicle.gameObject.GetComponent<VehicleComponent>() ?? vehicle.gameObject.AddComponent<VehicleComponent>();
-                        vc.owner = instigatorSteamID;
-                        if (damageOrigin == EDamageOrigin.Grenade_Explosion)
-                        {
-                            if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
-                            {
-                                ThrowableOwner a = c.thrown.FirstOrDefault(x =>
-                                    Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
-                                if (a != null)
-                                    vc.item = a.ThrowableID;
-                            }
-                        }
-                        else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
-                        {
-                            if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
-                            {
-                                vc.item = c.lastProjected;
-                            }
-                        }
-                        else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
-                        {
-                            if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
-                            {
-                                vc.item = c.lastExplodedVehicle;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (vehicle.gameObject.TryGetComponent(out VehicleComponent vc))
-                        {
-                            UnityEngine.Object.Destroy(vc);
-                        }
-                    }
-                }
-                return true;
             }
 
             // SDG.Unturned.InteractableVehicle

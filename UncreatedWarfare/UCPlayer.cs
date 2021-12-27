@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -38,6 +39,16 @@ namespace Uncreated.Warfare
         public Rank OfficerRank;
         public ITransportConnection connection { get { return Player?.channel.owner.transportConnection; } }
         public Coroutine StorageCoroutine;
+        public FPlayerName Name 
+        { 
+            get
+            {
+                if (cachedName == FPlayerName.Nil)
+                    cachedName = F.GetPlayerOriginalNames(this.Player);
+                return cachedName;
+            } 
+        }
+        private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
         public Rank XPRank()
         {
@@ -115,9 +126,9 @@ namespace Uncreated.Warfare
         public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID);
         public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
         {
-            if (caller == null || caller.DisplayName == "Console")
+            if (!(caller is UnturnedPlayer pl))
                 return null;
-            else return FromUnturnedPlayer(caller as UnturnedPlayer);
+            else return FromUnturnedPlayer(pl);
         }
 
         public static UCPlayer FromName(string name)
@@ -127,15 +138,78 @@ namespace Uncreated.Warfare
                 s =>
                 s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
                 s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
-                s.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
-                s.Player.channel.owner.playerID.characterName.Replace(" ", "").ToLower().Contains(name) ||
-                s.Player.channel.owner.playerID.nickName.Replace(" ", "").ToLower().Contains(name) ||
-                s.Player.channel.owner.playerID.playerName.Replace(" ", "").ToLower().Contains(name)
+                s.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.OrdinalIgnoreCase)
                 );
-
             return player;
         }
-
+        /// <summary>Slow, use rarely.</summary>
+        public static UCPlayer FromName(string name, ENameSearchType type)
+        {
+            if (type == ENameSearchType.CHARACTER_NAME)
+            {
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                return null;
+            }
+            else if (type == ENameSearchType.NICK_NAME)
+            {
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                return null;
+            }
+            else if (type == ENameSearchType.PLAYER_NAME)
+            {
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.playerName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.nickName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                foreach (UCPlayer current in PlayerManager.OnlinePlayers.OrderBy(x => x.Player.channel.owner.playerID.characterName.Length))
+                {
+                    if (current.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current;
+                }
+                return null;
+            }
+            else return FromName(name, ENameSearchType.CHARACTER_NAME);
+        }
+        public enum ENameSearchType : byte
+        {
+            CHARACTER_NAME,
+            NICK_NAME,
+            PLAYER_NAME
+        }
         public void ChangeKit(Kit kit)
         {
             KitName = kit.Name;

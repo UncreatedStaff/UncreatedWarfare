@@ -1,4 +1,5 @@
-﻿using Steamworks;
+﻿using SDG.Unturned;
+using Steamworks;
 using System;
 using UnityEngine;
 namespace Uncreated.Warfare.Components
@@ -8,5 +9,7 @@ namespace Uncreated.Warfare.Components
         public CSteamID owner;
         public Guid item;
         public bool isVehicle = false;
+        public EDamageOrigin lastDamageOrigin;
+        public ulong lastDamager = 0;
     }
 }

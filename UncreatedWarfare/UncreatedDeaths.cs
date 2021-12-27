@@ -29,7 +29,6 @@ namespace Uncreated.Warfare
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
         private void Teamkill(KillEventArgs parameters)
         {
-            //L.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
             L.Log(Translation.Translate("teamkilled_console_log", 0,
                 F.GetPlayerOriginalNames(parameters.killer).PlayerName,
                 parameters.killer.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
@@ -54,6 +53,7 @@ namespace Uncreated.Warfare
                 Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
+                Data.Reporter.OnTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.item, parameters.dead.channel.owner.playerID.steamID.m_SteamID, parameters.cause);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)

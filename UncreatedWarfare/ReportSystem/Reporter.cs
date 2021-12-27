@@ -13,22 +13,100 @@ namespace Uncreated.Warfare.ReportSystem
 {
     public class Reporter : MonoBehaviour
     {
-        public static readonly NetCallRaw<Report> SendReportInvocation = new NetCallRaw<Report>(4000, Report.ReadReport, Report.WriteReport);
-        public static void SendReport(Report report) => SendReportInvocation.NetInvoke(report);
-        public static bool CreateCustomReport(ulong reporter, ulong violator, string message)
+        /// <summary>
+        /// T1: report <br>T2: isOnline</br>
+        /// </summary>
+        public static readonly NetCallRaw<Report, bool> SendReportInvocation = new NetCallRaw<Report, bool>(4000, Report.ReadReport, null, Report.WriteReport, null, 256);
+        public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78, true);
+        public static readonly Dictionary<EDamageOrigin, string> DmgOriginLocalization = new Dictionary<EDamageOrigin, string>(30)
         {
-            if (Data.NetClient.connection.IsActive)
+            { EDamageOrigin.Animal_Attack, "Animal Attack" },
+            { EDamageOrigin.Bullet_Explosion, "Bullet Explosion" },
+            { EDamageOrigin.Carepackage_Timeout, "Carepackage Expired" },
+            { EDamageOrigin.Charge_Explosion, "Explosive Charge" },
+            { EDamageOrigin.Charge_Self_Destruct, "Detonated Charge" },
+            { EDamageOrigin.Flamable_Zombie_Explosion, "Flamable Zombie Explosion" },
+            { EDamageOrigin.Food_Explosion, "Explosive Food" },
+            { EDamageOrigin.Grenade_Explosion, "Explosive Grenade" },
+            { EDamageOrigin.Horde_Beacon_Self_Destruct, "Horde Beacon Expired" },
+            { EDamageOrigin.Kill_Volume, "Map Kill Volume" },
+            { EDamageOrigin.Lightning, "Lightning Strike" },
+            { EDamageOrigin.Mega_Zombie_Boulder, "Mega Zombie Boulder" },
+            { EDamageOrigin.Plant_Harvested, "Plant Harvested" },
+            { EDamageOrigin.Punch, "Punch" },
+            { EDamageOrigin.Radioactive_Zombie_Explosion, "Radioactive Zombie Explosion" },
+            { EDamageOrigin.Rocket_Explosion, "Explosive Rocket" },
+            { EDamageOrigin.Sentry, "Sentry" },
+            { EDamageOrigin.Trap_Explosion, "Trap Explosion" },
+            { EDamageOrigin.Trap_Wear_And_Tear, "Trap Wear & Tear" },
+            { EDamageOrigin.Unknown, "Unknown Damage Origin" },
+            { EDamageOrigin.Useable_Gun, "Gun" },
+            { EDamageOrigin.Useable_Melee, "Melee" },
+            { EDamageOrigin.VehicleDecay, "Vehicle Despawn" },
+            { EDamageOrigin.Vehicle_Bumper, "Ran Over" },
+            { EDamageOrigin.Vehicle_Collision_Self_Damage, "Collision" },
+            { EDamageOrigin.Vehicle_Explosion, "Vehicle Explosion" },
+            { EDamageOrigin.Zombie_Electric_Shock, "Electric Zombie Shock" },
+            { EDamageOrigin.Zombie_Fire_Breath, "Fire Zombie Breath" },
+            { EDamageOrigin.Zombie_Stomp, "Zombie Stomp" },
+            { EDamageOrigin.Zombie_Swipe, "Zombie Swipe" },
+        };
+        public static readonly Dictionary<EDeathCause, string> DeathCauseLocalization = new Dictionary<EDeathCause, string>(30);
+        public Report CreateReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
             {
-                SendReport(new Report()
-                {
-                    Message = message,
-                    Reporter = reporter,
-                    Violator = violator,
-                    Time = DateTime.Now
-                });
-                return true;
+                return pd.CustomReport(message, reporter);
             }
-            return false;
+            return null;
+        }
+        public ChatAbuseReport CreateChatAbuseReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.ChatAbuseReport(message, reporter);
+            }
+            return null;
+        }
+        public VoiceChatAbuseReport CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.VoiceChatAbuseReport(message, reporter);
+            }
+            return null;
+        }
+        public SoloingReport CreateSoloingReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.SoloingReport(message, reporter);
+            }
+            return null;
+        }
+        public WasteingAssetsReport CreateWasteingAssetsReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.WasteingAssetsReport(message, reporter);
+            }
+            return null;
+        }
+        public IntentionalTeamkillReport CreateIntentionalTeamkillReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.IntentionalTeamkillReport(message, reporter);
+            }
+            return null;
+        }
+        public GreifingFOBsReport CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.GreifingFOBsReport(message, reporter);
+            }
+            return null;
         }
         private void TickPlayer(PlayerData data, float deltaTime, float time)
         {
@@ -51,7 +129,7 @@ namespace Uncreated.Warfare.ReportSystem
                 {
                     if (!data.soloTime.TryGetValue(veh.asset.GUID, out List<float> times))
                     {
-                        times = new List<float>(120);
+                        times = new List<float>(120) { time };
                         data.soloTime.Add(veh.asset.GUID, times);
                     }
                     // remove times 20 minutes ago or older
@@ -73,6 +151,18 @@ namespace Uncreated.Warfare.ReportSystem
                 {
                     if (data.recentFriendlyDamages[i].time < lowerLimit)
                         data.recentFriendlyDamages.RemoveAt(i--);
+                    else break;
+                }
+                for (int i = 0; i < data.teamkills.Count; i++)
+                {
+                    if (data.teamkills[i].time < lowerLimit)
+                        data.teamkills.RemoveAt(i--);
+                    else break;
+                }
+                for (int i = 0; i < data.vehicleTeamkills.Count; i++)
+                {
+                    if (data.vehicleTeamkills[i].time < lowerLimit)
+                        data.vehicleTeamkills.RemoveAt(i--);
                     else break;
                 }
             }
@@ -146,9 +236,9 @@ namespace Uncreated.Warfare.ReportSystem
                 });
             }
         }
-        internal void OnVehicleDied(ulong owner, uint bayInstId)
+        internal void OnVehicleDied(ulong owner, uint bayInstId, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
         {
-            if (data.TryGetValue(owner, out PlayerData playerData))
+            if (bayInstId != uint.MaxValue && data.TryGetValue(owner, out PlayerData playerData))
             {
                 for (int i = 0; i < playerData.recentRequests.Count; i++)
                 {
@@ -159,19 +249,114 @@ namespace Uncreated.Warfare.ReportSystem
                     }
                 }
             }
+            if (tk && data.TryGetValue(killer, out playerData))
+            {
+                playerData.vehicleTeamkills.Add(new VehicleTeamkill()
+                {
+                    owner = owner,
+                    time = Time.realtimeSinceStartup,
+                    vehicle = vehicle,
+                    weapon = weapon,
+                    origin = origin
+                });
+            }
         }
-        internal void OnPlayerJoin(ulong player)
+        internal void OnPlayerJoin(SteamPlayer player)
         {
             foreach (KeyValuePair<ulong, PlayerData> pkv in data)
             {
-                if (pkv.Key == player)
+                if (pkv.Key == player.playerID.steamID.m_SteamID)
                 {
                     pkv.Value.isOnline = true;
                     pkv.Value.onlineTime = 0;
+                    pkv.Value.characterName = player.playerID.characterName;
+                    pkv.Value.playerName = player.playerID.playerName;
+                    pkv.Value.nickName = player.playerID.nickName;
                     return;
                 }
             }
-            data.Add(player, new PlayerData(player) { isOnline = true });
+            data.Add(player.playerID.steamID.m_SteamID, new PlayerData(player.playerID.steamID.m_SteamID) 
+            {
+                isOnline = true,
+                characterName = player.playerID.characterName,
+                playerName = player.playerID.playerName,
+                nickName = player.playerID.nickName
+            });
+        }
+        /// <summary>Slow, use rarely.</summary>
+        public ulong RecentPlayerNameCheck(string name, UCPlayer.ENameSearchType type)
+        {
+            if (type == UCPlayer.ENameSearchType.CHARACTER_NAME)
+            {
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
+                {
+                    if (current.Value.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.nickName.Length))
+                {
+                    if (current.Value.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.playerName.Length))
+                {
+                    if (current.Value.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                return 0;
+            }
+            else if (type == UCPlayer.ENameSearchType.NICK_NAME)
+            {
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.nickName.Length))
+                {
+                    if (current.Value.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
+                {
+                    if (current.Value.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.playerName.Length))
+                {
+                    if (current.Value.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                return 0;
+            }
+            else if (type == UCPlayer.ENameSearchType.PLAYER_NAME)
+            {
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.playerName.Length))
+                {
+                    if (current.Value.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.nickName.Length))
+                {
+                    if (current.Value.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
+                {
+                    if (current.Value.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                        return current.Value.Steam64;
+                }
+                return 0;
+            }
+            else return RecentPlayerNameCheck(name, UCPlayer.ENameSearchType.CHARACTER_NAME);
+        }
+        internal void OnTeamkill(ulong killer, Guid weapon, ulong dead, EDeathCause cause)
+        {
+            if (data.TryGetValue(killer, out PlayerData playerData))
+            {
+                playerData.teamkills.Add(new Teamkill()
+                {
+                    cause = cause,
+                    dead = dead,
+                    time = Time.realtimeSinceStartup,
+                    weapon = weapon
+                });
+            }
         }
         internal void OnPlayerChat(ulong player, string message)
         {
@@ -229,31 +414,202 @@ namespace Uncreated.Warfare.ReportSystem
             public readonly ulong Steam64;
             public Player player;
             public bool isOnline;
+            public string characterName;
+            public string playerName;
+            public string nickName;
             public float offlineTime;
             public float onlineTime;
             public Dictionary<Guid, List<float>> soloTime = new Dictionary<Guid, List<float>>(8);
             public List<VehicleLifeData> recentRequests = new List<VehicleLifeData>(8);
             public List<StructureDamageData> recentFriendlyDamages = new List<StructureDamageData>(16);
-            public List<KeyValuePair<int, string>> chatLogs = new List<KeyValuePair<int, string>>(256);
+            public List<KeyValuePair<int, KeyValuePair<string, DateTime>>> chatLogs = new List<KeyValuePair<int, KeyValuePair<string, DateTime>>>(256);
+            public List<Teamkill> teamkills = new List<Teamkill>();
+            public List<VehicleTeamkill> vehicleTeamkills = new List<VehicleTeamkill>();
 #if USE_VOICE
             public List<byte[]> voiceHistory = new List<byte[]>(0);
 #endif
             public void InsertChat(string message)
             {
                 if (message.Length < 1 || message[0] == '/') return;
-                if (chatLogs.Count > 0 && chatLogs[0].Value == message)
+                if (chatLogs.Count > 0 && chatLogs[0].Value.Key == message && (DateTime.Now - chatLogs[0].Value.Value).TotalSeconds < 10d)
                 {
-                    chatLogs[0] = new KeyValuePair<int, string>(chatLogs[0].Key + 1, chatLogs[0].Value);
+                    chatLogs[0] = new KeyValuePair<int, KeyValuePair<string, DateTime>>(chatLogs[0].Key + 1, chatLogs[0].Value);
                     return;
                 }
                 if (chatLogs.Count > 255)
                 {
                     chatLogs.RemoveAt(chatLogs.Count - 1);
                 }
-                chatLogs.Insert(0, new KeyValuePair<int, string>(1, message));
+                chatLogs.Insert(0, new KeyValuePair<int, KeyValuePair<string, DateTime>>(1, new KeyValuePair<string, DateTime>(message, DateTime.Now)));
+                
             }
             public PlayerData(ulong steam64) => Steam64 = steam64;
-            
+            public Report CustomReport(string message, ulong reporter) =>
+                new Report()
+                {
+                    Message = message,
+                    Reporter = reporter,
+                    Time = DateTime.Now,
+                    Violator = Steam64
+                };
+            private string[] ConvertChatLogs()
+            {
+                string[] chatlogs = new string[chatLogs.Count];
+                int i = 0;
+                foreach (KeyValuePair<int, KeyValuePair<string, DateTime>> kvp in chatLogs)
+                {
+                    chatlogs[i] = kvp.Key > 1 ? $"[{kvp.Key}x] [1st {kvp.Value.Value:HH:mm:ss EST}] {kvp.Value.Key}" : $"[{kvp.Value.Value:HH:mm:ss EST}] {kvp.Value.Key}";
+                    i++;
+                }
+                return chatlogs;
+            }
+            public ChatAbuseReport ChatAbuseReport(string message, ulong reporter) =>
+                new ChatAbuseReport()
+                {
+                    ChatRecords = ConvertChatLogs(),
+                    Message = message,
+                    Reporter = reporter,
+                    Time = DateTime.Now,
+                    Violator = Steam64
+                };
+#if USE_VOICE
+            public byte[] ConvertVoiceLogs()
+            {
+                return new byte[0];
+            }
+#endif
+            public VoiceChatAbuseReport VoiceChatAbuseReport(string message, ulong reporter) =>
+                new VoiceChatAbuseReport()
+                {
+#if USE_VOICE
+                    VoiceRecords = ConvertVoiceLogs(),
+#else
+                    VoiceRecords = new byte[0],
+#endif
+                    Message = message,
+                    Reporter = reporter,
+                    Time = DateTime.Now,
+                    Violator = Steam64
+                };
+            public Report.VehicleTime[] ConvertSoloData()
+            {
+                Report.VehicleTime[] vehicles = new Report.VehicleTime[soloTime.Count];
+                int i = 0;
+                foreach (KeyValuePair<Guid, List<float>> kvp in soloTime)
+                {
+                    vehicles[i] = new Report.VehicleTime()
+                    {
+                        VehicleName = Assets.find<VehicleAsset>(kvp.Key)?.vehicleName ?? kvp.Key.ToString("N"),
+                        Time = kvp.Value.Count * 5f
+                    };
+                    i++;
+                }
+                return vehicles;
+            }
+            public SoloingReport SoloingReport(string message, ulong reporter) =>
+                new SoloingReport()
+                {
+                    Message = message,
+                    Reporter = reporter,
+                    Time = DateTime.Now,
+                    Violator = Steam64,
+                    Seats = ConvertSoloData()
+                };
+            public Report.VehicleTime[] ConvertRecentRequestsData()
+            {
+                Report.VehicleTime[] vehicles = new Report.VehicleTime[recentRequests.Count];
+                for (int i = 0; i < recentRequests.Count; i++)
+                {
+                    VehicleLifeData data = recentRequests[i];
+                    vehicles[i] = new Report.VehicleTime()
+                    {
+                        VehicleName = Assets.find<VehicleAsset>(data.vehicle)?.vehicleName ?? data.vehicle.ToString("N"),
+                        Time = data.lifeTime,
+                        Timestamp = data.requestTime.FromUnityTime()
+                    };
+                }
+                return vehicles;
+            }
+            public Report.VehicleTeamkill[] ConvertRecentVehicleTeamkillData()
+            {
+                Report.VehicleTeamkill[] vehicles = new Report.VehicleTeamkill[vehicleTeamkills.Count];
+                for (int i = 0; i < vehicleTeamkills.Count; i++)
+                {
+                    VehicleTeamkill data = vehicleTeamkills[i];
+                    vehicles[i] = new Report.VehicleTeamkill()
+                    {
+                        VehicleName = Assets.find<VehicleAsset>(data.vehicle)?.vehicleName ?? data.vehicle.ToString("N"),
+                        Origin = DmgOriginLocalization.TryGetValue(data.origin, out string orig) ? orig : data.origin.ToString().Replace('_', ' '),
+                        Timestamp = data.time.FromUnityTime(),
+                        VehicleOwner = data.owner,
+                        Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
+                    };
+                }
+                return vehicles;
+            }
+            public WasteingAssetsReport WasteingAssetsReport(string message, ulong reporter) =>
+                new WasteingAssetsReport()
+                {
+                    Message = message,
+                    Reporter = reporter,
+                    Violator = Steam64,
+                    Time = DateTime.Now,
+                    RecentRequests = ConvertRecentRequestsData(),
+                    RecentVehicleTeamkills = ConvertRecentVehicleTeamkillData()
+                };
+            public Report.Teamkill[] ConvertRecentTeamkills()
+            {
+                Report.Teamkill[] teamkills = new Report.Teamkill[vehicleTeamkills.Count];
+                for (int i = 0; i < vehicleTeamkills.Count; i++)
+                {
+                    Teamkill data = this.teamkills[i];
+                    teamkills[i] = new Report.Teamkill()
+                    {
+                        Dead = data.dead,
+                        DeathType = DeathCauseLocalization.TryGetValue(data.cause, out string cause) ? cause : data.cause.ToString().Replace('_', ' '),
+                        Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
+                        IsVehicle = false,
+                        Timestamp = data.time.FromUnityTime()
+                    };
+                }
+                return teamkills;
+            }
+            public IntentionalTeamkillReport IntentionalTeamkillReport(string message, ulong reporter) =>
+                new IntentionalTeamkillReport()
+                {
+                    Message = message,
+                    Reporter = reporter,
+                    Violator = Steam64,
+                    Time = DateTime.Now,
+                    RecentTeamkills = ConvertRecentTeamkills()
+                };
+
+            public GreifingFOBsReport.StructureDamage[] ConvertRecentFOBDamage()
+            {
+                GreifingFOBsReport.StructureDamage[] damages = new GreifingFOBsReport.StructureDamage[vehicleTeamkills.Count];
+                for (int i = 0; i < vehicleTeamkills.Count; i++)
+                {
+                    StructureDamageData data = recentFriendlyDamages[i];
+                    damages[i] = new GreifingFOBsReport.StructureDamage()
+                    {
+                        Damage = data.damage,
+                        DamageOrigin = DmgOriginLocalization.TryGetValue(data.origin, out string orig) ? orig : data.origin.ToString().Replace('_', ' '),
+                        Structure = Assets.find<ItemAsset>(data.structure)?.itemName ?? data.structure.ToString("N"),
+                        Timestamp = data.time.FromUnityTime(),
+                        Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N")
+                    };
+                }
+                return damages;
+            }
+            public GreifingFOBsReport GreifingFOBsReport(string message, ulong reporter) =>
+                new GreifingFOBsReport()
+                {
+                    Message = message,
+                    Reporter = reporter,
+                    Violator = Steam64,
+                    Time = DateTime.Now,
+                    RecentDamage = ConvertRecentFOBDamage()
+                };
         }
         private struct VehicleLifeData
         {
@@ -264,6 +620,23 @@ namespace Uncreated.Warfare.ReportSystem
             public bool died;
             public void setDead(bool val) => died = val;
             public void addTime(float time) => lifeTime += time;
+        }
+
+        private struct VehicleTeamkill
+        {
+            public Guid vehicle;
+            public Guid weapon;
+            public float time;
+            public ulong owner;
+            public EDamageOrigin origin;
+        }
+
+        private struct Teamkill
+        {
+            public Guid weapon;
+            public ulong dead;
+            public EDeathCause cause;
+            public float time;
         }
 
         internal struct StructureDamageData

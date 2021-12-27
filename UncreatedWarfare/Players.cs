@@ -58,6 +58,10 @@ namespace Uncreated.Players
                 NickName = R.ReadString()
             };
         public override string ToString() => PlayerName;
+        public static bool operator ==(FPlayerName left, FPlayerName right) => left.Steam64 == right.Steam64;
+        public static bool operator !=(FPlayerName left, FPlayerName right) => left.Steam64 != right.Steam64;
+        public override bool Equals(object obj) => obj is FPlayerName pn && this.Steam64 == pn.Steam64;
+        public override int GetHashCode() => Steam64.GetHashCode();
     }
     public struct ToastMessage
     {
