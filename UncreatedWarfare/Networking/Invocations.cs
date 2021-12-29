@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Officers;
@@ -33,38 +34,43 @@ namespace Uncreated.Warfare.Networking
 
             internal static readonly NetCall<ulong, ulong, string, string, DateTime> LogTeamkilled = new NetCall<ulong, ulong, string, string, DateTime>(1006);
 
-            internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellBan = new NetCall<ulong, ulong, string, uint, DateTime>(1007);
+            internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellBan = new NetCall<ulong, ulong, string, uint, DateTime>(ReceiveBanRequest);
             [NetCall(ENetCall.FROM_SERVER, 1007)]
-            internal static void ReceiveBanRequest(in IConnection connection, ulong Violator, ulong Admin, string Reason, uint DurationMins, DateTime timestamp)
+            internal static async Task ReceiveBanRequest(IConnection connection, ulong Violator, ulong Admin, string Reason, uint DurationMins, DateTime timestamp)
             {
+                await UCWarfare.ToUpdate();
                 Commands.BanOverrideCommand.BanPlayer(Violator, Admin, Reason, DurationMins);
             }
 
-            internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellIPBan = new NetCall<ulong, ulong, string, uint, DateTime>(1008);
+            internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellIPBan = new NetCall<ulong, ulong, string, uint, DateTime>(ReceiveIPBanRequest);
             [NetCall(ENetCall.FROM_SERVER, 1008)]
-            internal static void ReceiveIPBanRequest(in IConnection connection, ulong Violator, ulong Admin, string Reason, uint DurationMins, DateTime timestamp)
+            internal static async Task ReceiveIPBanRequest(IConnection connection, ulong Violator, ulong Admin, string Reason, uint DurationMins, DateTime timestamp)
             {
+                await UCWarfare.ToUpdate();
                 Commands.IPBanCommand.IPBanPlayer(Violator, Admin, Reason, DurationMins);
             }
 
-            internal static readonly NetCall<ulong, ulong, DateTime> TellUnban = new NetCall<ulong, ulong, DateTime>(1009);
+            internal static readonly NetCall<ulong, ulong, DateTime> TellUnban = new NetCall<ulong, ulong, DateTime>(ReceiveUnbanRequest);
             [NetCall(ENetCall.FROM_SERVER, 1009)]
-            internal static void ReceiveUnbanRequest(in IConnection connection, ulong Violator, ulong Admin, DateTime timestamp)
+            internal static async Task ReceiveUnbanRequest(IConnection connection, ulong Violator, ulong Admin, DateTime timestamp)
             {
+                await UCWarfare.ToUpdate();
                 Commands.UnbanOverrideCommand.UnbanPlayer(Violator, Admin);
             }
 
-            internal static readonly NetCall<ulong, ulong, string, DateTime> TellKick = new NetCall<ulong, ulong, string, DateTime>(1010);
+            internal static readonly NetCall<ulong, ulong, string, DateTime> TellKick = new NetCall<ulong, ulong, string, DateTime>(ReceieveKickRequest);
             [NetCall(ENetCall.FROM_SERVER, 1010)]
-            internal static void ReceiveUnbanRequest(in IConnection connection, ulong Violator, ulong Admin, string Reason, DateTime timestamp)
+            internal static async Task ReceieveKickRequest(IConnection connection, ulong Violator, ulong Admin, string Reason, DateTime timestamp)
             {
+                await UCWarfare.ToUpdate();
                 Commands.KickOverrideCommand.KickPlayer(Violator, Admin, Reason);
             }
 
-            internal static readonly NetCall<ulong, ulong, string, DateTime> TellWarn = new NetCall<ulong, ulong, string, DateTime>(1011);
+            internal static readonly NetCall<ulong, ulong, string, DateTime> TellWarn = new NetCall<ulong, ulong, string, DateTime>(ReceiveWarnRequest);
             [NetCall(ENetCall.FROM_SERVER, 1011)]
-            internal static void ReceiveWarnRequest(in IConnection connection, ulong Violator, ulong Admin, string Reason, DateTime timestamp)
+            internal static async Task ReceiveWarnRequest(IConnection connection, ulong Violator, ulong Admin, string Reason, DateTime timestamp)
             {
+                await UCWarfare.ToUpdate();
                 Commands.WarnCommand.WarnPlayer(Violator, Admin, Reason);
             }
 
@@ -87,24 +93,24 @@ namespace Uncreated.Warfare.Networking
 
             internal static readonly NetCall ShuttingDownAfterComplete = new NetCall(1020);
 
-            internal static readonly NetCall RequestPlayerList = new NetCall(1021);
+            internal static readonly NetCall RequestPlayerList = new NetCall(ReceiveRequestPlayerList);
             [NetCall(ENetCall.FROM_SERVER, 1021)]
-            internal static void ReceiveRequestPlayerList(in IConnection connection)
+            internal static void ReceiveRequestPlayerList(IConnection connection)
             {
                 PlayerList.Invoke(connection, PlayerManager.GetPlayerList());
             }
 
-            internal static readonly NetCall RequestPing = new NetCall(1022);
+            internal static readonly NetCall RequestPing = new NetCall(ReceivePingRequest);
             [NetCall(ENetCall.FROM_SERVER, 1022)]
-            internal static void ReceivePingRequest(in IConnection connection)
+            internal static void ReceivePingRequest(IConnection connection)
             {
                 SendPing.Invoke(connection, DateTime.Now);
             }
             internal static readonly NetCall<DateTime> SendPing = new NetCall<DateTime>(1023);
 
-            internal static readonly NetCall<ulong, bool> SetQueueSkip = new NetCall<ulong, bool>(1024);
+            internal static readonly NetCall<ulong, bool> SetQueueSkip = new NetCall<ulong, bool>(ReceiveSetQueueSkip);
             [NetCall(ENetCall.FROM_SERVER, 1024)]
-            internal static void ReceiveSetQueueSkip(in IConnection connection, ulong player, bool status)
+            internal static void ReceiveSetQueueSkip(IConnection connection, ulong player, bool status)
             {
                 if (PlayerManager.HasSaveRead(player, out PlayerSave save))
                 {
@@ -116,9 +122,9 @@ namespace Uncreated.Warfare.Networking
                 }
             }
 
-            internal static readonly NetCall<ushort, EAssetType> RequestAssetName = new NetCall<ushort, EAssetType>(1025);
+            internal static readonly NetCall<ushort, EAssetType> RequestAssetName = new NetCall<ushort, EAssetType>(ReceiveRequestAssetName);
             [NetCall(ENetCall.FROM_SERVER, 1025)]
-            internal static void ReceiveRequestAssetName(in IConnection connection, ushort id, EAssetType type)
+            internal static void ReceiveRequestAssetName(IConnection connection, ushort id, EAssetType type)
             {
                 switch (type)
                 {
@@ -162,9 +168,9 @@ namespace Uncreated.Warfare.Networking
 
 
 
-            internal static readonly NetCall RequestFullLog = new NetCall(1029);
+            internal static readonly NetCall RequestFullLog = new NetCall(ReceiveRequestFullLog);
             [NetCall(ENetCall.FROM_SERVER, 1029)]
-            internal static void ReceiveRequestFullLog(in IConnection connection)
+            internal static void ReceiveRequestFullLog(IConnection connection)
             {
                 SendFullLog.Invoke(connection, Data.Logs.ToArray(), 0);
                 L.Log(Data.Logs.Count.ToString());
@@ -173,9 +179,9 @@ namespace Uncreated.Warfare.Networking
                 new NetCallRaw<Log, byte>(1030, Log.Read, R => R.ReadUInt8(), Log.Write, (W, B) => W.Write(B));
             internal static readonly NetCallRaw<Log[], byte> SendFullLog =
                 new NetCallRaw<Log[], byte>(1031, Log.ReadMany, R => R.ReadUInt8(), Log.WriteMany, (W, B) => W.Write(B));
-            internal static readonly NetCall<string> SendCommand = new NetCall<string>(1032);
+            internal static readonly NetCall<string> SendCommand = new NetCall<string>(ReceiveCommand);
             [NetCall(ENetCall.FROM_SERVER, 1032)]
-            internal static void ReceiveCommand(in IConnection connection, string command)
+            internal static void ReceiveCommand(IConnection connection, string command)
             {
                 if (Thread.CurrentThread == ThreadUtil.gameThread)
                     RunCommand(command);
@@ -200,20 +206,37 @@ namespace Uncreated.Warfare.Networking
                 L.LogError($"Unable to match \"{command}\" with any built-in commands");
             }
 
+            internal static readonly NetCall<ulong> RequestPermissions = new NetCall<ulong>(ReceivePermissionRequest);
+            internal static readonly NetCall<EAdminType> SendPermissions = new NetCall<EAdminType>(1034);
+            [NetCall(ENetCall.FROM_SERVER, 1033)]
+            internal static void ReceivePermissionRequest(IConnection connection, ulong Steam64)
+            {
+                RocketPlayer player = new RocketPlayer(Steam64.ToString());
+                EAdminType perms = player.GetPermissions();
+                SendPermissions.Invoke(connection, perms);
+            }
+
+            internal static readonly NetCall<ulong> RequestPlayerIsOnline = new NetCall<ulong>(ReceivePlayerOnlineCheckRequest, 8);
+            internal static readonly NetCall<bool> SendPlayerIsOnline = new NetCall<bool>(1036, 1);
+            [NetCall(ENetCall.FROM_SERVER, 1035)]
+            internal static void ReceivePlayerOnlineCheckRequest(IConnection connection, ulong Steam64)
+            {
+                SendPlayerIsOnline.Invoke(connection, PlayerTool.getSteamPlayer(Steam64) != null);
+            }
         }
         /// <summary>1100 - 1199</summary>
         public static class Warfare
         {
-            internal static readonly NetCall<ulong, string> GiveKitAccess = new NetCall<ulong, string>(1100);
+            internal static readonly NetCall<ulong, string> GiveKitAccess = new NetCall<ulong, string>(ReceiveGiveKitAccess);
             [NetCall(ENetCall.FROM_SERVER, 1100)]
-            internal static void ReceiveGiveKitAccess(in IConnection connection, ulong player, string kit) => KitManager.GiveAccess(player, kit);
-            internal static readonly NetCall<ulong, string> RemoveKitAccess = new NetCall<ulong, string>(1101);
+            internal static void ReceiveGiveKitAccess(IConnection connection, ulong player, string kit) => KitManager.GiveAccess(player, kit);
+            internal static readonly NetCall<ulong, string> RemoveKitAccess = new NetCall<ulong, string>(ReceiveRemoveKitAccess);
             [NetCall(ENetCall.FROM_SERVER, 1101)]
-            internal static void ReceiveRemoveKitAccess(in IConnection connection, ulong player, string kit) => KitManager.RemoveAccess(player, kit);
+            internal static void ReceiveRemoveKitAccess(IConnection connection, ulong player, string kit) => KitManager.RemoveAccess(player, kit);
 
-            internal static readonly NetCall<ulong, int, EBranch> SetOfficerLevel = new NetCall<ulong, int, EBranch>(1102);
+            internal static readonly NetCall<ulong, int, EBranch> SetOfficerLevel = new NetCall<ulong, int, EBranch>(ReceiveSetOfficerLevel);
             [NetCall(ENetCall.FROM_SERVER, 1102)]
-            internal static void ReceiveSetOfficerLevel(in IConnection connection, ulong player, int level, EBranch branch)
+            internal static void ReceiveSetOfficerLevel(IConnection connection, ulong player, int level, EBranch branch)
             {
                 if (level == 0)
                 {
@@ -231,10 +254,10 @@ namespace Uncreated.Warfare.Networking
                     OfficerManager.ChangeOfficerRank(player, lvl, branch);
                 }
             }
-            internal static readonly NetCall<ulong> GiveAdmin = new NetCall<ulong>(1103);
+            internal static readonly NetCall<ulong> GiveAdmin = new NetCall<ulong>(ReceiveGiveAdmin);
 
             [NetCall(ENetCall.FROM_SERVER, 1103)]
-            internal static void ReceiveGiveAdmin(in IConnection connection, ulong player)
+            internal static void ReceiveGiveAdmin(IConnection connection, ulong player)
             {
                 RocketPlayer pl = new RocketPlayer(player.ToString());
                 List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
@@ -256,10 +279,10 @@ namespace Uncreated.Warfare.Networking
                 }
             }
 
-            internal static readonly NetCall<ulong> RevokeAdmin = new NetCall<ulong>(1104);
+            internal static readonly NetCall<ulong> RevokeAdmin = new NetCall<ulong>(ReceiveRevokeAdmin);
 
             [NetCall(ENetCall.FROM_SERVER, 1104)]
-            internal static void ReceiveRevokeAdmin(in IConnection connection, ulong player)
+            internal static void ReceiveRevokeAdmin(IConnection connection, ulong player)
             {
                 RocketPlayer pl = new RocketPlayer(player.ToString());
                 List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
@@ -272,9 +295,9 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, pl);
                 }
             }
-            internal static readonly NetCall<ulong> GiveIntern = new NetCall<ulong>(1105);
+            internal static readonly NetCall<ulong> GiveIntern = new NetCall<ulong>(ReceiveGiveIntern);
             [NetCall(ENetCall.FROM_SERVER, 1105)]
-            internal static void ReceiveGiveIntern(in IConnection connection, ulong player)
+            internal static void ReceiveGiveIntern(IConnection connection, ulong player)
             {
                 RocketPlayer pl = new RocketPlayer(player.ToString());
                 List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
@@ -295,9 +318,9 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, pl);
                 }
             }
-            internal static readonly NetCall<ulong> RevokeIntern = new NetCall<ulong>(1106);
+            internal static readonly NetCall<ulong> RevokeIntern = new NetCall<ulong>(ReceiveRevokeIntern);
             [NetCall(ENetCall.FROM_SERVER, 1106)]
-            internal static void ReceiveRevokeIntern(in IConnection connection, ulong player)
+            internal static void ReceiveRevokeIntern(IConnection connection, ulong player)
             {
                 RocketPlayer pl = new RocketPlayer(player.ToString());
                 List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
@@ -310,9 +333,9 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, pl);
                 }
             }
-            internal static readonly NetCall<ulong> GiveHelper = new NetCall<ulong>(1107);
+            internal static readonly NetCall<ulong> GiveHelper = new NetCall<ulong>(ReceiveGiveHelper);
             [NetCall(ENetCall.FROM_SERVER, 1107)]
-            internal static void ReceiveGiveHelper(in IConnection connection, ulong player)
+            internal static void ReceiveGiveHelper(IConnection connection, ulong player)
             {
                 RocketPlayer pl = new RocketPlayer(player.ToString());
                 List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
@@ -337,9 +360,9 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, pl);
                 }
             }
-            internal static readonly NetCall<ulong> RevokeHelper = new NetCall<ulong>(1108);
+            internal static readonly NetCall<ulong> RevokeHelper = new NetCall<ulong>(ReceiveRevokeHelper);
             [NetCall(ENetCall.FROM_SERVER, 1108)]
-            internal static void ReceiveRevokeHelper(in IConnection connection, ulong player)
+            internal static void ReceiveRevokeHelper(IConnection connection, ulong player)
             {
                 RocketPlayer pl = new RocketPlayer(player.ToString());
                 List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
@@ -348,14 +371,14 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
                 }
             }
-            internal static readonly NetCallRaw<Kit> CreateKit = new NetCallRaw<Kit>(1109, Kit.Read, Kit.Write);
+            internal static readonly NetCallRaw<Kit> CreateKit = new NetCallRaw<Kit>(ReceiveCreateKit, Kit.Read, Kit.Write);
             [NetCall(ENetCall.FROM_SERVER, 1109)]
-            internal static void ReceiveCreateKit(in IConnection connection, Kit kit) => KitManager.CreateKit(kit);
+            internal static void ReceiveCreateKit(IConnection connection, Kit kit) => KitManager.CreateKit(kit);
 
-            internal static readonly NetCall RequestRankInfo = new NetCall(1110);
+            internal static readonly NetCall RequestRankInfo = new NetCall(ReceiveRequestRankInfo);
 
             [NetCall(ENetCall.FROM_SERVER, 1110)]
-            internal static void ReceiveRequestRankInfo(in IConnection connection)
+            internal static void ReceiveRequestRankInfo(IConnection connection)
             {
                 SendRankInfo.Invoke(connection, XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks,
                     OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
@@ -370,9 +393,9 @@ namespace Uncreated.Warfare.Networking
 
             internal static readonly NetCall<ulong, ushort, string, DateTime> LogFriendlyVehicleKill = new NetCall<ulong, ushort, string, DateTime>(1112);
 
-            internal static readonly NetCall<string> RequestKitClass = new NetCall<string>(1113);
+            internal static readonly NetCall<string> RequestKitClass = new NetCall<string>(ReceiveRequestKitClass);
             [NetCall(ENetCall.FROM_SERVER, 1113)]
-            internal static void ReceiveRequestKitClass(in IConnection connection, string kitID)
+            internal static void ReceiveRequestKitClass(IConnection connection, string kitID)
             {
                 if (KitManager.KitExists(kitID, out Kit kit))
                 {
@@ -390,9 +413,9 @@ namespace Uncreated.Warfare.Networking
             internal static readonly NetCall<string, EClass, string> SendKitClass = new NetCall<string, EClass, string>(1114);
         }
 
-        internal static readonly NetCall<string> RequestKit = new NetCall<string>(1115);
+        internal static readonly NetCall<string> RequestKit = new NetCall<string>(ReceiveKitRequest);
         [NetCall(ENetCall.FROM_SERVER, 1115)]
-        internal static void ReceiveKitRequest(in IConnection connection, string kitID)
+        internal static void ReceiveKitRequest(IConnection connection, string kitID)
         {
             if (KitManager.KitExists(kitID, out Kit kit))
             {
@@ -403,9 +426,9 @@ namespace Uncreated.Warfare.Networking
                 ReceiveKit.Invoke(connection, null);
             }
         }
-        internal static readonly NetCallRaw<string[]> RequestKits = new NetCallRaw<string[]>(1116, F.ReadStringArray, F.WriteStringArray);
+        internal static readonly NetCallRaw<string[]> RequestKits = new NetCallRaw<string[]>(ReceiveKitsRequest, F.ReadStringArray, F.WriteStringArray);
         [NetCall(ENetCall.FROM_SERVER, 1116)]
-        internal static void ReceiveKitsRequest(in IConnection connection, string[] kitIDs)
+        internal static void ReceiveKitsRequest(IConnection connection, string[] kitIDs)
         {
             Kit[] kits = new Kit[kitIDs.Length];
             for (int i = 0; i < kitIDs.Length; i++)
@@ -424,9 +447,9 @@ namespace Uncreated.Warfare.Networking
         internal static readonly NetCallRaw<Kit> ReceiveKit = new NetCallRaw<Kit>(1117, Kit.Read, Kit.Write);
         internal static readonly NetCallRaw<Kit[]> ReceiveKits = new NetCallRaw<Kit[]>(1118, Kit.ReadMany, Kit.WriteMany);
 
-        internal static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(1119);
+        internal static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(ReceiveItemInfoRequest);
         [NetCall(ENetCall.FROM_SERVER, 1119)]
-        internal static void ReceiveItemInfoRequest(in IConnection connection, ushort item)
+        internal static void ReceiveItemInfoRequest(IConnection connection, ushort item)
         {
             if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset)
                 SendItemInfo.Invoke(connection, ItemData.FromAsset(asset));
@@ -435,9 +458,9 @@ namespace Uncreated.Warfare.Networking
         }
         internal static readonly NetCallRaw<ItemData> SendItemInfo = new NetCallRaw<ItemData>(1120, ItemData.Read, ItemData.Write);
 
-        internal static readonly NetCall<ushort[]> RequestItemInfos = new NetCall<ushort[]>(1121);
+        internal static readonly NetCall<ushort[]> RequestItemInfos = new NetCall<ushort[]>(ReceiveItemInfosRequest);
         [NetCall(ENetCall.FROM_SERVER, 1121)]
-        internal static void ReceiveItemInfosRequest(in IConnection connection, ushort[] items)
+        internal static void ReceiveItemInfosRequest(IConnection connection, ushort[] items)
         {
             ItemData[] rtn = new ItemData[items.Length];
             for (int i = 0; i < items.Length; i++)
@@ -449,10 +472,10 @@ namespace Uncreated.Warfare.Networking
         }
         internal static readonly NetCallRaw<ItemData[]> SendItemInfos = new NetCallRaw<ItemData[]>(1122, ItemData.ReadMany, ItemData.WriteMany);
 
-        internal static readonly NetCall RequestAllItemInfos = new NetCall(1123);
+        internal static readonly NetCall RequestAllItemInfos = new NetCall(ReceiveAllItemInfosRequest);
 
         [NetCall(ENetCall.FROM_SERVER, 1123)]
-        internal static void ReceiveAllItemInfosRequest(in IConnection connection)
+        internal static void ReceiveAllItemInfosRequest(IConnection connection)
         {
             Asset[] assets = Assets.find(EAssetType.ITEM);
             ItemData[] rtn = new ItemData[assets.Length];
@@ -470,49 +493,6 @@ namespace Uncreated.Warfare.Networking
                 }
             }
             SendItemInfos.Invoke(connection, rtn);
-        }
-
-
-        internal static readonly NetCall<ushort, byte[]> RequestIcon = new NetCall<ushort, byte[]>(2102);
-        internal static readonly NetCall<ushort, byte[], byte[]> SendIcon = new NetCall<ushort, byte[], byte[]>(2103);
-        [NetCall(ENetCall.FROM_SERVER, 2102)]
-        internal static void ReceiveIconRequest(ushort id, byte[] state)
-        {
-            if (!(Assets.find(EAssetType.ITEM, id) is ItemAsset asset)) return;
-            Item item = new Item(id, asset.amount, asset.qualityMax, state);
-            L.Log("starting");
-            DateTime dt = DateTime.Now;
-            ItemTool.getIcon(id, asset.qualityMax, state, (txt) => SendRenderedIcon(id, state, txt, dt));
-        }
-        private static void SendRenderedIcon(ushort id, byte[] state, Texture2D texture, DateTime start)
-        {
-            byte[] png;
-            try
-            {
-                png = texture.EncodeToPNG();
-                UnityEngine.Object.Destroy(texture);
-            }
-            catch (ArgumentException)
-            {
-                // Reading unreadable textures: https://fargesportfolio.com/unity-texture-texture2d-rendertexture/
-                RenderTexture rt = RenderTexture.GetTemporary(texture.width, texture.height);
-                Texture2D newText = new Texture2D(texture.width, texture.height, TextureFormat.ARGB32, false)
-                {
-                    name = texture.name
-                };
-                RenderTexture currentActiveRT = RenderTexture.active;
-                RenderTexture.active = rt;
-                Graphics.Blit(texture, rt);
-                newText.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
-                newText.Apply(false);
-                RenderTexture.active = currentActiveRT;
-                RenderTexture.ReleaseTemporary(rt);
-                UnityEngine.Object.Destroy(texture);
-                png = newText.EncodeToPNG();
-                UnityEngine.Object.Destroy(newText);
-            }
-            L.Log($"done rendering {png.Length} bytes in {(DateTime.Now - start).TotalMilliseconds}ms");
-            System.IO.File.WriteAllBytes(@"C:\Users\danny\OneDrive\Desktop\txt.png", png);
-        }
+        }       
     }
 }

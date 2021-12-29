@@ -16,7 +16,7 @@ namespace Uncreated.Warfare.Commands
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
             if (player == null) return;
-            F.SendURL(player.Player.channel.owner, "Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            player.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
         }
     }
 }

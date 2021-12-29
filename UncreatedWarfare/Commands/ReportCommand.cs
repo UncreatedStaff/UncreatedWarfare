@@ -154,7 +154,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success && success && res.Parameters[1] is string messageUrl)
                 {
-                    await UCWarfare.ToUpdate();
+                    //await UCWarfare.ToUpdate();
                     //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
                     L.Log(Translation.Translate("report_console_record", JSONMethods.DefaultLanguage, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl), ConsoleColor.Cyan);
                 }

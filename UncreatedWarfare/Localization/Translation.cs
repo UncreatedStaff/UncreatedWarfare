@@ -1068,7 +1068,7 @@ namespace Uncreated.Warfare
         public static string TranslateBranch(EBranch branch, ulong player)
         {
             string branchName = "team";
-            ulong team = F.GetTeamFromPlayerSteam64ID(player);
+            ulong team = player.GetTeamFromPlayerSteam64ID();
             if (team == 1)
                 branchName += "1_";
             else if (team == 2)
@@ -1229,7 +1229,7 @@ namespace Uncreated.Warfare
                 for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                    if ((type & F.GetPermissions(pl)) != type) continue;
+                    if ((type & pl.GetPermissions()) != type) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                         lang = JSONMethods.DefaultLanguage;
                     bool found = false;

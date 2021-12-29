@@ -221,7 +221,7 @@ namespace Uncreated.Warfare
                 ulong team = ucplayer.Player.quests.groupID.m_SteamID.GetTeam();
                 if (team != oldGroup.GetTeam())
                 {
-                    ucplayer.Player.teleportToLocation(F.GetBaseSpawn(ucplayer.Player), F.GetBaseAngle(team));
+                    ucplayer.Player.teleportToLocation(ucplayer.Player.GetBaseSpawn(), team.GetBaseAngle());
                 }
             }
             GroupManager.save();

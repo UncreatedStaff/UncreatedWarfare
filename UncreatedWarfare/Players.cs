@@ -104,12 +104,12 @@ namespace Uncreated.Players
         public static void QueueMessage(Player player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player, new ToastMessage(message, second_message, severity));
         public static void QueueMessage(Player player, ToastMessage message)
         {
-            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
+            if (player.TryGetPlaytimeComponent(out Warfare.Components.PlaytimeComponent c))
                 c.QueueMessage(message, false);
         }
         public static void SendMessage(Player player, ToastMessage message)
         {
-            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
+            if (player.TryGetPlaytimeComponent(out Warfare.Components.PlaytimeComponent c))
                 c.QueueMessage(message, true);
         }
         public static void QueueMessagePriority(UnturnedPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.Player, new ToastMessage(message, severity));
@@ -125,7 +125,7 @@ namespace Uncreated.Players
         public static void QueueMessagePriority(Player player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player, new ToastMessage(message, second_message, severity));
         public static void QueueMessagePriority(Player player, ToastMessage message)
         {
-            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
+            if (player.TryGetPlaytimeComponent(out Warfare.Components.PlaytimeComponent c))
                 c.QueueMessage(message, true);
         }
     }

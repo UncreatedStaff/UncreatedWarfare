@@ -85,11 +85,11 @@ namespace Uncreated.Warfare.Commands
                                             }
                                         }
                                         FPlayerName names = Data.DatabaseManager.GetUsernames(result);
-                                        string time = Translation.GetTimeFromMinutes(duration, 0);
+                                        string time = duration.GetTimeFromMinutes(0);
                                         L.Log(Translation.Translate(translate, 0, out _, names.PlayerName, result.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
                                         foreach (SteamPlayer player in Provider.clients)
                                         {
-                                            time = Translation.GetTimeFromMinutes(duration, player.playerID.steamID.m_SteamID);
+                                            time = duration.GetTimeFromMinutes(player.playerID.steamID.m_SteamID);
                                             player.SendChat("ban_broadcast_operator", names.PlayerName, time);
                                         }
                                     }
@@ -132,7 +132,7 @@ namespace Uncreated.Warfare.Commands
                                 {
                                     string reason = command.MakeRemainder(2);
                                     Provider.requestBanPlayer(Provider.server, steamplayer.playerID.steamID, ipv4AddressOrZero, reason, result * 60u);
-                                    string time = Translation.GetTimeFromMinutes(result, 0);
+                                    string time = result.GetTimeFromMinutes(0);
                                     string name = F.GetPlayerOriginalNames(steamplayer).PlayerName;
                                     if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                                     {
@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.Commands
                                     L.Log(Translation.Translate("ip_ban_console_operator", 0, out _, name, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale), reason, time), ConsoleColor.Cyan);
                                     foreach (SteamPlayer player in Provider.clients)
                                     {
-                                        time = Translation.GetTimeFromMinutes(result, player.playerID.steamID.m_SteamID);
+                                        time = result.GetTimeFromMinutes(player.playerID.steamID.m_SteamID);
                                         player.SendChat("ban_broadcast_operator", steamplayer.playerID.playerName, time);
                                     }
                                 }
@@ -200,7 +200,7 @@ namespace Uncreated.Warfare.Commands
                                             L.Log(Translation.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat(translate, names.CharacterName);
-                                            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast",
+                                            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
                                                 names.CharacterName, callerName.CharacterName);
                                         }
                                         else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint duration))
@@ -228,7 +228,7 @@ namespace Uncreated.Warfare.Commands
                                                 }
                                             }
                                             FPlayerName names = Data.DatabaseManager.GetUsernames(result);
-                                            string timeLocalized = Translation.GetTimeFromMinutes(duration, 0);
+                                            string timeLocalized = duration.GetTimeFromMinutes(0);
                                             L.Log(Translation.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                             player.SendChat(translate, names.CharacterName, timeLocalized);
@@ -236,7 +236,7 @@ namespace Uncreated.Warfare.Commands
                                             {
                                                 if (pl.playerID.steamID.m_SteamID != player.CSteamID.m_SteamID)
                                                 {
-                                                    timeLocalized = Translation.GetTimeFromMinutes(duration, pl.playerID.steamID.m_SteamID);
+                                                    timeLocalized = duration.GetTimeFromMinutes(pl.playerID.steamID.m_SteamID);
                                                     pl.SendChat("ban_broadcast", names.CharacterName, callerName.CharacterName, timeLocalized);
                                                 }
                                             }
@@ -279,7 +279,7 @@ namespace Uncreated.Warfare.Commands
                                     L.Log(Translation.Translate("ip_ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     player.SendChat("ip_ban_permanent_feedback", names.CharacterName, callerName.CharacterName);
-                                    Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "ban_permanent_broadcast",
+                                    new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
                                         names.CharacterName, callerName.CharacterName);
                                 }
                                 else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint result))
@@ -295,7 +295,7 @@ namespace Uncreated.Warfare.Commands
                                         Invocations.Shared.LogBanned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, result, DateTime.Now);
                                         Data.DatabaseManager.AddIPBan(steamplayer.playerID.steamID.m_SteamID, ipv4AddressOrZero, ip, steamplayer.playerID.hwid, (int)result, reason);
                                     }
-                                    string timeLocalized = Translation.GetTimeFromMinutes(result, 0);
+                                    string timeLocalized = result.GetTimeFromMinutes(0);
                                     L.Log(Translation.Translate("ip_ban_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason, timeLocalized), ConsoleColor.Cyan);
                                     player.SendChat("ip_ban_feedback", names.CharacterName, callerName.CharacterName, timeLocalized);
@@ -303,7 +303,7 @@ namespace Uncreated.Warfare.Commands
                                     {
                                         if (pl.playerID.steamID.m_SteamID != player.CSteamID.m_SteamID)
                                         {
-                                            timeLocalized = Translation.GetTimeFromMinutes(result, pl.playerID.steamID.m_SteamID);
+                                            timeLocalized = result.GetTimeFromMinutes(pl.playerID.steamID.m_SteamID);
                                             pl.SendChat("ban_broadcast", names.CharacterName, callerName.CharacterName, timeLocalized);
                                         }
                                     }
@@ -355,7 +355,7 @@ namespace Uncreated.Warfare.Commands
                     Admin.ToString(Data.Locale), Reason), ConsoleColor.Cyan);
                 if (admin != null)
                     admin.SendChat(translate, names.CharacterName);
-                Chat.BroadcastToAllExcept(new List<CSteamID> { adminc }, "ban_broadcast" + (Admin == 0 ? "_operator" : string.Empty),
+                new List<CSteamID> { adminc }.BroadcastToAllExcept("ban_broadcast" + (Admin == 0 ? "_operator" : string.Empty),
                     names.CharacterName, callerName.CharacterName);
             }
             else
@@ -369,7 +369,7 @@ namespace Uncreated.Warfare.Commands
                     string ipstr = Parser.getIPFromUInt32(ip);
                     Data.DatabaseManager.AddIPBan(Violator, ip, ipstr, violator.playerID.hwid, (int)DurationMins, Reason);
                 }
-                string timeLocalized = Translation.GetTimeFromMinutes(DurationMins, 0);
+                string timeLocalized = DurationMins.GetTimeFromMinutes(0);
                 L.Log(Translation.Translate("ip_ban_console" + (Admin == 0 ? "_operator" : string.Empty), 0, out _, names.PlayerName, Violator.ToString(Data.Locale),
                     callerName.PlayerName, Admin.ToString(Data.Locale), Reason, timeLocalized), ConsoleColor.Cyan);
                 if (admin != null)
@@ -378,7 +378,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (pl.playerID.steamID.m_SteamID != Admin)
                     {
-                        timeLocalized = Translation.GetTimeFromMinutes(DurationMins, pl.playerID.steamID.m_SteamID);
+                        timeLocalized = DurationMins.GetTimeFromMinutes(pl.playerID.steamID.m_SteamID);
                         pl.SendChat("ban_broadcast" + (Admin == 0 ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName, timeLocalized);
                     }
                 }

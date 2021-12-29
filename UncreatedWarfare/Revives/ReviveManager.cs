@@ -522,7 +522,7 @@ namespace Uncreated.Warfare.Revives
 #pragma warning restore IDE0051
             private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
             {
-                if (F.TryGetPlaytimeComponent(killerid, out Components.PlaytimeComponent c) && c.stats != null && c.stats is IPVPModeStats pvp)
+                if (killerid.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats != null && c.stats is IPVPModeStats pvp)
                 {
                     pvp.AddDamage(damage);
                 }

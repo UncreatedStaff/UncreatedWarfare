@@ -204,7 +204,7 @@ namespace Uncreated.Warfare.FOBs
             
             if (fob.Owner != 0 && Data.Is(out IGameStats ws) && ws.GameStats is IFobsTracker ft)
             {
-                if (F.TryGetPlaytimeComponent(fob.Owner, out PlaytimeComponent c) && c.stats is IFOBStats f)
+                if (fob.Owner.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IFOBStats f)
                     f.AddFOBPlaced();
                 if (fob.Team == 1)
                 {
@@ -341,7 +341,7 @@ namespace Uncreated.Warfare.FOBs
             if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == EState.ACTIVE && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
             // doesnt count destroying fobs after game ends
             {
-                if (F.TryGetPlaytimeComponent(killer.Player, out PlaytimeComponent c) && c.stats is IFOBStats f)
+                if (killer.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IFOBStats f)
                     f.AddFOBDestroyed();
                 if (team == 1)
                 {

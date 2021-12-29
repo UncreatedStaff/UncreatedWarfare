@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Networking;
@@ -425,9 +426,8 @@ namespace Uncreated.Warfare.ReportSystem
             public List<KeyValuePair<int, KeyValuePair<string, DateTime>>> chatLogs = new List<KeyValuePair<int, KeyValuePair<string, DateTime>>>(256);
             public List<Teamkill> teamkills = new List<Teamkill>();
             public List<VehicleTeamkill> vehicleTeamkills = new List<VehicleTeamkill>();
-#if USE_VOICE
-            public List<byte[]> voiceHistory = new List<byte[]>(0);
-#endif
+            //public List<byte[]> voiceHistory = new List<byte[]>(0);
+            
             public void InsertChat(string message)
             {
                 if (message.Length < 1 || message[0] == '/') return;
@@ -443,6 +443,26 @@ namespace Uncreated.Warfare.ReportSystem
                 chatLogs.Insert(0, new KeyValuePair<int, KeyValuePair<string, DateTime>>(1, new KeyValuePair<string, DateTime>(message, DateTime.Now)));
                 
             }
+
+            /*
+            [StructLayout(LayoutKind.Sequential)]
+            private struct WAV_HEADER
+            {
+                public short wFormatTag;
+                public short nChannels;
+                public int nSamplesPerSec;
+                public int nAvgBytesPerSec;
+                public short nBlockAlign;
+                public short wBitsPerSample;
+                public short cbSize;
+                public WAV_HEADER(byte[] data)
+                {
+                    this.wFormatTag = 0x0001; // WAVE_FORMAT_PCM
+                    this.nChannels = 1;
+                    this.nSamplesPerSec = 44100;
+                }
+            }*/
+
             public PlayerData(ulong steam64) => Steam64 = steam64;
             public Report CustomReport(string message, ulong reporter) =>
                 new Report()
@@ -472,12 +492,10 @@ namespace Uncreated.Warfare.ReportSystem
                     Time = DateTime.Now,
                     Violator = Steam64
                 };
-#if USE_VOICE
             public byte[] ConvertVoiceLogs()
             {
                 return new byte[0];
             }
-#endif
             public VoiceChatAbuseReport VoiceChatAbuseReport(string message, ulong reporter) =>
                 new VoiceChatAbuseReport()
                 {
@@ -500,7 +518,8 @@ namespace Uncreated.Warfare.ReportSystem
                     vehicles[i] = new Report.VehicleTime()
                     {
                         VehicleName = Assets.find<VehicleAsset>(kvp.Key)?.vehicleName ?? kvp.Key.ToString("N"),
-                        Time = kvp.Value.Count * 5f
+                        Time = kvp.Value.Count * 5f,
+                        Timestamp = (Time.realtimeSinceStartup - kvp.Value.LastOrDefault() >= 10) ? DateTime.MaxValue : DateTime.MinValue
                     };
                     i++;
                 }

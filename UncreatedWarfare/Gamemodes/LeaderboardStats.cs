@@ -137,13 +137,13 @@ namespace Uncreated.Warfare.Gamemodes
             {
                 s = BasePlayerStats.New<IndividualStats>(player);
                 stats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
-                if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c))
+                if (player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                     c.stats = s;
             }
             else
             {
                 s.Player = player;
-                if (F.TryGetPlaytimeComponent(player, out PlaytimeComponent c))
+                if (player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                     c.stats = s;
             }
             L.LogDebug(player.name + " added to playerstats, " + stats.Count + " trackers");

@@ -52,9 +52,9 @@ namespace Uncreated.Warfare.Commands
                                     Data.DatabaseManager.AddWarning(player.playerID.steamID.m_SteamID, 0, reason);
                                     Invocations.Shared.LogWarned.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                 }
-                                Chat.SendChat(player.playerID.steamID, "warn_warned_private_operator", reason);
+                                player.playerID.steamID.SendChat("warn_warned_private_operator", reason);
                                 ToastMessage.QueueMessage(player, Translation.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING);
-                                Chat.BroadcastToAllExcept(new List<CSteamID> { player.playerID.steamID }, "warn_warned_broadcast_operator", name.CharacterName);
+                                new List<CSteamID> { player.playerID.steamID }.BroadcastToAllExcept("warn_warned_broadcast_operator", name.CharacterName);
                             }
                         }
                     }
@@ -64,19 +64,19 @@ namespace Uncreated.Warfare.Commands
             {
                 UnturnedPlayer player = caller as UnturnedPlayer;
                 if (!Provider.isServer)
-                    Chat.SendChat(player, "server_not_running");
+                    player.SendChat("server_not_running");
                 else
                 {
                     if (command.Length < 1)
-                        Chat.SendChat(player, "warn_syntax");
+                        player.SendChat("warn_syntax");
                     else
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
-                            Chat.SendChat(player, "warn_no_player_found", command[0]);
+                            player.SendChat("warn_no_player_found", command[0]);
                         else
                         {
                             if (command.Length == 1)
-                                Chat.SendChat(player, "warn_no_reason_provided");
+                                player.SendChat("warn_no_reason_provided");
                             else if (command.Length > 1)
                             {
                                 string reason = command.MakeRemainder(1);
@@ -91,13 +91,12 @@ namespace Uncreated.Warfare.Commands
                                     Data.DatabaseManager.AddWarning(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
                                     Invocations.Shared.LogWarned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 }
-                                Chat.SendChat(player, "warn_warned_feedback", name.CharacterName);
+                                player.SendChat("warn_warned_feedback", name.CharacterName);
                                 ToastMessage.QueueMessage(steamplayer,
                                     Translation.Translate("warn_warned_private", player, out _, callerName.CharacterName, reason),
                                     EToastMessageSeverity.WARNING);
-                                Chat.SendChat(steamplayer.playerID.steamID, "warn_warned_private", callerName.CharacterName, reason);
-                                Chat.BroadcastToAllExcept(new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID },
-                                    "warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
+                                steamplayer.playerID.steamID.SendChat("warn_warned_private", callerName.CharacterName, reason);
+                                new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID }.BroadcastToAllExcept("warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
                             }
                         }
                     }
@@ -130,13 +129,12 @@ namespace Uncreated.Warfare.Commands
                     Invocations.Shared.LogWarned.NetInvoke(Violator, Admin, Reason, DateTime.Now);
                 }
                 if (admin != null)
-                    Chat.SendChat(admin, "warn_warned_feedback", names.CharacterName);
+                    admin.SendChat("warn_warned_feedback", names.CharacterName);
                 ToastMessage.QueueMessage(violator,
                     Translation.Translate("warn_warned_private" + (admin == null ? "_operator" : string.Empty), Admin, out _, callerName.CharacterName, Reason),
                     EToastMessageSeverity.WARNING);
-                Chat.SendChat(violator, "warn_warned_private" + (admin == null ? "_operator" : string.Empty), callerName.CharacterName, Reason);
-                Chat.BroadcastToAllExcept(new List<CSteamID> { violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID },
-                    "warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);
+                violator.SendChat("warn_warned_private" + (admin == null ? "_operator" : string.Empty), callerName.CharacterName, Reason);
+                new List<CSteamID> { violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID }.BroadcastToAllExcept("warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);
             }
         }
     }

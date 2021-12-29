@@ -43,7 +43,7 @@ namespace Uncreated.Warfare
         {
             UCPlayer player = UCPlayer.FromPlayer(P);
 
-            if (F.OnDuty(player))
+            if (player.OnDuty())
             {
                 return;
             }
@@ -166,7 +166,7 @@ namespace Uncreated.Warfare
             try
             {
                 UCPlayer player = UCPlayer.FromID(owner);
-                if (player == null || player.Player == null || F.OnDuty(player)) return;
+                if (player == null || player.Player == null || player.OnDuty()) return;
                 if (TeamManager.IsInAnyMain(point))
                 {
                     shouldAllow = false;
@@ -223,7 +223,7 @@ namespace Uncreated.Warfare
             try
             {
                 UCPlayer player = UCPlayer.FromID(owner);
-                if (player == null || player.Player == null || F.OnDuty(player)) return;
+                if (player == null || player.Player == null || player.OnDuty()) return;
                 if (player == null || TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
                 {
                     shouldAllow = false;

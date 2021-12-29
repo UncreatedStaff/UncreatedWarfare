@@ -34,7 +34,7 @@ namespace Uncreated.Warfare.Commands
 
             if (command.Length == 1)
             {
-                PlaytimeComponent c = F.GetPlaytimeComponent(player.Player, out _);
+                PlaytimeComponent c = player.Player.GetPlaytimeComponent(out _);
 
                 ulong team = player.GetTeam();
                 bool IsInMain = player.Player.IsInMain();

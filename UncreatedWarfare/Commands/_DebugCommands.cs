@@ -24,6 +24,7 @@ using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.ReportSystem;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -198,7 +199,7 @@ namespace Uncreated.Warfare.Commands
             ulong team;
             if (command.Length > 1 && ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong id))
                 team = id;
-            else if (player != null) team = F.GetTeam(player);
+            else if (player != null) team = player.GetTeam();
             else team = 0;
             if (team != 1 && team != 2)
             {
@@ -718,7 +719,7 @@ namespace Uncreated.Warfare.Commands
                     $"Tickets: 1: {Tickets.TicketManager.Team1Tickets}, 2: {Tickets.TicketManager.Team2Tickets}\n" +
                     $"Starting Tickets: 1: {Tickets.TicketManager._Team1previousTickets}, 2: {Tickets.TicketManager._Team2previousTickets}\n" +
                     $"{fg.Rotation.Count} Flags: {flags}Players:\n" +
-                    $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (F.TryGetPlaytimeComponent(x.player, out PlaytimeComponent c) ? Translation.GetTimeFromSeconds((uint)Mathf.RoundToInt(c.CurrentTimeSeconds), 0) : "unknown pt")))}"// ends with \n
+                    $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (x.player.TryGetPlaytimeComponent(out PlaytimeComponent c) ? ((uint)Mathf.RoundToInt(c.CurrentTimeSeconds)).GetTimeFromSeconds(0) : "unknown pt")))}"// ends with \n
                     );
             }
         }
@@ -944,27 +945,6 @@ namespace Uncreated.Warfare.Commands
             else if (player == null) L.Log("Staging phase is disabled.");
             else player.SendChat("Staging phase is disabled.");
         }
-        private void render(string[] command, Player player)
-        {
-            if (player != null && player.equipment != null)
-            {
-                ItemJar equipped = player.inventory.getItem(player.equipment.equippedPage, 
-                    player.inventory.getIndex(player.equipment.equippedPage, player.equipment.equipped_x, 
-                    player.equipment.equipped_y));
-                if (equipped != null)
-                {
-                    Networking.Invocations.ReceiveIconRequest(equipped.item.id, equipped.item.state);
-                }
-                else
-                {
-                    L.Log("not equipped");
-                }
-            }
-            else
-            {
-                L.Log("something null");
-            }
-        }
         private void resetlobby(string[] command, Player player)
         {
             if (Data.Is(out ITeams t) && t.UseJoinUI)
@@ -1188,6 +1168,26 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
             player.SendChat("Found no structure or barricade.");
+        }
+
+        private void fakereport(string[] command, Player player)
+        {
+            Report report = new ChatAbuseReport()
+            {
+                Message = string.Join(" ", command),
+                Reporter = 76561198267927009,
+                Time = DateTime.Now,
+                Violator = 76561198267927009,
+                ChatRecords = new string[]
+                {
+                    "%SPEAKER%: chat 1",
+                    "%SPEAKER%: chat 2",
+                    "%SPEAKER%: chat 3",
+                    "[2x] %SPEAKER%: chat 4",
+                }
+            };
+            Reporter.SendReportInvocation.NetInvoke(report, false);
+            L.Log("Sent chat abuse report.");
         }
     }
 #pragma warning restore IDE0051

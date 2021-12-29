@@ -81,7 +81,7 @@ namespace Uncreated.Warfare.XP
             if (rank.level > oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, Translation.Translate("promoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
-                Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                new List<CSteamID>() { ucplayer.CSteamID }.BroadcastToAllExcept("xp_announce_promoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
                 for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.XP
             else if (rank.level < oldRank?.level)
             {
                 ToastMessage.QueueMessage(player, Translation.Translate("demoted_xp", player), rank.TranslateName(player.channel.owner.playerID.steamID.m_SteamID).ToUpper(), EToastMessageSeverity.BIG);
-                Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
+                new List<CSteamID>() { ucplayer.CSteamID }.BroadcastToAllExcept("xp_announce_demoted", F.GetPlayerOriginalNames(ucplayer).CharacterName, rank.TranslateName(ucplayer.Steam64));
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.channel.owner);
                 for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)

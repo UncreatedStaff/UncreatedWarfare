@@ -4,19 +4,16 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.XP;
@@ -48,52 +45,46 @@ namespace Uncreated.Warfare
 
             XPManager.OnGroupChanged(player, oldGroup, newGroup);
             OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
-            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
+            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, newGroup.GetTeamByte());
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
         internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
         internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
         {
             if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
-            if (KitManager.HasKit(inv.player, out Kit kit))
-            {
-                bool inkit = kit.Items.Exists(k => k.ID == item.id);
-                if (inkit)
-                {
-                    if (!itemstemp.ContainsKey(item))
-                        itemstemp.Add(item, inv);
-                    else itemstemp[item] = inv;
-                }
-            }
+            if (!KitManager.HasKit(inv.player, out Kit kit)) return;
+            bool inkit = kit.Items.Exists(k => k.ID == item.id);
+            if (!inkit) return;
+            if (!itemstemp.ContainsKey(item))
+                itemstemp.Add(item, inv);
+            else itemstemp[item] = inv;
         }
         internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
         {
             if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
-            if (itemstemp.TryGetValue(item, out PlayerInventory inv))
+            if (!itemstemp.TryGetValue(item, out PlayerInventory inv)) return;
+            uint nextindex;
+            try
             {
-                uint nextindex;
-                try
-                {
-                    nextindex = (uint)Data.ItemManagerInstanceCount.GetValue(null);
-                }
-                catch
-                {
-                    L.LogError("Unable to get ItemManager.instanceCount.");
-                    itemstemp.Remove(item);
-                    return;
-                }
-                nextindex++;
-                if (droppeditems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
-                {
-                    if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
-                    else instanceids.Add(nextindex);
-                }
-                else
-                {
-                    droppeditems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint>() { nextindex });
-                }
-                itemstemp.Remove(item);
+                nextindex = (uint)Data.ItemManagerInstanceCount.GetValue(null);
             }
+            catch
+            {
+                L.LogError("Unable to get ItemManager.instanceCount.");
+                itemstemp.Remove(item);
+                return;
+            }
+            nextindex++;
+            if (droppeditems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
+            {
+                if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
+                else instanceids.Add(nextindex);
+            }
+            else
+            {
+                droppeditems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint>() { nextindex });
+            }
+            itemstemp.Remove(item);
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
         {
@@ -149,7 +140,7 @@ namespace Uncreated.Warfare
             try
             {
                 ThrowableOwner t = throwable.AddComponent<ThrowableOwner>();
-                PlaytimeComponent c = F.GetPlaytimeComponent(useable.player, out bool success);
+                PlaytimeComponent c = useable.player.GetPlaytimeComponent(out bool success);
                 t.Set(useable, throwable, c);
                 L.LogDebug(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
                     useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
@@ -165,14 +156,14 @@ namespace Uncreated.Warfare
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
             Patches.DeathsPatches.lastProjected = projectile;
-            if (F.TryGetPlaytimeComponent(gun.player, out PlaytimeComponent c))
+            if (gun.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
             {
                 c.lastProjected = gun.equippedGunAsset.GUID;
             }
         }
         internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)
         {
-            PlaytimeComponent c = F.GetPlaytimeComponent(gun.player, out bool success);
+            PlaytimeComponent c = gun.player.GetPlaytimeComponent(out bool success);
             if (success)
             {
                 c.lastShot = gun.equippedGunAsset.GUID;
@@ -277,7 +268,7 @@ namespace Uncreated.Warfare
                     c.item = Guid.Empty;
                     if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c2))
+                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                         {
                             ThrowableOwner a = c2.thrown.FirstOrDefault(x =>
                                 Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
@@ -287,14 +278,14 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c2))
+                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                         {
                             c.item = c2.lastProjected;
                         }
                     }
                     else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
                     {
-                        if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c2))
+                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                         {
                             c.item = c2.lastExplodedVehicle;
                         }
@@ -389,7 +380,7 @@ namespace Uncreated.Warfare
                     Duty = ucplayer.OnDuty(),
                     Name = names.CharacterName,
                     Steam64 = ucplayer.Steam64,
-                    Team = F.GetTeamByte(player)
+                    Team = player.GetTeamByte()
                 });
             }
             catch (Exception ex)
@@ -470,7 +461,7 @@ namespace Uncreated.Warfare
                     if (team == 0 || pl == null || pl.GetTeam() != team) return;
                     if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.lastProjected;
                         }
@@ -482,7 +473,7 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Useable_Gun)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.lastProjected;
                         }
@@ -494,7 +485,7 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.thrown.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.ThrowableID)?.isExplosive ?? false)?.ThrowableID ?? Guid.Empty;
                         }
@@ -506,7 +497,7 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Trap_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.LastLandmineTriggered.barricadeGUID;
                         }
@@ -561,7 +552,7 @@ namespace Uncreated.Warfare
                     if (team == 0 || pl == null || pl.GetTeam() != team) return;
                     if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.lastProjected;
                         }
@@ -573,7 +564,7 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Useable_Gun)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.lastProjected;
                         }
@@ -585,7 +576,7 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.thrown.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.ThrowableID)?.isExplosive ?? false)?.ThrowableID ?? Guid.Empty;
                         }
@@ -597,7 +588,7 @@ namespace Uncreated.Warfare
                     }
                     else if (damageOrigin == EDamageOrigin.Trap_Explosion)
                     {
-                        if (F.TryGetPlaytimeComponent(pl.player, out PlaytimeComponent c))
+                        if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
                             weapon = c.LastLandmineTriggered.barricadeGUID;
                         }
@@ -877,7 +868,7 @@ namespace Uncreated.Warfare
                     else if (player.IsIntern())
                         Commands.DutyCommand.InternOnToOff(player, names);
                 }
-                PlaytimeComponent c = F.GetPlaytimeComponent(player.CSteamID, out bool gotptcomp);
+                PlaytimeComponent c = player.CSteamID.GetPlaytimeComponent(out bool gotptcomp);
                 Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
                 Chat.Broadcast("player_disconnected", names.CharacterName);
@@ -927,7 +918,7 @@ namespace Uncreated.Warfare
                     if (duration != 0)
                     {
                         isValid = false;
-                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + Translation.GetTimeFromMinutes((uint)duration, 0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
+                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + ((uint)duration).GetTimeFromMinutes(0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
                         return;
                     }
                 }

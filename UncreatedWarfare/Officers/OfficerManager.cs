@@ -84,11 +84,11 @@ namespace Uncreated.Warfare.Officers
 
             if (stars > oldStars && !(Data.Gamemode is IEndScreen l && l.isScreenUp))
             {
-                string startString = F.Colorize(Translation.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper(), UCWarfare.GetColorHex("star_color"));
+                string startString = Translation.Translate("officer_ui_stars", player, stars.ToString(), stars.S()).ToUpper().Colorize(UCWarfare.GetColorHex("star_color"));
 
                 ToastMessage.QueueMessage(player, Translation.Translate("gain_star", player), startString, EToastMessageSeverity.BIG);
 
-                Chat.BroadcastToAllExcept(new List<CSteamID>() { ucplayer.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
+                new List<CSteamID>() { ucplayer.CSteamID }.BroadcastToAllExcept("ofp_announce_gained", F.GetPlayerOriginalNames(ucplayer).CharacterName, startString);
             }
 
             if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)

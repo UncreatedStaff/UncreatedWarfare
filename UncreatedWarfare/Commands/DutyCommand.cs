@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.Commands
             player.Player.look.sendFreecamAllowed(true);
             player.Player.look.sendWorkzoneAllowed(true);
             player.SendChat("duty_on_feedback");
-            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
+            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("duty_on_broadcast", names.CharacterName);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
@@ -56,7 +56,7 @@ namespace Uncreated.Warfare.Commands
             L.Log(Translation.Translate("duty_admin_off_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
-            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_off_broadcast", names.CharacterName);
+            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("duty_off_broadcast", names.CharacterName);
             if (player == null)
                 return;
             if (player.Features != null && player.Features.gameObject != null)
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Commands
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             player.SendChat("duty_on_feedback");
-            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_on_broadcast", names.CharacterName);
+            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("duty_on_broadcast", names.CharacterName);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.Commands
             L.Log(Translation.Translate("duty_intern_off_console", 0, out _, names.PlayerName, names.Steam64.ToString(Data.Locale)), ConsoleColor.Cyan);
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
-            Chat.BroadcastToAllExcept(new List<CSteamID> { player.CSteamID }, "duty_off_broadcast", names.CharacterName);
+            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("duty_off_broadcast", names.CharacterName);
             if (player == null)
                 return;
             if (player.Features != null && player.Features.gameObject != null)

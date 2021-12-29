@@ -287,7 +287,7 @@ namespace Uncreated.Warfare.Commands
             }
             else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
             {
-                ucplayer.Message("request_vehicle_e_cooldown", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
+                ucplayer.Message("request_vehicle_e_cooldown", unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
             else
@@ -314,12 +314,12 @@ namespace Uncreated.Warfare.Commands
 
             if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)
             {
-                ucplayer.Message("request_vehicle_e_staging", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
+                ucplayer.Message("request_vehicle_e_staging", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
             if (delay < data.Delay )
             {
-                ucplayer.Message("request_vehicle_e_delay", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
+                ucplayer.Message("request_vehicle_e_delay", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
             int xp = XPManager.GetXP(ucplayer.Player, true);

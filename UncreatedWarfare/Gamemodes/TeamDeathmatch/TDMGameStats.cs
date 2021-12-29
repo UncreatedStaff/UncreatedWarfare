@@ -39,13 +39,13 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             {
                 s = new TDMPlayerStats(player);
                 playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
-                if (F.TryGetPlaytimeComponent(player, out Components.PlaytimeComponent c))
+                if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
                     c.stats = s;
             }
             else
             {
                 s.player = player;
-                if (F.TryGetPlaytimeComponent(player, out Components.PlaytimeComponent c))
+                if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
                     c.stats = s;
             }
             L.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");

@@ -87,7 +87,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     r.ReviveManager.RevivePlayer(player.Player);
 
                 if (!player.Player.life.isDead)
-                    player.Player.teleportToLocationUnsafe(F.GetBaseSpawnFromTeam(team), F.GetBaseAngle(team));
+                    player.Player.teleportToLocationUnsafe(team.GetBaseSpawnFromTeam(), team.GetBaseAngle());
                 else
                     player.Player.life.ReceiveRespawnRequest(false);
 

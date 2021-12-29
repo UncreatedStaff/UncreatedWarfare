@@ -76,7 +76,7 @@ namespace Uncreated.Warfare.Tickets
                 if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
                 {
                     insurgency.AddIntelligencePoints(1);
-                    if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c) && c.stats is InsurgencyPlayerStats s)
+                    if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is InsurgencyPlayerStats s)
                         s._intelligencePointsCollected++;
                     insurgency.GameStats.intelligenceGathered++;
                 }
@@ -193,7 +193,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 UCPlayer player = players[i];
 
-                if (F.TryGetPlaytimeComponent(player.CSteamID, out PlaytimeComponent component) && component.stats is IExperienceStats exp)
+                if (player.CSteamID.TryGetPlaytimeComponent(out PlaytimeComponent component) && component.stats is IExperienceStats exp)
                 {
                     if (exp.XPGained > 0)
                         XPManager.AddXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));

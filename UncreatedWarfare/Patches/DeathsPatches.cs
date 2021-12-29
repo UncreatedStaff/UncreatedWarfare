@@ -110,7 +110,7 @@ namespace Uncreated.Warfare
                             // triggerer
                             Player player = DamageTool.getPlayer(other.transform) ?? other.GetComponent<Player>();
 
-                            if (owner != null && player != null && player.quests.groupID.m_SteamID == F.GetTeamFromPlayerSteam64ID(owner.Owner))
+                            if (owner != null && player != null && player.quests.groupID.m_SteamID == owner.Owner.GetTeamFromPlayerSteam64ID())
                             {
                                 return false;
                             }
@@ -172,7 +172,7 @@ namespace Uncreated.Warfare
                                 SteamPlayer throwableOwner = PlayerTool.getSteamPlayer(c.ownerID);
                                 if (throwableOwner != null)
                                 {
-                                    if (owner != null && throwableOwner.player.quests.groupID.m_SteamID == F.GetTeamFromPlayerSteam64ID(owner.Owner))
+                                    if (owner != null && throwableOwner.player.quests.groupID.m_SteamID == owner.Owner.GetTeamFromPlayerSteam64ID())
                                     {
                                         return false;
                                     }
@@ -290,7 +290,7 @@ namespace Uncreated.Warfare
                 __instance.GetComponent<Rigidbody>().AddForce(force);
                 __instance.GetComponent<Rigidbody>().AddTorque(16f, 0.0f, 0.0f);
                 __instance.dropTrunkItems();
-                if (F.TryGetPlaytimeComponent(instigator, out PlaytimeComponent c))
+                if (instigator.TryGetPlaytimeComponent(out PlaytimeComponent c))
                 {
                     c.lastExplodedVehicle = __instance.asset.GUID;
                 }
@@ -392,7 +392,7 @@ namespace Uncreated.Warfare
                             Player hit = DamageTool.getPlayer(other.transform);
                             Player driver = ___vehicle.passengers[0].player.player;
                             if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
-                            if (F.TryGetPlaytimeComponent(driver, out PlaytimeComponent c))
+                            if (driver.TryGetPlaytimeComponent(out PlaytimeComponent c))
                             {
                                 c.lastRoadkilled = ___vehicle.asset.GUID;
                             }
