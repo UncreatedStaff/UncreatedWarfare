@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 CTFUI.ClearFlagList(player.transportConnection);
                 SendUIParameters.Nil.SendToPlayer(player); // clear all capturing uis
-                if (F.TryGetPlaytimeComponent(player.player, out Components.PlaytimeComponent c))
+                if (player.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
                     c.stats = null;
             }
             base.Dispose();

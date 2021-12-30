@@ -32,7 +32,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             else 
                 SpawnBlockerOnT2();
 
-            SpawnBlockers();
             Flag firstFlag = null;
             if (DefendingTeam == 1)
                 firstFlag = Rotation.Last();
@@ -294,7 +293,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                     {
-                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam1[i], out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                        if (flag.PlayersOnFlagTeam1[i].TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
                             fg.AddCapture();
                     }
                 }
@@ -314,7 +313,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                     for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                     {
-                        if (F.TryGetPlaytimeComponent(flag.PlayersOnFlagTeam2[i], out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                        if (flag.PlayersOnFlagTeam2[i].TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
                             fg.AddCapture();
                     }
                 }
@@ -455,7 +454,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             {
                 CTFUI.ClearFlagList(player.transportConnection);
                 SendUIParameters.Nil.SendToPlayer(player); // clear all capturing uis
-                if (F.TryGetPlaytimeComponent(player.player, out Components.PlaytimeComponent c))
+                if (player.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
                     c.stats = null;
             }
             base.Dispose();

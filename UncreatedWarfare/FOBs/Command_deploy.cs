@@ -13,8 +13,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "deploy";
         public string Help => "deploys you to a nearby FOB";
         public string Syntax => "/deploy";
-        public List<string> Aliases => new List<string>() { "dep" };
-        public List<string> Permissions => new List<string>() { "uc.deploy" };
+        public List<string> Aliases => new List<string>(1) { "dep" };
+        public List<string> Permissions => new List<string>(1) { "uc.deploy" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
@@ -33,7 +33,7 @@ namespace Uncreated.Warfare.Commands
 
             if (command.Length == 1)
             {
-                PlaytimeComponent c = F.GetPlaytimeComponent(player.Player, out _);
+                PlaytimeComponent c = player.Player.GetPlaytimeComponent(out _);
 
                 ulong team = player.GetTeam();
                 bool IsInMain = player.Player.IsInMain();

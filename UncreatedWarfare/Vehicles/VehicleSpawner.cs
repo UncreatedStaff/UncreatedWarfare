@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
-            if (HasLinkedSpawn(vehicle.instanceID, out var spawn) && spawn.IsActive)
+            if (HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn) && spawn.IsActive)
             {
                 spawn.StartVehicleRespawnTimer();
             }
@@ -636,7 +636,7 @@ namespace Uncreated.Warfare.Vehicles
         private Coroutine timer;
         private Coroutine xploop;
         private InteractableVehicle Owner;
-        private VehicleSpawn spawn;
+        public VehicleSpawn spawn;
         private VehicleData data;
         public bool hasBeenRequested = false;
         public bool isIdle = false;

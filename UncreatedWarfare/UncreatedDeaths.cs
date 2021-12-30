@@ -28,7 +28,6 @@ namespace Uncreated.Warfare
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
         private void Teamkill(KillEventArgs parameters)
         {
-            //L.Log("[TEAMKILL] " + parameters.ToString(), ConsoleColor.DarkRed);
             L.Log(Translation.Translate("teamkilled_console_log", 0,
                 F.GetPlayerOriginalNames(parameters.killer).PlayerName,
                 parameters.killer.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
@@ -41,7 +40,7 @@ namespace Uncreated.Warfare
                 Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => s.Teamkills++, false);
                 StatsManager.ModifyTeam(team, t => t.Teamkills++, false);
-                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c) && c.stats is ITeamPVPModeStats tpvp)
+                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is ITeamPVPModeStats tpvp)
                     tpvp.AddTeamkill();
                 if (Configuration.Instance.AdminLoggerSettings.LogTKs)
                 {
@@ -53,6 +52,7 @@ namespace Uncreated.Warfare
                 Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
+                Data.Reporter.OnTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.item, parameters.dead.channel.owner.playerID.steamID.m_SteamID, parameters.cause);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)
@@ -121,7 +121,7 @@ namespace Uncreated.Warfare
             {
                 TicketManager.OnEnemyKilled(parameters);
                 Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
-                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c))
+                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c))
                 {
                     if (c.stats is IPVPModeStats kd)
                         kd.AddKill();
@@ -154,7 +154,7 @@ namespace Uncreated.Warfare
                                 (d.Cache.Structure.model.transform.position - parameters.killer.transform.position).sqrMagnitude <=
                                 Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
                             {
-                                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
+                                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
                             }
                         }
                     }
@@ -167,7 +167,7 @@ namespace Uncreated.Warfare
                                 (d.Cache.Structure.model.transform.position - parameters.dead.transform.position).sqrMagnitude <=
                                 Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
                             {
-                                if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
+                                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
                             }
                         }
                     }
@@ -311,7 +311,7 @@ namespace Uncreated.Warfare
                 TicketManager.OnPlayerSuicide(parameters);
                 Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
-                if (F.TryGetPlaytimeComponent(parameters.dead, out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
+                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
                     kd.AddDeath();
                 if (KitManager.HasKit(parameters.dead, out Kit kit))
                 {
@@ -425,7 +425,7 @@ namespace Uncreated.Warfare
                     }
                 }
                 TicketManager.OnPlayerDeath(parameters);
-                if (F.TryGetPlaytimeComponent(parameters.dead, out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
+                if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
                     kd.AddDeath();
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
@@ -472,7 +472,7 @@ namespace Uncreated.Warfare
                 FPlayerName triggererName;
                 bool foundPlacer;
                 bool foundTriggerer;
-                ulong deadTeam = F.GetTeam(dead);
+                ulong deadTeam = dead.GetTeam();
                 ulong placerTeam;
                 ulong triggererTeam;
                 Guid landmineID;
@@ -496,9 +496,9 @@ namespace Uncreated.Warfare
                 else
                 {
                     placerName = F.GetPlayerOriginalNames(placer);
-                    placerTeam = F.GetTeam(placer);
+                    placerTeam = placer.GetTeam();
                     foundPlacer = true;
-                    if (F.TryGetPlaytimeComponent(placer.player, out PlaytimeComponent c))
+                    if (placer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                     {
                         if (c.LastLandmineExploded.Equals(default(LandmineData)) || c.LastLandmineExploded.owner == null)
                         {
@@ -532,7 +532,7 @@ namespace Uncreated.Warfare
                         if (pt != null)
                         {
                             triggerer = pt.player;
-                            triggererTeam = F.GetTeam(triggerer);
+                            triggererTeam = triggerer.GetTeam();
                             triggererName = F.GetPlayerOriginalNames(triggerer);
                             foundTriggerer = true;
                         }
@@ -930,7 +930,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     killerName = F.GetPlayerOriginalNames(killer);
-                    killerTeam = F.GetTeam(killer);
+                    killerTeam = killer.GetTeam();
                     foundKiller = true;
                     try
                     {
@@ -1014,7 +1014,7 @@ namespace Uncreated.Warfare
                     }
                     else
                     {
-                        if (killerTeam != F.GetTeam(dead))
+                        if (killerTeam != dead.GetTeam())
                         {
                             KillEventArgs a = new KillEventArgs()
                             {

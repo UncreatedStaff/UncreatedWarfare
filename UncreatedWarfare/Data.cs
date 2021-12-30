@@ -14,6 +14,10 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using UnityEngine;
 
@@ -110,6 +114,7 @@ namespace Uncreated.Warfare
         internal static FieldInfo PrivateStance;
         internal static FieldInfo ItemManagerInstanceCount;
         internal static ConsoleInputOutputBase defaultIOHandler;
+        public static Reporter Reporter;
         internal static Client NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         public static void LoadColoredConsole()
@@ -213,7 +218,9 @@ namespace Uncreated.Warfare
                 L.LogError("Failed to Initialize Gamemode");
             }
             ReloadTCP();
-            
+
+            Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
+
             /* REFLECT PRIVATE VARIABLES */
             L.Log("Getting client calls...", ConsoleColor.Magenta);
             FieldInfo updateSignInfo;

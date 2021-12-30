@@ -108,7 +108,7 @@ namespace Uncreated.Warfare
                             // triggerer
                             Player player = DamageTool.getPlayer(other.transform) ?? other.GetComponent<Player>();
 
-                            if (owner != null && player != null && player.quests.groupID.m_SteamID == F.GetTeamFromPlayerSteam64ID(owner.Owner))
+                            if (owner != null && player != null && player.quests.groupID.m_SteamID == owner.Owner.GetTeamFromPlayerSteam64ID())
                             {
                                 return false;
                             }
@@ -118,7 +118,7 @@ namespace Uncreated.Warfare
                                 c.LastLandmineTriggered = new LandmineData(__instance, owner);
                             }
 
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, CSteamID.Nil)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -170,7 +170,7 @@ namespace Uncreated.Warfare
                                 SteamPlayer throwableOwner = PlayerTool.getSteamPlayer(c.ownerID);
                                 if (throwableOwner != null)
                                 {
-                                    if (owner != null && throwableOwner.player.quests.groupID.m_SteamID == F.GetTeamFromPlayerSteam64ID(owner.Owner))
+                                    if (owner != null && throwableOwner.player.quests.groupID.m_SteamID == owner.Owner.GetTeamFromPlayerSteam64ID())
                                     {
                                         return false;
                                     }
@@ -180,7 +180,7 @@ namespace Uncreated.Warfare
                                     }
                                 }
                             }
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, CSteamID.Nil)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -261,61 +261,6 @@ namespace Uncreated.Warfare
                 }
             }
 
-            // SDG.Unturned.VehicleManager
-            [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.damage))]
-            [HarmonyPrefix]
-            static bool DamageVehicle(InteractableVehicle vehicle, float damage, float times, bool canRepair, CSteamID instigatorSteamID, EDamageOrigin damageOrigin)
-            {
-                if (!UCWarfare.Config.Patches.damageVehicleTool) return true;
-                if (vehicle == null || vehicle.asset == null || vehicle.isDead) return false;
-                if (!vehicle.asset.isVulnerable && !vehicle.asset.isVulnerableToExplosions && !vehicle.asset.isVulnerableToEnvironment)
-                {
-                    UnturnedLog.error("Somehow tried to damage completely invulnerable vehicle: " + vehicle + " " + damage + " " + times + " " + canRepair.ToString());
-                    return false;
-                }
-                float newtimes = times * Provider.modeConfigData.Vehicles.Armor_Multiplier;
-                if (Mathf.RoundToInt(damage * newtimes) >= vehicle.health)
-                {
-                    if (instigatorSteamID != default && instigatorSteamID != CSteamID.Nil)
-                    {
-                        VehicleComponent vc = vehicle.gameObject.GetComponent<VehicleComponent>() ?? vehicle.gameObject.AddComponent<VehicleComponent>();
-                        vc.owner = instigatorSteamID;
-                        if (damageOrigin == EDamageOrigin.Grenade_Explosion)
-                        {
-                            if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
-                            {
-                                ThrowableOwner a = c.thrown.FirstOrDefault(x =>
-                                    Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
-                                if (a != null)
-                                    vc.item = a.ThrowableID;
-                            }
-                        }
-                        else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
-                        {
-                            if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
-                            {
-                                vc.item = c.lastProjected;
-                            }
-                        }
-                        else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
-                        {
-                            if (F.TryGetPlaytimeComponent(instigatorSteamID, out PlaytimeComponent c))
-                            {
-                                vc.item = c.lastExplodedVehicle;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (vehicle.gameObject.TryGetComponent(out VehicleComponent vc))
-                        {
-                            UnityEngine.Object.Destroy(vc);
-                        }
-                    }
-                }
-                return true;
-            }
-
             // SDG.Unturned.InteractableVehicle
             /// <summary>
             /// Call event before vehicle explode
@@ -343,7 +288,7 @@ namespace Uncreated.Warfare
                 __instance.GetComponent<Rigidbody>().AddForce(force);
                 __instance.GetComponent<Rigidbody>().AddTorque(16f, 0.0f, 0.0f);
                 __instance.dropTrunkItems();
-                if (F.TryGetPlaytimeComponent(instigator, out PlaytimeComponent c))
+                if (instigator.TryGetPlaytimeComponent(out PlaytimeComponent c))
                 {
                     c.lastExplodedVehicle = __instance.asset.GUID;
                 }
@@ -445,7 +390,7 @@ namespace Uncreated.Warfare
                             Player hit = DamageTool.getPlayer(other.transform);
                             Player driver = ___vehicle.passengers[0].player.player;
                             if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
-                            if (F.TryGetPlaytimeComponent(driver, out PlaytimeComponent c))
+                            if (driver.TryGetPlaytimeComponent(out PlaytimeComponent c))
                             {
                                 c.lastRoadkilled = ___vehicle.asset.GUID;
                             }

@@ -16,8 +16,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "structure";
         public string Help => "Managed saved structures.";
         public string Syntax => "/structure";
-        public List<string> Aliases => new List<string>() { "struct" };
-        public List<string> Permissions => new List<string>() { "uc.structure" };
+        public List<string> Aliases => new List<string>(1) { "struct" };
+        public List<string> Permissions => new List<string>(1) { "uc.structure" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;
@@ -389,7 +389,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (Data.Gamemode is TeamGamemode)
                 {
-                    ulong team = F.GetTeamFromPlayerSteam64ID(vehicle.lockedOwner.m_SteamID);
+                    ulong team = vehicle.lockedOwner.m_SteamID.GetTeamFromPlayerSteam64ID();
                     string teamname = TeamManager.TranslateName(team, player);
                     if (sendurl)
                     {
@@ -449,8 +449,8 @@ namespace Uncreated.Warfare.Commands
                     else
                     {
                         player.SendChat("structure_last_owner_chat", data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName,
-                            data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)),
-                            teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
+                            data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(data.owner.GetTeamFromPlayerSteam64ID()),
+                            teamname, TeamManager.GetTeamHexColor(data.@group.GetTeam()));
                     }
                 }
                 else
@@ -495,8 +495,8 @@ namespace Uncreated.Warfare.Commands
                     else
                     {
                         player.SendChat("structure_last_owner_chat", data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName,
-                            data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(F.GetTeamFromPlayerSteam64ID(data.owner)),
-                            teamname, TeamManager.GetTeamHexColor(F.GetTeam(data.group)));
+                            data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(data.owner.GetTeamFromPlayerSteam64ID()),
+                            teamname, TeamManager.GetTeamHexColor(data.@group.GetTeam()));
                     }
                 }
                 else

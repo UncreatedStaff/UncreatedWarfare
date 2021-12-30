@@ -69,7 +69,7 @@ namespace Uncreated.Warfare.Squads
                                         {
                                             if (Data.Is(out FlagGamemode flags))
                                             {
-                                                var flag = flags.Rotation.Find(f => f.ZoneData.IsInside(new Vector2(marker.x, marker.z)));
+                                                Gamemodes.Flags.Flag flag = flags.Rotation.Find(f => f.ZoneData.IsInside(new Vector2(marker.x, marker.z)));
                                                 bool useFlag = false;
 
                                                 if (flag != null && player.Player.quests.isMarkerPlaced)

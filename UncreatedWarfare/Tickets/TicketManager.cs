@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.Tickets
                 if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
                 {
                     insurgency.AddIntelligencePoints(1);
-                    if (F.TryGetPlaytimeComponent(parameters.killer, out PlaytimeComponent c) && c.stats is InsurgencyPlayerStats s)
+                    if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is InsurgencyPlayerStats s)
                         s._intelligencePointsCollected++;
                     insurgency.GameStats.intelligenceGathered++;
                 }
@@ -170,6 +170,10 @@ namespace Uncreated.Warfare.Tickets
                             Points.AwardTW(player.Player, -amount, Translation.Translate(message, player.Steam64));
                             Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
+                        if (vehicle.TryGetComponent(out SpawnedVehicleComponent comp))
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, comp.spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                        else
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
                     }
                 }
             }
@@ -186,7 +190,7 @@ namespace Uncreated.Warfare.Tickets
             {
                 UCPlayer player = players[i];
 
-                if (F.TryGetPlaytimeComponent(player.CSteamID, out PlaytimeComponent component) && component.stats is IExperienceStats exp)
+                if (player.CSteamID.TryGetPlaytimeComponent(out PlaytimeComponent component) && component.stats is IExperienceStats exp)
                 {
                     if (exp.XPGained > 0)
                         Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));

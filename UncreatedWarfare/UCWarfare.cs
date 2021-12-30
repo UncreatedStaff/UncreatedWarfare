@@ -45,7 +45,6 @@ namespace Uncreated.Warfare
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
         private bool InitialLoadEventSubscription;
-        public Queue<System.Action> RunOnMainThread = new Queue<System.Action>();
         protected override void Load()
         {
             Instance = this;
@@ -182,6 +181,7 @@ namespace Uncreated.Warfare
             StructureManager.onDamageStructureRequested += EventFunctions.OnStructureDamaged;
             BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
             VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
+            VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
             ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
             UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
@@ -219,6 +219,7 @@ namespace Uncreated.Warfare
             BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
             StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
             VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
+            VehicleManager.onDamageVehicleRequested -= EventFunctions.OnPreVehicleDamage;
             ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
             UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
@@ -230,6 +231,15 @@ namespace Uncreated.Warfare
                 Level.onLevelLoaded -= OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
             }
+        }
+        internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
+        public static MainThreadTask ToUpdate() => new MainThreadTask();
+        public static PoolTask ToPool() => new PoolTask();
+        public static bool IsMainThread => System.Threading.Thread.CurrentThread.IsGameThread();
+        public static void RunOnMainThread(System.Action action)
+        {
+            MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask());
+            res.OnCompleted(action);
         }
         private void OnPluginsLoaded()
         {
@@ -298,16 +308,22 @@ namespace Uncreated.Warfare
         }
         private void Update()
         {
-            while (RunOnMainThread.Count > 0)
+            while (ThreadActionRequests.Count > 0)
             {
+                MainThreadTask.MainThreadResult res = null;
                 try
                 {
-                    RunOnMainThread.Dequeue().Invoke();
+                    res = ThreadActionRequests.Dequeue();
+                    res.continuation();
                 }
                 catch (Exception ex)
                 {
-                    L.LogError("Error running on main thread:");
+                    L.LogError("ERROR DEQUEING AND RUNNING MAIN THREAD OPERATION");
                     L.LogError(ex);
+                }
+                finally
+                {
+                    res?.Complete();
                 }
             }
         }

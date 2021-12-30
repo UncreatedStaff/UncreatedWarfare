@@ -14,8 +14,8 @@ namespace Uncreated.Warfare.Kits
         public string Name => "kit";
         public string Help => "creates, renames or deletes a kit";
         public string Syntax => "/kit";
-        public List<string> Aliases => new List<string>() { "kit" };
-        public List<string> Permissions => new List<string>() { "uc.kit" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.kit" };
         static void Reply(UCPlayer player, string key, params string[] formatting)
         {
             if (player == null)
@@ -29,19 +29,17 @@ namespace Uncreated.Warfare.Kits
         }
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UnturnedPlayer player;
             UCPlayer ucplayer;
-            if (caller.DisplayName == "Console")
+            if (!(caller is UnturnedPlayer player))
             {
                 player = null;
                 ucplayer = null;
             }
             else
             {
-                player = caller as UnturnedPlayer;
                 ucplayer = UCPlayer.FromIRocketPlayer(caller);
             }
-            if (!Data.Is(out IKitRequests ctf))
+            if (!Data.Is<IKitRequests>(out _))
             {
                 if (ucplayer == null)
                     L.LogWarning(Translation.Translate("command_e_gamemode", 0));
@@ -111,7 +109,7 @@ namespace Uncreated.Warfare.Kits
                 }
             }
 
-            if (command.Length != 1 && !player.OnDuty())
+            if (player != null && !player.OnDuty())
             {
                 Reply(ucplayer, "kits_notonduty");
                 return;
@@ -164,7 +162,7 @@ namespace Uncreated.Warfare.Kits
                         L.Log("This command can not be called from console.", ConsoleColor.Red);
                         return;
                     }
-                    if (!KitManager.KitExists(kitName, out var kit)) // create kit
+                    if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
                     {
                         KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
@@ -319,39 +317,22 @@ namespace Uncreated.Warfare.Kits
                 // give player access to kit
                 if (op == "giveaccess" || op == "givea")
                 {
-                    if (!KitManager.KitExists(kitName, out var kit))
+                    if (!KitManager.KitExists(kitName, out Kit kit))
                     {
                         Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
-
-                    UCPlayer target = UCPlayer.FromName(targetPlayer);
+                    UCPlayer target;
+                    if (targetPlayer.Length != 17 || !ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64))
+                        target = UCPlayer.FromName(targetPlayer);
+                    else 
+                        target = UCPlayer.FromID(steam64);
 
                     // error - no player found
                     if (target == null)
                     {
-                        if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steamid))
-                        {
-                            target = UCPlayer.FromID(steamid);
-                            if (target == null)
-                            {
-                                if (KitManager.HasAccess(steamid, kit.Name))
-                                {
-                                    Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
-                                    return;
-                                }
-                                //success
-                                FPlayerName names = Data.DatabaseManager.GetUsernames(steamid);
-                                Reply(ucplayer, "kit_accessgiven", names.CharacterName, kitName);
-                                KitManager.GiveAccess(steamid, kit.Name);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            Reply(ucplayer, "kit_e_noplayer", targetPlayer);
-                            return;
-                        }
+                        Reply(ucplayer, "kit_e_noplayer", targetPlayer);
+                        return;
                     }
                     // error - player already has access
                     if (KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))

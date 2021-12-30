@@ -12,8 +12,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "whitelist";
         public string Help => "Whitelists items";
         public string Syntax => "/whitelist";
-        public List<string> Aliases => new List<string>() { "wh" };
-        public List<string> Permissions => new List<string>() { "uc.whitelist" };
+        public List<string> Aliases => new List<string>(1) { "wl" };
+        public List<string> Permissions => new List<string>(1) { "uc.whitelist" };
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;

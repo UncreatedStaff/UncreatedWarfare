@@ -12,6 +12,8 @@ namespace Uncreated.Warfare.Components
         public CSteamID owner;
         public Guid item;
         public bool isVehicle = false;
+        public EDamageOrigin lastDamageOrigin;
+        public ulong lastDamager = 0;
         private Dictionary<ulong, Vector3> TransportTable = new Dictionary<ulong, Vector3>();
 
         public void OnPlayerEnteredVehicle(Player nelsonplayer, InteractableVehicle vehicle)

@@ -1,4 +1,7 @@
-﻿using Rocket.Unturned.Player;
+﻿using Rocket.API;
+using Rocket.API.Serialisation;
+using Rocket.Core;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -1063,7 +1066,7 @@ namespace Uncreated.Warfare
         public static string TranslateBranch(EBranch branch, ulong player)
         {
             string branchName = "team";
-            ulong team = F.GetTeamFromPlayerSteam64ID(player);
+            ulong team = player.GetTeamFromPlayerSteam64ID();
             if (team == 1)
                 branchName += "1_";
             else if (team == 2)
@@ -1176,6 +1179,70 @@ namespace Uncreated.Warfare
                         languages.Add(new LanguageSet(lang, pl));
                 }
                 players.Dispose();
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<Player> players)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                while (players.MoveNext())
+                {
+                    UCPlayer pl = UCPlayer.FromPlayer(players.Current);
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                players.Dispose();
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type = EAdminType.MODERATE_PERMS)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if ((type & pl.GetPermissions()) != type) continue;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
                 for (int i = 0; i < languages.Count; i++)
                 {
                     yield return languages[i];

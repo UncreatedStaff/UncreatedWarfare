@@ -35,6 +35,18 @@ namespace Uncreated.Warfare
             string tname = Steam64.ToString(Data.Locale);
             return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
         }
+        public bool GetDiscordID(ulong Steam64, out ulong DiscordID)
+        {
+            ulong tid = 0;
+            bool found = false;
+            Query("SELECT `DiscordID` FROM `discordnames` WHERE `Steam64` = @0 LIMIT 1;", new object[1] { Steam64 }, R =>
+            {
+                tid = R.GetUInt64(0);
+                found = true;
+            });
+            DiscordID = tid;
+            return found;
+        }
         public bool PlayerExistsInDatabase(ulong Steam64, out FPlayerName usernames)
         {
             FPlayerName? name = null;
@@ -218,6 +230,21 @@ namespace Uncreated.Warfare
                     return oldBalance - amount;
                 }
             }
+        }
+        public void AddReport(Report report)
+        {
+            Uncreated.Networking.Encoding.ByteWriter bw = new Uncreated.Networking.Encoding.ByteWriter(false, report.Size);
+            bw.Write(Report.WriteReport, report);
+            byte[] blob = bw.ToArray();
+            NonQuery("INSERT INTO `reports` (`Reporter`, `Violator`, `ReportType`, `Data`, `Timestamp`, `Message`) VALUES (@0, @1, @2, @3, @4, @5);", new object[]
+            {
+                report.Reporter,
+                report.Violator,
+                report.Type,
+                blob,
+                string.Format(TIME_FORMAT_SQL, report.Time),
+                report.Message
+            });
         }
         /// <returns>New Officer Points Value</returns>
         public int AddXP(ulong Steam64, EBranch branch, int amount)

@@ -21,8 +21,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "request";
         public string Help => "Request a kit by looking at a sign or request a vehicle by looking at the vehicle, then do /request.";
         public string Syntax => "/request";
-        public List<string> Aliases => new List<string>() { };
-        public List<string> Permissions => new List<string>() { "uc.request" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.request" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
             // dont allow requesting between game end and leaderboard
@@ -283,7 +283,7 @@ namespace Uncreated.Warfare.Commands
             }
             else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
             {
-                ucplayer.Message("request_vehicle_e_cooldown", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)), ucplayer.Steam64));
+                ucplayer.Message("request_vehicle_e_cooldown", unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
             else
@@ -310,12 +310,12 @@ namespace Uncreated.Warfare.Commands
 
             if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)
             {
-                ucplayer.Message("request_vehicle_e_staging", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
+                ucplayer.Message("request_vehicle_e_staging", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
             if (delay < data.Delay )
             {
-                ucplayer.Message("request_vehicle_e_delay", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
+                ucplayer.Message("request_vehicle_e_delay", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
             if (ucplayer.Rank.Level < data.RequiredLevel)
@@ -341,10 +341,11 @@ namespace Uncreated.Warfare.Commands
                         c.isIdle = false;
                     }
                     spawn.UpdateSign();
+                    Data.Reporter.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.SpawnPadInstanceID);
                 }
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
-
+                
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 

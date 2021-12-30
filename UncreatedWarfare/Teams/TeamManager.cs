@@ -214,7 +214,7 @@ namespace Uncreated.Warfare.Teams
         }
         public static string GetUnarmedFromS64ID(ulong playerSteam64)
         {
-            ulong team = F.GetTeamFromPlayerSteam64ID(playerSteam64);
+            ulong team = playerSteam64.GetTeamFromPlayerSteam64ID();
             if (team == 1) return Team1UnarmedKit;
             else if (team == 2) return Team2UnarmedKit;
             else return DefaultKit;
@@ -276,14 +276,14 @@ namespace Uncreated.Warfare.Teams
             else if (team == 3) return AdminID;
             else return 0;
         }
-        public static ulong GetTeam(UnturnedPlayer player) => F.GetTeam(player);
-        public static ulong GetTeam(SteamPlayer player) => F.GetTeam(player);
-        public static ulong GetTeam(Player player) => F.GetTeam(player);
+        public static ulong GetTeam(UnturnedPlayer player) => player.GetTeam();
+        public static ulong GetTeam(SteamPlayer player) => player.GetTeam();
+        public static ulong GetTeam(Player player) => player.GetTeam();
         public static bool HasTeam(UnturnedPlayer player) => HasTeam(player.Player);
         public static bool HasTeam(SteamPlayer player) => HasTeam(player.player);
         public static bool HasTeam(Player player)
         {
-            ulong t = F.GetTeam(player);
+            ulong t = player.GetTeam();
             return t == 1 || t == 2;
         }
         public static bool HasTeam(ulong groupID) => groupID == Team1ID || groupID == Team2ID;

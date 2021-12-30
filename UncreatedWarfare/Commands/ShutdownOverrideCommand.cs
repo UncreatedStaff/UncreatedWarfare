@@ -15,8 +15,8 @@ namespace Uncreated.Warfare.Commands
         public string Name => "shutdown";
         public string Help => "does something";
         public string Syntax => "/shutdown <aftergame|cancel|*seconds*|instant> <reason (except cancel)>";
-        public List<string> Aliases => new List<string>() { };
-        public List<string> Permissions => new List<string>() { "uc.shutdown" };
+        public List<string> Aliases => new List<string>(0);
+        public List<string> Permissions => new List<string>(1) { "uc.shutdown" };
         public static Coroutine Messager = null;
         public void Execute(IRocketPlayer caller, string[] command)
         {
@@ -82,10 +82,10 @@ namespace Uncreated.Warfare.Commands
                     string time;
                     foreach (SteamPlayer player in Provider.clients)
                     {
-                        time = Translation.GetTimeFromSeconds(seconds, player.playerID.steamID.m_SteamID);
+                        time = seconds.GetTimeFromSeconds(player.playerID.steamID.m_SteamID);
                         player.SendChat("shutdown_broadcast_after_time", time, reason);
                     }
-                    time = Translation.GetTimeFromSeconds(seconds, 0);
+                    time = seconds.GetTimeFromSeconds(0);
                     L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
                     Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);
@@ -159,10 +159,10 @@ namespace Uncreated.Warfare.Commands
                     string time;
                     foreach (SteamPlayer pl in Provider.clients)
                     {
-                        time = Translation.GetTimeFromSeconds(seconds, pl.playerID.steamID.m_SteamID);
+                        time = seconds.GetTimeFromSeconds(pl.playerID.steamID.m_SteamID);
                         pl.SendChat("shutdown_broadcast_after_time", time, reason);
                     }
-                    time = Translation.GetTimeFromSeconds(seconds, 0);
+                    time = seconds.GetTimeFromSeconds(0);
                     L.Log(Translation.Translate("shutdown_broadcast_after_time_console_player", 0, out _, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
                     Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);

@@ -158,15 +158,13 @@ namespace Uncreated.Warfare
                 else if (mode != EChatMode.GLOBAL || mode != EChatMode.LOCAL || mode != EChatMode.GROUP) return false;
                 if (fromUnityEvent)
                     L.Log($"UnityEventMsg {callingPlayer.playerID.steamID}: \"{text}\"", ConsoleColor.DarkCyan);
-                Color chatted = Color.white;
                 ulong team = callingPlayer.GetTeam();
-                chatted = Teams.TeamManager.GetTeamColor(team);
+                Color chatted = Teams.TeamManager.GetTeamColor(team);
                 if (callingPlayer.isAdmin && !Provider.hideAdmins)
                     chatted = Palette.ADMIN;
                 bool isRich = false;
                 bool isVisible = true;
-                if (ChatManager.onChatted != null)
-                    ChatManager.onChatted(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
+                ChatManager.onChatted?.Invoke(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
                 if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) && isVisible))
                     return false;
                 if (ChatManager.onServerFormattingMessage != null)
@@ -217,6 +215,7 @@ namespace Uncreated.Warfare
                             ChatManager.serverSendMessage(text, chatted, callingPlayer, client, EChatMode.GROUP, useRichTextFormatting: isRich);
                     }
                 }
+                Data.Reporter.OnPlayerChat(callingPlayer.playerID.steamID.m_SteamID, text);
                 return false;
             }
             // SDG.Unturned.PlayerAnimator
