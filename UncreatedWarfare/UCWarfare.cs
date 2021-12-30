@@ -5,7 +5,6 @@ using Rocket.Unturned;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Uncreated.Networking;
 using Uncreated.SQL;
@@ -16,12 +15,9 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -296,9 +292,9 @@ namespace Uncreated.Warfare
             if (Data.Is<IFOBs>(out _))
                 FOBManager.SendFOBList(ucplayer);
             if (Data.Gamemode.ShowXPUI)
-                XP.XPManager.UpdateUI(player.player, XP.XPManager.GetXP(player.player, false), out _);
+                Points.UpdateXPUI(ucplayer);
             if (Data.Gamemode.ShowOFPUI)
-                Officers.OfficerManager.UpdateUI(player.player, Officers.OfficerManager.GetOfficerPoints(player.player, false), out _);
+                Points.UpdateTWUI(ucplayer);
         }
         private void Update()
         {

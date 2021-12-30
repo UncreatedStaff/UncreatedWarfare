@@ -1,6 +1,5 @@
 ﻿using Rocket.API;
 using System.Collections.Generic;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 

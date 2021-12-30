@@ -7,10 +7,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UncreatedWarfare", "Uncreat
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8062F4B6-CF10-4BFC-AAE1-F633B0AD45CE}"
 EndProject
-Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\..\..\SteamCMD\unturned\Unturned.exe", "{2E799678-C219-45F2-940A-04662559D6DB}"
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\SteamCMD\unturned\Unturned.exe", "{2E799678-C219-45F2-940A-04662559D6DB}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
-		Executable = C:\SteamCMD\unturned\Unturned.exe
+		Executable = 
 		RemoteMachine = DANIEL-DESKTOP
 		StartingDirectory = C:\SteamCMD\unturned
 		Arguments = -batchmode -nographics +insecureserver/UncreatedRewrite

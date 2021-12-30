@@ -4,8 +4,6 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using UnityEngine;
@@ -415,7 +413,7 @@ namespace Uncreated.Warfare
                                                 (new Vector2(players.Current.player.transform.position.x, players.Current.player.transform.position.z) - dest2d).sqrMagnitude <
                                                 UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance)
                                             {
-                                                ToastMessage.QueueMessage(players.Current, Translation.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING);
+                                                ToastMessage.QueueMessage(players.Current, new ToastMessage(Translation.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING));
                                                 warned.Add(players.Current.playerID.steamID.m_SteamID);
                                             }
                                         }

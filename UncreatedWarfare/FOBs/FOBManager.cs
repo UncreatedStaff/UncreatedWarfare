@@ -7,6 +7,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 
@@ -162,9 +163,8 @@ namespace Uncreated.Warfare.FOBs
 
                 SendFOBListToTeam(data.group);
             }
-            else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
+            else if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID))
             {
-                //DeleteFOB(drop);
                 if (drop.model.TryGetComponent(out FOBComponent fob))
                 {
                     L.LogDebug("Starting fob bleed");
@@ -356,11 +356,11 @@ namespace Uncreated.Warfare.FOBs
             {
                 if (killer.GetTeam() == team)
                 {
-                    XP.XPManager.AddXP(killer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
+                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
                 }
                 else
                 {
-                    XP.XPManager.AddXP(killer.Player, XP.XPManager.config.Data.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
+                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
                     Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                     Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                 }
@@ -428,11 +428,11 @@ namespace Uncreated.Warfare.FOBs
             {
                 if (killer.GetTeam() == team)
                 {
-                    XP.XPManager.AddXP(killer.Player, XP.XPManager.config.Data.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
+                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
                 }
                 else
                 {
-                    XP.XPManager.AddXP(killer.Player, XP.XPManager.config.Data.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
+                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
                     Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                     Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
                 }

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -234,7 +234,8 @@ namespace Uncreated.Warfare.Squads
 
             ShowUIForPlayer(player);
 
-            OfficerManager.AddOfficerPoints(squad.Leader.Player, OfficerManager.config.Data.SpawnOnRallyPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
+            // TODO: fix and make only happen once for each player
+            Points.AwardTW(squad.Leader.Player, Points.TWConfig.RallyUsedPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
         }
     }
 

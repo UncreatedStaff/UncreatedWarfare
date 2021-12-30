@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {

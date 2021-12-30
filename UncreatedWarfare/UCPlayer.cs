@@ -8,15 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Networking.Encoding;
-using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -35,28 +31,51 @@ namespace Uncreated.Warfare
         public CSteamID CSteamID { get; internal set; }
         public string CharacterName;
         public string NickName;
-        public Rank OfficerRank;
         public ITransportConnection connection { get { return Player?.channel.owner.transportConnection; } }
         public Coroutine StorageCoroutine;
         /// <summary>[Unreliable]</summary>
-        public Rank XPRank()
+        private RankData _rank;
+        private MedalData _medals;
+        public RankData Rank
         {
-            if (CachedXp == -1)
-                RedownloadCachedXP();
-            if (_rank == null || isXpDirty)
+            get
             {
-                _rank = XPManager.GetRank(CachedXp, out _, out _);
-                isXpDirty = _rank == null;
+                if (CachedXP == -1)
+                    RedownloadCachedXP();
+                if (_rank == null || isXPDirty)
+                {
+                    _rank = new RankData(Steam64, CachedXP, Branch);
+                    isXPDirty = false;
+                }
+                return _rank;
             }
-            return _rank;
         }
+        public MedalData Medals
+        {
+            get
+            {
+                if (CachedTW == -1)
+                    RedownloadCachedTW();
+                if (_medals == null || isTWDirty)
+                {
+                    _medals = new MedalData(CachedTW);
+                    isTWDirty = false;
+                }
+                return _medals;
+            }
+        }
+        public bool IsOfficer { get => _rank?.OfficerLevel > 0; }
+        public void UpdateRank()
+        {
+            _rank = new RankData(Steam64, CachedXP, Branch);
+        }
+
         private bool _otherDonator;
         /// <summary>Slow, loops through all kits, only use once.</summary>
         public bool IsDonator
         {
             get => _otherDonator || KitManager.ActiveObjects.Exists(x => ((x.IsPremium && x.PremiumCost > 0f) || x.IsLoadout) && x.AllowedUsers.Contains(Steam64));
         }
-        private Rank _rank;
         public Vector3 Position
         {
             get
@@ -83,26 +102,30 @@ namespace Uncreated.Warfare
         }
         public bool IsOnline;
         public int LifeCounter;
-        private int _cachedOfp = -1;
-        public int CachedOfp
-        {
-            get => _cachedOfp;
-            set
-            {
-                _cachedOfp = value;
-            }
-        }
         private int _cachedXp = -1;
-        private bool isXpDirty = false;
-        public int CachedXp
+        private int _cachedTw = -1;
+        public int CachedXP
         {
             get => _cachedXp;
             set
             {
                 _cachedXp = value;
-                isXpDirty = true;
+                isXPDirty = true;
             }
         }
+        public int CachedTW
+        {
+            get => _cachedTw;
+            set
+            {
+                _cachedTw = value;
+                isTWDirty = true;
+            }
+        }
+        
+        private bool isXPDirty = false;
+        private bool isTWDirty = false;
+       
         public static UCPlayer FromID(ulong steamID)
         {
             return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
@@ -143,13 +166,18 @@ namespace Uncreated.Warfare
             PlayerManager.ApplyToOnline();
         }
         public ushort LastPingID { get; internal set; }
+        public int SuppliesUnloaded;
         public SteamPlayer SteamPlayer { get => Player.channel.owner; }
         public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
         public void RedownloadCachedXP()
         {
-            CachedXp = Data.DatabaseManager.GetXP(Steam64);
+            CachedXP = Data.DatabaseManager.GetXP(Steam64, Branch);
+        }
+        public void RedownloadCachedTW()
+        {
+            CachedTW = Data.DatabaseManager.GetTeamwork(Steam64);
         }
         public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
         {
@@ -170,12 +198,12 @@ namespace Uncreated.Warfare
             CSteamID = steamID;
             CharacterName = characterName;
             NickName = nickName;
-            OfficerRank = null;
             IsOnline = true;
             _cachedXp = -1;
-            _cachedOfp = -1;
+            _cachedTw = -1;
             _otherDonator = donator;
             LifeCounter = 0;
+            SuppliesUnloaded = 0;
         }
         public char Icon
         {

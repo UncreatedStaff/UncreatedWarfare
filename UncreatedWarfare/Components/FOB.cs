@@ -1,12 +1,10 @@
 ﻿using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -167,6 +165,14 @@ namespace Uncreated.Warfare.Components
         public List<UCPlayer> NearbyEnemies { get; private set; }
         public ulong killer { get; private set; }
 
+        private Guid builtRadioGUID;
+
+        private Guid BuildID;
+        private Guid AmmoID;
+
+        private ulong shortBuildID;
+        private ulong shortAmmoID;
+
         public FOB(BarricadeDrop radio)
         {
             Radio = radio;
@@ -181,6 +187,25 @@ namespace Uncreated.Warfare.Components
             IsBleeding = false;
 
             killer = 0;
+
+            builtRadioGUID = radio.asset.GUID;
+
+            if (Team == 1)
+            {
+                BuildID = Gamemode.Config.Items.T1Build;
+                AmmoID = Gamemode.Config.Items.T1Ammo;
+            }
+            else if (Team == 2)
+            {
+                BuildID = Gamemode.Config.Items.T2Build;
+                AmmoID = Gamemode.Config.Items.T2Ammo;
+            }
+            else return;
+
+            if (Assets.find(BuildID) is ItemAsset build)
+                shortBuildID = build.id;
+            if (Assets.find(AmmoID) is ItemAsset ammo)
+                shortAmmoID = ammo.id;
 
             UpdateBunker(UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 30, Position, Team, false).FirstOrDefault());
 
@@ -208,22 +233,40 @@ namespace Uncreated.Warfare.Components
         }
         public void ConsumeResources()
         {
-            Guid BuildID;
-            Guid AmmoID;
-            if (Team == 1)
-            {
-                BuildID = Gamemode.Config.Items.T1Build;
-                AmmoID = Gamemode.Config.Items.T1Ammo;
-            }
-            else if (Team == 2)
-            {
-                BuildID = Gamemode.Config.Items.T2Build;
-                AmmoID = Gamemode.Config.Items.T2Ammo;
-            }
-            else return;
-
             List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
             List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
+
+            foreach (var item in NearbyBuild.Concat(NearbyAmmo))
+            {
+                if (item.item.id == shortBuildID || item.item.id == shortAmmoID)
+                {
+                    if (EventFunctions.droppeditemsInverse.TryGetValue(item.instanceID, out ulong playerID))
+                    {
+                        UCPlayer player = UCPlayer.FromID(playerID);
+                        if (player != null)
+                        {
+                            player.SuppliesUnloaded++;
+                            if (player.SuppliesUnloaded >= 10)
+                            {
+                                int tw = Points.TWConfig.UnloadSuppliesPoints;
+
+                                if (player.KitClass == EClass.PILOT)
+                                {
+                                    tw *= 2;
+
+                                    int xp = Points.XPConfig.UnloadSuppliesXP;
+
+                                    Points.AwardXP(player, xp, Translation.Translate("ofp_supplies_unloaded", player));
+                                }
+
+                                Points.AwardTW(player, tw, Translation.Translate("ofp_supplies_unloaded", player));
+
+                                player.SuppliesUnloaded = 0;
+                            }
+                        }
+                    }
+                }
+            }
 
             int buildCount = NearbyBuild.Count;
             int ammoCount = NearbyAmmo.Count;
@@ -337,7 +380,7 @@ namespace Uncreated.Warfare.Components
         public void Reactivate()
         {
             SDG.Unturned.BarricadeData data = Radio.GetServersideData();
-            Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Gamemode.Config.Barricades.FOBRadioGUID));
+            Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(builtRadioGUID));
             Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
             BarricadeDrop newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
 

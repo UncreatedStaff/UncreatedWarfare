@@ -3,17 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 using Rocket.Unturned.Player;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 using System.Text;
 using Uncreated.Players;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes
@@ -44,7 +41,6 @@ namespace Uncreated.Warfare.Gamemodes
         public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
-        public OfficerManager OfficerManager;
         public PlayerManager LogoutSaver;
         public Whitelister Whitelister;
         public CooldownManager Cooldowns;
@@ -92,7 +88,6 @@ namespace Uncreated.Warfare.Gamemodes
             LogoutSaver = new PlayerManager();
             for (int i = 0; i < Provider.clients.Count; i++)
                 PlayerManager.InvokePlayerConnected(UnturnedPlayer.FromSteamPlayer(Provider.clients[i]));
-            OfficerManager = new OfficerManager();
             Cooldowns = new CooldownManager();
             if (UseWhitelist)
                 Whitelister = new Whitelister();
@@ -201,7 +196,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void AnnounceMode(UCPlayer player)
         {
-            ToastMessage.QueueMessage(player, "", DisplayName, EToastMessageSeverity.BIG);
+            ToastMessage.QueueMessage(player, new ToastMessage("", DisplayName, EToastMessageSeverity.BIG));
         }
         public virtual void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }

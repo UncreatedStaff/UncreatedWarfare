@@ -5,9 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles
@@ -552,7 +552,7 @@ namespace Uncreated.Warfare.Vehicles
                 {
                     try
                     {
-                        string val2 = string.Format(val, UCWarfare.GetColorHex(set.Next != null && set.Next.XPRank().level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                        string val2 = string.Format(val, UCWarfare.GetColorHex(set.Next != null && set.Next.Rank.Level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
                         Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
                     }
                     catch (FormatException)
@@ -573,7 +573,7 @@ namespace Uncreated.Warfare.Vehicles
             try
             {
                 UCPlayer pl = UCPlayer.FromSteamPlayer(player);
-                string val2 = string.Format(val, UCWarfare.GetColorHex(pl != null && pl.XPRank().level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                string val2 = string.Format(val, UCWarfare.GetColorHex(pl != null && pl.Rank.Level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
                 Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable, player.transportConnection, val2);
             }
             catch (FormatException)
@@ -652,7 +652,6 @@ namespace Uncreated.Warfare.Vehicles
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 this.data = data;
-                StartXPLoop();
             }
         }
         public void StartIdleRespawnTimer()
@@ -671,14 +670,6 @@ namespace Uncreated.Warfare.Vehicles
                 StopCoroutine(timer);
             }
             isIdle = false;
-        }
-        public void StartXPLoop()
-        {
-            if (Owner == null) return;
-            if (data != null)
-            {
-                xploop = StartCoroutine(XPLoop());
-            }
         }
         private IEnumerator<WaitForSeconds> IdleRespawnVehicle(VehicleData data)
         {
@@ -713,33 +704,6 @@ namespace Uncreated.Warfare.Vehicles
             spawn.SpawnVehicle();
             VehicleBay.DeleteVehicle(Owner);
             isIdle = false;
-        }
-        private IEnumerator<WaitForSeconds> XPLoop()
-        {
-            while (!Owner.isDead)
-            {
-                int count = 0;
-                //       not count driver
-                for (int i = 1; i < Owner.passengers.Length; i++)
-                {
-                    if (!data.CrewSeats.Exists(x => x == i) && Owner.passengers[i] != null && Owner.passengers[i].player != null) count++;
-                }
-                if (Owner.passengers.Length > 0)
-                {
-                    if (Owner.passengers[0] != null && Owner.passengers[0].player != null && count > 1 && Owner.speed > 0)
-                    {
-                        UCPlayer player = UCPlayer.FromSteamPlayer(Owner.passengers[0].player);
-                        if (player != null)
-                        {
-                            //if (player.Squad != null)
-                            //    await OfficerManager.AddOfficerPoints(player.Player, OfficerManager.config.Data.TransportPlayerPoints * (count - 2), Translation.Translate("ofp_transporting_players", player.Steam64));
-                            //else
-                            XPManager.AddXP(player.Player, XPManager.config.Data.TransportPlayerXP * (count - 1), Translation.Translate("xp_transporting_players", player.Steam64));
-                        }
-                    }
-                }
-                yield return new WaitForSeconds(XPManager.config.Data.TimeBetweenXpAndOfpAwardForTransport);
-            }
         }
     }
 }

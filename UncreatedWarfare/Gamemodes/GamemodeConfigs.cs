@@ -112,6 +112,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid SquadListGUID;
         public Guid SquadMenuGUID;
         public Guid RallyGUID;
+        public Guid OrderUI;
         public Guid XPGUID;
         public Guid OfficerGUID;
         public Guid CTFLeaderboardGUID;
@@ -136,6 +137,7 @@ namespace Uncreated.Warfare.Gamemodes
             SquadListGUID = new Guid("5acd091f-1e7b-4f93-ac9f-5431729ac5cc");
             SquadMenuGUID = new Guid("98154002-fbcd-4b74-9955-2d6497db8fc5");
             RallyGUID = new Guid("a280ac3f-e8c1-486c-adc8-eca331e8ce32");
+            OrderUI = new Guid("57a08eb9c4cb4fd2ad30a3e413e29b27");
             XPGUID = new Guid("d6de0a80-25de-44d2-9a99-a41937a58a59");
             OfficerGUID = new Guid("9fd31b77-6b74-4b72-847f-2dc00dba93a8");
             CTFLeaderboardGUID = new Guid("b83389df-1245-438d-b188-89af94f04960");
@@ -156,7 +158,6 @@ namespace Uncreated.Warfare.Gamemodes
     public struct BARRICADE_IDS
     {
         public Guid InsurgencyCacheGUID;
-        public Guid FOBRadioGUID;
         public Guid FOBRadioDamagedGUID;
         public Guid FOBGUID;
         public Guid FOBBaseGUID;
@@ -169,11 +170,11 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid T2RallyPointGUID;
         public Guid VehicleBayGUID;
         public Guid[] TimeLimitedStorages;
+        public Guid[] FOBRadioGUIDs;
         public void SetDefaults()
         {
             InsurgencyCacheGUID = new Guid("39051f33-f244-49b4-b341-7d0d666a4f27");
-            FOBRadioGUID = new Guid("72fae83175f34bde94bd52d40c7a9ebc");
-            FOBRadioDamagedGUID = new Guid("be8da1aa6deb44ecb4546ce7102fae41");
+            FOBRadioDamagedGUID = new Guid("07e68489e3b547879fa26f94ea227522");
             FOBGUID = new Guid("61c349f1-0000-498f-a2b9-2c029d38e523");
             FOBBaseGUID = new Guid("1bb17277-dd81-48df-9f4c-53d1a19b2503");
             AmmoCrateGUID = new Guid("6fe20851-9d7c-45b0-be38-273118eea7fd");
@@ -190,6 +191,12 @@ namespace Uncreated.Warfare.Gamemodes
                 RepairStationGUID,
                 new Guid("a2eb7659-0cf7-4401-aeb7-ff4b4b79fd86"), // supply crate
                 new Guid("2193aa0b-272f-4cc1-938f-719c8e8badb1")  // supply roll
+            };
+            FOBRadioGUIDs = new Guid[3]
+            {
+                new Guid("7715ad81f1e24f60bb8f196dd09bd4ef"),
+                new Guid("fb910102ad954169abd4b0cb06a112c8"),
+                new Guid("c7754ac78083421da73006b12a56811a")
             };
         }
     }

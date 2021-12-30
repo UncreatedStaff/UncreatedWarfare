@@ -5,13 +5,9 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Networking;
-using Uncreated.Networking.Encoding;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.XP;
 using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.Kits
@@ -387,12 +383,6 @@ namespace Uncreated.Warfare.Kits
             }
             if (modifiers != null) modifiers(kit);
             return kit;
-        }
-        public static Rank RequiredRank(this Kit kit)
-        {
-            if (kit._rank == null || kit._rank.level != kit.RequiredLevel)
-                kit._rank = XPManager.GetRankFromLevel(kit.RequiredLevel);
-            return kit._rank;
         }
         public static bool HasItemOfID(this Kit kit, ushort ID) => kit.Items.Exists(i => i.ID == ID);
         public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)

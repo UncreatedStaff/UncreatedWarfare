@@ -3,10 +3,7 @@ using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -107,24 +104,21 @@ namespace Uncreated.Warfare
                 }
             }
 
-            //[HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
-            //[HarmonyPostfix]
-            //static void OnItemDropRemovedPostfix(
-            //    SDG.Unturned.ItemData __state,
-            //    in ServerInvocationContext context,
-            //    byte x,
-            //    byte y,
-            //    uint instanceID,
-            //    byte to_x,
-            //    byte to_y,
-            //    byte to_rot,
-            //    byte to_page)
-            //{
-            //    if (__state != null)
-            //    {
-            //        FOBs.FOBManager.OnItemRemoved(__state);
-            //    }
-            //}
+            [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
+            [HarmonyPostfix]
+            static void OnItemDropRemovedPostfix(
+                SDG.Unturned.ItemData __state,
+                in ServerInvocationContext context,
+                byte x,
+                byte y,
+                uint instanceID,
+                byte to_x,
+                byte to_y,
+                byte to_rot,
+                byte to_page)
+            {
+                EventFunctions.droppeditemsInverse.Remove(instanceID);
+            }
 
             //[HarmonyPatch(typeof(ItemManager), nameof(ItemManager.dropItem))]
             //[HarmonyPostfix]
@@ -235,7 +229,7 @@ namespace Uncreated.Warfare
                                                     {
                                                         if (VehicleBay.VehicleExists(VehicleSpawner.ActiveObjects[i].VehicleID, out VehicleData data))
                                                             newtext = string.Format(Translation.TranslateVBS(VehicleSpawner.ActiveObjects[i], data, lang),
-                                                                UCWarfare.GetColorHex(pl != null && pl.XPRank().level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                                                                UCWarfare.GetColorHex(pl != null && pl.Rank.Level >= data.RequiredLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
                                                         else
                                                             newtext = Translation.TranslateSign(newtext, lang, pl, false);
                                                         break;

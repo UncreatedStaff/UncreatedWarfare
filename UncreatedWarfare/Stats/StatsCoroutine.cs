@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Stats
@@ -44,9 +45,9 @@ namespace Uncreated.Warfare.Stats
                             StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
                         /* ON DUTY AWARDER */
                         UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
-                        if (XP.XPManager.config.Data.OnDutyXP > 0 && player.OnDuty())
+                        if (Points.XPConfig.OnDutyXP > 0 && player.OnDuty())
                         {
-                            XP.XPManager.AddXP(player.Player, XP.XPManager.config.Data.OnDutyXP, Translation.Translate("xp_on_duty", player));
+                            Points.AwardXP(player.Player, Points.XPConfig.OnDutyXP, Translation.Translate("xp_on_duty", player));
                         }
                     }
                     players.Dispose();

@@ -9,10 +9,9 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.XP;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -170,10 +169,10 @@ namespace Uncreated.Warfare.Commands
                 Gamemode.ConfigObj.Reload();
                 SquadManager.config.Reload();
                 TicketManager.config.Reload();
-                XPManager.config.Reload();
-                OfficerManager.config.Reload();
+                Points.ReloadConfig();
 
-                Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
+                // FIX: Invocations
+                //Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
                 FOBManager.config.Reload();
 
                 UCWarfare.Instance.Configuration.Load();
@@ -268,7 +267,8 @@ namespace Uncreated.Warfare.Commands
                     }
                     catch (Exception) { }
                 }
-                Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
+                // FIX: Invocations
+                //Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
             }
             catch (Exception ex)
             {

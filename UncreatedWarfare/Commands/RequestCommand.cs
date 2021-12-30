@@ -7,12 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.XP;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands
@@ -191,9 +189,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        int xp = XPManager.GetXP(ucplayer.Player, true);
-                        Rank rank = XPManager.GetRank(xp, out _, out _);
-                        if ((rank == default || rank.level < kit.RequiredLevel) && !UCWarfare.Config.OverrideKitRequirements)
+                        if (ucplayer.Rank.Level < kit.RequiredLevel && !UCWarfare.Config.OverrideKitRequirements)
                         {
                             ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel.ToString(Data.Locale));
                         }
@@ -322,9 +318,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_delay", Translation.GetTimeFromSeconds(unchecked((uint)Math.Round(timeleft)), ucplayer.Steam64));
                 return;
             }
-            int xp = XPManager.GetXP(ucplayer.Player, true);
-            Rank rank = XPManager.GetRank(xp, out _, out _);
-            if (rank == default || rank.level < data.RequiredLevel)
+            if (ucplayer.Rank.Level < data.RequiredLevel)
             {
                 ucplayer.Message("request_vehicle_e_wronglevel", data.RequiredLevel.ToString(Data.Locale));
                 return;

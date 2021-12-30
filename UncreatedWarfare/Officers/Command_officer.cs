@@ -2,9 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.XP;
+using Uncreated.Players;
+using Uncreated.Warfare.Point;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -29,35 +28,43 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 UCPlayer target = UCPlayer.FromName(command[1]);
-                if (target != null)
+                ulong Steam64 = 0;
+                string characterName = "";
+                if (ulong.TryParse(command[1], out Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
                 {
-                    Rank rank = OfficerManager.config.Data.OfficerRanks.FirstOrDefault(r => r.name.Replace(" ", "").ToLower().Contains(command[2].ToLower()));
-
-                    if (rank is null)
-                    {
-                        if (int.TryParse(command[2], System.Globalization.NumberStyles.Any, Data.Locale, out var level))
-                        {
-                            rank = OfficerManager.config.Data.OfficerRanks.FirstOrDefault(r => r.level == level);
-                        }
-                    }
-
-                    if (rank != null)
-                    {
-                        if (Enum.TryParse<EBranch>(command[3], out EBranch branch))
-                        {
-                            OfficerManager.ChangeOfficerRank(target, rank, branch);
-                            player.OfficerRank = rank;
-                            PlayerManager.ApplyToOnline();
-                            XPManager.UpdateUI(target.Player, target.CachedXp, out _);
-                        }
-                        else
-                            player.SendChat("officer_branchnotfound", command[2]);
-                    }
-                    else
-                        player.SendChat("officer_ranknotfound", command[2]);
+                    characterName = names.CharacterName;
+                    goto CheckLevelAndBranch;
+                }
+                else if (target != null)
+                {
+                    goto CheckLevelAndBranch;
                 }
                 else
-                    player.SendChat("officer_playernotfound", command[1]);
+                    player.SendChat("officer_e_playernotfound", command[1]);
+
+                CheckLevelAndBranch:
+                if (int.TryParse(command[2], System.Globalization.NumberStyles.Any, Data.Locale, out var level))
+                {
+                    if (Enum.TryParse(command[3], out EBranch branch))
+                    {
+                        if (target != null)
+                        {
+                            OfficerStorage.ChangeOfficerRank(target.Steam64, level, branch);
+                            player.Message("officer_s_changedrank", target.CharacterName, target.Rank.Name, branch.ToString());
+                        }
+                        else
+                        {
+                            OfficerStorage.ChangeOfficerRank(Steam64, level, branch);
+                            player.Message("officer_s_changedrank", characterName, RankData.GetOfficerRankName(level), branch.ToString());
+                        }
+                    }
+                    else
+                        player.SendChat("officer_e_invalidbranch", command[2]);
+                }
+                else
+                    player.SendChat("officer_invalidrank", command[2]);
+
+                
             }
             else if (command.Length >= 1 && (command[0].ToLower() == "discharge" || command[0].ToLower() == "disc"))
             {
@@ -70,21 +77,20 @@ namespace Uncreated.Warfare.Commands
                 UCPlayer target = UCPlayer.FromName(command[1]);
                 if (target != null)
                 {
-                    if (target.OfficerRank != null)
+                    if (target.IsOfficer)
                     {
-                        OfficerManager.DischargeOfficer(target, target.OfficerRank);
-                        player.OfficerRank = null;
-                        PlayerManager.ApplyToOnline();
-                        XPManager.UpdateUI(target.Player, target.CachedXp, out _);
+                        OfficerStorage.DischargeOfficer(target);
                     }
                     else
-                        player.SendChat("officer_notofficer", command[1]);
+                        player.SendChat("officer_e_notofficer", command[1]);
                 }
                 else
-                    player.SendChat("officer_playernotfound", command[1]);
+                    player.SendChat("officer_e_playernotfound", command[1]);
             }
             else
                 player.SendChat("correct_usage", "/officer <setrank|discharge <player name> <level or rank> <branch>");
+
+
         }
     }
 }

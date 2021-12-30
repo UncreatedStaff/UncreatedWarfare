@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System.Collections.Generic;
-using Uncreated.Warfare;
 using Uncreated.Warfare.Kits;
 using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
@@ -168,7 +167,7 @@ namespace Uncreated.Warfare
                 { "squad_ui_leader_name", "{0}" },
                 { "squad_ui_expanded", "..." },
 
-                // orders
+                // orders   
 
                 { "order_usage_1", "<color=#9fa1a6>To give orders: <color=#9dbccf>/order <i>squad_name action</i></color'. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
                 { "order_actions", "<color=#9fa1a6>Order actions: <color=#9dbccf>{0}</color></color>" },
@@ -182,9 +181,10 @@ namespace Uncreated.Warfare
                 { "order_e_buildfob_marker", "<color=#9fa1a6>Place a map marker where you want {0} to build a <color=#d1bd90>FOB</color>.</color>" },
                 { "order_e_buildfob_fobexists", "<color=#9fa1a6>There is already a friendly FOB near that marker.</color>" },
                 { "order_e_buildfob_foblimit", "<color=#9fa1a6>The max FOB limit has been reached.</color>" },
+                { "order_e_squadtooclose", "<color=#9fa1a6>{0} is already near that marker. Try placing it further away.</color>" },
                 { "order_e_raycast", "<color=#b58b86>Something went wrong while raycasting. Please contact the devs/admins about this.</color>" },
                 { "order_s_sent", "<color=#9fa1a6>Order sent to {0}: <color=#9dbccf>{1}</color></color>" },
-                { "order_s_received", "<color=#9fa1a6>{0} has given your squad new orders: <color=#9dbccf>{1}</color></color>" },
+                { "order_s_received", "<color=#9fa1a6><color=#9dbccf>{0}</color> has given your squad new orders:\n<color=#d4d4d4>{1}</color></color>" },
 
                 // rally
                 { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
@@ -577,8 +577,13 @@ namespace Uncreated.Warfare
                 { "officer_announce_promoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#e3b552>PROMOTED</color> to <color=#e05353>{1}</color> of the <color=#baccca>{2}</color>!</color>" },
                 { "officer_announce_demoted", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#c47f5c>DEMOTED</color> to <color=#e05353>{1}</color>.</color>" },
                 { "officer_announce_discharged", "<color=#9e9788><color=#c4daff>{0}</color> has been <color=#ab2e2e>DISCHARGED</color> from the rank of <color=#e05353>{1}s</color> for unacceptable behaviour.</color>" },
-                { "officer_ui_no_stars", "no stars" },
-                { "officer_ui_stars", "{0} star{1}" },
+                { "officer_ui_no_stars", "no medals" },
+                { "officer_ui_stars", "{0} medal{1}" },
+                { "officer_e_playernotfound", "<color=#b08989>'{0}' is not a valid online player or Steam64 ID.</color>" },
+                { "officer_e_invalidrank", "<color=#b08989>'{0}' is not a valid officer level. Try numbers 1 - 5.</color>" },
+                { "officer_e_invalidbranch", "<color=#b08989>'{0}' is not a valid branch name. Try 'Infantry', 'Armor', etc.</color>" },
+                { "officer_s_changedrank", "<color=#c6d6c1>{0}'s officer rank was successfully changed to {1} of {2}.</color>" },
+                { "officer_s_discharged", "<color=#c6d6c1>{0} was successfully discharged.</color>" },
 
                 // promotions
 
@@ -763,7 +768,9 @@ namespace Uncreated.Warfare
                 { "xp_apc_destroyed", "APC DESTROYED" },
                 { "xp_ifv_destroyed", "IFV DESTROYED" },
                 { "xp_tank_destroyed", "TANK DESTROYED" },
-                { "xp_helicopter_destroyed", "HELICOPTER DESTROYED" },
+                { "xp_transheli_destroyed", "HELI SHOT DOWN" },
+                { "xp_attackheli_destroyed", "ATTACK HELI SHOT DOWN" },
+                { "xp_jet_destroyed", "JET SHOT DOWN" },
                 { "xp_emplacement_destroyed", "EMPLACEMENT DESTROYED" },
 
                 { "xp_friendly_humvee_destroyed", "FRIENDLY HUMVEE DESTROYED" },
@@ -806,9 +813,11 @@ namespace Uncreated.Warfare
 
                 { "ofp_rally_used", "RALLY USED" },
 
-                { "gain_ofp", "+{0} OF" },
-                { "loss_ofp", "-{0} OF" },
-                { "gain_star", "FOR EXCELLENT LEADERSHIP, YOU HAVE BEEN AWARDED" },
+                { "ofp_supplies_unloaded", "RESUPPLIED FOB" },
+
+                { "gain_ofp", "+{0} TW" },
+                { "loss_ofp", "-{0} TW" },
+                { "gain_star", "FOR GOOD TEAMWORK, YOU HAVE BEEN AWARDED" },
 
                 { "injured_ui_header", "You are injured" },
                 { "injured_ui_give_up", "Press <b>'/'</b> to give up.\n " },

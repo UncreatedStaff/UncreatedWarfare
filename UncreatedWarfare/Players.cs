@@ -63,66 +63,48 @@ namespace Uncreated.Players
     {
         public readonly EToastMessageSeverity Severity;
         private readonly long time;
-        public readonly string Message;
+        public readonly string Message1;
         /// <summary>NULLABLE</summary>
-        public readonly string SecondaryMessage;
+        public readonly string Message2;
+        public readonly string Message3;
         public const float FULL_TOAST_TIME = 12f;
         public const float MINI_TOAST_TIME = 4f;
         public const float BIG_TOAST_TIME = 5.5f;
-        public static bool operator ==(ToastMessage left, ToastMessage right) => left.time == right.time && left.Message == right.Message;
-        public static bool operator !=(ToastMessage left, ToastMessage right) => left.time != right.time || left.Message != right.Message;
-        public override int GetHashCode() => time.GetHashCode() / 2 + Message.GetHashCode() / 2;
-        public override bool Equals(object obj) => obj is ToastMessage msg && msg.time == time && msg.Message == Message;
-        public ToastMessage(string message, EToastMessageSeverity severity)
+        public static bool operator ==(ToastMessage left, ToastMessage right) => left.time == right.time && left.Message1 == right.Message1;
+        public static bool operator !=(ToastMessage left, ToastMessage right) => left.time != right.time || left.Message1 != right.Message1;
+        public override int GetHashCode() => time.GetHashCode() / 2 + Message1.GetHashCode() / 2;
+        public override bool Equals(object obj) => obj is ToastMessage msg && msg.time == time && msg.Message1 == Message1;
+        public ToastMessage(string message1, EToastMessageSeverity severity)
         {
             this.time = DateTime.Now.Ticks;
-            this.Message = message;
-            this.SecondaryMessage = null;
+            this.Message1 = message1;
+            this.Message2 = null;
+            this.Message3 = null;
             this.Severity = severity;
         }
-        public ToastMessage(string message, string secondmessage, EToastMessageSeverity severity = EToastMessageSeverity.INFO)
+        public ToastMessage(string message1, string message2, EToastMessageSeverity severity = EToastMessageSeverity.INFO)
         {
             this.time = DateTime.Now.Ticks;
-            this.Message = message;
-            this.SecondaryMessage = secondmessage;
+            this.Message1 = message1;
+            this.Message2 = message2;
+            this.Message3 = null;
             this.Severity = severity;
         }
-        public static void QueueMessage(UnturnedPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, severity));
-        public static void QueueMessage(UnturnedPlayer player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessage(UnturnedPlayer player, ToastMessage message) => QueueMessage(player.Player, message);
-        public static void QueueMessage(UCPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, severity));
-        public static void QueueMessage(UCPlayer player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player.Player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessage(UCPlayer player, ToastMessage message) => QueueMessage(player.Player, message);
-        public static void QueueMessage(SteamPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player.player, new ToastMessage(message, severity));
-        public static void QueueMessage(SteamPlayer player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player.player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessage(SteamPlayer player, ToastMessage message) => QueueMessage(player.player, message);
-        public static void QueueMessage(Player player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player, new ToastMessage(message, severity));
-        public static void QueueMessage(Player player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessage(player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessage(Player player, ToastMessage message)
+        public ToastMessage(string message1, string message2, string message3, EToastMessageSeverity severity = EToastMessageSeverity.INFO)
         {
-            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
-                c.QueueMessage(message, false);
+            this.time = DateTime.Now.Ticks;
+            this.Message1 = message1;
+            this.Message2 = message2;
+            this.Message3 = message3;
+            this.Severity = severity;
         }
-        public static void SendMessage(Player player, ToastMessage message)
+        public static void QueueMessage(UnturnedPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.Player, message, priority);
+        public static void QueueMessage(UCPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.Player, message, priority);
+        public static void QueueMessage(SteamPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.player, message, priority);
+        public static void QueueMessage(Player player, ToastMessage message, bool priority = false)
         {
             if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
-                c.QueueMessage(message, true);
-        }
-        public static void QueueMessagePriority(UnturnedPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.Player, new ToastMessage(message, severity));
-        public static void QueueMessagePriority(UnturnedPlayer player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.Player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessagePriority(UnturnedPlayer player, ToastMessage message) => QueueMessagePriority(player.Player, message);
-        public static void QueueMessagePriority(UCPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.Player, new ToastMessage(message, severity));
-        public static void QueueMessagePriority(UCPlayer player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.Player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessagePriority(UCPlayer player, ToastMessage message) => QueueMessagePriority(player.Player, message);
-        public static void QueueMessagePriority(SteamPlayer player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.player, new ToastMessage(message, severity));
-        public static void QueueMessagePriority(SteamPlayer player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player.player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessagePriority(SteamPlayer player, ToastMessage message) => QueueMessagePriority(player.player, message);
-        public static void QueueMessagePriority(Player player, string message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player, new ToastMessage(message, severity));
-        public static void QueueMessagePriority(Player player, string message, string second_message, EToastMessageSeverity severity = EToastMessageSeverity.INFO) => QueueMessagePriority(player, new ToastMessage(message, second_message, severity));
-        public static void QueueMessagePriority(Player player, ToastMessage message)
-        {
-            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
-                c.QueueMessage(message, true);
+                c.QueueMessage(message, priority);
         }
     }
     public enum EToastMessageSeverity : byte
@@ -130,8 +112,8 @@ namespace Uncreated.Players
         INFO = 0,
         WARNING = 1,
         SEVERE = 2,
-        MINIXP = 3,
-        MINIOFFICERPTS = 4,
+        MINI = 3,
+        MEDIUM = 4,
         BIG = 5,
         PROGRESS = 6
     }

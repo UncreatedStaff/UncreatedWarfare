@@ -18,12 +18,11 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Point;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -104,7 +103,7 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("test_givexp_player_not_found", command[1]);
                     return;
                 }
-                XPManager.AddXP(target.Player, amount, player == null ? Translation.Translate("xp_from_operator", target.Steam64) :
+                Points.AwardXP(target, amount, player == null ? Translation.Translate("xp_from_operator", target.Steam64) :
                     Translation.Translate("xp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                 if (player == null)
                     L.Log(Translation.Translate("test_givexp_success", 0, out _, amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName));
@@ -137,7 +136,7 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("test_giveof_player_not_found", command[1]);
                     return;
                 }
-                OfficerManager.AddOfficerPoints(target.Player, amount, player == null ? Translation.Translate("ofp_from_operator", target.Steam64) :
+                Points.AwardTW(target, amount, player == null ? Translation.Translate("ofp_from_operator", target.Steam64) :
                     Translation.Translate("ofp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                 if (player == null)
                     L.Log(Translation.Translate("test_giveof_success", 0, out _, amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName));
@@ -1018,17 +1017,16 @@ namespace Uncreated.Warfare.Commands
                 L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            ToastMessage.QueueMessage(player, "some info 1", EToastMessageSeverity.INFO);
-            ToastMessage.QueueMessage(player, "some info 2", EToastMessageSeverity.INFO);
-            ToastMessage.QueueMessage(player, "some severe info 3", EToastMessageSeverity.SEVERE);
-            ToastMessage.QueueMessage(player, "some warned info 4", EToastMessageSeverity.WARNING);
-            ToastMessage.QueueMessage(player, "some xp 5", "lots of xp", EToastMessageSeverity.MINIXP);
-            ToastMessage.QueueMessage(player, "some xp 6", "more xp", EToastMessageSeverity.MINIOFFICERPTS);
-            ToastMessage.QueueMessage(player, "some ofp 7", "lots of ofp", EToastMessageSeverity.MINIXP);
-            ToastMessage.QueueMessage(player, "some ofp 8", "more ofp", EToastMessageSeverity.MINIOFFICERPTS);
-            ToastMessage.QueueMessage(player, "BIG MESSAGE HOW COOL", "actually sick ngl", EToastMessageSeverity.BIG);
-            ToastMessage.QueueMessage(player, "ANOTHER BIG MESSAGE HOW COOL", "blown out of my socks because of this amazing advancement in queue technology made by siege pro league player.", EToastMessageSeverity.BIG);
-            ToastMessage.QueueMessagePriority(player, "some info 3", EToastMessageSeverity.INFO);
+            ToastMessage.QueueMessage(player, new ToastMessage("some info 1", EToastMessageSeverity.INFO));
+            ToastMessage.QueueMessage(player, new ToastMessage("some info 2", EToastMessageSeverity.INFO));
+            ToastMessage.QueueMessage(player, new ToastMessage("some severe info 3", EToastMessageSeverity.SEVERE));
+            ToastMessage.QueueMessage(player, new ToastMessage("some warned info 4", EToastMessageSeverity.WARNING));
+            ToastMessage.QueueMessage(player, new ToastMessage("some xp 5", "lots of xp", EToastMessageSeverity.MINI));
+            ToastMessage.QueueMessage(player, new ToastMessage("some ofp 7", "lots of ofp", EToastMessageSeverity.MINI));
+            ToastMessage.QueueMessage(player, new ToastMessage("Medium message! Very nice", EToastMessageSeverity.MEDIUM));
+            ToastMessage.QueueMessage(player, new ToastMessage("Another Medium message! Wild", EToastMessageSeverity.MEDIUM));
+            ToastMessage.QueueMessage(player, new ToastMessage("BIG MESSAGE HOW COOL", "actually sick ngl", EToastMessageSeverity.BIG));
+            ToastMessage.QueueMessage(player, new ToastMessage("ANOTHER BIG MESSAGE HOW COOL", "blown out of my socks because of this amazing advancement in queue technology made by siege pro league player.", "This one even has BOTTOM TEXT", EToastMessageSeverity.BIG));
         }
         private void instid(string[] command, Player player)
         {

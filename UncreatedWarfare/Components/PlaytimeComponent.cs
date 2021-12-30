@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components
@@ -81,10 +80,10 @@ namespace Uncreated.Warfare.Components
             new ToastMessageInfo(EToastMessageSeverity.INFO, new Guid("d7504683-4b32-4ed4-9191-4b4136ab1bc8"), 0, 12f), // info
             new ToastMessageInfo(EToastMessageSeverity.WARNING, new Guid("5678a559-695e-4d99-9dfe-a9a771b6616f"), 0, 12f), // warning
             new ToastMessageInfo(EToastMessageSeverity.SEVERE, new Guid("26fed656-4ccf-4c46-aac1-df01dbba0aab"), 0, 12f), // error
-            new ToastMessageInfo(EToastMessageSeverity.MINIXP, new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 4f), // xp
-            new ToastMessageInfo(EToastMessageSeverity.MINIOFFICERPTS, new Guid("5f695955-f0da-4d19-adac-ac39140da797"), 1, 4f), // ofp
-            new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 2, 5.5f), // big
-            new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 3, 1.6f), // progress
+            new ToastMessageInfo(EToastMessageSeverity.MINI, new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 1.58f), // xp
+            new ToastMessageInfo(EToastMessageSeverity.MEDIUM, new Guid("5f695955f0da4d19adacac39140da797"), 2, 4f), // xp
+            new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 3, 5.5f), // big
+            new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 4, 1.6f), // progress
         };
         private static readonly bool[] channels;
         static PlaytimeComponent()
@@ -127,15 +126,13 @@ namespace Uncreated.Warfare.Components
         private Coroutine _toastDelay = null;
         private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
         {
-            if (message.Message != null)
-            {
-                if (message.SecondaryMessage != null)
-                    EffectManager.sendUIEffect(info.id, unchecked((short)info.id),
-                        player.channel.owner.transportConnection, true, message.Message, message.SecondaryMessage);
-                else
-                    EffectManager.sendUIEffect(info.id, unchecked((short)info.id),
-                        player.channel.owner.transportConnection, true, message.Message);
-            }
+            EffectManager.sendUIEffect(info.id, unchecked((short)info.id),
+                        player.channel.owner.transportConnection, true,
+                        message.Message1 != null ? message.Message1 : "",
+                        message.Message2 != null ? message.Message2 : "",
+                        message.Message3 != null ? message.Message3 : ""
+                        );
+
             channels[info.channel] = true;
             for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
             {

@@ -1,5 +1,4 @@
 ﻿using Rocket.Unturned.Player;
-using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;

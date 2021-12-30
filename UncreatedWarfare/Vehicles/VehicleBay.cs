@@ -6,11 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles
@@ -461,13 +458,13 @@ namespace Uncreated.Warfare.Vehicles
                         }
                     }
                 }
+
+                EventFunctions.OnVehicleSwapSeatRequested(nelsonplayer, vehicle, ref shouldAllow, fromSeatIndex, ref toSeatIndex);
             }
             catch (Exception ex)
             {
                 L.LogError("Error in OnVehicleSeatChanged: ");
                 L.LogError(ex);
-                if (shouldAllow)
-                    EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
             }
         }
 
@@ -525,16 +522,6 @@ namespace Uncreated.Warfare.Vehicles
         public EVehicleType Type;
         [JsonSettable]
         public bool RequiresSL;
-        [JsonIgnore]
-        public Rank RequiredRank
-        {
-            get
-            {
-                if (_rank == null || _rank.level != RequiredLevel)
-                    _rank = XPManager.GetRankFromLevel(RequiredLevel);
-                return _rank;
-            }
-        }
         [JsonIgnore]
         private Rank _rank;
         public Guid[] Items;
