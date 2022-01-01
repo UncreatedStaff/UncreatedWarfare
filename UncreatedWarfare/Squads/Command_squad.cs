@@ -1,8 +1,6 @@
 ﻿using Rocket.API;
-using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Squads

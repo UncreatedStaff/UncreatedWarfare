@@ -3,17 +3,13 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components
@@ -51,7 +47,7 @@ namespace Uncreated.Warfare.Components
 
             if (builder.Player.TryGetPlaytimeComponent(out var component))
             {
-                component.QueueMessage(new Players.ToastMessage(XPManager.GetProgress(Hits, Buildable.requiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
+                component.QueueMessage(new Players.ToastMessage(Points.GetProgressBar(Hits, Buildable.requiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
             }
 
             if (PlayerHits.ContainsKey(builder.Steam64))
@@ -135,8 +131,9 @@ namespace Uncreated.Warfare.Components
 
             foreach (var entry in PlayerHits)
             {
-                if ((float)entry.Value / Buildable.requiredHits >= 0.1F)
-                    XPManager.AddXP(UCPlayer.FromID(entry.Key).Player, entry.Value * XPManager.config.Data.ShovelXP, structureName.ToUpper() + " BUILT");
+                UCPlayer player = UCPlayer.FromID(entry.Key);
+                if ((float)entry.Value / Buildable.requiredHits >= 0.1F && player != null)
+                    Points.AwardXP(player, entry.Value * Points.XPConfig.ShovelXP, structureName.ToUpper() + " BUILT");
             }
 
             if (Regions.tryGetCoordinate(Foundation.model.position, out byte x, out byte y))

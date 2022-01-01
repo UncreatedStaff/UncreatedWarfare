@@ -1,10 +1,7 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs
@@ -30,7 +27,7 @@ namespace Uncreated.Warfare.FOBs
 
             UCPlayer owner = UCPlayer.FromID(data.owner);
             if (owner != null && owner.Steam64 != player.Steam64)
-                XP.XPManager.AddXP(owner.Player, XP.XPManager.config.Data.RessupplyFriendlyXP, Translation.Translate("xp_resupplied_teammate", owner));
+                Points.AwardTW(owner, Points.TWConfig.ResupplyFriendlyPoints, Translation.Translate("xp_resupplied_teammate", owner));
 
             if (uses >= FOBManager.config.Data.AmmoBagMaxUses && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {

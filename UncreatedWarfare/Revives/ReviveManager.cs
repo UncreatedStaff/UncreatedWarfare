@@ -7,10 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.XP;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Revives
@@ -135,8 +134,9 @@ namespace Uncreated.Warfare.Revives
                 ulong tteam = target.GetTeam();
                 if (team == tteam)
                 {
-                    XPManager.AddXP(medic, XPManager.config.Data.FriendlyRevivedXP,
-                        Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                    // TODO: better points calculations
+                    Points.AwardTW(UCPlayer.FromPlayer(medic), Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+
                     if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IRevivesStats r2)
                         r2.AddRevive();
 
@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Revives
                     byte kteam = killer.GetTeamByte();
                     if (kteam != team)
                     {
-                        ToastMessage.QueueMessage(killer, "", Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINIXP);
+                        ToastMessage.QueueMessage(killer, new ToastMessage("", Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
 
                         Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
                         if (KitManager.HasKit(killer, out Kit kit))
@@ -294,7 +294,7 @@ namespace Uncreated.Warfare.Revives
                             Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
                     }
                     else
-                        ToastMessage.QueueMessage(killer, "", Translation.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINIXP);
+                        ToastMessage.QueueMessage(killer, new ToastMessage("", Translation.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINI));
                 }
             }
             if (parameters.player.transform.TryGetComponent(out Reviver reviver))

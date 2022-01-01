@@ -7,12 +7,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -830,11 +828,11 @@ namespace Uncreated.Warfare
                 else if (KitManager.KitExists(key2, out Kit kit))
                 {
                     ulong playerteam = 0;
-                    Rank playerrank = null;
+                    RankData playerrank = null;
                     if (ucplayer != null)
                     {
                         playerteam = ucplayer.GetTeam();
-                        playerrank = ucplayer.XPRank();
+                        playerrank = ucplayer.Rank;
                     }
 
                     if (!kit.SignTexts.TryGetValue(language, out string name))
@@ -857,7 +855,7 @@ namespace Uncreated.Warfare
                     string weapons = kit.Weapons ?? string.Empty;
                     if (weapons != string.Empty)
                         weapons = Translate("kit_weapons", language, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
-                    string cost;
+                    string cost = "";
                     string playercount;
                     if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
                     {
@@ -868,19 +866,19 @@ namespace Uncreated.Warfare
                         else
                             cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                     }
+                    // TODO: Fix
                     else if (kit.RequiredLevel > 0)
                     {
-                        Rank reqrank = kit.RequiredRank();
-                        if (playerrank == null || playerrank.level < reqrank.level)
-                        {
-                            cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
-                                reqrank.TranslateAbbreviation(language), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
-                        }
-                        else
-                        {
-                            cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
-                                reqrank.TranslateAbbreviation(language), UCWarfare.GetColorHex("kit_level_available_abbr"));
-                        }
+                        //if (playerrank == null || playerrank.Level < kit.RequiredLevel)
+                        //{
+                        //    cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
+                        //        reqrank.ToString().Colorize(UCWarfare.GetColorHex("kit_level_unavailable_abbr")));
+                        //}
+                        //else
+                        //{
+                        //    cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
+                        //        reqrank.ToString().Colorize(UCWarfare.GetColorHex("kit_level_unavailable_abbr")));
+                        //}
                     }
                     else
                     {

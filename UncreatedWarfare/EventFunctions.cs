@@ -12,11 +12,10 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Officers;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
@@ -43,12 +42,12 @@ namespace Uncreated.Warfare
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);
 
-            XPManager.OnGroupChanged(player, oldGroup, newGroup);
-            OfficerManager.OnGroupChanged(player, oldGroup, newGroup);
-            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, newGroup.GetTeamByte());
+            Points.OnGroupChanged(ucplayer, oldGroup, newGroup);
+            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
         internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
+        internal static Dictionary<uint, ulong> droppeditemsInverse = new Dictionary<uint, ulong>();
         internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
         {
             if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
@@ -62,29 +61,37 @@ namespace Uncreated.Warfare
         internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
         {
             if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
-            if (!itemstemp.TryGetValue(item, out PlayerInventory inv)) return;
-            uint nextindex;
-            try
+            if (itemstemp.TryGetValue(item, out PlayerInventory inv))
             {
-                nextindex = (uint)Data.ItemManagerInstanceCount.GetValue(null);
-            }
-            catch
-            {
-                L.LogError("Unable to get ItemManager.instanceCount.");
+                uint nextindex;
+                try
+                {
+                    nextindex = (uint)Data.ItemManagerInstanceCount.GetValue(null);
+                }
+                catch
+                {
+                    L.LogError("Unable to get ItemManager.instanceCount.");
+                    itemstemp.Remove(item);
+                    return;
+                }
+                nextindex++;
+                if (droppeditems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
+                {
+                    if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
+                    else instanceids.Add(nextindex);
+                }
+                else
+                {
+                    droppeditems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint>() { nextindex });
+                }
+
+                if (!droppeditemsInverse.ContainsKey(nextindex))
+                    droppeditemsInverse.Add(nextindex, inv.player.channel.owner.playerID.steamID.m_SteamID);
+                else
+                    droppeditemsInverse[nextindex] = inv.player.channel.owner.playerID.steamID.m_SteamID;
+
                 itemstemp.Remove(item);
-                return;
             }
-            nextindex++;
-            if (droppeditems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
-            {
-                if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
-                else instanceids.Add(nextindex);
-            }
-            else
-            {
-                droppeditems.Add(inv.player.channel.owner.playerID.steamID.m_SteamID, new List<uint>() { nextindex });
-            }
-            itemstemp.Remove(item);
         }
         internal static void StopCosmeticsToggleEvent(ref EVisualToggleType type, SteamPlayer player, ref bool allow)
         {
@@ -111,8 +118,10 @@ namespace Uncreated.Warfare
 
             RepairManager.OnBarricadePlaced(drop, region);
 
+            bool isFOBRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID);
+
             // FOB radio
-            if (Gamemode.Config.Barricades.FOBRadioGUID == data.barricade.asset.GUID)
+            if (isFOBRadio)
             {
                 if (!FOBManager.AllFOBs.Exists(f => f.Position == drop.model.position))
                     FOBManager.RegisterNewFOB(drop);
@@ -130,7 +139,7 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
             BuildableData repairable = FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EbuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
-            if (repairable != null || drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
+            if (repairable != null || isFOBRadio)
             {
                 drop.model.gameObject.AddComponent<RepairableComponent>();
             }
@@ -228,7 +237,7 @@ namespace Uncreated.Warfare
                     }
                 }
 
-                if (barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioGUID)
+                if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g ==  barricade.asset.GUID))
                 {
                     shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
                     return;
@@ -352,8 +361,7 @@ namespace Uncreated.Warfare
                 PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 pt.StartTracking(player.Player);
                 Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                OfficerManager.OnPlayerJoined(ucplayer);
-                XPManager.OnPlayerJoined(ucplayer);
+                Points.OnPlayerJoined(ucplayer);
                 Data.DatabaseManager.CheckUpdateUsernames(names);
                 bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Data.DatabaseManager.RegisterLogin(player.Player);
@@ -366,12 +374,12 @@ namespace Uncreated.Warfare
                 if (Data.Gamemode is ITeams)
                 {
                     ulong team = player.GetTeam();
-                    ToastMessage.QueueMessage(player, Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO);
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
                 } else
                 {
-                    ToastMessage.QueueMessage(player, Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO);
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
                 }
                 Chat.Broadcast("player_connected", names.CharacterName);
                 Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
@@ -618,6 +626,14 @@ namespace Uncreated.Warfare
         }
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
         {
+            if (shouldAllow)
+            {
+                if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                {
+                    component.OnPlayerEnteredVehicle(player, vehicle);
+                }
+            }
+
             if (Data.Is<IFlagRotation>(out _) && player.IsOnFlag(out Flag flag))
             {
                 SendUIParameters p = CTFUI.RefreshStaticUI(player.GetTeam(), flag, true);
@@ -823,7 +839,26 @@ namespace Uncreated.Warfare
         internal static void OnPlayerLeavesVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
             if (shouldAllow)
+            {
+                if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                {
+                    component.OnPlayerExitedVehicle(player, vehicle);
+                }
+
                 Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+            }
+        }
+        internal static void OnVehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
+        {
+            if (shouldAllow)
+            {
+                if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                {
+                    component.OnPlayerSwapSeatRequested(player, vehicle, toSeatIndex);
+                }
+
+                Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+            }
         }
         internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
         {

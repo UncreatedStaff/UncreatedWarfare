@@ -1,6 +1,5 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,6 +18,7 @@ namespace Uncreated.Warfare.Squads
         internal static ushort squadMenuID = 0;
         internal const short squadMenuKey = 12002;
         internal static ushort rallyID = 0;
+        internal static ushort orderID = 0;
         internal const short rallyKey = 12003;
 
         // temporary until effects are upgraded to using GUIDs
@@ -30,7 +30,9 @@ namespace Uncreated.Warfare.Squads
                 squadMenuID = squadMenu.id;
             if (Assets.find(Gamemode.Config.UI.RallyGUID) is EffectAsset rally)
                 rallyID = rally.id;
-            L.Log("Found squad UIs: " + squadListID + ", " + squadMenuID + ", " + rallyID);
+            if (Assets.find(Gamemode.Config.UI.OrderUI) is EffectAsset order)
+                orderID = order.id;
+            L.Log("Found squad UIs: " + squadListID + ", " + squadMenuID + ", " + rallyID + ", " + orderID);
         }
         public static readonly string[] NAMES =
         {
@@ -296,16 +298,13 @@ namespace Uncreated.Warfare.Squads
                 string name = NAMES[n];
                 for (int i = 0; i < Squads.Count; i++)
                 {
-                    if (Squads[i].Team != team)
+                    if (Squads[i].Team == team)
                     {
-                        if (i == Squads.Count - 1)
+                        if (name == Squads[i].Name)
+                            break;
+                        else
                             return name;
-                        else continue;
                     }
-                    if (name == Squads[i].Name)
-                        break;
-                    else if (i == Squads.Count - 1)
-                        return name;
                 }
             }
             return NAMES[NAMES.Length - 1];
@@ -355,8 +354,8 @@ namespace Uncreated.Warfare.Squads
         {
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
-                int o = b.CachedOfp.CompareTo(a.CachedOfp); // sort players by their officer status
-                return o == 0 ? b.CachedXp.CompareTo(a.CachedXp) : o;
+                int o = b.CachedTW.CompareTo(a.CachedTW); // sort players by their officer status
+                return o == 0 ? b.CachedXP.CompareTo(a.CachedXP) : o;
             });
             if (squad.Leader != null)
             {

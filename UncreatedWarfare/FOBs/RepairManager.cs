@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs

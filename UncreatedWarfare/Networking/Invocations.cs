@@ -9,8 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Networking
@@ -238,21 +236,21 @@ namespace Uncreated.Warfare.Networking
             [NetCall(ENetCall.FROM_SERVER, 1102)]
             internal static void ReceiveSetOfficerLevel(IConnection connection, ulong player, int level, EBranch branch)
             {
-                if (level == 0)
-                {
-                    if (OfficerManager.IsOfficer(player, out Officer officer))
-                    {
-                        Rank rank = OfficerManager.GetRankFromLevel(officer.officerLevel);
-                        if (rank != null)
-                            OfficerManager.DischargeOfficer(player, rank);
-                    }
-                    return;
-                }
-                Rank lvl = OfficerManager.GetRankFromLevel(level);
-                if (lvl != null)
-                {
-                    OfficerManager.ChangeOfficerRank(player, lvl, branch);
-                }
+                //if (level == 0)
+                //{
+                //    if (OfficerManager.IsOfficer(player, out Officer officer))
+                //    {
+                //        Rank rank = OfficerManager.GetRankFromLevel(officer.officerLevel);
+                //        if (rank != null)
+                //            OfficerManager.DischargeOfficer(player, rank);
+                //    }
+                //    return;
+                //}
+                //Rank lvl = OfficerManager.GetRankFromLevel(level);
+                //if (lvl != null)
+                //{
+                //    OfficerManager.ChangeOfficerRank(player, lvl, branch);
+                //}
             }
             internal static readonly NetCall<ulong> GiveAdmin = new NetCall<ulong>(ReceiveGiveAdmin);
 
@@ -380,8 +378,8 @@ namespace Uncreated.Warfare.Networking
             [NetCall(ENetCall.FROM_SERVER, 1110)]
             internal static void ReceiveRequestRankInfo(IConnection connection)
             {
-                SendRankInfo.Invoke(connection, XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks,
-                    OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
+                //SendRankInfo.Invoke(connection, XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks,
+                //    OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
             }
 
             internal static readonly NetCallRaw<Rank[], Rank[], int, int> SendRankInfo =

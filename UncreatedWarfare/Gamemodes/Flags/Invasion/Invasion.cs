@@ -1,25 +1,11 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using UnityEngine;
 using Uncreated.Warfare.Teams;
-using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Structures;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {

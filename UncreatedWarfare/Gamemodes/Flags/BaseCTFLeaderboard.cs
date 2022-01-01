@@ -3,15 +3,11 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {

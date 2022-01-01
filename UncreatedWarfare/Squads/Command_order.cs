@@ -103,8 +103,20 @@ namespace Uncreated.Warfare.Squads
                                         }
                                         if (type == EOrder.MOVE)
                                         {
-                                            message = $"Move to the marker position";
-                                            Orders.GiveOrder(squad, player, type, marker, message);
+                                            Vector3 avgMemberPoint = Vector3.zero;
+                                            foreach (var member in squad.Members)
+                                                avgMemberPoint += member.Position;
+
+                                            avgMemberPoint /= squad.Members.Count;
+                                            float distanceToMarker = (avgMemberPoint - marker).magnitude;
+
+                                            if (distanceToMarker >= 100)
+                                            {
+                                                message = $"Move squad to the marker position";
+                                                Orders.GiveOrder(squad, player, type, marker, message);
+                                            }
+                                            else
+                                                player.Message("order_e_squadtooclose", squad.Name);
                                         }
                                     }
                                     else

@@ -1,16 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes
@@ -74,8 +67,8 @@ namespace Uncreated.Warfare.Gamemodes
                                 InAMC.Add(players.Current.playerID.steamID.m_SteamID);
                                 int a = Mathf.RoundToInt(AMC_TIME);
                                 ToastMessage.QueueMessage(players.Current,
-                                    Translation.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
-                                    EToastMessageSeverity.WARNING);
+                                    new ToastMessage(Translation.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
+                                    EToastMessageSeverity.WARNING));
                                 UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
                             }
                         }

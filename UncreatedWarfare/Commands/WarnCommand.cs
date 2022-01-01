@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Commands
                                     Invocations.Shared.LogWarned.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                 }
                                 player.playerID.steamID.SendChat("warn_warned_private_operator", reason);
-                                ToastMessage.QueueMessage(player, Translation.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING);
+                                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING));
                                 new List<CSteamID> { player.playerID.steamID }.BroadcastToAllExcept("warn_warned_broadcast_operator", name.CharacterName);
                             }
                         }

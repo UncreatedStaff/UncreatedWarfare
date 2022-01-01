@@ -11,24 +11,14 @@ using System.Text;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.TeamDeathmatch;
-using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Structures;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.XP;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -66,7 +56,7 @@ namespace Uncreated.Warfare
         }
         public static readonly string TeamStorage = DATA_DIRECTORY + @"Teams\";
         public static readonly string TicketStorage = DATA_DIRECTORY + @"Tickets\";
-        public static readonly string XPStorage = DATA_DIRECTORY + @"XP\";
+        public static readonly string PointsStorage = DATA_DIRECTORY + @"Points\";
         public static readonly string OfficerStorage = DATA_DIRECTORY + @"Officers\";
         public static readonly string CooldownStorage = DATA_DIRECTORY + @"Cooldowns\";
         public static readonly string SquadStorage = DATA_DIRECTORY + @"Squads\";

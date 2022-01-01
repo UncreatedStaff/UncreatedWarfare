@@ -3,8 +3,6 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
@@ -339,7 +337,7 @@ namespace Uncreated.Warfare.Teams
             PlayerManager.ApplyToOnline();
 
             CooldownManager.StartCooldown(player, ECooldownType.CHANGE_TEAMS, TeamManager.TeamSwitchCooldown);
-            ToastMessage.QueueMessage(player, "", Data.Gamemode.DisplayName, EToastMessageSeverity.BIG);
+            ToastMessage.QueueMessage(player, new ToastMessage("", Data.Gamemode.DisplayName, EToastMessageSeverity.BIG));
         }
 
         public void CloseUI(UCPlayer player)

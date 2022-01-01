@@ -1,8 +1,6 @@
 ﻿//#define NONADJACENCIES
-using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF

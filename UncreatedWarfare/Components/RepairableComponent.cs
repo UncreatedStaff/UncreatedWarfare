@@ -1,18 +1,8 @@
 ﻿using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Officers;
-using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.Vehicles;
-using Uncreated.Warfare.XP;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components
@@ -75,8 +65,8 @@ namespace Uncreated.Warfare.Components
                     int amount = 0;
                     if (buildable.type == EbuildableType.FOB_BUNKER)
                     {
-                        if (teamkilled) amount = XPManager.config.Data.FOBTeamkilledXP;
-                        else amount = XPManager.config.Data.FOBKilledXP;
+                        if (teamkilled) amount = Points.XPConfig.FOBTeamkilledXP;
+                        else amount = Points.XPConfig.FOBKilledXP;
                     }
                     if (buildable.type == EbuildableType.FORTIFICATION)
                     {
@@ -95,7 +85,7 @@ namespace Uncreated.Warfare.Components
                     }
 
                     if (amount != 0)
-                        XPManager.AddXP(player.Player, amount, message.ToUpper());
+                        Points.AwardXP(player, amount, message.ToUpper());
                 }
             }
 

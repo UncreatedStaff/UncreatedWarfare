@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Uncreated.Networking;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;

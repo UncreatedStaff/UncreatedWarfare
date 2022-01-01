@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.SQL;
 
@@ -47,6 +46,26 @@ namespace Uncreated.Warfare
             });
             DiscordID = tid;
             return found;
+        }
+        public bool PlayerExistsInDatabase(ulong Steam64, out FPlayerName usernames)
+        {
+            FPlayerName? name = null;
+            Query(
+                $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
+                $"FROM `usernames` " +
+                $"WHERE `Steam64` = @0 LIMIT 1;",
+                new object[] { Steam64 },
+                (R) =>
+                {
+                    name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2) };
+                });
+            if (name.HasValue)
+            {
+                usernames = name.Value;
+                return true;
+            }
+            usernames = FPlayerName.Nil;
+            return false;
         }
         public void CheckUpdateUsernames(FPlayerName player)
         {
@@ -96,35 +115,35 @@ namespace Uncreated.Warfare
                 $";",
                 parameters);
         }
-        public int GetXP(ulong Steam64)
+        public int GetXP(ulong Steam64, EBranch branch)
         {
             int xp = 0;
             Query(
                 "SELECT `XP` " +
-                "FROM `points` " +
-                "WHERE `Steam64` = @0 " +
+                "FROM `xp` " +
+                "WHERE `Steam64` = @0 AND `Branch` = @1 " +
                 "LIMIT 1;",
-                new object[] { Steam64 },
+                new object[] { Steam64, branch },
                 (R) =>
                 {
                     xp = R.GetInt32(0);
                 });
             return xp;
         }
-        public int GetOfficerPoints(ulong Steam64)
+        public int GetTeamwork(ulong Steam64)
         {
-            int officer_points = 0;
+            int teamwork = 0;
             Query(
-                $"SELECT `OfficerPoints` " +
-                $"FROM `points` " +
+                $"SELECT `Points` " +
+                $"FROM `teamwork` " +
                 $"WHERE `Steam64` = @0 " +
                 $"LIMIT 1;",
                 new object[] { Steam64 },
                 (R) =>
                 {
-                    officer_points = R.GetInt32(0);
+                    teamwork = R.GetInt32(0);
                 });
-            return officer_points;
+            return teamwork;
         }
         public uint GetKills(ulong Steam64, ulong Team)
         {
@@ -172,43 +191,43 @@ namespace Uncreated.Warfare
             return teamkills;
         }
         /// <returns>New XP Value</returns>
-        public int AddXP(ulong Steam64, int amount)
+        public int AddTeamwork(ulong Steam64, int amount)
         {
-            int oldBalance = GetXP(Steam64);
+            int oldBalance = GetTeamwork(Steam64);
+
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
                 NonQuery(
-                    "INSERT INTO `points` " +
-                    "(`Steam64`, `XP`, `OfficerPoints`) " +
-                    "VALUES(@0, @1,'0') " +
+                    "INSERT INTO `teamwork` " +
+                    "(`Steam64`, `Points`) " +
+                    "VALUES(@0, @1) " +
                     "ON DUPLICATE KEY UPDATE " +
-                    "`XP` = `XP` + VALUES(`XP`);",
+                    "`Points` = `Points` + @1;",
                     new object[] { Steam64, amount });
-                return unchecked(oldBalance + amount);
+                return oldBalance + amount;
             }
             else
             {
-                int absamount = Math.Abs(amount);
-                if (absamount >= oldBalance)
+                if (amount >= oldBalance)
                 {
                     NonQuery(
-                        "INSERT INTO `points` " +
-                        "(`Steam64`, `XP`, `OfficerPoints`) " +
-                        "VALUES(@0, '0', '0') " +
+                        "INSERT INTO `teamwork` " +
+                        "(`Steam64`, `Points`) " +
+                        "VALUES(@0, 0) " +
                         "ON DUPLICATE KEY UPDATE " +
-                        "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64 });
+                        "`Points` = 0;", // clamp to 0
+                        new object[] { Steam64});
                     return 0;
                 }
                 else
                 {
                     NonQuery(
-                        "UPDATE `points` SET " +
-                        "`XP` = `XP` - @1 " +
+                        "UPDATE `teamwork` SET " +
+                        "`Points` = `Points` - @1 " +
                         "WHERE `Steam64` = @0;",
-                        new object[] { Steam64, absamount });
-                    return unchecked(oldBalance - absamount);
+                        new object[] { Steam64, Math.Abs(amount) });
+                    return oldBalance - amount;
                 }
             }
         }
@@ -228,20 +247,20 @@ namespace Uncreated.Warfare
             });
         }
         /// <returns>New Officer Points Value</returns>
-        public int AddOfficerPoints(ulong Steam64, int amount)
+        public int AddXP(ulong Steam64, EBranch branch, int amount)
         {
-            int oldBalance = GetOfficerPoints(Steam64);
+            int oldBalance = GetXP(Steam64, branch);
 
             if (amount == 0) return oldBalance;
             if (amount > 0)
             {
                 NonQuery(
-                    "INSERT INTO `points` " +
-                    "(`Steam64`, `XP`, `OfficerPoints`) " +
-                    "VALUES(@0, '0', @1) " +
+                    "INSERT INTO `xp` " +
+                    "(`Steam64`, `Branch`, `XP`) " +
+                    "VALUES(@0, @1, @2) " +
                     "ON DUPLICATE KEY UPDATE " +
-                    "`OfficerPoints` = `OfficerPoints` + VALUES(`OfficerPoints`);",
-                    new object[] { Steam64, amount });
+                    "`xp` = `xp` + @2;",
+                    new object[] { Steam64, (int)branch, amount });
                 return oldBalance + amount;
             }
             else
@@ -249,21 +268,21 @@ namespace Uncreated.Warfare
                 if (amount >= oldBalance)
                 {
                     NonQuery(
-                        "INSERT INTO `points` " +
-                        "(`Steam64`, `XP`, `OfficerPoints`) " +
-                        "VALUES(@0, '0', '0') " +
+                        "INSERT INTO `xp` " +
+                        "(`Steam64`, `Branch`, `XP`) " +
+                        "VALUES(@0, @1, 0) " +
                         "ON DUPLICATE KEY UPDATE " +
                         "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64 });
+                        new object[] { Steam64, (int)branch });
                     return 0;
                 }
                 else
                 {
                     NonQuery(
-                        "UPDATE `points` SET " +
-                        "`OfficerPoints` = `OfficerPoints` - @1 " +
-                        "WHERE `Steam64` = @0;",
-                        new object[] { Steam64, Math.Abs(amount) });
+                        "UPDATE `xp` SET " +
+                        "`XP` = `XP` - @2 " +
+                        "WHERE `Steam64` = @0 AND `Branch` = @1;",
+                        new object[] { Steam64, (int)branch, Math.Abs(amount) });
                     return oldBalance - amount;
                 }
             }
