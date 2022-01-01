@@ -1169,7 +1169,6 @@ namespace Uncreated.Warfare.Commands
             }
             player.SendChat("Found no structure or barricade.");
         }
-
         private void fakereport(string[] command, Player player)
         {
             Report report = new ChatAbuseReport()

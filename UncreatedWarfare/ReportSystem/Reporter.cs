@@ -441,27 +441,7 @@ namespace Uncreated.Warfare.ReportSystem
                     chatLogs.RemoveAt(chatLogs.Count - 1);
                 }
                 chatLogs.Insert(0, new KeyValuePair<int, KeyValuePair<string, DateTime>>(1, new KeyValuePair<string, DateTime>(message, DateTime.Now)));
-                
             }
-
-            /*
-            [StructLayout(LayoutKind.Sequential)]
-            private struct WAV_HEADER
-            {
-                public short wFormatTag;
-                public short nChannels;
-                public int nSamplesPerSec;
-                public int nAvgBytesPerSec;
-                public short nBlockAlign;
-                public short wBitsPerSample;
-                public short cbSize;
-                public WAV_HEADER(byte[] data)
-                {
-                    this.wFormatTag = 0x0001; // WAVE_FORMAT_PCM
-                    this.nChannels = 1;
-                    this.nSamplesPerSec = 44100;
-                }
-            }*/
 
             public PlayerData(ulong steam64) => Steam64 = steam64;
             public Report CustomReport(string message, ulong reporter) =>
