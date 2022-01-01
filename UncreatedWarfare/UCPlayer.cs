@@ -46,41 +46,53 @@ namespace Uncreated.Warfare
         }
         private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
-        private RankData _rank;
         private MedalData _medals;
-        public RankData Rank
+        private Dictionary<EBranch, RankData> _ranks;
+        public Dictionary<EBranch, RankData> Ranks
         {
             get
             {
-                if (CachedXP == -1)
-                    RedownloadCachedXP();
-                if (_rank == null || isXPDirty)
-                {
-                    _rank = new RankData(Steam64, CachedXP, Branch);
-                    isXPDirty = false;
-                }
-                return _rank;
+                if (_ranks == null)
+                    RedownloadRanks();
+                return _ranks;
+            }
+        }
+        public RankData CurrentRank
+        {
+            get
+            {
+                if (_ranks.TryGetValue(Branch, out RankData rank))
+                    return rank;
+                else
+                    return _ranks[EBranch.INFANTRY];
             }
         }
         public MedalData Medals
         {
             get
             {
-                if (CachedTW == -1)
-                    RedownloadCachedTW();
-                if (_medals == null || isTWDirty)
-                {
-                    _medals = new MedalData(CachedTW);
-                    isTWDirty = false;
-                }
+                if (_medals == null)
+                    RedownloadMedals();
                 return _medals;
             }
         }
-        public bool IsOfficer { get => _rank?.OfficerLevel > 0; }
-        public void UpdateRank()
+        public bool IsOfficer { get => CurrentRank?.OfficerTier > 0; }
+        public void RedownloadRanks()
         {
-            _rank = new RankData(Steam64, CachedXP, Branch);
+            _ranks = new Dictionary<EBranch, RankData>();
+
+            var xplevels = Data.DatabaseManager.GetAllXP(Steam64);
+            foreach (var entry in xplevels)
+            {
+                _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key));
+            }
         }
+        public void RedownloadMedals()
+        {
+            _medals = new MedalData(Data.DatabaseManager.GetTeamwork(Steam64));
+        }
+        public void UpdateRank(EBranch branch, int newXP) => _ranks[branch] = new RankData(Steam64, newXP, branch);
+        public void UpdateMedals(int newTW) => _medals = new MedalData(newTW);
 
         private bool _otherDonator;
         /// <summary>Slow, loops through all kits, only use once.</summary>
@@ -114,29 +126,7 @@ namespace Uncreated.Warfare
         }
         public bool IsOnline;
         public int LifeCounter;
-        private int _cachedXp = -1;
-        private int _cachedTw = -1;
-        public int CachedXP
-        {
-            get => _cachedXp;
-            set
-            {
-                _cachedXp = value;
-                isXPDirty = true;
-            }
-        }
-        public int CachedTW
-        {
-            get => _cachedTw;
-            set
-            {
-                _cachedTw = value;
-                isTWDirty = true;
-            }
-        }
-        
-        private bool isXPDirty = false;
-        private bool isTWDirty = false;
+       
        
         public static UCPlayer FromID(ulong steamID)
         {
@@ -246,14 +236,7 @@ namespace Uncreated.Warfare
         public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
-        public void RedownloadCachedXP()
-        {
-            CachedXP = Data.DatabaseManager.GetXP(Steam64, Branch);
-        }
-        public void RedownloadCachedTW()
-        {
-            CachedTW = Data.DatabaseManager.GetTeamwork(Steam64);
-        }
+
         public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
         {
             Steam64 = steamID.m_SteamID;
@@ -274,8 +257,6 @@ namespace Uncreated.Warfare
             CharacterName = characterName;
             NickName = nickName;
             IsOnline = true;
-            _cachedXp = -1;
-            _cachedTw = -1;
             _otherDonator = donator;
             LifeCounter = 0;
             SuppliesUnloaded = 0;

@@ -18,16 +18,20 @@ namespace Uncreated.Warfare.Point
         public static XPConfig XPConfig => _xpconfig.Data;
         public static TWConfig TWConfig => _twconfig.Data;
 
-        public static OfficerStorage Officers = new OfficerStorage();
+        public static OfficerStorage Officers;
 
+        public static void Initialize()
+        {
+            Officers = new OfficerStorage();
+        }
         public static void ReloadConfig()
         {
             _xpconfig.Reload();
             _twconfig.Reload();
         }
-        public static void OnPlayerJoined(UCPlayer player)
+        public static void OnPlayerJoined(UCPlayer player, bool isnewGame)
         {
-            if (player.IsTeam1() || player.IsTeam2())
+            if (!isnewGame && (player.IsTeam1() || player.IsTeam2()))
             {
                 UpdateXPUI(player);
                 UpdateTWUI(player);
@@ -35,44 +39,45 @@ namespace Uncreated.Warfare.Point
         }
         public static void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
         {
-            int xp = GetXP(player, true);
-            UpdateXPUI(player);
-            UpdateTWUI(player);
-        }
-        public static int GetXP(UCPlayer player, bool important)
-        {
-            if (player == default || important || player.CachedXP == -1)
+            if (newGroup == 1 || newGroup == 2)
             {
-                int newxp = Data.DatabaseManager.GetXP(player.Steam64, player.Branch);
-                if (player != null)
-                    player.CachedXP = newxp;
-                return newxp;
+                UpdateXPUI(player);
+                UpdateTWUI(player);
             }
-            else return player.CachedXP;
-        }
-        public static int GetXP(ulong player, bool important) => GetXP(UCPlayer.FromID(player), important);
-        public static int GetTeamwork(UCPlayer player, bool important)
-        {
-            if (player == default || important || player.CachedXP == -1)
+            else
             {
-                int newtw = Data.DatabaseManager.GetTeamwork(player.Steam64);
-                if (player != null)
-                    player.CachedTW = newtw;
-                return newtw;
+                
             }
-            else return player.CachedTW;
         }
-        public static int GetTeamwork(ulong player, bool important) => GetTeamwork(UCPlayer.FromID(player), important);
+        public static void OnBranchChanged(UCPlayer player, EBranch oldBranch, EBranch newBranch)
+        {
+            if (oldBranch != EBranch.DEFAULT)
+            {
+                string rank = "";
+                if (player.CurrentRank.Level > 0)
+                    rank = Translation.Translate("branch_changed", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name, player.CurrentRank.Level.ToString(Data.Locale));
+                else
+                    rank = Translation.Translate("branch_changed_recruit", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name);
+
+                ToastMessage.QueueMessage(player, new ToastMessage(
+                "",
+                "",
+                rank,
+                EToastMessageSeverity.BIG));
+
+                UpdateXPUI(player);
+            }
+        }
         public static void AwardXP(UCPlayer player, int amount, string message = "")
         {
             if (!Data.TrackStats) return;
 
-            RankData oldRank = player.Rank;
+            RankData oldRank = player.CurrentRank;
 
             amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
             int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
 
-            player.CachedXP = newBalance;
+            player.UpdateRank(player.Branch, newBalance);
 
             if (amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
             {
@@ -95,7 +100,7 @@ namespace Uncreated.Warfare.Point
 
             UpdateXPUI(player);
 
-            RankData newRank = player.Rank;
+            RankData newRank = player.CurrentRank;
 
             if (newRank.Level > oldRank?.Level)
             {
@@ -130,7 +135,7 @@ namespace Uncreated.Warfare.Point
             amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
             int newBalance = Data.DatabaseManager.AddTeamwork(player.Steam64, amount);
 
-            player.CachedTW = newBalance;
+            player.UpdateMedals(newBalance);
 
             MedalData newMedals = player.Medals;
 
@@ -175,55 +180,27 @@ namespace Uncreated.Warfare.Point
         public static void UpdateXPUI(UCPlayer player)
         {
             short key = (short)XPConfig.RankUI;
-            RankData current = player.Rank;
-            RankData next = player.Rank.NextRank;
+            RankData current = player.CurrentRank;
 
-            if (player.IsOfficer)
-            {
-                EffectManager.sendUIEffect(XPConfig.RankUI, key, player.connection, true);
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Rank", current.Name
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Level", current.Level == 0 ? "" : Translation.Translate("ui_ofp_level", player, current.OfficerLevel.ToString(Data.Locale))
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "XP", next != null ? current.CurrentXP + "/" + current.RequiredXP : current.CurrentXP.ToString()
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Next", next != null ?
-                    Translation.Translate("ui_ofp_equivalent", player, next.Name, next.Level.ToString(Data.Locale)) : string.Empty
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Progress", GetProgressBar(current.CurrentXP, current.RequiredXP)
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Division", Translation.TranslateBranch(player.Branch, player)
-                );
-            }
-            else
-            {
-                EffectManager.sendUIEffect(XPConfig.RankUI, key, player.connection, true);
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Rank", current.Name
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Level", current.Level == 0 ? "" : Translation.Translate("ui_xp_level", player, current.Level.ToString(Data.Locale))
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "XP", next != null ? current.CurrentXP + "/" + current.RequiredXP : current.CurrentXP.ToString()
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Next", next != null ?
-                    Translation.Translate("ui_xp_next_level", player, next.Abbreviation, next.Level.ToString(Data.Locale)) : string.Empty
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Progress", GetProgressBar(current.CurrentXP, current.RequiredXP)
-                );
-                EffectManager.sendUIEffectText(key, player.connection, true,
-                    "Division", Translation.TranslateBranch(player.Branch, player)
-                );
-            }
+            EffectManager.sendUIEffect(XPConfig.RankUI, key, player.connection, true);
+            EffectManager.sendUIEffectText(key, player.connection, true,
+                "Rank", current.Name
+            );
+            EffectManager.sendUIEffectText(key, player.connection, true,
+                "Level", current.Level == 0 ? "" : Translation.Translate("ui_xp_level", player, current.Level.ToString(Data.Locale))
+            );
+            EffectManager.sendUIEffectText(key, player.connection, true,
+                "XP", current.CurrentXP + "/" + current.RequiredXP
+            );
+            EffectManager.sendUIEffectText(key, player.connection, true,
+                "Next", Translation.Translate("ui_xp_next_level", player, (current.Level + 1).ToString(Data.Locale))
+            );
+            EffectManager.sendUIEffectText(key, player.connection, true,
+                "Progress", GetProgressBar(current.CurrentXP, current.RequiredXP)
+            );
+            EffectManager.sendUIEffectText(key, player.connection, true,
+                "Division", Translation.TranslateBranch(player.Branch, player)
+            );
         }
         public static void UpdateTWUI(UCPlayer player)
         {

@@ -325,6 +325,7 @@ namespace Uncreated.Warfare
                 // reset the player to spawn if they have joined in a different game as they last played in.
 
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+
                 bool g = Data.Is(out ITeams t);
                 bool isNewGame = false;
                 bool isNewPlayer = true;
@@ -361,7 +362,7 @@ namespace Uncreated.Warfare
                 PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 pt.StartTracking(player.Player);
                 Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                Points.OnPlayerJoined(ucplayer);
+                Points.OnPlayerJoined(ucplayer, isNewGame);
                 Data.DatabaseManager.CheckUpdateUsernames(names);
                 bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Data.DatabaseManager.RegisterLogin(player.Player);

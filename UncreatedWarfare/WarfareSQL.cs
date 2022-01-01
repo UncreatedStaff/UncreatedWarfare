@@ -115,6 +115,19 @@ namespace Uncreated.Warfare
                 $";",
                 parameters);
         }
+        public void TryInitializeXP(ulong Steam64)
+        {
+            NonQuery(
+                    "INSERT INTO `xp` " +
+                    "(`Steam64`, `Branch`, `XP`) " +
+                    "VALUES" +
+                    "(@0, @1, 0), " +
+                    "(@0, @2, 0), " +
+                    "(@0, @3, 0) " +
+                    "ON DUPLICATE KEY UPDATE " +
+                    "`xp` = `xp`;",
+                    new object[] { Steam64, (int)EBranch.INFANTRY, (int)EBranch.ARMOR, (int)EBranch.AIRFORCE });
+        }
         public int GetXP(ulong Steam64, EBranch branch)
         {
             int xp = 0;
@@ -129,6 +142,21 @@ namespace Uncreated.Warfare
                     xp = R.GetInt32(0);
                 });
             return xp;
+        }
+        public Dictionary<EBranch, int> GetAllXP(ulong Steam64)
+        {
+            Dictionary<EBranch, int> levels = new Dictionary<EBranch, int>();
+            Query(
+                "SELECT `Branch`, `XP` " +
+                "FROM `xp` " +
+                "WHERE `Steam64` = @0;",
+                new object[] { Steam64 },
+                (R) =>
+                {
+                    levels.Add((EBranch)R.GetInt32(0), R.GetInt32(1));
+                });
+            levels.Add(EBranch.DEFAULT, 0);
+            return levels;
         }
         public int GetTeamwork(ulong Steam64)
         {

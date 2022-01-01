@@ -10,14 +10,15 @@ namespace Uncreated.Warfare.Point
     public class OfficerStorage : JSONSaver<OfficerData>
     {
         public OfficerStorage()
-            : base(Data.OfficerStorage + "officers.json")
+            : base(Data.PointsStorage + "officers.json")
         {
             Reload();
         }
         protected override string LoadDefaults() => "[]";
         public static bool IsOfficer(ulong playerID, out OfficerData officer)
         {
-            officer = GetObject(o => o.Steam64 == playerID);
+            L.Log("playerID: " + playerID);
+            officer = GetObject(o => o.Steam64 == playerID, true);
             return officer != null;
         }
         public static void ChangeOfficerRank(ulong playerID, int newOfficerLevel, EBranch newBranch)
@@ -26,10 +27,10 @@ namespace Uncreated.Warfare.Point
 
             if (ObjectExists(o => o.Steam64 == playerID, out var officer))
             {
-                if (officer.OfficerLevel == newOfficerLevel && officer.Branch == newBranch)
+                if (officer.OfficerTier == newOfficerLevel && officer.Branch == newBranch)
                     return;
 
-                UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Branch = newBranch; o.OfficerLevel = newOfficerLevel; });                
+                UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Branch = newBranch; o.OfficerTier = newOfficerLevel; });                
             }
             else
             {
@@ -40,48 +41,54 @@ namespace Uncreated.Warfare.Point
             UCPlayer player = UCPlayer.FromID(playerID);
             if (player != null)
             {
-                player.UpdateRank();
+                player.RedownloadRanks();
 
-                if (isNewOfficer || newBranch != officer.Branch || newOfficerLevel >= officer.OfficerLevel)
+                if (isNewOfficer || newBranch != officer.Branch || newOfficerLevel >= officer.OfficerTier)
                 {
-                    player.Message("officer_promoted", player.Rank.Name, Translation.TranslateBranch(newBranch, player));
+                    player.Message("officer_promoted", player.CurrentRank.Name, Translation.TranslateBranch(newBranch, player));
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, player.Rank.Name, Translation.TranslateBranch(newBranch, PlayerManager.OnlinePlayers[i]));
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, player.CurrentRank.Name, Translation.TranslateBranch(newBranch, PlayerManager.OnlinePlayers[i]));
                         }
                     }
                 }
                 else
                 {
-                    player.Message("officer_demoted", player.Rank.Name);
+                    player.Message("officer_demoted", player.CurrentRank.Name);
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName, player.Rank.Name);
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName, player.CurrentRank.Name);
                         }
                     }
                 }
+                Points.UpdateXPUI(player);
             }
         }
-        public static void DischargeOfficer(UCPlayer player)
+        public static void DischargeOfficer(ulong playerID)
         {
-            RemoveWhere(o => o.Steam64 == player.CSteamID.m_SteamID);
+            RemoveWhere(o => o.Steam64 == playerID);
 
-            player.Message("officer_discharged", player.Rank.Name);
-            FPlayerName names = F.GetPlayerOriginalNames(player);
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            UCPlayer player = UCPlayer.FromID(playerID);
+            if (player != null)
             {
-                if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
+                player.Message("officer_discharged", player.CurrentRank.Name);
+                FPlayerName names = F.GetPlayerOriginalNames(player);
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                 {
-                    PlayerManager.OnlinePlayers[i].Message("officer_announce_discharged", names.CharacterName, player.Rank.Name);
+                    if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
+                    {
+                        PlayerManager.OnlinePlayers[i].Message("officer_announce_discharged", names.CharacterName, player.CurrentRank.Name);
+                    }
                 }
+                Points.UpdateXPUI(player);
             }
         }
     }
@@ -89,13 +96,13 @@ namespace Uncreated.Warfare.Point
     {
         public ulong Steam64;
         public EBranch Branch;
-        public int OfficerLevel;
+        public int OfficerTier;
 
         public OfficerData(ulong steam64, EBranch branch, int officerLevel)
         {
             Steam64 = steam64;
             Branch = branch;
-            OfficerLevel = officerLevel;
+            OfficerTier = officerLevel;
         }
         public OfficerData() { }
     }

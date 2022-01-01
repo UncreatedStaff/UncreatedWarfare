@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Teams;
 using Item = SDG.Unturned.Item;
 
@@ -172,19 +173,19 @@ namespace Uncreated.Warfare.Kits
             }
             player.KitName = kit.Name;
             player.KitClass = kit.Class;
+
+            EBranch oldBranch = player.Branch;
+
+            player.Branch = kit.Branch;
+
+            if (oldBranch != player.Branch && player.Branch != EBranch.DEFAULT)
+            {
+                Points.OnBranchChanged(player, oldBranch, player.Branch);
+            }
+
             
-            for (int i = 0; i < PlayerManager.ActiveObjects.Count; i++)
-            {
-                if (PlayerManager.ActiveObjects[i].Steam64 == player.Steam64)
-                {
-                    PlayerManager.ActiveObjects[i].KitName = kit.Name;
-                    break;
-                }
-            }
-            if (kit.IsPremium && kit.Cooldown > 0)
-            {
-                CooldownManager.StartCooldown(player, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
-            }
+            
+
 
             OnKitChanged?.Invoke(player, kit, oldkit);
             if (oldkit != null && oldkit != string.Empty)
@@ -254,7 +255,7 @@ namespace Uncreated.Warfare.Kits
                     !k.IsPremium &&
                     !k.IsLoadout &&
                     k.TeamLimit == 1 &&
-                    k.RequiredLevel == 0
+                    k.UnlockLevel == 0
                 ).FirstOrDefault();
 
             if (rifleman != null)
@@ -359,7 +360,7 @@ namespace Uncreated.Warfare.Kits
                 Branch = EBranch.DEFAULT,
                 Team = 0,
                 Cost = 0,
-                RequiredLevel = 0,
+                UnlockLevel = 0,
                 TicketCost = 1,
                 IsPremium = false,
                 PremiumCost = 0,

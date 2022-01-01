@@ -136,7 +136,7 @@ namespace Uncreated.Warfare.Commands
             player.SendChat("report_success_p2");
             if (targetPl != null)
             {
-                ToastMessage.QueueMessage(targetPl, Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE);
+                ToastMessage.QueueMessage(targetPl, new ToastMessage(Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
                 targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
                 targetPl.SendChat("report_notify_violator_chat_p2");
             }
@@ -257,7 +257,7 @@ namespace Uncreated.Warfare.Commands
                 string translation = Translation.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message, typename);
                 while (set.MoveNext())
                 {
-                    ToastMessage.QueueMessage(set.Next, translation, EToastMessageSeverity.INFO);
+                    ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, EToastMessageSeverity.INFO));
                 }
             }
         }

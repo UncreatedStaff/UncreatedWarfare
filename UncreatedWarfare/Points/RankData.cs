@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Point
 {
@@ -12,14 +13,13 @@ namespace Uncreated.Warfare.Point
         public readonly int TotalXP;
         public readonly EBranch Branch;
         public readonly int Level;
-        public readonly int OfficerLevel;
+        public readonly int RankTier;
+        public readonly int OfficerTier;
         public readonly EBranch OfficerBranch;
         public readonly int CurrentXP;
         public readonly int RequiredXP;
         public readonly string Name;
         public readonly string Abbreviation;
-        public readonly RankData NextRank;
-        private Dictionary<int, int> RankValues;
         public RankData(ulong steamID, int xp, EBranch branch)
         {
             Steam64 = steamID;
@@ -27,81 +27,64 @@ namespace Uncreated.Warfare.Point
             TotalXP = xp;
             Branch = branch;
 
+            int a = 600;
+            int d = 200;
+
+            float x = d / 2f;
+            float y = a - (3 * x);
+            float z = 0 - x - y;
+
+            Level = Mathf.RoundToInt(Mathf.Floor((x - a + Mathf.Sqrt(Mathf.Pow(a - x, 2f) + (2f * d * TotalXP))) / d));
+
+            float n = Level + 1;
+
+            RequiredXP = a + Level * d;
+
+            CurrentXP = (int)(TotalXP - ((x * Math.Pow(n, 2)) + (y * n) + z));
+
             if (OfficerStorage.IsOfficer(Steam64, out var officer))
             {
-                OfficerLevel = officer.OfficerLevel;
+                OfficerTier = officer.OfficerTier;
                 OfficerBranch = officer.Branch;
             }
-
-            if (Branch == EBranch.INFANTRY) RankValues = Points.XPConfig.InfantryRankValues;
-            else if (Branch == EBranch.ARMOR) RankValues = Points.XPConfig.ArmorRankValues;
-            else if (Branch == EBranch.AIRFORCE) RankValues = Points.XPConfig.AirforceRankValues;
-            else RankValues = null;
-
-            // set level & RequiredXP
-            Level = RankValues.Last().Key; ;
-            foreach (var level in RankValues)
-            {
-                if (TotalXP < level.Value)
-                {
-                    Level = level.Key;
-                    RequiredXP = level.Value;
-                    break;
-                }
-            }
-
-            // set CurrentXP
-            int totalRequiredXP = 0;
-            for (int i = 0; i < RankValues.Count; i++)
-            {
-                totalRequiredXP += RankValues[i];
-                if (TotalXP < totalRequiredXP)
-                {
-                    CurrentXP = unchecked(RankValues[i] - (totalRequiredXP - xp));
-                    break;
-                }
-            }
-
-            // set NextRank
-            if (Level >= RankValues.Count - 1 || OfficerLevel == 5)
-                NextRank = null;
             else
             {
-                int nextLevel = Level + 1;
-                int nextXP = RankValues[nextLevel];
-                NextRank = new RankData(Steam64, nextXP, Branch, nextLevel, OfficerLevel, OfficerBranch, CurrentXP, RequiredXP, RankValues);
+                OfficerTier = 0;
+                OfficerBranch = EBranch.DEFAULT;
             }
 
-            // set Name & Abbreivation
+            RankTier = GetRankTier(Level);
 
-            if (OfficerLevel > 0)
+
+            if (OfficerTier > 0)
             {
-                Name = GetOfficerRankName(OfficerLevel);
-                Abbreviation = GetOfficerRankAbbreviation(OfficerLevel);
+                Name = GetOfficerRankName(OfficerTier);
+                Abbreviation = GetOfficerRankAbbreviation(OfficerTier);
             }
             else
             {
-                Name = GetRankName(Level);
-                Abbreviation = GetRankAbbreviation(Level);
+                Name = GetRankName(RankTier);
+                Abbreviation = GetRankAbbreviation(RankTier);
             }
             
         }
-        private RankData(ulong steamID, int xp, EBranch branch, int level, int officerLevel, EBranch officerBranch, int currentXP, int requiredXP, Dictionary<int, int> rankValues)
+        public static int GetRankTier(int level)
         {
-            Steam64 = steamID;
-            TotalXP = xp;
-            Branch = branch;
-            Level = level;
-            OfficerLevel = officerLevel;
-            OfficerBranch = officerBranch;
-            RankValues = rankValues;
-            CurrentXP = currentXP;
-            RequiredXP = requiredXP;
+            if (level < 2) return 0;
+            else if (level < 5) return 1;
+            else if (level < 8) return 2;
+            else if (level < 12) return 3;
+            else if (level < 16) return 4;
+            else if (level < 22) return 5;
+            else if (level < 28) return 6;
+            else if (level < 32) return 7;
+            else if (level < 36) return 8;
+            else if (level < 40) return 9;
+            else return 10;
         }
-
-        public static string GetRankName(int level)
+        public static string GetRankName(int rankTier)
         {
-            switch (level)
+            switch (rankTier)
             {
                 case 0: return "Recruit";
                 case 1: return "Private";
@@ -117,9 +100,9 @@ namespace Uncreated.Warfare.Point
                 default: return "unknown";
             }
         }
-        public static string GetRankAbbreviation(int level)
+        public static string GetRankAbbreviation(int rankTier)
         {
-            switch (level)
+            switch (rankTier)
             {
                 case 0: return "Rec.";
                 case 1: return "Pvt.";
@@ -136,9 +119,9 @@ namespace Uncreated.Warfare.Point
             }
         }
 
-        public static string GetOfficerRankName(int officerLevel)
+        public static string GetOfficerRankName(int officerTier)
         {
-            switch (officerLevel)
+            switch (officerTier)
             {
                 case 1: return "Captain";
                 case 2: return "Major";
@@ -148,9 +131,9 @@ namespace Uncreated.Warfare.Point
                 default: return "unknown";
             }
         }
-        public static string GetOfficerRankAbbreviation(int officerLevel)
+        public static string GetOfficerRankAbbreviation(int officerTier)
         {
-            switch (officerLevel)
+            switch (officerTier)
             {
                 case 1: return "Cpt.";
                 case 2: return "Maj.";

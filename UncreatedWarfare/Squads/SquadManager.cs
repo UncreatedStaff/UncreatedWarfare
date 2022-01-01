@@ -354,8 +354,8 @@ namespace Uncreated.Warfare.Squads
         {
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
-                int o = b.CachedTW.CompareTo(a.CachedTW); // sort players by their officer status
-                return o == 0 ? b.CachedXP.CompareTo(a.CachedXP) : o;
+                int o = b.Medals.TotalTW.CompareTo(a.Medals.TotalTW); // sort players by their officer status
+                return o == 0 ? b.CurrentRank.TotalXP.CompareTo(a.CurrentRank.TotalXP) : o;
             });
             if (squad.Leader != null)
             {
