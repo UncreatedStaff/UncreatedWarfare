@@ -50,17 +50,12 @@ namespace Uncreated.Warfare
         internal static Dictionary<uint, ulong> droppeditemsInverse = new Dictionary<uint, ulong>();
         internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
         {
-            if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
-            if (!KitManager.HasKit(inv.player, out Kit kit)) return;
-            bool inkit = kit.Items.Exists(k => k.ID == item.id);
-            if (!inkit) return;
             if (!itemstemp.ContainsKey(item))
                 itemstemp.Add(item, inv);
             else itemstemp[item] = inv;
         }
         internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
         {
-            if (!UCWarfare.Config.ClearItemsOnAmmoBoxUse) return;
             if (itemstemp.TryGetValue(item, out PlayerInventory inv))
             {
                 uint nextindex;

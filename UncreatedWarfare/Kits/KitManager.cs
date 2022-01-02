@@ -178,9 +178,9 @@ namespace Uncreated.Warfare.Kits
 
             player.Branch = kit.Branch;
 
-            if (oldBranch != player.Branch && player.Branch != EBranch.DEFAULT)
+            if (oldBranch != kit.Branch && kit.Branch != EBranch.DEFAULT)
             {
-                Points.OnBranchChanged(player, oldBranch, player.Branch);
+                Points.OnBranchChanged(player, oldBranch, kit.Branch);
             }
 
             

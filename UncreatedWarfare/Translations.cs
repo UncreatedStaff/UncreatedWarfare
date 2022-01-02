@@ -785,8 +785,11 @@ namespace Uncreated.Warfare
 
                 { "gain_xp", "+{0} XP" },
                 { "loss_xp", "-{0} XP" },
+                { "level_up_xp_1", "YOU HAVE REACHED" },
+                { "level_up_xp_2", "{1} - <color=#f7b88b>Level {2}</color>" },
+                { "level_down_xp", "<color=#e08675>LEVEL LOST</color>" },
                 { "promoted_xp", "YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO" },
-                { "demoted_xp", "YOU HAVE BEEN <color=#ff8a8a>DEMOTED</color> TO" },
+                { "demoted_xp", "YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO" },
 
                 { "branch_changed", "<color=#ffffff>{0}</color>\n<color=#9e9e9e>{1} - <color=#f7b88b>lvl {2}</color></color>" },
                 { "branch_changed_recruit", "<color=#ffffff>{0}</color>\n<color=#9e9e9e>{1}</color>" },

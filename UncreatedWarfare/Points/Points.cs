@@ -104,8 +104,14 @@ namespace Uncreated.Warfare.Point
 
             if (newRank.Level > oldRank?.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
-                Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                if (newRank.RankTier > oldRank?.RankTier)
+                {
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                    Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                }
+                else
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
+
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
                 for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
@@ -113,13 +119,20 @@ namespace Uncreated.Warfare.Point
             }
             else if (newRank.Level < oldRank?.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
-                Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                if (newRank.RankTier < oldRank?.RankTier)
+                {
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                    Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                }
+                else
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
+
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
                 for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
                     Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
             }
+
             if (player.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
                 ex.AddXP(amount);
@@ -270,9 +283,6 @@ namespace Uncreated.Warfare.Point
         public int RessupplyFriendlyXP;
         public int UnloadSuppliesXP;
         public Dictionary<EVehicleType, int> VehicleDestroyedXP;
-        public Dictionary<int, int> InfantryRankValues;
-        public Dictionary<int, int> ArmorRankValues;
-        public Dictionary<int, int> AirforceRankValues;
 
         public float XPMultiplier;
 
@@ -321,49 +331,6 @@ namespace Uncreated.Warfare.Point
             XPMultiplier = 1f;
 
             RankUI = 36031;
-
-            InfantryRankValues = new Dictionary<int, int>()
-            {
-                {0, 1500 },
-                {1, 3800 },
-                {2, 5300 },
-                {3, 7200 },
-                {4, 12500 },
-                {5, 15000 },
-                {6, 20000 },
-                {7, 24000 },
-                {8, 28000 },
-                {9, 32000 },
-                {10, 40000 }
-            };
-            ArmorRankValues = new Dictionary<int, int>()
-            {
-                {0, 1500 },
-                {1, 3800 },
-                {2, 5300 },
-                {3, 7200 },
-                {4, 12500 },
-                {5, 15000 },
-                {6, 20000 },
-                {7, 24000 },
-                {8, 28000 },
-                {9, 32000 },
-                {10, 40000 }
-            };
-            AirforceRankValues = new Dictionary<int, int>()
-            {
-                {0, 1500 },
-                {1, 3800 },
-                {2, 5300 },
-                {3, 7200 },
-                {4, 12500 },
-                {5, 15000 },
-                {6, 20000 },
-                {7, 24000 },
-                {8, 28000 },
-                {9, 32000 },
-                {10, 40000 }
-            };
         }
         public XPConfig()
         { }
