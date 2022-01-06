@@ -14,7 +14,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Officers;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;

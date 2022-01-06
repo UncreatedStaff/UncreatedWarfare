@@ -1048,7 +1048,8 @@ namespace Uncreated.Warfare
             }, (k) =>
             {
                 k.ShouldClearInventory = true;
-                k.RequiredLevel = 0;
+                k.UnlockLevel = 0;
+                k.UnlockBranch = EBranch.DEFAULT;
                 k.Cost = 0;
                 k.Team = 0;
                 k.Class = EClass.UNARMED;
@@ -1069,7 +1070,8 @@ namespace Uncreated.Warfare
             }, (k) =>
             {
                 k.ShouldClearInventory = true;
-                k.RequiredLevel = 0;
+                k.UnlockLevel = 0;
+                k.UnlockBranch = EBranch.DEFAULT;
                 k.Cost = 0;
                 k.Team = 1;
                 k.Class = EClass.UNARMED;
@@ -1091,7 +1093,8 @@ namespace Uncreated.Warfare
             }, (k) =>
             {
                 k.ShouldClearInventory = true;
-                k.RequiredLevel = 0;
+                k.UnlockLevel = 0;
+                k.UnlockBranch = EBranch.DEFAULT;
                 k.Cost = 0;
                 k.Team = 2;
                 k.Class = EClass.UNARMED;
@@ -1126,7 +1129,8 @@ namespace Uncreated.Warfare
             }, (k) =>
             {
                 k.ShouldClearInventory = true;
-                k.RequiredLevel = 0;
+                k.UnlockLevel = 0;
+                k.UnlockBranch = EBranch.INFANTRY;
                 k.Cost = 0;
                 k.Team = 1;
                 k.Class = EClass.AUTOMATIC_RIFLEMAN;
@@ -1167,7 +1171,8 @@ namespace Uncreated.Warfare
             }, (k) =>
             {
                 k.ShouldClearInventory = true;
-                k.RequiredLevel = 0;
+                k.UnlockLevel = 0;
+                k.UnlockBranch = EBranch.INFANTRY;
                 k.Cost = 0;
                 k.Team = 2;
                 k.Class = EClass.AUTOMATIC_RIFLEMAN;
@@ -1211,7 +1216,8 @@ namespace Uncreated.Warfare
             }, (k) =>
             {
                 k.ShouldClearInventory = true;
-                k.RequiredLevel = 0;
+                k.UnlockLevel = 0;
+                k.UnlockBranch = EBranch.INFANTRY;
                 k.Cost = 0;
                 k.IsPremium = true;
                 k.PremiumCost = 6.00f;
