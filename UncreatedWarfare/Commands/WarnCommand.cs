@@ -93,8 +93,8 @@ namespace Uncreated.Warfare.Commands
                                 }
                                 player.SendChat("warn_warned_feedback", name.CharacterName);
                                 ToastMessage.QueueMessage(steamplayer,
-                                    Translation.Translate("warn_warned_private", player, out _, callerName.CharacterName, reason),
-                                    EToastMessageSeverity.WARNING);
+                                    new ToastMessage(Translation.Translate("warn_warned_private", player, out _, callerName.CharacterName, reason),
+                                    EToastMessageSeverity.WARNING));
                                 steamplayer.playerID.steamID.SendChat("warn_warned_private", callerName.CharacterName, reason);
                                 new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID }.BroadcastToAllExcept("warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
                             }
@@ -131,8 +131,8 @@ namespace Uncreated.Warfare.Commands
                 if (admin != null)
                     admin.SendChat("warn_warned_feedback", names.CharacterName);
                 ToastMessage.QueueMessage(violator,
-                    Translation.Translate("warn_warned_private" + (admin == null ? "_operator" : string.Empty), Admin, out _, callerName.CharacterName, Reason),
-                    EToastMessageSeverity.WARNING);
+                    new ToastMessage(Translation.Translate("warn_warned_private" + (admin == null ? "_operator" : string.Empty), Admin, out _, callerName.CharacterName, Reason),
+                    EToastMessageSeverity.WARNING));
                 violator.SendChat("warn_warned_private" + (admin == null ? "_operator" : string.Empty), callerName.CharacterName, Reason);
                 new List<CSteamID> { violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID }.BroadcastToAllExcept("warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);
             }

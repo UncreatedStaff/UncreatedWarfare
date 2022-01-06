@@ -503,13 +503,13 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public ushort Cost;
         [JsonSettable]
-        public ushort RequiredLevel;
+        public ushort UnlockLevel;
         [JsonSettable]
         public ushort TicketCost;
         [JsonSettable]
         public ushort Cooldown;
         [JsonSettable]
-        public EBranch RequiredBranch;
+        public EBranch UnlockBranch;
         [JsonSettable]
         public EBranch Branch;
         [JsonSettable]
@@ -522,8 +522,6 @@ namespace Uncreated.Warfare.Vehicles
         public EVehicleType Type;
         [JsonSettable]
         public bool RequiresSL;
-        [JsonIgnore]
-        private Rank _rank;
         public Guid[] Items;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
@@ -535,10 +533,10 @@ namespace Uncreated.Warfare.Vehicles
             RespawnTime = 600;
             Delay = 0;
             Cost = 0;
-            RequiredLevel = 0;
+            UnlockLevel = 0;
             TicketCost = 0;
             Cooldown = 0;
-            RequiredBranch = EBranch.DEFAULT;
+            UnlockBranch = EBranch.DEFAULT;
             if (Assets.find(vehicleID) is VehicleAsset va)
             {
                 if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
@@ -566,10 +564,10 @@ namespace Uncreated.Warfare.Vehicles
             RespawnTime = 600;
             Delay = 0;
             Cost = 0;
-            RequiredLevel = 0;
+            UnlockLevel = 0;
             TicketCost = 0;
             Cooldown = 0;
-            RequiredBranch = EBranch.DEFAULT;
+            UnlockBranch = EBranch.DEFAULT;
             Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;

@@ -9,6 +9,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
@@ -189,9 +190,11 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        if (ucplayer.Rank.Level < kit.RequiredLevel && !UCWarfare.Config.OverrideKitRequirements)
+                        RankData currentRank = ucplayer.Ranks[kit.UnlockBranch];
+
+                        if (currentRank.Level < kit.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
                         {
-                            ucplayer.Message("request_kit_e_wronglevel", kit.RequiredLevel.ToString(Data.Locale));
+                            ucplayer.Message("request_kit_e_wronglevel", Translation.TranslateBranch(kit.UnlockBranch, ucplayer).ToUpper(), kit.UnlockLevel.ToString(Data.Locale));
                         }
                         else
                         {
@@ -219,21 +222,11 @@ namespace Uncreated.Warfare.Commands
         }
         private void GiveKit(UCPlayer ucplayer, Kit kit)
         {
-            bool branchChanged = false;
-            if (KitManager.HasKit(ucplayer.CSteamID, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
-                branchChanged = true;
-
             Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
             KitManager.GiveKit(ucplayer, kit);
             Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
             KitManager.AddRequest(kit);
             ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
-
-            if (branchChanged)
-            {
-                ucplayer.Branch = kit.Branch;
-                ucplayer.Message("branch_changed", Translation.TranslateBranch(kit.Branch, ucplayer).ToUpper());
-            }
 
             if (kit.IsPremium)
             {
@@ -318,9 +311,17 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_delay", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
-            if (ucplayer.Rank.Level < data.RequiredLevel)
+
+            RankData currentRank = ucplayer.Ranks[data.UnlockBranch];
+
+            if (currentRank.Level < data.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
             {
-                ucplayer.Message("request_vehicle_e_wronglevel", data.RequiredLevel.ToString(Data.Locale));
+                ucplayer.Message("request_vehicle_e_wronglevel", Translation.TranslateBranch(data.UnlockBranch, ucplayer).ToUpper(), data.UnlockLevel.ToString(Data.Locale));
+                return;
+            }
+            if (ucplayer.CurrentRank.Level < data.UnlockLevel)
+            {
+                ucplayer.Message("request_vehicle_e_wronglevel", data.UnlockLevel.ToString(Data.Locale));
                 return;
             }
             else if (vehicle.asset != default && vehicle.asset.canBeLocked)

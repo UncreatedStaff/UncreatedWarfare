@@ -236,7 +236,11 @@ namespace Uncreated.Warfare.Components
             List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
             List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
 
-            foreach (var item in NearbyBuild.Concat(NearbyAmmo))
+            var items = NearbyBuild.Concat(NearbyAmmo);
+
+            int itemsCount = items.Count();
+            int counter = 0;
+            foreach (var item in items)
             {
                 if (item.item.id == shortBuildID || item.item.id == shortAmmoID)
                 {
@@ -246,7 +250,7 @@ namespace Uncreated.Warfare.Components
                         if (player != null)
                         {
                             player.SuppliesUnloaded++;
-                            if (player.SuppliesUnloaded >= 10)
+                            if (player.SuppliesUnloaded >= 6)
                             {
                                 int tw = Points.TWConfig.UnloadSuppliesPoints;
 
@@ -265,6 +269,11 @@ namespace Uncreated.Warfare.Components
                             }
                         }
                     }
+                }
+                counter++;
+                if (counter >= Math.Min(itemsCount, 3))
+                {
+                    break;
                 }
             }
 
@@ -287,7 +296,6 @@ namespace Uncreated.Warfare.Components
                 EffectManager.sendEffect(25998, EffectManager.MEDIUM, NearbyAmmo[0].point);
                 foreach (UCPlayer player in FriendliesOnFOB)
                     UpdateAmmoUI(player);
-                return;
             }
         }
         public void ReduceAmmo(int amount)

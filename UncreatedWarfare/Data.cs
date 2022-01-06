@@ -14,6 +14,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
@@ -199,6 +200,7 @@ namespace Uncreated.Warfare
             L.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
             DatabaseManager.Open();
+            Points.Initialize();
             CommandWindow.shouldLogDeaths = false;
             Gamemode.ReadGamemodes();
 

@@ -50,7 +50,7 @@ namespace Uncreated.Warfare.Commands
                         if (target != null)
                         {
                             OfficerStorage.ChangeOfficerRank(target.Steam64, level, branch);
-                            player.Message("officer_s_changedrank", target.CharacterName, target.Rank.Name, branch.ToString());
+                            player.Message("officer_s_changedrank", target.CharacterName, target.CurrentRank.Name, branch.ToString());
                         }
                         else
                         {
@@ -75,17 +75,31 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 UCPlayer target = UCPlayer.FromName(command[1]);
-                if (target != null)
+                ulong Steam64 = 0;
+                string characterName = "";
+                if (ulong.TryParse(command[1], out Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
                 {
-                    if (target.IsOfficer)
-                    {
-                        OfficerStorage.DischargeOfficer(target);
-                    }
-                    else
-                        player.SendChat("officer_e_notofficer", command[1]);
+                    characterName = names.CharacterName;
+                    goto DischargePlayer;
+                }
+                else if (target != null)
+                {
+                    goto DischargePlayer;
                 }
                 else
                     player.SendChat("officer_e_playernotfound", command[1]);
+
+                DischargePlayer:
+                if (target != null)
+                {
+                    OfficerStorage.DischargeOfficer(target.Steam64);
+                    player.Message("officer_s_discharged", target.CharacterName);
+                }
+                else
+                {
+                    OfficerStorage.DischargeOfficer(target.Steam64);
+                    player.Message("officer_s_discharged", characterName);
+                }
             }
             else
                 player.SendChat("correct_usage", "/officer <setrank|discharge <player name> <level or rank> <branch>");

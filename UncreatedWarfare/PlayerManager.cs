@@ -133,6 +133,8 @@ namespace Uncreated.Warfare
                 save = existingSave;
             }
 
+            
+
             UCPlayer player = new UCPlayer(
                     rocketplayer.CSteamID,
                     save.KitName,
@@ -141,6 +143,8 @@ namespace Uncreated.Warfare
                     rocketplayer.Player.channel.owner.playerID.nickName,
                     save.IsOtherDonator
                 );
+
+            Data.DatabaseManager.TryInitializeXP(player.Steam64);
 
             OnlinePlayers.Add(player);
             if (player.IsTeam1())

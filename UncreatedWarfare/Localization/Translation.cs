@@ -832,7 +832,7 @@ namespace Uncreated.Warfare
                     if (ucplayer != null)
                     {
                         playerteam = ucplayer.GetTeam();
-                        playerrank = ucplayer.Rank;
+                        playerrank = ucplayer.Ranks[kit.UnlockBranch];
                     }
 
                     if (!kit.SignTexts.TryGetValue(language, out string name))
@@ -866,19 +866,18 @@ namespace Uncreated.Warfare
                         else
                             cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                     }
-                    // TODO: Fix
-                    else if (kit.RequiredLevel > 0)
+                    else if (kit.UnlockLevel > 0)
                     {
-                        //if (playerrank == null || playerrank.Level < kit.RequiredLevel)
-                        //{
-                        //    cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_unavailable"),
-                        //        reqrank.ToString().Colorize(UCWarfare.GetColorHex("kit_level_unavailable_abbr")));
-                        //}
-                        //else
-                        //{
-                        //    cost = Translate("kit_required_level", language, kit.RequiredLevel.ToString(), UCWarfare.GetColorHex("kit_level_available"),
-                        //        reqrank.ToString().Colorize(UCWarfare.GetColorHex("kit_level_unavailable_abbr")));
-                        //}
+                        if (playerrank.Level < kit.UnlockLevel)
+                        {
+                            cost = Translate("kit_required_level", language, kit.UnlockLevel.ToString(Data.Locale), UCWarfare.GetColorHex("kit_level_unavailable"),
+                                RankData.GetRankAbbreviation(RankData.GetRankTier(kit.UnlockLevel)), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
+                        }
+                        else
+                        {
+                            cost = Translate("kit_required_level", language, kit.UnlockLevel.ToString(Data.Locale), (UCWarfare.GetColorHex("kit_level_available")),
+                                RankData.GetRankAbbreviation(RankData.GetRankTier(kit.UnlockLevel)), UCWarfare.GetColorHex("kit_level_available_abbr"));
+                        }
                     }
                     else
                     {
@@ -1104,7 +1103,7 @@ namespace Uncreated.Warfare
                 $"<color=#{UCWarfare.GetColorHex("vbs_name")}>{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}</color>\n" +
                 $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{Translate("vbs_branch_" + data.Branch.ToString().ToLower(), language)}</color>\n" +
                 (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>" : string.Empty) +
-                $"\n<color=#{{0}}>{(data.RequiredLevel <= 0 ? string.Empty : Translate("vbs_level_prefix", language) + " " + data.RequiredLevel.ToString(Data.Locale))}</color>\n";
+                $"\n<color=#{{0}}>{(data.UnlockLevel <= 0 ? string.Empty : Translate("vbs_level_prefix", language) + " " + data.UnlockLevel.ToString(Data.Locale))}</color>\n";
             if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle) || !vehicle.TryGetComponent(out SpawnedVehicleComponent vehcomp)) // vehicle is dead
             {
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.RoundToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";

@@ -476,7 +476,7 @@ namespace Uncreated.Warfare
                 { "request_kit_e_alreadyhaskit", "<color=#a8918a>You already have this kit.</color>" },
                 { "request_kit_e_notallowed", "<color=#a8918a>You do not have access to this kit.</color>" },
                 { "request_kit_e_limited", "<color=#a8918a>Your team already has a max of {0} players using this kit. Try again later.</color>" },
-                { "request_kit_e_wronglevel", "<color=#a8918a>You must be <color=#ffc29c>Level {0}</color> to request this kit.</color>" },
+                { "request_kit_e_wronglevel", "<color=#b3ab9f>You must be <color=#ff8f8f>{0}</color> - <color=#ffc29c>Level {1}</color> to request this kit.</color>" },
                 { "request_kit_e_wrongbranch", "<color=#a8918a>You must be a different branch.</color>" },
                 { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to get this kit.</color>" },
                 { "request_loadout_e_notallowed", "<color=#a8918a>You do not own this loadout.</color>" },
@@ -487,7 +487,7 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
                 { "request_vehicle_e_notinteam", "<color=#a8918a>You must be on the other team to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
-                { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ffc29c>Level {0}</color> to request this vehicle.</color>" },
+                { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be <color=#ff8f8f>{0}</color> - <color=#ffc29c>Level {1}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
                 { "request_vehicle_e_already_owned", "<color=#a8918a>You have already requested a nearby vehicle.</color>" },
@@ -629,7 +629,6 @@ namespace Uncreated.Warfare
                 { "dominating", "Your team is dominating!" },
 
                 // Branch names
-                { "branch_changed", "<color=#ccb89f>You have joined the <color=#ff9182>{0}</color>.</color>" },
                 { "team1_infantry", "Infantry Division" },
                 { "team2_infantry", "Infantry Division" },
                 { "team1_armor", "Armor Division" },
@@ -645,7 +644,7 @@ namespace Uncreated.Warfare
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0:N2}" },
                 { "kit_price_exclusive", "EXCLUSIVE" },
-                { "kit_required_level", "<color=#{1}>L {0}</color><color=#{3}> - {2}</color>" }, // {0} = level number
+                { "kit_required_level", "<color=#{3}>{2}</color> <color=#{1}>lvl {0}</color>" }, // {0} = level number
                 { "kit_owned", "OWNED" },
                 { "kit_unlimited", "unlimited" },
                 { "kit_not_owned", "NOT OWNED" },
@@ -786,13 +785,17 @@ namespace Uncreated.Warfare
 
                 { "gain_xp", "+{0} XP" },
                 { "loss_xp", "-{0} XP" },
+                { "level_up_xp_1", "YOU HAVE REACHED" },
+                { "level_up_xp_2", "{1} - <color=#f7b88b>Level {2}</color>" },
+                { "level_down_xp", "<color=#e08675>LEVEL LOST</color>" },
                 { "promoted_xp", "YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO" },
-                { "demoted_xp", "YOU HAVE BEEN <color=#ff8a8a>DEMOTED</color> TO" },
+                { "demoted_xp", "YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO" },
 
-                { "ui_xp_level", "L {0}" },
-                { "ui_ofp_level", "O {0}" },
-                { "ui_ofp_equivalent", "L {0} equivalent" },
-                { "ui_xp_next_level", "{0}  L {1}" },
+                { "branch_changed", "<color=#ffffff>{0}</color>\n<color=#9e9e9e>{1} - <color=#f7b88b>lvl {2}</color></color>" },
+                { "branch_changed_recruit", "<color=#ffffff>{0}</color>\n<color=#9e9e9e>{1}</color>" },
+
+                { "ui_xp_level", "lvl {0}" },
+                { "ui_xp_next_level", "lvl {0}" },
 
                 // officer point toast messages
                 { "ofp_squad_built_emplacement", "SQUAD BUILT EMPLACEMENT" },
@@ -1011,7 +1014,7 @@ namespace Uncreated.Warfare
             new ColorData("kit_public_header", "ffffff"),
             new ColorData("kit_level_available", "ff974d"),
             new ColorData("kit_level_available_abbr", "999999"),
-            new ColorData("kit_level_unavailable", "b06d3e"),
+            new ColorData("kit_level_unavailable", "ad9380"),
             new ColorData("kit_level_unavailable_abbr", "999999"),
             new ColorData("kit_level_dollars", "7878ff"),
             new ColorData("kit_level_dollars_owned", "769fb5"),
