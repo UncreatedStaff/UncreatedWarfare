@@ -94,7 +94,7 @@ namespace Uncreated.Warfare.FOBs
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
         }
-        public static void OnGameTick(int counter)
+        public static void OnGameTick()
         {
             if (Data.Gamemode.EveryMinute)
             {
@@ -151,6 +151,7 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+            if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID)
             {
                 FOB fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);

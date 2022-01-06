@@ -224,7 +224,7 @@ namespace Uncreated.Warfare
             {
                 UCPlayer player = UCPlayer.FromID(owner);
                 if (player == null || player.Player == null || player.OnDuty()) return;
-                if (player == null || TeamManager.IsInAnyMain(player.Player.transform.position) && !player.OnDutyOrAdmin())
+                if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {
                     shouldAllow = false;
                     player.Message("whitelist_noplace");

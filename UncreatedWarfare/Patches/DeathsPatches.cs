@@ -14,7 +14,8 @@ namespace Uncreated.Warfare
     {
         [HarmonyPatch]
         public static class DeathsPatches
-        {// SDG.Unturned.InteractableTrap
+        {
+            // SDG.Unturned.InteractableTrap
             /// <summary>
             /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider other)"/> to set the killer to the player that placed the landmine.
             /// </summary>

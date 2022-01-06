@@ -113,7 +113,11 @@ namespace Uncreated.Warfare
 
             RepairManager.OnBarricadePlaced(drop, region);
 
+            if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
+
             bool isFOBRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID);
+
+            if (FOBManager.AllFOBs == null) return;
 
             // FOB radio
             if (isFOBRadio)
@@ -128,6 +132,7 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
             }
 
+            if (FOBManager.config.Data.Buildables == null) return;
             BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
             if (buildable != null)
             {
@@ -213,23 +218,11 @@ namespace Uncreated.Warfare
                     Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
                 if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
                 ulong team = group.GetTeam();
-                if (team == 1)
+                if (player != null && !player.OnDuty() && TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {
-                    if (player != null && !player.OnDuty() && TeamManager.Team2AMC.IsInside(point))
-                    {
-                        shouldAllow = false;
-                        player.Message("whitelist_noplace");
-                        return;
-                    }
-                }
-                else if (team == 2)
-                {
-                    if (player != null && !player.OnDuty() && TeamManager.Team1AMC.IsInside(point))
-                    {
-                        shouldAllow = false;
-                        player.Message("whitelist_noplace");
-                        return;
-                    }
+                    shouldAllow = false;
+                    player.Message("whitelist_noplace");
+                    return;
                 }
 
                 if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g ==  barricade.asset.GUID))

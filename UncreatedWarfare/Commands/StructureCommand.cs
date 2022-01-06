@@ -7,6 +7,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Structure = Uncreated.Warfare.Structures.Structure;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -26,105 +27,57 @@ namespace Uncreated.Warfare.Commands
             {
                 if (action == "save")
                 {
-                    if (!(Data.Gamemode is IStructureSaving))
-                    {
-                        player.Message("command_e_gamemode");
-                        return;
-                    }
                     if (player.HasPermission("uc.structure.save"))
                     {
-                        Interactable barricade = UCBarricadeManager.GetInteractableFromLook<Interactable>(player.Player.look, RayMasks.BARRICADE | RayMasks.VEHICLE);
-                        if (barricade == default)
+                        if (!(Data.Gamemode is IStructureSaving))
                         {
-                            Interactable2 barricade2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.BARRICADE);
-                            if (barricade2 == default)
+                            player.Message("command_e_gamemode");
+                            return;
+                        }
+                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
+                        if (structure != null)
+                        {
+                            if (!StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure structexists))
                             {
-                                Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
-                                if (structure == default) player.SendChat("structure_not_looking");
+                                if (StructureSaver.AddStructure(structure, structure.GetServersideData(), out Structure structureaded))
+                                {
+                                    player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                }
                                 else
                                 {
-                                    StructureDrop drop = StructureManager.FindStructureByRootTransform(structure.transform);
-                                    if (drop != null)
-                                    {
-                                        if (!StructureSaver.StructureExists(drop.instanceID, EStructType.STRUCTURE, out Structure structexists))
-                                        {
-                                            if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
-                                            {
-                                                player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                            }
-                                            else
-                                            {
-                                                player.SendChat("structure_not_looking");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            player.SendChat("structure_saved_already",
-                                                structexists == default ? "unknown" : structexists.Asset.itemName);
-                                        }
-                                    }
+                                    player.SendChat("structure_not_looking");
                                 }
                             }
                             else
                             {
-                                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricade2.transform);
-                                if (drop != null)
-                                {
-                                    if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structure structureexists))
-                                    {
-                                        if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
-                                        {
-                                            player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                        }
-                                        else
-                                        {
-                                            player.SendChat("structure_not_looking");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        player.SendChat("structure_saved_already",
-                                            structureexists == default ? "unknown" : structureexists.Asset.itemName);
-                                    }
-                                }
-                                else player.SendChat("structure_not_looking");
+                                player.SendChat("structure_saved_already",
+                                    structexists == default ? "unknown" : structexists.Asset.itemName);
                             }
+                            return;
                         }
-                        else
+                        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(hit);
+                        if (barricade != null)
                         {
-                            if (barricade is InteractableVehicle)
+                            if (!StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure structureexists))
                             {
-                                player.SendChat("structure_saved_not_vehicle");
-                            }
-                            else if (barricade is InteractableForage)
-                            {
-                                player.SendChat("structure_saved_not_bush");
+                                if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure structureaded))
+                                {
+                                    player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                }
+                                else
+                                {
+                                    player.SendChat("structure_not_looking");
+                                }
                             }
                             else
                             {
-                                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricade.transform);
-                                if (drop != null)
-                                {
-                                    if (!StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structure structureexists))
-                                    {
-                                        if (StructureSaver.AddStructure(drop, drop.GetServersideData(), out Structure structureaded))
-                                        {
-                                            player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                        }
-                                        else
-                                        {
-                                            player.SendChat("structure_not_looking");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        player.SendChat("structure_saved_already",
-                                            structureexists == default ? "unknown" : structureexists.Asset.itemName);
-                                    }
-                                }
-                                else player.SendChat("structure_not_looking");
+                                player.SendChat("structure_saved_already",
+                                    structureexists == default ? "unknown" : structureexists.Asset.itemName);
                             }
                         }
+                        else player.SendChat("structure_not_looking");
+                        return;
                     }
                     else
                         player.Player.SendChat("no_permissions");
@@ -132,112 +85,43 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (action == "remove")
                 {
-                    if (!(Data.Gamemode is IStructureSaving))
-                    {
-                        player.Message("command_e_gamemode");
-                        return;
-                    }
                     if (player.HasPermission("uc.structure.remove"))
                     {
-                        Interactable barricade = UCBarricadeManager.GetInteractableFromLook<Interactable>(player.Player.look, RayMasks.BARRICADE | RayMasks.VEHICLE);
-                        if (barricade == default)
+                        if (!(Data.Gamemode is IStructureSaving))
                         {
-                            Interactable2 barricade2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.BARRICADE);
-                            if (barricade2 == default)
+                            player.Message("command_e_gamemode");
+                            return;
+                        }
+                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
+                        if (structure != null)
+                        {
+                            if (StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure structureaded))
                             {
-                                Interactable2 structure = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE);
-                                if (structure == default) player.SendChat("structure_not_looking");
-                                else
-                                {
-                                    StructureDrop drop = StructureManager.FindStructureByRootTransform(structure.transform);
-                                    if (drop != null)
-                                    {
-                                        if (StructureSaver.StructureExists(drop.instanceID, EStructType.STRUCTURE, out Structure structureaded))
-                                        {
-                                            StructureSaver.RemoveStructure(structureaded);
-                                            player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
-                                        }
-                                        else
-                                        {
-                                            string itemname;
-                                            if (structure is Interactable2SalvageStructure str)
-                                            {
-                                                SDG.Unturned.StructureData data = drop.GetServersideData();
-                                                if (data != default) itemname = data.structure.asset.itemName;
-                                                else itemname = str.name;
-                                            }
-                                            else if (structure is Interactable2SalvageBarricade bar)
-                                            {
-                                                BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(bar.transform);
-                                                if (bdrop != null)
-                                                {
-                                                    SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                                                    if (data != default) itemname = data.barricade.asset.itemName;
-                                                    else itemname = bar.name;
-                                                }
-                                                else itemname = bar.name;
-                                            }
-                                            else itemname = structure.name;
-                                            player.SendChat("structure_unsaved_already",
-                                                structureaded == default ? "unknown" : itemname);
-                                        }
-                                    }
-                                }
+                                StructureSaver.RemoveStructure(structureaded);
+                                player.Player.SendChat("structure_unsaved", structure.asset.itemName);
                             }
                             else
                             {
-                                BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(barricade2.transform);
-                                if (bdrop != null)
-                                {
-                                    if (StructureSaver.StructureExists(bdrop.instanceID, EStructType.BARRICADE, out Structure structureaded))
-                                    {
-                                        StructureSaver.RemoveStructure(structureaded);
-                                        player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
-                                    }
-                                    else
-                                    {
-                                        string itemname;
-                                        SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                                        if (data != default) itemname = data.barricade.asset.itemName;
-                                        else itemname = barricade2.name;
-                                        player.SendChat("structure_unsaved_already",
-                                            structureaded == default ? "unknown" : itemname);
-                                    }
-                                }
+                                player.SendChat("structure_unsaved_already", structure.asset.itemName);
                             }
+                            return;
                         }
-                        else
+                        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(hit);
+                        if (barricade != null)
                         {
-                            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(barricade.transform);
-                            if (bdrop != null)
+                            if (StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure structureaded))
                             {
-                                if (barricade is InteractableVehicle)
-                                {
-                                    player.SendChat("structure_unsaved_not_vehicle");
-                                }
-                                else if (barricade is InteractableForage)
-                                {
-                                    player.SendChat("structure_unsaved_not_bush");
-                                }
-                                else
-                                {
-                                    if (StructureSaver.StructureExists(bdrop.instanceID, EStructType.BARRICADE, out Structure structureaded))
-                                    {
-                                        StructureSaver.RemoveStructure(structureaded);
-                                        player.Player.SendChat("structure_unsaved", structureaded.Asset.itemName);
-                                    }
-                                    else
-                                    {
-                                        string itemname;
-                                        SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-                                        if (data != default) itemname = data.barricade.asset.itemName;
-                                        else itemname = barricade.name;
-                                        player.SendChat("structure_unsaved_already",
-                                            structureaded == default ? "unknown" : itemname);
-                                    }
-                                }
+                                StructureSaver.RemoveStructure(structureaded);
+                                player.Player.SendChat("structure_unsaved", barricade.asset.itemName);
+                            }
+                            else
+                            {
+                                player.SendChat("structure_unsaved_already", barricade.asset.itemName);
                             }
                         }
+                        else player.SendChat("structure_not_looking");
+                        return;
                     }
                     else
                         player.Player.SendChat("no_permissions");
@@ -246,42 +130,25 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.pop"))
                     {
-                        Interactable i = UCBarricadeManager.GetInteractableFromLook<Interactable>(player.Player.look, RayMasks.BARRICADE | RayMasks.VEHICLE);
-                        if (i != default)
+                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
+                        if (structure != null)
                         {
-                            if (i is InteractableVehicle veh)
-                            {
-                                DestroyVehicle(veh, player.Player);
-                            }
-                            else if (!(i is InteractableForage || i is InteractableObject))
-                            {
-                                DestroyBarricade(i, player.Player);
-                            }
-                            else
-                            {
-                                player.Player.SendChat("structure_pop_not_poppable");
-                            }
+                            DestroyStructure(structure, player.Player);
+                            return;
                         }
-                        else
+                        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(hit);
+                        if (barricade != null)
                         {
-                            Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE | RayMasks.BARRICADE);
-                            if (i2 != default)
-                            {
-                                if (i2 is Interactable2SalvageBarricade)
-                                {
-                                    DestroyBarricade(i2, player.Player);
-                                }
-                                else if (i2 is Interactable2SalvageStructure)
-                                {
-                                    DestroyStructure(i2, player.Player);
-                                }
-                                else
-                                {
-                                    player.Player.SendChat("structure_pop_not_poppable");
-                                }
-                            }
-                            else player.SendChat("structure_not_looking");
+                            DestroyBarricade(barricade, player.Player);
+                            return;
                         }
+                        if (hit.TryGetComponent(out InteractableVehicle veh))
+                        {
+                            DestroyVehicle(veh, player.Player);
+                        }
+                        else player.Player.SendChat("structure_pop_not_poppable");
+                        return;
                     }
                     else player.Player.SendChat("no_permissions");
                 }
@@ -289,54 +156,35 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.examine"))
                     {
-                        Interactable i = UCBarricadeManager.GetInteractableFromLook<Interactable>(player.Player.look, RayMasks.BARRICADE | RayMasks.VEHICLE);
-                        if (i != default)
+                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
+                        if (structure != null)
                         {
-                            if (i is InteractableVehicle veh)
-                            {
-                                ExamineVehicle(veh, player.Player, true);
-                            }
-                            else if (i is InteractableTrap)
-                            {
-                                ExamineTrap(i.transform, player.Player, true);
-                            }
-                            else if (!(i is InteractableForage || i is InteractableObject))
-                            {
-                                ExamineBarricade(i, player.Player, true);
-                            }
+                            ExamineStructure(structure, player.Player, true);
+                            return;
+                        }
+                        BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(hit);
+                        if (barricade != null)
+                        {
+                            if (barricade.interactable is InteractableTrap trap)
+                                ExamineTrap(trap, player.Player, true);
                             else
-                            {
-                                player.Player.SendChat("structure_examine_not_examinable");
-                            }
+                                ExamineBarricade(barricade, player.Player, true);
+                            return;
                         }
-                        else
+                        if (hit.TryGetComponent(out InteractableVehicle veh))
                         {
-                            Interactable2 i2 = UCBarricadeManager.GetInteractable2FromLook<Interactable2>(player.Player.look, RayMasks.STRUCTURE | RayMasks.STRUCTURE);
-                            if (i2 != default)
-                            {
-                                if (i2 is Interactable2SalvageBarricade)
-                                {
-                                    ExamineBarricade(i2, player.Player, true);
-                                }
-                                else if (i2 is Interactable2SalvageStructure)
-                                {
-                                    ExamineStructure(i2, player.Player, true);
-                                }
-                                else
-                                {
-                                    player.Player.SendChat("structure_examine_not_examinable");
-                                }
-                            }
-                            else player.SendChat("structure_not_looking");
+                            ExamineVehicle(veh, player.Player, true);
                         }
+                        else player.Player.SendChat("structure_examine_not_examinable");
+                        return;
                     }
                     else player.Player.SendChat("no_permissions");
                 }
             }
         }
-        private void DestroyBarricade(UnityEngine.MonoBehaviour i, Player player)
+        private void DestroyBarricade(BarricadeDrop bdrop, Player player)
         {
-            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
             if (bdrop != null && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
             {
                 SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
@@ -348,9 +196,8 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("structure_pop_not_poppable");
             }
         }
-        private void DestroyStructure(UnityEngine.MonoBehaviour i, Player player)
+        private void DestroyStructure(StructureDrop sdrop, Player player)
         {
-            StructureDrop sdrop = StructureManager.FindStructureByRootTransform(i.transform);
             if (sdrop != null && Regions.tryGetCoordinate(sdrop.model.position, out byte x, out byte y))
             {
                 SDG.Unturned.StructureData data = sdrop.GetServersideData();
@@ -427,9 +274,8 @@ namespace Uncreated.Warfare.Commands
                 }
             }
         }
-        private void ExamineBarricade(UnityEngine.MonoBehaviour i, Player player, bool sendurl)
+        private void ExamineBarricade(BarricadeDrop bdrop, Player player, bool sendurl)
         {
-            BarricadeDrop bdrop = BarricadeManager.FindBarricadeByRootTransform(i.transform);
             if (bdrop != null)
             {
                 SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
@@ -474,9 +320,8 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("structure_examine_not_examinable");
             }
         }
-        private void ExamineStructure(UnityEngine.MonoBehaviour i, Player player, bool sendurl)
+        private void ExamineStructure(StructureDrop sdrop, Player player, bool sendurl)
         {
-            StructureDrop sdrop = StructureManager.FindStructureByRootTransform(i.transform);
             if (sdrop != null)
             {
                 SDG.Unturned.StructureData data = sdrop.GetServersideData();
@@ -520,9 +365,9 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("structure_examine_not_examinable");
             }
         }
-        private void ExamineTrap(UnityEngine.Transform i, Player player, bool sendurl)
+        private void ExamineTrap(InteractableTrap trap, Player player, bool sendurl)
         {
-            if (i.TryGetComponent(out Components.BarricadeComponent data))
+            if (trap.transform.TryGetComponent(out Components.BarricadeComponent data))
             {
                 if (data.Owner == 0)
                 {

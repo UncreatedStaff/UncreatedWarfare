@@ -216,6 +216,65 @@ namespace Uncreated.Warfare.Kits
                 }
             }
 
+            for (int i = 0; i < kit.Clothes.Count; i++)
+            {
+                KitClothing clothing = kit.Clothes[i];
+                ushort old = 0;
+                switch (clothing.type)
+                {
+                    case EClothingType.GLASSES:
+                        if (player.Player.clothing.glasses != clothing.ID)
+                        {
+                            old = player.Player.clothing.glasses;
+                            player.Player.clothing.askWearGlasses(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                    case EClothingType.HAT:
+                        if (player.Player.clothing.hat != clothing.ID)
+                        {
+                            old = player.Player.clothing.hat;
+                            player.Player.clothing.askWearHat(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                    case EClothingType.BACKPACK:
+                        if (player.Player.clothing.backpack != clothing.ID)
+                        {
+                            old = player.Player.clothing.backpack;
+                            player.Player.clothing.askWearBackpack(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                    case EClothingType.MASK:
+                        if (player.Player.clothing.mask != clothing.ID)
+                        {
+                            old = player.Player.clothing.mask;
+                            player.Player.clothing.askWearMask(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                    case EClothingType.PANTS:
+                        if (player.Player.clothing.pants != clothing.ID)
+                        {
+                            old = player.Player.clothing.pants;
+                            player.Player.clothing.askWearPants(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                    case EClothingType.SHIRT:
+                        if (player.Player.clothing.shirt != clothing.ID)
+                        {
+                            old = player.Player.clothing.shirt;
+                            player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                    case EClothingType.VEST:
+                        if (player.Player.clothing.vest != clothing.ID)
+                        {
+                            old = player.Player.clothing.vest;
+                            player.Player.clothing.askWearVest(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                        }
+                        break;
+                }
+                if (old != 0)
+                    player.Player.inventory.removeItem(2, 0);
+            }
             foreach (KitItem i in kit.Items)
             {
                 if (ignoreAmmoBags && Assets.find(Gamemode.Config.Barricades.AmmoBagGUID) is ItemAsset asset && asset.id == i.ID)

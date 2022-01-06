@@ -635,7 +635,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected override void EventLoopAction()
         {
             base.EventLoopAction();
-            FOBManager.OnGameTick(_ticks);
+            FOBManager.OnGameTick();
         }
         public override void Dispose()
         {

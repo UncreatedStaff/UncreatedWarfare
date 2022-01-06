@@ -259,11 +259,13 @@ namespace Uncreated.Warfare
                 }
             }
         }
+        private static readonly Uncreated.Networking.Encoding.ByteWriter bw = new Uncreated.Networking.Encoding.ByteWriter(0, false, 27);
         public void AddReport(Report report)
         {
-            Uncreated.Networking.Encoding.ByteWriter bw = new Uncreated.Networking.Encoding.ByteWriter(false, report.Size);
-            bw.Write(Report.WriteReport, report);
-            byte[] blob = bw.ToArray();
+            bw.BaseCapacity = report.Size;
+            bw.Flush();
+            Report.WriteReport(bw, report);
+            byte[] blob = bw.ByteBuffer;
             NonQuery("INSERT INTO `reports` (`Reporter`, `Violator`, `ReportType`, `Data`, `Timestamp`, `Message`) VALUES (@0, @1, @2, @3, @4, @5);", new object[]
             {
                 report.Reporter,

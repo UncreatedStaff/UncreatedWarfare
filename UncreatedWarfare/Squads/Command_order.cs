@@ -82,9 +82,7 @@ namespace Uncreated.Warfare.Squads
                                                     {
                                                         useFlag = true;
                                                     }
-                                                    
                                                 }
-
                                             }
 
                                             Orders.GiveOrder(squad, player, type, marker, message);
