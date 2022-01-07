@@ -85,7 +85,7 @@ namespace Uncreated.Warfare.Commands
                                 L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                     callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-                                new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
+                                Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
                                 player.CSteamID.SendChat("kick_kicked_feedback", names.CharacterName);
                             }
                         }
@@ -122,7 +122,7 @@ namespace Uncreated.Warfare.Commands
                 L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
                     names.PlayerName, Violator.ToString(Data.Locale),
                     callerName.PlayerName, Admin.ToString(Data.Locale), Reason), ConsoleColor.Cyan);
-                new List<CSteamID> { admin == null ? new CSteamID(Admin) : admin.playerID.steamID }.BroadcastToAllExcept("kick_kicked_broadcast", names.CharacterName, callerName.CharacterName);
+                Chat.BroadcastToAllExcept(new ulong[1] { Admin }, "kick_kicked_broadcast", names.CharacterName, callerName.CharacterName);
                 if (admin != null)
                     admin.SendChat("kick_kicked_feedback", names.CharacterName);
             }

@@ -200,8 +200,7 @@ namespace Uncreated.Warfare.Commands
                                             L.Log(Translation.Translate(translate2, 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat(translate, names.CharacterName);
-                                            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
-                                                names.CharacterName, callerName.CharacterName);
+                                            Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ban_permanent_broadcast", names.CharacterName, callerName.CharacterName);
                                         }
                                         else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint duration))
                                             player.SendChat("ip_ban_invalid_number", command[2]);
@@ -279,8 +278,7 @@ namespace Uncreated.Warfare.Commands
                                     L.Log(Translation.Translate("ip_ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     player.SendChat("ip_ban_permanent_feedback", names.CharacterName, callerName.CharacterName);
-                                    new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
-                                        names.CharacterName, callerName.CharacterName);
+                                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ban_permanent_broadcast", names.CharacterName, callerName.CharacterName);
                                 }
                                 else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint result))
                                     player.SendChat("ip_ban_invalid_number", command[2]);
@@ -355,7 +353,7 @@ namespace Uncreated.Warfare.Commands
                     Admin.ToString(Data.Locale), Reason), ConsoleColor.Cyan);
                 if (admin != null)
                     admin.SendChat(translate, names.CharacterName);
-                new List<CSteamID> { adminc }.BroadcastToAllExcept("ban_broadcast" + (Admin == 0 ? "_operator" : string.Empty),
+                Chat.BroadcastToAllExcept(new ulong[1] { Admin }, "ban_broadcast" + (Admin == 0 ? "_operator" : string.Empty),
                     names.CharacterName, callerName.CharacterName);
             }
             else

@@ -158,7 +158,7 @@ namespace Uncreated.Warfare.Commands
                                             L.Log(Translation.Translate("ban_permanent_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat("ban_permanent_feedback", names.CharacterName);
-                                            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
+                                            Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ban_permanent_broadcast",
                                                 names.CharacterName, callerName.CharacterName);
                                         }
                                         else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint duration))
@@ -218,8 +218,7 @@ namespace Uncreated.Warfare.Commands
                                     L.Log(Translation.Translate("ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     player.SendChat("ban_permanent_feedback", names.CharacterName, callerName.CharacterName);
-                                    new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
-                                        names.CharacterName, callerName.CharacterName);
+                                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ban_permanent_broadcast", names.CharacterName, callerName.CharacterName);
                                 }
                                 else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint result))
                                     player.SendChat("ban_invalid_number", command[2]);

@@ -730,5 +730,10 @@ namespace Uncreated.Warfare
         }
         public static DateTime FromUnityTime(this float realtimeSinceStartup) => 
             DateTime.Now - TimeSpan.FromSeconds(Time.realtimeSinceStartup) + TimeSpan.FromSeconds(realtimeSinceStartup);
+
+        /// <summary>
+        /// Finds the 2D distance between two Vector3's x and z components.
+        /// </summary>
+        public static float SqrDistance2D(Vector3 a, Vector3 b) => Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2);
     }
 }

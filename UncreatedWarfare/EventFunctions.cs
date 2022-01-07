@@ -138,7 +138,8 @@ namespace Uncreated.Warfare
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
-            BuildableData repairable = FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EbuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
+
+            BuildableData repairable = isFOBRadio ? null : FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || isFOBRadio)
             {
                 drop.model.gameObject.AddComponent<RepairableComponent>();

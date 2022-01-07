@@ -1138,7 +1138,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            if (killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+            if (killer != null && killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
             {
                 if (cause == EDeathCause.GUN && c.lastShot != default)
                     item = c.lastShot;

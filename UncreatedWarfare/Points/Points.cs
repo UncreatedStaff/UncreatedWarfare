@@ -107,7 +107,7 @@ namespace Uncreated.Warfare.Point
                 if (newRank.RankTier > oldRank?.RankTier)
                 {
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
-                    Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
                 }
                 else
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
@@ -122,7 +122,7 @@ namespace Uncreated.Warfare.Point
                 if (newRank.RankTier < oldRank?.RankTier)
                 {
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
-                    Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
                 }
                 else
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
@@ -181,7 +181,7 @@ namespace Uncreated.Warfare.Point
 
                 ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("gain_star", player), startString, EToastMessageSeverity.BIG));
 
-                Chat.BroadcastToAllExcept(new List<CSteamID>() { player.CSteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(player).CharacterName, startString);
+                Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(player).CharacterName, startString);
             }
 
             if (player.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)

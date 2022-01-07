@@ -54,7 +54,7 @@ namespace Uncreated.Warfare.Commands
                                 }
                                 player.playerID.steamID.SendChat("warn_warned_private_operator", reason);
                                 ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING));
-                                new List<CSteamID> { player.playerID.steamID }.BroadcastToAllExcept("warn_warned_broadcast_operator", name.CharacterName);
+                                Chat.BroadcastToAllExcept(new ulong[1] { player.playerID.steamID.m_SteamID }, "warn_warned_broadcast_operator", name.CharacterName);
                             }
                         }
                     }
@@ -96,7 +96,7 @@ namespace Uncreated.Warfare.Commands
                                     new ToastMessage(Translation.Translate("warn_warned_private", player, out _, callerName.CharacterName, reason),
                                     EToastMessageSeverity.WARNING));
                                 steamplayer.playerID.steamID.SendChat("warn_warned_private", callerName.CharacterName, reason);
-                                new List<CSteamID> { steamplayer.playerID.steamID, player.CSteamID }.BroadcastToAllExcept("warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
+                                Chat.BroadcastToAllExcept(new ulong[2] { steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID }, "warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
                             }
                         }
                     }
@@ -134,7 +134,7 @@ namespace Uncreated.Warfare.Commands
                     new ToastMessage(Translation.Translate("warn_warned_private" + (admin == null ? "_operator" : string.Empty), Admin, out _, callerName.CharacterName, Reason),
                     EToastMessageSeverity.WARNING));
                 violator.SendChat("warn_warned_private" + (admin == null ? "_operator" : string.Empty), callerName.CharacterName, Reason);
-                new List<CSteamID> { violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID }.BroadcastToAllExcept("warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);
+                Chat.BroadcastToAllExcept(new ulong[2] { violator.playerID.steamID.m_SteamID, Admin }, "warn_warned_broadcast" + (admin == null ? "_operator" : string.Empty), names.CharacterName, callerName.CharacterName);
             }
         }
     }
