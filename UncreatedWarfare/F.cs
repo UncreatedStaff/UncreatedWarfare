@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 using Uncreated.Players;
@@ -541,6 +542,24 @@ namespace Uncreated.Warfare
                 SteamPlayer pl = PlayerTool.getSteamPlayer(player);
                 if (pl == default)
                     return Data.DatabaseManager.GetUsernames(player);
+                else return new FPlayerName()
+                {
+                    CharacterName = pl.playerID.characterName,
+                    NickName = pl.playerID.nickName,
+                    PlayerName = pl.playerID.playerName,
+                    Steam64 = player
+                };
+            }
+        }
+        public static async Task<FPlayerName> GetPlayerOriginalNamesAsync(ulong player)
+        {
+            if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
+                return names;
+            else
+            {
+                SteamPlayer pl = PlayerTool.getSteamPlayer(player);
+                if (pl == default)
+                    return await Data.DatabaseManager.GetUsernamesAsync(player);
                 else return new FPlayerName()
                 {
                     CharacterName = pl.playerID.characterName,

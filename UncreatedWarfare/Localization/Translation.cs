@@ -725,6 +725,38 @@ namespace Uncreated.Warfare
                 return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
+        public static string GetTimeFromSeconds(this uint seconds, string language)
+        {
+            if (seconds < 60) // < 1 minute
+            {
+                return (seconds + 1).ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), language);
+            }
+            else if (seconds < 3600) // < 1 hour
+            {
+                int minutes = F.DivideRemainder(seconds, 60, out int secondOverflow);
+                return $"{minutes} {Translate("time_minute" + minutes.S(), language)}{(secondOverflow == 0 ? "" : $" {Translate("time_and", language)} {secondOverflow} {Translate("time_second" + secondOverflow.S(), language)}")}";
+            }
+            else if (seconds < 86400) // < 1 day 
+            {
+                int hours = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
+                return $"{hours} {Translate("time_hour" + hours.S(), language)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", language)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), language)}")}";
+            }
+            else if (seconds < 2628000) // < 1 month (30.416 days) (365/12)
+            {
+                uint days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out uint hoursOverflow);
+                return $"{days} {Translate("time_day" + days.S(), language)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", language)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), language)}")}";
+            }
+            else if (seconds < 31536000) // < 1 year
+            {
+                uint months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out uint daysOverflow);
+                return $"{months} {Translate("time_month" + months.S(), language)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", language)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), language)}")}";
+            }
+            else // > 1 year
+            {
+                uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
+                return $"{years} {Translate("time_year" + years.S(), language)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", language)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), language)}")}";
+            }
+        }
         public static string GetTimeFromMinutes(this uint minutes, ulong player)
         {
             if (minutes < 60) // < 1 hour
@@ -750,6 +782,33 @@ namespace Uncreated.Warfare
             {
                 uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
+            }
+        }
+        public static string GetTimeFromMinutes(this uint minutes, string language)
+        {
+            if (minutes < 60) // < 1 hour
+            {
+                return minutes.ToString(Data.Locale) + ' ' + Translate("time_minute" + minutes.S(), language);
+            }
+            else if (minutes < 1440) // < 1 day 
+            {
+                uint hours = F.DivideRemainder(minutes, 60, out uint minutesOverflow);
+                return $"{hours} {Translate("time_hour" + hours.S(), language)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", language)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), language)}")}";
+            }
+            else if (minutes < 43800) // < 1 month (30.416 days)
+            {
+                uint days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out uint hoursOverflow);
+                return $"{days} {Translate("time_day" + days.S(), language)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", language)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), language)}")}";
+            }
+            else if (minutes < 525600) // < 1 year
+            {
+                uint months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out uint daysOverflow);
+                return $"{months} {Translate("time_month" + months.S(), language)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", language)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), language)}")}";
+            }
+            else // > 1 year
+            {
+                uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
+                return $"{years} {Translate("time_year" + years.S(), language)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", language)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), language)}")}";
             }
         }
         public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
