@@ -1,9 +1,10 @@
-﻿using Newtonsoft.Json;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
@@ -86,7 +87,13 @@ namespace Uncreated.Warfare
             this.z = z;
         }
     }
-    public struct SerializableVector3
+    public interface IJsonReadWrite
+    {
+        void WriteJson(Utf8JsonWriter writer);
+        void ReadJson(ref Utf8JsonReader reader);
+    }
+
+    public struct SerializableVector3 : IJsonReadWrite
     {
         public static readonly SerializableVector3 Zero = new SerializableVector3(0, 0, 0);
         public float x;
@@ -132,18 +139,9 @@ namespace Uncreated.Warfare
         public override string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.Locale)}, {Mathf.RoundToInt(y).ToString(Data.Locale)}, {Mathf.RoundToInt(z).ToString(Data.Locale)})";
         public SerializableVector3(Vector3 v)
         {
-            if (v == default)
-            {
-                x = 0;
-                y = 0;
-                z = 0;
-            }
-            else
-            {
-                x = v.x;
-                y = v.y;
-                z = v.z;
-            }
+            x = v.x;
+            y = v.y;
+            z = v.z;
         }
         [JsonConstructor]
         public SerializableVector3(float x, float y, float z)
@@ -152,8 +150,40 @@ namespace Uncreated.Warfare
             this.y = y;
             this.z = z;
         }
+        public void WriteJson(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty(nameof(x), this.x);
+            writer.WriteProperty(nameof(y), this.x);
+            writer.WriteProperty(nameof(z), this.x);
+        }
+        public void ReadJson(ref Utf8JsonReader reader)
+        {
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string val = reader.GetString();
+                    if (val != null && reader.Read())
+                    {
+                        switch (val)
+                        {
+                            case nameof(x):
+                                x = (float)reader.GetDecimal();
+                                break;
+                            case nameof(y):
+                                y = (float)reader.GetDecimal();
+                                break;
+                            case nameof(z):
+                                z = (float)reader.GetDecimal();
+                                break;
+                        }
+                    }
+                }
+                else if (reader.TokenType == JsonTokenType.EndObject) return;
+            }
+        }
     }
-    public struct SerializableTransform
+    public struct SerializableTransform : IJsonReadWrite
     {
         public static readonly SerializableTransform Zero = new SerializableTransform(SerializableVector3.Zero, SerializableVector3.Zero);
         public SerializableVector3 position;
@@ -209,6 +239,37 @@ namespace Uncreated.Warfare
             this.position = new SerializableVector3(position);
             this.euler_angles = new SerializableVector3(rotation.eulerAngles);
         }
+        public void WriteJson(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty(nameof(position), position);
+            writer.WriteProperty(nameof(euler_angles), euler_angles);
+        }
+        public void ReadJson(ref Utf8JsonReader reader)
+        {
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string val = reader.GetString();
+                    if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                    {
+                        switch (val)
+                        {
+                            case nameof(position):
+                                position = new SerializableVector3();
+                                position.ReadJson(ref reader);
+                                break;
+                            case nameof(euler_angles):
+                                euler_angles = new SerializableVector3();
+                                euler_angles.ReadJson(ref reader);
+                                break;
+                        }
+                    }
+                }
+                else if (reader.TokenType == JsonTokenType.EndObject)
+                    return;
+            }
+        }
     }
     public struct LangData
     {
@@ -221,153 +282,132 @@ namespace Uncreated.Warfare
             this.language = language;
         }
     }
-    public struct LanguageAliasSet
+    public struct LanguageAliasSet : IJsonReadWrite
     {
         public string key;
         public string display_name;
-        public List<string> values;
+        public string[] values;
         [JsonConstructor]
-        public LanguageAliasSet(string key, string display_name, List<string> values)
+        public LanguageAliasSet(string key, string display_name, string[] values)
         {
             this.key = key;
             this.display_name = display_name;
             this.values = values;
         }
-    }
-    public struct MySqlColumnData
-    {
-        public string key;
-        public string name;
-        [JsonConstructor]
-        public MySqlColumnData(string key, string name)
+        public void ReadJson(ref Utf8JsonReader reader)
         {
-            this.key = key;
-            this.name = name;
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject) return;
+                else if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string prop = reader.GetString();
+                    if (!reader.Read()) continue;
+                    if (prop == nameof(key))
+                        this.key = reader.GetString();
+                    else if (prop == nameof(display_name))
+                        this.display_name = reader.GetString();
+                    else if (prop == nameof(values) && reader.TokenType == JsonTokenType.StartArray)
+                    {
+                        List<string> tlist = new List<string>(24);
+                        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                        {
+                            if (reader.TokenType == JsonTokenType.String)
+                            {
+                                tlist.Add(reader.GetString());
+                            }
+                        }
+                        this.values = tlist.ToArray();
+                    }
+                }
+            }
+        }
+        public void WriteJson(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty(nameof(key), key);
+            writer.WriteProperty(nameof(display_name), display_name);
+            writer.WriteStartArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                writer.WriteStringValue(values[i]);
+            }
+            writer.WriteEndArray();
         }
     }
-    public struct MySqlTableData
-    {
-        public string TableName;
-        public string key;
-        public List<MySqlColumnData> Columns;
-        [JsonConstructor]
-        public MySqlTableData(string key, string tableName, List<MySqlColumnData> columns)
-        {
-            this.key = key;
-            this.TableName = tableName;
-            this.Columns = columns;
-        }
-    }
-    public struct MySqlTableLang
-    {
-        public string TableName;
-        public Dictionary<string, string> Columns;
-        public MySqlTableLang(string tableName, Dictionary<string, string> columns)
-        {
-            this.TableName = tableName;
-            this.Columns = columns;
-        }
-        public string GetColumnName(string column_key) => Columns.TryGetValue(column_key, out string val) ? val : column_key;
-        public override string ToString() => TableName;
-    }
+    
     public static partial class JSONMethods
     {
+        public static readonly JsonSerializerOptions serializerOptions = new JsonSerializerOptions() { WriteIndented = true };
         public const string DefaultLanguage = "en-us";
-        public static List<FlagData> ReadFlags()
-        {
-            F.CheckDir(Data.FlagStorage, out bool madeFolder);
-            if (madeFolder)
-            {
-                if (!File.Exists(Data.FlagStorage + "flags.json"))
-                {
-                    SaveFlags(DefaultFlags);
-                }
-                else
-                {
-                    List<FlagData> Flags;
-                    using (StreamReader Reader = File.OpenText(Data.FlagStorage + "flags.json"))
-                    {
-                        Flags = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd(), new JsonSerializerSettings() { Culture = Data.Locale });
-                        Reader.Close();
-                        Reader.Dispose();
-                    }
-                    return Flags ?? DefaultFlags;
-                }
-            }
-            return DefaultFlags;
-        }
-        public static void SaveFlags(this List<FlagData> Flags)
-        {
-            using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + "flags.json"))
-            {
-                using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
-                {
-                    JsonSerializer Serializer = new JsonSerializer { Formatting = Formatting.Indented };
-                    Serializer.Serialize(JsonWriter, Flags);
-                    JsonWriter.Close();
-                    TextWriter.Close();
-                    TextWriter.Dispose();
-                }
-            }
-        }
-        public static void AddFlag(this FlagData flag)
-        {
-            List<FlagData> Data = ReadFlags();
-            Data.Add(flag);
-            Data.SaveFlags();
-        }
-        public static void RemoveFlag(this FlagData flag)
-        {
-            List<FlagData> Data = ReadFlags();
-            Data.RemoveAll(x => x.id == flag.id);
-            Data.SaveFlags();
-        }
-        public static FlagData GetFlagInfo(int id)
-        {
-            List<FlagData> Data = ReadFlags();
-            return Data.FirstOrDefault(x => x.id == id);
-        }
         public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
         {
             if (!File.Exists(Data.DATA_DIRECTORY + "chat_colors.json"))
             {
-                using (StreamWriter TextWriter = File.CreateText(Data.DATA_DIRECTORY + "chat_colors.json"))
+                Dictionary<string, Color> NewDefaults = new Dictionary<string, Color>(DefaultColors.Count);
+                using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "chat_colors.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                    writer.WriteStartObject();
+                    foreach (KeyValuePair<string, string> color in DefaultColors)
                     {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
-                        Serializer.Serialize(JsonWriter, DefaultColors);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
+                        writer.WritePropertyName(color.Key);
+                        writer.WriteStringValue(color.Value);
+                        NewDefaults.Add(color.Key, color.Value.Hex());
                     }
+                    writer.WriteEndObject();
+                    writer.Dispose();
+                    stream.Close();
+                    stream.Dispose();
                 }
-                Dictionary<string, Color> NewDefaults = new Dictionary<string, Color>();
-                Dictionary<string, string> NewDefaultsHex = new Dictionary<string, string>();
-                foreach (ColorData data in DefaultColors)
-                {
-                    NewDefaults.Add(data.key, data.Color);
-                    NewDefaultsHex.Add(data.key, data.color_hex);
-                }
-                HexValues = NewDefaultsHex;
+                HexValues = DefaultColors;
                 return NewDefaults;
             }
-            List<ColorData> Colors;
-            using (StreamReader Reader = File.OpenText(Data.DATA_DIRECTORY + "chat_colors.json"))
+            using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "chat_colors.json", FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                Colors = JsonConvert.DeserializeObject<List<ColorData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
+                long len = stream.Length;
+                if (len > int.MaxValue)
+                {
+                    L.LogError("chat_colors.json is too long to read.");
+                    Dictionary<string, Color> NewDefaults = new Dictionary<string, Color>(DefaultColors.Count);
+                    foreach (KeyValuePair<string, string> color in DefaultColors)
+                    {
+                        NewDefaults.Add(color.Key, color.Value.Hex());
+                    }
+                    HexValues = DefaultColors;
+                    return NewDefaults;
+                }
+                else
+                {
+                    Dictionary<string, Color> converted = new Dictionary<string, Color>(DefaultColors.Count);
+                    Dictionary<string, string> read = new Dictionary<string, string>(DefaultColors.Count);
+                    byte[] bytes = new byte[len];
+                    stream.Read(bytes, 0, (int)len);
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                    while (reader.Read())
+                    {
+                        if (reader.TokenType == JsonTokenType.StartObject) continue;
+                        else if (reader.TokenType == JsonTokenType.EndObject) break;
+                        else if (reader.TokenType == JsonTokenType.PropertyName)
+                        {
+                            string key = reader.GetString();
+                            if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                            {
+                                string color = reader.GetString();
+                                string value = reader.GetString();
+                                if (read.ContainsKey(key))
+                                    L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
+                                else
+                                {
+                                    read.Add(key, color);
+                                    converted.Add(key, color.Hex());
+                                }
+                            }
+                        }
+                    }
+                    HexValues = read;
+                    return converted;
+                }
             }
-            Dictionary<string, Color> NewColors = new Dictionary<string, Color>();
-            Dictionary<string, string> NewColorsHex = new Dictionary<string, string>();
-            foreach (ColorData data in Colors ?? DefaultColors)
-            {
-                NewColors.Add(data.key, data.Color);
-                NewColorsHex.Add(data.key, data.color_hex);
-            }
-            HexValues = NewColorsHex;
-            return NewColors;
         }
         public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations(
             out Dictionary<string, Dictionary<string, string>> deathloc, out Dictionary<string, Dictionary<ELimb, string>> limbloc)
@@ -376,76 +416,116 @@ namespace Uncreated.Warfare
             Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
             deathloc = new Dictionary<string, Dictionary<string, string>>();
             limbloc = new Dictionary<string, Dictionary<ELimb, string>>();
-            F.CheckDir(Data.LangStorage + DefaultLanguage, out bool madeDir);
-            if (madeDir)
+            F.CheckDir(Data.LangStorage + DefaultLanguage, out bool folderIsThere);
+            if (folderIsThere)
             {
                 if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\localization.json"))
                 {
-                    using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DefaultLanguage + @"\localization.json"))
+                    Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
+                    using (FileStream stream = new FileStream(Data.LangStorage + DefaultLanguage + @"\localization.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
-                        using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                        writer.WriteStartObject();
+                        foreach (KeyValuePair<string, string> translation in DefaultTranslations)
                         {
-                            JsonSerializer Serializer = new JsonSerializer { Formatting = Formatting.Indented, Culture = Data.Locale };
-                            Serializer.Serialize(JsonWriter, DefaultTranslations);
-                            JsonWriter.Close();
-                            TextWriter.Close();
-                            TextWriter.Dispose();
+                            writer.WritePropertyName(translation.Key);
+                            writer.WriteStringValue(translation.Value);
+                            defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
                         }
+                        writer.WriteEndObject();
+                        writer.Dispose();
+                        stream.Close();
+                        stream.Dispose();
                     }
+
+                    languages.Add(DefaultLanguage, defaultLocal);
                 }
                 if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\deathlocalization.dat"))
                 {
+                    Dictionary<string, string> defaultDeathLocal = new Dictionary<string, string>(DefaultDeathTranslations.Count);
                     using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DefaultLanguage + @"\deathlocalization.dat"))
                     {
                         TextWriter.WriteLine(DeathsTranslationDescription);
                         foreach (KeyValuePair<string, string> dmsg in DefaultDeathTranslations)
+                        {
+                            defaultDeathLocal.Add(dmsg.Key, dmsg.Value);
                             TextWriter.WriteLine(dmsg.Key + ' ' + dmsg.Value);
+                        }
                         TextWriter.Close();
                         TextWriter.Dispose();
                     }
+
+                    deathloc.Add(DefaultLanguage, defaultDeathLocal);
                 }
                 if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\limblocalization.dat"))
                 {
+                    Dictionary<ELimb, string> defaultLimbLocal = new Dictionary<ELimb, string>(DefaultLimbTranslations.Count);
                     using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DefaultLanguage + @"\limblocalization.dat"))
                     {
                         TextWriter.WriteLine(DeathsLimbTranslationsDescription);
                         foreach (KeyValuePair<ELimb, string> dmsg in DefaultLimbTranslations)
+                        {
                             TextWriter.WriteLine(dmsg.Key.ToString() + ' ' + dmsg.Value);
+                            defaultLimbLocal.Add(dmsg.Key, dmsg.Value);
+                        }
                         TextWriter.Close();
                         TextWriter.Dispose();
                     }
+
+                    limbloc.Add(DefaultLanguage, defaultLimbLocal);
                 }
                 foreach (string folder in langDirs)
                 {
                     DirectoryInfo directoryInfo = new DirectoryInfo(folder);
-                    string[] langFiles = Directory.GetFiles(folder, "*", SearchOption.TopDirectoryOnly);
-                    foreach (string file in langFiles)
+                    string lang = directoryInfo.Name;
+                    FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+                    foreach (FileInfo info in langFiles)
                     {
-                        FileInfo info = new FileInfo(file);
                         if (info.Name == "localization.json")
                         {
-                            Dictionary<string, string> Translations = null;
-                            if (file == null) continue;
-                            using (StreamReader Reader = File.OpenText(file))
+                            using (FileStream stream = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                try
+                                long len = stream.Length;
+                                if (len > int.MaxValue)
                                 {
-                                    Translations = JsonConvert.DeserializeObject<Dictionary<string, string>>(Reader.ReadToEnd(), new JsonSerializerSettings() { Culture = Data.Locale });
+                                    L.LogError(info.FullName + " is too long to read.");
+                                    if (lang == DefaultLanguage && !languages.ContainsKey(DefaultLanguage))
+                                    {
+                                        Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
+                                        foreach (KeyValuePair<string, string> translation in DefaultTranslations)
+                                        {
+                                            defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
+                                        }
+                                        languages.Add(DefaultLanguage, defaultLocal);
+                                    }
                                 }
-                                catch (Exception ex)
+                                else
                                 {
-                                    L.LogError("Error reading localization file in " + directoryInfo.Name);
-                                    L.LogError(ex);
-                                }
-                                finally
-                                {
-                                    Reader.Close();
-                                    Reader.Dispose();
+                                    Dictionary<string, TranslationData> local = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
+                                    byte[] bytes = new byte[len];
+                                    stream.Read(bytes, 0, (int)len);
+                                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                                    while (reader.Read())
+                                    {
+                                        if (reader.TokenType == JsonTokenType.StartObject) continue;
+                                        else if (reader.TokenType == JsonTokenType.EndObject) break;
+                                        else if (reader.TokenType == JsonTokenType.PropertyName)
+                                        {
+                                            string key = reader.GetString();
+                                            if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                                            {
+                                                string value = reader.GetString();
+                                                if (local.ContainsKey(key))
+                                                    L.LogWarning("Duplicate key \"" + key + "\" in localization file for " + lang);
+                                                else
+                                                    local.Add(key, new TranslationData(value));
+                                            }
+                                        }
+                                    }
+                                    if (!languages.ContainsKey(lang))
+                                        languages.Add(lang, local);
                                 }
                             }
-                            if (Translations == null) continue;
-                            if (!languages.ContainsKey(directoryInfo.Name))
-                                languages.Add(directoryInfo.Name, ConvertTranslations(Translations, directoryInfo.Name));
                         }
                         else if (info.Name == "deathlocalization.dat")
                         {
@@ -462,11 +542,11 @@ namespace Uncreated.Warfare
                                     if (data.Length > 1)
                                         rtn.Add(data[0], string.Join(" ", data, 1, data.Length - 1));
                                     else
-                                        L.LogWarning($"Error parsing death translation in \".\\{Data.LangStorage}{directoryInfo.Name}\\{info.Name}\":\n{p}");
+                                        L.LogWarning($"Error parsing death translation in \".\\{Data.LangStorage}{lang}\\{info.Name}\":\n{p}");
                                 }
                             }
-                            if (!deathloc.ContainsKey(directoryInfo.Name))
-                                deathloc.Add(directoryInfo.Name, rtn);
+                            if (!deathloc.ContainsKey(lang))
+                                deathloc.Add(lang, rtn);
                         }
                         else if (info.Name == "limblocalization.dat")
                         {
@@ -488,17 +568,17 @@ namespace Uncreated.Warfare
                                             L.LogWarning("Invalid line, must match SDG.Unturned.ELimb enumerator list (LEFT|RIGHT)_(ARM|LEG|BACK|FOOT|FRONT|HAND), SPINE, SKULL. Line:\n" + p);
                                     }
                                     else
-                                        L.LogWarning($"Error parsing limb translation in \".\\{Data.LangStorage}{directoryInfo.Name}\\{info.Name}\":\n{p}");
+                                        L.LogWarning($"Error parsing limb translation in \".\\{Data.LangStorage}{lang}\\{info.Name}\":\n{p}");
                                 }
                             }
-                            if (!limbloc.ContainsKey(directoryInfo.Name))
-                                limbloc.Add(directoryInfo.Name, rtn);
+                            if (!limbloc.ContainsKey(lang))
+                                limbloc.Add(lang, rtn);
                         }
 
                     }
 
                 }
-                L.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.Count > 0 ? languages.ElementAt(0).Value.Count.ToString(Data.Locale) : "NO_LANGS_FOUND")} translations.");
+                L.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.TryGetValue(DefaultLanguage, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
             }
             else
             {
@@ -536,152 +616,256 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<int, Zone> LoadExtraZones()
         {
-            F.CheckDir(Data.FlagStorage, out bool madeDir);
-            if (madeDir)
+            F.CheckDir(Data.FlagStorage, out bool dirExists);
+            if (dirExists)
             {
                 if (!File.Exists(Data.FlagStorage + "extra_zones.json"))
                 {
-                    using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + "extra_zones.json"))
+                    Dictionary<int, Zone> defaultXtraZones = new Dictionary<int, Zone>(DefaultExtraZones.Count);
+                    using (FileStream stream = new FileStream(Data.FlagStorage + "extra_zones.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
-                        using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                        writer.WriteStartArray();
+                        for (int i = 0; i < DefaultExtraZones.Count; i++)
                         {
-                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
-                            Serializer.Serialize(JsonWriter, DefaultExtraZones);
-                            JsonWriter.Close();
-                            TextWriter.Close();
-                            TextWriter.Dispose();
+                            FlagData zone = DefaultExtraZones[i];
+                            writer.WriteStartObject();
+                            zone.WriteFlagData(writer);
+                            writer.WriteEndObject();
+                            defaultXtraZones.Add(zone.id, Flag.ComplexifyZone(zone));
                         }
+                        writer.WriteEndArray();
+                        writer.Dispose();
+                        stream.Close();
+                        stream.Dispose();
                     }
-                    Dictionary<int, Zone> NewDefaultZones = new Dictionary<int, Zone>();
-                    foreach (FlagData zone in DefaultExtraZones)
-                        NewDefaultZones.Add(zone.id, Flag.ComplexifyZone(zone));
-                    return NewDefaultZones;
+                    return defaultXtraZones;
                 }
-                List<FlagData> Zones;
-                using (StreamReader Reader = File.OpenText(Data.FlagStorage + "extra_zones.json"))
+                using (FileStream stream = new FileStream(Data.FlagStorage + "extra_zones.json", FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    Zones = JsonConvert.DeserializeObject<List<FlagData>>(Reader.ReadToEnd());
-                    Reader.Close();
-                    Reader.Dispose();
+                    long len = stream.Length;
+                    if (len > int.MaxValue)
+                    {
+                        L.LogError("extra_zones.json is too long to read.");
+                        Dictionary<int, Zone> defaultXtraZones = new Dictionary<int, Zone>(DefaultExtraZones.Count);
+                        for (int i = 0; i < DefaultExtraZones.Count; i++)
+                        {
+                            FlagData zone = DefaultExtraZones[i];
+                            defaultXtraZones.Add(zone.id, Flag.ComplexifyZone(zone));
+                        }
+                        return defaultXtraZones;
+                    }
+                    else
+                    {
+                        Dictionary<int, Zone> xtraZones = new Dictionary<int, Zone>(DefaultExtraZones.Count);
+                        byte[] bytes = new byte[len];
+                        stream.Read(bytes, 0, (int)len);
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        while (reader.Read())
+                        {
+                            if (reader.TokenType == JsonTokenType.StartArray) continue;
+                            else if (reader.TokenType == JsonTokenType.EndArray) break;
+                            else if (reader.TokenType == JsonTokenType.StartObject)
+                            {
+                                FlagData data = FlagData.ReadFlagData(ref reader);
+                                xtraZones.Add(data.id, Flag.ComplexifyZone(data));
+                            }
+                        }
+
+                        return xtraZones;
+                    }
                 }
-                if (Zones == null)
-                {
-                    Dictionary<int, Zone> NewDefaultZones = new Dictionary<int, Zone>();
-                    foreach (FlagData zone in DefaultExtraZones)
-                        NewDefaultZones.Add(zone.id, Flag.ComplexifyZone(zone));
-                    return NewDefaultZones;
-                }
-                Dictionary<int, Zone> NewZones = new Dictionary<int, Zone>();
-                foreach (FlagData zone in Zones)
-                    NewZones.Add(zone.id, Flag.ComplexifyZone(zone));
-                return NewZones;
             }
             else
             {
                 L.LogError("Failed to load extra zones, see above. Loading default zones.");
-                Dictionary<int, Zone> NewDefaultZones = new Dictionary<int, Zone>();
-                foreach (FlagData zone in DefaultExtraZones)
-                    NewDefaultZones.Add(zone.id, Flag.ComplexifyZone(zone));
-                return NewDefaultZones;
+                Dictionary<int, Zone> defaultXtraZones = new Dictionary<int, Zone>(DefaultExtraZones.Count);
+                for (int i = 0; i < DefaultExtraZones.Count; i++)
+                {
+                    FlagData zone = DefaultExtraZones[i];
+                    defaultXtraZones.Add(zone.id, Flag.ComplexifyZone(zone));
+                }
+                return defaultXtraZones;
             }
         }
         public static Dictionary<string, Vector3> LoadExtraPoints()
         {
-            F.CheckDir(Data.FlagStorage, out bool madeDirs);
-            if (madeDirs)
+            F.CheckDir(Data.FlagStorage, out bool dirExists);
+            if (dirExists)
             {
                 if (!File.Exists(Data.FlagStorage + "extra_points.json"))
                 {
-                    using (StreamWriter TextWriter = File.CreateText(Data.FlagStorage + "extra_points.json"))
+                    Dictionary<string, Vector3> defaultXtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
+                    using (FileStream stream = new FileStream(Data.FlagStorage + "extra_points.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
-                        using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                        writer.WriteStartObject();
+                        for (int i = 0; i < DefaultExtraPoints.Count; i++)
                         {
-                            JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
-                            Serializer.Serialize(JsonWriter, DefaultExtraPoints);
-                            JsonWriter.Close();
-                            TextWriter.Close();
-                            TextWriter.Dispose();
+                            Point3D point = DefaultExtraPoints[i];
+                            writer.WritePropertyName(point.name);
+                            writer.WriteStartObject();
+                            writer.WriteProperty("x", point.x);
+                            writer.WriteProperty("y", point.y);
+                            writer.WriteProperty("z", point.z);
+                            writer.WriteEndObject();
+                            defaultXtraPoints.Add(point.name, point.Vector3);
                         }
+                        writer.WriteEndObject();
+                        writer.Dispose();
+                        stream.Close();
+                        stream.Dispose();
                     }
-                    Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
-                    foreach (Point3D point in DefaultExtraPoints)
-                        NewDefaultPoints.Add(point.name, point.Vector3);
-                    return NewDefaultPoints;
+                    return defaultXtraPoints;
                 }
-                List<Point3D> Points;
-                using (StreamReader Reader = File.OpenText(Data.FlagStorage + "extra_points.json"))
+                using (FileStream stream = new FileStream(Data.FlagStorage + "extra_points.json", FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    Points = JsonConvert.DeserializeObject<List<Point3D>>(Reader.ReadToEnd());
-                    Reader.Close();
-                    Reader.Dispose();
+                    long len = stream.Length;
+                    if (len > int.MaxValue)
+                    {
+                        L.LogError("extra_points.json is too long to read.");
+                        Dictionary<string, Vector3> defaultXtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
+                        for (int i = 0; i < DefaultExtraPoints.Count; i++)
+                        {
+                            Point3D point = DefaultExtraPoints[i];
+                            defaultXtraPoints.Add(point.name, point.Vector3);
+                        }
+                        return defaultXtraPoints;
+                    }
+                    else
+                    {
+                        Dictionary<string, Vector3> xtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
+                        byte[] bytes = new byte[len];
+                        stream.Read(bytes, 0, (int)len);
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        while (reader.Read())
+                        {
+                            if (reader.TokenType == JsonTokenType.StartObject) continue;
+                            else if (reader.TokenType == JsonTokenType.EndObject) break;
+                            else if (reader.TokenType == JsonTokenType.PropertyName)
+                            {
+                                string key = reader.GetString();
+                                if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                                {
+                                    float x = 0f;
+                                    float y = 0f;
+                                    float z = 0f;
+                                    while (reader.Read())
+                                    {
+                                        if (reader.TokenType == JsonTokenType.EndObject) break;
+                                        else if (reader.TokenType == JsonTokenType.PropertyName)
+                                        {
+                                            string prop = reader.GetString();
+                                            switch (prop)
+                                            {
+                                                case "x":
+                                                    x = (float)reader.GetDouble();
+                                                    break;
+                                                case "y":
+                                                    y = (float)reader.GetDouble();
+                                                    break;
+                                                case "z":
+                                                    z = (float)reader.GetDouble();
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    xtraPoints.Add(key, new Vector3(x, y, z));
+                                }
+                            }
+                        }
+
+                        return xtraPoints;
+                    }
                 }
-                if (Points == null)
-                {
-                    Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
-                    foreach (Point3D point in DefaultExtraPoints)
-                        NewDefaultPoints.Add(point.name, point.Vector3);
-                    return NewDefaultPoints;
-                }
-                Dictionary<string, Vector3> NewPoints = new Dictionary<string, Vector3>();
-                foreach (Point3D point in Points)
-                    NewPoints.Add(point.name, point.Vector3);
-                return NewPoints;
             }
             else
             {
                 L.LogError("Failed to load extra points, see above. Loading default points.");
-                Dictionary<string, Vector3> NewDefaultPoints = new Dictionary<string, Vector3>();
-                foreach (Point3D point in DefaultExtraPoints)
-                    NewDefaultPoints.Add(point.name, point.Vector3);
-                return NewDefaultPoints;
+                Dictionary<string, Vector3> defaultXtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
+                for (int i = 0; i < DefaultExtraPoints.Count; i++)
+                {
+                    Point3D point = DefaultExtraPoints[i];
+                    defaultXtraPoints.Add(point.name, point.Vector3);
+                }
+                return defaultXtraPoints;
             }
-
         }
         public static Dictionary<ulong, string> LoadLanguagePreferences()
         {
-            if (!File.Exists(Data.LangStorage + "preferences.json"))
+            F.CheckDir(Data.LangStorage, out bool dirExists);
+            if (dirExists)
             {
-                using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + "preferences.json"))
+                if (!File.Exists(Data.LangStorage + "preferences.json"))
                 {
-                    TextWriter.Write("[]");
-                    TextWriter.Close();
-                    TextWriter.Dispose();
-                }
-                return new Dictionary<ulong, string>();
-            }
-            List<LangData> Languages;
-            using (StreamReader Reader = File.OpenText(Data.LangStorage + "preferences.json"))
-            {
-                Languages = JsonConvert.DeserializeObject<List<LangData>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
-            }
-            if (Languages == null) return new Dictionary<ulong, string>();
-            Dictionary<ulong, string> NewLanguages = new Dictionary<ulong, string>();
-            foreach (LangData player in Languages)
-                NewLanguages.Add(player.player, player.language ?? DefaultLanguage);
-            return NewLanguages;
-        }
-        public static void SaveLangs(Dictionary<ulong, string> Languages)
-        {
-            if (Languages == null) return;
-            List<LangData> data = new List<LangData>();
-            foreach (KeyValuePair<ulong, string> player in Languages)
-                data.Add(new LangData(player.Key, player.Value));
-            using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + "preferences.json"))
-            {
-                if (data.Count == 0) TextWriter.Write("[]");
-                else
-                {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-                        Serializer.Serialize(JsonWriter, data);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
+                        byte[] utf8 = System.Text.Encoding.UTF8.GetBytes("[]");
+                        stream.Write(utf8, 0, utf8.Length);
+                        stream.Close();
+                        stream.Dispose();
+                    }
+                    return new Dictionary<ulong, string>();
+                }
+                using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    long len = stream.Length;
+                    if (len > int.MaxValue)
+                    {
+                        L.LogError("Language preferences at preferences.json is too long to read.");
+                        return new Dictionary<ulong, string>();
+                    }
+                    else
+                    {
+                        Dictionary<ulong, string> prefs = new Dictionary<ulong, string>(48);
+                        byte[] bytes = new byte[len];
+                        stream.Read(bytes, 0, (int)len);
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        while (reader.Read())
+                        {
+                            if (reader.TokenType == JsonTokenType.StartObject) continue;
+                            else if (reader.TokenType == JsonTokenType.EndObject) break;
+                            else if (reader.TokenType == JsonTokenType.PropertyName)
+                            {
+                                string input = reader.GetString();
+                                if (!ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64))
+                                {
+                                    L.LogWarning("Invalid Steam64 ID: \"" + input + "\" in Lang\\preferences.json");
+                                }
+                                else if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                                {
+                                    string language = reader.GetString();
+                                    prefs.Add(steam64, language);
+                                }
+                            }
+                        }
+
+                        return prefs;
                     }
                 }
+            }
+            else
+            {
+                L.LogError("Failed to load language preferences, see above.");
+                return new Dictionary<ulong, string>();
+            }
+        }
+        public static void SaveLangs(Dictionary<ulong, string> languages)
+        {
+            if (languages == null) return;
+            using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+            {
+                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                writer.WriteStartObject();
+                foreach (KeyValuePair<ulong, string> languagePref in languages)
+                {
+                    writer.WritePropertyName(languagePref.Key.ToString(Data.Locale));
+                    writer.WriteStringValue(languagePref.Value);
+                }
+                writer.WriteEndObject();
+                writer.Dispose();
+                stream.Close();
+                stream.Dispose();
             }
         }
         public static void SetLanguage(ulong player, string language)
@@ -699,49 +883,78 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, LanguageAliasSet> LoadLangAliases()
         {
-            if (!File.Exists(Data.LangStorage + "aliases.json"))
+            F.CheckDir(Data.LangStorage, out bool dirExists);
+            if (dirExists)
             {
-
-                using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + "aliases.json"))
+                if (!File.Exists(Data.LangStorage + "aliases.json"))
                 {
-                    using (JsonWriter JsonWriter = new JsonTextWriter(TextWriter))
+                    Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                    using (FileStream stream = new FileStream(Data.LangStorage + "aliases.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
-                        JsonSerializer Serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-                        Serializer.Serialize(JsonWriter, DefaultLanguageAliasSets);
-                        JsonWriter.Close();
-                        TextWriter.Close();
-                        TextWriter.Dispose();
+                        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                        writer.WriteStartArray();
+                        for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
+                        {
+                            LanguageAliasSet set = DefaultLanguageAliasSets[i];
+                            writer.WriteStartObject();
+                            set.WriteJson(writer);
+                            writer.WriteEndObject();
+                            defaultLanguageAliasSets.Add(set.key, set);
+                        }
+                        writer.WriteEndArray();
+                        writer.Dispose();
+                        stream.Close();
+                        stream.Dispose();
+                    }
+                    return defaultLanguageAliasSets;
+                }
+                using (FileStream stream = new FileStream(Data.LangStorage + "aliases.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    long len = stream.Length;
+                    if (len > int.MaxValue)
+                    {
+                        L.LogError("Language alias sets at aliases.json is too long to read.");
+                        Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                        for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
+                        {
+                            LanguageAliasSet set = DefaultLanguageAliasSets[i];
+                            defaultLanguageAliasSets.Add(set.key, set);
+                        }
+                        return defaultLanguageAliasSets;
+                    }
+                    else
+                    {
+                        Dictionary<string, LanguageAliasSet> languageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                        byte[] bytes = new byte[len];
+                        stream.Read(bytes, 0, (int)len);
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        while (reader.Read())
+                        {
+                            if (reader.TokenType == JsonTokenType.StartArray) continue;
+                            else if (reader.TokenType == JsonTokenType.EndArray) break;
+                            else if (reader.TokenType == JsonTokenType.StartObject)
+                            {
+                                LanguageAliasSet set = new LanguageAliasSet();
+                                set.ReadJson(ref reader);
+                                languageAliasSets.Add(set.key, set);
+                            }
+                        }
+
+                        return languageAliasSets;
                     }
                 }
-                Dictionary<string, LanguageAliasSet> DefaultNewAliases = new Dictionary<string, LanguageAliasSet>();
-                foreach (LanguageAliasSet set in DefaultLanguageAliasSets)
+            }
+            else
+            {
+                L.LogError("Failed to load language aliases, see above. Loading default language aliases.");
+                Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
                 {
-                    DefaultNewAliases.Add(set.key, set);
+                    LanguageAliasSet set = DefaultLanguageAliasSets[i];
+                    defaultLanguageAliasSets.Add(set.key, set);
                 }
-                return DefaultNewAliases;
+                return defaultLanguageAliasSets;
             }
-            List<LanguageAliasSet> Sets;
-            using (StreamReader Reader = File.OpenText(Data.LangStorage + "aliases.json"))
-            {
-                Sets = JsonConvert.DeserializeObject<List<LanguageAliasSet>>(Reader.ReadToEnd());
-                Reader.Close();
-                Reader.Dispose();
             }
-            if (Sets == null)
-            {
-                Dictionary<string, LanguageAliasSet> DefaultNewAliases = new Dictionary<string, LanguageAliasSet>();
-                foreach (LanguageAliasSet set in DefaultLanguageAliasSets)
-                {
-                    DefaultNewAliases.Add(set.key, set);
-                }
-                return DefaultNewAliases;
-            }
-            Dictionary<string, LanguageAliasSet> NewAliases = new Dictionary<string, LanguageAliasSet>();
-            foreach (LanguageAliasSet set in Sets)
-            {
-                NewAliases.Add(set.key, set);
-            }
-            return NewAliases;
-        }
     }
 }

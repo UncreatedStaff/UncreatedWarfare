@@ -330,7 +330,7 @@ namespace Uncreated.Warfare.Teams
 
             player.SendChat("teams_join_success", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-            new List<CSteamID>(1) { player.CSteamID }.BroadcastToAllExcept("teams_join_announce", names.CharacterName, teamName);
+            Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "teams_join_announce", names.CharacterName, teamName);
 
             if (player.Squad != null)
                 Squads.SquadManager.LeaveSquad(player, player.Squad);

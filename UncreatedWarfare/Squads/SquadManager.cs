@@ -301,11 +301,14 @@ namespace Uncreated.Warfare.Squads
                     if (Squads[i].Team == team)
                     {
                         if (name == Squads[i].Name)
-                            break;
-                        else
-                            return name;
+                        {
+                            goto next;
+                        }
                     }
                 }
+                return name;
+                next:
+                continue;
             }
             return NAMES[NAMES.Length - 1];
         }

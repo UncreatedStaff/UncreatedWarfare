@@ -120,6 +120,13 @@ namespace Uncreated.Warfare
             {
                 if (!UCWarfare.Config.Patches.ReceiveChatRequest) return true;
                 SteamPlayer callingPlayer = context.GetCallingPlayer();
+                UCPlayer caller = UCPlayer.FromSteamPlayer(callingPlayer);
+                if (caller != null && (caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT && caller.TimeUnmuted > DateTime.Now)
+                {
+                    caller.SendChat("text_chat_feedback_muted", caller.MuteReason,
+                        caller.TimeUnmuted.ToString("g") + " EST");
+                    return false;
+                }
                 if (callingPlayer == null || callingPlayer.player == null || Time.realtimeSinceStartup - callingPlayer.lastChat < ChatManager.chatrate)
                     return false;
                 callingPlayer.lastChat = Time.realtimeSinceStartup;

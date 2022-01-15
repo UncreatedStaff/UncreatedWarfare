@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -10,7 +11,8 @@ namespace Uncreated.Warfare.Kits
 {
     public class RequestSigns : JSONSaver<RequestSign>
     {
-        public RequestSigns() : base(Data.StructureStorage + "request_signs.json") { }
+        public RequestSigns() : base(Data.StructureStorage + "request_signs.json", RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
+
         protected override string LoadDefaults() => "[]";
         public static void DropAllSigns()
         {
@@ -81,11 +83,9 @@ namespace Uncreated.Warfare.Kits
                     return;
                 }
             }
-            List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
-            for (int i = 0; i < s.Count; i++)
-            {
-                s[i].InvokeUpdate(player);
-            }
+            IEnumerable<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
+            foreach (RequestSign sign in s)
+                sign.InvokeUpdate(player);
         }
         public static void InvokeLangUpdateForSignsOfKit(string kitName)
         {
@@ -101,11 +101,9 @@ namespace Uncreated.Warfare.Kits
                     return;
                 }
             }
-            List<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
-            for (int i = 0; i < s.Count; i++)
-            {
-                s[i].InvokeUpdate();
-            }
+            IEnumerable<RequestSign> s = GetObjectsWhere(x => x.kit_name == kitName);
+            foreach (RequestSign sign in s)
+                sign.InvokeUpdate();
         }
         public static void InvokeLangUpdateForAllSigns(SteamPlayer player)
         {
@@ -140,7 +138,7 @@ namespace Uncreated.Warfare.Kits
             sign.updateState(barricadeByRootFast.asset, numArray1);
         }
     }
-    public class RequestSign
+    public class RequestSign : IJsonReadWrite
     {
         [JsonIgnore]
         public Kit Kit
@@ -309,6 +307,68 @@ namespace Uncreated.Warfare.Kits
                     sign.updateText(SignText);
                 }
             }
+        }
+        public static void WriteRequestSign(RequestSign obj, Utf8JsonWriter writer) => obj.WriteJson(writer);
+        public void WriteJson(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty(nameof(kit_name), kit_name);
+            writer.WriteProperty(nameof(transform), transform);
+            writer.WriteProperty(nameof(sign_id), sign_id);
+            writer.WriteProperty(nameof(owner), owner);
+            writer.WriteProperty(nameof(group), group);
+            writer.WriteProperty(nameof(instance_id), instance_id);
+        }
+        public void ReadJson(ref Utf8JsonReader reader)
+        {
+            transform = new SerializableTransform();
+            while (reader.Read())
+            {
+                switch (reader.TokenType)
+                {
+                    case JsonTokenType.PropertyName:
+                        string val = reader.GetString();
+                        if (reader.Read())
+                        {
+                            switch (val)
+                            {
+                                case nameof(kit_name):
+                                    kit_name = reader.GetString();
+                                    break;
+                                case nameof(sign_id):
+                                    sign_id = reader.GetGuid();
+                                    break;
+                                case nameof(transform):
+                                    if (reader.TokenType != JsonTokenType.StartObject)
+                                        transform = SerializableTransform.Zero;
+                                    else
+                                    {
+                                        transform = new SerializableTransform();
+                                        transform.ReadJson(ref reader);
+                                    }
+                                    break;
+                                case nameof(owner):
+                                    owner = reader.GetUInt64();
+                                    break;
+                                case nameof(group):
+                                    group = reader.GetUInt64();
+                                    break;
+                                case nameof(instance_id):
+                                    instance_id = reader.GetUInt32();
+                                    break;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+        public override string ToString() =>
+            $"Request sign: " + kit_name + ", Instance ID: " + instance_id + ", Placed by: " + owner;
+        public static RequestSign ReadRequestSign(ref Utf8JsonReader reader)
+        {
+            RequestSign rs = new RequestSign();
+            rs.ReadJson(ref reader);
+            return rs;
         }
     }
 }

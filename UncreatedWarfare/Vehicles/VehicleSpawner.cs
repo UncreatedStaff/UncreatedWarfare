@@ -634,7 +634,6 @@ namespace Uncreated.Warfare.Vehicles
     public class SpawnedVehicleComponent : MonoBehaviour
     {
         private Coroutine timer;
-        private Coroutine xploop;
         private InteractableVehicle Owner;
         public VehicleSpawn spawn;
         private VehicleData data;

@@ -224,8 +224,8 @@ namespace Uncreated.Warfare.Gamemodes
         public string Map;
         public Guid T1ZoneBlocker;
         public Guid T2ZoneBlocker;
-        public Dictionary<int, float> Team1Adjacencies;
-        public Dictionary<int, float> Team2Adjacencies;
+        public Flags.AdjacentFlagData[] Team1Adjacencies;
+        public Flags.AdjacentFlagData[] Team2Adjacencies;
         public SerializableTransform[] CacheSpawns;
         public void AddCacheSpawn(SerializableTransform t)
         {
@@ -250,25 +250,25 @@ namespace Uncreated.Warfare.Gamemodes
                     T1ZoneBlocker = new Guid("57927806-0501-4735-ab01-2f1f7adaf714");
                     T2ZoneBlocker = new Guid("b4c0a51b-7005-4ad5-b6fe-06aead982d94");
                     CacheSpawns = NuijamaaDefaultCaches;
-                    Team1Adjacencies = new Dictionary<int, float>()
+                    Team1Adjacencies = new Flags.AdjacentFlagData[3]
                     {
-                        { 16, 1f },
-                        { 15, 1f },
-                        { 1, 1f },
+                        new Flags.AdjacentFlagData(16, 1f),
+                        new Flags.AdjacentFlagData(15, 1f),
+                        new Flags.AdjacentFlagData(1, 1f),
                     };
-                    Team2Adjacencies = new Dictionary<int, float>()
+                    Team2Adjacencies = new Flags.AdjacentFlagData[3]
                     {
-                        { 12, 1f },
-                        { 3, 1f },
-                        { 8, 1f }
+                        new Flags.AdjacentFlagData(12, 1f),
+                        new Flags.AdjacentFlagData(3, 1f),
+                        new Flags.AdjacentFlagData(8, 1f)
                     };
                     break;
                 default:
                     T1ZoneBlocker = Guid.Empty;
                     T2ZoneBlocker = Guid.Empty;
                     CacheSpawns = new SerializableTransform[0];
-                    Team1Adjacencies = new Dictionary<int, float>();
-                    Team2Adjacencies = new Dictionary<int, float>();
+                    Team1Adjacencies = new Flags.AdjacentFlagData[0];
+                    Team2Adjacencies = new Flags.AdjacentFlagData[0];
                     break;
             }
         }

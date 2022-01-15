@@ -49,7 +49,7 @@ namespace Uncreated.Warfare.Commands
                     if (Data.LanguageAliases.ContainsKey(OldLanguage))
                         oldSet = Data.LanguageAliases[OldLanguage];
                     else
-                        oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
+                        oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
 
                     player.SendChat("language_current", $"{oldSet.display_name} : {oldSet.key}");
                 }
@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Commands
                         fullname = alias.display_name;
                     }
                     else
-                        alias = new LanguageAliasSet(fullname, fullname, new List<string>());
+                        alias = new LanguageAliasSet(fullname, fullname, new string[0]);
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                     {
                         string OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Commands
                         if (Data.LanguageAliases.ContainsKey(OldLanguage))
                             oldSet = Data.LanguageAliases[OldLanguage];
                         else
-                            oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
+                            oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
                         if (OldLanguage == JSONMethods.DefaultLanguage)
                             player.SendChat("reset_language_not_needed", fullname);
                         else
@@ -94,7 +94,7 @@ namespace Uncreated.Warfare.Commands
                     if (Data.LanguageAliases.ContainsKey(OldLanguage))
                         oldSet = Data.LanguageAliases[OldLanguage];
                     else
-                        oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new List<string>());
+                        oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
                     string langInput = op.Trim();
                     bool found = false;
                     if (!Data.LanguageAliases.TryGetValue(langInput, out LanguageAliasSet aliases))

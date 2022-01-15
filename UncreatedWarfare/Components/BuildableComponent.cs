@@ -62,11 +62,11 @@ namespace Uncreated.Warfare.Components
         }
         public void Build()
         {
-            var data = Foundation.GetServersideData();
+            SDG.Unturned.BarricadeData data = Foundation.GetServersideData();
 
             string structureName = "";
 
-            if (Buildable.type != EbuildableType.EMPLACEMENT)
+            if (Buildable.type != EBuildableType.EMPLACEMENT)
             {
                 Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Buildable.structureID));
                 Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
@@ -74,17 +74,32 @@ namespace Uncreated.Warfare.Components
 
                 structureName = Assets.find<ItemBarricadeAsset>(Buildable.foundationID).itemName;
 
-                if (Buildable.type == EbuildableType.FOB_BUNKER)
+                if (Buildable.type == EBuildableType.FOB_BUNKER)
                 {
-                    var fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
-                    fob.UpdateBunker(structure);
+                    FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
+                    if (fob != null)
+                    {
+                        fob.UpdateBunker(structure);
 
-                    FOBManager.SendFOBListToTeam(fob.Team);
+                        FOBManager.SendFOBListToTeam(fob.Team);
 
-                    Orders.OnFOBBunkerBuilt(fob, this);
+                        Orders.OnFOBBunkerBuilt(fob, this);
 
-                    //StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
-                    StatsManager.ModifyTeam(data.group, t => t.FobsBuilt++, false);
+                        //StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.FobsBuilt++, false);
+                        StatsManager.ModifyTeam(data.group, t => t.FobsBuilt++, false);
+                    }
+                }
+                else if (Buildable.type == EBuildableType.AMMO_CRATE)
+                {
+                    FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.FULL, data.group);
+                    fob.Status |= EFOBStatus.AMMO_CRATE;
+                    FOBManager.SendFOBEffect(fob.Team, fob.Status, fob.Position);
+                }
+                else if (Buildable.type == EBuildableType.REPAIR_STATION)
+                {
+                    FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.FULL, data.group);
+                    fob.Status |= EFOBStatus.REPAIR_STATION;
+                    FOBManager.SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
             }
             else
@@ -200,7 +215,7 @@ namespace Uncreated.Warfare.Components
 
             FOB fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);
 
-            if (buildable.type == EbuildableType.FOB_BUNKER)
+            if (buildable.type == EBuildableType.FOB_BUNKER)
             {
                 if (FOBManager.config.Data.RestrictFOBPlacement)
                 {
@@ -249,7 +264,7 @@ namespace Uncreated.Warfare.Components
                     return false;
                 }
 
-                if (buildable.type == EbuildableType.REPAIR_STATION)
+                if (buildable.type == EBuildableType.REPAIR_STATION)
                 {
                     int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, fob.Radius, fob.Position, team, false).Count();
                     if (existing >= 1)
@@ -259,7 +274,7 @@ namespace Uncreated.Warfare.Components
                         return false;
                     }
                 }
-                if (buildable.type == EbuildableType.EMPLACEMENT)
+                if (buildable.type == EBuildableType.EMPLACEMENT)
                 {
                     int existing = UCVehicleManager.GetNearbyVehicles(buildable.structureID, fob.Radius, fob.Position).Count();
                     if (existing >= buildable.emplacementData.allowedPerFob)

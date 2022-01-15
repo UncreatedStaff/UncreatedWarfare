@@ -1,42 +1,56 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Uncreated.Warfare;
+using System.Text.Json.Serialization;
 
 namespace Uncreated
 {
-    public abstract class JSONSaver<T> where T : new()
+    public abstract class JSONSaver<T> : List<T> where T : new()
     {
         protected static string directory;
         public static readonly Type Type = typeof(T);
         private static readonly FieldInfo[] fields = Type.GetFields();
-        public static List<T> ActiveObjects = new List<T>();
-        public JSONSaver(string _directory)
+        private static readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 1);
+
+        public static JSONSaver<T> ActiveObjects;
+        //public static List<T> ActiveObjects = new List<T>();
+        private static CustomSerializer _serializer;
+        private static bool useSerializer;
+        private static CustomDeserializer _deserializer;
+        private static bool useDeserializer;
+        public delegate void CustomSerializer(T obj, Utf8JsonWriter writer);
+        public delegate T CustomDeserializer(ref Utf8JsonReader reader);
+
+        public JSONSaver(string _directory) : base()
         {
+            ActiveObjects = this;
             directory = _directory;
+            useSerializer = false;
+            useDeserializer = false;
             CreateFileIfNotExists(LoadDefaults());
             Reload();
             TryUpgrade();
         }
-        public static void Save() => OverwriteSavedList(ActiveObjects);
-        public static void Reload() => ActiveObjects = GetExistingObjects();
-        public static T ReloadSingle(string defaults, Func<T> ifFail)
+
+        public JSONSaver(string _directory, CustomSerializer serializer, CustomDeserializer deserializer) : base()
         {
+            ActiveObjects = this;
+            directory = _directory;
+            _serializer = serializer;
+            useSerializer = serializer != null;
+            _deserializer = deserializer;
+            useDeserializer = deserializer != null;
+            CreateFileIfNotExists(LoadDefaults());
             Reload();
-            if (ActiveObjects.Count > 0) return ActiveObjects[0];
-            else
-            {
-                CreateFileIfNotExists(defaults);
-                Reload();
-                if (ActiveObjects.Count > 0) return ActiveObjects[0];
-                else
-                {
-                    return ifFail.Invoke();
-                }
-            }
+            TryUpgrade();
         }
         protected abstract string LoadDefaults();
         protected static void CreateFileIfNotExists(string text = "[]")
@@ -67,54 +81,137 @@ namespace Uncreated
             ActiveObjects.Clear();
             if (save) Save();
         }
-        protected static void OverwriteSavedList(List<T> newList)
+        //private static readonly JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
+        
+        public static void Save()
         {
-            ActiveObjects = newList;
-            StreamWriter file = File.CreateText(directory);
-            JsonWriter writer = new JsonTextWriter(file);
-            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
-            try
+            _threadLocker.Wait();
+            if (useSerializer)
             {
-                serializer.Serialize(writer, newList);
-                writer.Close();
-            }
-            catch (Exception ex)
-            {
-                writer.Close();
-                throw ex;
-            }
-        }
-        public static List<T> GetExistingObjects(bool readFile = false)
-        {
-            if (readFile || ActiveObjects == default || ActiveObjects.Count == 0)
-            {
-                StreamReader r = File.OpenText(directory);
                 try
                 {
-                    string json = r.ReadToEnd();
-                    List<T> list = JsonConvert.DeserializeObject<List<T>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
+                    using (FileStream rs = new FileStream(directory, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                    {
+                        Utf8JsonWriter writer = new Utf8JsonWriter(rs, JsonEx.writerOptions);
+                        writer.WriteStartArray();
+                        for (int i = 0; i < ActiveObjects.Count; i++)
+                        {
+                            writer.WriteStartObject();
+                            _serializer.Invoke(ActiveObjects[i], writer);
+                            writer.WriteEndObject();
+                        }
 
-                    r.Close();
-                    r.Dispose();
-                    return list;
+                        writer.WriteEndArray();
+                        rs.Close();
+                        rs.Dispose();
+                    }
+                    _threadLocker.Release();
+                    return;
                 }
                 catch (Exception ex)
                 {
-                    if (r != default)
-                    {
-                        r.Close();
-                        r.Dispose();
-                    }
-                    throw new JSONReadException(r, directory, ex);
+                    L.LogError("Failed to run custom serializer for " + typeof(T).Name);
+                    L.LogError(ex);
                 }
             }
-            else return ActiveObjects;
+            try
+            {
+                using (StreamWriter file = File.CreateText(directory))
+                {
+                    file.Write(JsonSerializer.Serialize(ActiveObjects, JsonEx.serializerSettings));
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to run automatic serializer for " + typeof(T).Name);
+                L.LogError(ex);
+            }
+            _threadLocker.Release();
         }
-        protected static List<T> GetObjectsWhere(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).Where(predicate).ToList();
-        protected static T GetObject(Func<T, bool> predicate, bool readFile = false) => GetExistingObjects(readFile).FirstOrDefault(predicate);
-        protected static bool ObjectExists(Func<T, bool> match, out T item, bool readFile = false)
+        public static void Reload()
         {
-            if (readFile) Reload();
+            _threadLocker.Wait();
+            if (useDeserializer)
+            {
+                FileStream rs = null;
+                try
+                {
+                    using (rs = new FileStream(directory, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        long len = rs.Length;
+                        if (len > int.MaxValue)
+                        {
+                            L.LogError("File " + directory + " is too large.");
+                            return;
+                        }
+                        byte[] buffer = new byte[len];
+                        rs.Read(buffer, 0, (int)len);
+                        Utf8JsonReader reader = new Utf8JsonReader(buffer.AsSpan(), JsonEx.readerOptions);
+                        if (reader.Read() && reader.TokenType == JsonTokenType.StartArray)
+                        {
+                            ActiveObjects.Clear();
+                            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                            {
+                                if (reader.TokenType == JsonTokenType.StartObject)
+                                {
+                                    T next = _deserializer.Invoke(ref reader);
+                                    ActiveObjects.Add(next);
+                                    L.Log("read " + next.ToString());
+                                    while (reader.Read()) if (reader.TokenType == JsonTokenType.EndObject) break;
+                                }
+                            }
+                        }
+                        rs.Close();
+                        rs.Dispose();
+                    }
+                    _threadLocker.Release();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    L.LogError("Failed to run custom deserializer for " + typeof(T).Name);
+                    L.LogError(e);
+                    if (rs != null)
+                    {
+                        rs.Close();
+                        rs.Dispose();
+                    }
+                }
+            }
+            bool clsd = false;
+            StreamReader r = null;
+            try
+            {
+                r = File.OpenText(directory);
+                string json = r.ReadToEnd();
+                r.Close();
+                r.Dispose();
+                clsd = true;
+                _threadLocker.Release();
+                T[] vals = JsonSerializer.Deserialize<T[]>(json, JsonEx.serializerSettings);
+                if (vals != null)
+                {
+                    ActiveObjects.Clear();
+                    ActiveObjects.AddRange(vals);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (r != null && !clsd)
+                {
+                    r.Close();
+                    r.Dispose();
+                }
+
+                _threadLocker.Release();
+                throw new JSONReadException(directory, ex);
+            }
+        }
+        protected static List<T> GetObjectsWhereAsList(Func<T, bool> predicate) => ActiveObjects.Where(predicate).ToList();
+        protected static IEnumerable<T> GetObjectsWhere(Func<T, bool> predicate) => ActiveObjects.Where(predicate);
+        protected static T GetObject(Func<T, bool> predicate, bool readFile = false) => ActiveObjects.FirstOrDefault(predicate);
+        protected static bool ObjectExists(Func<T, bool> match, out T item)
+        {
             item = GetObject(match);
             return item != null;
         }
@@ -527,26 +624,6 @@ namespace Uncreated
             results.Dispose();
             if (save) Save();
         }
-        public static void WriteSingleObject(T item)
-        {
-            StreamWriter file = File.CreateText(directory);
-            JsonWriter writer = new JsonTextWriter(file);
-            JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented };
-            try
-            {
-                serializer.Serialize(writer, new List<T>() { item });
-                writer.Close();
-                file.Close();
-                file.Dispose();
-            }
-            catch (Exception ex)
-            {
-                writer.Close();
-                file.Close();
-                file.Dispose();
-                throw ex;
-            }
-        }
         public static bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
         {
             if (Enum.TryParse<TEnum>(name.ToString(), out var p))
@@ -559,16 +636,16 @@ namespace Uncreated
         }
         public void TryUpgrade()
         {
-            if (ActiveObjects == default) throw new NullReferenceException("Error upgrading in JsonSaver: Not yet loaded.");
             try
             {
                 bool needsSaving = false;
-                for (int t = 0; t < ActiveObjects.Count; t++)
+                T defaultConfig = new T();
+                for (int t = 0; t < Count; t++)
                 {
-                    T defaultConfig = new T();
-                    if (ActiveObjects[t] == null)
+                    T th = this[t];
+                    if (th == null)
                     {
-                        ActiveObjects[t] = defaultConfig;
+                        th = new T();
                         needsSaving = true;
                         continue;
                     }
@@ -577,13 +654,13 @@ namespace Uncreated
                     {
                         if (fields[i].IsStatic ||  // if the field is static or it contains [JsonIgnore] in its attributes.
                             fields[i].CustomAttributes.Count(x => x.AttributeType == typeof(JsonIgnoreAttribute)) > 0) continue;
-                        object currentvalue = fields[i].GetValue(ActiveObjects[t]);
+                        object currentvalue = fields[i].GetValue(th);
                         object defaultvalue = fields[i].GetValue(defaultConfig);
                         if (currentvalue == defaultvalue) continue;
                         else if (currentvalue != fields[i].FieldType.getDefaultValue()) continue;
                         else
                         {
-                            fields[i].SetValue(ActiveObjects[t], defaultvalue);
+                            fields[i].SetValue(th, defaultvalue);
                             needsSaving = true;
                         }
                     }
@@ -596,7 +673,7 @@ namespace Uncreated
                 L.LogError(ex);
             }
         }
-        protected class TypeArgumentException : Exception
+        protected sealed class TypeArgumentException : Exception
         {
             public TypeArgumentException() { }
 
@@ -607,16 +684,208 @@ namespace Uncreated
 
             }
         }
-        public class JSONReadException : Exception
+        public sealed class JSONReadException : Exception
         {
             public JSONReadException() { }
 
-            public JSONReadException(StreamReader reader, string directory, Exception inner)
+            public JSONReadException(string directory, Exception inner)
                 : base(string.Format("Could not deserialize data from {0} because the data was corrupted.", directory), inner)
             {
-                reader.Close();
-                reader.Dispose();
             }
+        }
+        internal static void RunTest()
+        {
+            int amt = 10000;
+            Stopwatch stopwatch = new Stopwatch();
+            bool old = useDeserializer;
+            TimeSpan elapsed;
+            if (old)
+            {
+                stopwatch.Start();
+                for (int i = 0; i < amt; i++)
+                {
+                    Reload();
+                }
+                stopwatch.Stop();
+                elapsed = stopwatch.Elapsed;
+                L.Log("Test 1, custom read, " + elapsed.ToString());
+                L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
+                stopwatch.Reset();
+                useDeserializer = false;
+            }
+            stopwatch.Start();
+            for (int i = 0; i < amt; i++)
+            {
+                Reload();
+            }
+            stopwatch.Stop();
+            elapsed = stopwatch.Elapsed;
+            stopwatch.Reset();
+            L.Log("Test 2, auto read, " + elapsed.ToString());
+            L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
+            useDeserializer = old;
+            old = useSerializer;
+            if (old)
+            {
+                stopwatch.Start();
+                for (int i = 0; i < amt; i++)
+                {
+                    Save();
+                }
+                stopwatch.Stop();
+                elapsed = stopwatch.Elapsed;
+                L.Log("Test 3, custom write, " + elapsed.ToString());
+                L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
+                stopwatch.Reset();
+                useDeserializer = false;
+            }
+            stopwatch.Start();
+            for (int i = 0; i < amt; i++)
+            {
+                Save();
+            }
+            stopwatch.Stop();
+            elapsed = stopwatch.Elapsed;
+            L.Log("Test 4, auto write, " + elapsed.ToString());
+            L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
+            useDeserializer = old;
+        }
+    }
+    public static class JsonEx
+    {
+        public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions() { WriteIndented = true };
+        public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true };
+        public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteBooleanValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, byte value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, byte[] value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteBase64StringValue(new ReadOnlySpan<byte>(value));
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, ReadOnlySpan<byte> value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteBase64StringValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, char value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStringValue(new string(new char[1] { value }));
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, decimal value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, double value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, float value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, int value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, long value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, sbyte value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, short value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, string value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStringValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, DateTime value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStringValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, DateTimeOffset value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStringValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, Guid value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStringValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, TimeSpan value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStringValue(value.ToString());
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, uint value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, ulong value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, ushort value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteNumberValue(value);
+        }
+        public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, IJsonReadWrite value)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStartObject();
+            value.WriteJson(writer);
+            writer.WriteEndObject();
+        }
+        public static void WriteArrayProperty(this Utf8JsonWriter writer, string propertyName, IJsonReadWrite[] values)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStartArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                writer.WriteStartObject();
+                values[i].WriteJson(writer);
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
+        public static void WriteArrayProperty(this Utf8JsonWriter writer, string propertyName, IEnumerable<IJsonReadWrite> values)
+        {
+            writer.WritePropertyName(propertyName);
+            writer.WriteStartArray();
+            foreach (IJsonReadWrite jwr in values)
+            {
+                writer.WriteStartObject();
+                jwr.WriteJson(writer);
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
         }
     }
 }

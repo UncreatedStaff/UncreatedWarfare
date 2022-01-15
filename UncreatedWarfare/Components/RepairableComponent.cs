@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
-            var buildable = FOBManager.config.Data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EbuildableType.EMPLACEMENT);
+            var buildable = FOBManager.config.Data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
 
             if (buildable != null)
             {
@@ -63,12 +63,12 @@ namespace Uncreated.Warfare.Components
                     bool teamkilled = Structure.GetServersideData().group == player.GetTeam();
 
                     int amount = 0;
-                    if (buildable.type == EbuildableType.FOB_BUNKER)
+                    if (buildable.type == EBuildableType.FOB_BUNKER)
                     {
                         if (teamkilled) amount = Points.XPConfig.FOBTeamkilledXP;
                         else amount = Points.XPConfig.FOBKilledXP;
                     }
-                    if (buildable.type == EbuildableType.FORTIFICATION)
+                    if (buildable.type == EBuildableType.FORTIFICATION)
                     {
                         amount = (int)Math.Round(buildable.requiredHits * 0.25F);
                         if (teamkilled) amount *= -1;

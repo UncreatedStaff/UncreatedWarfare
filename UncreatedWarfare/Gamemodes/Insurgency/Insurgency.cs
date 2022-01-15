@@ -206,7 +206,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         protected override void EventLoopAction()
         {
-            FOBManager.OnGameTick(_ticks);
+            FOBManager.OnGameTick();
             CheckPlayersAMC();
             TeamManager.EvaluateBases();
             _counter++;

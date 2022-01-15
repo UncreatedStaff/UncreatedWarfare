@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.SQL;
 
@@ -22,6 +23,23 @@ namespace Uncreated.Warfare
         {
             FPlayerName? name = null;
             Query(
+                $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
+                $"FROM `usernames` " +
+                $"WHERE `Steam64` = @0 LIMIT 1;",
+                new object[] { Steam64 },
+                (R) =>
+                {
+                    name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2) };
+                });
+            if (name.HasValue)
+                return name.Value;
+            string tname = Steam64.ToString(Data.Locale);
+            return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
+        }
+        public async Task<FPlayerName> GetUsernamesAsync(ulong Steam64)
+        {
+            FPlayerName? name = null;
+            await QueryAsync(
                 $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
                 $"FROM `usernames` " +
                 $"WHERE `Steam64` = @0 LIMIT 1;",

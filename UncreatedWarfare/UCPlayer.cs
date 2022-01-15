@@ -10,6 +10,7 @@ using System.Linq;
 using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -44,6 +45,9 @@ namespace Uncreated.Warfare
                 return cachedName;
             } 
         }
+        public DateTime TimeUnmuted;
+        public string MuteReason;
+        public EMuteType MuteType;
         private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
         private MedalData _medals;
@@ -130,7 +134,8 @@ namespace Uncreated.Warfare
        
         public static UCPlayer FromID(ulong steamID)
         {
-            return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
+            return PlayerManager.FromID(steamID);
+            //return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
         }
         public static UCPlayer FromCSteamID(CSteamID steamID) =>
             steamID == default ? null : FromID(steamID.m_SteamID);
@@ -145,7 +150,7 @@ namespace Uncreated.Warfare
             else return FromUnturnedPlayer(pl);
         }
 
-        public static UCPlayer FromName(string name)
+        public static UCPlayer FromName(string name, bool includeContains = false)
         {
             if (name == null) return null;
             UCPlayer player = PlayerManager.OnlinePlayers.Find(
@@ -154,6 +159,13 @@ namespace Uncreated.Warfare
                 s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
                 s.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.OrdinalIgnoreCase)
                 );
+            if (includeContains && player == null)
+            {
+                player = PlayerManager.OnlinePlayers.Find(s =>
+                    s.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
+                    s.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
+                    s.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
+            }
             return player;
         }
         /// <summary>Slow, use rarely.</summary>
@@ -393,7 +405,7 @@ namespace Uncreated.Warfare
     public class PlayerSave
     {
         public const uint CURRENT_DATA_VERSION = 1;
-        public uint DATA_VERSION;
+        public uint DATA_VERSION = CURRENT_DATA_VERSION;
         [JsonSettable]
         public readonly ulong Steam64;
         [JsonSettable]
@@ -446,7 +458,7 @@ namespace Uncreated.Warfare
         }
         public static void Write(ByteWriter W, PlayerSave S)
         {
-            W.Write(S.DATA_VERSION);
+            W.Write(CURRENT_DATA_VERSION);
             W.Write(S.Steam64);
             W.Write((byte)S.Team);
             W.Write(S.KitName ?? string.Empty);
@@ -458,18 +470,19 @@ namespace Uncreated.Warfare
         }
         public static PlayerSave Read(ByteReader R)
         {
-            uint DATA_VERSION = R.ReadUInt32();
-            PlayerSave S = new PlayerSave(R.ReadUInt64()) { DATA_VERSION = DATA_VERSION };
-            if (DATA_VERSION > 0)
+            PlayerSave S = new PlayerSave(R.ReadUInt64());
+            S.DATA_VERSION = R.ReadUInt32();
+            if (S.DATA_VERSION > 0)
             {
                 S.Team = R.ReadUInt8();
                 S.KitName = R.ReadString();
                 S.SquadName = R.ReadString();
                 S.HasQueueSkip = R.ReadBool();
-                S.LastGame = R.ReadInt32();
+                S.LastGame = R.ReadInt64();
                 S.ShouldRespawnOnJoin = R.ReadBool();
                 S.IsOtherDonator = R.ReadBool();
-            } else
+            }
+            else
             {
                 S.Team = 0;
                 S.KitName = string.Empty;
@@ -485,49 +498,28 @@ namespace Uncreated.Warfare
         {
             W.Write(SL.Count);
             for (int i = 0; i < SL.Count; i++)
-            {
-                PlayerSave S = SL[i];
-                W.Write(S.DATA_VERSION);
-                W.Write(S.Steam64);
-                W.Write((byte)S.Team);
-                W.Write(S.KitName ?? string.Empty);
-                W.Write(S.SquadName ?? string.Empty);
-                W.Write(S.HasQueueSkip);
-                W.Write(S.LastGame);
-                W.Write(S.ShouldRespawnOnJoin);
-                W.Write(S.IsOtherDonator);
-            }
+                Write(W, SL[i]);
         }
         public static List<PlayerSave> ReadList(ByteReader R)
         {
             int length = R.ReadInt32();
             List<PlayerSave> saves = new List<PlayerSave>(length);
             for (int i = 0; i < length; i++)
-            {
-                uint DATA_VERSION = R.ReadUInt32();
-                PlayerSave S = new PlayerSave(R.ReadUInt64()) { DATA_VERSION = DATA_VERSION };
-                if (DATA_VERSION > 0)
-                {
-                    S.Team = R.ReadUInt8();
-                    S.KitName = R.ReadString();
-                    S.SquadName = R.ReadString();
-                    S.HasQueueSkip = R.ReadBool();
-                    S.LastGame = R.ReadInt32();
-                    S.ShouldRespawnOnJoin = R.ReadBool();
-                    S.IsOtherDonator = R.ReadBool();
-                }
-                else
-                {
-                    S.Team = 0;
-                    S.KitName = string.Empty;
-                    S.SquadName = string.Empty;
-                    S.HasQueueSkip = false;
-                    S.LastGame = 0;
-                    S.ShouldRespawnOnJoin = false;
-                    S.IsOtherDonator = false;
-                }
-                saves.Add(S);
-            }
+                saves.Add(Read(R));
+            return saves;
+        }
+        public static void WriteMany(ByteWriter W, PlayerSave[] SL)
+        {
+            W.Write(SL.Length);
+            for (int i = 0; i < SL.Length; i++)
+                Write(W, SL[i]);
+        }
+        public static PlayerSave[] ReadMany(ByteReader R)
+        {
+            int length = R.ReadInt32();
+            PlayerSave[] saves = new PlayerSave[length];
+            for (int i = 0; i < length; i++)
+                saves[i] = Read(R);
             return saves;
         }
     }

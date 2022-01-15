@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
                         {
-                            if (command[0].Length == 17 && command[0].StartsWith("765") && ulong.TryParse(command[0], NumberStyles.Any, Data.Locale, out ulong result))
+                            if (ulong.TryParse(command[0], NumberStyles.Any, Data.Locale, out ulong result) && OffenseManager.IsValidSteam64ID(result))
                             {
                                 if (command.Length < 3)
                                     L.LogError(Translation.Translate("ban_no_reason_provided", 0, out _));
@@ -137,7 +137,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
                         {
-                            if (command[0].Length == 17 && command[0].StartsWith("765") && ulong.TryParse(command[0], NumberStyles.Any, CultureInfo.InvariantCulture, out ulong result))
+                            if (ulong.TryParse(command[0], NumberStyles.Any, CultureInfo.InvariantCulture, out ulong result) && OffenseManager.IsValidSteam64ID(result))
                             {
                                 try
                                 {
@@ -158,7 +158,7 @@ namespace Uncreated.Warfare.Commands
                                             L.Log(Translation.Translate("ban_permanent_console", 0, out _, names.PlayerName, result.ToString(Data.Locale), callerName.PlayerName,
                                                 player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                             player.SendChat("ban_permanent_feedback", names.CharacterName);
-                                            new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
+                                            Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ban_permanent_broadcast",
                                                 names.CharacterName, callerName.CharacterName);
                                         }
                                         else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint duration))
@@ -218,8 +218,7 @@ namespace Uncreated.Warfare.Commands
                                     L.Log(Translation.Translate("ban_permanent_console", 0, out _, names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                         callerName.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
                                     player.SendChat("ban_permanent_feedback", names.CharacterName, callerName.CharacterName);
-                                    new List<CSteamID> { player.CSteamID }.BroadcastToAllExcept("ban_permanent_broadcast",
-                                        names.CharacterName, callerName.CharacterName);
+                                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ban_permanent_broadcast", names.CharacterName, callerName.CharacterName);
                                 }
                                 else if (!uint.TryParse(command[1], NumberStyles.Any, Data.Locale, out uint result))
                                     player.SendChat("ban_invalid_number", command[2]);

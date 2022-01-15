@@ -363,59 +363,9 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        /// <summary>
-        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
-        /// </summary>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
-        /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
-        public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, Color textColor, params string[] formatting)
+        private static void BroadcastToPlayers(IEnumerable<LanguageSet> players, string text, params string[] formatting)
         {
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(x => Excluded.Exists(y => y.m_SteamID == x.Steam64)))
-            {
-                string localizedString = Translation.Translate(text, set.Language, formatting);
-                bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
-                {
-                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
-                    if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
-                        localizedString = text;
-                    else
-                    {
-                        try
-                        {
-                            localizedString = string.Format(localizedString, formatting);
-                        }
-                        catch (FormatException)
-                        {
-                            localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
-                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
-                        }
-                    }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
-                    {
-                        L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
-                            + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
-                        localizedString = text;
-                    }
-                    else
-                        isRich = localizedString.Contains("</");
-                }
-                while (set.MoveNext())
-                {
-                    SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
-                }
-            }
-        }
-        /// <summary>
-        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
-        /// </summary>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
-        /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
-        public static void BroadcastToAllExcept(this List<CSteamID> Excluded, string text, params string[] formatting)
-        {
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(x => Excluded.Exists(y => y.m_SteamID == x.Steam64)))
+            foreach (LanguageSet set in players)
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
@@ -450,6 +400,78 @@ namespace Uncreated.Warfare
                     SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
                 }
             }
+        }
+        private static void BroadcastToPlayers(IEnumerable<LanguageSet> players, string text, Color textColor, params string[] formatting)
+        {
+            foreach (LanguageSet set in players)
+            {
+                string localizedString = Translation.Translate(text, set.Language, formatting);
+                bool isRich = localizedString.Contains("</");
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                    if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
+                        localizedString = text;
+                    else
+                    {
+                        try
+                        {
+                            localizedString = string.Format(localizedString, formatting);
+                        }
+                        catch (FormatException)
+                        {
+                            localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
+                            L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                        }
+                    }
+                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    {
+                        L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                                   + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                        localizedString = text;
+                    }
+                    else
+                        isRich = localizedString.Contains("</");
+                }
+                while (set.MoveNext())
+                {
+                    SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
+                }
+            }
+        }
+        /// <summary>
+        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void BroadcastToAllExcept(ulong[] Excluded, string text, Color textColor, params string[] formatting)
+        {
+            BroadcastToPlayers(Translation.EnumerateLanguageSets(x =>
+            {
+                for (int i = 0; i < Excluded.Length; i++)
+                {
+                    if (Excluded[i] == x.Steam64) return false;
+                }
+                return true;
+            }), text, textColor, formatting);
+        }
+        /// <summary>
+        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void BroadcastToAllExcept(ulong[] Excluded, string text, params string[] formatting)
+        {
+            BroadcastToPlayers(Translation.EnumerateLanguageSets(x =>
+            {
+                for (int i = 0; i < Excluded.Length; i++)
+                {
+                    if (Excluded[i] == x.Steam64) return false;
+                }
+                return true;
+            }), text, formatting);
         }
         public static void SendSingleMessage(string text, Color color, EChatMode mode, string iconURL, bool richText, SteamPlayer recipient)
         {

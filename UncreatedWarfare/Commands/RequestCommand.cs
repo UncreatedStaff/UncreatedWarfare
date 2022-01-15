@@ -350,7 +350,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 
-                if (!FOBManager.config.Data.Buildables.Exists(e => e.type == EbuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
+                if (!FOBManager.config.Data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
                 {
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack

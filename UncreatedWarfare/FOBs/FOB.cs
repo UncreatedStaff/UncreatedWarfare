@@ -34,7 +34,7 @@ namespace Uncreated.Warfare.Components
                 {
                     if (player.GetTeam() == parent.Team)
                     {
-                        if ((player.Position - parent.Position).sqrMagnitude < Math.Pow(parent.Radius, 2))
+                        if (Mathf.Abs(player.Position.y - parent.Position.y) < 4 && F.SqrDistance2D(player.Position, parent.Position) < parent.Radius * parent.Radius)
                         {
                             if (!parent.FriendliesOnFOB.Contains(player))
                             {
@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Components
                     }
                     else if (parent.Bunker != null)
                     {
-                        if ((player.Position - parent.Bunker.model.position).sqrMagnitude < Math.Pow(10, 2))
+                        if (Mathf.Abs(player.Position.y - parent.Position.y) < 4 && F.SqrDistance2D(player.Position, parent.Bunker.model.position) < 100)
                         {
                             if (!parent.NearbyEnemies.Contains(player))
                             {
@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.Components
             get
             {
                 return UCBarricadeManager.GetBarricadesWhere(b =>
-                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EbuildableType.FORTIFICATION) &&
+                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
                     b.GetServersideData().group == Team
                     );
@@ -154,13 +154,13 @@ namespace Uncreated.Warfare.Components
             get
             {
                 return UCBarricadeManager.CountBarricadesWhere(b =>
-                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EbuildableType.FORTIFICATION) &&
+                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
                     b.GetServersideData().group == Team
                     );
             }
         }
-        public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.Buildables.Where(bl => bl.type == EbuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
+        public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.Buildables.Where(bl => bl.type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
 
         public List<UCPlayer> FriendliesOnFOB { get; private set; }
         public List<UCPlayer> NearbyEnemies { get; private set; }
@@ -239,17 +239,18 @@ namespace Uncreated.Warfare.Components
                 Radius = FOBManager.config.Data.FOBBuildPickupRadius;
                 Status |= EFOBStatus.HAB;
             }
+            FOBManager.SendFOBEffect(Team, Status, Position);
         }
         public void ConsumeResources()
         {
             List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
             List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
 
-            var items = NearbyBuild.Concat(NearbyAmmo);
+            IEnumerable<SDG.Unturned.ItemData> items = NearbyBuild.Concat(NearbyAmmo);
 
             int itemsCount = items.Count();
             int counter = 0;
-            foreach (var item in items)
+            foreach (SDG.Unturned.ItemData item in items)
             {
                 if (item.item.id == shortBuildID || item.item.id == shortAmmoID)
                 {

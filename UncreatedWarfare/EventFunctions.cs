@@ -112,7 +112,11 @@ namespace Uncreated.Warfare
 
             RepairManager.OnBarricadePlaced(drop, region);
 
+            if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
+
             bool isFOBRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID);
+
+            if (FOBManager.AllFOBs == null) return;
 
             // FOB radio
             if (isFOBRadio)
@@ -134,12 +138,14 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<IconRenderer>().Initialize(Gamemode.Config.UI.MarkerAmmo, drop.model.position, 100f, 0.5F, data.group);
             }
 
+            if (FOBManager.config.Data.Buildables == null) return;
             BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
             if (buildable != null)
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
-            BuildableData repairable = FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EbuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
+
+            BuildableData repairable = isFOBRadio ? null : FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || isFOBRadio)
             {
                 drop.model.gameObject.AddComponent<RepairableComponent>();
@@ -226,23 +232,11 @@ namespace Uncreated.Warfare
                     Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
                 if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
                 ulong team = group.GetTeam();
-                if (team == 1)
+                if (player != null && !player.OnDuty() && TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {
-                    if (player != null && !player.OnDuty() && TeamManager.Team2AMC.IsInside(point))
-                    {
-                        shouldAllow = false;
-                        player.Message("whitelist_noplace");
-                        return;
-                    }
-                }
-                else if (team == 2)
-                {
-                    if (player != null && !player.OnDuty() && TeamManager.Team1AMC.IsInside(point))
-                    {
-                        shouldAllow = false;
-                        player.Message("whitelist_noplace");
-                        return;
-                    }
+                    shouldAllow = false;
+                    player.Message("whitelist_noplace");
+                    return;
                 }
 
                 if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g ==  barricade.asset.GUID))
@@ -406,14 +400,36 @@ namespace Uncreated.Warfare
                 L.LogError(ex);
             }
         }
+        
+        private static void VoiceMutedUseTick()
+        {
+            // send ui or something
+        }
+
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
             if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE || Data.Gamemode.State == EState.STAGING) return;
-            cullingHandler = new PlayerVoice.RelayVoiceCullingHandler((source, target) =>
+
+            UCPlayer ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
+            if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
+                shouldBroadcastOverRadio = true;
+
+            bool CullingHandler(PlayerVoice source, PlayerVoice target)
             {
+                if (ucplayer != null)
+                {
+                    if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
+                    {
+                        VoiceMutedUseTick();
+                        return false;
+                    }
+                }
+
                 return true;
-            });
+            }
+
+            cullingHandler = CullingHandler;
             shouldBroadcastOverRadio = true;
         }
 
@@ -796,15 +812,14 @@ namespace Uncreated.Warfare
                 Structures.StructureSaver.Save();
                 if (Vehicles.VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, Structures.EStructType.STRUCTURE))
                 {
-                    List<Vehicles.VehicleSign> linked = Vehicles.VehicleSigns.GetLinkedSigns(spawn);
-                    if (linked.Count > 0)
+                    IEnumerable<Vehicles.VehicleSign> linked = Vehicles.VehicleSigns.GetLinkedSigns(spawn);
+                    int i = 0;
+                    foreach (Vehicles.VehicleSign sign in linked)
                     {
-                        for (int i = 0; i < linked.Count; i++)
-                        {
-                            linked[i].bay_transform = found.transform;
-                        }
-                        Vehicles.VehicleSigns.Save();
+                        i++;
+                        sign.bay_transform = found.transform;
                     }
+                    if (i > 0) Vehicles.VehicleSigns.Save();
                 }
             }
         }
@@ -816,15 +831,14 @@ namespace Uncreated.Warfare
                 Structures.StructureSaver.Save();
                 if (Vehicles.VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, Structures.EStructType.BARRICADE))
                 {
-                    List<Vehicles.VehicleSign> linked = Vehicles.VehicleSigns.GetLinkedSigns(spawn);
-                    if (linked.Count > 0)
+                    IEnumerable<Vehicles.VehicleSign> linked = Vehicles.VehicleSigns.GetLinkedSigns(spawn);
+                    int i = 0;
+                    foreach (Vehicles.VehicleSign sign in linked)
                     {
-                        for (int i = 0; i < linked.Count; i++)
-                        {
-                            linked[i].bay_transform = found.transform;
-                        }
-                        Vehicles.VehicleSigns.Save();
+                        i++;
+                        sign.bay_transform = found.transform;
                     }
+                    if (i > 0) Vehicles.VehicleSigns.Save();
                 }
             }
             UCBarricadeManager.GetBarricadeFromInstID(instanceID, out BarricadeDrop drop);
@@ -953,30 +967,18 @@ namespace Uncreated.Warfare
         internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
         {
             SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
-            if (player == default(SteamPending)) return;
+            if (player == null) return;
             try
             {
-                if (player.transportConnection.TryGetIPv4Address(out uint address))
-                {
-                    int duration = Data.DatabaseManager.IPBanCheck(player.playerID.steamID.m_SteamID, address, player.playerID.hwid);
-                    if (duration != 0)
-                    {
-                        isValid = false;
-                        explanation = $"You are IP banned on Uncreated Network for{(duration > 0 ? " another " + ((uint)duration).GetTimeFromMinutes(0) : "ever")}, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
-                        return;
-                    }
-                }
-                else
+                int remainingDuration = 0;
+                OffenseManager.EBanResponse response = OffenseManager.VerifyJoin(player, ref explanation, ref remainingDuration);
+                if (response > OffenseManager.EBanResponse.ALL_GOOD)
                 {
                     isValid = false;
-                    explanation = "Uncreated Network was unable to check your ban status, try again later or contact a Director if this keeps happening.";
+                    L.Log("Rejecting " + player.playerID.playerName + " (" + player.playerID.steamID.m_SteamID.ToString(Data.Locale) + ") because " + response.ToString());
                     return;
                 }
-                L.LogDebug(player.playerID.playerName, ConsoleColor.DarkGray);
-                if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
-                    Data.OriginalNames[player.playerID.steamID.m_SteamID] = new FPlayerName(player.playerID);
-                else
-                    Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, new FPlayerName(player.playerID));
+                FPlayerName names = new FPlayerName(player.playerID);
 
                 bool kick = false;
                 string cn = null;
@@ -1023,6 +1025,13 @@ namespace Uncreated.Warfare
                     player.playerID.characterName = cn;
                     player.playerID.nickName = cn;
                 }
+
+                if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
+                    Data.OriginalNames[player.playerID.steamID.m_SteamID] = names;
+                else
+                    Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, names);
+
+                L.Log("PN: \"" + player.playerID.playerName + "\", CN: \"" + player.playerID.characterName + "\", NN: \"" + player.playerID.nickName + "\" (" + player.playerID.steamID.m_SteamID.ToString(Data.Locale) + ") trying to connect.", ConsoleColor.Cyan);
             }
             catch (Exception ex)
             {
