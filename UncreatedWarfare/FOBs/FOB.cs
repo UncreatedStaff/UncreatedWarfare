@@ -14,6 +14,7 @@ namespace Uncreated.Warfare.Components
     {
         public FOB parent { get; private set; }
         private Coroutine loop;
+        
 
         public void Initialize(FOB parent)
         {
@@ -109,7 +110,7 @@ namespace Uncreated.Warfare.Components
         public EFOBStatus Status;
         public int Number;
         public string Name;
-        public string ClosestLocation;
+        public string GridCoordinates;
         public ulong Team { get => Radio.GetServersideData().group; }
         public ulong Owner { get => Radio.GetServersideData().owner; }
         public BarricadeDrop Bunker { get; private set; }
@@ -118,7 +119,7 @@ namespace Uncreated.Warfare.Components
         public int Build { get; private set; }
         public int Ammo { get; private set; }
         public bool IsBleeding { get; private set; }
-        public bool IsSpawnable { get => Radio != null || Bunker != null || !Radio.GetServersideData().barricade.isDead || !Bunker.GetServersideData().barricade.isDead; }
+        public bool IsSpawnable { get => !IsBleeding && Radio != null && Bunker != null && !Radio.GetServersideData().barricade.isDead && !Bunker.GetServersideData().barricade.isDead; }
 
         public string UIColor
         {
@@ -163,7 +164,9 @@ namespace Uncreated.Warfare.Components
 
         public List<UCPlayer> FriendliesOnFOB { get; private set; }
         public List<UCPlayer> NearbyEnemies { get; private set; }
-        public ulong killer { get; private set; }
+        public ulong Killer { get; private set; }
+        public ulong Placer { get; private set; }
+        public ulong Creator { get; private set; }
 
         private Guid builtRadioGUID;
 
@@ -182,11 +185,17 @@ namespace Uncreated.Warfare.Components
             Ammo = 0;
             Build = 0;
 
-            ClosestLocation = F.GetClosestLocation(Position) ?? Provider.map;
+            GridCoordinates = FOBManager.GetGridCoords(Position.x, Position.z);
             Status = EFOBStatus.RADIO;
             IsBleeding = false;
 
-            killer = 0;
+            Killer = 0;
+
+            Placer = radio.GetServersideData().owner;
+
+            var nearestLogi = UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.LogiTruckIDs.AsEnumerable(), 30, Position).FirstOrDefault(l => l.lockedGroup.m_SteamID == Team);
+            if (nearestLogi != null)
+                Creator = nearestLogi.lockedOwner.m_SteamID;
 
             builtRadioGUID = radio.asset.GUID;
 
@@ -370,7 +379,7 @@ namespace Uncreated.Warfare.Components
         {
             if (Radio.model.TryGetComponent(out BarricadeComponent component))
             {
-                killer = component.LastDamager;
+                Killer = component.LastDamager;
             }
 
             SDG.Unturned.BarricadeData data = Radio.GetServersideData();
@@ -504,7 +513,6 @@ namespace Uncreated.Warfare.Components
             fob = GetNearbyFOBs(player.Position, player.GetTeam()).Where(f => f.FriendliesOnFOB.Contains(player)).FirstOrDefault();
             return fob != null;
         }
-
 
     }
     public enum EFOBRadius

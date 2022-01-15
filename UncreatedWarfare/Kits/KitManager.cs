@@ -62,8 +62,8 @@ namespace Uncreated.Warfare.Kits
                 return JsonConvert.SerializeObject(JSONMethods.DefaultKits, Formatting.Indented);
             else return "[]";
         }
-        public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(KitEx.Construct(kitName, items, clothes));
-        public static void CreateKit(Kit kit) => AddObjectToSave(kit);
+        public static Kit CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(KitEx.Construct(kitName, items, clothes));
+        public static Kit CreateKit(Kit kit) => AddObjectToSave(kit);
         public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public static void DeleteAllKits() => RemoveAllObjectsFromSave();
         public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);

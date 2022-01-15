@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components
@@ -43,6 +44,8 @@ namespace Uncreated.Warfare.Components
         public Player player;
         public Guid lastShot;
         public Guid lastProjected;
+        public ulong lastAttacker;
+        public ulong secondLastAttacker;
         public List<ThrowableOwner> thrown;
         public LandmineData LastLandmineTriggered;
         public LandmineData LastLandmineExploded;
@@ -170,6 +173,16 @@ namespace Uncreated.Warfare.Components
             for (int i = 0; i < channels.Length; i++)
                 channels[i] = false;
             L.Log("Started tracking playtime of " + player.name);
+        }
+        public void UpdateAttackers(ulong lastAttacker)
+        {
+            secondLastAttacker = this.lastAttacker;
+            this.lastAttacker = lastAttacker;
+        }
+        public void ResetAttackers()
+        {
+            lastAttacker = 0;
+            secondLastAttacker = 0;
         }
         public void Update()
         {
@@ -335,7 +348,11 @@ namespace Uncreated.Warfare.Components
             _currentTeleportRequest = default;
 
             if (isFOB)
+            {
                 player.Message("deploy_s", fob.UIColor, fob.Name);
+
+                Points.TryAwardFOBCreatorXP(fob, Points.XPConfig.FOBDeployedXP, "xp_fob_in_use");
+            }
             if (isSpecialFOB)
                 player.Message("deploy_s", special.UIColor, special.Name);
             if (isCache)

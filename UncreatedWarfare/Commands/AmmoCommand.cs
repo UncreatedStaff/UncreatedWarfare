@@ -134,13 +134,22 @@ namespace Uncreated.Warfare.Commands
                         L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
                         return;
                     }
-                    
+
+                    bool isInMain = false;
+
                     if (!player.IsOnFOB(out var fob))
                     {
-                        player.SendChat("ammo_not_near_fob");
-                        return;
+                        if (F.IsInMain(barricade.point))
+                        {
+                            isInMain = true;
+                        }
+                        else
+                        {
+                            player.SendChat("ammo_not_near_fob");
+                            return;
+                        }   
                     }
-                    if (fob.Ammo == 0)
+                    if (!isInMain && fob.Ammo == 0)
                     {
                         player.SendChat("ammo_no_stock");
                         return;
@@ -153,10 +162,13 @@ namespace Uncreated.Warfare.Commands
 
                     player.SendChat("ammo_success");
 
-                    if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                        CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
-
-                    fob.ReduceAmmo(1);
+                    if (isInMain)
+                    {
+                        if (FOBManager.config.Data.AmmoCommandCooldown > 0)
+                            CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
+                    }
+                    else
+                        fob.ReduceAmmo(1);
                 }
                 else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.barricade.asset.GUID)
                 {

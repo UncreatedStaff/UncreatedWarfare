@@ -148,8 +148,10 @@ namespace Uncreated.Warfare
             CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
             FOBManager.TempCacheEffectIDs();
+            FOBManager.OnLevelLoaded();
 
             Data.Gamemode.OnLevelLoaded();
+
         }
         private void SubscribeToEvents()
         {

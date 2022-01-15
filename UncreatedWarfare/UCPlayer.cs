@@ -84,14 +84,14 @@ namespace Uncreated.Warfare
             var xplevels = Data.DatabaseManager.GetAllXP(Steam64);
             foreach (var entry in xplevels)
             {
-                _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key));
+                _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
         }
         public void RedownloadMedals()
         {
             _medals = new MedalData(Data.DatabaseManager.GetTeamwork(Steam64));
         }
-        public void UpdateRank(EBranch branch, int newXP) => _ranks[branch] = new RankData(Steam64, newXP, branch);
+        public void UpdateRank(EBranch branch, int newXP) => _ranks[branch] = new RankData(Steam64, newXP, branch, Player.GetTeam());
         public void UpdateMedals(int newTW) => _medals = new MedalData(newTW);
 
         private bool _otherDonator;

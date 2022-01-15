@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Players;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -254,12 +255,44 @@ namespace Uncreated.Warfare.Point
             }
             return bars.ToString();
         }
+        public static void TryAwardDriverAssist(Player gunner, int amount)
+        {
+            var vehicle = gunner.movement.getVehicle();
+            if (vehicle != null)
+            {
+                var driver = vehicle.passengers[0].player;
+                if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
+                {
+                    AwardXP(driver.player, amount, Translation.Translate("xp_driver_assist", gunner));
+                }
+            }
+        }
+        public static void TryAwardFOBCreatorXP(FOB fob, int amount, string translationKey)
+        {
+            UCPlayer creator = UCPlayer.FromID(fob.Creator);
+
+            if (creator != null)
+                AwardXP(creator, amount, Translation.Translate(translationKey, creator));
+
+            if (fob.Placer != fob.Creator)
+            {
+                UCPlayer placer = UCPlayer.FromID(fob.Placer);
+                if (placer != null)
+                    AwardXP(placer, amount, Translation.Translate(translationKey, placer));
+            }
+            else
+            {
+                if (creator != null)
+                    AwardTW(creator, amount);
+            }
+        }
     }
     
     public class XPConfig : ConfigData
     {
         public char ProgressBlockCharacter;
         public int EnemyKilledXP;
+        public int KillAssistXP;
         public int FriendlyKilledXP;
         public int FriendlyRevivedXP;
         public int FOBKilledXP;
@@ -292,6 +325,7 @@ namespace Uncreated.Warfare.Point
         {
             ProgressBlockCharacter = '█';
             EnemyKilledXP = 10;
+            KillAssistXP = 5;
             FriendlyKilledXP = -50;
             FriendlyRevivedXP = 25;
             FOBKilledXP = 150;

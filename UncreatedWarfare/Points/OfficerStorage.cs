@@ -15,26 +15,26 @@ namespace Uncreated.Warfare.Point
             Reload();
         }
         protected override string LoadDefaults() => "[]";
-        public static bool IsOfficer(ulong playerID, out OfficerData officer)
+        public static bool IsOfficer(ulong playerID, ulong team, out OfficerData officer)
         {
             L.Log("playerID: " + playerID);
-            officer = GetObject(o => o.Steam64 == playerID, true);
+            officer = GetObject(o => o.Steam64 == playerID && o.Team == team, true);
             return officer != null;
         }
-        public static void ChangeOfficerRank(ulong playerID, int newOfficerLevel, EBranch newBranch)
+        public static void ChangeOfficerRank(ulong playerID, int newOfficerTier, ulong newTeam)
         {
             bool isNewOfficer = false;
 
-            if (ObjectExists(o => o.Steam64 == playerID, out var officer))
+            if (ObjectExists(o => o.Steam64 == playerID && o.Team == newTeam, out var officer))
             {
-                if (officer.OfficerTier == newOfficerLevel && officer.Branch == newBranch)
+                if (officer.OfficerTier == newOfficerTier)
                     return;
 
-                UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Branch = newBranch; o.OfficerTier = newOfficerLevel; });                
+                UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Team = newTeam; o.OfficerTier = newOfficerTier; });                
             }
             else
             {
-                AddObjectToSave(new OfficerData(playerID, newBranch, newOfficerLevel));
+                AddObjectToSave(new OfficerData(playerID, newTeam, newOfficerTier));
                 isNewOfficer = true;
             }
 
@@ -43,29 +43,29 @@ namespace Uncreated.Warfare.Point
             {
                 player.RedownloadRanks();
 
-                if (isNewOfficer || newBranch != officer.Branch || newOfficerLevel >= officer.OfficerTier)
+                if (isNewOfficer || newOfficerTier >= officer.OfficerTier)
                 {
-                    player.Message("officer_promoted", player.CurrentRank.Name, Translation.TranslateBranch(newBranch, player));
+                    player.Message("officer_promoted", player.CurrentRank.Name, Translation.Translate("team_" + newTeam, player));
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, player.CurrentRank.Name, Translation.TranslateBranch(newBranch, PlayerManager.OnlinePlayers[i]));
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, player.CurrentRank.Name, Translation.Translate("team_" + newTeam, PlayerManager.OnlinePlayers[i]));
                         }
                     }
                 }
                 else
                 {
-                    player.Message("officer_demoted", player.CurrentRank.Name);
+                    player.Message("officer_demoted", player.CurrentRank.Name, Translation.Translate("team_" + newTeam, player));
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
                     for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
                     {
                         if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
                         {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName, player.CurrentRank.Name);
+                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName, player.CurrentRank.Name, Translation.Translate("team_" + newTeam, PlayerManager.OnlinePlayers[i]));
                         }
                     }
                 }
@@ -95,13 +95,13 @@ namespace Uncreated.Warfare.Point
     public class OfficerData
     {
         public ulong Steam64;
-        public EBranch Branch;
+        public ulong Team;
         public int OfficerTier;
 
-        public OfficerData(ulong steam64, EBranch branch, int officerLevel)
+        public OfficerData(ulong steam64, ulong team, int officerLevel)
         {
             Steam64 = steam64;
-            Branch = branch;
+            Team = team;
             OfficerTier = officerLevel;
         }
         public OfficerData() { }
