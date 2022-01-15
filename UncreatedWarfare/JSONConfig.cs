@@ -62,12 +62,12 @@ namespace Uncreated
             }
             catch (Exception ex)
             {
-                if (r != default)
+                if (r != null)
                 {
                     r.Close();
                     r.Dispose();
                 }
-                throw new JSONSaver<TData>.JSONReadException(r, _dir, ex);
+                throw new JSONSaver<TData>.JSONReadException(_dir, ex);
             }
         }
         public void TryUpgrade()

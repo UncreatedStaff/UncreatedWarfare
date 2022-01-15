@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.FOBs
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
             for (int i = 0; i < effects.Length; i++)
             {
-                if (!(Assets.find(new Guid(config.Data.BaseEffectGUID + i.ToString(Data.Locale))) is EffectAsset asset))
+                if (Assets.find(new Guid(config.Data.BaseEffectGUID + i.ToString(Data.Locale))) is not EffectAsset asset)
                 {
                     L.LogWarning("Failed to find FOB Marker Effect #" + i.ToString(Data.Locale));
                     effects[i] = null;

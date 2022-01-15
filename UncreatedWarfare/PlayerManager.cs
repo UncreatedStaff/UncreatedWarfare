@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
@@ -17,9 +18,13 @@ namespace Uncreated.Warfare
     public class PlayerManager
     {
         public readonly static RawByteIO<List<PlayerSave>> IO = new RawByteIO<List<PlayerSave>>(PlayerSave.ReadList, PlayerSave.WriteList, directory + FILE, 4);
+        internal SemaphoreSlim threadLocker = new SemaphoreSlim(1, 1);
         public static List<UCPlayer> OnlinePlayers;
+        private static Dictionary<ulong, UCPlayer> _dict;
+        /*
         public static List<UCPlayer> Team1Players;
         public static List<UCPlayer> Team2Players;
+        */
         public static List<PlayerSave> ActiveObjects;
         private static readonly string directory = Data.KitsStorage;
         public static readonly Type Type = typeof(PlayerSave);
@@ -29,43 +34,54 @@ namespace Uncreated.Warfare
         public PlayerManager()
         {
             Load();
-            OnlinePlayers = new List<UCPlayer>();
+            OnlinePlayers = new List<UCPlayer>(50);
+            _dict = new Dictionary<ulong, UCPlayer>(50);
+            /*
             Team1Players = new List<UCPlayer>();
-            Team2Players = new List<UCPlayer>();
+            Team2Players = new List<UCPlayer>();*/
         }
         private void Load()
         {
-            if (!Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
-            if (File.Exists(directory + FILE))
+            threadLocker.Wait();
+            try
             {
-                if (IO.ReadFrom(Path, out List<PlayerSave> saves))
+                if (!Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
+                if (File.Exists(directory + FILE))
                 {
-                    ActiveObjects = saves;
-                    L.Log($"Read {saves.Count} saves.", ConsoleColor.Magenta);
+                    if (IO.ReadFrom(Path, out List<PlayerSave> saves))
+                    {
+                        ActiveObjects = saves;
+                        L.Log($"Read {saves.Count} saves.", ConsoleColor.Magenta);
+                    }
+                    else
+                    {
+                        ActiveObjects = new List<PlayerSave>();
+                        L.LogError("Failed to read saves!!!");
+                    }
+                    bool needwrite = ActiveObjects.Count == 0;
+                    for (int i = 0; i < ActiveObjects.Count; i++)
+                    {
+                        if (ActiveObjects[i].DATA_VERSION < PlayerSave.CURRENT_DATA_VERSION)
+                        {
+                            ActiveObjects[i].DATA_VERSION = PlayerSave.CURRENT_DATA_VERSION;
+                            needwrite = true;
+                        }
+                        if (needwrite)
+                        {
+                            IO.WriteTo(ActiveObjects, Path);
+                        }
+                    }
                 }
                 else
                 {
                     ActiveObjects = new List<PlayerSave>();
-                    L.LogError("Failed to read saves!!!");
+                    IO.WriteTo(ActiveObjects, Path);
                 }
-                bool needwrite = ActiveObjects.Count == 0;
-                for (int i = 0; i < ActiveObjects.Count; i++)
-                {
-                    if (ActiveObjects[i].DATA_VERSION < PlayerSave.CURRENT_DATA_VERSION)
-                    {
-                        ActiveObjects[i].DATA_VERSION = PlayerSave.CURRENT_DATA_VERSION;
-                        needwrite = true;
-                    }
-                    if (needwrite)
-                    {
-                        IO.WriteTo(ActiveObjects, Path);
-                    }
-                }
-            } else
+            }
+            finally
             {
-                ActiveObjects = new List<PlayerSave>();
-                IO.WriteTo(ActiveObjects, Path);
+                threadLocker.Release();
             }
         }
         protected static List<PlayerSave> GetObjectsWhere(Func<PlayerSave, bool> predicate, bool readFile = false) => ActiveObjects.Where(predicate).ToList();
@@ -75,6 +91,7 @@ namespace Uncreated.Warfare
             item = GetObject(match);
             return item != null;
         }
+        public static UCPlayer FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
         public static bool HasSave(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, false);
         public static bool HasSaveRead(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, true);
         public static PlayerSave GetSave(ulong playerID) => GetObject(ks => ks.Steam64 == playerID, true);
@@ -147,10 +164,12 @@ namespace Uncreated.Warfare
             Data.DatabaseManager.TryInitializeXP(player.Steam64);
 
             OnlinePlayers.Add(player);
+            _dict.Add(player.Steam64, player);
+            /*
             if (player.IsTeam1())
                 Team1Players.Add(player);
             else if (player.IsTeam2())
-                Team2Players.Add(player);
+                Team2Players.Add(player);*/
 
             SquadManager.OnPlayerJoined(player, save.SquadName);
             FOBManager.SendFOBList(player);
@@ -161,11 +180,12 @@ namespace Uncreated.Warfare
             player.IsOnline = false;
 
             OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
-
+            _dict.Remove(player.Steam64);
+            /*
             if (TeamManager.IsTeam1(rocketplayer))
                 Team1Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
             else if (TeamManager.IsTeam2(rocketplayer))
-                Team2Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
+                Team2Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);*/
 
             SquadManager.OnPlayerDisconnected(player);
         }
@@ -173,7 +193,7 @@ namespace Uncreated.Warfare
         public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point) => OnlinePlayers.Find(p => p.Steam64 == playerID && !p.Player.life.isDead && (p.Position - point).sqrMagnitude < range * range) != null;
 
         public static void VerifyTeam(Player nelsonplayer)
-        {
+        {/*
             if (nelsonplayer == default) return;
 
             UCPlayer player = OnlinePlayers.Find(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
@@ -198,7 +218,7 @@ namespace Uncreated.Warfare
                 {
                     Team2Players.Add(player);
                 }
-            }
+            }*/
         }
 
         internal static void PickGroupAfterJoin(UCPlayer ucplayer)

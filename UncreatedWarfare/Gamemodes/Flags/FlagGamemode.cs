@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public List<Flag> Rotation { get => _rotation; }
         protected List<Flag> _allFlags = new List<Flag>();
         public List<Flag> LoadedFlags { get => _allFlags; }
+        public ReadOnlyListSaver<FlagData> LoadedFlagData;
         public Dictionary<ulong, int> _onFlag = new Dictionary<ulong, int>();
         public Dictionary<ulong, int> OnFlag { get => _onFlag; }
         protected int _counter;
@@ -24,6 +25,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             base.Init();
             this._state = EState.PAUSED;
+            if (LoadedFlagData == null)
+                LoadedFlagData = new ReadOnlyListSaver<FlagData>(Data.FlagStorage + "flags.json", FlagData.ReadFlagData);
         }
         protected override void EventLoopAction()
         {
@@ -47,19 +50,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 Teams.TeamManager.EvaluateBases();
             }
         }
+        protected void ConvertFlags()
+        {
+            LoadedFlagData.Reload();
+            _allFlags.Clear();
+            _allFlags.Capacity = LoadedFlagData.Count;
+            for (int i = 0; i < LoadedFlagData.Count; i++)
+                _allFlags.Add(new Flag(LoadedFlagData[i], this) { index = -1 });
+            _allFlags.Sort((Flag a, Flag b) => a.ID.CompareTo(b.ID));
+        }
         public virtual void OnEvaluate()
         { }
         public void LoadAllFlags()
         {
-            _allFlags.Clear();
-            List<FlagData> flags = JSONMethods.ReadFlags();
-            flags.Sort((FlagData a, FlagData b) => a.id.CompareTo(b.id));
-            int i;
-            for (i = 0; i < flags.Count; i++)
-            {
-                _allFlags.Add(new Flag(flags[i], this) { index = i });
-            }
-            L.Log("Loaded " + i.ToString(Data.Locale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
+            ConvertFlags();
+            L.Log("Loaded " + _allFlags.Count.ToString(Data.Locale) + " flags into memory and cleared any existing old flags.", ConsoleColor.Magenta);
         }
         public virtual void PrintFlagRotation()
         {

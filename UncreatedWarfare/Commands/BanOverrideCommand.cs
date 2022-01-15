@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
                         {
-                            if (command[0].Length == 17 && command[0].StartsWith("765") && ulong.TryParse(command[0], NumberStyles.Any, Data.Locale, out ulong result))
+                            if (ulong.TryParse(command[0], NumberStyles.Any, Data.Locale, out ulong result) && OffenseManager.IsValidSteam64ID(result))
                             {
                                 if (command.Length < 3)
                                     L.LogError(Translation.Translate("ban_no_reason_provided", 0, out _));
@@ -137,7 +137,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (!PlayerTool.tryGetSteamPlayer(command[0], out SteamPlayer steamplayer))
                         {
-                            if (command[0].Length == 17 && command[0].StartsWith("765") && ulong.TryParse(command[0], NumberStyles.Any, CultureInfo.InvariantCulture, out ulong result))
+                            if (ulong.TryParse(command[0], NumberStyles.Any, CultureInfo.InvariantCulture, out ulong result) && OffenseManager.IsValidSteam64ID(result))
                             {
                                 try
                                 {

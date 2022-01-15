@@ -84,7 +84,6 @@ namespace Uncreated.Warfare
             remainder = (uint)Math.Round((answer - Math.Floor(answer)) * dividend);
             return (uint)Math.Floor(answer);
         }
-
         public static bool PermissionCheck(this IRocketPlayer player, EAdminType type)
         {
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
@@ -754,5 +753,38 @@ namespace Uncreated.Warfare
         /// Finds the 2D distance between two Vector3's x and z components.
         /// </summary>
         public static float SqrDistance2D(Vector3 a, Vector3 b) => Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2);
+
+        private const string ABET = "ABCDEFGHIJKL";
+        public static string test(Vector3 pos)
+        {
+            float mult = (Level.size - Level.border * 2) / Level.size;
+            float gridStart = Level.size / 2 - Level.border - Level.border * mult;
+            float gridSize = Level.size - Level.border * 2 - (mult * Level.border * 2);
+            int sqrsTotal = 36; // 12 x 3
+            float sqrSize = Mathf.Floor(gridSize / 36f);
+            float x = pos.x;
+            float y = pos.y;
+            int xSqr;
+            if (x < gridStart)
+                xSqr = 0;
+            else if (x > gridStart + gridSize)
+                xSqr = sqrsTotal - 1;
+            else
+                xSqr = Mathf.FloorToInt((x - gridStart) / sqrSize);
+
+            int ySqr;
+            if (y < gridStart)
+                ySqr = 0;
+            else if (y > gridStart + gridSize)
+                ySqr = sqrsTotal - 1;
+            else
+                ySqr = Mathf.FloorToInt((y - gridStart) / sqrSize);
+
+            int bigsqrx = Mathf.FloorToInt(xSqr / 3f);
+            int smlSqrDstX = bigsqrx * 3 - xSqr;
+            int bigsqry = Mathf.FloorToInt(ySqr / 3f);
+            int smlSqrDstY = bigsqry * 3 - ySqr;
+            return ABET[bigsqrx] + bigsqry.ToString() + " - " + (smlSqrDstX + smlSqrDstY * 3).ToString();
+        }
     }
 }

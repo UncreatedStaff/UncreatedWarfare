@@ -85,7 +85,6 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Dictionary<ELimb, string>> LimbLocalization;
         public static Dictionary<int, Zone> ExtraZones;
         public static Dictionary<string, Vector3> ExtraPoints;
-        public static Dictionary<string, MySqlTableLang> TableData;
         public static Dictionary<ulong, string> DefaultPlayerNames;
         public static Dictionary<ulong, FPlayerName> OriginalNames = new Dictionary<ulong, FPlayerName>();
         public static Dictionary<ulong, string> Languages;

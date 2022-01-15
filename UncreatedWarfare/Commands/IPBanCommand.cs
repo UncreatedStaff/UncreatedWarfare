@@ -10,6 +10,7 @@ using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
 {
+    [Obsolete]
     public class IPBanCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Both;

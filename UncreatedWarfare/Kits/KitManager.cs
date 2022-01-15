@@ -364,13 +364,13 @@ namespace Uncreated.Warfare.Kits
         {
             if (KitExists(kitname, out Kit kit))
             {
-                List<Kit> matches = GetObjectsWhere(k => k.Name == kit.Name);
-                for (int i = 0; i < matches.Count; i++)
+                IEnumerable<Kit> matches = GetObjectsWhere(k => k.Name == kit.Name);
+                foreach (Kit k in matches)
                 {
-                    matches[i].SignName = SignName;
-                    matches[i].SignTexts.Remove(language);
-                    matches[i].SignTexts.Add(language, SignName);
-                    RequestSigns.InvokeLangUpdateForSignsOfKit(matches[i].Name);
+                    k.SignName = SignName;
+                    k.SignTexts.Remove(language);
+                    k.SignTexts.Add(language, SignName);
+                    RequestSigns.InvokeLangUpdateForSignsOfKit(k.Name);
                 }
                 return true;
             }

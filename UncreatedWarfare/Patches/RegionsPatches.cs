@@ -239,8 +239,7 @@ namespace Uncreated.Warfare
                                             else
                                                 newtext = Translation.TranslateSign(newtext, lang, pl, false);
                                             // size is not allowed in signs.
-                                            newtext.Replace("<size=", "");
-                                            newtext.Replace("</size>", "");
+                                            newtext = newtext.Replace("<size=", "").Replace("</size>", "");
                                         }
                                         byte[] state = region.drops[index].GetServersideData().barricade.state;
                                         byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);

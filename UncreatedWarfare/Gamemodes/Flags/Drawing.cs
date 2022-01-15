@@ -187,10 +187,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             else if (step == -3)
             {
+                /*
                 System.Random r = new System.Random();
                 for (int i = 0; i < zones.Count; i++)
                 {
                     Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
+                    
                     DrawCircle(img, zones[i].InverseZone.Center.x, zones[i].InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier, zonecolor, 5, false, true);
                     if (drawAngles)
                     {
@@ -232,6 +234,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
                 DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
                 DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
+                */
                 img.Apply();
             }
         }

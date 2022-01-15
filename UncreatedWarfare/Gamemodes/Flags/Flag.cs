@@ -19,11 +19,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public int index = -1;
         public const float MAX_POINTS = 64;
         public Zone ZoneData { get; protected set; }
-        public Dictionary<int, float> Adjacencies;
+        public AdjacentFlagData[] Adjacencies;
         public FlagGamemode Manager { get; protected set; }
-        public int Level { get => _level; }
         public static float CaptureMultiplier = 1.0f;
-        private readonly int _level;
         public int ObjectivePlayerCount
         {
             get
@@ -240,7 +238,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this._x = data.x;
             this._y = data.y;
             this._position2d = data.Position2D;
-            this._level = data.level;
             this.LastDeltaPoints = 0;
             this._name = data.name;
             this._color = data.color;

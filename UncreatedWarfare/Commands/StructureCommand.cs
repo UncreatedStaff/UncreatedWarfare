@@ -130,7 +130,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.pop"))
                     {
-                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE);
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {
@@ -156,7 +156,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.examine"))
                     {
-                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE);
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {

@@ -1186,6 +1186,35 @@ namespace Uncreated.Warfare.Commands
             Reporter.SendReportInvocation.NetInvoke(report, false);
             L.Log("Sent chat abuse report.");
         }
+
+        private void speedtest(string[] command, Player player)
+        {
+            Kits.RequestSigns.RunTest();
+        }
+
+        private void readtest(string[] command, Player player)
+        {
+            Kits.RequestSigns.Reload();
+            foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
+            {
+                L.Log("Sign: " + sign.kit_name + " instid: " + sign.instance_id + " owner: " + sign.owner + " id: " +
+                      sign.sign_id);
+            }
+
+            Kits.RequestSigns.Save();
+        }
+
+
+        private void testpos(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+
+            L.Log(F.test(player.transform.position));
+        }
     }
 #pragma warning restore IDE0051
 #pragma warning restore IDE0060
