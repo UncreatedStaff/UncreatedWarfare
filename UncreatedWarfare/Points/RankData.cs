@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Point
 {
     public struct RankData
     {
-        public static readonly RankData Nil = new RankData(0, -1, EBranch.DEFAULT);
+        public static readonly RankData Nil = new RankData(0, -1, EBranch.DEFAULT, 0);
         public readonly ulong Steam64;
         public readonly EBranch Branch;
         public int TotalXP;
@@ -39,6 +39,7 @@ namespace Uncreated.Warfare.Point
             RequiredXP = 0;
             Name = null;
             Abbreviation = null;
+            OfficerTeam = 0;
             CheckOfficerStatus();
             Update(xp);
         }
@@ -59,7 +60,7 @@ namespace Uncreated.Warfare.Point
             float n = Level + 1;
             CurrentXP = (int)(TotalXP - ((x * Math.Pow(n, 2)) + (y * n) + z));
 
-            if (OfficerStorage.IsOfficer(Steam64, officerTeam, out var officer))
+            if (OfficerStorage.IsOfficer(Steam64, OfficerTeam, out OfficerData officer))
             {
                 RequiredXP = A + Level * D;
                 RankTier = GetRankTier(Level);
@@ -68,15 +69,13 @@ namespace Uncreated.Warfare.Point
         }
         public void CheckOfficerStatus()
         {
-            if (OfficerStorage.IsOfficer(Steam64, officerTeam, out OfficerData officer))
+            if (OfficerStorage.IsOfficer(Steam64, OfficerTeam, out OfficerData officer))
             {
                 OfficerTier = officer.OfficerTier;
-                OfficerTeam = officerTeam;
             }
             else
             {
                 OfficerTier = 0;
-                OfficerTeam = 0;
             }
 
             CheckNameAbbreviations();
@@ -168,18 +167,6 @@ namespace Uncreated.Warfare.Point
                 5 => "Gen.",
                 _ => "###",
             };
-        }
-
-        public static RankData Read(ByteReader R)
-        {
-            return new RankData(R.ReadUInt64(), R.ReadInt32(), R.ReadEnum<EBranch>());
-        }
-
-        public static void Write(RankData data, ByteWriter W)
-        {
-            W.Write(data.Steam64);
-            W.Write(data.TotalXP);
-            W.Write(data.Branch);
         }
     }
 }

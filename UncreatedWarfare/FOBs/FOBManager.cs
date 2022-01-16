@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.FOBs
                 GridBorder = 64;
             }
         }
-        private static void SendFOBEffect(ulong team, EFOBStatus fob, Vector3 position)
+        public static void SendFOBEffect(ulong team, EFOBStatus fob, Vector3 position)
         {
             int index = (int)fob;
             if (index < 0 || index >= effects.Length)
@@ -855,7 +855,7 @@ namespace Uncreated.Warfare.FOBs
                 {
                     structureID = new Guid("6fe208519d7c45b0be38273118eea7fd"),
                     foundationID = new Guid("eccfe06e53d041d5b83c614ffa62ee59"),
-                    type = EbuildableType.AMMO_CRATE,
+                    type = EBuildableType.AMMO_CRATE,
                     requiredHits = 10,
                     requiredBuild = 2,
                     team = 0,
@@ -865,7 +865,7 @@ namespace Uncreated.Warfare.FOBs
                 {
                     structureID = new Guid("c0d11e0666694ddea667377b4c0580be"),
                     foundationID = new Guid("26a6b91cd1944730a0f28e5f299cebf9"),
-                    type = EbuildableType.REPAIR_STATION,
+                    type = EBuildableType.REPAIR_STATION,
                     requiredHits = 30,
                     requiredBuild = 15,
                     team = 0,

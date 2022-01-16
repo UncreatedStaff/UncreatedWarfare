@@ -17,7 +17,6 @@ namespace Uncreated.Warfare.Point
         protected override string LoadDefaults() => "[]";
         public static bool IsOfficer(ulong playerID, ulong team, out OfficerData officer)
         {
-            L.Log("playerID: " + playerID);
             officer = GetObject(o => o.Steam64 == playerID && o.Team == team, true);
             return officer != null;
         }

@@ -32,6 +32,7 @@ namespace Uncreated.Warfare
             ulong oldteam = oldGroup.GetTeam();
             ulong newteam = newGroup.GetTeam();
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+            ucplayer.UpdateRankTeam(newteam);
             PlayerManager.VerifyTeam(player.player);
             Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
 

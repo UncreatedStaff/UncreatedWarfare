@@ -388,7 +388,6 @@ namespace Uncreated.Warfare.Kits
                                 Class = existing.Class,
                                 Branch = existing.Branch,
                                 Team = existing.Team,
-                                Cost = existing.Cost,
                                 UnlockBranch = existing.UnlockBranch,
                                 UnlockLevel = existing.UnlockLevel,
                                 TicketCost = existing.TicketCost,
@@ -397,12 +396,9 @@ namespace Uncreated.Warfare.Kits
                                 IsLoadout = existing.IsLoadout,
                                 TeamLimit = existing.TeamLimit,
                                 Cooldown = existing.Cooldown,
-                                SignName = existing.SignName,
-                                ShouldClearInventory = existing.ShouldClearInventory,
                                 AllowedUsers = new List<ulong>(),
                                 SignTexts = existing.SignTexts,
-                                Weapons = existing.Weapons,
-                                Requests = 0
+                                Weapons = existing.Weapons
                             };
 
                             Reply(ucplayer, "kit_copied", kitName);

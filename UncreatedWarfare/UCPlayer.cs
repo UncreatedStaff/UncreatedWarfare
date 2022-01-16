@@ -77,7 +77,7 @@ namespace Uncreated.Warfare
                     return rank;
                 else
                 {
-                    RankData data = new RankData(Steam64, 0, Branch);
+                    RankData data = new RankData(Steam64, 0, Branch, this.GetTeam());
                     _ranks.Add(Branch, data);
                     RedownloadRanks();
                     return data;
@@ -114,7 +114,18 @@ namespace Uncreated.Warfare
             if (_ranks.TryGetValue(branch, out RankData data))
                 data.Update(newXP);
             else
-                _ranks.Add(branch, new RankData(Steam64, newXP, branch));
+                _ranks.Add(branch, new RankData(Steam64, newXP, branch, this.GetTeam()));
+        }
+        public void UpdateRankTeam(ulong team)
+        {
+            if (_ranks.TryGetValue(Branch, out RankData data))
+            {
+                data.OfficerTeam = team;
+                data.Update(data.TotalXP);
+                data.CheckOfficerStatus();
+            }
+            else
+                _ranks.Add(Branch, new RankData(Steam64, 0, Branch, this.GetTeam()));
         }
         public void UpdateMedals(int newTW) => _medals.Update(newTW);
 

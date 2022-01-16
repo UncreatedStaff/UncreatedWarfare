@@ -164,8 +164,8 @@ namespace Uncreated.Warfare.Commands
 
                     if (isInMain)
                     {
-                        if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                            CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
+                        if (FOBManager.config.data.AmmoCommandCooldown > 0)
+                            CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.data.AmmoCommandCooldown);
                     }
                     else
                         fob.ReduceAmmo(1);
