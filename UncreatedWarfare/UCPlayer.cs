@@ -102,7 +102,7 @@ namespace Uncreated.Warfare
                 if (_ranks.TryGetValue(entry.Key, out RankData rank))
                     rank.Update(entry.Value);
                 else
-                    _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key));
+                    _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
         }
         public void RedownloadMedals()

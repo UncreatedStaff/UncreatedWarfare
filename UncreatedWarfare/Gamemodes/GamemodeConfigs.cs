@@ -118,6 +118,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid CTFLeaderboardGUID;
         public Guid InsurgencyLeaderboardGUID;
         public Guid NearbyResourcesGUID;
+        public Guid MarkerAmmo;
         public int FlagUICount;
         public int MaxSquadMembers;
         public int MaxSquads;
@@ -143,6 +144,7 @@ namespace Uncreated.Warfare.Gamemodes
             CTFLeaderboardGUID = new Guid("b83389df-1245-438d-b188-89af94f04960");
             InsurgencyLeaderboardGUID = new Guid("c0bf4518-d941-4319-b67d-bb46ad88ba2f");
             NearbyResourcesGUID = new Guid("3775a1e7-d84b-47e7-9cac-ecd5e6b2a224");
+            MarkerAmmo = new Guid("827b0c00724b466d8d33633fe2a7743a");
             MaxSquadMembers = 6;
             MaxSquads = 8;
             FlagUICount = 10;

@@ -18,11 +18,12 @@ namespace Uncreated.Warfare.Point
         public int RankTier;
         public int OfficerTier;
         public EBranch OfficerBranch;
+        public ulong OfficerTeam;
         public int CurrentXP;
         public int RequiredXP;
         public string Name;
         public string Abbreviation;
-        public RankData(ulong steamID, int xp, EBranch branch)
+        public RankData(ulong steamID, int xp, EBranch branch, ulong officerTeam)
         {
             Steam64 = steamID;
             Branch = branch;
@@ -57,7 +58,8 @@ namespace Uncreated.Warfare.Point
 
             float n = Level + 1;
             CurrentXP = (int)(TotalXP - ((x * Math.Pow(n, 2)) + (y * n) + z));
-            if (Level != oldlvl)
+
+            if (OfficerStorage.IsOfficer(Steam64, officerTeam, out var officer))
             {
                 RequiredXP = A + Level * D;
                 RankTier = GetRankTier(Level);
@@ -66,15 +68,15 @@ namespace Uncreated.Warfare.Point
         }
         public void CheckOfficerStatus()
         {
-            if (OfficerStorage.IsOfficer(Steam64, out OfficerData officer))
+            if (OfficerStorage.IsOfficer(Steam64, officerTeam, out OfficerData officer))
             {
                 OfficerTier = officer.OfficerTier;
-                OfficerBranch = officer.Branch;
+                OfficerTeam = officerTeam;
             }
             else
             {
                 OfficerTier = 0;
-                OfficerBranch = EBranch.DEFAULT;
+                OfficerTeam = 0;
             }
 
             CheckNameAbbreviations();

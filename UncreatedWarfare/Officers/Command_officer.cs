@@ -45,21 +45,21 @@ namespace Uncreated.Warfare.Commands
                 CheckLevelAndBranch:
                 if (int.TryParse(command[2], System.Globalization.NumberStyles.Any, Data.Locale, out var level))
                 {
-                    if (Enum.TryParse(command[3], out EBranch branch))
+                    if (ulong.TryParse(command[3], out ulong team) && team == 1 || team == 2)
                     {
                         if (target != null)
                         {
-                            OfficerStorage.ChangeOfficerRank(target.Steam64, level, branch);
-                            player.Message("officer_s_changedrank", target.CharacterName, target.CurrentRank.Name, branch.ToString());
+                            OfficerStorage.ChangeOfficerRank(target.Steam64, level, team);
+                            player.Message("officer_s_changedrank", target.CharacterName, target.CurrentRank.Name, Translation.Translate(team.ToString(), player));
                         }
                         else
                         {
-                            OfficerStorage.ChangeOfficerRank(Steam64, level, branch);
-                            player.Message("officer_s_changedrank", characterName, RankData.GetOfficerRankName(level), branch.ToString());
+                            OfficerStorage.ChangeOfficerRank(Steam64, level, team);
+                            player.Message("officer_s_changedrank", characterName, RankData.GetOfficerRankName(level), Translation.Translate(team.ToString(), player));
                         }
                     }
                     else
-                        player.SendChat("officer_e_invalidbranch", command[2]);
+                        player.SendChat("officer_e_team", command[2]);
                 }
                 else
                     player.SendChat("officer_invalidrank", command[2]);

@@ -35,6 +35,14 @@ namespace Uncreated.Warfare.FOBs
         public const short fobListKey = 12008;
         public static ushort nearbyResourceId;
         public const short nearbyResourceKey = 12009;
+
+        public static ushort GridSquareCount { get; private set; }
+        public static ushort GridBorder { get; private set; }
+        public static float GridSquareWidth { get; private set; }
+        public static float GridScalingFactor { get; private set; }
+
+        public static char[] GridLetters { get; private set; }
+
         public static void TempCacheEffectIDs()
         {
             if (Assets.find(Gamemode.Config.UI.FOBListGUID) is EffectAsset fobList)
@@ -55,8 +63,19 @@ namespace Uncreated.Warfare.FOBs
                 }
                 else effects[i] = asset;
             }
+
+            if (Level.size == Level.MEDIUM_SIZE)
+            {
+                GridSquareCount = 12;
+                GridBorder = 64;
+            }
+            else
+            {
+                GridSquareCount = 12;
+                GridBorder = 64;
+            }
         }
-        public static void SendFOBEffect(ulong team, EFOBStatus fob, Vector3 position)
+        private static void SendFOBEffect(ulong team, EFOBStatus fob, Vector3 position)
         {
             int index = (int)fob;
             if (index < 0 || index >= effects.Length)
@@ -70,14 +89,78 @@ namespace Uncreated.Warfare.FOBs
                 SteamPlayer pl = Provider.clients[i];
                 if (pl.GetTeam() == team)
                 {
-                    for (int i2 = 0; i2 < effects.Length; i2++)
-                    {
-                        if (effects[i2] != null && effects[i2].id != id)
-                            EffectManager.askEffectClearByID(effects[i2].id, pl.transportConnection);
-                    }
-                    EffectManager.sendEffect(id, pl.transportConnection, position);
+                    EffectManager.askEffectClearByID(id, pl.transportConnection);
+                    EffectManager.sendEffectReliable(id, pl.transportConnection, position);
                 }
             }
+        }
+        public static string GetGridCoordsFromTexture(float textureX, float textureY, bool includeSubKey = false)
+        {
+
+            int xKey;
+            int xSubIndex = 0;
+            float upper = GridBorder;
+            float lower = 0;
+
+            for (xKey = 0; xKey < GridSquareCount; xKey++)
+            {
+                upper += GridSquareWidth;
+                if (lower <= upper && textureX < upper)
+                {
+                    upper = upper - GridSquareWidth;
+                    lower = upper;
+                    for (xSubIndex = 0; xSubIndex < 3; xSubIndex++)
+                    {
+                        upper += GridSquareWidth / 3;
+                        if (lower <= upper && textureX < upper)
+                            break;
+                        lower = upper;
+                    }
+
+                    break;
+                }
+                lower = upper;
+            }
+
+            int yKey;
+            int ySubIndex = 0;
+            upper = GridBorder;
+            lower = 0;
+            for (yKey = 1; yKey < GridSquareCount; yKey++)
+            {
+                upper += GridSquareWidth;
+                if (lower <= upper && textureY < upper)
+                {
+                    upper = upper - GridSquareWidth;
+                    lower = upper;
+                    for (ySubIndex = 0; ySubIndex < 3; ySubIndex++)
+                    {
+                        upper += GridSquareWidth / 3;
+                        if (lower <= upper && textureY < upper)
+                            break;
+                        lower = upper;
+                    }
+
+                    break;
+                }
+                lower = upper;
+            }
+
+            int subKey = (3 - ySubIndex) * 3 + (xSubIndex - 2);
+
+            string gridCoord = GridLetters[xKey] + yKey.ToString();
+            if (includeSubKey && 
+                textureX >= GridBorder && 
+                textureX <= Level.size - GridBorder &&
+                textureY >= GridBorder &&
+                textureY <= Level.size - GridBorder)
+                gridCoord += "-" + subKey;
+
+            return gridCoord;
+        }
+        public static string GetGridCoords(float xPos, float yPos, bool includeSubKey = false)
+        {
+            return GetGridCoordsFromTexture(xPos * GridScalingFactor + Level.size / 2, yPos * -GridScalingFactor + Level.size / 2, includeSubKey);
         }
         public static void Reset()
         {
@@ -93,6 +176,15 @@ namespace Uncreated.Warfare.FOBs
             }
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
+        }
+        public static void OnLevelLoaded()
+        {
+            L.Log($"level size: {Level.size}");
+            L.Log($"level border: {Level.border}");
+            GridScalingFactor = Level.size / (Level.size - Level.border * 2);
+            GridSquareWidth = (Level.size - Level.border * 2) / (float)GridSquareCount;
+            L.Log($"grid square width: {GridSquareWidth}");
+            GridLetters = new char[12] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L' };
         }
         public static void OnNewGameStarting()
         {
@@ -321,7 +413,7 @@ namespace Uncreated.Warfare.FOBs
         {
             ulong team = fob.Team;
 
-            UCPlayer killer = UCPlayer.FromID(fob.killer);
+            UCPlayer killer = UCPlayer.FromID(fob.Killer);
             ulong killerteam = (ulong)(killer?.GetTeam());
 
             ulong instanceID = fob.Radio.instanceID;
@@ -551,7 +643,7 @@ namespace Uncreated.Warfare.FOBs
                     return;
                 }
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + i.ToString(),
-                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].NearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].ClosestLocation));
+                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].NearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].GridCoordinates));
             }
         }
         public static void UpdateFOBList(UCPlayer player, SpecialFOB fob = null)
@@ -607,12 +699,14 @@ namespace Uncreated.Warfare.FOBs
         }
         private static void UpdateUIList(ulong team, ITransportConnection c, List<FOB> FOBList, UCPlayer player)
         {
+            HideFOBList(player); // TODO: remove this line and make the FOB list UI have all gameobjects disabled by default
             EffectManager.sendUIEffect(fobListId, fobListKey, true);
 
             int i2 = 0;
             int min = Math.Min(SpecialFOBs.Count, config.data.FobLimit);
             for (int i = 0; i < min; i++)
             {
+                //L.LogDebug($"    s: {i}");
                 if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == team)
                 {
                     string i22 = i2.ToString();
@@ -627,6 +721,7 @@ namespace Uncreated.Warfare.FOBs
                 min = Math.Min(Caches.Count, config.data.FobLimit);
                 for (int i = 0; i < min; i++)
                 {
+                    //L.LogDebug($"    i: {i}");
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
                     EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].ClosestLocation));
@@ -637,15 +732,17 @@ namespace Uncreated.Warfare.FOBs
             min = Math.Min(FOBList.Count, config.data.FobLimit - i2);
             for (int i = 0; i < min; i++)
             {
+                //L.LogDebug($"    f: {i}");
                 string i22 = i2.ToString();
 
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
                 EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22,
-                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].ClosestLocation));
+                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates));
                 i2++;
             }
             for (; i2 < config.data.FobLimit; i2++)
             {
+                //L.LogDebug($"    c: {i2}");
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i2.ToString(), false);
             }
         }
@@ -725,7 +822,7 @@ namespace Uncreated.Warfare.FOBs
             FobLimit = 10;
 
             AmmoCrateRequiredBuild = 2;
-            AmmoCommandCooldown = 0f;
+            AmmoCommandCooldown = 120f;
 
             RepairStationRequiredBuild = 6;
 
@@ -758,9 +855,9 @@ namespace Uncreated.Warfare.FOBs
                 {
                     structureID = new Guid("6fe208519d7c45b0be38273118eea7fd"),
                     foundationID = new Guid("eccfe06e53d041d5b83c614ffa62ee59"),
-                    type = EBuildableType.AMMO_CRATE,
-                    requiredHits = 8,
-                    requiredBuild = 20,
+                    type = EbuildableType.AMMO_CRATE,
+                    requiredHits = 10,
+                    requiredBuild = 2,
                     team = 0,
                     emplacementData = null
                 },
@@ -768,9 +865,9 @@ namespace Uncreated.Warfare.FOBs
                 {
                     structureID = new Guid("c0d11e0666694ddea667377b4c0580be"),
                     foundationID = new Guid("26a6b91cd1944730a0f28e5f299cebf9"),
-                    type = EBuildableType.REPAIR_STATION,
+                    type = EbuildableType.REPAIR_STATION,
                     requiredHits = 30,
-                    requiredBuild = 1,
+                    requiredBuild = 15,
                     team = 0,
                     emplacementData = null
                 },

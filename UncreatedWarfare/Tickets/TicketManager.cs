@@ -79,10 +79,26 @@ namespace Uncreated.Warfare.Tickets
                     insurgency.GameStats.intelligenceGathered++;
                 }
             }
+
             Points.AwardXP(
                 parameters.killer,
                 Points.XPConfig.EnemyKilledXP,
                 Translation.Translate("xp_enemy_killed", parameters.killer));
+
+            if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent component))
+            {
+                var assister = UCPlayer.FromID(component.secondLastAttacker);
+                if (assister != null)
+                {
+                    Points.AwardXP(
+                        assister,
+                        Points.XPConfig.KillAssistXP,
+                        Translation.Translate("xp_kill_assist", parameters.killer));
+                }
+                component.ResetAttackers();
+            }
+
+            Points.TryAwardDriverAssist(parameters.killer, Points.XPConfig.EnemyKilledXP);
         }
         public static void OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
@@ -159,6 +175,7 @@ namespace Uncreated.Warfare.Tickets
                                 Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), F.ColorizeName(F.GetPlayerOriginalNames(owner).CharacterName, owner.GetTeam()), vehicle.asset.vehicleName);
 
                             Points.AwardXP(player, amount, "xp_" + message);
+                            Points.TryAwardDriverAssist(player.Player, amount);
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
                         }

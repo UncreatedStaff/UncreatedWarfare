@@ -100,7 +100,6 @@ namespace Uncreated.Warfare
         {
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-            L.LogDebug($"{data.owner} Placed barricade: {data.barricade.asset.itemName}, {data.point}");
             BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
             owner.Owner = data.owner;
             SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
@@ -130,6 +129,13 @@ namespace Uncreated.Warfare
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
             {
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
+                drop.model.gameObject.AddComponent<IconRenderer>().Initialize(Gamemode.Config.UI.MarkerAmmo, drop.model.position, 100f, 0.5F, data.group);
+            }
+
+            // ammo crate
+            if (Gamemode.Config.Barricades.AmmoCrateGUID == data.barricade.asset.GUID)
+            {
+                drop.model.gameObject.AddComponent<IconRenderer>().Initialize(Gamemode.Config.UI.MarkerAmmo, drop.model.position, 100f, 0.5F, data.group);
             }
 
             if (FOBManager.config.data.Buildables == null) return;
@@ -165,6 +171,13 @@ namespace Uncreated.Warfare
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
+            var rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>();
+            foreach (var rocket in rockets)
+            {
+                L.Log("     rocket owner: " + rocket.killer);
+                rocket.killer = gun.player.channel.owner.playerID.steamID;
+            }
+
             Patches.DeathsPatches.lastProjected = projectile;
             if (gun.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
             {
@@ -1051,8 +1064,10 @@ namespace Uncreated.Warfare
 
             if (drop.model.TryGetComponent(out BuildableComponent buildable))
                 buildable.Destroy();
-            if (drop.model.TryGetComponent(out BuildableComponent repairable))
+            if (drop.model.TryGetComponent(out RepairableComponent repairable))
                 repairable.Destroy();
+            if (drop.model.TryGetComponent(out IconRenderer iconRenderer))
+                iconRenderer.Destroy();
 
             if (Data.Is<ISquads>(out _))
                 RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
