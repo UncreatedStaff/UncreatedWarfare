@@ -49,11 +49,13 @@ namespace Uncreated.Warfare
             }
             WhitelistItem whitelistedItem;
             bool isWhitelisted;
-            if (!(Assets.find(EAssetType.ITEM, itemData.item.id) is ItemAsset a))
+            if (Assets.find(EAssetType.ITEM, itemData.item.id) is not ItemAsset a)
             {
                 whitelistedItem = null;
                 isWhitelisted = false;
                 L.LogError("Unknown asset on item " + itemData.item.id.ToString());
+                shouldAllow = false;
+                return;
             }
             else
             {
@@ -69,9 +71,9 @@ namespace Uncreated.Warfare
             {
                 int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
 
-                int allowedItems = kit.Items.Count(k => k.ID == itemData.item.id);
+                int allowedItems = kit.Items.Count(k => k.id == a.GUID);
                 if (allowedItems == 0)
-                    allowedItems = kit.Clothes.Count(k => k.ID == itemData.item.id);
+                    allowedItems = kit.Clothes.Count(k => k.id == a.GUID);
 
                 if (allowedItems == 0)
                 {
@@ -181,7 +183,7 @@ namespace Uncreated.Warfare
                     }
                     else
                     {
-                        int allowedCount = kit.Items.Where(k => k.ID == barricade.asset.id).Count();
+                        int allowedCount = kit.Items.Where(k => k.id == barricade.asset.GUID).Count();
 
                         if (allowedCount > 0)
                         {
@@ -232,7 +234,7 @@ namespace Uncreated.Warfare
                 }
                 if (KitManager.HasKit(player.CSteamID, out Kit kit))
                 {
-                    if (kit.Items.Exists(k => k.ID == structure.asset.id))
+                    if (kit.Items.Exists(k => k.id == structure.asset.GUID))
                     {
                         return;
                     }

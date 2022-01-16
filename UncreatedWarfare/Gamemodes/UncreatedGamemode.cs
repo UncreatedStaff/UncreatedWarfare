@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Gamemodes
             { "Insurgency", typeof(Insurgency.Insurgency) }
         };
         internal static readonly Config<GamemodeConfigs> ConfigObj = new Config<GamemodeConfigs>(Data.DATA_DIRECTORY, "gamemode_settings.json");
-        public static GamemodeConfigs Config => ConfigObj.Data;
+        public static GamemodeConfigs Config => ConfigObj.data;
         public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
         protected readonly string _name;
         public string Name { get => _name; }

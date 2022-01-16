@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Structures;
 using Structure = Uncreated.Warfare.Structures.Structure;
@@ -120,6 +120,7 @@ namespace Uncreated.Warfare.Vehicles
         public SerializableTransform sign_transform;
         public SerializableTransform bay_transform;
         public string placeholder_text;
+        public override string ToString() => $"Instance id: {instance_id}, bay: {bay_instance_id}, text: {placeholder_text}";
         [JsonConstructor]
         public VehicleSign(uint instance_id, uint bay_instance_id, SerializableTransform sign_transform, SerializableTransform bay_transform, string placeholder_text, EStructType bay_type)
         {

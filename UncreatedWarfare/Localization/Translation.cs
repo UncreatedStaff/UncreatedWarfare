@@ -887,12 +887,13 @@ namespace Uncreated.Warfare
                 else if (KitManager.KitExists(key2, out Kit kit))
                 {
                     ulong playerteam = 0;
-                    RankData playerrank = null;
+                    RankData playerrank;
                     if (ucplayer != null)
                     {
                         playerteam = ucplayer.GetTeam();
-                        playerrank = ucplayer.Ranks[kit.UnlockBranch];
+                        playerrank = ucplayer.CurrentRank;
                     }
+                    else playerrank = RankData.Nil;
 
                     if (!kit.SignTexts.TryGetValue(language, out string name))
                         if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out name))
@@ -918,16 +919,17 @@ namespace Uncreated.Warfare
                     string playercount;
                     if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
                     {
-                        if (kit.AllowedUsers.Contains(ucplayer.Steam64))
-                            cost = ObjectTranslate("kit_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
-                        else if (kit.PremiumCost == -1)
-                            cost = Translate("kit_price_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
-                        else
-                            cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                        if (ucplayer != null)
+                            if (kit.AllowedUsers.Contains(ucplayer.Steam64))
+                                cost = ObjectTranslate("kit_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                            else if (kit.PremiumCost == -1)
+                                cost = Translate("kit_price_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                            else
+                                cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
                     }
                     else if (kit.UnlockLevel > 0)
                     {
-                        if (playerrank.Level < kit.UnlockLevel)
+                        if (playerrank.IsNil || (playerrank.Level < kit.UnlockLevel))
                         {
                             cost = Translate("kit_required_level", language, kit.UnlockLevel.ToString(Data.Locale), UCWarfare.GetColorHex("kit_level_unavailable"),
                                 RankData.GetRankAbbreviation(RankData.GetRankTier(kit.UnlockLevel)), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));

@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -268,7 +268,7 @@ namespace Uncreated.Warfare.Kits
             SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (drop == null || data == null)
             {
-                if (!(Assets.find(sign_id) is ItemBarricadeAsset asset))
+                if (Assets.find(sign_id) is not ItemBarricadeAsset asset)
                 {
                     L.LogError("Failed to find barricade with " + sign_id.ToString("N"));
                     return;
@@ -320,50 +320,44 @@ namespace Uncreated.Warfare.Kits
         }
         public void ReadJson(ref Utf8JsonReader reader)
         {
-            transform = new SerializableTransform();
             while (reader.Read())
             {
-                switch (reader.TokenType)
+                if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    case JsonTokenType.PropertyName:
-                        string val = reader.GetString();
-                        if (reader.Read())
+                    string val = reader.GetString();
+                    if (reader.Read())
+                    {
+                        switch (val)
                         {
-                            switch (val)
-                            {
-                                case nameof(kit_name):
-                                    kit_name = reader.GetString();
-                                    break;
-                                case nameof(sign_id):
-                                    sign_id = reader.GetGuid();
-                                    break;
-                                case nameof(transform):
-                                    if (reader.TokenType != JsonTokenType.StartObject)
-                                        transform = SerializableTransform.Zero;
-                                    else
-                                    {
-                                        transform = new SerializableTransform();
-                                        transform.ReadJson(ref reader);
-                                    }
-                                    break;
-                                case nameof(owner):
-                                    owner = reader.GetUInt64();
-                                    break;
-                                case nameof(group):
-                                    group = reader.GetUInt64();
-                                    break;
-                                case nameof(instance_id):
-                                    instance_id = reader.GetUInt32();
-                                    break;
-                            }
+                            case nameof(kit_name):
+                                kit_name = reader.GetString();
+                                break;
+                            case nameof(transform):
+                                if (reader.TokenType == JsonTokenType.StartObject)
+                                    transform.ReadJson(ref reader);
+                                break;
+                            case nameof(sign_id):
+                                sign_id = reader.GetGuid();
+                                break;
+                            case nameof(owner):
+                                owner = reader.GetUInt64();
+                                break;
+                            case nameof(group):
+                                group = reader.GetUInt64();
+                                break;
+                            case nameof(instance_id):
+                                instance_id = reader.GetUInt32();
+                                break;
                         }
-                        break;
+                    }
                 }
+                else if (reader.TokenType == JsonTokenType.EndObject)
+                    break;
             }
         }
 
         public override string ToString() =>
-            $"Request sign: " + kit_name + ", Instance ID: " + instance_id + ", Placed by: " + owner;
+            $"Request sign: " + kit_name + ", Instance ID: " + instance_id + ", Placed by: " + owner + " guid: " + sign_id.ToString("N");
         public static RequestSign ReadRequestSign(ref Utf8JsonReader reader)
         {
             RequestSign rs = new RequestSign();

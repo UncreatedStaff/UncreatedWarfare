@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Commands
                 if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object deployable))
                 {
                     if (command[0] == "main")
-                        c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.Data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
+                        c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
                     else if (command[0] == "lobby")
                         player.SendChat("deploy_lobby_removed");
                     else
@@ -84,12 +84,12 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    c.TeleportTo(FOB, FOBManager.config.Data.DeloyFOBDelay, shouldCancelOnMove);
+                    c.TeleportTo(FOB, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
  
                 }
                 else if (deployable is SpecialFOB special)
                 {
-                    c.TeleportTo(special, FOBManager.config.Data.DeloyFOBDelay, shouldCancelOnMove);
+                    c.TeleportTo(special, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
                 }
                 else if (deployable is Cache cache)
                 {
@@ -99,7 +99,7 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    c.TeleportTo(cache, FOBManager.config.Data.DeloyFOBDelay, shouldCancelOnMove);
+                    c.TeleportTo(cache, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
                 }
 #if false
                 else if (command[0].ToLower() == "lobby")

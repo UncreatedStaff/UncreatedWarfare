@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Kits;
 using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
@@ -860,6 +861,7 @@ namespace Uncreated.Warfare
                 { "report_console_record_failed", "Report against {0} ({1}) failed to send to UCDB." },
             };
         }
+
         public static Dictionary<string, string> DefaultTranslations;
         public static readonly List<FlagData> DefaultFlags = new List<FlagData>
         {
@@ -1045,199 +1047,7 @@ namespace Uncreated.Warfare
             { "no_stars", "737373" },
             { "star_color", "ffd683" },
         };
-        public static List<Kit> DefaultKits = new List<Kit>
-        {
-            KitEx.Construct("default",
-                new List<KitItem> { },
-                new List<KitClothing> {
-                new KitClothing(184, 100, "", EClothingType.SHIRT),
-                new KitClothing(2, 100, "", EClothingType.PANTS),
-                new KitClothing(185, 100, "", EClothingType.MASK)
-            }, (k) =>
-            {
-                k.ShouldClearInventory = true;
-                k.UnlockLevel = 0;
-                k.UnlockBranch = EBranch.DEFAULT;
-                k.Cost = 0;
-                k.Team = 0;
-                k.Class = EClass.UNARMED;
-                k.Branch = EBranch.DEFAULT;
-                k.SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "Default Kit" },
-                    { "ru-ru", "Комплект по умолчанию" }
-                };
-            }),
-            KitEx.Construct("usunarmed",
-                new List<KitItem> { },
-                new List<KitClothing> {
-                new KitClothing(30710, 100, "", EClothingType.SHIRT),
-                new KitClothing(30711, 100, "", EClothingType.PANTS),
-                new KitClothing(30715, 100, "", EClothingType.HAT),
-                new KitClothing(30718, 100, "", EClothingType.BACKPACK),
-                new KitClothing(31251, 100, "", EClothingType.GLASSES)
-            }, (k) =>
-            {
-                k.ShouldClearInventory = true;
-                k.UnlockLevel = 0;
-                k.UnlockBranch = EBranch.DEFAULT;
-                k.Cost = 0;
-                k.Team = 1;
-                k.Class = EClass.UNARMED;
-                k.Branch = EBranch.DEFAULT;
-                k.SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "Unarmed" },
-                    { "ru-ru", "Безоружный" }
-                };
-            }),
-            KitEx.Construct("ruunarmed",
-                new List<KitItem> { },
-                new List<KitClothing> {
-                new KitClothing(30700, 100, "", EClothingType.SHIRT),
-                new KitClothing(30701, 100, "", EClothingType.PANTS),
-                new KitClothing(31123, 100, "", EClothingType.VEST),
-                new KitClothing(30704, 100, "", EClothingType.HAT),
-                new KitClothing(434, 100, "", EClothingType.MASK),
-                new KitClothing(31156, 100, "", EClothingType.BACKPACK)
-            }, (k) =>
-            {
-                k.ShouldClearInventory = true;
-                k.UnlockLevel = 0;
-                k.UnlockBranch = EBranch.DEFAULT;
-                k.Cost = 0;
-                k.Team = 2;
-                k.Class = EClass.UNARMED;
-                k.Branch = EBranch.DEFAULT;
-                k.SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "Unarmed" } ,
-                    { "ru-ru", "Безоружный" }
-                };
-            }),
-            KitEx.Construct("usrif1",
-                new List<KitItem> {
-                new KitItem(81, 0, 0, 0, 100, "", 1, 3),
-                new KitItem(394, 0, 2, 0, 100, "", 1, 2),
-                new KitItem(394, 1, 2, 0, 100, "", 1, 2),
-                new KitItem(394, 2, 2, 0, 100, "", 1, 2),
-                new KitItem(1176, 1, 0, 0, 100, "", 1, 3),
-                new KitItem(31343, 0, 0, 0, 100, "", 30, 2),
-                new KitItem(31343, 1, 0, 0, 100, "", 30, 2),
-                new KitItem(31343, 2, 0, 0, 100, "", 30, 2),
-                new KitItem(31343, 3, 0, 0, 100, "", 30, 2),
-                new KitItem(31343, 4, 0, 0, 100, "", 30, 2),
-                new KitItem(31475, 2, 0, 0, 100, "", 30, 3),
-                new KitItem(31477, 3, 2, 0, 100, "", 30, 2),
-                new KitItem(32326, 0, 0, 0, 100, "6HoAAO56AABveh4BAWRkZGRk", 1, 0)
-            },
-                new List<KitClothing> {
-                new KitClothing(30710, 100, "", EClothingType.SHIRT),
-                new KitClothing(30711, 100, "", EClothingType.PANTS),
-                new KitClothing(30715, 100, "", EClothingType.HAT),
-                new KitClothing(30718, 100, "", EClothingType.BACKPACK),
-                new KitClothing(31251, 100, "", EClothingType.GLASSES)
-            }, (k) =>
-            {
-                k.ShouldClearInventory = true;
-                k.UnlockLevel = 0;
-                k.UnlockBranch = EBranch.INFANTRY;
-                k.Cost = 0;
-                k.Team = 1;
-                k.Class = EClass.AUTOMATIC_RIFLEMAN;
-                k.Branch = EBranch.INFANTRY;
-                k.SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "Rifleman 1" },
-                    { "ru-ru", "Стрелок 1" }
-                };
-            }),
-            KitEx.Construct("rurif1",
-                new List<KitItem> {
-                new KitItem(81, 0, 0, 0, 100, "", 1, 3),
-                new KitItem(394, 0, 2, 0, 100, "", 1, 2),
-                new KitItem(394, 1, 2, 0, 100, "", 1, 2),
-                new KitItem(394, 2, 2, 0, 100, "", 1, 2),
-                new KitItem(1176, 1, 0, 0, 100, "", 1, 3),
-                new KitItem(31413, 0, 0, 0, 100, "", 30, 2),
-                new KitItem(31413, 1, 0, 0, 100, "", 30, 2),
-                new KitItem(31413, 2, 0, 0, 100, "", 30, 2),
-                new KitItem(31413, 3, 0, 0, 100, "", 30, 2),
-                new KitItem(31413, 4, 0, 0, 100, "", 30, 2),
-                new KitItem(31438, 1, 1, 0, 100, "", 8, 3),
-                new KitItem(31438, 2, 1, 0, 100, "", 8, 3),
-                new KitItem(31438, 3, 1, 0, 100, "", 8, 3),
-                new KitItem(31475, 2, 0, 0, 100, "", 1, 3),
-                new KitItem(31477, 3, 2, 0, 100, "", 1, 3),
-                new KitItem(31477, 3, 2, 0, 100, "", 1, 3),
-                new KitItem(31412, 0, 0, 0, 100, "4HsAAAAAAAC1eh4CAWRkZGRk", 1, 0),
-                new KitItem(31437, 0, 0, 0, 100, "AAAAAAAAAADOeggBAWRkZGRk", 1, 1)
-            },
-                new List<KitClothing> {
-                new KitClothing(30700, 100, "", EClothingType.SHIRT),
-                new KitClothing(30701, 100, "", EClothingType.PANTS),
-                new KitClothing(31123, 100, "", EClothingType.VEST),
-                new KitClothing(30704, 100, "", EClothingType.HAT),
-                new KitClothing(434, 100, "", EClothingType.MASK),
-                new KitClothing(31156, 100, "", EClothingType.BACKPACK)
-            }, (k) =>
-            {
-                k.ShouldClearInventory = true;
-                k.UnlockLevel = 0;
-                k.UnlockBranch = EBranch.INFANTRY;
-                k.Cost = 0;
-                k.Team = 2;
-                k.Class = EClass.AUTOMATIC_RIFLEMAN;
-                k.Branch = EBranch.INFANTRY;
-                k.SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "Rifleman 1" },
-                    { "ru-ru", "Стрелок 1" }
-                };
-            }),
-            KitEx.Construct("africa1",
-                new List<KitItem> {
-                new KitItem(81, 3, 0, 0, 100, "", 1, 3),
-                new KitItem(333, 6, 0, 0, 100, "", 1, 3),
-                new KitItem(394, 2, 2, 0, 100, "", 1, 2),
-                new KitItem(394, 1, 2, 0, 100, "", 1, 2),
-                new KitItem(394, 0, 2, 0, 100, "", 1, 2),
-                new KitItem(1176, 5, 0, 0, 100, "", 1, 3),
-                new KitItem(30505, 2, 0, 0, 100, "", 1, 3),
-                new KitItem(30511, 0, 0, 0, 100, "", 1, 3),
-                new KitItem(30511, 1, 0, 0, 100, "", 1, 3),
-                new KitItem(31312, 0, 0, 0, 100, "", 20, 2),
-                new KitItem(31312, 1, 0, 0, 100, "", 20, 2),
-                new KitItem(31312, 2, 0, 0, 100, "", 20, 2),
-                new KitItem(31312, 3, 0, 0, 100, "", 20, 2),
-                new KitItem(31322, 0, 0, 0, 100, "TH4AAAAAAABQehQBAWRkZGRk", 1, 0),
-                new KitItem(31479, 3, 2, 0, 100, "", 1, 2),
-                new KitItem(31481, 4, 2, 0, 100, "", 1, 2),
-                new KitItem(31487, 0, 0, 0, 100, "AAAAAAAAAAABexEBAWRkZGRk", 1, 1),
-                new KitItem(31489, 4, 0, 0, 100, "", 17, 3),
-                new KitItem(31489, 3, 0, 0, 100, "", 17, 3),
-                new KitItem(38310, 0, 2, 0, 100, "", 1, 3),
-                new KitItem(38333, 6, 1, 0, 100, "vpW/lQAAAAAAAAABAWRkZGRk", 1, 3)
-            },
-                new List<KitClothing> {
-                new KitClothing(30960, 100, "", EClothingType.SHIRT),
-                new KitClothing(30961, 100, "", EClothingType.PANTS),
-                new KitClothing(30962, 100, "", EClothingType.VEST),
-                new KitClothing(30965, 100, "", EClothingType.HAT),
-                new KitClothing(31221, 100, "", EClothingType.MASK),
-                new KitClothing(30970, 100, "", EClothingType.BACKPACK)
-            }, (k) =>
-            {
-                k.ShouldClearInventory = true;
-                k.UnlockLevel = 0;
-                k.UnlockBranch = EBranch.INFANTRY;
-                k.Cost = 0;
-                k.IsPremium = true;
-                k.PremiumCost = 6.00f;
-                k.Team = 2;
-                k.Class = EClass.AUTOMATIC_RIFLEMAN;
-                k.Branch = EBranch.INFANTRY;
-                k.SignTexts = new Dictionary<string, string> {
-                    { DefaultLanguage, "Africa 1" },
-                    { "ru-ru", "Африка 1" }
-                };
-            })
-        };
+        public static List<Kit> DefaultKits = new List<Kit> { };
         public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
         {
             new LanguageAliasSet("en-us", "English", new string[] { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",

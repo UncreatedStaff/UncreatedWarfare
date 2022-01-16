@@ -164,18 +164,18 @@ namespace Uncreated.Warfare.Components
         public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)
         {
             ulong team = placer.GetTeam();
-            float radius = FOBManager.config.Data.FOBBuildPickupRadius;
+            float radius = FOBManager.config.data.FOBBuildPickupRadius;
 
-            if (FOBManager.config.Data.RestrictFOBPlacement)
+            if (FOBManager.config.data.RestrictFOBPlacement)
             {
                 if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                 {
                     placer?.Message("no_placement_fobs_underwater");
                     return false;
                 }
-                else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
+                else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.data.FOBMaxHeightAboveTerrain)
                 {
-                    placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                    placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                     return false;
                 }
                 else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
@@ -184,14 +184,14 @@ namespace Uncreated.Warfare.Components
                     return false;
                 }
             }
-            if (FOB.GetFOBs(team).Count >= FOBManager.config.Data.FobLimit)
+            if (FOB.GetFOBs(team).Count >= FOBManager.config.data.FobLimit)
             {
                 // fob limit reached
                 placer?.Message("build_error_too_many_fobs");
                 return false;
             }
 
-            int logis = UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.LogiTruckIDs.AsEnumerable(), 30, placer.Position).Count(l => l.lockedGroup.m_SteamID == placer.GetTeam());
+            int logis = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, placer.Position).Count(l => l.lockedGroup.m_SteamID == placer.GetTeam());
             //if (logis == 0)
             //{
             //    // no logis nearby
@@ -217,16 +217,16 @@ namespace Uncreated.Warfare.Components
 
             if (buildable.type == EBuildableType.FOB_BUNKER)
             {
-                if (FOBManager.config.Data.RestrictFOBPlacement)
+                if (FOBManager.config.data.RestrictFOBPlacement)
                 {
                     if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                     {
                         placer?.Message("no_placement_fobs_underwater");
                         return false;
                     }
-                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
+                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.data.FOBMaxHeightAboveTerrain)
                     {
-                        placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                        placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                         return false;
                     }
                     else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))

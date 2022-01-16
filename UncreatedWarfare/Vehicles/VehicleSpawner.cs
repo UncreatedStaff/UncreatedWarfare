@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Structures;
@@ -226,6 +226,8 @@ namespace Uncreated.Warfare.Vehicles
         public bool initialized = false;
         [JsonIgnore]
         public VehicleSign LinkedSign;
+
+        public override string ToString() => $"Instance id: {SpawnPadInstanceID}, guid: {VehicleID}, type: {type}";
         public VehicleSpawn(uint spawnPadInstanceId, Guid vehicleID, EStructType type, SerializableTransform loc)
         {
             SpawnPadInstanceID = spawnPadInstanceId;

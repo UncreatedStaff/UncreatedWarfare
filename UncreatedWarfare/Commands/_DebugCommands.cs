@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Rocket.API;
+﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -819,49 +818,6 @@ namespace Uncreated.Warfare.Commands
                 else player.SendChat("Couldn't parse to Steam64.");
             }
         }
-        private void migratesaves(string[] command, Player player)
-        {
-            string dir = Data.KitsStorage + "playersaves.json";
-            if (!File.Exists(dir))
-            {
-                if (player == null) L.LogWarning("No playersaves to append.");
-                else player.SendChat("No playersaves to append.");
-            }
-            else
-            {
-                StreamReader r = File.OpenText(dir);
-                try
-                {
-                    string json = r.ReadToEnd();
-                    List<PlayerSave> list = JsonConvert.DeserializeObject<List<PlayerSave>>(json, new JsonSerializerSettings() { Culture = Data.Locale });
-
-                    r.Close();
-                    r.Dispose();
-                    int i = 0;
-                    for (; i < list.Count; i++)
-                    {
-                        if (!PlayerManager.ActiveObjects.Exists(x => x.Steam64 == list[i].Steam64))
-                        {
-                            PlayerManager.ActiveObjects.Add(list[i]);
-                        }
-                    }
-                    PlayerManager.Write();
-                    if (player == null) L.Log(i + " playersaves appended.");
-                    else player.SendChat(i + " playersaves appended.");
-                }
-                catch (Exception ex)
-                {
-                    if (r != default)
-                    {
-                        r.Close();
-                        r.Dispose();
-                    }
-                    if (player == null) L.LogError(ex.GetType().Name + " exception during execution.");
-                    else player.SendChat(ex.GetType().Name + " exception during execution.");
-                    throw;
-                }
-            }
-        }
         private void gamemode(string[] command, Player player)
         {
             if (command.Length != 2)
@@ -1186,12 +1142,10 @@ namespace Uncreated.Warfare.Commands
             Reporter.SendReportInvocation.NetInvoke(report, false);
             L.Log("Sent chat abuse report.");
         }
-
         private void speedtest(string[] command, Player player)
         {
             Kits.RequestSigns.RunTest();
         }
-
         private void readtest(string[] command, Player player)
         {
             Kits.RequestSigns.Reload();
@@ -1203,8 +1157,6 @@ namespace Uncreated.Warfare.Commands
 
             Kits.RequestSigns.Save();
         }
-
-
         private void testpos(string[] command, Player player)
         {
             if (player == default)

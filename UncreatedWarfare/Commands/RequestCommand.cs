@@ -190,7 +190,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        RankData currentRank = ucplayer.Ranks[kit.UnlockBranch];
+                        RankData currentRank = ucplayer.CurrentRank;
 
                         if (currentRank.Level < kit.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
                         {
@@ -225,14 +225,13 @@ namespace Uncreated.Warfare.Commands
             Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
             KitManager.GiveKit(ucplayer, kit);
             Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
-            KitManager.AddRequest(kit);
             ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
             if (kit.IsPremium)
             {
                 CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
             }
-            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.Data.RequestKitCooldown);
+            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.data.RequestKitCooldown);
 
             PlayerManager.ApplyToOnline();
         }
@@ -350,7 +349,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 
-                if (!FOBManager.config.Data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
+                if (!FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
                 {
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Text.Json.Serialization;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -445,7 +446,7 @@ namespace Uncreated.Warfare
     {
         public string type;
         public string data;
-        [Newtonsoft.Json.JsonConstructor]
+        [JsonConstructor]
         public ZoneData(string type, string data)
         {
             this.type = type;

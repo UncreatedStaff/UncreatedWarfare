@@ -18,7 +18,7 @@ namespace Uncreated
         protected static string directory;
         public static readonly Type Type = typeof(T);
         private static readonly FieldInfo[] fields = Type.GetFields();
-        private static readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
 
         public static JSONSaver<T> ActiveObjects;
         //public static List<T> ActiveObjects = new List<T>();
@@ -118,7 +118,7 @@ namespace Uncreated
             {
                 using (StreamWriter file = File.CreateText(directory))
                 {
-                    file.Write(JsonSerializer.Serialize(ActiveObjects, JsonEx.serializerSettings));
+                    file.Write(JsonSerializer.Serialize(ActiveObjects as List<T>, JsonEx.serializerSettings));
                 }
             }
             catch (Exception ex)
@@ -156,8 +156,7 @@ namespace Uncreated
                                 {
                                     T next = _deserializer.Invoke(ref reader);
                                     ActiveObjects.Add(next);
-                                    L.Log("read " + next.ToString());
-                                    while (reader.Read()) if (reader.TokenType == JsonTokenType.EndObject) break;
+                                    while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
                                 }
                             }
                         }
@@ -169,7 +168,7 @@ namespace Uncreated
                 }
                 catch (Exception e)
                 {
-                    L.LogError("Failed to run custom deserializer for " + typeof(T).Name);
+                    L.LogError("Failed to run custom deserializer for " + Type.Name);
                     L.LogError(e);
                     if (rs != null)
                     {
@@ -203,8 +202,9 @@ namespace Uncreated
                     r.Dispose();
                 }
 
+                L.LogError("Failed to auto-deserialize " + Type.Name);
+                L.LogError(ex);
                 _threadLocker.Release();
-                throw new JSONReadException(directory, ex);
             }
         }
         protected static List<T> GetObjectsWhereAsList(Func<T, bool> predicate) => ActiveObjects.Where(predicate).ToList();
@@ -753,7 +753,7 @@ namespace Uncreated
     }
     public static class JsonEx
     {
-        public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions() { WriteIndented = true };
+        public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions() { WriteIndented = true, IncludeFields = true, AllowTrailingCommas = true };
         public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true };
         public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
         public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)

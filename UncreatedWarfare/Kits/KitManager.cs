@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Kits
     {
         public static event KitChangedHandler OnKitChanged;
 
-        public KitManager() : base(Data.KitsStorage + "kits.json")
+        public KitManager() : base(Data.KitsStorage + "kits.json", KitEx.WriteKitJson, KitEx.ReadKitJson)
         {
             PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
         }
@@ -37,10 +37,10 @@ namespace Uncreated.Warfare.Kits
                     {
                         ItemJar jar = life.player.inventory.getItem(page, index);
 
-                        if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) continue;
+                        if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) continue;
                         float percentage = (float)jar.item.amount / asset.amount;
 
-                        bool notInKit = !kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(asset.GUID, out _);
+                        bool notInKit = !kit.HasItemOfID(asset.GUID) && Whitelister.IsWhitelisted(asset.GUID, out _);
                         if (notInKit || (percentage < 0.3 && asset.type != EItemType.GUN))
                         {
                             if (notInKit)
@@ -58,9 +58,7 @@ namespace Uncreated.Warfare.Kits
 
         protected override string LoadDefaults()
         {
-            if (JSONMethods.DefaultKits != default)
-                return JsonConvert.SerializeObject(JSONMethods.DefaultKits, Formatting.Indented);
-            else return "[]";
+            return "[]";
         }
         public static void CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(KitEx.Construct(kitName, items, clothes));
         public static void CreateKit(Kit kit) => AddObjectToSave(kit);
@@ -88,17 +86,18 @@ namespace Uncreated.Warfare.Kits
                 for (byte i = 0; i < player.Inventory.getItemCount(page); i++)
                 {
                     ItemJar jar = player.Inventory.getItem(page, i);
-
-                    items.Add(new KitItem(
-                        jar.item.id,
-                        jar.x,
-                        jar.y,
-                        jar.rot,
-                        jar.item.quality,
-                        Convert.ToBase64String(jar.item.metadata),
-                        jar.item.amount,
-                        page
-                    ));
+                    if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
+                    {
+                        items.Add(new KitItem(
+                            asset.GUID,
+                            jar.x,
+                            jar.y,
+                            jar.rot,
+                            Convert.ToBase64String(jar.item.metadata),
+                            jar.item.amount,
+                            page
+                        ));
+                    }
                 }
             }
 
@@ -110,13 +109,13 @@ namespace Uncreated.Warfare.Kits
 
             List<KitClothing> clothes = new List<KitClothing>
             {
-                new KitClothing(playerClothes.shirt, playerClothes.shirtQuality, Convert.ToBase64String(playerClothes.shirtState), EClothingType.SHIRT),
-                new KitClothing(playerClothes.pants, playerClothes.pantsQuality, Convert.ToBase64String(playerClothes.pantsState), EClothingType.PANTS),
-                new KitClothing(playerClothes.vest, playerClothes.vestQuality, Convert.ToBase64String(playerClothes.vestState), EClothingType.VEST),
-                new KitClothing(playerClothes.hat, playerClothes.hatQuality, Convert.ToBase64String(playerClothes.hatState), EClothingType.HAT),
-                new KitClothing(playerClothes.mask, playerClothes.maskQuality, Convert.ToBase64String(playerClothes.maskState), EClothingType.MASK),
-                new KitClothing(playerClothes.backpack, playerClothes.backpackQuality, Convert.ToBase64String(playerClothes.backpackState), EClothingType.BACKPACK),
-                new KitClothing(playerClothes.glasses, playerClothes.glassesQuality, Convert.ToBase64String(playerClothes.glassesState), EClothingType.GLASSES)
+                new KitClothing(playerClothes.shirtAsset.GUID, Convert.ToBase64String(playerClothes.shirtState), EClothingType.SHIRT),
+                new KitClothing(playerClothes.pantsAsset.GUID, Convert.ToBase64String(playerClothes.pantsState), EClothingType.PANTS),
+                new KitClothing(playerClothes.vestAsset.GUID, Convert.ToBase64String(playerClothes.vestState), EClothingType.VEST),
+                new KitClothing(playerClothes.hatAsset.GUID, Convert.ToBase64String(playerClothes.hatState), EClothingType.HAT),
+                new KitClothing(playerClothes.maskAsset.GUID, Convert.ToBase64String(playerClothes.maskState), EClothingType.MASK),
+                new KitClothing(playerClothes.backpackAsset.GUID, Convert.ToBase64String(playerClothes.backpackState), EClothingType.BACKPACK),
+                new KitClothing(playerClothes.glassesAsset.GUID, Convert.ToBase64String(playerClothes.glassesState), EClothingType.GLASSES)
             };
             return clothes;
         }
@@ -127,36 +126,38 @@ namespace Uncreated.Warfare.Kits
             if (kit == null)
                 return;
 
-            if (kit.ShouldClearInventory)
-            {
-                UCInventoryManager.ClearInventory(player);
-            }
+            UCInventoryManager.ClearInventory(player);
             foreach (KitClothing clothing in kit.Clothes)
             {
-                if (clothing.type == EClothingType.SHIRT)
-                    player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                if (clothing.type == EClothingType.PANTS)
-                    player.Player.clothing.askWearPants(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                if (clothing.type == EClothingType.VEST)
-                    player.Player.clothing.askWearVest(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                if (clothing.type == EClothingType.HAT)
-                    player.Player.clothing.askWearHat(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                if (clothing.type == EClothingType.MASK)
-                    player.Player.clothing.askWearMask(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                if (clothing.type == EClothingType.BACKPACK)
-                    player.Player.clothing.askWearBackpack(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                if (clothing.type == EClothingType.GLASSES)
-                    player.Player.clothing.askWearGlasses(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                if (Assets.find(clothing.id) is ItemAsset asset)
+                {
+                    if (clothing.type == EClothingType.SHIRT)
+                        player.Player.clothing.askWearShirt(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    if (clothing.type == EClothingType.PANTS)
+                        player.Player.clothing.askWearPants(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    if (clothing.type == EClothingType.VEST)
+                        player.Player.clothing.askWearVest(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    if (clothing.type == EClothingType.HAT)
+                        player.Player.clothing.askWearHat(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    if (clothing.type == EClothingType.MASK)
+                        player.Player.clothing.askWearMask(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    if (clothing.type == EClothingType.BACKPACK)
+                        player.Player.clothing.askWearBackpack(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    if (clothing.type == EClothingType.GLASSES)
+                        player.Player.clothing.askWearGlasses(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                }
             }
 
             foreach (KitItem k in kit.Items)
             {
-                Item item = new Item(k.ID, k.amount, k.quality)
-                { metadata = Convert.FromBase64String(k.metadata) };
-
-                if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                    if (player.Player.inventory.tryAddItem(item, true))
-                        ItemManager.dropItem(item, player.Position, true, true, true);
+                if (Assets.find(k.id) is ItemAsset asset)
+                {
+                    Item item = new Item(asset.id, k.amount, 100)
+                        { metadata = Convert.FromBase64String(k.metadata) };
+                    if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                        if (player.Player.inventory.tryAddItem(item, true))
+                            ItemManager.dropItem(item, player.Position, true, true, true);
+                }
             }
             string oldkit = player.KitName;
 
@@ -207,8 +208,8 @@ namespace Uncreated.Warfare.Kits
                 for (byte index = 0; index < count; index++)
                 {
                     ItemJar jar = player.Player.inventory.getItem(page, 0);
-                    if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) continue;
-                    if (!kit.HasItemOfID(jar.item.id) && Whitelister.IsWhitelisted(asset.GUID, out _))
+                    if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) continue;
+                    if (!kit.HasItemOfID(asset.GUID) && Whitelister.IsWhitelisted(asset.GUID, out _))
                     {
                         nonKitItems.Add(jar);
                     }
@@ -219,71 +220,76 @@ namespace Uncreated.Warfare.Kits
             for (int i = 0; i < kit.Clothes.Count; i++)
             {
                 KitClothing clothing = kit.Clothes[i];
-                ushort old = 0;
-                switch (clothing.type)
+                if (Assets.find(clothing.id) is ItemAsset asset)
                 {
-                    case EClothingType.GLASSES:
-                        if (player.Player.clothing.glasses != clothing.ID)
-                        {
-                            old = player.Player.clothing.glasses;
-                            player.Player.clothing.askWearGlasses(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
-                    case EClothingType.HAT:
-                        if (player.Player.clothing.hat != clothing.ID)
-                        {
-                            old = player.Player.clothing.hat;
-                            player.Player.clothing.askWearHat(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
-                    case EClothingType.BACKPACK:
-                        if (player.Player.clothing.backpack != clothing.ID)
-                        {
-                            old = player.Player.clothing.backpack;
-                            player.Player.clothing.askWearBackpack(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
-                    case EClothingType.MASK:
-                        if (player.Player.clothing.mask != clothing.ID)
-                        {
-                            old = player.Player.clothing.mask;
-                            player.Player.clothing.askWearMask(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
-                    case EClothingType.PANTS:
-                        if (player.Player.clothing.pants != clothing.ID)
-                        {
-                            old = player.Player.clothing.pants;
-                            player.Player.clothing.askWearPants(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
-                    case EClothingType.SHIRT:
-                        if (player.Player.clothing.shirt != clothing.ID)
-                        {
-                            old = player.Player.clothing.shirt;
-                            player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
-                    case EClothingType.VEST:
-                        if (player.Player.clothing.vest != clothing.ID)
-                        {
-                            old = player.Player.clothing.vest;
-                            player.Player.clothing.askWearVest(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                        }
-                        break;
+                    ushort old = 0;
+                    switch (clothing.type)
+                    {
+                        case EClothingType.GLASSES:
+                            if (player.Player.clothing.glasses != asset.id)
+                            {
+                                old = player.Player.clothing.glasses;
+                                player.Player.clothing.askWearGlasses(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                        case EClothingType.HAT:
+                            if (player.Player.clothing.hat != asset.id)
+                            {
+                                old = player.Player.clothing.hat;
+                                player.Player.clothing.askWearHat(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                        case EClothingType.BACKPACK:
+                            if (player.Player.clothing.backpack != asset.id)
+                            {
+                                old = player.Player.clothing.backpack;
+                                player.Player.clothing.askWearBackpack(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                        case EClothingType.MASK:
+                            if (player.Player.clothing.mask != asset.id)
+                            {
+                                old = player.Player.clothing.mask;
+                                player.Player.clothing.askWearMask(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                        case EClothingType.PANTS:
+                            if (player.Player.clothing.pants != asset.id)
+                            {
+                                old = player.Player.clothing.pants;
+                                player.Player.clothing.askWearPants(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                        case EClothingType.SHIRT:
+                            if (player.Player.clothing.shirt != asset.id)
+                            {
+                                old = player.Player.clothing.shirt;
+                                player.Player.clothing.askWearShirt(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                        case EClothingType.VEST:
+                            if (player.Player.clothing.vest != asset.id)
+                            {
+                                old = player.Player.clothing.vest;
+                                player.Player.clothing.askWearVest(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            }
+                            break;
+                    }
+                    if (old != 0)
+                        player.Player.inventory.removeItem(2, 0);
                 }
-                if (old != 0)
-                    player.Player.inventory.removeItem(2, 0);
             }
             foreach (KitItem i in kit.Items)
             {
-                if (ignoreAmmoBags && Assets.find(Gamemode.Config.Barricades.AmmoBagGUID) is ItemAsset asset && asset.id == i.ID)
+                if (ignoreAmmoBags && Gamemode.Config.Barricades.AmmoBagGUID == i.id)
                     continue;
-                Item item = new Item(i.ID, i.amount, i.quality);
-                item.metadata = Convert.FromBase64String(i.metadata);
+                if (Assets.find(i.id) is ItemAsset itemasset)
+                {
+                    Item item = new Item(itemasset.id, i.amount, 100, Convert.FromBase64String(i.metadata));
 
-                if (!player.Player.inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
-                    player.Player.inventory.tryAddItem(item, true);
+                    if (!player.Player.inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
+                        player.Player.inventory.tryAddItem(item, true);
+                }
             }
 
             foreach (ItemJar jar in nonKitItems)
@@ -324,11 +330,6 @@ namespace Uncreated.Warfare.Kits
             }
             return false;
         }
-        public static void AddRequest(Kit kit)
-        {
-            kit.Requests++;
-            Save();
-        }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
             var player = UCPlayer.FromID(steamID);
@@ -367,7 +368,6 @@ namespace Uncreated.Warfare.Kits
                 IEnumerable<Kit> matches = GetObjectsWhere(k => k.Name == kit.Name);
                 foreach (Kit k in matches)
                 {
-                    k.SignName = SignName;
                     k.SignTexts.Remove(language);
                     k.SignTexts.Add(language, SignName);
                     RequestSigns.InvokeLangUpdateForSignsOfKit(k.Name);
@@ -408,6 +408,14 @@ namespace Uncreated.Warfare.Kits
     }
     public static class KitEx
     {
+        public static Kit ReadKitJson(ref Utf8JsonReader reader)
+        {
+            Kit kit = new Kit(true);
+            kit.ReadJson(ref reader);
+            return kit;
+        }
+
+        public static void WriteKitJson(Kit kit, Utf8JsonWriter writer) => kit.WriteJson(writer);
         public static Kit Construct(string name, List<KitItem> items, List<KitClothing> clothes, Action<Kit> modifiers = null)
         {
             Kit kit = new Kit(true)
@@ -418,7 +426,6 @@ namespace Uncreated.Warfare.Kits
                 Class = EClass.NONE,
                 Branch = EBranch.DEFAULT,
                 Team = 0,
-                Cost = 0,
                 UnlockLevel = 0,
                 TicketCost = 1,
                 IsPremium = false,
@@ -426,25 +433,22 @@ namespace Uncreated.Warfare.Kits
                 IsLoadout = false,
                 TeamLimit = 1,
                 Cooldown = 0,
-                ShouldClearInventory = true,
-                AllowedUsers = new List<ulong>(),
-                Requests = 0
+                AllowedUsers = new List<ulong>()
             };
-            kit.SignName = kit.DisplayName;
-            kit.SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, kit.SignName } };
+            kit.SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, kit.DisplayName } };
             if (kit.Items == null || items.Count == 0)
                 kit.Weapons = string.Empty;
             else
             {
                 KitItem i = items.OrderByDescending(x => x.metadata == null ? 0 : x.metadata.Length).First();
                 if (i == null) kit.Weapons = string.Empty;
-                else if (!(Assets.find(EAssetType.ITEM, i.ID) is ItemAsset asset)) kit.Weapons = string.Empty;
+                else if (Assets.find(i.id) is not ItemAsset asset) kit.Weapons = string.Empty;
                 else kit.Weapons = asset.itemName;
             }
-            if (modifiers != null) modifiers(kit);
+            modifiers?.Invoke(kit);
             return kit;
         }
-        public static bool HasItemOfID(this Kit kit, ushort ID) => kit.Items.Exists(i => i.ID == ID);
+        public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.id == ID);
         public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
             ulong Team = team == 1 || team == 2 ? team : kit.Team;

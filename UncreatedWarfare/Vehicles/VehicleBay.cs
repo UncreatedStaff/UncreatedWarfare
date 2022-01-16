@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -171,7 +170,7 @@ namespace Uncreated.Warfare.Vehicles
         private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
-            if (FOBManager.config.Data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
+            if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
             if (pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
                 player.SendChat("vehicle_too_high");
@@ -233,7 +232,7 @@ namespace Uncreated.Warfare.Vehicles
                     return;
                 }
 
-                if (FOBManager.config.Data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
+                if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
@@ -338,7 +337,7 @@ namespace Uncreated.Warfare.Vehicles
                 if (!VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
                     return;
 
-                if (FOBManager.config.Data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
+                if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
                     return;
 
                 UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);

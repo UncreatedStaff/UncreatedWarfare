@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
-            var buildable = FOBManager.config.Data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
+            var buildable = FOBManager.config.data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
 
             if (buildable != null)
             {

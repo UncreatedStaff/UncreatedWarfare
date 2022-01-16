@@ -40,14 +40,6 @@ namespace Uncreated.Warfare.Networking
                 Commands.BanOverrideCommand.BanPlayer(Violator, Admin, Reason, DurationMins);
             }
 
-            internal static readonly NetCall<ulong, ulong, string, uint, DateTime> TellIPBan = new NetCall<ulong, ulong, string, uint, DateTime>(ReceiveIPBanRequest);
-            [NetCall(ENetCall.FROM_SERVER, 1008)]
-            internal static async Task ReceiveIPBanRequest(IConnection connection, ulong Violator, ulong Admin, string Reason, uint DurationMins, DateTime timestamp)
-            {
-                await UCWarfare.ToUpdate();
-                Commands.IPBanCommand.IPBanPlayer(Violator, Admin, Reason, DurationMins);
-            }
-
             internal static readonly NetCall<ulong, ulong, DateTime> TellUnban = new NetCall<ulong, ulong, DateTime>(ReceiveUnbanRequest);
             [NetCall(ENetCall.FROM_SERVER, 1009)]
             internal static async Task ReceiveUnbanRequest(IConnection connection, ulong Violator, ulong Admin, DateTime timestamp)

@@ -142,7 +142,7 @@ namespace Uncreated.Warfare.Components
             get
             {
                 return UCBarricadeManager.GetBarricadesWhere(b =>
-                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
+                    FOBManager.config.data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
                     b.GetServersideData().group == Team
                     );
@@ -153,13 +153,13 @@ namespace Uncreated.Warfare.Components
             get
             {
                 return UCBarricadeManager.CountBarricadesWhere(b =>
-                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
+                    FOBManager.config.data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
                     b.GetServersideData().group == Team
                     );
             }
         }
-        public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.Buildables.Where(bl => bl.type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
+        public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.Buildables.Where(bl => bl.type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
 
         public List<UCPlayer> FriendliesOnFOB { get; private set; }
         public List<UCPlayer> NearbyEnemies { get; private set; }
@@ -227,7 +227,7 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                Radius = FOBManager.config.Data.FOBBuildPickupRadius;
+                Radius = FOBManager.config.data.FOBBuildPickupRadius;
                 Status |= EFOBStatus.HAB;
             }
             FOBManager.SendFOBEffect(Team, Status, Position);
@@ -474,11 +474,11 @@ namespace Uncreated.Warfare.Components
             float range = 0;
 
             if (radius == EFOBRadius.FULL)
-                range = FOBManager.config.Data.FOBBuildPickupRadius;
+                range = FOBManager.config.data.FOBBuildPickupRadius;
             else if (radius == EFOBRadius.SHORT)
                 range = 30;
             else if (radius == EFOBRadius.FOB_PLACEMENT)
-                range = FOBManager.config.Data.FOBBuildPickupRadius * 2;
+                range = FOBManager.config.data.FOBBuildPickupRadius * 2;
 
 
             List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>

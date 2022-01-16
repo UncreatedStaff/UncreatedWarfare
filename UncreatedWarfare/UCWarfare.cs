@@ -1,11 +1,11 @@
-﻿using Newtonsoft.Json;
-using Rocket.Core;
+﻿using Rocket.Core;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
@@ -81,10 +81,7 @@ namespace Uncreated.Warfare
                 if (!File.Exists(Data.ElseWhereSQLPath))
                 {
                     TextWriter w = File.CreateText(Data.ElseWhereSQLPath);
-                    JsonTextWriter wr = new JsonTextWriter(w);
-                    JsonSerializer s = new JsonSerializer { Formatting = Formatting.Indented };
-                    s.Serialize(wr, Config.SQL);
-                    wr.Close();
+                    w.Write(JsonSerializer.Serialize(Config.SQL, JsonEx.serializerSettings));
                     w.Close();
                     w.Dispose();
                     _sqlElsewhere = Config.SQL;
@@ -92,7 +89,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     string json = File.ReadAllText(Data.ElseWhereSQLPath);
-                    _sqlElsewhere = JsonConvert.DeserializeObject<MySqlData>(json);
+                    _sqlElsewhere = JsonSerializer.Deserialize<MySqlData>(json, JsonEx.serializerSettings);
                 }
             }
 

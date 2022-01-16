@@ -7,13 +7,22 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Point
 {
-    public class MedalData
+    public struct MedalData
     {
-        public readonly int TotalTW;
-        public readonly int NumberOfMedals;
-        public readonly int CurrentTW;
-        public readonly int RequiredTW;
+        public static readonly MedalData Nil = new MedalData(-1);
+        public int TotalTW;
+        public int NumberOfMedals;
+        public int CurrentTW;
+        public int RequiredTW;
         public MedalData(int totalPoints)
+        {
+            TotalTW = totalPoints;
+            NumberOfMedals = -1;
+            RequiredTW = -1;
+            CurrentTW = -1;
+            Update(totalPoints);
+        }
+        public void Update(int totalPoints)
         {
             TotalTW = totalPoints;
 
@@ -32,5 +41,7 @@ namespace Uncreated.Warfare.Point
 
             CurrentTW = (int)(TotalTW - ((x * Math.Pow(n, 2)) + (y * n) + z));
         }
+
+        public bool IsNil => TotalTW == -1;
     }
 }

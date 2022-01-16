@@ -48,8 +48,8 @@ namespace Uncreated.Warfare.Squads
                     if (player.Squad.Members.Count > 1)
                     {
                         int nearbyEnemiesCount = 0;
-                        float sqrdst = SquadManager.config.Data.RallyDespawnDistance *
-                                       SquadManager.config.Data.RallyDespawnDistance;
+                        float sqrdst = SquadManager.config.data.RallyDespawnDistance *
+                                       SquadManager.config.data.RallyDespawnDistance;
                         if (player.IsTeam1())
                             nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == TeamManager.Team1ID && (p.Position - player.Position).sqrMagnitude < sqrdst);
                         if (player.IsTeam2())
@@ -183,7 +183,7 @@ namespace Uncreated.Warfare.Squads
             this.squad = squad;
             AwaitingPlayers = new List<UCPlayer>();
             IsActive = true;
-            timer = SquadManager.config.Data.RallyTimer;
+            timer = SquadManager.config.data.RallyTimer;
 
             List<Node> locations = LevelNodes.nodes.Where(n => n.type == ENodeType.LOCATION).ToList();
             Node nearerstLocation = locations.Aggregate((n1, n2) => (n1.point - structure.point).sqrMagnitude <= (n2.point - structure.point).sqrMagnitude ? n1 : n2);
@@ -265,7 +265,7 @@ namespace Uncreated.Warfare.Squads
                     }
                     parent.AwaitingPlayers.Clear();
 
-                    parent.timer = SquadManager.config.Data.RallyTimer;
+                    parent.timer = SquadManager.config.data.RallyTimer;
                 }
                 else
                 {
@@ -282,7 +282,7 @@ namespace Uncreated.Warfare.Squads
                         // check for enemies nearby rally points every 5 seconds
                         List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                             p.GetTeam() == enemyTeam &&
-                            (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(SquadManager.config.Data.RallyDespawnDistance, 2)
+                            (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(SquadManager.config.data.RallyDespawnDistance, 2)
                             ).ToList();
 
                         if (enemies.Count > 0)

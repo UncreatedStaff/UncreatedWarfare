@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Rocket.API;
+﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.NetTransport;
 using SDG.Unturned;
@@ -7,6 +6,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Uncreated.Networking.Encoding;
 using Uncreated.Networking.Encoding.IO;
 using Uncreated.Players;
@@ -50,14 +50,17 @@ namespace Uncreated.Warfare
         public EMuteType MuteType;
         private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
-        private MedalData _medals;
+        private MedalData _medals = MedalData.Nil;
         private Dictionary<EBranch, RankData> _ranks;
         public Dictionary<EBranch, RankData> Ranks
         {
             get
             {
                 if (_ranks == null)
+                {
+                    _ranks = new Dictionary<EBranch, RankData>(6);
                     RedownloadRanks();
+                }
                 return _ranks;
             }
         }
@@ -65,38 +68,55 @@ namespace Uncreated.Warfare
         {
             get
             {
+                if (_ranks == null)
+                {
+                    _ranks = new Dictionary<EBranch, RankData>(6);
+                    RedownloadRanks();
+                }
                 if (_ranks.TryGetValue(Branch, out RankData rank))
                     return rank;
                 else
-                    return _ranks[EBranch.INFANTRY];
+                {
+                    RankData data = new RankData(Steam64, 0, Branch);
+                    _ranks.Add(Branch, data);
+                    RedownloadRanks();
+                    return data;
+                }
             }
         }
         public MedalData Medals
         {
             get
             {
-                if (_medals == null)
+                if (_medals.IsNil)
                     RedownloadMedals();
                 return _medals;
             }
         }
-        public bool IsOfficer { get => CurrentRank?.OfficerTier > 0; }
+        public bool IsOfficer { get => CurrentRank.OfficerTier > 0; }
         public void RedownloadRanks()
         {
-            _ranks = new Dictionary<EBranch, RankData>();
-
-            var xplevels = Data.DatabaseManager.GetAllXP(Steam64);
-            foreach (var entry in xplevels)
+            Dictionary<EBranch, int> xplevels = Data.DatabaseManager.GetAllXP(Steam64);
+            foreach (KeyValuePair<EBranch, int> entry in xplevels)
             {
-                _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key));
+                if (_ranks.TryGetValue(entry.Key, out RankData rank))
+                    rank.Update(entry.Value);
+                else
+                    _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key));
             }
         }
         public void RedownloadMedals()
         {
-            _medals = new MedalData(Data.DatabaseManager.GetTeamwork(Steam64));
+            _medals.Update(Data.DatabaseManager.GetTeamwork(Steam64));
         }
-        public void UpdateRank(EBranch branch, int newXP) => _ranks[branch] = new RankData(Steam64, newXP, branch);
-        public void UpdateMedals(int newTW) => _medals = new MedalData(newTW);
+        public void UpdateRank(EBranch branch, int newXP)
+        {
+            if (_ranks.TryGetValue(branch, out RankData data))
+                data.Update(newXP);
+            else
+                _ranks.Add(branch, new RankData(Steam64, newXP, branch));
+        }
+        public void UpdateMedals(int newTW) => _medals.Update(newTW);
 
         private bool _otherDonator;
         /// <summary>Slow, loops through all kits, only use once.</summary>
@@ -145,8 +165,9 @@ namespace Uncreated.Warfare
         public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID);
         public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
         {
-            if (!(caller is UnturnedPlayer pl))
-                return null;
+            if (caller is not UnturnedPlayer pl)
+                if (caller is UCPlayer uc) return uc;
+                else return null;
             else return FromUnturnedPlayer(pl);
         }
 
@@ -277,9 +298,9 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+                if (SquadManager.config.data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.Icon;
-                else if (SquadManager.config.Data.Classes.TryGetValue(EClass.NONE, out config))
+                else if (SquadManager.config.data.Classes.TryGetValue(EClass.NONE, out config))
                     return config.Icon;
                 else return '±';
             }
@@ -289,9 +310,9 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+                if (SquadManager.config.data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.MarkerEffect;
-                else if (SquadManager.config.Data.Classes.TryGetValue(EClass.NONE, out config))
+                else if (SquadManager.config.data.Classes.TryGetValue(EClass.NONE, out config))
                     return config.MarkerEffect;
                 else return 0;
             }
@@ -300,9 +321,9 @@ namespace Uncreated.Warfare
         {
             get
             {
-                if (SquadManager.config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+                if (SquadManager.config.data.Classes.TryGetValue(KitClass, out ClassConfig config))
                     return config.SquadLeaderMarkerEffect;
-                else if (SquadManager.config.Data.Classes.TryGetValue(EClass.NONE, out config))
+                else if (SquadManager.config.data.Classes.TryGetValue(EClass.NONE, out config))
                     return config.SquadLeaderMarkerEffect;
                 else return 0;
             }

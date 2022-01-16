@@ -15,8 +15,8 @@ namespace Uncreated.Warfare.Point
     {
         private static Config<XPConfig> _xpconfig = new Config<XPConfig>(Data.PointsStorage, "xp.json");
         private static Config<TWConfig> _twconfig = new Config<TWConfig>(Data.PointsStorage, "tw.json");
-        public static XPConfig XPConfig => _xpconfig.Data;
-        public static TWConfig TWConfig => _twconfig.Data;
+        public static XPConfig XPConfig => _xpconfig.data;
+        public static TWConfig TWConfig => _twconfig.data;
 
         public static OfficerStorage Officers;
 
@@ -46,7 +46,8 @@ namespace Uncreated.Warfare.Point
             }
             else
             {
-                
+                EffectManager.askEffectClearByID(XPConfig.RankUI, player.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(TWConfig.MedalsUI, player.Player.channel.owner.transportConnection);
             }
         }
         public static void OnBranchChanged(UCPlayer player, EBranch oldBranch, EBranch newBranch)
@@ -74,7 +75,7 @@ namespace Uncreated.Warfare.Point
 
             RankData oldRank = player.CurrentRank;
 
-            amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
+            amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
             int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
 
             player.UpdateRank(player.Branch, newBalance);
@@ -102,9 +103,9 @@ namespace Uncreated.Warfare.Point
 
             RankData newRank = player.CurrentRank;
 
-            if (newRank.Level > oldRank?.Level)
+            if (newRank.Level > oldRank.Level)
             {
-                if (newRank.RankTier > oldRank?.RankTier)
+                if (newRank.RankTier > oldRank.RankTier)
                 {
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
                     Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
@@ -117,9 +118,9 @@ namespace Uncreated.Warfare.Point
                 for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
                     Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
             }
-            else if (newRank.Level < oldRank?.Level)
+            else if (newRank.Level < oldRank.Level)
             {
-                if (newRank.RankTier < oldRank?.RankTier)
+                if (newRank.RankTier < oldRank.RankTier)
                 {
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
                     Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
@@ -145,7 +146,7 @@ namespace Uncreated.Warfare.Point
 
             MedalData oldMedals = player.Medals;
 
-            amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
+            amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
             int newBalance = Data.DatabaseManager.AddTeamwork(player.Steam64, amount);
 
             player.UpdateMedals(newBalance);
@@ -245,14 +246,14 @@ namespace Uncreated.Warfare.Point
         {
             float ratio = currentPoints / (float)totalPoints;
 
-            int progress = UnityEngine.Mathf.RoundToInt(ratio * barLength);
+            int progress = Mathf.RoundToInt(ratio * barLength);
 
-            StringBuilder bars = new StringBuilder();
+            char[] bars = new char[barLength];
             for (int i = 0; i < progress; i++)
             {
-                bars.Append(XPConfig.ProgressBlockCharacter);
+                bars[i] = XPConfig.ProgressBlockCharacter;
             }
-            return bars.ToString();
+            return new string(bars);
         }
     }
     

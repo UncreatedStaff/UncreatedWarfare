@@ -342,7 +342,7 @@ namespace Uncreated.Warfare.Components
                 player.Message("deploy_s", cache.UIColor, cache.Name);
 
             if (startCoolDown)
-                CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
+                CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.config.data.DeployFOBCooldown);
         }
 
         public object PendingFOB;

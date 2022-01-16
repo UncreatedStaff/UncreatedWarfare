@@ -29,14 +29,14 @@ namespace Uncreated.Warfare.FOBs
             if (owner != null && owner.Steam64 != player.Steam64)
                 Points.AwardTW(owner, Points.TWConfig.ResupplyFriendlyPoints, Translation.Translate("xp_resupplied_teammate", owner));
 
-            if (uses >= FOBManager.config.Data.AmmoBagMaxUses && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+            if (uses >= FOBManager.config.data.AmmoBagMaxUses && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {
                 player.Message("ammo_success_bag_finished");
                 BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
             }
             else
             {
-                player.Message("ammo_success_bag", (FOBManager.config.Data.AmmoBagMaxUses - uses).ToString());
+                player.Message("ammo_success_bag", (FOBManager.config.data.AmmoBagMaxUses - uses).ToString());
 
                 if (ResuppliedPlayers.ContainsKey(player.Steam64))
                     ResuppliedPlayers[player.Steam64] = player.LifeCounter;

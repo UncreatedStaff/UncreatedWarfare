@@ -100,7 +100,6 @@
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.0.4" />
     <PackageReference Include="MySql.Data" Version="8.0.25" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Text.Json" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>

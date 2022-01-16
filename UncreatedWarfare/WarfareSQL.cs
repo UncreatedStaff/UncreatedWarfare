@@ -163,7 +163,7 @@ namespace Uncreated.Warfare
         }
         public Dictionary<EBranch, int> GetAllXP(ulong Steam64)
         {
-            Dictionary<EBranch, int> levels = new Dictionary<EBranch, int>();
+            Dictionary<EBranch, int> levels = new Dictionary<EBranch, int>(6);
             Query(
                 "SELECT `Branch`, `XP` " +
                 "FROM `xp` " +
@@ -173,7 +173,8 @@ namespace Uncreated.Warfare
                 {
                     levels.Add((EBranch)R.GetInt32(0), R.GetInt32(1));
                 });
-            levels.Add(EBranch.DEFAULT, 0);
+            if (levels.Count == 0)
+                levels.Add(EBranch.DEFAULT, 0);
             return levels;
         }
         public int GetTeamwork(ulong Steam64)

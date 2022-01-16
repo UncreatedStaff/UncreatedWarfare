@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 
@@ -643,7 +644,7 @@ namespace Uncreated.Warfare.Squads
         public char Icon;
         public ushort MarkerEffect;
         public ushort SquadLeaderMarkerEffect;
-        [Newtonsoft.Json.JsonConstructor]
+        [JsonConstructor]
         public ClassConfig(char Icon, ushort MarkerEffect, ushort SquadLeaderMarkerEffect)
         {
             this.Icon = Icon;

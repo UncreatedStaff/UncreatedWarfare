@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
@@ -76,21 +77,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                             data.y = (float)reader.GetDecimal();
                             break;
                         case nameof(zone):
-                            if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                            if (reader.TokenType == JsonTokenType.StartObject)
                             {
-                                ZoneData d = new ZoneData();
-                                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                                 {
                                     val = reader.GetString();
-                                    if (reader.Read())
+                                    if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                     {
                                         if (val == nameof(ZoneData.type))
                                         {
-                                            d.type = reader.GetString();
+                                            data.zone.type = reader.GetString();
                                         }
                                         else if (val == nameof(ZoneData.data))
                                         {
-                                            d.data = reader.GetString();
+                                            data.zone.data = reader.GetString();
                                         }
                                     }
                                 }
@@ -152,6 +152,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             writer.WriteEndArray();
         }
+
+        private const string N = "null";
+
+        public override string ToString() =>
+            $"FlagData for {name ?? N}, ID {id}. Flag type: {zone.type ?? N} ({zone.data ?? N}) at {x}, {y} from {minHeight} to {maxHeight} in height. " +
+            $"World coords? {!use_map_size_multiplier}, Adjacent to: {string.Join(", ", adjacencies == null ? new string[1] { N } : adjacencies.Select(x => x.flag_id + " %= " + x.weight))}.";
     }
     public struct AdjacentFlagData : IJsonReadWrite
     {

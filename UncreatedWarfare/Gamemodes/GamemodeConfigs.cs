@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Gamemodes
         public INSURGENCY Insurgency;
         public MAP_CONFIG[] MapsConfig;
         [JsonIgnore]
-        public MAP_CONFIG MapConfig 
+        public MAP_CONFIG MapConfig
         { 
             get
             {

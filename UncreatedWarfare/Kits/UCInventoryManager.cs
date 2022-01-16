@@ -10,35 +10,38 @@ namespace Uncreated.Warfare.Kits
         {
             if (kit != null)
             {
-                if (kit.ShouldClearInventory)
-                {
-                    ClearInventory(player);
-                }
+                ClearInventory(player);
                 foreach (KitClothing clothing in kit.Clothes)
                 {
-                    if (clothing.type == EClothingType.SHIRT)
-                        player.Player.clothing.askWearShirt(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.PANTS)
-                        player.Player.clothing.askWearPants(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.VEST)
-                        player.Player.clothing.askWearVest(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.HAT)
-                        player.Player.clothing.askWearHat(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.MASK)
-                        player.Player.clothing.askWearMask(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.BACKPACK)
-                        player.Player.clothing.askWearBackpack(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.GLASSES)
-                        player.Player.clothing.askWearGlasses(clothing.ID, clothing.quality, Convert.FromBase64String(clothing.state), true);
+                    if (Assets.find(clothing.id) is ItemAsset asset)
+                    {
+                        if (clothing.type == EClothingType.SHIRT)
+                            player.Player.clothing.askWearShirt(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                        if (clothing.type == EClothingType.PANTS)
+                            player.Player.clothing.askWearPants(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                        if (clothing.type == EClothingType.VEST)
+                            player.Player.clothing.askWearVest(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                        if (clothing.type == EClothingType.HAT)
+                            player.Player.clothing.askWearHat(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                        if (clothing.type == EClothingType.MASK)
+                            player.Player.clothing.askWearMask(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                        if (clothing.type == EClothingType.BACKPACK)
+                            player.Player.clothing.askWearBackpack(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                        if (clothing.type == EClothingType.GLASSES)
+                            player.Player.clothing.askWearGlasses(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                    }
                 }
 
                 foreach (KitItem k in kit.Items)
                 {
-                    Item item = new Item(k.ID, k.amount, k.quality);
-                    item.metadata = Convert.FromBase64String(k.metadata);
+                    if (Assets.find(k.id) is ItemAsset asset)
+                    {
+                        Item item = new Item(asset.id, k.amount, 100);
+                        item.metadata = Convert.FromBase64String(k.metadata);
 
-                    if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                        player.Inventory.tryAddItem(item, true);
+                        if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                            player.Inventory.tryAddItem(item, true);
+                    }
                 }
             }
         }

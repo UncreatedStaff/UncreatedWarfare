@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.FOBs
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
             for (int i = 0; i < effects.Length; i++)
             {
-                if (Assets.find(new Guid(config.Data.BaseEffectGUID + i.ToString(Data.Locale))) is not EffectAsset asset)
+                if (Assets.find(new Guid(config.data.BaseEffectGUID + i.ToString(Data.Locale))) is not EffectAsset asset)
                 {
                     L.LogWarning("Failed to find FOB Marker Effect #" + i.ToString(Data.Locale));
                     effects[i] = null;
@@ -610,7 +610,7 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendUIEffect(fobListId, fobListKey, true);
 
             int i2 = 0;
-            int min = Math.Min(SpecialFOBs.Count, config.Data.FobLimit);
+            int min = Math.Min(SpecialFOBs.Count, config.data.FobLimit);
             for (int i = 0; i < min; i++)
             {
                 if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == team)
@@ -624,7 +624,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (Data.Is<Insurgency>(out _))
             {
-                min = Math.Min(Caches.Count, config.Data.FobLimit);
+                min = Math.Min(Caches.Count, config.data.FobLimit);
                 for (int i = 0; i < min; i++)
                 {
                     string i22 = i2.ToString();
@@ -634,7 +634,7 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
 
-            min = Math.Min(FOBList.Count, config.Data.FobLimit - i2);
+            min = Math.Min(FOBList.Count, config.data.FobLimit - i2);
             for (int i = 0; i < min; i++)
             {
                 string i22 = i2.ToString();
@@ -644,7 +644,7 @@ namespace Uncreated.Warfare.FOBs
                     Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].ClosestLocation));
                 i2++;
             }
-            for (; i2 < config.Data.FobLimit; i2++)
+            for (; i2 < config.data.FobLimit; i2++)
             {
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i2.ToString(), false);
             }

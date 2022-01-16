@@ -132,14 +132,14 @@ namespace Uncreated.Warfare
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
             }
 
-            if (FOBManager.config.Data.Buildables == null) return;
-            BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
+            if (FOBManager.config.data.Buildables == null) return;
+            BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
             if (buildable != null)
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
 
-            BuildableData repairable = isFOBRadio ? null : FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
+            BuildableData repairable = isFOBRadio ? null : FOBManager.config.data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || isFOBRadio)
             {
                 drop.model.gameObject.AddComponent<RepairableComponent>();
@@ -232,7 +232,7 @@ namespace Uncreated.Warfare
                     return;
                 }
 
-                BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
+                BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
 
                 if (buildable != null)
                 {

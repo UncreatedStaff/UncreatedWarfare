@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Squads
                                         {
                                             if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, player.GetTeam()) != null)
                                                 player.Message("order_e_buildfob_fobexists");
-                                            else if (FOB.GetFOBs(player.GetTeam()).Count >= FOBManager.config.Data.FobLimit)
+                                            else if (FOB.GetFOBs(player.GetTeam()).Count >= FOBManager.config.data.FobLimit)
                                                 player.Message("order_e_buildfob_foblimit");
                                             else
                                             {

@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using Rocket.Unturned.Player;
+﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -22,38 +22,38 @@ namespace Uncreated.Warfare.Teams
 
         public TeamManager()
         {
-            if (!KitManager.KitExists(_data.Data.team1unarmedkit, out _))
-                L.LogError("Team 1's unarmed kit, \"" + _data.Data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.Data.team2unarmedkit, out _))
-                L.LogError("Team 2's unarmed kit, \"" + _data.Data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.Data.defaultkit, out _))
-                L.LogError("The default kit, \"" + _data.Data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if (!KitManager.KitExists(_data.data.team1unarmedkit, out _))
+                L.LogError("Team 1's unarmed kit, \"" + _data.data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if (!KitManager.KitExists(_data.data.team2unarmedkit, out _))
+                L.LogError("Team 2's unarmed kit, \"" + _data.data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if (!KitManager.KitExists(_data.data.defaultkit, out _))
+                L.LogError("The default kit, \"" + _data.data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
 
         }
-        public static ulong Team1ID { get => _data.Data.team1id; }
-        public static ulong Team2ID { get => _data.Data.team2id; }
-        public static ulong AdminID { get => _data.Data.adminid; }
-        public static string Team1Name { get => _data.Data.team1name; }
-        public static string Team2Name { get => _data.Data.team2name; }
-        public static string AdminName { get => _data.Data.adminname; }
-        public static string Team1Code { get => _data.Data.team1code; }
-        public static string Team2Code { get => _data.Data.team2code; }
-        public static string AdminCode { get => _data.Data.admincode; }
-        public static Color Team1Color { get => _data.Data.Team1Color; }
-        public static Color Team2Color { get => _data.Data.Team2Color; }
-        public static Color AdminColor { get => _data.Data.AdminColor; }
-        public static Color NeutralColor { get => _data.Data.AdminColor; }
-        public static string Team1ColorHex { get => _data.Data.Team1ColorHex; }
-        public static string Team2ColorHex { get => _data.Data.Team2ColorHex; }
-        public static string AdminColorHex { get => _data.Data.AdminColorHex; }
-        public static string NeutralColorHex { get => _data.Data.AdminColorHex; }
-        public static string Team1UnarmedKit { get => _data.Data.team1unarmedkit; }
-        public static string Team2UnarmedKit { get => _data.Data.team2unarmedkit; }
-        public static float Team1SpawnAngle { get => _data.Data.team1spawnangle; }
-        public static float Team2SpawnAngle { get => _data.Data.team2spawnangle; }
-        public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
-        public static float TeamSwitchCooldown { get => _data.Data.team_switch_cooldown; }
-        public static string DefaultKit { get => _data.Data.defaultkit; }
+        public static ulong Team1ID { get => _data.data.team1id; }
+        public static ulong Team2ID { get => _data.data.team2id; }
+        public static ulong AdminID { get => _data.data.adminid; }
+        public static string Team1Name { get => _data.data.team1name; }
+        public static string Team2Name { get => _data.data.team2name; }
+        public static string AdminName { get => _data.data.adminname; }
+        public static string Team1Code { get => _data.data.team1code; }
+        public static string Team2Code { get => _data.data.team2code; }
+        public static string AdminCode { get => _data.data.admincode; }
+        public static Color Team1Color { get => _data.data.Team1Color; }
+        public static Color Team2Color { get => _data.data.Team2Color; }
+        public static Color AdminColor { get => _data.data.AdminColor; }
+        public static Color NeutralColor { get => _data.data.AdminColor; }
+        public static string Team1ColorHex { get => _data.data.Team1ColorHex; }
+        public static string Team2ColorHex { get => _data.data.Team2ColorHex; }
+        public static string AdminColorHex { get => _data.data.AdminColorHex; }
+        public static string NeutralColorHex { get => _data.data.AdminColorHex; }
+        public static string Team1UnarmedKit { get => _data.data.team1unarmedkit; }
+        public static string Team2UnarmedKit { get => _data.data.team2unarmedkit; }
+        public static float Team1SpawnAngle { get => _data.data.team1spawnangle; }
+        public static float Team2SpawnAngle { get => _data.data.team2spawnangle; }
+        public static float LobbySpawnAngle { get => _data.data.lobbyspawnangle; }
+        public static float TeamSwitchCooldown { get => _data.data.team_switch_cooldown; }
+        public static string DefaultKit { get => _data.data.defaultkit; }
         internal static void ResetLocations()
         {
             _t1main = null;

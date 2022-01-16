@@ -35,10 +35,10 @@ namespace Uncreated.Warfare.Tickets
 
             _previousWinner = 0;
 
-            Team1Tickets = config.Data.StartingTickets;
-            Team2Tickets = config.Data.StartingTickets;
-            _Team1previousTickets = config.Data.StartingTickets;
-            _Team2previousTickets = config.Data.StartingTickets;
+            Team1Tickets = config.data.StartingTickets;
+            Team2Tickets = config.data.StartingTickets;
+            _Team1previousTickets = config.data.StartingTickets;
+            _Team2previousTickets = config.data.StartingTickets;
 
             
 
@@ -240,19 +240,19 @@ namespace Uncreated.Warfare.Tickets
             {
                 if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
                 {
-                    Team1Tickets += config.Data.TicketsFlagCaptured;
+                    Team1Tickets += config.data.TicketsFlagCaptured;
                     flag.HasBeenCapturedT1 = true;
                 }
                 else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
                 {
-                    Team2Tickets += config.Data.TicketsFlagCaptured;
+                    Team2Tickets += config.data.TicketsFlagCaptured;
                     flag.HasBeenCapturedT2 = true;
                 }
 
                 if (lostTeam == 1)
-                    Team1Tickets += config.Data.TicketsFlagLost;
+                    Team1Tickets += config.data.TicketsFlagLost;
                 if (lostTeam == 2)
-                    Team2Tickets += config.Data.TicketsFlagLost;
+                    Team2Tickets += config.data.TicketsFlagLost;
             }
             
 
@@ -350,8 +350,8 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
-            EffectManager.askEffectClearByID(config.Data.Team1TicketUIID, player.transportConnection);
-            EffectManager.askEffectClearByID(config.Data.Team2TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
             GetTeamBleed(newGroup, out int bleed, out string message);
             UpdateUI(player.transportConnection, newGroup, bleed, Translation.Translate(message, player));
         }
@@ -395,8 +395,8 @@ namespace Uncreated.Warfare.Tickets
             }
             else
             {
-                Team1Tickets = config.Data.StartingTickets;
-                Team2Tickets = config.Data.StartingTickets;
+                Team1Tickets = config.data.StartingTickets;
+                Team2Tickets = config.data.StartingTickets;
             }
 
             UpdateUITeam1();
@@ -436,13 +436,13 @@ namespace Uncreated.Warfare.Tickets
             if (TeamManager.IsTeam1(team))
             {
                 tickets = Team1Tickets;
-                UIID = config.Data.Team1TicketUIID;
+                UIID = config.data.Team1TicketUIID;
             }
 
             else if (TeamManager.IsTeam2(team))
             {
                 tickets = Team2Tickets;
-                UIID = config.Data.Team2TicketUIID;
+                UIID = config.data.Team2TicketUIID;
             }
 
             if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == team)

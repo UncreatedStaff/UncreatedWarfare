@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_vehicle_cant_rearm");
                     return;
                 }
-                if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
+                if (FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
                 {
                     player.SendChat("ammo_vehicle_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
                     return;
@@ -57,8 +57,8 @@ namespace Uncreated.Warfare.Commands
 
                     VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
 
-                    if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                        CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.Data.AmmoCommandCooldown);
+                    if (FOBManager.config.data.AmmoCommandCooldown > 0)
+                        CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.data.AmmoCommandCooldown);
                     foreach (Guid item in vehicleData.Items)
                         if (Assets.find(item) is ItemAsset a)
                             ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
@@ -99,8 +99,8 @@ namespace Uncreated.Warfare.Commands
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
 
-                if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                    CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.Data.AmmoCommandCooldown);
+                if (FOBManager.config.data.AmmoCommandCooldown > 0)
+                    CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.data.AmmoCommandCooldown);
 
                 foreach (Guid item in vehicleData.Items)
                     if (Assets.find(item) is ItemAsset a)
@@ -124,7 +124,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 if (barricade.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
                 {
-                    if (FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
+                    if (FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
                     {
                         player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
                         return;
@@ -153,8 +153,8 @@ namespace Uncreated.Warfare.Commands
 
                     player.SendChat("ammo_success");
 
-                    if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                        CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
+                    if (FOBManager.config.data.AmmoCommandCooldown > 0)
+                        CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.data.AmmoCommandCooldown);
 
                     fob.ReduceAmmo(1);
                 }
