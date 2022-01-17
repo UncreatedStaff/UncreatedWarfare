@@ -100,7 +100,16 @@ namespace Uncreated.Warfare
             foreach (KeyValuePair<EBranch, int> entry in xplevels)
             {
                 if (_ranks.TryGetValue(entry.Key, out RankData rank))
+                {
                     rank.Update(entry.Value);
+                    ulong t = this.GetTeam();
+                    if (t != rank.OfficerTeam)
+                    {
+                        rank.OfficerTeam = t;
+                        rank.CheckOfficerStatus();
+                        rank.CheckNameAbbreviations();
+                    }
+                }
                 else
                     _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
@@ -118,14 +127,11 @@ namespace Uncreated.Warfare
         }
         public void UpdateRankTeam(ulong team)
         {
-            if (_ranks.TryGetValue(Branch, out RankData data))
+            if (_ranks == null)
             {
-                data.OfficerTeam = team;
-                data.Update(data.TotalXP);
-                data.CheckOfficerStatus();
+                _ranks = new Dictionary<EBranch, RankData>(6);
             }
-            else
-                _ranks.Add(Branch, new RankData(Steam64, 0, Branch, this.GetTeam()));
+            RedownloadRanks();
         }
         public void UpdateMedals(int newTW) => _medals.Update(newTW);
 

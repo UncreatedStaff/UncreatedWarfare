@@ -94,6 +94,7 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
         }
+#if false
         public static string GetGridCoordsFromTexture(float textureX, float textureY, bool includeSubKey = false)
         {
 
@@ -162,6 +163,7 @@ namespace Uncreated.Warfare.FOBs
         {
             return GetGridCoordsFromTexture(xPos * GridScalingFactor + Level.size / 2, yPos * -GridScalingFactor + Level.size / 2, includeSubKey);
         }
+#endif
         public static void Reset()
         {
             Team1FOBs.Clear();

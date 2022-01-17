@@ -277,10 +277,16 @@ namespace Uncreated.Warfare.Kits
                     new Barricade(asset),
                     transform.position.Vector3, transform.Rotation, owner, group
                     );
+                if (barricadetransform == null)
+                {
+                    exists = false;
+                    L.LogWarning("Failed to spawn request sign for " + kit_name);
+                    return;
+                }
                 drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
                 if (drop != null)
                 {
-                    L.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Black);
+                    L.Log("Replaced lost request sign for " + kit_name, ConsoleColor.Gray);
                     instance_id = drop.instanceID;
                     exists = true;
                     InvokeUpdate();
@@ -289,6 +295,7 @@ namespace Uncreated.Warfare.Kits
                 else
                 {
                     exists = false;
+                    L.LogWarning("Failed to find newly spawned request sign for " + kit_name);
                 }
             }
             else

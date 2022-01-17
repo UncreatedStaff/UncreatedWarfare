@@ -185,7 +185,7 @@ namespace Uncreated.Warfare.Components
             Ammo = 0;
             Build = 0;
 
-            GridCoordinates = FOBManager.GetGridCoords(Position.x, Position.z);
+            GridCoordinates = F.ToGridPosition(Position);
             Status = EFOBStatus.RADIO;
             IsBleeding = false;
 
@@ -193,7 +193,7 @@ namespace Uncreated.Warfare.Components
 
             Placer = radio.GetServersideData().owner;
 
-            var nearestLogi = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, Position).FirstOrDefault(l => l.lockedGroup.m_SteamID == Team);
+            InteractableVehicle nearestLogi = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, Position).FirstOrDefault(l => l.lockedGroup.m_SteamID == Team);
             if (nearestLogi != null)
                 Creator = nearestLogi.lockedOwner.m_SteamID;
 
