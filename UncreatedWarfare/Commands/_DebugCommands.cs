@@ -1165,7 +1165,7 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
 
-            L.Log(F.test(player.transform.position));
+            L.Log(F.ToGridPosition(player.transform.position));
         }
     }
 #pragma warning restore IDE0051

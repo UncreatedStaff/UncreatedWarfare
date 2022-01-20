@@ -118,9 +118,7 @@ namespace Uncreated.Warfare
         {
             if (Ranks.TryGetValue(Branch, out RankData data))
             {
-                data.OfficerTeam = team;
-                data.Update(data.TotalXP);
-                data.CheckOfficerStatus();
+                _ranks = new Dictionary<EBranch, RankData>(6);
             }
             else
                 Ranks.Add(Branch, new RankData(Steam64, 0, Branch, this.GetTeam()));

@@ -138,7 +138,7 @@ namespace Uncreated.Warfare
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
-            L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
+            //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
 
             // remove once effectmanager supports GUIDs
             SquadManager.TempCacheEffectIDs();

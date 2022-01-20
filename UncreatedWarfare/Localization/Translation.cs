@@ -1214,6 +1214,38 @@ namespace Uncreated.Warfare
                 languages.Clear();
             }
         }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(byte x, byte y, byte regionDistance)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DefaultLanguage;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
         public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<SteamPlayer> players)
         {
             lock (languages)

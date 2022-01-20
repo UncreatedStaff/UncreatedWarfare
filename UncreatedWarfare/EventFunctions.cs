@@ -993,7 +993,7 @@ namespace Uncreated.Warfare
             }
             catch (Exception ex)
             {
-                L.LogError("Failed to update kit sign for leaving player:");
+                L.LogError("Failed to update kit sign for other players after leaving:");
                 L.LogError(ex);
             }
         }

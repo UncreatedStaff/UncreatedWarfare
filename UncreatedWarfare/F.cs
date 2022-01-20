@@ -14,7 +14,6 @@ using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -26,7 +25,7 @@ namespace Uncreated.Warfare
     public static class F
     {
         public const float SPAWN_HEIGHT_ABOVE_GROUND = 0.5f;
-        public static readonly List<char> vowels = new List<char> { 'a', 'e', 'i', 'o', 'u' };
+        public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
         /// <summary>Convert an HTMLColor string to a actual color.</summary>
         /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
         public static Color Hex(this string htmlColorCode)
@@ -167,14 +166,31 @@ namespace Uncreated.Warfare
             }
             SteamBlacklist.list.Add(new SteamBlacklistID(banned, IPAddress, BannerID, reason, duration, Provider.time));
         }
-        public static string An(this string word) => (word.Length > 0 && vowels.Contains(word[0].ToString().ToLower()[0])) ? "n" : "";
-        public static string An(this char letter) => vowels.Contains(letter.ToString().ToLower()[0]) ? "n" : "";
-        public static string S(this int number) => number == 1 ? "" : "s";
-        public static string S(this float number) => number == 1 ? "" : "s";
-        public static string S(this uint number) => number == 1 ? "" : "s";
+        public static string An(this string word)
+        {
+            if (word.Length > 0)
+            {
+                char first = char.ToLower(word[0]);
+                for (int i = 0; i < vowels.Length; i++)
+                    if (vowels[i] == first)
+                        return "n";
+            }
+            return string.Empty;
+        }
+        public static string An(this char letter)
+        {
+            char let = char.ToLower(letter);
+            for (int i = 0; i < vowels.Length; i++)
+                if (vowels[i] == let)
+                    return "n";
+            return string.Empty;
+        }
+        public static string S(this int number) => number == 1 ? string.Empty : "s";
+        public static string S(this float number) => number == 1 ? string.Empty : "s";
+        public static string S(this uint number) => number == 1 ? string.Empty : "s";
         public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
         {
-            if (!(Data.Gamemode is TeamGamemode))
+            if (!Data.Is<ITeams>(out _))
             {
                 SteamPlayer pl2 = PlayerTool.getSteamPlayer(s64);
                 if (pl2 == null) return 0;
@@ -195,7 +211,7 @@ namespace Uncreated.Warfare
         public static ulong GetTeam(this UnturnedPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
         public static ulong GetTeam(this ulong groupID)
         {
-            if (!(Data.Gamemode is TeamGamemode)) return groupID;
+            if (!Data.Is<ITeams>(out _)) return groupID;
             if (groupID == TeamManager.Team1ID) return 1;
             else if (groupID == TeamManager.Team2ID) return 2;
             else if (groupID == TeamManager.AdminID) return 3;
@@ -206,7 +222,7 @@ namespace Uncreated.Warfare
         public static byte GetTeamByte(this UnturnedPlayer player) => GetTeamByte(player.Player.quests.groupID.m_SteamID);
         public static byte GetTeamByte(this ulong groupID)
         {
-            if (!(Data.Gamemode is TeamGamemode)) return groupID > byte.MaxValue ? byte.MaxValue : (byte)groupID;
+            if (!Data.Is<ITeams>(out _)) return groupID > byte.MaxValue ? byte.MaxValue : (byte)groupID;
             if (groupID == TeamManager.Team1ID) return 1;
             else if (groupID == TeamManager.Team2ID) return 2;
             else if (groupID == TeamManager.AdminID) return 3;
@@ -215,7 +231,7 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
-            if (!(Data.Gamemode is ITeams)) return TeamManager.LobbySpawn;
+            if (!Data.Is<ITeams>(out _)) return TeamManager.LobbySpawn;
             ulong team = player.GetTeam();
             if (team == 1)
             {
@@ -229,7 +245,7 @@ namespace Uncreated.Warfare
         }
         public static Vector3 GetBaseSpawn(this Player player, out ulong team)
         {
-            if (!(Data.Gamemode is ITeams))
+            if (!Data.Is<ITeams>(out _))
             {
                 team = player.quests.groupID.m_SteamID;
                 return TeamManager.LobbySpawn;
@@ -248,7 +264,7 @@ namespace Uncreated.Warfare
         public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
         {
             team = playerID.GetTeamFromPlayerSteam64ID();
-            if (!(Data.Gamemode is ITeams))
+            if (!Data.Is<ITeams>(out _))
             {
                 return TeamManager.LobbySpawn;
             }
@@ -256,7 +272,7 @@ namespace Uncreated.Warfare
         }
         public static Vector3 GetBaseSpawnFromTeam(this ulong team)
         {
-            if (!(Data.Gamemode is ITeams))
+            if (!Data.Is<ITeams>(out _))
             {
                 return TeamManager.LobbySpawn;
             }
@@ -266,7 +282,7 @@ namespace Uncreated.Warfare
         }
         public static float GetBaseAngle(this ulong team)
         {
-            if (!(Data.Gamemode is ITeams))
+            if (!Data.Is<ITeams>(out _))
             {
                 return TeamManager.LobbySpawnAngle;
             }
@@ -285,15 +301,17 @@ namespace Uncreated.Warfare
         public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
         {
             if (text == null) return;
-            IEnumerator<SteamPlayer> connections = EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
-            while (connections.MoveNext())
+            if (text.StartsWith("sign_"))
             {
-                string newtext = text;
-                if (text.StartsWith("sign_"))
-                    newtext = Translation.TranslateSign(text, UCPlayer.FromSteamPlayer(connections.Current), false);
-                Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, connections.Current.transportConnection, newtext);
+                for (int i = 0; i < Provider.clients.Count; i++)
+                {
+                    SteamPlayer pl = Provider.clients[i];
+                    if (Regions.checkArea(x, y, pl.player.movement.region_x, pl.player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+                    {
+                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, Translation.TranslateSign(text, UCPlayer.FromSteamPlayer(pl), false));
+                    }
+                }
             }
-            connections.Dispose();
         }
         public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
         {
@@ -570,7 +588,7 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(this Player player)
         {
-            if (!(Data.Gamemode is TeamGamemode)) return false;
+            if (!Data.Is<ITeams>(out _)) return false;
             ulong team = player.GetTeam();
             if (team == 1) return TeamManager.Team1Main.IsInside(player.transform.position);
             else if (team == 2) return TeamManager.Team2Main.IsInside(player.transform.position);
@@ -578,7 +596,7 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(Vector3 point)
         {
-            if (!(Data.Gamemode is TeamGamemode)) return false;
+            if (!Data.Is<ITeams>(out _)) return false;
             return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
         }
         public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
@@ -612,7 +630,7 @@ namespace Uncreated.Warfare
         public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
         public static string ColorizeName(string innerText, ulong team)
         {
-            if (!(Data.Gamemode is TeamGamemode)) return innerText;
+            if (!Data.Is<ITeams>(out _)) return innerText;
             if (team == TeamManager.ZOMBIE_TEAM_ID) return $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>";
             else if (team == TeamManager.Team1ID) return $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>";
             else if (team == TeamManager.Team2ID) return $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>";
@@ -754,37 +772,59 @@ namespace Uncreated.Warfare
         /// </summary>
         public static float SqrDistance2D(Vector3 a, Vector3 b) => Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2);
 
-        private const string ABET = "ABCDEFGHIJKL";
-        public static string test(Vector3 pos)
+        private static readonly char[] ABET = new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L' };
+        private static bool _setGridConstants = false;
+        private static float _toMapCoordsMultiplier;
+        private static float _gridSize;
+        private const int _sqrsTotal = 36;
+        private static float _sqrSize;
+        private static void SetGridPositionConstants()
         {
-            float mult = (Level.size - Level.border * 2) / Level.size;
-            float gridStart = Level.size / 2 - Level.border - Level.border * mult;
-            float gridSize = Level.size - Level.border * 2 - (mult * Level.border * 2);
-            int sqrsTotal = 36; // 12 x 3
-            float sqrSize = Mathf.Floor(gridSize / 36f);
-            float x = pos.x;
-            float y = pos.y;
+            _toMapCoordsMultiplier = Level.size / (Level.size - Level.border * 2f);
+            _gridSize = Level.size - Level.border * 2;
+            _sqrSize = Mathf.Floor(_gridSize / 36f);
+            _setGridConstants = true;
+        }
+        public static string ToGridPosition(Vector3 pos)
+        {
+            if (!_setGridConstants) SetGridPositionConstants();
+            float x = Level.size / 2 + _toMapCoordsMultiplier * pos.x;
+            float y = Level.size / 2 - _toMapCoordsMultiplier * pos.z;
+
             int xSqr;
-            if (x < gridStart)
+            bool isOut = false;
+            if (x < Level.border)
+            {
+                isOut = true;
                 xSqr = 0;
-            else if (x > gridStart + gridSize)
-                xSqr = sqrsTotal - 1;
+            }
+            else if (x > Level.border + _gridSize)
+            {
+                isOut = true;
+                xSqr = _sqrsTotal - 1;
+            }
             else
-                xSqr = Mathf.FloorToInt((x - gridStart) / sqrSize);
-
+                xSqr = Mathf.FloorToInt((x - Level.border) / _sqrSize);
             int ySqr;
-            if (y < gridStart)
+            if (y < Level.border)
+            {
+                isOut = true;
                 ySqr = 0;
-            else if (y > gridStart + gridSize)
-                ySqr = sqrsTotal - 1;
+            }
+            else if (y > Level.border + _gridSize)
+            {
+                isOut = true;
+                ySqr = _sqrsTotal - 1;
+            }
             else
-                ySqr = Mathf.FloorToInt((y - gridStart) / sqrSize);
-
+                ySqr = Mathf.FloorToInt((y - Level.border) / _sqrSize);
             int bigsqrx = Mathf.FloorToInt(xSqr / 3f);
-            int smlSqrDstX = bigsqrx * 3 - xSqr;
+            int smlSqrDstX = xSqr % 3;
             int bigsqry = Mathf.FloorToInt(ySqr / 3f);
-            int smlSqrDstY = bigsqry * 3 - ySqr;
-            return ABET[bigsqrx] + bigsqry.ToString() + " - " + (smlSqrDstX + smlSqrDstY * 3).ToString();
+            int smlSqrDstY = ySqr % 3;
+            string rtn = ABET[bigsqrx] + (bigsqry + 1).ToString();
+            if (!isOut) rtn += " - " + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
+            return rtn;
         }
     }
 }
