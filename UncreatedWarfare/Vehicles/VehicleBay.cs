@@ -308,7 +308,7 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             if (vehicle.lockedOwner == CSteamID.Nil)
                             {
-                                player.SendChat("vehicle_not_valid_kit");
+                                player.SendChat("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
                             }
                             else
                             {

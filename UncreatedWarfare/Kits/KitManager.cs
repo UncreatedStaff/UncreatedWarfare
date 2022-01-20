@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static List<KitItem> ItemsFromInventory(UnturnedPlayer player)
         {
-            var items = new List<KitItem>();
+            List<KitItem> items = new List<KitItem>();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
@@ -107,16 +107,23 @@ namespace Uncreated.Warfare.Kits
         {
             PlayerClothing playerClothes = player.Player.clothing;
 
-            List<KitClothing> clothes = new List<KitClothing>
-            {
-                new KitClothing(playerClothes.shirtAsset.GUID, Convert.ToBase64String(playerClothes.shirtState), EClothingType.SHIRT),
-                new KitClothing(playerClothes.pantsAsset.GUID, Convert.ToBase64String(playerClothes.pantsState), EClothingType.PANTS),
-                new KitClothing(playerClothes.vestAsset.GUID, Convert.ToBase64String(playerClothes.vestState), EClothingType.VEST),
-                new KitClothing(playerClothes.hatAsset.GUID, Convert.ToBase64String(playerClothes.hatState), EClothingType.HAT),
-                new KitClothing(playerClothes.maskAsset.GUID, Convert.ToBase64String(playerClothes.maskState), EClothingType.MASK),
-                new KitClothing(playerClothes.backpackAsset.GUID, Convert.ToBase64String(playerClothes.backpackState), EClothingType.BACKPACK),
-                new KitClothing(playerClothes.glassesAsset.GUID, Convert.ToBase64String(playerClothes.glassesState), EClothingType.GLASSES)
-            };
+            List<KitClothing> clothes = new List<KitClothing>(7);
+
+            if (playerClothes.shirtAsset != null)
+                clothes.Add(new KitClothing(playerClothes.shirtAsset.GUID, Convert.ToBase64String(playerClothes.shirtState), EClothingType.SHIRT));
+            if (playerClothes.pantsAsset != null)
+                clothes.Add(new KitClothing(playerClothes.pantsAsset.GUID, Convert.ToBase64String(playerClothes.pantsState), EClothingType.PANTS));
+            if (playerClothes.vestAsset != null)
+                clothes.Add(new KitClothing(playerClothes.vestAsset.GUID, Convert.ToBase64String(playerClothes.vestState), EClothingType.VEST));
+            if (playerClothes.hatAsset != null)
+                clothes.Add(new KitClothing(playerClothes.hatAsset.GUID, Convert.ToBase64String(playerClothes.hatState), EClothingType.HAT));
+            if (playerClothes.maskAsset != null)
+                clothes.Add(new KitClothing(playerClothes.maskAsset.GUID, Convert.ToBase64String(playerClothes.maskState), EClothingType.MASK));
+            if (playerClothes.backpackAsset != null)
+                clothes.Add(new KitClothing(playerClothes.backpackAsset.GUID, Convert.ToBase64String(playerClothes.backpackState), EClothingType.BACKPACK));
+            if (playerClothes.glassesAsset != null)
+                clothes.Add(new KitClothing(playerClothes.glassesAsset.GUID, Convert.ToBase64String(playerClothes.glassesState), EClothingType.GLASSES));
+            
             return clothes;
         }
         public static void GiveKit(UCPlayer player, Kit kit)
