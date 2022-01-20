@@ -79,7 +79,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static List<KitItem> ItemsFromInventory(UnturnedPlayer player)
         {
-            var items = new List<KitItem>();
+            List<KitItem> items = new List<KitItem>();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
@@ -123,7 +123,7 @@ namespace Uncreated.Warfare.Kits
                 clothes.Add(new KitClothing(playerClothes.backpackAsset.GUID, Convert.ToBase64String(playerClothes.backpackState), EClothingType.BACKPACK));
             if (playerClothes.glassesAsset != null)
                 clothes.Add(new KitClothing(playerClothes.glassesAsset.GUID, Convert.ToBase64String(playerClothes.glassesState), EClothingType.GLASSES));
-
+            
             return clothes;
         }
         public static void GiveKit(UCPlayer player, Kit kit)
