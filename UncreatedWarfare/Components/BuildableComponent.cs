@@ -23,11 +23,14 @@ namespace Uncreated.Warfare.Components
 
         public Dictionary<ulong, int> PlayerHits { get; private set; }
 
+        public bool IsSalvaged;
+
         public void Initialize(BarricadeDrop foundation, BuildableData buildable)
         {
             Foundation = foundation;
             Buildable = buildable;
             Hits = 0;
+            IsSalvaged = false;
             PlayerHits = new Dictionary<ulong, int>();
         }
 
@@ -35,7 +38,7 @@ namespace Uncreated.Warfare.Components
         {
             int amount = 1;
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
-                amount = 2;
+                amount = 3;
 
             Hits += amount;
 
@@ -93,13 +96,11 @@ namespace Uncreated.Warfare.Components
                 {
                     FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.FULL, data.group);
                     fob.Status |= EFOBStatus.AMMO_CRATE;
-                    FOBManager.SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
                 else if (Buildable.type == EBuildableType.REPAIR_STATION)
                 {
                     FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.FULL, data.group);
                     fob.Status |= EFOBStatus.REPAIR_STATION;
-                    FOBManager.SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
             }
             else
@@ -159,6 +160,15 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
+            if (IsSalvaged)
+            {
+                var fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
+                if (fob is not null)
+                {
+                    fob.AddBuild(Buildable.requiredBuild);
+                }
+            }
+
             Destroy(this);
         }
         public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)

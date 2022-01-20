@@ -25,7 +25,6 @@ namespace Uncreated.Warfare.FOBs
     public class FOBManager
     {
         public static Config<FOBConfig> config;
-        public static EffectAsset[] effects = new EffectAsset[8];
         public static readonly List<FOB> Team1FOBs = new List<FOB>();
         public static readonly List<FOB> Team2FOBs = new List<FOB>();
         public static List<FOB> AllFOBs { get => Team1FOBs.Concat(Team2FOBs).ToList(); }
@@ -54,15 +53,6 @@ namespace Uncreated.Warfare.FOBs
         public FOBManager()
         {
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
-            for (int i = 0; i < effects.Length; i++)
-            {
-                if (Assets.find(new Guid(config.data.BaseEffectGUID + i.ToString(Data.Locale))) is not EffectAsset asset)
-                {
-                    L.LogWarning("Failed to find FOB Marker Effect #" + i.ToString(Data.Locale));
-                    effects[i] = null;
-                }
-                else effects[i] = asset;
-            }
 
             if (Level.size == Level.MEDIUM_SIZE)
             {
@@ -73,25 +63,6 @@ namespace Uncreated.Warfare.FOBs
             {
                 GridSquareCount = 12;
                 GridBorder = 64;
-            }
-        }
-        public static void SendFOBEffect(ulong team, EFOBStatus fob, Vector3 position)
-        {
-            int index = (int)fob;
-            if (index < 0 || index >= effects.Length)
-            {
-                L.LogWarning("Failed to get FOB Marker Effect #" + index.ToString(Data.Locale) + " from enum.");
-                return;
-            }
-            ushort id = effects[index].id;
-            for (int i = 0; i < Provider.clients.Count; i++)
-            {
-                SteamPlayer pl = Provider.clients[i];
-                if (pl.GetTeam() == team)
-                {
-                    EffectManager.askEffectClearByID(id, pl.transportConnection);
-                    EffectManager.sendEffectReliable(id, pl.transportConnection, position);
-                }
             }
         }
         public static string GetGridCoordsFromTexture(float textureX, float textureY, bool includeSubKey = false)
@@ -168,12 +139,6 @@ namespace Uncreated.Warfare.FOBs
             Team2FOBs.Clear();
             SpecialFOBs.Clear();
             Caches.Clear();
-            for (int i = 0; i < Provider.clients.Count; i++)
-            {
-                SteamPlayer pl = Provider.clients[i];
-                for (int i2 = 0; i2 < effects.Length; i2++)
-                    EffectManager.askEffectClearByID(effects[i2].id, pl.transportConnection);
-            }
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
         }
@@ -193,12 +158,6 @@ namespace Uncreated.Warfare.FOBs
             SpecialFOBs.Clear();
             Caches.Clear();
 
-            for (int i = 0; i < Provider.clients.Count; i++)
-            {
-                SteamPlayer pl = Provider.clients[i];
-                for (int i2 = 0; i2 < effects.Length; i2++)
-                    EffectManager.askEffectClearByID(effects[i2].id, pl.transportConnection);
-            }
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
         }
@@ -206,16 +165,7 @@ namespace Uncreated.Warfare.FOBs
         {
             if (Data.Gamemode.EveryXSeconds(50f))
             {
-                for (int i = 0; i < Team1FOBs.Count; i++)
-                {
-                    FOB fob = Team1FOBs[i];
-                    SendFOBEffect(1, fob.Status, fob.Position);
-                }
-                for (int i = 0; i < Team2FOBs.Count; i++)
-                {
-                    FOB fob = Team2FOBs[i];
-                    SendFOBEffect(2, fob.Status, fob.Position);
-                }
+
             }
         }
         public static void OnPlayerDisconnect(UCPlayer player)
@@ -266,19 +216,25 @@ namespace Uncreated.Warfare.FOBs
                 if (fob != null)
                 {
                     fob.UpdateBunker(null);
-                    SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
 
                 SendFOBListToTeam(data.group);
             }
-            else if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID))
+            if (drop.model.TryGetComponent(out FOBComponent f))
             {
-                if (drop.model.TryGetComponent(out FOBComponent fob))
+                if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID))
                 {
-                    fob.parent.StartBleed();
-
-                    SendFOBListToTeam(fob.parent.Team);
+                    if (f.parent.IsWipedByAuthority)
+                        f.parent.Destroy();
+                    else
+                        f.parent.StartBleed();
                 }
+                else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID)
+                {
+                    f.parent.Destroy();
+                }
+
+                SendFOBListToTeam(f.parent.Team);
             }
             else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID)
             {
@@ -290,7 +246,6 @@ namespace Uncreated.Warfare.FOBs
                 if (fob != null)
                 {
                     fob.Status &= ~EFOBStatus.AMMO_CRATE;
-                    SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
             }
             else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
@@ -299,13 +254,21 @@ namespace Uncreated.Warfare.FOBs
                 if (fob != null)
                 {
                     fob.Status &= ~EFOBStatus.REPAIR_STATION;
-                    SendFOBEffect(fob.Team, fob.Status, fob.Position);
                 }
+            }
+        }
+
+        public static void PrepareFOBsForWipe()
+        {
+            foreach (var fob in AllFOBs)
+            {
+                fob.IsWipedByAuthority = true;
             }
         }
         
         public static FOB RegisterNewFOB(BarricadeDrop drop)
         {
+
             FOB fob = new FOB(drop);
             
             if (fob.Owner != 0 && Data.Is(out IGameStats ws) && ws.GameStats is IFobsTracker ft)
@@ -324,6 +287,10 @@ namespace Uncreated.Warfare.FOBs
 
             if (fob.Team == 1)
             {
+                byte[] state = Convert.FromBase64String(config.data.T1RadioState);
+                fob.Radio.GetServersideData().barricade.state = state;
+                fob.Radio.ReceiveUpdateState(state);
+
                 int number = 1;
                 bool placed = false;
                 for (int i = 0; i < Team1FOBs.Count; i++)
@@ -349,6 +316,10 @@ namespace Uncreated.Warfare.FOBs
             }
             else if (fob.Team == 2)
             {
+                byte[] state = Convert.FromBase64String(config.data.T2RadioState);
+                fob.Radio.GetServersideData().barricade.state = state;
+                fob.Radio.ReceiveUpdateState(state);
+
                 int number = 1;
                 bool placed = false;
                 for (int i = 0; i < Team2FOBs.Count; i++)
@@ -372,7 +343,6 @@ namespace Uncreated.Warfare.FOBs
                     Team2FOBs.Add(fob);
                 }
             }
-            SendFOBEffect(1, fob.Status, fob.Position);
             SendFOBListToTeam(fob.Team);
             return fob;
         }
@@ -414,7 +384,9 @@ namespace Uncreated.Warfare.FOBs
             ulong team = fob.Team;
 
             UCPlayer killer = UCPlayer.FromID(fob.Killer);
-            ulong killerteam = (ulong)(killer?.GetTeam());
+            ulong killerteam = 0;
+            if (killer != null)
+                killerteam = (ulong)(killer.GetTeam());
 
             ulong instanceID = fob.Radio.instanceID;
 
@@ -444,31 +416,37 @@ namespace Uncreated.Warfare.FOBs
                 pts.Dispose();
             }
 
-            if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == EState.ACTIVE && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
-            // doesnt count destroying fobs after game ends
+            if (!fob.IsWipedByAuthority)
             {
-                if (killer.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IFOBStats f)
-                    f.AddFOBDestroyed();
-                if (team == 1)
+                if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == EState.ACTIVE && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
+                // doesnt count destroying fobs after game ends
                 {
-                    ft.FOBsDestroyedT2++;
+                    if (killer.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IFOBStats f)
+                        f.AddFOBDestroyed();
+                    if (team == 1)
+                    {
+                        ft.FOBsDestroyedT2++;
+                    }
+                    else if (team == 2)
+                    {
+                        ft.FOBsDestroyedT1++;
+                    }
                 }
-                else if (team == 2)
+                if (removed != null && killer != null)
                 {
-                    ft.FOBsDestroyedT1++;
-                }
-            }
-            else if (removed != null && killer != null)
-            {
-                if (killer.GetTeam() == team)
-                {
-                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
-                }
-                else
-                {
-                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
-                    Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
-                    Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
+                    if (killer.GetTeam() == team)
+                    {
+                        Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
+                    }
+                    else
+                    {
+                        Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
+
+                        Points.TryAwardDriverAssist(killer.Player, Points.XPConfig.FOBKilledXP, 5);
+
+                        Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
+                        Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
+                    }
                 }
             }
             SendFOBListToTeam(team);
@@ -778,7 +756,6 @@ namespace Uncreated.Warfare.FOBs
     public class FOBConfig : ConfigData
     {
         public Guid MortarBase;
-        public string BaseEffectGUID;
         public float FOBMaxHeightAboveTerrain;
         public bool RestrictFOBPlacement;
         public ushort FOBID;
@@ -813,6 +790,9 @@ namespace Uncreated.Warfare.FOBs
         public ushort FirstFOBUiId;
         public ushort BuildResourceUI;
 
+        public string T1RadioState;
+        public string T2RadioState;
+
         public override void SetDefaults()
         {
             FOBMaxHeightAboveTerrain = 25f;
@@ -826,7 +806,8 @@ namespace Uncreated.Warfare.FOBs
 
             RepairStationRequiredBuild = 6;
 
-            BaseEffectGUID = "ef01398fb6564e8bb28b5cf9552d149";
+            T1RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAAABQDGlQFkAAMFAMmVAWQABgUAyZUBZAAACACmZQFkAAMIAMCVAWQABggAwJUBZAAHAgDWlQFkAAoCANaVAWQABwMA1pUBZAAKAwDWlQFkAAcEANaVAWQACgQA1pUBZAAJBQDYlQFkAAkHANiVAWQACQkA2JUBZAAACwDOlQFkAAAMAM6VAWQAAA0AzpUBZAADCwDOlQFkAAcAAKyVAWQACgAA1pUBZAAKAQDWlQFkAAMMAM6VAWQAAw0AzpUBZAAGDQDQlQFkAAQCANqVAWQACQsA0JUBZAAJDADQlQFkAAkNANCVAWQABgsAzpUBZAAGDADOlQFkAA==";
+            T2RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAAABQDGlQFkAAMFAMmVAWQABgUAyZUBZAAACACmZQFkAAMIAMCVAWQABggAwJUBZAAHAgDWlQFkAAoCANaVAWQABwMA1pUBZAAKAwDWlQFkAAcEANaVAWQACgQA1pUBZAAJBQDYlQFkAAkHANiVAWQACQkA2JUBZAAACwDOlQFkAAAMAM6VAWQAAA0AzpUBZAADCwDOlQFkAAcAAKyVAWQACgAA1pUBZAAKAQDWlQFkAAMMAM6VAWQAAw0AzpUBZAAGDQDQlQFkAAQCANqVAWQACQsA0JUBZAAJDADQlQFkAAkNANCVAWQABgsAzpUBZAAGDADOlQFkAA==";
 
             LogiTruckIDs = new Guid[4]
             { 

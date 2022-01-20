@@ -275,7 +275,7 @@ namespace Uncreated.Warfare
                 CSteamID instigator = CSteamID.Nil;
                 if (__instance.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
-                    instigator = vc.owner;
+                    instigator = vc.Vehicle.lockedOwner;
                 }
                 else
                 {

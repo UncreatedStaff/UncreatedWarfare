@@ -307,6 +307,7 @@ namespace Uncreated.Warfare
         {
             writer.WriteProperty(nameof(key), key);
             writer.WriteProperty(nameof(display_name), display_name);
+            writer.WritePropertyName(nameof(values));
             writer.WriteStartArray();
             for (int i = 0; i < values.Length; i++)
             {

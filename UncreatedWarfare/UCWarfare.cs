@@ -149,6 +149,13 @@ namespace Uncreated.Warfare
 
             Data.Gamemode.OnLevelLoaded();
 
+            if (File.Exists(@"C:\orb.wav"))
+            {
+                System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
+                player.Load();
+                player.Play();
+            }
+
         }
         private void SubscribeToEvents()
         {

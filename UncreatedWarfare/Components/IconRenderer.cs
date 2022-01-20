@@ -8,28 +8,73 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Components
 {
-    public class IconManager
+    public static class IconManager
     {
         private static List<IconRenderer> icons = new List<IconRenderer>();
+        
 
-        public static void OnGameTick(int counter)
+        public static void DrawNewMarkers(UCPlayer player, bool clearOld)
         {
-            if (Data.Gamemode.EveryMinute)
+            List<Guid> seenTypes = new List<Guid>();
+
+            foreach (var icon in icons)
             {
-                foreach (var icon in icons)
+                if (clearOld)
                 {
-                    
+                    if (!seenTypes.Contains(icon.EffectGUID))
+                    {
+                        seenTypes.Add(icon.EffectGUID);
+                        EffectManager.askEffectClearByID(icon.EffectID, player.connection);
+                    }
+                }
+
+                if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
+                {
+                    EffectManager.sendEffect(icon.EffectID, player.connection, icon.Point);
                 }
             }
         }
-
-        public static void AddIcon(IconRenderer icon)
+        public static void AttachIcon(Guid effectGUID, Transform transform, ulong team = 0, float yOffset = 0)
         {
+            var icon = transform.gameObject.AddComponent<IconRenderer>();
+            icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
+
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
+                {
+                    EffectManager.sendEffect(icon.EffectID, player.connection, icon.Point);
+                }
+            }
+
             icons.Add(icon);
         }
-        public static void RemoveIcon(IconRenderer icon)
+        public static void DeleteIcon(IconRenderer icon)
         {
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
+                {
+                    EffectManager.askEffectClearByID(icon.EffectID, player.connection);
+                }
+            }
             icons.Remove(icon);
+            icon.Destroy();
+
+            SpawnNewIconsOfType(icon.EffectGUID);
+        }
+        private static void SpawnNewIconsOfType(Guid effectGUID)
+        {
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                foreach (var icon in icons)
+                {
+                    if (icon.EffectGUID == effectGUID && icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
+                    {
+                        icon.SpawnNewIcon(player);
+                    }
+                }
+            }
         }
     }
 
@@ -41,23 +86,18 @@ namespace Uncreated.Warfare.Components
         public ushort EffectID { get; private set; }
         public float Range { get; private set; }
         public ulong Team { get; private set; }
-        private float refreshTime;
-        public void Initialize(Guid effectGUID, Vector3 point, float visibleRange, float refreshTimeSeconds, ulong team = 0)
+        public Vector3 Point { get; private set; }
+        public void Initialize(Guid effectGUID, Vector3 point, ulong team = 0)
         {
-            transform.position = point;
+            Point = point;
 
             EffectGUID = effectGUID;
-            refreshTime = refreshTimeSeconds;
 
             Team = team;
-
-            Range = visibleRange;
 
             if (Assets.find(EffectGUID) is EffectAsset effect)
             {
                 EffectID = effect.id;
-
-                
             }
             else
                 L.LogWarning("IconSpawner could not start: Effect asset not found: " + effectGUID);
@@ -67,21 +107,9 @@ namespace Uncreated.Warfare.Components
         {
             Destroy(this);
         }
-        private IEnumerable<UCPlayer> GetPlayerlist()
+        public void SpawnNewIcon(UCPlayer player)
         {
-            var playerList = PlayerManager.OnlinePlayers.Where(p => (p.Position - transform.position).sqrMagnitude < Math.Pow(Range, 2));
-
-            if (Team != 0)
-            {
-                playerList = playerList.Where(p => p.GetTeam() == Team);
-            }
-
-            return playerList;
-        }
-        public void SendIconToPlayers()
-        {
-            foreach (var player in GetPlayerlist())
-                EffectManager.sendEffect(EffectID, player.connection, transform.position);
+            EffectManager.sendEffect(EffectID, player.connection, Point);
         }
     }
 }

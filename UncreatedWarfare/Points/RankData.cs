@@ -17,7 +17,6 @@ namespace Uncreated.Warfare.Point
         public int Level;
         public int RankTier;
         public int OfficerTier;
-        public EBranch OfficerBranch;
         public ulong OfficerTeam;
         public int CurrentXP;
         public int RequiredXP;
@@ -29,43 +28,44 @@ namespace Uncreated.Warfare.Point
             Branch = branch;
 
             // have to assign all variables in constructor in structures
-            TotalXP = xp;
+
+            TotalXP = -1;
             Level = -1;
+            CurrentXP = -1;
+            RequiredXP = -1;
+
             RankTier = -1;
-            OfficerTier = -1;
-            OfficerBranch = EBranch.DEFAULT;
-            OfficerTier = 0;
-            CurrentXP = 0;
-            RequiredXP = 0;
+
             Name = null;
             Abbreviation = null;
-            OfficerTeam = 0;
-            CheckOfficerStatus();
+
+            OfficerTeam = officerTeam;
+            OfficerTier = -1;
+
             Update(xp);
+
         }
 
         public bool IsNil => TotalXP == -1;
         private const int A = 600;
         private const int D = 200;
-        public void Update(int newXp)
+        public void Update(int newXP)
         {
-            TotalXP = newXp;
+            TotalXP = newXP;
 
             float x = D / 2f;
             float y = A - (3 * x);
             float z = 0 - x - y;
-            int oldlvl = Level;
             Level = Mathf.RoundToInt(Mathf.Floor((x - A + Mathf.Sqrt(Mathf.Pow(A - x, 2f) + (2f * D * TotalXP))) / D));
 
             float n = Level + 1;
             CurrentXP = (int)(TotalXP - ((x * Math.Pow(n, 2)) + (y * n) + z));
+            RequiredXP = A + Level * D;
 
-            if (OfficerStorage.IsOfficer(Steam64, OfficerTeam, out OfficerData officer))
-            {
-                RequiredXP = A + Level * D;
-                RankTier = GetRankTier(Level);
-                CheckNameAbbreviations();
-            }
+            RankTier = GetRankTier(Level);
+
+            CheckOfficerStatus();
+            CheckNameAbbreviations();
         }
         public void CheckOfficerStatus()
         {
@@ -77,8 +77,6 @@ namespace Uncreated.Warfare.Point
             {
                 OfficerTier = 0;
             }
-
-            CheckNameAbbreviations();
         }
         public void CheckNameAbbreviations()
         {

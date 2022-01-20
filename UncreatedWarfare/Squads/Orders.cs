@@ -45,6 +45,8 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnFOBBunkerBuilt(FOB fob, BuildableComponent buildable)
         {
+            return;
+
             foreach (var pair in buildable.PlayerHits)
             {
                 var player = UCPlayer.FromID(pair.Key);

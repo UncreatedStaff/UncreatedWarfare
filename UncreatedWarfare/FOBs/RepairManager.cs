@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
@@ -167,7 +168,7 @@ namespace Uncreated.Warfare.FOBs
             while (parent.IsActive)
             {
                 List<InteractableVehicle> nearby = new List<InteractableVehicle>();
-                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(20, 2), nearby);
+                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(10, 2), nearby);
 
                 for (int i = 0; i < nearby.Count; i++)
                 {
@@ -204,33 +205,14 @@ namespace Uncreated.Warfare.FOBs
                         }
                         else if (parent.structure.group == nearby[i].lockedGroup.m_SteamID)
                         {
-                            int build_count = 0;
-
-                            ulong team = parent.structure.group.GetTeam();
-                            foreach (ItemJar jar in parent.storage.items.items)
-                            {
-                                if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) continue;
-                                if (team == 1 && asset.GUID == Gamemode.Config.Items.T1Build)
-                                {
-                                    build_count++;
-                                    break;
-                                }
-                                else if (team == 2 && asset.GUID == Gamemode.Config.Items.T2Build)
-                                {
-                                    build_count++;
-                                    break;
-                                }
-                            }
-
-                            if (build_count > 0)
+                            var fob = FOB.GetNearestFOB(parent.structure.point, EFOBRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
+                            if (F.IsInMain(parent.structure.point) || (fob != null && fob.Build > 0))
                             {
                                 parent.VehiclesRepairing.Add(nearby[i].instanceID, 9);
                                 parent.RepairVehicle(nearby[i]);
 
-                                if (team == 1)
-                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, Gamemode.Config.Items.T1Build);
-                                else if (team == 2)
-                                    UCBarricadeManager.RemoveSingleItemFromStorage(parent.storage, Gamemode.Config.Items.T2Build);
+                                if (fob != null)
+                                    fob.ReduceBuild(1);
                             }
                         }
                     }

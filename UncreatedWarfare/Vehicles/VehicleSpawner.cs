@@ -636,7 +636,7 @@ namespace Uncreated.Warfare.Vehicles
     public class SpawnedVehicleComponent : MonoBehaviour
     {
         private Coroutine timer;
-        private InteractableVehicle Owner;
+        private InteractableVehicle Vehicle;
         public VehicleSpawn spawn;
         private VehicleData data;
         public bool hasBeenRequested = false;
@@ -648,7 +648,7 @@ namespace Uncreated.Warfare.Vehicles
 
         public void Initialize(InteractableVehicle vehicle, VehicleSpawn spawn)
         {
-            Owner = vehicle;
+            Vehicle = vehicle;
             this.spawn = spawn;
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
@@ -657,7 +657,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void StartIdleRespawnTimer()
         {
-            if (Owner == null) return;
+            if (Vehicle == null) return;
             if (data != null)
             {
                 StopIdleRespawnTimer();
@@ -680,7 +680,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 yield return new WaitForSeconds(1f);
                 idleSecondsRemaining--;
-                if ((isIdle || idleSecondsRemaining % 4 == 0) && Owner.anySeatsOccupied || PlayerManager.IsPlayerNearby(Owner.lockedOwner.m_SteamID, 150, Owner.transform.position))
+                if ((isIdle || idleSecondsRemaining % 4 == 0) && Vehicle.anySeatsOccupied || PlayerManager.IsPlayerNearby(Vehicle.lockedOwner.m_SteamID, 150, Vehicle.transform.position))
                 {
                     isIdle = false;
                     idleSecondsRemaining = data.RespawnTime;
@@ -703,7 +703,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
             spawn.SpawnVehicle();
-            VehicleBay.DeleteVehicle(Owner);
+            VehicleBay.DeleteVehicle(Vehicle);
             isIdle = false;
         }
     }

@@ -84,9 +84,6 @@ namespace Uncreated.Warfare.Components
                         Barricade barricade = parent.Radio.GetServersideData().barricade;
 
                         BarricadeManager.damage(transform, loss, 1, false, default, EDamageOrigin.Useable_Melee);
-
-                        if (loss >= barricade.health)
-                            parent.Destroy();
                     }
                    
                 }
@@ -169,6 +166,7 @@ namespace Uncreated.Warfare.Components
         public ulong Creator { get; private set; }
 
         private Guid builtRadioGUID;
+        private byte[] builtState;
 
         private Guid BuildID;
         private Guid AmmoID;
@@ -179,6 +177,10 @@ namespace Uncreated.Warfare.Components
         public FOB(BarricadeDrop radio)
         {
             Radio = radio;
+
+            if (Radio.interactable is InteractableStorage storage)
+                storage.despawnWhenDestroyed = true;
+
             FriendliesOnFOB = new List<UCPlayer>();
             NearbyEnemies = new List<UCPlayer>();
 
@@ -188,6 +190,8 @@ namespace Uncreated.Warfare.Components
             GridCoordinates = FOBManager.GetGridCoords(Position.x, Position.z);
             Status = EFOBStatus.RADIO;
             IsBleeding = false;
+            IsWipedByAuthority = false;
+            IsDestroyed = false;
 
             Killer = 0;
 
@@ -195,7 +199,11 @@ namespace Uncreated.Warfare.Components
 
             var nearestLogi = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, Position).FirstOrDefault(l => l.lockedGroup.m_SteamID == Team);
             if (nearestLogi != null)
+            {
+                if (nearestLogi.transform.TryGetComponent(out VehicleComponent component))
+                    component.Quota += 3;
                 Creator = nearestLogi.lockedOwner.m_SteamID;
+            }
 
             builtRadioGUID = radio.asset.GUID;
 
@@ -239,7 +247,6 @@ namespace Uncreated.Warfare.Components
                 Radius = FOBManager.config.data.FOBBuildPickupRadius;
                 Status |= EFOBStatus.HAB;
             }
-            FOBManager.SendFOBEffect(Team, Status, Position);
         }
         public void ConsumeResources()
         {
@@ -271,6 +278,12 @@ namespace Uncreated.Warfare.Components
                                     int xp = Points.XPConfig.UnloadSuppliesXP;
 
                                     Points.AwardXP(player, xp, Translation.Translate("ofp_supplies_unloaded", player));
+
+                                    var vehicle = player.Player.movement.getVehicle();
+                                    if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
+                                    {
+                                        component.Quota += 0.33F;
+                                    }
                                 }
 
                                 Points.AwardTW(player, tw, Translation.Translate("ofp_supplies_unloaded", player));
@@ -317,6 +330,12 @@ namespace Uncreated.Warfare.Components
         public void ReduceBuild(int amount)
         {
             Build -= amount;
+            foreach (UCPlayer player in FriendliesOnFOB)
+                UpdateBuildUI(player);
+        }
+        public void AddBuild(int amount)
+        {
+            Build += amount;
             foreach (UCPlayer player in FriendliesOnFOB)
                 UpdateBuildUI(player);
         }
@@ -375,9 +394,12 @@ namespace Uncreated.Warfare.Components
             Radio = newDrop;
             component = newDrop.model.gameObject.AddComponent<FOBComponent>();
             component.Initialize(this);
+
         }
         public void StartBleed()
         {
+            builtState = Radio.GetServersideData().barricade.state;
+
             if (Radio.model.TryGetComponent(out BarricadeComponent component))
             {
                 Killer = component.LastDamager;
@@ -393,7 +415,6 @@ namespace Uncreated.Warfare.Components
             SwapRadioBarricade(newRadio);
 
             FOBManager.SendFOBListToTeam(Team);
-
         }
         public void Reactivate()
         {
@@ -406,6 +427,12 @@ namespace Uncreated.Warfare.Components
 
             SwapRadioBarricade(newRadio);
 
+            if (Radio.interactable is InteractableStorage storage)
+                storage.despawnWhenDestroyed = true;
+
+            Radio.GetServersideData().barricade.state = builtState;
+            Radio.ReceiveUpdateState(builtState);
+
             FOBManager.SendFOBListToTeam(Team);
         }
 
@@ -414,7 +441,7 @@ namespace Uncreated.Warfare.Components
             float amount = 30;
 
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
-                amount *= 2;
+                amount *= 3;
 
             EffectManager.sendEffect(38405, EffectManager.MEDIUM, builder.Position);
 
@@ -425,9 +452,13 @@ namespace Uncreated.Warfare.Components
                 Reactivate();
             }
         }
-
+        public bool IsWipedByAuthority;
+        public bool IsDestroyed { get; private set; }
         public void Destroy()
         {
+            if (IsDestroyed || Radio.GetServersideData().barricade.isDead)
+                return;
+
             foreach (UCPlayer player in FriendliesOnFOB)
                 OnPlayerLeftFOB(player);
             foreach (UCPlayer player in NearbyEnemies)
@@ -438,11 +469,6 @@ namespace Uncreated.Warfare.Components
 
             component.Destroy();
 
-            if (!(Radio == null || Radio.GetServersideData().barricade.isDead))
-            {
-                if (Regions.tryGetCoordinate(Radio.model.position, out byte x, out byte y))
-                    BarricadeManager.destroyBarricade(Radio, x, y, ushort.MaxValue);
-            }
             if(!(Bunker == null || Bunker.GetServersideData().barricade.isDead))
             {
                 if (Regions.tryGetCoordinate(Bunker.model.position, out byte x, out byte y))
@@ -458,6 +484,8 @@ namespace Uncreated.Warfare.Components
                 if (Regions.tryGetCoordinate(ammoCrate.model.position, out byte x, out byte y))
                     BarricadeManager.destroyBarricade(ammoCrate, x, y, ushort.MaxValue);
             }
+
+            IsDestroyed = true;
 
             FOBManager.DeleteFOB(this);
         }
@@ -480,19 +508,31 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetNearbyFOBs(Vector3 point, ulong team = 0, EFOBRadius radius = EFOBRadius.FULL)
         {
-            float range = 0;
-
-            if (radius == EFOBRadius.FULL)
-                range = FOBManager.config.data.FOBBuildPickupRadius;
-            else if (radius == EFOBRadius.SHORT)
-                range = 30;
-            else if (radius == EFOBRadius.FOB_PLACEMENT)
-                range = FOBManager.config.data.FOBBuildPickupRadius * 2;
-
-
             List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
-                (b.model.position - point).sqrMagnitude <= Math.Pow(range, 2) &&
-                b.model.TryGetComponent<FOBComponent>(out _)
+                {
+                    bool isFOB = b.model.TryGetComponent<FOBComponent>(out var f);
+                    if (!isFOB)
+                        return false;
+
+                    bool isInrange = false;
+                    if (radius == EFOBRadius.FULL_WITH_BUNKER_CHECK)
+                    {
+                        if ((b.model.position - point).sqrMagnitude <= Math.Pow(30, 2))
+                            isInrange = true;
+                        else
+                        {
+                            isInrange = f.parent.Bunker != null && (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius, 2);
+                        }
+                    }
+                    else if (radius == EFOBRadius.SHORT)
+                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(30, 2);
+                    else if (radius == EFOBRadius.FULL)
+                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius, 2);
+                    else if (radius == EFOBRadius.FOB_PLACEMENT)
+                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius * 2, 2);
+
+                    return isInrange;
+                }
             );
 
             List<FOB> fobs = new List<FOB>();
@@ -520,6 +560,7 @@ namespace Uncreated.Warfare.Components
     {
         SHORT,
         FULL,
+        FULL_WITH_BUNKER_CHECK,
         FOB_PLACEMENT
     }
 }

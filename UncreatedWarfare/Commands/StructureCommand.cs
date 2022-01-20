@@ -187,6 +187,12 @@ namespace Uncreated.Warfare.Commands
         {
             if (bdrop != null && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
             {
+                if (bdrop.model.TryGetComponent(out Components.FOBComponent f))
+                {
+                    f.parent.IsWipedByAuthority = true;
+                    //f.parent.Destroy();
+                }
+
                 SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
                 player.SendChat("structure_popped", data.barricade.asset.itemName);
                 BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);

@@ -45,6 +45,8 @@ namespace Uncreated.Warfare
 
             Points.OnGroupChanged(ucplayer, oldGroup, newGroup);
             Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
+
+            IconManager.DrawNewMarkers(ucplayer, true);
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
         internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
@@ -124,20 +126,32 @@ namespace Uncreated.Warfare
             {
                 if (!FOBManager.AllFOBs.Exists(f => f.Position == drop.model.position))
                     FOBManager.RegisterNewFOB(drop);
+
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerRadio, drop.model, data.group, 3.5F);
             }
+
+            // FOB radio damaged
+            if (Gamemode.Config.Barricades.FOBRadioDamagedGUID == data.barricade.asset.GUID)
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerRadioDamaged, drop.model, data.group, 3.5F);
+
+            // FOB bunker
+            if (Gamemode.Config.Barricades.FOBGUID == data.barricade.asset.GUID)
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerBunker, drop.model, data.group, 5.5F);
 
             // ammo bag
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
             {
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
-                drop.model.gameObject.AddComponent<IconRenderer>().Initialize(Gamemode.Config.UI.MarkerAmmo, drop.model.position, 100f, 0.5F, data.group);
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1);
             }
 
             // ammo crate
             if (Gamemode.Config.Barricades.AmmoCrateGUID == data.barricade.asset.GUID)
-            {
-                drop.model.gameObject.AddComponent<IconRenderer>().Initialize(Gamemode.Config.UI.MarkerAmmo, drop.model.position, 100f, 0.5F, data.group);
-            }
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1.75F);
+
+            // repair station
+            if (Gamemode.Config.Barricades.RepairStationGUID == data.barricade.asset.GUID)
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerRepair, drop.model, data.group, 4.5F);
 
             if (FOBManager.config.data.Buildables == null) return;
             BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
@@ -172,7 +186,7 @@ namespace Uncreated.Warfare
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
-            var rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>();
+            var rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
             foreach (var rocket in rockets)
             {
                 L.Log("     rocket owner: " + rocket.killer);
@@ -273,7 +287,7 @@ namespace Uncreated.Warfare
                 if (!vehicle.TryGetComponent(out VehicleComponent c))
                 {
                     c = vehicle.gameObject.AddComponent<VehicleComponent>();
-                    c.owner = vehicle.lockedOwner;
+                    c.Initialize(vehicle);
                 }
                 if (instigatorSteamID != CSteamID.Nil)
                 {
@@ -295,11 +309,25 @@ namespace Uncreated.Warfare
                             c.item = c2.lastProjected;
                         }
                     }
-                    else if (damageOrigin == EDamageOrigin.Vehicle_Bumper)
+                    else if (damageOrigin == EDamageOrigin.Vehicle_Explosion)
                     {
                         if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                         {
                             c.item = c2.lastExplodedVehicle;
+                        }
+                    }
+                    else if (damageOrigin == EDamageOrigin.Useable_Gun || damageOrigin == EDamageOrigin.Bullet_Explosion)
+                    {
+                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                        {
+                            c.item = c2.lastShot;
+                        }
+                    }
+                    else if (damageOrigin == EDamageOrigin.Trap_Explosion)
+                    {
+                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                        {
+                            c.item = c2.LastLandmineExploded.barricadeGUID;
                         }
                     }
                 }
@@ -394,6 +422,8 @@ namespace Uncreated.Warfare
                     Steam64 = ucplayer.Steam64,
                     Team = player.GetTeamByte()
                 });
+
+                IconManager.DrawNewMarkers(ucplayer, false);
             }
             catch (Exception ex)
             {
@@ -654,10 +684,14 @@ namespace Uncreated.Warfare
         {
             if (shouldAllow)
             {
-                if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                VehicleComponent component = null;
+                if (!vehicle.transform.TryGetComponent(out component))
                 {
-                    component.OnPlayerEnteredVehicle(player, vehicle);
+                    component = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
+                    component.Initialize(vehicle);
                 }
+
+                component.OnPlayerEnteredVehicle(player, vehicle);
             }
 
             if (Data.Is<IFlagRotation>(out _) && player.IsOnFlag(out Flag flag))
@@ -1068,7 +1102,7 @@ namespace Uncreated.Warfare
             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                 repairable.Destroy();
             if (drop.model.TryGetComponent(out IconRenderer iconRenderer))
-                iconRenderer.Destroy();
+                IconManager.DeleteIcon(iconRenderer);
 
             if (Data.Is<ISquads>(out _))
                 RallyManager.OnBarricadeDestroyed(data, drop, instanceID, plant);

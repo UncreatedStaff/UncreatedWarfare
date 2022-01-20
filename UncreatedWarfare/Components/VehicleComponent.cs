@@ -9,13 +9,40 @@ namespace Uncreated.Warfare.Components
 {
     public class VehicleComponent : MonoBehaviour
     {
-        public CSteamID owner;
         public Guid item;
-        public bool isVehicle = false;
+        public InteractableVehicle Vehicle;
+        public VehicleData Data;
+        public bool isInVehiclebay { get; private set; }
         public EDamageOrigin lastDamageOrigin;
-        public ulong lastDamager = 0;
-        private Dictionary<ulong, Vector3> TransportTable = new Dictionary<ulong, Vector3>();
+        public ulong lastDamager;
+        public Dictionary<ulong, Vector3> TransportTable { get; private set; }
+        public Dictionary<ulong, double> UsageTable { get; private set; }
+        private Dictionary<ulong, DateTime> TimeEnteredTable;
+        private float _quota;
+        private float _requiredQuota;
+        public float Quota { get => _quota; set => _quota = value; }
+        public float RequiredQuota { get => _requiredQuota; set => _requiredQuota = value; }
 
+        private Coroutine quotaLoop;
+
+        public void Initialize(InteractableVehicle vehicle)
+        {
+            Vehicle = vehicle;
+
+            lastDamager = 0;
+            TransportTable = new Dictionary<ulong, Vector3>();
+            UsageTable = new Dictionary<ulong, double>();
+            TimeEnteredTable = new Dictionary<ulong, DateTime>();
+
+            _quota = 0;
+            _requiredQuota = -1;
+
+            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out var data))
+            {
+                Data = data;
+                isInVehiclebay = true;
+            }
+        }
         public void OnPlayerEnteredVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
@@ -26,24 +53,42 @@ namespace Uncreated.Warfare.Components
             for (byte i = 0; i < vehicle.passengers.Length; i++)
             {
                 if (vehicle.passengers[i].player == null)
-                {
                     toSeat = i;
+            }
+
+            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out var data))
+            {
+                bool isCrewSeat = data.CrewSeats.Contains(toSeat);
+
+                if (!isCrewSeat)
+                {
+                    if (!TransportTable.ContainsKey(player.Steam64))
+                        TransportTable.Add(player.Steam64, player.Position);
+                    else
+                        TransportTable[player.Steam64] = player.Position;
+                }
+
+                if (!TimeEnteredTable.ContainsKey(player.Steam64))
+                    TimeEnteredTable.Add(player.Steam64, DateTime.Now);
+                else
+                    TimeEnteredTable[player.Steam64] = DateTime.Now;
+
+                if (quotaLoop is null)
+                {
+                    _requiredQuota = data.TicketCost;
+                    quotaLoop = StartCoroutine(QuotaLoop());
                 }
             }
-            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out var data) &&
-                !data.CrewSeats.Contains(toSeat))
-            {
-                if (!TransportTable.ContainsKey(player.Steam64))
-                    TransportTable.Add(player.Steam64, player.Position);
-                else
-                    TransportTable[player.Steam64] = player.Position;
-            }
         }
+
         public void OnPlayerExitedVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
+
+            if (isInVehiclebay)
+                EvaluateUsage(nelsonplayer.channel.owner);
 
             if (vehicle.passengers[0].player == null)
                 return;
@@ -59,6 +104,8 @@ namespace Uncreated.Warfare.Components
                     int amount = (int)(Math.Floor(distance / 100) * 5) + 15;
 
                     Points.AwardXP(vehicle.passengers[0].player.player, amount, Translation.Translate("xp_transporting_players", vehicle.passengers[0].player.player));
+
+                    _quota += 0.5F;
                 }
                 TransportTable.Remove(player.Steam64);
             }
@@ -69,16 +116,47 @@ namespace Uncreated.Warfare.Components
             if (player == null)
                 return;
 
-            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out var data) &&
-                !data.CrewSeats.Contains(toSeatIndex))
+            if (isInVehiclebay)
             {
-                if (!TransportTable.ContainsKey(player.Steam64))
-                    TransportTable.Add(player.Steam64, player.Position);
+                EvaluateUsage(nelsonplayer.channel.owner);
+
+                if (!Data.CrewSeats.Contains(toSeatIndex))
+                {
+                    if (!TransportTable.ContainsKey(player.Steam64))
+                        TransportTable.Add(player.Steam64, player.Position);
+                }
                 else
-                    TransportTable[player.Steam64] = player.Position;
+                    TransportTable.Remove(player.Steam64);
             }
-            else
-                TransportTable.Remove(player.Steam64);
+        }
+
+        public void EvaluateUsage(SteamPlayer player)
+        {
+            byte currentSeat = player.player.movement.getSeat();
+            bool isCrewSeat = Data.CrewSeats.Contains(currentSeat);
+
+            if (currentSeat == 0 || isCrewSeat)
+            {
+                ulong Steam64 = player.playerID.steamID.m_SteamID;
+
+                if (TimeEnteredTable.TryGetValue(Steam64, out DateTime start))
+                {
+                    double time = (DateTime.Now - start).TotalSeconds;
+                    if (!UsageTable.ContainsKey(Steam64))
+                        UsageTable.Add(Steam64, time);
+                    else
+                        UsageTable[Steam64] += time;
+                }
+            }
+        }
+        private IEnumerator<WaitForSeconds> QuotaLoop()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(60);
+
+                _quota += 0.5F;
+            }
         }
     }
 }

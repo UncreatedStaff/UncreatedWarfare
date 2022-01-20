@@ -333,6 +333,11 @@ namespace Uncreated.Warfare.Gamemodes
                                 uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
                                 if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
                                 {
+                                    if (BarricadeManager.regions[x, y].drops[i].model.TryGetComponent(out Components.FOBComponent fob))
+                                    {
+                                        fob.parent.IsWipedByAuthority = true;
+                                    }
+
                                     if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
                                         storage.despawnWhenDestroyed = true;
                                     BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);

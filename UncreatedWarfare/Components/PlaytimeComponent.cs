@@ -272,6 +272,13 @@ namespace Uncreated.Warfare.Components
                             CancelTeleport();
                             yield break;
                         }
+                        if (fob.IsBleeding)
+                        {
+                            player.Message("deploy_c_bleeding");
+
+                            CancelTeleport();
+                            yield break;
+                        }
                         if (!fob.IsSpawnable)
                         {
                             player.Message("deploy_c_notspawnable");

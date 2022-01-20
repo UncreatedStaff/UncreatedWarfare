@@ -53,22 +53,22 @@ namespace Uncreated.Warfare.Point
         }
         public static void OnBranchChanged(UCPlayer player, EBranch oldBranch, EBranch newBranch)
         {
-            if (oldBranch != EBranch.DEFAULT)
+            string rank = "";
+            if (player.CurrentRank.Level > 0)
+                rank = Translation.Translate("branch_changed", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name, player.CurrentRank.Level.ToString(Data.Locale));
+            else
+                rank = Translation.Translate("branch_changed_recruit", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name);
+
+            if (!(oldBranch == EBranch.DEFAULT || player.Branch != EBranch.DEFAULT))
             {
-                string rank = "";
-                if (player.CurrentRank.Level > 0)
-                    rank = Translation.Translate("branch_changed", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name, player.CurrentRank.Level.ToString(Data.Locale));
-                else
-                    rank = Translation.Translate("branch_changed_recruit", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name);
-
                 ToastMessage.QueueMessage(player, new ToastMessage(
-                "",
-                "",
-                rank,
-                EToastMessageSeverity.BIG));
-
-                UpdateXPUI(player);
+                    "",
+                    "",
+                    rank,
+                    EToastMessageSeverity.BIG));
             }
+
+            UpdateXPUI(player);
         }
         public static void AwardXP(UCPlayer player, int amount, string message = "")
         {
@@ -248,6 +248,8 @@ namespace Uncreated.Warfare.Point
             float ratio = currentPoints / (float)totalPoints;
 
             int progress = Mathf.RoundToInt(ratio * barLength);
+            if (progress > barLength)
+                progress = barLength;
 
             char[] bars = new char[barLength];
             for (int i = 0; i < progress; i++)
@@ -256,7 +258,7 @@ namespace Uncreated.Warfare.Point
             }
             return new string(bars);
         }
-        public static void TryAwardDriverAssist(Player gunner, int amount)
+        public static void TryAwardDriverAssist(Player gunner, int amount, float quota = 0)
         {
             var vehicle = gunner.movement.getVehicle();
             if (vehicle != null)
@@ -265,6 +267,11 @@ namespace Uncreated.Warfare.Point
                 if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
                 {
                     AwardXP(driver.player, amount, Translation.Translate("xp_driver_assist", gunner));
+                }
+
+                if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                {
+                    component.Quota += quota;
                 }
             }
         }
