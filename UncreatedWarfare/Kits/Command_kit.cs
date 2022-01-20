@@ -39,6 +39,7 @@ namespace Uncreated.Warfare.Kits
             else
             {
                 ucplayer = UCPlayer.FromIRocketPlayer(caller);
+                player = (UnturnedPlayer)caller;
             }
             if (!Data.Is<IKitRequests>(out _))
             {
@@ -374,7 +375,7 @@ namespace Uncreated.Warfare.Kits
                 // copy new kit from existing kit
                 if (op == "copyfrom" || op == "cf")
                 {
-                    string existingName = command[1];
+                    string existingName = command[1].ToLower();
 
                     if (KitManager.KitExists(existingName, out Kit existing))
                     {
@@ -382,7 +383,7 @@ namespace Uncreated.Warfare.Kits
                         {
                             Kit newKit = new Kit
                             {
-                                Name = kitName,
+                                Name = kitName.ToLower(),
                                 Items = existing.Items,
                                 Clothes = existing.Clothes,
                                 Class = existing.Class,
@@ -401,7 +402,9 @@ namespace Uncreated.Warfare.Kits
                                 Weapons = existing.Weapons
                             };
 
-                            Reply(ucplayer, "kit_copied", kitName);
+                            KitManager.CreateKit(newKit);
+
+                            Reply(ucplayer, "kit_copied", existing.Name, newKit.Name);
                         }
                         else
                         {
@@ -446,7 +449,7 @@ namespace Uncreated.Warfare.Kits
                         Reply(ucplayer, "kit_l_e_invalid_team", team_s);
                         return;
                     }
-                    if (!Enum.TryParse(team_s, out EClass kitClass))
+                    if (!Enum.TryParse(class_s, out EClass kitClass))
                     {
                         Reply(ucplayer, "kit_l_e_invalid_class", class_s);
                         return;
@@ -456,7 +459,7 @@ namespace Uncreated.Warfare.Kits
 
                     var loadoutsCount = KitManager.GetKitsWhere(k => k.IsLoadout && k.AllowedUsers.Contains(steamid)).Count();
 
-                    char letter = chars[loadoutsCount - 1];
+                    char letter = chars[loadoutsCount];
                     string loadoutName = steamid.ToString() + "_" + letter;
 
                     if (!KitManager.KitExists(loadoutName, out _))

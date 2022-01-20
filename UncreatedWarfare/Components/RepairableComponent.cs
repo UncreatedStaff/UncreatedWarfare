@@ -63,20 +63,32 @@ namespace Uncreated.Warfare.Components
                     bool teamkilled = Structure.GetServersideData().group == player.GetTeam();
 
                     int amount = 0;
+                    float vehicleQuota = 0;
                     if (buildable.type == EBuildableType.FOB_BUNKER)
                     {
-                        if (teamkilled) amount = Points.XPConfig.FOBTeamkilledXP;
-                        else amount = Points.XPConfig.FOBKilledXP;
+                        if (teamkilled)
+                        {
+                            amount = Points.XPConfig.FOBTeamkilledXP;
+                        }
+                        else
+                        {
+                            amount = Points.XPConfig.FOBKilledXP;
+                            vehicleQuota = 5;
+                        }
                     }
                     if (buildable.type == EBuildableType.FORTIFICATION)
                     {
-                        amount = (int)Math.Round(buildable.requiredHits * 0.25F);
+                        amount = (int)Math.Round(buildable.requiredHits * 0.1F);
+                        
+
                         if (teamkilled) amount *= -1;
+                        else vehicleQuota = 0.1F;
                     }
                     else
                     {
                         amount = (int)Math.Round(buildable.requiredHits * 0.75F);
                         if (teamkilled) amount *= -1;
+                        else vehicleQuota = amount * 0.02F;
                     }
 
                     if (teamkilled)
@@ -85,7 +97,10 @@ namespace Uncreated.Warfare.Components
                     }
 
                     if (amount != 0)
+                    {
                         Points.AwardXP(player, amount, message.ToUpper());
+                        Points.TryAwardDriverAssist(player.Player, amount, vehicleQuota);
+                    }
                 }
             }
 

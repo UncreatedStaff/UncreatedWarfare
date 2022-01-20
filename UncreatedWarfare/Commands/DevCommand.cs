@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -50,13 +51,77 @@ namespace Uncreated.Warfare.Commands
             {
                 var barricade = BarricadeManager.FindBarricadeByRootTransform(UCBarricadeManager.GetBarricadeTransformFromLook(player.Player.look));
 
-                if (barricade.model.TryGetComponent<BuildableComponent>(out var buildable))
+                if (barricade != null)
                 {
-                    buildable.Build();
-                    player.Message($"Successfully built {barricade.asset.itemName}".Colorize("ebd491"));
+                    if (barricade.model.TryGetComponent<BuildableComponent>(out var buildable))
+                    {
+                        buildable.Build();
+                        player.Message($"Successfully built {barricade.asset.itemName}".Colorize("ebd491"));
+                    }
+                    else
+                        player.Message($"This barricade ({barricade.asset.itemName}) is not buildable.".Colorize("c7a29f"));
                 }
                 else
-                    player.Message($"This barricade ({barricade.asset.itemName}) is not buildable.".Colorize("c7a29f"));
+                    player.Message($"You are not looking at a barricade.".Colorize("c7a29f"));
+            }
+            else if (command.Length == 1 && command[0].ToLower() == "logmeta")
+            {
+                var barricade = BarricadeManager.FindBarricadeByRootTransform(UCBarricadeManager.GetBarricadeTransformFromLook(player.Player.look));
+
+                if (barricade != null)
+                {
+                    var data = barricade.GetServersideData();
+                    string state = System.Convert.ToBase64String(data.barricade.state);
+                    L.Log($"BARRICADE STATE: {state}");
+                    player.Message($"Metadata state has been logged to console. State: {state}".Colorize("ebd491"));
+                }
+                else
+                    player.Message($"You are not looking at a barricade.".Colorize("c7a29f"));
+
+            }
+            else if (command.Length == 1 && (command[0].ToLower() == "checkvehicle" || command[0].ToLower() == "cvc"))
+            {
+                var vehicle = player.Player.movement.getVehicle();
+                if (vehicle is null)
+                    vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+
+                if (vehicle is not null)
+                {
+                    if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                    {
+                        player.Message($"Vehicle logged successfully. Check console".Colorize("ebd491"));
+
+                        L.Log($"{vehicle.asset.vehicleName.ToUpper()}");
+
+                        L.Log($"    Is In VehicleBay: {component.isInVehiclebay}\n");
+
+                        if (component.isInVehiclebay)
+                        {
+                            L.Log($"    Team: {component.Data.Team}");
+                            L.Log($"    Type: {component.Data.Type}");
+                            L.Log($"    Tickets: {component.Data.TicketCost}");
+                            L.Log($"    Branch: {component.Data.Branch}\n");
+                        }
+
+                        L.Log($"    Quota: {component.Quota}/{component.RequiredQuota}\n");
+
+                        L.Log($"    Usage Table:");
+                        foreach (var entry in component.UsageTable)
+                        {
+                            L.Log($"        {entry.Key}'s time in vehicle: {entry.Value} s");
+                        }
+                        L.Log($"    Transport Table:");
+                        foreach (var entry in component.TransportTable)
+                        {
+                            L.Log($"        {entry.Key}'s starting position: {entry.Value}");
+                        }
+                    }
+                    else
+                        player.Message($"This vehicle does have a VehicleComponent".Colorize("c7a29f"));
+                }
+                else
+                    player.Message($"You are not inside or looking at a vehicle.".Colorize("c7a29f"));
+
             }
             else
                 player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));

@@ -78,6 +78,11 @@ namespace Uncreated.Warfare.Commands
                         player.Message("deploy_e_nobunker", command[0]);
                         return;
                     }
+                    if (FOB.IsBleeding)
+                    {
+                        player.Message("deploy_e_damaged", command[0]);
+                        return;
+                    }
                     if (FOB.NearbyEnemies.Count != 0)
                     {
                         player.Message("deploy_e_enemiesnearby", command[0]);

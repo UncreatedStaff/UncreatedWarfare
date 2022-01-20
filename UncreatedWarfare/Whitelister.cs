@@ -115,13 +115,32 @@ namespace Uncreated.Warfare
         }
         private void OnBarricadeSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
-            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
-            if (player.OnDuty())
-                return;
+            if (!shouldAllow) return;
 
-            SDG.Unturned.BarricadeData data = barricade.GetServersideData();
-            if (IsWhitelisted(data.barricade.asset.GUID, out _))
-                return;
+            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
+            bool isFob = false;
+            if (player.OnDuty())
+            {
+                if (barricade.model.TryGetComponent(out Components.FOBComponent f))
+                {
+                    isFob = true;
+                    f.parent.IsWipedByAuthority = true;
+                }
+            }
+            else
+            {
+                if (!IsWhitelisted(barricade.asset.GUID, out _) || isFob)
+                {
+                    player.Message("whitelist_nosalvage");
+                    shouldAllow = false;
+                    return;
+                }
+            }
+
+            if (barricade.model.TryGetComponent(out Components.BuildableComponent b))
+            {
+                b.IsSalvaged = true;
+            }
 
             //if (KitManager.KitExists(player.KitName, out var kit))
             //{
@@ -129,8 +148,7 @@ namespace Uncreated.Warfare
             //        return;
             //}
 
-            player.Message("whitelist_nosalvage");
-            shouldAllow = false;
+
         }
         private void OnStructureSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
         {

@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Tickets
                 component.ResetAttackers();
             }
 
-            Points.TryAwardDriverAssist(parameters.killer, Points.XPConfig.EnemyKilledXP);
+            Points.TryAwardDriverAssist(parameters.killer, Points.XPConfig.EnemyKilledXP, 1);
         }
         public static void OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
@@ -122,7 +122,16 @@ namespace Uncreated.Warfare.Tickets
                 {
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        UCPlayer player = UCPlayer.FromCSteamID(vc.owner);
+                        UCPlayer player = UCPlayer.FromID(vc.lastDamager);
+                        bool wasCrashed = false;
+
+                        if (player == null)
+                            player = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
+                        if (player == null)
+                            return;
+                        else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID)
+                            wasCrashed = true;
+
                         ulong dteam = player.GetTeam();
                         bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
                         bool vehicleWasFriendly = dteam == lteam;
@@ -166,16 +175,28 @@ namespace Uncreated.Warfare.Tickets
                                 break;
                         }
 
-                        UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+                        
                         if (vehicleWasEnemy)
                         {
-                            if (owner is null)
-                                Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
+                            Asset asset = Assets.find(vc.item);
+                            string reason = "";
+                            if (asset != null)
+                            {
+                                L.Log("     Asset was not null");
+
+                                if (asset is ItemAsset item)
+                                    reason = item.itemName;
+                                else if (asset is VehicleAsset v)
+                                    reason = "suicide " + v.vehicleName;
+                            }
+
+                            if (reason == "")
+                                Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
                             else
-                                Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), F.ColorizeName(F.GetPlayerOriginalNames(owner).CharacterName, owner.GetTeam()), vehicle.asset.vehicleName);
+                                Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
 
                             Points.AwardXP(player, amount, "xp_" + message);
-                            Points.TryAwardDriverAssist(player.Player, amount);
+                            Points.TryAwardDriverAssist(player.Player, amount, data.TicketCost);
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
                         }
@@ -187,8 +208,43 @@ namespace Uncreated.Warfare.Tickets
                             Points.AwardTW(player.Player, -amount, Translation.Translate(message, player.Steam64));
                             Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
-                        if (vehicle.TryGetComponent(out SpawnedVehicleComponent comp))
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, comp.spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+
+                        float missingQuota = vc.Quota - vc.RequiredQuota;
+                        if (missingQuota < 0)
+                        {
+                            // give quota penalty
+                            if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
+                            {
+                                for (byte i = 0; i < vehicle.passengers.Length; i++)
+                                {
+                                    var passenger = vehicle.passengers[i];
+
+                                    if (passenger.player is not null)
+                                    {
+                                        vc.EvaluateUsage(passenger.player);
+                                    }
+                                }
+
+                                double totalTime = 0;
+                                foreach (var entry in vc.UsageTable)
+                                    totalTime += entry.Value;
+
+                                foreach (var entry in vc.UsageTable)
+                                {
+                                    float responsibleness = (float)(entry.Value / totalTime);
+                                    int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
+
+                                    L.Log($"    {entry.Key} was responsible for {responsibleness * 100}% of the damage. Their penalty: {penalty} XP");
+
+                                    var assetWaster = UCPlayer.FromID(entry.Key);
+                                    if (assetWaster != null)
+                                        Points.AwardXP(assetWaster, penalty, "xp_wasting_assets");
+                                }
+                            }
+                        }
+
+                        if (vehicle.TryGetComponent(out SpawnedVehicleComponent svc))
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, svc.spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
                         else
                             Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
                     }

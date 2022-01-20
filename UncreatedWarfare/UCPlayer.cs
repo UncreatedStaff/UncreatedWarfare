@@ -97,21 +97,10 @@ namespace Uncreated.Warfare
         public void RedownloadRanks()
         {
             Dictionary<EBranch, int> xplevels = Data.DatabaseManager.GetAllXP(Steam64);
+            _ranks.Clear();
             foreach (KeyValuePair<EBranch, int> entry in xplevels)
             {
-                if (_ranks.TryGetValue(entry.Key, out RankData rank))
-                {
-                    rank.Update(entry.Value);
-                    ulong t = this.GetTeam();
-                    if (t != rank.OfficerTeam)
-                    {
-                        rank.OfficerTeam = t;
-                        rank.CheckOfficerStatus();
-                        rank.CheckNameAbbreviations();
-                    }
-                }
-                else
-                    _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
+                _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
         }
         public void RedownloadMedals()
@@ -120,18 +109,19 @@ namespace Uncreated.Warfare
         }
         public void UpdateRank(EBranch branch, int newXP)
         {
-            if (_ranks.TryGetValue(branch, out RankData data))
+            if (Ranks.TryGetValue(branch, out RankData data))
                 data.Update(newXP);
             else
-                _ranks.Add(branch, new RankData(Steam64, newXP, branch, this.GetTeam()));
+                Ranks.Add(branch, new RankData(Steam64, newXP, branch, this.GetTeam()));
         }
         public void UpdateRankTeam(ulong team)
         {
-            if (_ranks == null)
+            if (Ranks.TryGetValue(Branch, out RankData data))
             {
                 _ranks = new Dictionary<EBranch, RankData>(6);
             }
-            RedownloadRanks();
+            else
+                Ranks.Add(Branch, new RankData(Steam64, 0, Branch, this.GetTeam()));
         }
         public void UpdateMedals(int newTW) => _medals.Update(newTW);
 

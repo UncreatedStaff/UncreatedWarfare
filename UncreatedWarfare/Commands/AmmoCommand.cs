@@ -76,14 +76,21 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 var fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
+                bool isInMain = false;
 
                 if (fob == null)
                 {
-                    player.SendChat("ammo_not_near_fob");
-                    return;
+                    if (F.IsInMain(vehicle.transform.position))
+                        isInMain = true;
+                    else
+                    {
+                        player.SendChat("ammo_not_near_fob");
+                        return;
+                    }
+                    
                 }
 
-                if (fob.Ammo < vehicleData.RearmCost)
+                if (!isInMain && fob.Ammo < vehicleData.RearmCost)
                 {
                     player.SendChat("ammo_not_enough_stock", fob.Ammo.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
                     return;
@@ -95,8 +102,6 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
-
                 EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
 
                 if (FOBManager.config.data.AmmoCommandCooldown > 0)
@@ -106,7 +111,15 @@ namespace Uncreated.Warfare.Commands
                     if (Assets.find(item) is ItemAsset a)
                         ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
 
-                fob.ReduceAmmo(vehicleData.RearmCost);
+                if (!isInMain)
+                {
+                    fob.ReduceAmmo(vehicleData.RearmCost);
+                    player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), fob.Ammo.ToString());
+                }
+                else
+                {
+                    player.SendChat("ammo_success_vehicle_main", vehicleData.RearmCost.ToString(Data.Locale));
+                }
 
                 return;
             }
@@ -122,13 +135,15 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_no_kit");
                     return;
                 }
+
+                int ammoCost = 1;
+                if (player.KitClass == EClass.LAT || player.KitClass == EClass.AUTOMATIC_RIFLEMAN || player.KitClass == EClass.GRENADIER)
+                    ammoCost = 2;
+                else if (player.KitClass == EClass.HAT || player.KitClass == EClass.MACHINE_GUNNER || player.KitClass == EClass.COMBAT_ENGINEER)
+                    ammoCost = 3;
+
                 if (barricade.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
                 {
-                    if (FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
-                    {
-                        player.SendChat("ammo_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
-                        return;
-                    }
                     if (!(Assets.find(Gamemode.Config.Items.T1Ammo) is ItemAsset t1ammo) || !(Assets.find(Gamemode.Config.Items.T2Ammo) is ItemAsset t2ammo))
                     {
                         L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
@@ -149,9 +164,15 @@ namespace Uncreated.Warfare.Commands
                             return;
                         }   
                     }
-                    if (!isInMain && fob.Ammo == 0)
+                    if (isInMain && FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
                     {
-                        player.SendChat("ammo_no_stock");
+                        player.SendChat("ammo_cooldown", cooldown.ToString());
+                        return;
+                    }
+
+                    if (!isInMain && fob.Ammo < ammoCost)
+                    {
+                        player.SendChat("ammo_not_enough_stock", fob.Ammo.ToString(), ammoCost.ToString());
                         return;
                     }
 
@@ -160,27 +181,37 @@ namespace Uncreated.Warfare.Commands
 
                     EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 
-                    player.SendChat("ammo_success");
-
                     if (isInMain)
                     {
+                        player.SendChat("ammo_success_main", ammoCost.ToString());
+
                         if (FOBManager.config.data.AmmoCommandCooldown > 0)
                             CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.data.AmmoCommandCooldown);
                     }
                     else
+                    {
                         fob.ReduceAmmo(1);
+                        player.SendChat("ammo_success", ammoCost.ToString(), fob.Ammo.ToString());
+                    }
+                        
                 }
                 else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.barricade.asset.GUID)
                 {
                     if (drop.model.TryGetComponent(out AmmoBagComponent ammobag))
                     {
-                        if (ammobag.ResuppliedPlayers.TryGetValue(player.Steam64, out int lifeIndex) && lifeIndex == player.LifeCounter)
+                        //if (ammobag.ResuppliedPlayers.TryGetValue(player.Steam64, out int lifeIndex) && lifeIndex == player.LifeCounter)
+                        //{
+                        //    player.Message("ammo_bag_already_resupplied");
+                        //    return;
+                        //}
+
+                        if (ammobag.Ammo < ammoCost)
                         {
-                            player.Message("ammo_bag_already_resupplied");
+                            player.SendChat("ammo_not_enough_stock", ammobag.Ammo.ToString(), ammoCost.ToString());
                             return;
                         }
 
-                        ammobag.ResupplyPlayer(player, kit);
+                        ammobag.ResupplyPlayer(player, kit, ammoCost);
 
                         EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
 

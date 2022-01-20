@@ -119,6 +119,10 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid InsurgencyLeaderboardGUID;
         public Guid NearbyResourcesGUID;
         public Guid MarkerAmmo;
+        public Guid MarkerRepair;
+        public Guid MarkerRadio;
+        public Guid MarkerRadioDamaged;
+        public Guid MarkerBunker;
         public int FlagUICount;
         public int MaxSquadMembers;
         public int MaxSquads;
@@ -145,6 +149,10 @@ namespace Uncreated.Warfare.Gamemodes
             InsurgencyLeaderboardGUID = new Guid("c0bf4518-d941-4319-b67d-bb46ad88ba2f");
             NearbyResourcesGUID = new Guid("3775a1e7-d84b-47e7-9cac-ecd5e6b2a224");
             MarkerAmmo = new Guid("827b0c00724b466d8d33633fe2a7743a");
+            MarkerRepair = new Guid("bcfda6fb871f42cd88597c8ac5f7c424");
+            MarkerRadio = new Guid("bc6f0e7d5d9340f39ca4968bc3f7a132");
+            MarkerRadioDamaged = new Guid("37d5c48597ea4b61a7a87ed85a4c9b39");
+            MarkerBunker = new Guid("d7452e8671c14e93a5e9d69e077d999c");
             MaxSquadMembers = 6;
             MaxSquads = 8;
             FlagUICount = 10;
