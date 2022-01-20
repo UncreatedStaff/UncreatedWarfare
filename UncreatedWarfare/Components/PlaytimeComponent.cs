@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Components
         public Guid lastShot;
         public Guid lastProjected;
         public ulong lastAttacker;
-        public ulong secondLastAttacker;
+        public KeyValuePair<ulong, DateTime> secondLastAttacker;
         public List<ThrowableOwner> thrown;
         public LandmineData LastLandmineTriggered;
         public LandmineData LastLandmineExploded;
@@ -176,13 +176,13 @@ namespace Uncreated.Warfare.Components
         }
         public void UpdateAttackers(ulong lastAttacker)
         {
-            secondLastAttacker = this.lastAttacker;
+            secondLastAttacker = new KeyValuePair<ulong, DateTime>(this.lastAttacker, DateTime.Now);
             this.lastAttacker = lastAttacker;
         }
         public void ResetAttackers()
         {
             lastAttacker = 0;
-            secondLastAttacker = 0;
+            secondLastAttacker = new KeyValuePair<ulong, DateTime>(0, DateTime.Now);
         }
         public void Update()
         {

@@ -81,10 +81,8 @@ namespace Uncreated.Warfare.Components
 
     public class IconRenderer : MonoBehaviour
     {
-        public static List<IconRenderer> icons = new List<IconRenderer>();
         public Guid EffectGUID { get; private set; }
         public ushort EffectID { get; private set; }
-        public float Range { get; private set; }
         public ulong Team { get; private set; }
         public Vector3 Point { get; private set; }
         public void Initialize(Guid effectGUID, Vector3 point, ulong team = 0)
