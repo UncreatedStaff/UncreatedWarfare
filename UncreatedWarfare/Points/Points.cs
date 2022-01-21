@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.Point
         }
         public static void AwardXP(UCPlayer player, int amount, string message = "")
         {
-            if (!Data.TrackStats) return;
+            if (!Data.TrackStats || amount == 0) return;
 
             RankData oldRank = player.CurrentRank;
 
@@ -81,11 +81,11 @@ namespace Uncreated.Warfare.Point
 
             player.UpdateRank(player.Branch, newBalance);
 
-            if (amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
+            if (!(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
             {
                 string number = Translation.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
 
-                if (amount >= 0)
+                if (amount > 0)
                     number = number.Colorize("e3e3e3");
                 else
                     number = number.Colorize("d69898");
@@ -143,7 +143,7 @@ namespace Uncreated.Warfare.Point
         public static void AwardXP(Player player, int amount, string message = "") => AwardXP(UCPlayer.FromPlayer(player), amount, message);
         public static void AwardTW(UCPlayer player, int amount, string message = "")
         {
-            if (!Data.TrackStats) return;
+            if (!Data.TrackStats || amount == 0) return;
 
             MedalData oldMedals = player.Medals;
 
@@ -154,11 +154,11 @@ namespace Uncreated.Warfare.Point
 
             MedalData newMedals = player.Medals;
 
-            if (amount != 0 && !(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
+            if (!(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
             {
                 string number = Translation.Translate(amount >= 0 ? "gain_ofp" : "loss_ofp", player, Math.Abs(amount).ToString(Data.Locale));
 
-                if (amount >= 0)
+                if (amount > 0)
                     number = number.Colorize("ffe392");
                 else
                     number = number.Colorize("e0b08d");
@@ -280,18 +280,16 @@ namespace Uncreated.Warfare.Point
             UCPlayer creator = UCPlayer.FromID(fob.Creator);
 
             if (creator != null)
+            {
                 AwardXP(creator, amount, Translation.Translate(translationKey, creator));
+                AwardTW(creator, amount);
+            }    
 
             if (fob.Placer != fob.Creator)
             {
                 UCPlayer placer = UCPlayer.FromID(fob.Placer);
                 if (placer != null)
                     AwardXP(placer, amount, Translation.Translate(translationKey, placer));
-            }
-            else
-            {
-                if (creator != null)
-                    AwardTW(creator, amount);
             }
         }
     }
@@ -313,15 +311,11 @@ namespace Uncreated.Warfare.Point
         public int FlagDefendXP;
         public int FlagNeutralizedXP;
         public int TransportPlayerXP;
-        public float TimeBetweenXpAndOfpAwardForTransport;
         public int ShovelXP;
         public int BuiltFOBXP;
-        public int BuiltAmmoCrateXP;
-        public int BuiltRepairStationXP;
-        public int BuiltEmplacementXP;
-        public int BuiltBarricadeXP;
         public int OnDutyXP;
-        public int RessupplyFriendlyXP;
+        public int ResupplyFriendlyXP;
+        public int RepairVehicleXP;
         public int UnloadSuppliesXP;
         public Dictionary<EVehicleType, int> VehicleDestroyedXP;
 
@@ -335,26 +329,23 @@ namespace Uncreated.Warfare.Point
             EnemyKilledXP = 10;
             KillAssistXP = 5;
             FriendlyKilledXP = -50;
-            FriendlyRevivedXP = 25;
-            FOBKilledXP = 150;
+            FriendlyRevivedXP = 30;
+            FOBKilledXP = 80;
             FOBTeamkilledXP = -1500;
-            FOBBunkerKilledXP = 100;
-            FOBBunkerTeamkilledXP = -800;
+            FOBBunkerKilledXP = 60;
+            FOBBunkerTeamkilledXP = -1000;
             FOBDeployedXP = 10;
-            FlagCapturedXP = 120;
+            FlagCapturedXP = 30;
             FlagAttackXP = 5;
             FlagDefendXP = 5;
-            FlagNeutralizedXP = 40;
+            FlagNeutralizedXP = 50;
             TransportPlayerXP = 10;
-            TimeBetweenXpAndOfpAwardForTransport = 10f;
-            ShovelXP = 3;
-            BuiltFOBXP = 50;
-            BuiltAmmoCrateXP = 10;
-            BuiltRepairStationXP = 25;
-            BuiltEmplacementXP = 15;
-            BuiltBarricadeXP = 5;
+            ShovelXP = 2;
+            BuiltFOBXP = 100;
+            ResupplyFriendlyXP = 20;
+            RepairVehicleXP = 20;
             OnDutyXP = 5;
-            UnloadSuppliesXP = 50;
+            UnloadSuppliesXP = 20;
 
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
@@ -380,22 +371,26 @@ namespace Uncreated.Warfare.Point
     public class TWConfig : ConfigData
     {
         public ushort MedalsUI;
-        public int FirstStarPoints;
-        public int PointsIncreasePerStar;
+        public int FirstMedalPoints;
+        public int PointsIncreasePerMedal;
         public int RallyUsedPoints;
         public int MemberFlagCapturePoints;
         public int ResupplyFriendlyPoints;
+        public int RepairVehiclePoints;
+        public int ReviveFriendlyTW;
         public int UnloadSuppliesPoints;
 
         public override void SetDefaults()
         {
             MedalsUI = 36033;
-            FirstStarPoints = 1000;
-            PointsIncreasePerStar = 400;
+            FirstMedalPoints = 1000;
+            PointsIncreasePerMedal = 400;
             RallyUsedPoints = 30;
             MemberFlagCapturePoints = 15;
             ResupplyFriendlyPoints = 20;
-            UnloadSuppliesPoints = 20;
+            RepairVehiclePoints = 10;
+            ReviveFriendlyTW = 20;
+            UnloadSuppliesPoints = 10;
         }
         public TWConfig()
         { }

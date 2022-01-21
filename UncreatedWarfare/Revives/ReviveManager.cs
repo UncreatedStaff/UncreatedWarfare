@@ -16,7 +16,7 @@ namespace Uncreated.Warfare.Revives
 {
     public class ReviveManager : IDisposable
     {
-        public readonly Dictionary<ulong, DamagePlayerParameters> DownedPlayers;
+        public readonly Dictionary<ulong, DownedPlayerData> DownedPlayers;
         public readonly Dictionary<ulong, DeathInfo> DeathInfo;
         public readonly List<UCPlayer> Medics = new List<UCPlayer>();
         private Coroutine Updater;
@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Revives
         const bool CAN_HEAL_ENEMIES = true;
         public ReviveManager()
         {
-            DownedPlayers = new Dictionary<ulong, DamagePlayerParameters>();
+            DownedPlayers = new Dictionary<ulong, DownedPlayerData>();
             DeathInfo = new Dictionary<ulong, DeathInfo>();
             Medics = PlayerManager.OnlinePlayers.Where(x => x.KitName != null && x.KitName != string.Empty
             && KitManager.KitExists(x.KitName, out Kit kit) && kit.Class == EClass.MEDIC).ToList();
@@ -104,14 +104,14 @@ namespace Uncreated.Warfare.Revives
                 StanceUpdatedLocal(player);
             };
             Medics.RemoveAll(x => x == null || x.Steam64 == player.playerID.steamID.m_SteamID);
-            if (DownedPlayers.TryGetValue(player.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
+            if (DownedPlayers.TryGetValue(player.playerID.steamID.m_SteamID, out DownedPlayerData p))
             {
                 if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
                 {
                     save.ShouldRespawnOnJoin = true;
                     PlayerManager.ApplyToOnline();
                 }
-                player.player.life.askDamage(byte.MaxValue, Vector3.up, p.cause, p.limb, p.killer, out _, p.trackKill, p.ragdollEffect, false, true);
+                player.player.life.askDamage(byte.MaxValue, Vector3.up, p.parameters.cause, p.parameters.limb, p.parameters.killer, out _, p.parameters.trackKill, p.parameters.ragdollEffect, false, true);
                 // player will be removed from list in OnDeath
             }
         }
@@ -135,7 +135,8 @@ namespace Uncreated.Warfare.Revives
                 if (team == tteam)
                 {
                     // TODO: better points calculations
-                    Points.AwardTW(UCPlayer.FromPlayer(medic), Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                    Points.AwardXP(UCPlayer.FromPlayer(medic), Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                    Points.AwardTW(UCPlayer.FromPlayer(medic), Points.TWConfig.ReviveFriendlyTW);
 
                     if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IRevivesStats r2)
                         r2.AddRevive();
@@ -186,7 +187,7 @@ namespace Uncreated.Warfare.Revives
                 if (Teams.TeamManager.LobbyZone != null && Teams.TeamManager.LobbyZone.IsInside(parameters.player.transform.position))
                     return;
             }
-            if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
+            if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
             {
                 SteamPlayer killer = PlayerTool.getSteamPlayer(parameters.killer);
                 if (killer != null && DownedPlayers.ContainsKey(killer.playerID.steamID.m_SteamID))
@@ -207,11 +208,21 @@ namespace Uncreated.Warfare.Revives
             }
             else
             {
-                float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-                parameters = p;
-                parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
-                if (UCWarfare.Config.Debug)
-                    L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
+                if ((DateTime.Now - p.start).TotalSeconds >= 0.5)
+                {
+                    float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
+                    parameters = p.parameters;
+                    parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
+                    if (UCWarfare.Config.Debug)
+                        L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
+                }
+                else
+                {
+                    shouldAllow = false;
+
+                    if (UCWarfare.Config.Debug)
+                        L.Log(parameters.player.name + " was damaged too soon after being downed.", ConsoleColor.DarkGray);
+                }
             }
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
@@ -236,7 +247,7 @@ namespace Uncreated.Warfare.Revives
                 Translation.Translate("injured_ui_give_up", parameters.player));
             parameters.player.SendChat("injured_chat");
 
-            DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, parameters);
+            DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
             SpawnInjuredMarker(parameters.player.transform.position, team);
             UpdateMedicMarkers(parameters.player.channel.owner.transportConnection, team, parameters.player.transform.position, false);
             Guid item = Guid.Empty;
@@ -355,9 +366,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void Dispose()
         {
-            foreach (DamagePlayerParameters paramaters in DownedPlayers.Values)
+            foreach (DownedPlayerData downPlayer in DownedPlayers.Values)
             {
-                if (paramaters.player.transform.TryGetComponent(out Reviver reviver))
+                if (downPlayer.parameters.player.transform.TryGetComponent(out Reviver reviver))
                 {
                     reviver.FinishKillingPlayer();
                 }
@@ -388,9 +399,9 @@ namespace Uncreated.Warfare.Revives
         }
         internal void GiveUp(Player player)
         {
-            if (DownedPlayers.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out DamagePlayerParameters p))
+            if (DownedPlayers.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
             {
-                player.life.askDamage(byte.MaxValue, Vector3.down, p.cause, p.limb, p.killer, out _, p.trackKill, p.ragdollEffect, false, true);
+                player.life.askDamage(byte.MaxValue, Vector3.down, p.parameters.cause, p.parameters.limb, p.parameters.killer, out _, p.parameters.trackKill, p.parameters.ragdollEffect, false, true);
                 // player and Revive UI will be removed from list in OnDeath
             }
         }
@@ -589,7 +600,7 @@ namespace Uncreated.Warfare.Revives
                     this.RevivePlayer(g, false);
                     if (!isDead)
                     {
-                        DamagePlayerParameters parameters = g.ReviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID];
+                        DamagePlayerParameters parameters = g.ReviveManager.DownedPlayers[Player.Player.channel.owner.playerID.steamID.m_SteamID].parameters;
                         parameters.damage = 100.0f;
                         parameters.respectArmor = false;
                         parameters.applyGlobalArmorMultiplier = false;
@@ -598,6 +609,17 @@ namespace Uncreated.Warfare.Revives
                     g.ReviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                     g.ReviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                 }
+            }
+        }
+        public struct DownedPlayerData
+        {
+            public DamagePlayerParameters parameters;
+            public DateTime start;
+
+            public DownedPlayerData(DamagePlayerParameters parameters)
+            {
+                this.parameters = parameters;
+                start = DateTime.Now;
             }
         }
     }

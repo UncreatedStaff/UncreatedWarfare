@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Components
         {
             int amount = 1;
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
-                amount = 3;
+                amount = 2;
 
             Hits += amount;
 
@@ -149,7 +149,15 @@ namespace Uncreated.Warfare.Components
             {
                 UCPlayer player = UCPlayer.FromID(entry.Key);
                 if ((float)entry.Value / Buildable.requiredHits >= 0.1F && player != null)
-                    Points.AwardXP(player, entry.Value * Points.XPConfig.ShovelXP, structureName.ToUpper() + " BUILT");
+                {
+                    int amount = 0;
+                    if (Buildable.type == EBuildableType.FOB_BUNKER)
+                        amount = entry.Value * Points.XPConfig.BuiltFOBXP;
+                    else
+                        amount = entry.Value * Points.XPConfig.ShovelXP;
+
+                    Points.AwardXP(player, amount, structureName.ToUpper() + " BUILT");
+                }
             }
 
             if (Regions.tryGetCoordinate(Foundation.model.position, out byte x, out byte y))

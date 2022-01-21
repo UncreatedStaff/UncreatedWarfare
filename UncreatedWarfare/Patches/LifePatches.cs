@@ -73,7 +73,7 @@ namespace Uncreated.Warfare
                                 {
                                     ___lastBleed = simulation;
                                     ____isBleeding = true;
-                                    DamagePlayerParameters p = r.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID];
+                                    DamagePlayerParameters p = r.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID].parameters;
                                     __instance.askDamage(1, p.direction, p.cause, p.limb, p.killer, out EPlayerKill _, canCauseBleeding: false, bypassSafezone: true);
                                 }
                             }

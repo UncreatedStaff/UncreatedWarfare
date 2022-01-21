@@ -26,8 +26,8 @@ namespace Uncreated.Warfare.Point
         {
             TotalTW = totalPoints;
 
-            int a = Points.TWConfig.FirstStarPoints;
-            int d = Points.TWConfig.PointsIncreasePerStar;
+            int a = Points.TWConfig.FirstMedalPoints;
+            int d = Points.TWConfig.PointsIncreasePerMedal;
 
             float x = d / 2f;
             float y = a - (3 * x);

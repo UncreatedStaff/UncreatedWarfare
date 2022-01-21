@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Point;
 using UnityEngine;
 
 namespace Uncreated.Warfare.FOBs
@@ -212,7 +213,17 @@ namespace Uncreated.Warfare.FOBs
                                 parent.RepairVehicle(nearby[i]);
 
                                 if (fob != null)
+                                {
                                     fob.ReduceBuild(1);
+
+                                    UCPlayer stationPlacer = UCPlayer.FromID(parent.structure.owner);
+                                    if (stationPlacer != null)
+                                    {
+                                        Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Translation.Translate("xp_repaired_vehicle", stationPlacer));
+                                        Points.AwardXP(stationPlacer, Points.TWConfig.RepairVehiclePoints);
+                                    }
+                                    Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_repaired_vehicle");
+                                }
                             }
                         }
                     }

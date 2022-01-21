@@ -35,7 +35,8 @@ namespace Uncreated.Warfare.Squads
         public static bool HasOrder(Squad squad, out Order order)
         {
             order = null;
-            return (bool)(squad?.Leader.Player.TryGetComponent(out order));
+            if (squad is null) return false;
+            return (bool)(squad.Leader.Player.TryGetComponent(out order));
         }
         public static bool CancelOrder(Order order)
         {
@@ -45,8 +46,6 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnFOBBunkerBuilt(FOB fob, BuildableComponent buildable)
         {
-            return;
-
             foreach (var pair in buildable.PlayerHits)
             {
                 var player = UCPlayer.FromID(pair.Key);
@@ -113,12 +112,12 @@ namespace Uncreated.Warfare.Squads
                     break;
                 case EOrder.BUILDFOB:
                     TimeLeft = 420;
-                    RewardXP = 0;
-                    RewardTW = 200;
+                    RewardXP = 150;
+                    RewardTW = 100;
                     break;
                 case EOrder.MOVE:
                     TimeLeft = 240;
-                    RewardXP = 100;
+                    RewardXP = 150;
                     RewardTW = 100;
 
                     Vector3 avgMemberPoint = Vector3.zero;
