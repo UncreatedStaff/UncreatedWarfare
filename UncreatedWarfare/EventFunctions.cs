@@ -109,8 +109,6 @@ namespace Uncreated.Warfare
             owner.Player = player?.player;
             owner.BarricadeGUID = data.barricade.asset.GUID;
 
-            
-
             RallyManager.OnBarricadePlaced(drop, region);
 
             RepairManager.OnBarricadePlaced(drop, region);
