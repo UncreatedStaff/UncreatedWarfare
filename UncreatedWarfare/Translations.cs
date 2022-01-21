@@ -760,7 +760,7 @@ namespace Uncreated.Warfare
                 { "xp_kill_assist", "ASSIST" },
                 { "xp_driver_assist", "DRIVER ASSIST" },
                 { "xp_wasting_assets", "WASTING ASSETS" },
-                { "xp_friendly_killed", "TEAMKILLED {0}" },
+                { "xp_friendly_killed", "TEAMKILLED" },
                 { "xp_fob_killed", "FOB DESTROYED" },
                 { "xp_fob_teamkilled", "FRIENDLY FOB DESTROYED" },
                 { "xp_fob_in_use", "FOB IN USE" },

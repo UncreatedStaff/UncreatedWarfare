@@ -260,14 +260,20 @@ namespace Uncreated.Warfare.Point
         }
         public static void TryAwardDriverAssist(Player gunner, int amount, float quota = 0)
         {
+            if (Debug.isDebugBuild)
+                L.Log("attempting to award driver assist");
             var vehicle = gunner.movement.getVehicle();
             if (vehicle != null)
             {
+                L.Log("     vehicle found");
                 var driver = vehicle.passengers[0].player;
                 if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
                 {
+                    L.Log("         successfully award driver assist");
                     AwardXP(driver.player, amount, Translation.Translate("xp_driver_assist", gunner));
                 }
+                else
+                    L.Log("         driver was not found, or gunner was driver");
 
                 if (vehicle.transform.TryGetComponent(out VehicleComponent component))
                 {

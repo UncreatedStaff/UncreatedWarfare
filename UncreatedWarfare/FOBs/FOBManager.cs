@@ -130,11 +130,12 @@ namespace Uncreated.Warfare.FOBs
 
             return gridCoord;
         }
+
         public static string GetGridCoords(float xPos, float yPos, bool includeSubKey = false)
         {
             return GetGridCoordsFromTexture(xPos * GridScalingFactor + Level.size / 2, yPos * -GridScalingFactor + Level.size / 2, includeSubKey);
         }
-
+#endif
         public static void Reset()
         {
             Team1FOBs.Clear();
