@@ -197,6 +197,16 @@ namespace Uncreated.Warfare.Revives
                 if (UCWarfare.Config.Debug)
                     L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.", ConsoleColor.DarkGray);
 
+                UCPlayer player = UCPlayer.FromPlayer(parameters.player);
+                if (player.OnDuty())
+                {
+                    if (parameters.player.TryGetComponent(out UnturnedPlayerFeatures features) && features.GodMode)
+                    {
+                        shouldAllow = false;
+                        return;
+                    }
+                }
+
                 if (!parameters.player.life.isDead &&
                     parameters.damage > parameters.player.life.health &&
                     parameters.cause != EDeathCause.LANDMINE &&

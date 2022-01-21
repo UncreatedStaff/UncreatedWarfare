@@ -8,6 +8,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 
@@ -134,7 +135,7 @@ namespace Uncreated.Warfare.FOBs
         {
             return GetGridCoordsFromTexture(xPos * GridScalingFactor + Level.size / 2, yPos * -GridScalingFactor + Level.size / 2, includeSubKey);
         }
-
+#endif
         public static void Reset()
         {
             Team1FOBs.Clear();
@@ -163,13 +164,14 @@ namespace Uncreated.Warfare.FOBs
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
         }
+        /*
         public static void OnGameTick()
         {
             if (Data.Gamemode.EveryXSeconds(50f))
             {
 
             }
-        }
+        }*/
         public static void OnPlayerDisconnect(UCPlayer player)
         {
             foreach (FOB f in Team1FOBs)
@@ -552,33 +554,37 @@ namespace Uncreated.Warfare.FOBs
 
         public static void UpdateFOBListForTeam(ulong team, SpecialFOB fob = null)
         {
+            if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                if (PlayerManager.OnlinePlayers[i].GetTeam() == team)
+                if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
                     UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
             }
         }
         public static void UpdateFOBListForTeam(ulong team, FOB fob = null)
         {
+            if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                if (PlayerManager.OnlinePlayers[i].GetTeam() == team)
+                if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
                     UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
             }
         }
         public static void UpdateFOBListForTeam(ulong team, Cache fob = null)
         {
+            if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                if (PlayerManager.OnlinePlayers[i].GetTeam() == team)
+                if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
                     UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
             }
         }
         public static void SendFOBListToTeam(ulong team)
         {
+            if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                if (PlayerManager.OnlinePlayers[i].GetTeam() == team)
+                if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
                     SendFOBList(PlayerManager.OnlinePlayers[i]);
             }
         }

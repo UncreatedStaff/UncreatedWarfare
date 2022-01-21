@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Structures
             {
                 structure.SpawnCheck();
                 if (!structure.exists)
-                    L.LogError($"Structure {structure.Asset.itemName} ({structure.instance_id}) failed to spawn.");
+                    L.LogError($"Structure {structure?.Asset?.itemName ?? structure.id.ToString("N")} ({structure.instance_id}) failed to spawn.");
             }
         }
         public static bool AddStructure(StructureDrop drop, SDG.Unturned.StructureData data, out Structure structureadded)

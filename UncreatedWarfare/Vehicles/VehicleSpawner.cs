@@ -519,7 +519,6 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void UpdateSign()
         {
-            L.LogDebug("Updating sign " + (Assets.find(VehicleID)?.name ?? VehicleID.ToString("N")));
             if (this.LinkedSign == null || this.LinkedSign.SignInteractable == null || this.LinkedSign.SignDrop == null) return;
             if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
             {
@@ -547,7 +546,6 @@ namespace Uncreated.Warfare.Vehicles
                 return;
             foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
             {
-                L.Log("Updating sign for " + set.Language);
                 string val = Translation.TranslateVBS(spawn, data, set.Language);
                 NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
                 while (set.MoveNext())

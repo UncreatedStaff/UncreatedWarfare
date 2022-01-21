@@ -123,7 +123,10 @@ namespace Uncreated.Warfare.Components
             if (priority || (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel]))
                 SendToastMessage(message, info);
             else
+            {
                 pendingToastMessages.Insert(0, new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
+                L.Log("Queued effect " + info.id + ": " + (message.Message1 ?? "null") + ", " + (message.Message3 ?? "null") + ", " + (message.Message3 ?? "null") + " over channel " + info.channel);
+            }
         }   
         readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
         private Coroutine _toastDelay = null;
@@ -135,7 +138,7 @@ namespace Uncreated.Warfare.Components
                         message.Message2 != null ? message.Message2 : "",
                         message.Message3 != null ? message.Message3 : ""
                         );
-
+            L.Log("Sent effect " + info.id + ": " + (message.Message1 ?? "null") + ", " + (message.Message3 ?? "null") + ", " + (message.Message3 ?? "null") + " over channel " + info.channel);
             channels[info.channel] = true;
             for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
             {

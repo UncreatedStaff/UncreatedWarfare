@@ -39,7 +39,8 @@ namespace Uncreated.Warfare
 
             SquadManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
-            FOBManager.SendFOBList(ucplayer);
+            if (newGroup == 1 || newGroup == 2)
+                FOBManager.SendFOBList(ucplayer); 
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);
 

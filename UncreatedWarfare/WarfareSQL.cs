@@ -331,8 +331,8 @@ namespace Uncreated.Warfare
                         "UPDATE `xp` SET " +
                         "`XP` = `XP` - @2 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
-                        new object[] { Steam64, (int)branch, Math.Abs(amount) });
-                    return oldBalance - amount;
+                        new object[] { Steam64, (int)branch, -amount });
+                    return oldBalance + amount;
                 }
             }
         }
