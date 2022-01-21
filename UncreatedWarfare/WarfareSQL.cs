@@ -295,7 +295,7 @@ namespace Uncreated.Warfare
                 report.Message
             });
         }
-        /// <returns>New Officer Points Value</returns>
+        /// <returns>New XP Value</returns>
         public int AddXP(ulong Steam64, EBranch branch, int amount)
         {
             int oldBalance = GetXP(Steam64, branch);
