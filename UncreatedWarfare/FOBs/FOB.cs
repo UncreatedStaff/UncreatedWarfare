@@ -270,23 +270,22 @@ namespace Uncreated.Warfare.Components
                             if (player.SuppliesUnloaded >= 6)
                             {
                                 int tw = Points.TWConfig.UnloadSuppliesPoints;
+                                int xp = Points.XPConfig.UnloadSuppliesXP;
 
                                 if (player.KitClass == EClass.PILOT)
                                 {
+                                    xp *= 2;
                                     tw *= 2;
-
-                                    int xp = Points.XPConfig.UnloadSuppliesXP;
-
-                                    Points.AwardXP(player, xp, Translation.Translate("ofp_supplies_unloaded", player));
-
-                                    var vehicle = player.Player.movement.getVehicle();
-                                    if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
-                                    {
-                                        component.Quota += 0.33F;
-                                    }
                                 }
 
-                                Points.AwardTW(player, tw, Translation.Translate("ofp_supplies_unloaded", player));
+                                var vehicle = player.Player.movement.getVehicle();
+                                if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
+                                {
+                                    component.Quota += 0.33F;
+                                }
+
+                                Points.AwardXP(player, xp, Translation.Translate("xp_supplies_unloaded", player));
+                                Points.AwardTW(player, tw);
 
                                 player.SuppliesUnloaded = 0;
                             }
@@ -441,7 +440,7 @@ namespace Uncreated.Warfare.Components
             float amount = 30;
 
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
-                amount *= 3;
+                amount *= 2;
 
             EffectManager.sendEffect(38405, EffectManager.MEDIUM, builder.Position);
 

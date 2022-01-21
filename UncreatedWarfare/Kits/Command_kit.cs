@@ -216,7 +216,6 @@ namespace Uncreated.Warfare.Kits
                         if (branchChanged)
                         {
                             ucplayer.Branch = kit.Branch;
-                            Reply(ucplayer, "branch_changed", Translation.TranslateBranch(kit.Branch, ucplayer).ToUpper());
                         }
 
                         PlayerManager.ApplyToOnline();

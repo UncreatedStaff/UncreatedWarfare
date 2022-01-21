@@ -760,11 +760,13 @@ namespace Uncreated.Warfare
                 { "xp_kill_assist", "ASSIST" },
                 { "xp_driver_assist", "DRIVER ASSIST" },
                 { "xp_wasting_assets", "WASTING ASSETS" },
-                { "xp_friendly_killed", "TEAMKILLED {0}" },
+                { "xp_friendly_killed", "TEAMKILLED" },
                 { "xp_fob_killed", "FOB DESTROYED" },
                 { "xp_fob_teamkilled", "FRIENDLY FOB DESTROYED" },
                 { "xp_fob_in_use", "FOB IN USE" },
+                { "xp_supplies_unloaded", "RESUPPLIED FOB" },
                 { "xp_resupplied_teammate", "RESUPPLIED TEAMMATE" },
+                { "xp_repaired_vehicle", "RESUPPLIED TEAMMATE" },
 
                 { "xp_victory", "VICTORY" },
                 { "xp_handicap", "HARD FOUGHT" },
@@ -781,6 +783,7 @@ namespace Uncreated.Warfare
                 { "xp_humvee_destroyed", "HUMVEE DESTROYED" },
                 { "xp_transport_destroyed", "TRANSPORT DESTROYED" },
                 { "xp_logistics_destroyed", "LOGISTICS DESTROYED" },
+                { "xp_scoutcar_destroyed", "SCOUT CAR DESTROYED" },
                 { "xp_apc_destroyed", "APC DESTROYED" },
                 { "xp_ifv_destroyed", "IFV DESTROYED" },
                 { "xp_tank_destroyed", "TANK DESTROYED" },
@@ -788,15 +791,6 @@ namespace Uncreated.Warfare
                 { "xp_attackheli_destroyed", "ATTACK HELI SHOT DOWN" },
                 { "xp_jet_destroyed", "JET SHOT DOWN" },
                 { "xp_emplacement_destroyed", "EMPLACEMENT DESTROYED" },
-
-                { "xp_friendly_humvee_destroyed", "FRIENDLY HUMVEE DESTROYED" },
-                { "xp_friendly_transport_destroyed", "FRIENDLY TRANSPORT DESTROYED" },
-                { "xp_friendly_logistics_destroyed", "FRIENDLY LOGISTICS DESTROYED" },
-                { "xp_friendly_apc_destroyed", "FRIENDLY APC DESTROYED" },
-                { "xp_friendly_ifv_destroyed", "FRIENDLY IFV DESTROYED" },
-                { "xp_friendly_tank_destroyed", "FRIENDLY TANK DESTROYED" },
-                { "xp_friendly_helicopter_destroyed", "FRIENDLY HELICOPTER DESTROYED" },
-                { "xp_friendly_emplacement_destroyed", "FRIENDLY EMPLACEMENT DESTROYED" },
 
                 { "xp_transporting_players", "TRANSPORTING PLAYERS" },
 
@@ -832,8 +826,6 @@ namespace Uncreated.Warfare
                 { "ofp_transporting_players", "TRANSPORTING PLAYERS" },
 
                 { "ofp_rally_used", "RALLY USED" },
-
-                { "ofp_supplies_unloaded", "RESUPPLIED FOB" },
 
                 { "gain_ofp", "+{0} TW" },
                 { "loss_ofp", "-{0} TW" },

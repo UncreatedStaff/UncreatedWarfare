@@ -155,6 +155,9 @@ namespace Uncreated.Warfare.Tickets
                             case EVehicleType.LOGISTICS:
                                 message = "logistics_destroyed";
                                 break;
+                            case EVehicleType.SCOUT_CAR:
+                                message = "scoutcar_destroyed";
+                                break;
                             case EVehicleType.APC:
                                 message = "apc_destroyed";
                                 break;
@@ -198,7 +201,7 @@ namespace Uncreated.Warfare.Tickets
                             else
                                 Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
 
-                            Points.AwardXP(player, amount, "xp_" + message);
+                            Points.AwardXP(player, amount, Translation.Translate("xp_" + message, player));
                             Points.TryAwardDriverAssist(player.Player, amount, data.TicketCost);
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
@@ -208,7 +211,7 @@ namespace Uncreated.Warfare.Tickets
                             Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
 
                             if (message != string.Empty) message = "xp_friendly_" + message;
-                            Points.AwardTW(player.Player, -amount, Translation.Translate(message, player.Steam64));
+                            Points.AwardXP(player.Player, -amount, Translation.Translate(message, player.Steam64));
                             Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
 
