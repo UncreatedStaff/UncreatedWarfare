@@ -65,6 +65,7 @@ namespace Uncreated.Warfare.FOBs
                 GridBorder = 64;
             }
         }
+#if false
         public static string GetGridCoordsFromTexture(float textureX, float textureY, bool includeSubKey = false)
         {
 

@@ -79,7 +79,6 @@ namespace Uncreated.Warfare
                 {
                     RankData data = new RankData(Steam64, 0, Branch, this.GetTeam());
                     _ranks.Add(Branch, data);
-                    RedownloadRanks();
                     return data;
                 }
             }
@@ -100,6 +99,8 @@ namespace Uncreated.Warfare
             _ranks.Clear();
             foreach (KeyValuePair<EBranch, int> entry in xplevels)
             {
+                if (_ranks.ContainsKey(entry.Key))
+                    _ranks.Remove(entry.Key);
                 _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
         }
@@ -116,12 +117,8 @@ namespace Uncreated.Warfare
         }
         public void UpdateRankTeam(ulong team)
         {
-            if (Ranks.TryGetValue(Branch, out RankData data))
-            {
-                _ranks = new Dictionary<EBranch, RankData>(6);
-            }
-            else
-                Ranks.Add(Branch, new RankData(Steam64, 0, Branch, this.GetTeam()));
+            _ranks = new Dictionary<EBranch, RankData>(6);
+            RedownloadRanks();
         }
         public void UpdateMedals(int newTW) => _medals.Update(newTW);
 

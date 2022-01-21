@@ -341,6 +341,7 @@ namespace Uncreated.Warfare
                             writer.WriteEndObject();
                         }
                         writer.WriteEndArray();
+                        writer.Flush();
                         writer.Dispose();
                         stream.Close();
                         stream.Dispose();
@@ -413,6 +414,7 @@ namespace Uncreated.Warfare
                             defaultColors2.Add(color.Key, color.Value.Hex());
                         }
                         writer.WriteEndObject();
+                        writer.Flush();
                         writer.Dispose();
                         stream.Close();
                         stream.Dispose();
@@ -509,6 +511,7 @@ namespace Uncreated.Warfare
                             defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
                         }
                         writer.WriteEndObject();
+                        writer.Flush();
                         writer.Dispose();
                         stream.Close();
                         stream.Dispose();
@@ -696,6 +699,7 @@ namespace Uncreated.Warfare
                             defaultXtraZones2.Add(zone.id, Flag.ComplexifyZone(zone));
                         }
                         writer.WriteEndArray();
+                        writer.Flush();
                         writer.Dispose();
                         stream.Close();
                         stream.Dispose();
@@ -785,6 +789,7 @@ namespace Uncreated.Warfare
                             defaultXtraPoints2.Add(point.name, point.Vector3);
                         }
                         writer.WriteEndObject();
+                        writer.Flush();
                         writer.Dispose();
                         stream.Close();
                         stream.Dispose();
@@ -955,6 +960,7 @@ namespace Uncreated.Warfare
                     writer.WriteStringValue(languagePref.Value);
                 }
                 writer.WriteEndObject();
+                writer.Flush();
                 writer.Dispose();
                 stream.Close();
                 stream.Dispose();
@@ -994,6 +1000,7 @@ namespace Uncreated.Warfare
                             defaultLanguageAliasSets2.Add(set.key, set);
                         }
                         writer.WriteEndArray();
+                        writer.Flush();
                         writer.Dispose();
                         stream.Close();
                         stream.Dispose();

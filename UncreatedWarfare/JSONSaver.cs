@@ -65,7 +65,7 @@ namespace Uncreated
         }
         protected static T AddObjectToSave(T item, bool save = true)
         {
-            if (item.Equals(default)) return default;
+            if (item.Equals(default(T))) return default;
             ActiveObjects.Add(item);
             if (save) Save();
             return item;
@@ -102,6 +102,7 @@ namespace Uncreated
                         }
 
                         writer.WriteEndArray();
+                        writer.Flush();
                         rs.Close();
                         rs.Dispose();
                     }
