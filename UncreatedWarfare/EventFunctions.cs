@@ -39,7 +39,7 @@ namespace Uncreated.Warfare
 
             SquadManager.OnGroupChanged(player, oldGroup, newGroup);
             TicketManager.OnGroupChanged(player, oldGroup, newGroup);
-            if (newGroup == 1 || newGroup == 2)
+            if (newteam == 1 || newteam == 2)
                 FOBManager.SendFOBList(ucplayer); 
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);

@@ -555,6 +555,7 @@ namespace Uncreated.Warfare.FOBs
 
         public static void UpdateFOBListForTeam(ulong team, SpecialFOB fob = null)
         {
+            if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
@@ -564,6 +565,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBListForTeam(ulong team, FOB fob = null)
         {
+            if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
@@ -573,6 +575,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBListForTeam(ulong team, Cache fob = null)
         {
+            if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
@@ -582,6 +585,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void SendFOBListToTeam(ulong team)
         {
+            if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {

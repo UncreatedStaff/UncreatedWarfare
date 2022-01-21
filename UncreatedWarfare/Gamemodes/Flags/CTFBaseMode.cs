@@ -632,11 +632,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);
             base.OnPlayerLeft(player);
         }
-        protected override void EventLoopAction()
-        {
-            base.EventLoopAction();
-            FOBManager.OnGameTick();
-        }
         public override void Dispose()
         {
             EffectManager.ClearEffectByID_AllPlayers(CTFUI.headerID);
