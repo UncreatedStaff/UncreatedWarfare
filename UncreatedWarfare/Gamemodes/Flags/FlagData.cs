@@ -11,6 +11,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     {
         public int id;
         public string name;
+        public string short_name;
         public float x;
         public float y;
         public ZoneData zone;
@@ -26,10 +27,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             this.color = UCWarfare.Config.FlagSettings.NeutralColor;
         }
-        public FlagData(int id, string name, float x, float y, ZoneData zone, bool use_map_size_multiplier, float minHeight, float maxHeight)
+        public FlagData(int id, string name, string shortName, float x, float y, ZoneData zone, bool use_map_size_multiplier, float minHeight, float maxHeight)
         {
             this.id = id;
             this.name = name;
+            this.short_name = shortName;
             this.x = x;
             this.y = y;
             this.zone = zone;
@@ -40,10 +42,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this.adjacencies = new AdjacentFlagData[0];
         }
         [JsonConstructor]
-        public FlagData(int id, string name, float x, float y, ZoneData zone, bool use_map_size_multiplier, float minHeight, float maxHeight, AdjacentFlagData[] adjacencies)
+        public FlagData(int id, string name, string shortName, float x, float y, ZoneData zone, bool use_map_size_multiplier, float minHeight, float maxHeight, AdjacentFlagData[] adjacencies)
         {
             this.id = id;
             this.name = name;
+            this.short_name = shortName;
             this.x = x;
             this.y = y;
             this.zone = zone;
@@ -69,6 +72,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                             break;
                         case nameof(name):
                             data.name = reader.GetString();
+                            break;
+                        case nameof(short_name):
+                            data.short_name = reader.GetString();
                             break;
                         case nameof(x):
                             data.x = (float)reader.GetDecimal();
@@ -131,6 +137,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             writer.WriteProperty(nameof(id), id);
             writer.WriteProperty(nameof(name), name);
+            writer.WriteProperty(nameof(short_name), short_name);
             writer.WriteProperty(nameof(x), x);
             writer.WriteProperty(nameof(y), y);
             writer.WritePropertyName(nameof(zone));

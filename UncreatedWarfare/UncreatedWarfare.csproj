@@ -3,7 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
-    <OutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</OutputPath>
+    <OutputPath>C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedRewrite\Rocket\Plugins</OutputPath>
 	<Version>3.22.0.0</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
@@ -27,7 +27,7 @@
     <FileVersion>3.22.0.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <BaseOutputPath>C:\SteamCMD\unturned\Servers\UncreatedRewrite\Rocket\Plugins</BaseOutputPath>
+    <BaseOutputPath>C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedRewrite\Rocket\Plugins</BaseOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
   <PropertyGroup>

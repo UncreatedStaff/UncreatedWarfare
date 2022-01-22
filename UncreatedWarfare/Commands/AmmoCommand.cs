@@ -252,10 +252,11 @@ namespace Uncreated.Warfare.Commands
                         for (int i = 0; i < instances.Count; i++)
                         {
                             int index = region.items.FindIndex(r => r.instanceID == instances[i]);
-                            SDG.Unturned.ItemData it = ItemManager.regions[x, y].items[index];
-                            if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
                             if (index != -1)
                             {
+                                SDG.Unturned.ItemData it = ItemManager.regions[x, y].items[index];
+                                if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
+
                                 Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
                                 ItemManager.regions[x, y].items.RemoveAt(index);
                             }

@@ -92,16 +92,6 @@ namespace Uncreated.Warfare.Components
                         StatsManager.ModifyTeam(data.group, t => t.FobsBuilt++, false);
                     }
                 }
-                else if (Buildable.type == EBuildableType.AMMO_CRATE)
-                {
-                    FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.FULL, data.group);
-                    fob.Status |= EFOBStatus.AMMO_CRATE;
-                }
-                else if (Buildable.type == EBuildableType.REPAIR_STATION)
-                {
-                    FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.FULL, data.group);
-                    fob.Status |= EFOBStatus.REPAIR_STATION;
-                }
             }
             else
             {

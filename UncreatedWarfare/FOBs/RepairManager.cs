@@ -217,12 +217,13 @@ namespace Uncreated.Warfare.FOBs
                                     fob.ReduceBuild(1);
 
                                     UCPlayer stationPlacer = UCPlayer.FromID(parent.structure.owner);
-                                    if (stationPlacer != null)
+                                    if (stationPlacer != null && stationPlacer.CSteamID != nearby[i].lockedOwner )
                                     {
                                         Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Translation.Translate("xp_repaired_vehicle", stationPlacer));
-                                        Points.AwardXP(stationPlacer, Points.TWConfig.RepairVehiclePoints);
+                                        Points.AwardTW(stationPlacer, Points.TWConfig.RepairVehiclePoints);
                                     }
-                                    Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_repaired_vehicle");
+                                    if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
+                                        Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_fob_repaired_vehicle");
                                 }
                             }
                         }

@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components
 {
@@ -11,6 +13,7 @@ namespace Uncreated.Warfare.Components
         public BarricadeDrop Structure { get; private set; }
         public int Number;
         public string Name;
+        public string GridCoordinates;
         public string ClosestLocation;
         public ulong Team { get => Structure.GetServersideData().group; }
         public Vector3 Position { get => Structure.model.position; }
@@ -45,12 +48,23 @@ namespace Uncreated.Warfare.Components
 
             IsDiscovered = false;
 
+            GridCoordinates = F.ToGridPosition(Position);
             ClosestLocation =
                 (LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
                 .Aggregate((n1, n2) =>
                     (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)
                 .name;
+
+            if (Data.Is(out IFlagRotation fg))
+            {
+                Flag flag = fg.LoadedFlags.Find(f => f.Name == ClosestLocation);
+                if (flag != null)
+                {
+                    if (flag.ShortName != "")
+                        ClosestLocation = flag.ShortName;
+                }
+            }
 
             loop = StartCoroutine(Tick());
 

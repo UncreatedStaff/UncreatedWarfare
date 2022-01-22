@@ -68,7 +68,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public int ID { get => _id; }
         private readonly int _id;
         public string Name { get => _name; }
+        public string ShortName { get => _shortName; }
         private readonly string _name;
+        private readonly string _shortName;
         public float X
         {
             get => _x;
@@ -240,6 +242,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this._position2d = data.Position2D;
             this.LastDeltaPoints = 0;
             this._name = data.name;
+            this._shortName = data.short_name;
             this._color = data.color;
             this._owner = 0;
             PlayersOnFlag = new List<Player>();

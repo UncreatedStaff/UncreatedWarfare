@@ -823,7 +823,7 @@ namespace Uncreated.Warfare
             int bigsqry = Mathf.FloorToInt(ySqr / 3f);
             int smlSqrDstY = ySqr % 3;
             string rtn = ABET[bigsqrx] + (bigsqry + 1).ToString();
-            if (!isOut) rtn += " - " + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
+            if (!isOut) rtn += "-" + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
             return rtn;
         }
     }

@@ -11,6 +11,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.FOBs
 {
@@ -236,7 +237,8 @@ namespace Uncreated.Warfare.FOBs
                 }
                 else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID)
                 {
-                    f.parent.Destroy();
+                    if (f.parent.IsBleeding)
+                        f.parent.Destroy();
                 }
 
                 SendFOBListToTeam(f.parent.Team);
@@ -244,30 +246,6 @@ namespace Uncreated.Warfare.FOBs
             else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID)
             {
                 DeleteCache(drop);
-            }
-            else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID)
-            {
-                FOB fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);
-                if (fob != null)
-                {
-                    fob.Status &= ~EFOBStatus.AMMO_CRATE;
-                }
-            }
-            else if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
-            {
-                FOB fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);
-                if (fob != null)
-                {
-                    fob.Status &= ~EFOBStatus.REPAIR_STATION;
-                }
-            }
-        }
-
-        public static void PrepareFOBsForWipe()
-        {
-            foreach (var fob in AllFOBs)
-            {
-                fob.IsWipedByAuthority = true;
             }
         }
         
@@ -606,6 +584,31 @@ namespace Uncreated.Warfare.FOBs
 
             UpdateUIList(team, player.connection, FOBList, player);
         }
+        public static void UpdateResourceUIString(FOB fob)
+        {
+            if (!Data.Is(out TeamGamemode gm)) return;
+            if (fob.IsBleeding) return;
+
+            List<FOB> FOBList;
+            ulong team = fob.Team;
+            if (team == 1)
+                FOBList = Team1FOBs;
+            else if (team == 2)
+                FOBList = Team2FOBs;
+            else return;
+
+            int offset = SpecialFOBs.Count + Caches.Count;
+            int i = FOBList.IndexOf(fob) + offset;
+            if (i == -1)
+                return;
+
+            for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
+            {
+                if (PlayerManager.OnlinePlayers[j].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[j]))
+                    EffectManager.sendUIEffectText(fobListKey, PlayerManager.OnlinePlayers[j].connection, true, "R" + i.ToString(),
+                fob.UIResourceString);
+            }
+        }
         public static void UpdateFOBList(UCPlayer player, FOB fob = null)
         {
             List<FOB> FOBList;
@@ -629,8 +632,10 @@ namespace Uncreated.Warfare.FOBs
                     UpdateUIList(team, player.connection, FOBList, player);
                     return;
                 }
-                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + i.ToString(),
-                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].NearbyEnemies.Count == 0 ? FOBList[i].UIColor : UCWarfare.GetColorHex("enemy_nearby_fob_color")), FOBList[i].GridCoordinates));
+                string ii = i.ToString();
+                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + ii,
+                Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates.Colorize("ebe8df"), FOBList[i].ClosestLocation));
+                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + ii, FOBList[i].UIResourceString);
             }
         }
         public static void UpdateFOBList(UCPlayer player, SpecialFOB fob = null)
@@ -655,7 +660,7 @@ namespace Uncreated.Warfare.FOBs
                     UpdateUIList(team, c, FOBList, player);
                     return;
                 }
-                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].ClosestLocation));
+                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].GridCoordinates, SpecialFOBs[i].ClosestLocation));
             }
         }
         public static void UpdateFOBList(UCPlayer player, Cache cache = null)
@@ -681,12 +686,11 @@ namespace Uncreated.Warfare.FOBs
                     UpdateUIList(team, c, FOBList, player);
                     return;
                 }
-                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].ClosestLocation));
+                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
             }
         }
         private static void UpdateUIList(ulong team, ITransportConnection c, List<FOB> FOBList, UCPlayer player)
         {
-            HideFOBList(player); // TODO: remove this line and make the FOB list UI have all gameobjects disabled by default
             EffectManager.sendUIEffect(fobListId, fobListKey, true);
 
             int i2 = 0;
@@ -698,7 +702,7 @@ namespace Uncreated.Warfare.FOBs
                 {
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
-                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].ClosestLocation));
+                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].GridCoordinates, SpecialFOBs[i].ClosestLocation));
                     i2++;
                 }
             }
@@ -711,8 +715,10 @@ namespace Uncreated.Warfare.FOBs
                     //L.LogDebug($"    i: {i}");
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
-                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].ClosestLocation));
-                    i2++;
+                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22,
+                    Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
+                    EffectManager.sendUIEffectText(fobListKey, c, true, "R" + i22, "");
+                        i2++;
                 }
             }
 
@@ -723,8 +729,10 @@ namespace Uncreated.Warfare.FOBs
                 string i22 = i2.ToString();
 
                 EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
-                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22,
-                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates));
+                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + i22,
+                    Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates, FOBList[i].ClosestLocation));
+                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + i22,
+                    FOBList[i].UIResourceString);
                 i2++;
             }
             for (; i2 < config.data.FobLimit; i2++)
@@ -740,6 +748,7 @@ namespace Uncreated.Warfare.FOBs
         public string Name;
         public Vector3 Point;
         public string ClosestLocation;
+        public string GridCoordinates;
         public ulong Team;
         public string UIColor;
         public bool IsActive;
@@ -754,8 +763,17 @@ namespace Uncreated.Warfare.FOBs
                 .Aggregate((n1, n2) =>
                     (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)
                 .name;
+
+            if (Data.Is(out IFlagRotation fg))
+            {
+                Flag flag = fg.LoadedFlags.Find(f => f.Name == ClosestLocation);
+                if (flag != null && flag.ShortName != "")
+                    ClosestLocation = flag.ShortName;
+            }
+
             Team = team;
             Point = point;
+            GridCoordinates = F.ToGridPosition(Point);
             UIColor = color;
             IsActive = true;
             DisappearAroundEnemies = disappearAroundEnemies;

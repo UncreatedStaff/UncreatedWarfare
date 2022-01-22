@@ -18,6 +18,7 @@ namespace Uncreated.Warfare.Components
         public Dictionary<ulong, Vector3> TransportTable { get; private set; }
         public Dictionary<ulong, double> UsageTable { get; private set; }
         private Dictionary<ulong, DateTime> TimeEnteredTable;
+        private Dictionary<ulong, DateTime> TimeRewardedTable;
         private float _quota;
         private float _requiredQuota;
         public float Quota { get => _quota; set => _quota = value; }
@@ -33,6 +34,7 @@ namespace Uncreated.Warfare.Components
             TransportTable = new Dictionary<ulong, Vector3>();
             UsageTable = new Dictionary<ulong, double>();
             TimeEnteredTable = new Dictionary<ulong, DateTime>();
+            TimeRewardedTable = new Dictionary<ulong, DateTime>();
 
             _quota = 0;
             _requiredQuota = -1;
@@ -101,11 +103,23 @@ namespace Uncreated.Warfare.Components
                 float distance = (player.Position - original).magnitude;
                 if (distance >= 200 && !(player.KitClass == EClass.CREWMAN || player.KitClass == EClass.PILOT))
                 {
-                    int amount = (int)(Math.Floor(distance / 100) * 5) + 15;
+                    bool isOnCooldown = false;
+                    if (TimeRewardedTable.TryGetValue(player.Steam64, out DateTime time) && (DateTime.Now - time).TotalSeconds < 60)
+                        isOnCooldown = true;
 
-                    Points.AwardXP(vehicle.passengers[0].player.player, amount, Translation.Translate("xp_transporting_players", vehicle.passengers[0].player.player));
+                    if (!isOnCooldown)
+                    {
+                        int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
-                    _quota += 0.5F;
+                        Points.AwardXP(vehicle.passengers[0].player.player, amount, Translation.Translate("xp_transporting_players", vehicle.passengers[0].player.player));
+
+                        _quota += 0.5F;
+
+                        if (!TimeRewardedTable.ContainsKey(player.Steam64))
+                            TimeRewardedTable.Add(player.Steam64, DateTime.Now);
+                        else
+                            TimeRewardedTable[player.Steam64] = DateTime.Now;
+                    }
                 }
                 TransportTable.Remove(player.Steam64);
             }

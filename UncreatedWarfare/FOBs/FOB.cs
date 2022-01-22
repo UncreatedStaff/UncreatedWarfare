@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components
 {
@@ -102,12 +104,12 @@ namespace Uncreated.Warfare.Components
     }
     public class FOB
     {
-        public BarricadeDrop Radio { get; private set; }
+        public BarricadeDrop Radio;
         private FOBComponent component;
-        public EFOBStatus Status;
         public int Number;
         public string Name;
-        public string GridCoordinates;
+        public string GridCoordinates { get; private set; }
+        public string ClosestLocation { get; private set; }
         public ulong Team { get => Radio.GetServersideData().group; }
         public ulong Owner { get => Radio.GetServersideData().owner; }
         public BarricadeDrop Bunker { get; private set; }
@@ -130,6 +132,16 @@ namespace Uncreated.Warfare.Components
                     return UCWarfare.GetColorHex("enemy_nearby_fob_color");
                 else
                     return UCWarfare.GetColorHex("default_fob_color");
+            }
+        }
+        public string UIResourceString
+        {
+            get
+            {
+                if (IsBleeding)
+                    return "";
+                else
+                    return Build.ToString().Colorize("d4c49d") + " " + Ammo.ToString().Colorize("b56e6e");
             }
         }
         public BarricadeDrop RepairStation { get => UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, Radius, Position, Team, false).FirstOrDefault(); }
@@ -188,7 +200,23 @@ namespace Uncreated.Warfare.Components
             Build = 0;
 
             GridCoordinates = F.ToGridPosition(Position);
-            Status = EFOBStatus.RADIO;
+            ClosestLocation =
+                (LevelNodes.nodes
+                .Where(n => n.type == ENodeType.LOCATION)
+                .Aggregate((n1, n2) =>
+                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)
+                .name;
+
+            if (Data.Is(out IFlagRotation fg))
+            {
+                Flag flag = fg.LoadedFlags.Find(f => f.Name == ClosestLocation);
+                if (flag != null)
+                {
+                    if (flag.ShortName != "")
+                        ClosestLocation = flag.ShortName;
+                }
+            }
+
             IsBleeding = false;
             IsWipedByAuthority = false;
             IsDestroyed = false;
@@ -240,12 +268,10 @@ namespace Uncreated.Warfare.Components
             if (Bunker == null)
             {
                 Radius = 30;
-                Status &= ~EFOBStatus.HAB;
             }
             else
             {
                 Radius = FOBManager.config.data.FOBBuildPickupRadius;
-                Status |= EFOBStatus.HAB;
             }
         }
         public void ConsumeResources()
@@ -370,6 +396,8 @@ namespace Uncreated.Warfare.Components
                     "Build",
                     Build.ToString()
                     );
+
+            FOBManager.UpdateResourceUIString(this);
         }
         public void UpdateAmmoUI(UCPlayer player)
         {
@@ -377,6 +405,8 @@ namespace Uncreated.Warfare.Components
                     "Ammo",
                     Ammo.ToString()
                     );
+
+            FOBManager.UpdateResourceUIString(this);
         }
         private void SwapRadioBarricade(BarricadeDrop newDrop)
         {
