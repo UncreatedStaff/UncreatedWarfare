@@ -88,22 +88,42 @@ namespace Uncreated.Warfare.Components
             new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 3, 5.5f), // big
             new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 4, 1.6f), // progress
         };
-        private static readonly bool[] channels;
-        static PlaytimeComponent()
+        private struct ToastChannel
         {
-            byte max = 0;
-            bool cont0 = false;
-            for (int i = 0; i < TOASTS.Length; i++)
+            public byte channel;
+            public ToastMessageInfo info;
+            public ToastMessage message;
+            public float timeRemaining;
+            public bool InUse => timeRemaining > 0f;
+            public bool hasPending = false;
+            public ToastChannel(byte channel)
             {
-                ToastMessageInfo toast = TOASTS[i];
-                if (toast.channel == 0)
-                    cont0 = true;
-                else if (max < toast.channel)
-                    max = toast.channel;
+                this.info = default;
+                this.message = default;
+                this.timeRemaining = 0f;
+                this.channel = channel;
             }
-            if (cont0) max++;
-            channels = new bool[max];
+            public void SetMessage(ToastMessageInfo info, ToastMessage message)
+            {
+                this.info = info;
+                this.message = message;
+                this.timeRemaining = info.time;
+            }
+            /// <returns><see langword="true"/> if there is a message currently playing on the channel, otherwise <see langword="false"/>.</returns>
+            public bool Update(float dt)
+            {
+                if (this.timeRemaining <= 0f) return hasPending;
+                this.timeRemaining -= dt;
+                if (this.timeRemaining <= 0f)
+                {
+                    this.timeRemaining = 0f;
+                    return hasPending;
+                }
+                return false;
+            }
         }
+
+        private ToastChannel[] channels;
         public void QueueMessage(ToastMessage message, bool priority = false)
         {
             ToastMessageInfo info = ToastMessageInfo.Nil;
@@ -120,26 +140,26 @@ namespace Uncreated.Warfare.Components
                 L.LogWarning("Undefined toast message type: " + message.Severity.ToString());
                 return;
             }
-            if (priority || (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel]))
+            if (priority || (pendingToastMessages.Count(x => x.Value.channel == info.channel) == 0 && !channels[info.channel].InUse))
                 SendToastMessage(message, info);
             else
             {
                 pendingToastMessages.Insert(0, new KeyValuePair<ToastMessage, ToastMessageInfo>(message, info));
-                L.Log("Queued effect " + info.id + ": " + (message.Message1 ?? "null") + ", " + (message.Message3 ?? "null") + ", " + (message.Message3 ?? "null") + " over channel " + info.channel);
+                for (int i = 0; i < channels.Length; i++)
+                {
+                    if (channels[i].channel == info.channel)
+                    {
+                        channels[i].hasPending = true;
+                        break;
+                    }
+                }
             }
         }   
         readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
-        private Coroutine _toastDelay = null;
         private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
         {
-            EffectManager.sendUIEffect(info.id, unchecked((short)info.id),
-                        player.channel.owner.transportConnection, true,
-                        message.Message1 != null ? message.Message1 : "",
-                        message.Message2 != null ? message.Message2 : "",
-                        message.Message3 != null ? message.Message3 : ""
-                        );
-            L.Log("Sent effect " + info.id + ": " + (message.Message1 ?? "null") + ", " + (message.Message3 ?? "null") + ", " + (message.Message3 ?? "null") + " over channel " + info.channel);
-            channels[info.channel] = true;
+            EffectManager.sendUIEffect(info.id, unchecked((short)info.id), player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "" );
+            channels[info.channel].SetMessage(info, message);
             for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
             {
                 KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[i];
@@ -149,33 +169,27 @@ namespace Uncreated.Warfare.Components
                     break;
                 }
             }
-            if (_toastDelay != null)
-                StopCoroutine(_toastDelay);
-            _toastDelay = StartCoroutine(ToastDelay(message, info));
-        }
-        private IEnumerator<WaitForSeconds> ToastDelay(ToastMessage message, ToastMessageInfo info)
-        {
-            yield return new WaitForSeconds(info.time);
-            channels[info.channel] = false;
-            EffectManager.askEffectClearByID(info.id, player.channel.owner.transportConnection);
-            for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
-            {
-                KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[i];
-                if (t.Value.channel == info.channel)
-                {
-                    SendToastMessage(t.Key, t.Value);
-                    break;
-                }
-            }
         }
         public void StartTracking(Player player)
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
             this.thrown = new List<ThrowableOwner>();
-            for (int i = 0; i < channels.Length; i++)
-                channels[i] = false;
             L.Log("Started tracking playtime of " + player.name);
+            byte max = 0;
+            bool cont0 = false;
+            for (int i = 0; i < TOASTS.Length; i++)
+            {
+                ToastMessageInfo toast = TOASTS[i];
+                if (toast.channel == 0)
+                    cont0 = true;
+                else if (max < toast.channel)
+                    max = toast.channel;
+            }
+            if (cont0) max++;
+            channels = new ToastChannel[max];
+            for (byte i = 0; i < channels.Length; i++)
+                channels[i] = new ToastChannel(i);
         }
         public void UpdateAttackers(ulong lastAttacker)
         {
@@ -191,6 +205,24 @@ namespace Uncreated.Warfare.Components
         {
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
+            for (int i = 0; i < channels.Length; i++)
+            {
+                if (channels[i].Update(dt))
+                {
+                    ToastChannel channel = channels[i];
+                    for (int j = pendingToastMessages.Count - 1; j >= 0; j--)
+                    {
+                        KeyValuePair<ToastMessage, ToastMessageInfo> t = pendingToastMessages[j];
+                        if (t.Value.channel == channel.channel)
+                        {
+                            SendToastMessage(t.Key, t.Value);
+                            goto next;
+                        }
+                    }
+                    channel.hasPending = false;
+                    next: ;
+                }
+            }
         }
         public void CancelTeleport()
         {
