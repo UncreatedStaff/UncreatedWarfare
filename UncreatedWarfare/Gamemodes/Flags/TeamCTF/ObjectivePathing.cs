@@ -73,7 +73,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 Flag f = selection.FirstOrDefault(x => x.ID == afd.flag_id);
                 if (f != default)
                 {
-                    if (toNotRemove == null || !toNotRemove.Exists(x => x.ID == afd.flag_id))
+                    if (!rtn.ContainsKey(f) && (toNotRemove == null || !toNotRemove.Exists(x => x.ID == afd.flag_id)))
                         rtn.Add(f, afd.weight);
                 }
                 else if (current != null)

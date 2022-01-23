@@ -132,6 +132,8 @@ namespace Uncreated
         public static void Reload()
         {
             _threadLocker.Wait();
+            if (!File.Exists(directory))
+                CreateFileIfNotExists(ActiveObjects.LoadDefaults());
             if (useDeserializer)
             {
                 FileStream rs = null;
