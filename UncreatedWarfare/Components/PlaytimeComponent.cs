@@ -175,7 +175,6 @@ namespace Uncreated.Warfare.Components
             this.player = player;
             CurrentTimeSeconds = 0.0f;
             this.thrown = new List<ThrowableOwner>();
-            L.Log("Started tracking playtime of " + player.name);
             byte max = 0;
             bool cont0 = false;
             for (int i = 0; i < TOASTS.Length; i++)
