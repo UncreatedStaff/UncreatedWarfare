@@ -549,7 +549,7 @@ namespace Uncreated.Warfare.Revives
                 }
                 if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent victim))
                 {
-
+                    victim.TryUpdateAttackers(killerid.m_SteamID);
                 }
             }
 

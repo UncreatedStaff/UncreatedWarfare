@@ -695,7 +695,7 @@ namespace Uncreated.Warfare.FOBs
         }
         private static void UpdateUIList(ulong team, ITransportConnection c, List<FOB> FOBList, UCPlayer player)
         {
-            EffectManager.sendUIEffect(fobListId, fobListKey, true);
+            EffectManager.sendUIEffect(fobListId, fobListKey, c, true);
 
             int i2 = 0;
             int min = Math.Min(SpecialFOBs.Count, config.data.FobLimit);

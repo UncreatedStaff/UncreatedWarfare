@@ -190,10 +190,11 @@ namespace Uncreated.Warfare.Components
             for (byte i = 0; i < channels.Length; i++)
                 channels[i] = new ToastChannel(i);
         }
-        public void UpdateAttackers(ulong lastAttacker)
+        public void TryUpdateAttackers(ulong newLastAttacker)
         {
-            secondLastAttacker = new KeyValuePair<ulong, DateTime>(this.lastAttacker, DateTime.Now);
-            this.lastAttacker = lastAttacker;
+            if (this.lastAttacker != newLastAttacker)
+                secondLastAttacker = new KeyValuePair<ulong, DateTime>(this.lastAttacker, DateTime.Now);
+            this.lastAttacker = newLastAttacker;
         }
         public void ResetAttackers()
         {
