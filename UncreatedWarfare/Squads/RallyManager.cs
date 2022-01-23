@@ -121,7 +121,7 @@ namespace Uncreated.Warfare.Squads
         {
             if (!rallypoints.Exists(r => r.structure.instanceID == data.instanceID))
             {
-                RallyPoint existing = rallypoints.Find(r => r.squad.Name == squad.Name);
+                RallyPoint existing = rallypoints.Find(r => r.squad.Name == squad.Name && r.squad.Team == squad.Team);
                 if (existing != null)
                 {
                     existing.ClearUIForSquad();
@@ -149,12 +149,12 @@ namespace Uncreated.Warfare.Squads
         }
         public static bool HasRally(UCPlayer player, out RallyPoint rallypoint)
         {
-            rallypoint = rallypoints.Find(r => r.squad.Name == player.Squad.Name);
+            rallypoint = rallypoints.Find(r => r.squad.Name == player.Squad.Name && r.squad.Team == player.Squad.Team);
             return rallypoint != null;
         }
         public static bool HasRally(Squad squad, out RallyPoint rallypoint)
         {
-            rallypoint = rallypoints.Find(r => r.squad == squad);
+            rallypoint = rallypoints.Find(r => r.squad.Name == squad.Name && r.squad.Team == squad.Team);
             return rallypoint != null;
         }
         public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
