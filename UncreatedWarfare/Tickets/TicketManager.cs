@@ -85,13 +85,15 @@ namespace Uncreated.Warfare.Tickets
                 Points.XPConfig.EnemyKilledXP,
                 Translation.Translate("xp_enemy_killed", parameters.killer));
 
+            L.Log("attempting to award assist...");
+
             if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent component))
             {
                 ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
                 ulong victimID = parameters.dead.channel.owner.playerID.steamID.m_SteamID;
 
                 var assister = UCPlayer.FromID(component.secondLastAttacker.Key);
-                if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds < 30)
+                if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
                 {
                     Points.AwardXP(
                         assister,
