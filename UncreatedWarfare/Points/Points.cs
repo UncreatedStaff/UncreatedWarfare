@@ -1,9 +1,6 @@
 ﻿using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -14,8 +11,8 @@ namespace Uncreated.Warfare.Point
 {
     public class Points
     {
-        private static Config<XPConfig> _xpconfig = new Config<XPConfig>(Data.PointsStorage, "xp.json");
-        private static Config<TWConfig> _twconfig = new Config<TWConfig>(Data.PointsStorage, "tw.json");
+        private static readonly Config<XPConfig> _xpconfig = new Config<XPConfig>(Data.PointsStorage, "xp.json");
+        private static readonly Config<TWConfig> _twconfig = new Config<TWConfig>(Data.PointsStorage, "tw.json");
         public static XPConfig XPConfig => _xpconfig.data;
         public static TWConfig TWConfig => _twconfig.data;
 
@@ -135,7 +132,7 @@ namespace Uncreated.Warfare.Point
                     Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
             }
 
-            if (player.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
+            if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
                 ex.AddXP(amount);
             }
@@ -186,7 +183,7 @@ namespace Uncreated.Warfare.Point
                 Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "ofp_announce_gained", F.GetPlayerOriginalNames(player).CharacterName, startString);
             }
 
-            if (player.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats ex)
+            if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IExperienceStats ex)
             {
                 ex.AddOfficerPoints(amount);
             }
@@ -194,6 +191,9 @@ namespace Uncreated.Warfare.Point
         public static void AwardTW(Player player, int amount, string message = "") => AwardTW(UCPlayer.FromPlayer(player), amount, message);
         public static void UpdateXPUI(UCPlayer player)
         {
+            if (Data.Is(out IEndScreen lb) && lb.isScreenUp || Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player))
+                return;
+
             short key = (short)XPConfig.RankUI;
             RankData current = player.CurrentRank;
 
@@ -219,6 +219,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void UpdateTWUI(UCPlayer player)
         {
+            if (Data.Is(out IEndScreen lb) && lb.isScreenUp || Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player))
+                return;
+
             short key = (short)TWConfig.MedalsUI;
             EffectManager.sendUIEffect(TWConfig.MedalsUI, key, player.connection, true);
             
@@ -260,10 +263,10 @@ namespace Uncreated.Warfare.Point
         }
         public static void TryAwardDriverAssist(Player gunner, int amount, float quota = 0)
         {
-            var vehicle = gunner.movement.getVehicle();
+            InteractableVehicle vehicle = gunner.movement.getVehicle();
             if (vehicle != null)
             {
-                var driver = vehicle.passengers[0].player;
+                SteamPlayer driver = vehicle.passengers[0].player;
                 if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
                 {
                     AwardXP(driver.player, amount, Translation.Translate("xp_driver_assist", gunner));

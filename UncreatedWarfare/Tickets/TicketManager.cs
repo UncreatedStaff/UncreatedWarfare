@@ -26,14 +26,11 @@ namespace Uncreated.Warfare.Tickets
         public static int Team1Tickets;
         public static int Team2Tickets;
         public static DateTime TimeSinceMatchStart;
-        private static ulong _previousWinner;
         internal static int _Team1previousTickets;
         internal static int _Team2previousTickets;
         public TicketManager()
         {
             TimeSinceMatchStart = DateTime.Now;
-
-            _previousWinner = 0;
 
             Team1Tickets = config.data.StartingTickets;
             Team2Tickets = config.data.StartingTickets;
@@ -261,8 +258,6 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnRoundWin(ulong team)
         {
-            _previousWinner = team;
-
             float winMultiplier = 0.15f;
 
             List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team).ToList();
@@ -340,7 +335,7 @@ namespace Uncreated.Warfare.Tickets
             UpdateUITeam1();
             UpdateUITeam2();
 
-            Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
+            Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
@@ -352,20 +347,20 @@ namespace Uncreated.Warfare.Tickets
 
                 if (player.IsNearSquadLeader(50))
                 {
-                    if (alreadyUpdated.TryGetValue(player.Squad.Name, out var amount))
+                    if (alreadyUpdated.TryGetValue(player.Squad, out int amount))
                     {
                         amount += Points.TWConfig.MemberFlagCapturePoints;
                     }
                     else
                     {
-                        alreadyUpdated.Add(player.Squad.Name, Points.TWConfig.MemberFlagCapturePoints);
+                        alreadyUpdated.Add(player.Squad, Points.TWConfig.MemberFlagCapturePoints);
                     }
                 }
             }
 
             for (int i = 0; i < SquadManager.Squads.Count; i++)
             {
-                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i].Name, out int amount))
+                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i], out int amount))
                 {
                     Points.AwardTW(SquadManager.Squads[i].Leader.Player, amount, "");
                 }

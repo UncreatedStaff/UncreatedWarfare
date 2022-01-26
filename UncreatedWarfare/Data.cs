@@ -143,17 +143,12 @@ namespace Uncreated.Warfare
                 }
                 L.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 NetClient = new Client(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                NetClient.AssertConnected();
                 NetClient.connection.OnReceived += ClientReceived;
                 NetClient.connection.OnAutoSent += ClientSent;
+                //NetClient.AssertConnected();
                 Invocations.Shared.PlayerList.NetInvoke(PlayerManager.GetPlayerList());
             }
         }
-        public static void LoadRandomGamemode()
-        {
-
-        }
-
         public static void LoadVariables()
         {
             /* INITIALIZE UNCREATED NETWORKING */

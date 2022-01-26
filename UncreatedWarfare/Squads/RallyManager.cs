@@ -169,19 +169,19 @@ namespace Uncreated.Warfare.Squads
 
     public class RallyPoint
     {
-        public SDG.Unturned.BarricadeData structure; // physical barricade structure of the rallypoint
-        public BarricadeDrop drop;
-        public List<UCPlayer> AwaitingPlayers; // list of players currently waiting to teleport to the rally
-        public Squad squad;
+        public readonly SDG.Unturned.BarricadeData structure; // physical barricade structure of the rallypoint
+        public readonly BarricadeDrop drop;
+        public readonly List<UCPlayer> AwaitingPlayers; // list of players currently waiting to teleport to the rally
+        public readonly Squad squad;
         public bool IsActive;
         public int timer;
-        public string nearestLocation;
+        public readonly string nearestLocation;
         public RallyPoint(SDG.Unturned.BarricadeData structure, BarricadeDrop drop, Squad squad)
         {
             this.structure = structure;
             this.drop = drop;
             this.squad = squad;
-            AwaitingPlayers = new List<UCPlayer>();
+            AwaitingPlayers = new List<UCPlayer>(6);
             IsActive = true;
             timer = SquadManager.config.data.RallyTimer;
 

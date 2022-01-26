@@ -11,18 +11,18 @@ using Uncreated.Players;
 
 namespace Uncreated.Warfare.Squads
 {
-    public class Orders
+    public static class Orders
     {
-        public static List<Order> orders = new List<Order>();
+        public static List<Order> orders = new List<Order>(16);
 
         public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message)
         {
-            Order  order = squad.Leader.Player.gameObject.AddComponent<Order>();
+            Order order = squad.Leader.Player.gameObject.AddComponent<Order>();
             order.Initialize(squad, commander, type, marker, message);
             orders.Add(order);
 
             commander.Message("order_s_sent", squad.Name, message);
-            foreach (var player in squad.Members)
+            foreach (UCPlayer player in squad.Members)
             {
                 order.SendUI(player);
                 ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("order_s_received", player, commander.CharacterName, message), EToastMessageSeverity.MEDIUM));
@@ -295,16 +295,17 @@ namespace Uncreated.Warfare.Squads
         {
             yield return new WaitForSeconds(20);
             // TODO: Clear UI
+            StopCoroutine(loop);
             Destroy(this);
         }
     }
 
 
-    public class OrderCondition
+    public struct OrderCondition
     {
-        EOrder Type;
-        Squad Squad;
-        Vector3 Marker;
+        public readonly EOrder Type;
+        public readonly Squad Squad;
+        public readonly Vector3 Marker;
         public List<UCPlayer> FullfilledPlayers;
 
 
@@ -313,7 +314,7 @@ namespace Uncreated.Warfare.Squads
             Type = type;
             Squad = squad;
             Marker = marker;
-            FullfilledPlayers = new List<UCPlayer>();
+            FullfilledPlayers = new List<UCPlayer>(12);
         }
         public bool Check()
         {
@@ -327,7 +328,7 @@ namespace Uncreated.Warfare.Squads
         {
             if (Type == EOrder.MOVE)
             {
-                foreach (var player in Squad.Members)
+                foreach (UCPlayer player in Squad.Members)
                 {
                     if ((player.Position - Marker).sqrMagnitude <= Math.Pow(40, 2))
                     {

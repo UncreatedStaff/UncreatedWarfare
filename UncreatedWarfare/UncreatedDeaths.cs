@@ -964,8 +964,8 @@ namespace Uncreated.Warfare
                 }
                 string key = cause.ToString();
                 if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
-                if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINCAMP")) key = "MAINCAMP";
-                else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey("MAINDEATH")) key = "MAINDEATH";
+                if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey("MAINCAMP")) key = "MAINCAMP";
+                else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey("MAINDEATH")) key = "MAINDEATH";
                 if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH
                     || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL || cause == EDeathCause.BLEEDING) && foundKiller)
                 {
@@ -974,11 +974,11 @@ namespace Uncreated.Warfare
                         Asset a = Assets.find(item);
                         string k1 = (itemIsVehicle ? "v" : "") + a == null ? "0" : a.id.ToString(Data.Locale);
                         string k2 = k1 + "_SUICIDE";
-                        if (Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(k1))
+                        if (Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey(k1))
                         {
                             key = k1;
                         }
-                        if (dead.CSteamID.m_SteamID == killer.playerID.steamID.m_SteamID && cause != EDeathCause.SUICIDE && Data.DeathLocalization[JSONMethods.DefaultLanguage].ContainsKey(k2))
+                        if (dead.CSteamID.m_SteamID == killer.playerID.steamID.m_SteamID && cause != EDeathCause.SUICIDE && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey(k2))
                         {
                             key = k2;
                         }

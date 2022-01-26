@@ -643,6 +643,8 @@ namespace Uncreated.Warfare
                 { "dominating", "Your team is dominating!" },
 
                 // Branch names
+                { "team1_default", "Recruit" },
+                { "team2_default", "Recruit" },
                 { "team1_infantry", "Infantry Division" },
                 { "team2_infantry", "Infantry Division" },
                 { "team1_armor", "Armor Division" },

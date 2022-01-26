@@ -140,7 +140,7 @@ namespace Uncreated.Warfare.Commands
                 targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
                 targetPl.SendChat("report_notify_violator_chat_p2");
             }
-            L.Log(Translation.Translate("report_console", JSONMethods.DefaultLanguage,
+            L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
                 player.Player.channel.owner.playerID.playerName, player.Steam64.ToString(Data.Locale),
                 targetNames.PlayerName, target.ToString(Data.Locale), report.Message, typename), ConsoleColor.Cyan);
             Task.Run(
@@ -156,11 +156,11 @@ namespace Uncreated.Warfare.Commands
                 {
                     //await UCWarfare.ToUpdate();
                     //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
-                    L.Log(Translation.Translate("report_console_record", JSONMethods.DefaultLanguage, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl), ConsoleColor.Cyan);
+                    L.Log(Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl), ConsoleColor.Cyan);
                 }
                 else
                 {
-                    L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DefaultLanguage, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                    L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                 }
             });
             return;

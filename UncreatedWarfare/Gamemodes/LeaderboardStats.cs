@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
     }
 
-    public abstract class Leaderboard<Stats, StatTracker> : MonoBehaviour
+    public abstract class Leaderboard<Stats, StatTracker> : MonoBehaviour where Stats : BasePlayerStats where StatTracker : BaseStatTracker<Stats>
     {
         public const string NO_PLAYER_NAME_PLACEHOLDER = "---";
         public const string NO_PLAYER_VALUE_PLACEHOLDER = "--";
