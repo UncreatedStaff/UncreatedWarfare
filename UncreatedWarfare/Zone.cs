@@ -12,19 +12,14 @@ namespace Uncreated.Warfare
     {
         private static readonly float EffectiveImageScalingSize = Level.size - (Level.border * 2);
         private static readonly float FullImageSize = Level.size;
-        public float MaxHeight;
-        public float MinHeight;
-        protected float _multiplier;
+        public readonly float MaxHeight;
+        public readonly float MinHeight;
+        protected readonly float _multiplier;
         public float CoordinateMultiplier { get => _multiplier; }
-        public Vector2 Center;
+        public readonly Vector2 Center;
         public Vector3 Center3D
         {
             get => new Vector3(Center.x, Mathf.Max(F.GetTerrainHeightAt2DPoint(Center), MinHeight), Center.y);
-            set
-            {
-                Center.x = value.x;
-                Center.y = value.z;
-            }
         }
         public Vector3 Center3DAbove
         {
@@ -32,11 +27,11 @@ namespace Uncreated.Warfare
         }
         public Zone InverseZone;
         protected bool SucessfullyParsed = false;
-        public ZoneData data;
+        public readonly ZoneData data;
         protected float spacing = -1;
         protected int perline = 10;
         public Vector2[] _particleSpawnPoints;
-        public string Name;
+        public readonly string Name;
         public Vector2 BoundsTLPos;
         public Vector2 BoundsSize;
         public float BoundsArea;
@@ -237,14 +232,14 @@ namespace Uncreated.Warfare
         }
         public override string Dump() => $"{base.Dump()}. Radius: {Radius}";
     }
-    public class Line
+    public readonly struct Line
     {
-        public Vector2 pt1;
-        public Vector2 pt2;
-        public float m; // slope 
-        public float b; // y-inx
-        public float length;
-        public Line(Vector2 pt1, Vector2 pt2)
+        public readonly Vector2 pt1;
+        public readonly Vector2 pt2;
+        public readonly float m; // slope 
+        public readonly float b; // y-inx
+        public readonly float length;
+        public Line(in Vector2 pt1, in Vector2 pt2)
         {
             this.pt1 = pt1;
             this.pt2 = pt2;
@@ -252,7 +247,7 @@ namespace Uncreated.Warfare
             this.b = -1 * ((m * pt1.x) - pt1.y);
             this.length = Vector2.Distance(pt1, pt2);
         }
-        public float NormalizeSpacing(float baseSpacing)
+        public readonly float NormalizeSpacing(float baseSpacing)
         {
             int canfit = F.DivideRemainder(length, baseSpacing, out int remainder);
             if (remainder == 0) return baseSpacing;
@@ -261,15 +256,15 @@ namespace Uncreated.Warfare
             else                                //add one more and subtend all others
                 return length / (canfit + 1);
         }
-        public bool IsIntersecting(float playerY, float playerX)
+        public readonly bool IsIntersecting(float playerY, float playerX)
         {
             if (playerY < Mathf.Min(pt1.y, pt2.y) || playerY >= Mathf.Max(pt1.y, pt2.y)) return false; // if input value is out of vertical range of line
             if (pt1.x == pt2.x) return pt1.x >= playerX; // checks for undefined sloped (a completely vertical line)
             float x = GetX(playerY); // solve for y
             return x >= playerX; // if output value is in front of player
         }
-        public float GetX(float y) => (y - b) / m; // inverse slope function
-        public float GetY(float x) => m * x + b;   // slope function
+        public readonly float GetX(float y) => (y - b) / m; // inverse slope function
+        public readonly float GetY(float x) => m * x + b;   // slope function
         public static Vector2 AvgAllPoints(Vector2[] Points)
         {
             float xTotal = 0;
@@ -282,20 +277,20 @@ namespace Uncreated.Warfare
             }
             return new Vector2(xTotal / i, yTotal / i);
         }
-        public Vector2 GetPointFromPercentFromPt1(float percent0to1)
+        public readonly Vector2 GetPointFromPercentFromPt1(float percent0to1)
         {
             if (pt1.x == pt2.x) return new Vector2(pt1.x, pt1.y + (pt2.y - pt1.y) * percent0to1);
             float x = pt1.x + ((pt2.x - pt1.x) * percent0to1);
             return new Vector2(x, GetY(x));
         }
-        public Vector2 GetPointFromDistanceFromPt1(float distance) => GetPointFromPercentFromPt1(distance / length);
-        public Vector2 GetPointFromPercentFromPt2(float percent0to1)
+        public readonly Vector2 GetPointFromDistanceFromPt1(float distance) => GetPointFromPercentFromPt1(distance / length);
+        public readonly Vector2 GetPointFromPercentFromPt2(float percent0to1)
         {
             if (pt2.x == pt1.x) return new Vector2(pt2.x, pt2.y + (pt1.y - pt2.y) * percent0to1);
             float x = pt2.x + ((pt1.x - pt2.x) * percent0to1);
             return new Vector2(x, GetY(x));
         }
-        public Vector2 GetPointFromDistanceFromPt2(float distance) => GetPointFromPercentFromPt2(distance / length);
+        public readonly Vector2 GetPointFromDistanceFromPt2(float distance) => GetPointFromPercentFromPt2(distance / length);
     }
     public class PolygonZone : Zone
     {
@@ -308,14 +303,15 @@ namespace Uncreated.Warfare
         public static Vector2 GetBounds(Vector2[] points, out Vector2 size)
         {
             float? maxX = null, maxY = null, minX = null, minY = null;
-            if (points.Length == 0) throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
+            if ((points ?? throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN")).Length == 0) throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
             if (points.Length == 1)
             {
                 size = new Vector2(0, 0);
                 return new Vector2(points[0].x, points[0].y);
             }
-            foreach (Vector2 point in points)
+            for (int i = 0; i < points.Length; i++)
             {
+                ref Vector2 point = ref points[i];
                 if (!maxX.HasValue || maxX.Value > point.x) maxX = point.x;
                 if (!maxY.HasValue || maxY.Value > point.y) maxY = point.y;
                 if (!minX.HasValue || minX.Value < point.x) minX = point.x;

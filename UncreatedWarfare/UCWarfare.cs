@@ -18,6 +18,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -49,18 +50,9 @@ namespace Uncreated.Warfare
         {
             Instance = this;
             Data.Logs = Data.ReadRocketLog();
-            if (Config.UsePatchForPlayerCap)
-                Provider.maxPlayers = 24;
             Data.LoadColoredConsole();
             L.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
-
-            /* PLAYER COUNT VERIFICATION */
-            if (!Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
-            {
-                Provider.maxPlayers = Config.MaxPlayerCount;
-                L.Log("Set max player count to " + Provider.maxPlayers.ToString(), ConsoleColor.Magenta);
-            }
 
             /* PATCHES */
             L.Log("Patching methods...", ConsoleColor.Magenta);
@@ -135,6 +127,7 @@ namespace Uncreated.Warfare
             CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
             FOBManager.TempCacheEffectIDs();
+            JoinManager.CacheIDs();
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             Data.ExtraZones = JSONMethods.LoadExtraZones();
@@ -144,6 +137,7 @@ namespace Uncreated.Warfare
             SquadManager.TempCacheEffectIDs();
             CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
+            JoinManager.CacheIDs();
             FOBManager.TempCacheEffectIDs();
             FOBManager.OnLevelLoaded();
 

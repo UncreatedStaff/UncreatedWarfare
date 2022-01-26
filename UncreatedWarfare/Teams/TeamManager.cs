@@ -69,6 +69,15 @@ namespace Uncreated.Warfare.Teams
         private static Zone _t2amc;
         private static Zone _lobbyZone;
         private static Vector3 _lobbySpawn = default;
+        internal static void OnReloadFlags()
+        {
+            _lobbySpawn = default;
+            _t1main = null;
+            _t1amc = null;
+            _t2main = null;
+            _t2amc = null;
+            _lobbyZone = null;
+        }
         public static Zone Team1Main
         {
             get
@@ -494,7 +503,7 @@ namespace Uncreated.Warfare.Teams
             this.team2id = team2id;
             this.adminid = adminid;
             this.team1name = team1name ?? "USA";
-            this.team2name = team2name ?? "Russia";
+            this.team2name = team2name ?? "MEC";
             this.adminname = adminname ?? "Admins";
             this.team1code = team1code ?? "us";
             this.team2code = team2code ?? "ru";

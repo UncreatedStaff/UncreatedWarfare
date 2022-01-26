@@ -57,7 +57,7 @@ namespace Uncreated.Warfare.Components
                         writer.WriteProperty(nameof(TimeBetweenMessages), 60f);
                         writer.WritePropertyName("Messages");
                         writer.WriteStartObject();
-                        writer.WritePropertyName(JSONMethods.DefaultLanguage);
+                        writer.WritePropertyName(JSONMethods.DEFAULT_LANGUAGE);
                         writer.WriteStartObject();
                         foreach (KeyValuePair<string, string> message in DefaultMessages)
                         {
@@ -68,7 +68,7 @@ namespace Uncreated.Warfare.Components
                         writer.WriteEndObject();
                         writer.WriteEndObject();
                         writer.WriteEndObject();
-                        Messages.Add(JSONMethods.DefaultLanguage, enUs);
+                        Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
                     }
                     return;
                 }
@@ -81,7 +81,7 @@ namespace Uncreated.Warfare.Components
                         Dictionary<string, TranslationData> enUs = new Dictionary<string, TranslationData>(DefaultMessages.Count);
                         foreach (KeyValuePair<string, string> message in DefaultMessages)
                             enUs.Add(message.Key, new TranslationData(message.Value));
-                        Messages.Add(JSONMethods.DefaultLanguage, enUs);
+                        Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
                     }
                     else
                     {
@@ -154,7 +154,7 @@ namespace Uncreated.Warfare.Components
                 Dictionary<string, TranslationData> enUs = new Dictionary<string, TranslationData>(DefaultMessages.Count);
                 foreach (KeyValuePair<string, string> entry in DefaultMessages)
                     enUs.Add(entry.Key, new TranslationData(entry.Value));
-                Messages.Add(JSONMethods.DefaultLanguage, enUs);
+                Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
             }
         }
         private IEnumerator MessageLoop()
@@ -175,7 +175,7 @@ namespace Uncreated.Warfare.Components
         {
             if (
                 (Messages.TryGetValue(language, out Dictionary<string, TranslationData> data) && data.TryGetValue(key, out TranslationData value)) ||
-                (Messages.TryGetValue(JSONMethods.DefaultLanguage, out data) && data.TryGetValue(key, out value)) ||
+                (Messages.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data) && data.TryGetValue(key, out value)) ||
                 (Messages.Count > 0 && Messages.ElementAt(0).Value.TryGetValue(key, out value)))
             {
                 return value;

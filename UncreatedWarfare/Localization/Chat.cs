@@ -520,7 +520,7 @@ namespace Uncreated.Warfare
         }/// <param name="backupcause">Used in case the key can not be found.</param>
         public static void BroadcastDeath(string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, bool translateKillerName, ulong killerTeam, ELimb limb, string itemName, float distance, out string message, bool broadcast = true)
         {
-            message = Translation.TranslateDeath(JSONMethods.DefaultLanguage, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
+            message = Translation.TranslateDeath(JSONMethods.DEFAULT_LANGUAGE, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
                 string killer = translateKillerName ? Translation.Translate(killerName.CharacterName, set.Language) : killerName.CharacterName;
@@ -556,7 +556,7 @@ namespace Uncreated.Warfare
         }
         public static void BroadcastLandmineDeath(string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, out string message, bool broadcast = true)
         {
-            message = Translation.TranslateLandmineDeath(JSONMethods.DefaultLanguage, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
+            message = Translation.TranslateLandmineDeath(JSONMethods.DEFAULT_LANGUAGE, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
                 string localizedString = Translation.TranslateLandmineDeath(set.Language, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);

@@ -21,7 +21,7 @@ namespace Uncreated.Warfare
         {
             if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -45,9 +45,9 @@ namespace Uncreated.Warfare
                     return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
-            else if (language != JSONMethods.DefaultLanguage)
+            else if (language != JSONMethods.DEFAULT_LANGUAGE)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -94,7 +94,7 @@ namespace Uncreated.Warfare
             }
             if (player == 0)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -145,9 +145,9 @@ namespace Uncreated.Warfare
                 if (Data.Languages.TryGetValue(player, out string lang))
                 {
                     if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                 }
-                else lang = JSONMethods.DefaultLanguage;
+                else lang = JSONMethods.DEFAULT_LANGUAGE;
                 if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
@@ -212,7 +212,7 @@ namespace Uncreated.Warfare
         /// Tramslate an unlocalized string to a localized translation structure using the translations file.
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage"/>.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DEFAULT_LANGUAGE"/>.</param>
         /// <returns>A translation structure.</returns>
         public static TranslationData GetTranslation(string key, ulong player)
         {
@@ -227,7 +227,7 @@ namespace Uncreated.Warfare
             }
             if (player == 0)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -262,9 +262,9 @@ namespace Uncreated.Warfare
                 if (Data.Languages.TryGetValue(player, out string lang))
                 {
                     if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                 }
-                else lang = JSONMethods.DefaultLanguage;
+                else lang = JSONMethods.DEFAULT_LANGUAGE;
                 if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
@@ -297,7 +297,7 @@ namespace Uncreated.Warfare
         /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the Original message (non-color removed)
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DEFAULT_LANGUAGE">Default Language</see>.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
         /// <returns>A localized string based on the player's language.</returns>
         public static string Translate(string key, ulong player, params string[] formatting)
@@ -314,7 +314,7 @@ namespace Uncreated.Warfare
             }
             if (player == 0)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -365,9 +365,9 @@ namespace Uncreated.Warfare
                 if (Data.Languages.TryGetValue(player, out string lang))
                 {
                     if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                 }
-                else lang = JSONMethods.DefaultLanguage;
+                else lang = JSONMethods.DEFAULT_LANGUAGE;
                 if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
@@ -416,7 +416,7 @@ namespace Uncreated.Warfare
         /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DEFAULT_LANGUAGE">Default Language</see>.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
         /// <param name="color">Color of the message.</param>
         /// <returns>A localized string based on the player's language.</returns>
@@ -436,7 +436,7 @@ namespace Uncreated.Warfare
             }
             if (player == 0)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<string, TranslationData> data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -492,9 +492,9 @@ namespace Uncreated.Warfare
                 if (Data.Languages.TryGetValue(player, out string lang))
                 {
                     if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                 }
-                else lang = JSONMethods.DefaultLanguage;
+                else lang = JSONMethods.DEFAULT_LANGUAGE;
                 if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
                 {
                     if (Data.Localization.Count > 0)
@@ -549,7 +549,7 @@ namespace Uncreated.Warfare
         /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="language">The first language to translate with, pass null to use <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="language">The first language to translate with, pass null to use <see cref="JSONMethods.DEFAULT_LANGUAGE">Default Language</see>.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
         /// <param name="color">Color of the message.</param>
         /// <returns>A localized string based on <paramref name="language"/>.</returns>
@@ -557,7 +557,7 @@ namespace Uncreated.Warfare
         {
             if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -583,9 +583,9 @@ namespace Uncreated.Warfare
                     return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
-            else if (language != JSONMethods.DefaultLanguage)
+            else if (language != JSONMethods.DEFAULT_LANGUAGE)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -626,14 +626,14 @@ namespace Uncreated.Warfare
         /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the message with color still in it.
         /// </summary>
         /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-        /// <param name="language">The first language to translate with, pass null to use <see cref="JSONMethods.DefaultLanguage">Default Language</see>.</param>
+        /// <param name="language">The first language to translate with, pass null to use <see cref="JSONMethods.DEFAULT_LANGUAGE">Default Language</see>.</param>
         /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
         /// <returns>A localized string based on <paramref name="language"/>.</returns>
         public static string Translate(string key, string language, params string[] formatting)
         {
             if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -657,9 +657,9 @@ namespace Uncreated.Warfare
                     return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
-            else if (language != JSONMethods.DefaultLanguage)
+            else if (language != JSONMethods.DEFAULT_LANGUAGE)
             {
-                if (!Data.Localization.TryGetValue(JSONMethods.DefaultLanguage, out data))
+                if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
                 {
                     if (Data.Localization.Count > 0)
                     {
@@ -833,7 +833,7 @@ namespace Uncreated.Warfare
                                 Kit kit = loadouts[loadoutid - 1];
 
                                 if (!kit.SignTexts.TryGetValue(language, out string name))
-                                    if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out name))
+                                    if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
                                         if (kit.SignTexts.Count > 0)
                                             name = kit.SignTexts.First().Value;
                                         else
@@ -896,7 +896,7 @@ namespace Uncreated.Warfare
                     else playerrank = RankData.Nil;
 
                     if (!kit.SignTexts.TryGetValue(language, out string name))
-                        if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out name))
+                        if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
                             if (kit.SignTexts.Count > 0)
                                 name = kit.SignTexts.First().Value;
                             else
@@ -973,22 +973,22 @@ namespace Uncreated.Warfare
         public static string TranslateSign(string key, UCPlayer player, bool important = true)
         {
             if (!Data.Languages.TryGetValue(player.Steam64, out string lang))
-                lang = JSONMethods.DefaultLanguage;
+                lang = JSONMethods.DEFAULT_LANGUAGE;
             return TranslateSign(key, lang, player, important);
         }
         public static string DecideLanguage<TVal>(ulong player, Dictionary<string, TVal> searcher)
         {
             if (player == 0)
             {
-                if (!searcher.ContainsKey(JSONMethods.DefaultLanguage))
+                if (!searcher.ContainsKey(JSONMethods.DEFAULT_LANGUAGE))
                 {
                     if (searcher.Count > 0)
                     {
                         return searcher.ElementAt(0).Key;
                     }
-                    else return JSONMethods.DefaultLanguage;
+                    else return JSONMethods.DEFAULT_LANGUAGE;
                 }
-                else return JSONMethods.DefaultLanguage;
+                else return JSONMethods.DEFAULT_LANGUAGE;
             }
             else
             {
@@ -998,14 +998,14 @@ namespace Uncreated.Warfare
                     {
                         return searcher.ElementAt(0).Key;
                     }
-                    else return JSONMethods.DefaultLanguage;
+                    else return JSONMethods.DEFAULT_LANGUAGE;
                 }
                 return lang;
             }
         }
         public static string TranslateLimb(string language, ELimb limb)
         {
-            if ((!Data.LimbLocalization.TryGetValue(language, out Dictionary<ELimb, string> loc) || !loc.ContainsKey(limb)) && !Data.LimbLocalization.TryGetValue(JSONMethods.DefaultLanguage, out loc))
+            if ((!Data.LimbLocalization.TryGetValue(language, out Dictionary<ELimb, string> loc) || !loc.ContainsKey(limb)) && !Data.LimbLocalization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out loc))
             {
                 return limb.ToString().ToLower().Replace('_', ' ');
             }
@@ -1017,7 +1017,7 @@ namespace Uncreated.Warfare
         {
             if (player == 0)
             {
-                if (!Data.LimbLocalization.TryGetValue(JSONMethods.DefaultLanguage, out Dictionary<ELimb, string> loc))
+                if (!Data.LimbLocalization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<ELimb, string> loc))
                 {
                     if (Data.LimbLocalization.Count > 0)
                     {
@@ -1043,7 +1043,7 @@ namespace Uncreated.Warfare
             {
                 if (!Data.Languages.TryGetValue(player, out string lang) || !Data.LimbLocalization.TryGetValue(lang, out Dictionary<ELimb, string> loc) || !loc.ContainsKey(limb))
                 {
-                    lang = JSONMethods.DefaultLanguage;
+                    lang = JSONMethods.DEFAULT_LANGUAGE;
                 }
                 if (!Data.LimbLocalization.TryGetValue(lang, out loc))
                 {
@@ -1074,7 +1074,7 @@ namespace Uncreated.Warfare
             if (colorize) murderername = F.ColorizeName(murderername, killerTeam);
             string dis = Mathf.RoundToInt(distance).ToString(Data.Locale) + 'm';
 
-            if ((!Data.DeathLocalization.TryGetValue(language, out Dictionary<string, string> loc) || !loc.TryGetValue(key, out string v) || !loc.TryGetValue(backupcause.ToString(), out v)) && (language == JSONMethods.DefaultLanguage || !Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out loc) || !loc.TryGetValue(key, out v) || !loc.TryGetValue(backupcause.ToString(), out v)))
+            if ((!Data.DeathLocalization.TryGetValue(language, out Dictionary<string, string> loc) || !loc.TryGetValue(key, out string v) || !loc.TryGetValue(backupcause.ToString(), out v)) && (language == JSONMethods.DEFAULT_LANGUAGE || !Data.DeathLocalization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out loc) || !loc.TryGetValue(key, out v) || !loc.TryGetValue(backupcause.ToString(), out v)))
             {
                 return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Mathf.RoundToInt(distance).ToString(Data.Locale) + "m"}";
             }
@@ -1098,7 +1098,7 @@ namespace Uncreated.Warfare
             if (colorize) triggerername = F.ColorizeName(triggerername, triggererTeam);
 
 
-            if ((!Data.DeathLocalization.TryGetValue(language, out Dictionary<string, string> loc) || !loc.TryGetValue(key, out string v)) && (language == JSONMethods.DefaultLanguage || !Data.DeathLocalization.TryGetValue(JSONMethods.DefaultLanguage, out loc) || !loc.TryGetValue(key, out v)))
+            if ((!Data.DeathLocalization.TryGetValue(language, out Dictionary<string, string> loc) || !loc.TryGetValue(key, out string v)) && (language == JSONMethods.DEFAULT_LANGUAGE || !Data.DeathLocalization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out loc) || !loc.TryGetValue(key, out v)))
             {
                 return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
             }
@@ -1120,7 +1120,8 @@ namespace Uncreated.Warfare
                 branchName += "1_";
             else if (team == 2)
                 branchName += "2_";
-
+            else
+                branchName += "1_";
             return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
         }
         public static string TranslateBranch(EBranch branch, ulong player)
@@ -1131,18 +1132,20 @@ namespace Uncreated.Warfare
                 branchName += "1_";
             else if (team == 2)
                 branchName += "2_";
+            else
+                branchName += "1_";
             return Translate(branchName + branch.ToString().ToLower(), player, out _);
         }
         public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, ulong player)
         {
             if (player == 0)
             {
-                return TranslateVBS(spawn, data, JSONMethods.DefaultLanguage);
+                return TranslateVBS(spawn, data, JSONMethods.DEFAULT_LANGUAGE);
             }
             else
             {
                 if (!Data.Languages.TryGetValue(player, out string lang))
-                    lang = JSONMethods.DefaultLanguage;
+                    lang = JSONMethods.DEFAULT_LANGUAGE;
                 return TranslateVBS(spawn, data, lang);
             }
         }
@@ -1193,7 +1196,7 @@ namespace Uncreated.Warfare
                 {
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1225,7 +1228,7 @@ namespace Uncreated.Warfare
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1256,7 +1259,7 @@ namespace Uncreated.Warfare
                 {
                     UCPlayer pl = UCPlayer.FromSteamPlayer(players.Current);
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1288,7 +1291,7 @@ namespace Uncreated.Warfare
                 {
                     UCPlayer pl = UCPlayer.FromPlayer(players.Current);
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1321,7 +1324,7 @@ namespace Uncreated.Warfare
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if ((type & pl.GetPermissions()) != type) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1352,7 +1355,7 @@ namespace Uncreated.Warfare
                 {
                     UCPlayer pl = players.Current;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1385,7 +1388,7 @@ namespace Uncreated.Warfare
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if (pl.GetTeam() != team) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1417,7 +1420,7 @@ namespace Uncreated.Warfare
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if (pl.Squad != squad) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1449,7 +1452,7 @@ namespace Uncreated.Warfare
                     UCPlayer pl = PlayerManager.OnlinePlayers[i];
                     if (!selector(pl)) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                        lang = JSONMethods.DefaultLanguage;
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
                     for (int i2 = 0; i2 < languages.Count; i2++)
                     {
@@ -1494,7 +1497,7 @@ namespace Uncreated.Warfare
         public LanguageSet(string lang, UCPlayer first)
         {
             this.Language = lang;
-            this.Players = new List<UCPlayer>(lang == JSONMethods.DefaultLanguage ? Provider.clients.Count : 4) { first };
+            this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 4) { first };
             this.nextIndex = 0;
             this.Next = null;
         }

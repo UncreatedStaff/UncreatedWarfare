@@ -305,7 +305,7 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_staging", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
-            if (delay < data.Delay )
+            if (delay < data.Delay)
             {
                 ucplayer.Message("request_vehicle_e_delay", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;

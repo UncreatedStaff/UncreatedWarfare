@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Commands
@@ -208,6 +209,7 @@ namespace Uncreated.Warfare.Commands
             Gamemodes.Flags.TeamCTF.CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
             FOBManager.TempCacheEffectIDs();
+            JoinManager.CacheIDs();
         }
         internal static void ReloadFlags()
         {
@@ -221,6 +223,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 Data.ExtraZones = JSONMethods.LoadExtraZones();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();
+                Teams.TeamManager.OnReloadFlags();
                 if (OnFlagsReloaded != null)
                     OnFlagsReloaded.Invoke();
             }

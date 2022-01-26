@@ -693,9 +693,9 @@ namespace Uncreated.Warfare.FOBs
                 EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
             }
         }
-        private static void UpdateUIList(ulong team, ITransportConnection c, List<FOB> FOBList, UCPlayer player)
+        private static void UpdateUIList(ulong team, ITransportConnection connection, List<FOB> FOBList, UCPlayer player)
         {
-            EffectManager.sendUIEffect(fobListId, fobListKey, c, true);
+            EffectManager.sendUIEffect(fobListId, fobListKey, connection, true);
 
             int i2 = 0;
             int min = Math.Min(SpecialFOBs.Count, config.data.FobLimit);
@@ -705,8 +705,8 @@ namespace Uncreated.Warfare.FOBs
                 if (SpecialFOBs[i].IsActive && SpecialFOBs[i].Team == team)
                 {
                     string i22 = i2.ToString();
-                    EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
-                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].GridCoordinates, SpecialFOBs[i].ClosestLocation));
+                    EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i22, true);
+                    EffectManager.sendUIEffectText(fobListKey, connection, true, "N" + i22, Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].GridCoordinates, SpecialFOBs[i].ClosestLocation));
                     i2++;
                 }
             }
@@ -718,10 +718,10 @@ namespace Uncreated.Warfare.FOBs
                 {
                     //L.LogDebug($"    i: {i}");
                     string i22 = i2.ToString();
-                    EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
-                    EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i22,
+                    EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i22, true);
+                    EffectManager.sendUIEffectText(fobListKey, connection, true, "N" + i22,
                     Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
-                    EffectManager.sendUIEffectText(fobListKey, c, true, "R" + i22, "");
+                    EffectManager.sendUIEffectText(fobListKey, connection, true, "R" + i22, "");
                         i2++;
                 }
             }
@@ -732,7 +732,7 @@ namespace Uncreated.Warfare.FOBs
                 //L.LogDebug($"    f: {i}");
                 string i22 = i2.ToString();
 
-                EffectManager.sendUIEffectVisibility(fobListKey, c, true, i22, true);
+                EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i22, true);
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + i22,
                     Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates, FOBList[i].ClosestLocation));
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + i22,
@@ -742,7 +742,7 @@ namespace Uncreated.Warfare.FOBs
             for (; i2 < config.data.FobLimit; i2++)
             {
                 //L.LogDebug($"    c: {i2}");
-                EffectManager.sendUIEffectVisibility(fobListKey, c, true, i2.ToString(), false);
+                EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i2.ToString(), false);
             }
         }
     }

@@ -466,7 +466,7 @@ namespace Uncreated.Warfare.Stats
             if (KitManager.KitExists(KitID, out Kit GameKit))
             {
                 @class = GameKit.Class;
-                if (!GameKit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out sname))
+                if (!GameKit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out sname))
                     if (GameKit.SignTexts.Count > 0)
                         sname = GameKit.SignTexts.Values.ElementAt(0);
             }
@@ -508,7 +508,7 @@ namespace Uncreated.Warfare.Stats
                 string kitname;
                 if (KitManager.KitExists(KitID, out Kit kit))
                 {
-                    if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out kitname))
+                    if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out kitname))
                         if (kit.SignTexts.Count > 0)
                             kitname = kit.SignTexts.Values.ElementAt(0);
                 }
@@ -568,7 +568,7 @@ namespace Uncreated.Warfare.Stats
                     weapons.Add(w);
                     string kitname = w.KitID;
                     if (KitManager.KitExists(w.KitID, out Kit kit))
-                        if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out kitname))
+                        if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out kitname))
                             if (kit.SignTexts.Count > 0)
                                 kitname = kit.SignTexts.Values.ElementAt(0);
                     kitnames.Add(kitname);
@@ -624,7 +624,7 @@ namespace Uncreated.Warfare.Stats
                 {
                     classes[i] = (byte)GameKit.Class;
                     kitnames[i] = Kits[i].KitID;
-                    if (!GameKit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out kitnames[i]))
+                    if (!GameKit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out kitnames[i]))
                         if (GameKit.SignTexts.Count > 0)
                             kitnames[i] = GameKit.SignTexts.Values.ElementAt(0);
                 }

@@ -284,33 +284,36 @@ namespace Uncreated.Warfare
                 (R) =>
                 {
                     ct++;
-                    uint ip = R.GetUInt32(1);
-                    if (ip == 0) return false;
-                    if (ip == ipv4)
+                    if (!entered)
                     {
-                        long length = R.GetBytes(0, 0L, searchBuffer, 0, HWIDS_COLUMN_SIZE);
-                        if (length == 0) return false;
-                        length--;
-                        for (; length >= 0L; length--)
+                        uint ip = R.GetUInt32(1);
+                        if (ip == 0) return;
+                        if (ip == ipv4)
                         {
-                            fixed (byte* ptr = &searchBuffer[1 + length * 20])
+                            long length = R.GetBytes(0, 0L, searchBuffer, 0, HWIDS_COLUMN_SIZE);
+                            if (length == 0) return;
+                            length = searchBuffer[0];
+                            length--;
+                            for (; length >= 0L; length--)
                             {
-                                fixed (byte* ptr2 = hwids[length])
+                                fixed (byte* ptr = &searchBuffer[1 + length * 20])
                                 {
-                                    for (int i2 = 0; i2 < 20; i2++)
-                                        if (*(ptr + i2) != *(ptr2 + i2))
-                                            return false;
+                                    fixed (byte* ptr2 = hwids[length])
+                                    {
+                                        for (int i2 = 0; i2 < 20; i2++)
+                                            if (*(ptr + i2) != *(ptr2 + i2))
+                                                return;
+                                    }
                                 }
                             }
+                            entered = true;
                         }
-                        entered = true;
-                        return true;
                     }
-                    return false;
+                    return;
                 });
             if (entered) return;
             Data.DatabaseManager.NonQuery(
-                "INSERT INTO `anti_alt` (`Steam64`, `EntryID`, `HWIDs`, `IP`) VALUES (@0, @1, @2, @3);",
+                "INSERT INTO `anti_alt` (`Steam64`, `EntryID`, `HWIDs`, `IP`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `xp` = @2;",
                 new object[4]
                 {
                     player.playerID.steamID.m_SteamID, ct, hwidsList, ipv4

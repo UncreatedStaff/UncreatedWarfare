@@ -568,7 +568,7 @@ namespace Uncreated.Warfare.Vehicles
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
-                lang = JSONMethods.DefaultLanguage;
+                lang = JSONMethods.DEFAULT_LANGUAGE;
             string val = Translation.TranslateVBS(spawn, data, lang);
             try
             {

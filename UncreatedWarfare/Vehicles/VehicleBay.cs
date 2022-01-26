@@ -13,8 +13,7 @@ namespace Uncreated.Warfare.Vehicles
 {
     public class VehicleBay : JSONSaver<VehicleData>, IDisposable
     {
-        public VehicleBay()
-            : base(Data.VehicleStorage + "vehiclebay.json")
+        public VehicleBay() : base(Data.VehicleStorage + "vehiclebay.json")
         {
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
@@ -54,7 +53,7 @@ namespace Uncreated.Warfare.Vehicles
             }
             if (save) Save();
         }
-        public static void SetItems(Guid vehicleID, Guid[] newItems) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
+        public static void SetItems(Guid vehicleID, Guid[] newItems) =>         UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.Items = newItems);
         public static void AddCrewmanSeat(Guid vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
         public static void RemoveCrewmanSeat(Guid vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
         /// <summary>Level must be loaded.</summary>
@@ -65,7 +64,7 @@ namespace Uncreated.Warfare.Vehicles
                 instanceID = 0;
                 if (VehicleExists(vehicleID, out VehicleData vehicleData))
                 {
-                    if (!(Assets.find(vehicleID) is VehicleAsset asset))
+                    if (Assets.find(vehicleID) is not VehicleAsset asset)
                     {
                         L.LogError("SpawnLockedVehicle: Unable to find vehicle asset of " + vehicleID.ToString());
                         return null;
@@ -78,7 +77,7 @@ namespace Uncreated.Warfare.Vehicles
                     {
                         foreach (VBarricade vb in vehicleData.Metadata.Barricades)
                         {
-                            if (!(Assets.find(vb.BarricadeID) is ItemBarricadeAsset basset))
+                            if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
                             {
                                 L.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
                                 continue;

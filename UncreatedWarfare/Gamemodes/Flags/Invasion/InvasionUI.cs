@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 {
                     return new SendUIParameters(team, EFlagStatus.SECURED, "secured", UCWarfare.GetColor($"secured_team_{team}_chat"),
                         Mathf.RoundToInt(Flag.MAX_POINTS), flag.Team1TotalPlayers, flag.Team2TotalCappers, flag.Name, flag.TeamSpecificHexColor);
-                } 
+                }
                 else
                 {
                     return new SendUIParameters(team, EFlagStatus.LOCKED, "locked", UCWarfare.GetColor($"locked_team_{team}_chat"),

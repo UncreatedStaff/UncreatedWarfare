@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (op == "current")
                 {
-                    string OldLanguage = JSONMethods.DefaultLanguage;
+                    string OldLanguage = JSONMethods.DEFAULT_LANGUAGE;
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                         OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
                     LanguageAliasSet oldSet;
@@ -55,11 +55,11 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (op == "reset")
                 {
-                    string fullname = JSONMethods.DefaultLanguage;
+                    string fullname = JSONMethods.DEFAULT_LANGUAGE;
                     LanguageAliasSet alias;
-                    if (Data.LanguageAliases.ContainsKey(JSONMethods.DefaultLanguage))
+                    if (Data.LanguageAliases.ContainsKey(JSONMethods.DEFAULT_LANGUAGE))
                     {
-                        alias = Data.LanguageAliases[JSONMethods.DefaultLanguage];
+                        alias = Data.LanguageAliases[JSONMethods.DEFAULT_LANGUAGE];
                         fullname = alias.display_name;
                     }
                     else
@@ -72,11 +72,11 @@ namespace Uncreated.Warfare.Commands
                             oldSet = Data.LanguageAliases[OldLanguage];
                         else
                             oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
-                        if (OldLanguage == JSONMethods.DefaultLanguage)
+                        if (OldLanguage == JSONMethods.DEFAULT_LANGUAGE)
                             player.SendChat("reset_language_not_needed", fullname);
                         else
                         {
-                            JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DefaultLanguage);
+                            JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DEFAULT_LANGUAGE);
                             if (OnPlayerChangedLanguage != null)
                                 OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
                             player.SendChat("reset_language", fullname);
@@ -87,7 +87,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
-                    string OldLanguage = JSONMethods.DefaultLanguage;
+                    string OldLanguage = JSONMethods.DEFAULT_LANGUAGE;
                     if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                         OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
                     LanguageAliasSet oldSet;

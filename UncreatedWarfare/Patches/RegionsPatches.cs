@@ -163,7 +163,7 @@ namespace Uncreated.Warfare
                         if (hasSign)
                         {
                             if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
-                                lang = JSONMethods.DefaultLanguage;
+                                lang = JSONMethods.DEFAULT_LANGUAGE;
                         }
                         else lang = null;
                         Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>

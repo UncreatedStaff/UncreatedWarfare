@@ -10,6 +10,8 @@ using System.Reflection;
 using System.Threading;
 using Uncreated.Warfare;
 using System.Text.Json.Serialization;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 
 namespace Uncreated
 {
@@ -756,7 +758,13 @@ namespace Uncreated
     }
     public static class JsonEx
     {
-        public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions() { WriteIndented = true, IncludeFields = true, AllowTrailingCommas = true };
+        public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
+        {
+            WriteIndented = true, 
+            IncludeFields = true, 
+            AllowTrailingCommas = true,
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
         public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true };
         public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
         public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)

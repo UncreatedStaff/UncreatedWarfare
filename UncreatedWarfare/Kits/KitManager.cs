@@ -364,7 +364,7 @@ namespace Uncreated.Warfare.Kits
                 return kit.AllowedUsers.Contains(playerID);
             else return false;
         }
-        public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DefaultLanguage)
+        public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DEFAULT_LANGUAGE)
         {
             if (KitExists(kitname, out Kit kit))
             {
@@ -438,7 +438,7 @@ namespace Uncreated.Warfare.Kits
                 Cooldown = 0,
                 AllowedUsers = new List<ulong>()
             };
-            kit.SignTexts = new Dictionary<string, string> { { JSONMethods.DefaultLanguage, kit.DisplayName } };
+            kit.SignTexts = new Dictionary<string, string> { { JSONMethods.DEFAULT_LANGUAGE, kit.DisplayName } };
             if (kit.Items == null || items.Count == 0)
                 kit.Weapons = string.Empty;
             else

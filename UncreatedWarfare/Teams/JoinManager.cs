@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 
@@ -11,9 +12,15 @@ namespace Uncreated.Warfare.Teams
 {
     public class JoinManager : MonoBehaviour, IDisposable
     {
+        private static ushort JOIN_UI_ID;
+        internal const short joinUiKey = 29000;
+        internal static void CacheIDs()
+        {
+            if (Assets.find(Gamemode.Config.UI.JoinUIGUID) is EffectAsset ea)
+                JOIN_UI_ID = ea.id;
+        }
         private List<LobbyPlayer> LobbyPlayers;
         private TimeSpan countdown;
-        internal short joinUiKey = 29000;
         public void Initialize()
         {
             LobbyPlayers = new List<LobbyPlayer>();
@@ -135,7 +142,7 @@ namespace Uncreated.Warfare.Teams
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
 
-            EffectManager.sendUIEffect(36036, joinUiKey, player.Player.connection, true);
+            EffectManager.sendUIEffect(JOIN_UI_ID, joinUiKey, player.Player.connection, true);
 
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper());
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper());
@@ -354,7 +361,7 @@ namespace Uncreated.Warfare.Teams
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.None);
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Default);
-            EffectManager.askEffectClearByID(36036, player.Player.connection);
+            EffectManager.askEffectClearByID(JOIN_UI_ID, player.Player.connection);
 
             foreach (LobbyPlayer p in LobbyPlayers)
                 UpdateUITeams(p, p.Team);

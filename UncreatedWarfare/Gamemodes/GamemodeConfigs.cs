@@ -123,6 +123,7 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid MarkerRadio;
         public Guid MarkerRadioDamaged;
         public Guid MarkerBunker;
+        public Guid JoinUIGUID;
         public int FlagUICount;
         public int MaxSquadMembers;
         public int MaxSquads;
@@ -153,6 +154,7 @@ namespace Uncreated.Warfare.Gamemodes
             MarkerRadio = new Guid("bc6f0e7d5d9340f39ca4968bc3f7a132");
             MarkerRadioDamaged = new Guid("37d5c48597ea4b61a7a87ed85a4c9b39");
             MarkerBunker = new Guid("d7452e8671c14e93a5e9d69e077d999c");
+            JoinUIGUID = new Guid("0ce74ee0a7534851838e967ed4ea4c5e");
             MaxSquadMembers = 6;
             MaxSquads = 8;
             FlagUICount = 10;

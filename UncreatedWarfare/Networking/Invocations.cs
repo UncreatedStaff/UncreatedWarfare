@@ -390,7 +390,7 @@ namespace Uncreated.Warfare.Networking
                 if (KitManager.KitExists(kitID, out Kit kit))
                 {
                     string signtext = kit.Name;
-                    if (!kit.SignTexts.TryGetValue(JSONMethods.DefaultLanguage, out signtext))
+                    if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out signtext))
                         if (kit.SignTexts.Count > 0)
                             signtext = kit.SignTexts.Values.ElementAt(0);
                 

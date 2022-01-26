@@ -11,28 +11,26 @@ using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
 namespace Uncreated.Warfare
 {
-    public struct TranslationData
+    public readonly struct TranslationData
     {
-        public static TranslationData Nil => new TranslationData() { Color = Color.white, Message = "default", Original = "<color=#ffffff>default</color>", UseColor = true };
-        public string Message;
-        public string Original;
-        public Color Color;
-        public bool UseColor;
+        public static readonly TranslationData Nil = new TranslationData("default", "<color=#ffffff>default</color>", true, Color.white);
+        public readonly string Message;
+        public readonly string Original;
+        public readonly Color Color;
+        public readonly bool UseColor;
+        public TranslationData(string message, string original, bool useColor, Color color)
+        {
+            this.Message = message;
+            this.Original = original;
+            this.UseColor = useColor;
+            this.Color = color;
+        }
         public TranslationData(string Original)
         {
             this.Original = Original;
             this.Color = GetColorFromMessage(Original, out Message, out UseColor);
         }
-        public static TranslationData GetPlaceholder(string key)
-        {
-            return new TranslationData()
-            {
-                Original = key,
-                Message = key,
-                Color = Color.white,
-                UseColor = false
-            };
-        }
+        public static TranslationData GetPlaceholder(string key) => new TranslationData(key, key, false, Color.white);
         public static Color GetColorFromMessage(string Original, out string InnerText, out bool found)
         {
             if (Original.Length < 23)
@@ -64,7 +62,7 @@ namespace Uncreated.Warfare
                 return UCWarfare.GetColor("default");
             }
         }
-        public override string ToString() =>
+        public override readonly string ToString() =>
             $"Original: {Original}, Inner text: {Message}, {(UseColor ? $"Color: {Color} ({ColorUtility.ToHtmlStringRGBA(Color)}." : "Unable to find color.")}";
     }
     public struct Point3D
@@ -74,7 +72,7 @@ namespace Uncreated.Warfare
         public float y;
         public float z;
         [JsonIgnore]
-        public Vector3 Vector3 { get => new Vector3(x, y, z); }
+        public readonly Vector3 Vector3 { get => new Vector3(x, y, z); }
         [JsonConstructor]
         public Point3D(string name, float x, float y, float z)
         {
@@ -94,24 +92,17 @@ namespace Uncreated.Warfare
         [JsonIgnore]
         public Vector3 Vector3
         {
-            get => new Vector3(x, y, z);
+            readonly get => new Vector3(x, y, z);
             set
             {
-                if (value == default)
-                {
-                    x = 0; y = 0; z = 0;
-                }
-                else
-                {
-                    x = value.x; y = value.y; z = value.z;
-                }
+                x = value.x; y = value.y; z = value.z;
             }
         }
         public static bool operator ==(SerializableVector3 a, SerializableVector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
         public static bool operator ==(SerializableVector3 a, Vector3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
         public static bool operator !=(SerializableVector3 a, SerializableVector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
         public static bool operator !=(SerializableVector3 a, Vector3 b) => a.x != b.x || a.y != b.y || a.z != b.z;
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj == default) return false;
             if (obj is SerializableVector3 v3)
@@ -120,7 +111,7 @@ namespace Uncreated.Warfare
                 return x == uv3.x && y == uv3.y && z == uv3.z;
             else return false;
         }
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hashCode = 373119288;
             hashCode = hashCode * -1521134295 + x.GetHashCode();
@@ -128,7 +119,7 @@ namespace Uncreated.Warfare
             hashCode = hashCode * -1521134295 + z.GetHashCode();
             return hashCode;
         }
-        public override string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.Locale)}, {Mathf.RoundToInt(y).ToString(Data.Locale)}, {Mathf.RoundToInt(z).ToString(Data.Locale)})";
+        public override readonly string ToString() => $"({Mathf.RoundToInt(x).ToString(Data.Locale)}, {Mathf.RoundToInt(y).ToString(Data.Locale)}, {Mathf.RoundToInt(z).ToString(Data.Locale)})";
         public SerializableVector3(Vector3 v)
         {
             x = v.x;
@@ -142,7 +133,7 @@ namespace Uncreated.Warfare
             this.y = y;
             this.z = z;
         }
-        public void WriteJson(Utf8JsonWriter writer)
+        public readonly void WriteJson(Utf8JsonWriter writer)
         {
             writer.WriteProperty(nameof(x), this.x);
             writer.WriteProperty(nameof(y), this.x);
@@ -181,14 +172,14 @@ namespace Uncreated.Warfare
         public SerializableVector3 position;
         public SerializableVector3 euler_angles;
         [JsonIgnore]
-        public Quaternion Rotation { get => Quaternion.Euler(euler_angles.Vector3); }
+        public readonly Quaternion Rotation { get => Quaternion.Euler(euler_angles.Vector3); }
         [JsonIgnore]
-        public Vector3 Position { get => position.Vector3; }
+        public readonly Vector3 Position { get => position.Vector3; }
         public static bool operator ==(SerializableTransform a, SerializableTransform b) => a.position == b.position && a.euler_angles == b.euler_angles;
         public static bool operator !=(SerializableTransform a, SerializableTransform b) => a.position != b.position || a.euler_angles != b.euler_angles;
         public static bool operator ==(SerializableTransform a, Transform b) => a.position == b.position && a.euler_angles == b.rotation.eulerAngles;
         public static bool operator !=(SerializableTransform a, Transform b) => a.position != b.position || a.euler_angles != b.rotation.eulerAngles;
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj == default) return false;
             if (obj is SerializableTransform t)
@@ -197,8 +188,8 @@ namespace Uncreated.Warfare
                 return position == ut.position && euler_angles == ut.eulerAngles;
             else return false;
         }
-        public override string ToString() => position.ToString();
-        public override int GetHashCode()
+        public override readonly string ToString() => position.ToString();
+        public override readonly int GetHashCode()
         {
             int hashCode = -1079335343;
             hashCode = hashCode * -1521134295 + position.GetHashCode();
@@ -231,7 +222,7 @@ namespace Uncreated.Warfare
             this.position = new SerializableVector3(position);
             this.euler_angles = new SerializableVector3(rotation.eulerAngles);
         }
-        public void WriteJson(Utf8JsonWriter writer)
+        public readonly void WriteJson(Utf8JsonWriter writer)
         {
             writer.WriteProperty(nameof(position), position);
             writer.WriteProperty(nameof(euler_angles), euler_angles);
@@ -303,7 +294,7 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public void WriteJson(Utf8JsonWriter writer)
+        public readonly void WriteJson(Utf8JsonWriter writer)
         {
             writer.WriteProperty(nameof(key), key);
             writer.WriteProperty(nameof(display_name), display_name);
@@ -319,7 +310,7 @@ namespace Uncreated.Warfare
     
     public static partial class JSONMethods
     {
-        public const string DefaultLanguage = "en-us";
+        public const string DEFAULT_LANGUAGE = "en-us";
 
         public static List<FlagData> LoadFlags()
         {
@@ -494,13 +485,13 @@ namespace Uncreated.Warfare
             Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
             deathloc = new Dictionary<string, Dictionary<string, string>>();
             limbloc = new Dictionary<string, Dictionary<ELimb, string>>();
-            F.CheckDir(Data.LangStorage + DefaultLanguage, out bool folderIsThere);
+            F.CheckDir(Data.LangStorage + DEFAULT_LANGUAGE, out bool folderIsThere);
             if (folderIsThere)
             {
-                if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\localization.json"))
+                if (!File.Exists(Data.LangStorage + DEFAULT_LANGUAGE + @"\localization.json"))
                 {
                     Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                    using (FileStream stream = new FileStream(Data.LangStorage + DefaultLanguage + @"\localization.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                    using (FileStream stream = new FileStream(Data.LangStorage + DEFAULT_LANGUAGE + @"\localization.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
                         Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                         writer.WriteStartObject();
@@ -517,12 +508,12 @@ namespace Uncreated.Warfare
                         stream.Dispose();
                     }
 
-                    languages.Add(DefaultLanguage, defaultLocal);
+                    languages.Add(DEFAULT_LANGUAGE, defaultLocal);
                 }
-                if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\deathlocalization.dat"))
+                if (!File.Exists(Data.LangStorage + DEFAULT_LANGUAGE + @"\deathlocalization.dat"))
                 {
                     Dictionary<string, string> defaultDeathLocal = new Dictionary<string, string>(DefaultDeathTranslations.Count);
-                    using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DefaultLanguage + @"\deathlocalization.dat"))
+                    using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DEFAULT_LANGUAGE + @"\deathlocalization.dat"))
                     {
                         TextWriter.WriteLine(DeathsTranslationDescription);
                         foreach (KeyValuePair<string, string> dmsg in DefaultDeathTranslations)
@@ -534,12 +525,12 @@ namespace Uncreated.Warfare
                         TextWriter.Dispose();
                     }
 
-                    deathloc.Add(DefaultLanguage, defaultDeathLocal);
+                    deathloc.Add(DEFAULT_LANGUAGE, defaultDeathLocal);
                 }
-                if (!File.Exists(Data.LangStorage + DefaultLanguage + @"\limblocalization.dat"))
+                if (!File.Exists(Data.LangStorage + DEFAULT_LANGUAGE + @"\limblocalization.dat"))
                 {
                     Dictionary<ELimb, string> defaultLimbLocal = new Dictionary<ELimb, string>(DefaultLimbTranslations.Count);
-                    using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DefaultLanguage + @"\limblocalization.dat"))
+                    using (StreamWriter TextWriter = File.CreateText(Data.LangStorage + DEFAULT_LANGUAGE + @"\limblocalization.dat"))
                     {
                         TextWriter.WriteLine(DeathsLimbTranslationsDescription);
                         foreach (KeyValuePair<ELimb, string> dmsg in DefaultLimbTranslations)
@@ -551,7 +542,7 @@ namespace Uncreated.Warfare
                         TextWriter.Dispose();
                     }
 
-                    limbloc.Add(DefaultLanguage, defaultLimbLocal);
+                    limbloc.Add(DEFAULT_LANGUAGE, defaultLimbLocal);
                 }
                 foreach (string folder in langDirs)
                 {
@@ -569,14 +560,14 @@ namespace Uncreated.Warfare
                                 if (len > int.MaxValue)
                                 {
                                     L.LogError(info.FullName + " is too long to read.");
-                                    if (lang == DefaultLanguage && !languages.ContainsKey(DefaultLanguage))
+                                    if (lang == DEFAULT_LANGUAGE && !languages.ContainsKey(DEFAULT_LANGUAGE))
                                     {
                                         Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
                                         foreach (KeyValuePair<string, string> translation in DefaultTranslations)
                                         {
                                             defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
                                         }
-                                        languages.Add(DefaultLanguage, defaultLocal);
+                                        languages.Add(DEFAULT_LANGUAGE, defaultLocal);
                                     }
                                 }
                                 else
@@ -663,7 +654,7 @@ namespace Uncreated.Warfare
                         }
                     }
                 }
-                L.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.TryGetValue(DefaultLanguage, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
+                L.Log($"Loaded {Math.Max(Math.Max(languages.Count, deathloc.Count), limbloc.Count)} languages ({deathloc.Count} death files, {limbloc.Count} limb files, {languages.Count} localization files), default having {(languages.TryGetValue(DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
             }
             else
             {
@@ -671,9 +662,9 @@ namespace Uncreated.Warfare
                 Dictionary<string, TranslationData> rtn = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
                 foreach (KeyValuePair<string, string> kvp in DefaultTranslations)
                     rtn.Add(kvp.Key, new TranslationData(kvp.Value));
-                languages.Add(DefaultLanguage, rtn);
-                limbloc.Add(DefaultLanguage, DefaultLimbTranslations);
-                deathloc.Add(DefaultLanguage, DefaultDeathTranslations);
+                languages.Add(DEFAULT_LANGUAGE, rtn);
+                limbloc.Add(DEFAULT_LANGUAGE, DefaultLimbTranslations);
+                deathloc.Add(DEFAULT_LANGUAGE, DefaultDeathTranslations);
                 return languages;
             }
             return languages;
