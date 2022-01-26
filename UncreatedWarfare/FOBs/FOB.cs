@@ -559,6 +559,8 @@ namespace Uncreated.Warfare.Components
                         isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius, 2);
                     else if (radius == EFOBRadius.FOB_PLACEMENT)
                         isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius * 2, 2);
+                    else if (radius == EFOBRadius.ENEMY_BUNKER_CLAIM)
+                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(5, 2);
 
                     return isInrange;
                 }
@@ -590,6 +592,7 @@ namespace Uncreated.Warfare.Components
         SHORT,
         FULL,
         FULL_WITH_BUNKER_CHECK,
-        FOB_PLACEMENT
+        FOB_PLACEMENT,
+        ENEMY_BUNKER_CLAIM
     }
 }

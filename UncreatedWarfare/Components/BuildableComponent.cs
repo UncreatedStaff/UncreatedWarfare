@@ -243,7 +243,6 @@ namespace Uncreated.Warfare.Components
                         return false;
                     }
                 }
-
                 if (fob == null || (fob.Position - point).sqrMagnitude > Math.Pow(30, 2))
                 {
                     // no radio nearby, radio must be within 30m
@@ -254,6 +253,13 @@ namespace Uncreated.Warfare.Components
                 {
                     // this fob already has a bunker
                     placer?.Message("build_error_structureexists", "a", "FOB Bunker");
+                    return false;
+                }
+                var closeEnemyFOB = FOB.GetNearestFOB(point, EFOBRadius.ENEMY_BUNKER_CLAIM);
+                if (closeEnemyFOB is not null)
+                {
+                    // buildable too close to enemy bunker
+                    placer?.Message("build_error_tooclosetoenemybunker");
                     return false;
                 }
             }

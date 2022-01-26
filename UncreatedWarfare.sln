@@ -10,9 +10,9 @@ EndProject
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\SteamCMD\unturned\Unturned.exe", "{2E799678-C219-45F2-940A-04662559D6DB}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
-		Executable = C:\SteamCMD\unturned\Unturned.exe
+		Executable = C:\SteamCMD\steamapps\common\U3DS\Unturned.exe
 		RemoteMachine = DANIEL-DESKTOP
-		StartingDirectory = C:\SteamCMD\unturned
+		StartingDirectory = C:\SteamCMD\steamapps\common\U3DS
 		Arguments = -batchmode -nographics +insecureserver/UncreatedRewrite
 		Environment = Default
 		LaunchingEngine = 5fff7536-0c87-462d-8fd2-7971d948e6dc
@@ -26,7 +26,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UncreatedStats", "Uncreated
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StatsAnalyzer", "StatsAnalyzer\StatsAnalyzer.csproj", "{6E2CA4E2-EF63-4480-BF7E-A5FFB0F61AC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ID Tool", "..\ID Tool\ID Tool.csproj", "{B11DB906-E389-4AC2-B545-638E8EF38778}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ID Tool", "..\ID Tool\ID Tool.csproj", "{B11DB906-E389-4AC2-B545-638E8EF38778}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

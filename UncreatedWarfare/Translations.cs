@@ -232,6 +232,7 @@ namespace Uncreated.Warfare
                 { "build_error_radiustoosmall", "<color=#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a FOB BUNKER.</color>" },
                 { "build_error_noradio", "<color=#ffab87>This can only be placed within {0}m of a friendly FOB RADIO.</color>" },
                 { "build_error_structureexists", "<color=#ffab87>This FOB already has {0} {1}.</color>" },
+                { "build_error_tooclosetoenemybunker", "<color=#ffab87>You may not build on top of an enemy FOB bunker.</color>" },
                 { "build_error_notenoughbuild", "<color=#fae69c>You are missing nearby build! <color=#d1c597>Building Supplies: </color><color=#d1c597>{0}/{1}</color></color>" },
                 { "build_error_tooclosetomain", "<color=#fae69c>You cannot build too close to main.</color>" },
                 { "build_error_maxemplacements", "<color=#d1c597>This FOB already has {0} {1}s.</color>" },
