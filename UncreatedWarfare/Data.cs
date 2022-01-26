@@ -151,6 +151,11 @@ namespace Uncreated.Warfare
         }
         public static void LoadVariables()
         {
+            // TODO: Make flags between 4 and 10;
+            // TODO: Fix exceptions in OffenseManager
+            // TODO: Rename teams
+
+
             /* INITIALIZE UNCREATED NETWORKING */
             Logging.OnLog += L.Log;
             Logging.OnLogWarning += L.LogWarning;

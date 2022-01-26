@@ -252,9 +252,9 @@ namespace Uncreated.Warfare.Revives
             ulong team = parameters.player.GetTeam();
             parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
             parameters.player.movement.sendPluginJumpMultiplier(0);
-            EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, unchecked((short)UCWarfare.Config.GiveUpUI),
-                parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player),
-                Translation.Translate("injured_ui_give_up", parameters.player));
+            short key = unchecked((short)UCWarfare.Config.GiveUpUI);
+            EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
+            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Translation.Translate("injured_ui_give_up", parameters.player));
             parameters.player.SendChat("injured_chat");
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));

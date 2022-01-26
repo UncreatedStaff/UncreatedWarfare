@@ -666,7 +666,7 @@ namespace Uncreated.Warfare.Tickets
             TicketsFlagCaptured = 20;
             TicketsFlagLost = -20;
             Team1TicketUIID = 36035;
-            Team2TicketUIID = 36034;
+            Team2TicketUIID = 36058;
         }
         public TicketData() { }
     }
