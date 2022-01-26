@@ -19,6 +19,7 @@ namespace Uncreated.Warfare.Components
         public Dictionary<ulong, double> UsageTable { get; private set; }
         private Dictionary<ulong, DateTime> TimeEnteredTable;
         private Dictionary<ulong, DateTime> TimeRewardedTable;
+        public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
         private float _quota;
         private float _requiredQuota;
         public float Quota { get => _quota; set => _quota = value; }
@@ -35,6 +36,7 @@ namespace Uncreated.Warfare.Components
             UsageTable = new Dictionary<ulong, double>();
             TimeEnteredTable = new Dictionary<ulong, DateTime>();
             TimeRewardedTable = new Dictionary<ulong, DateTime>();
+            DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
 
             _quota = 0;
             _requiredQuota = -1;

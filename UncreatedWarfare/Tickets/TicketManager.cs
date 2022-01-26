@@ -131,16 +131,18 @@ namespace Uncreated.Warfare.Tickets
                             player = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
                         if (player == null)
                             return;
-                        else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID)
+                        else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
                             wasCrashed = true;
+
+                        L.Log("Last damage origin: " + vc.lastDamageOrigin.ToString());
 
                         ulong dteam = player.GetTeam();
                         bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
                         bool vehicleWasFriendly = dteam == lteam;
                         if (!vehicleWasFriendly)
                             Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
-                        if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(data.Type, out int amount))
-                            amount = 0;
+                        if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(data.Type, out int fullXP))
+                            fullXP = 0;
                         string message = string.Empty;
 
                         switch (data.Type)
@@ -180,7 +182,14 @@ namespace Uncreated.Warfare.Tickets
                                 break;
                         }
 
-                        
+
+                        double totalDamage = 0;
+                        foreach (var entry in vc.DamageTable)
+                        {
+                            if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
+                                totalDamage += entry.Value.Key;
+                        }
+
                         if (vehicleWasEnemy)
                         {
                             Asset asset = Assets.find(vc.item);
@@ -200,8 +209,36 @@ namespace Uncreated.Warfare.Tickets
                             else
                                 Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
 
-                            Points.AwardXP(player, amount, Translation.Translate("xp_" + message, player));
-                            Points.TryAwardDriverAssist(player.Player, amount, data.TicketCost);
+                            foreach (var entry in vc.DamageTable)
+                            {
+                                if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
+                                {
+                                    float responsibleness = (float)(entry.Value.Key / totalDamage);
+                                    int reward = Mathf.RoundToInt(responsibleness * fullXP);
+
+                                    L.Log($"    {entry.Key} was responsible for {responsibleness * 100}% of the damage. Their gain: {reward} XP");
+
+                                    var attacker = UCPlayer.FromID(entry.Key);
+                                    if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
+                                    {
+                                        if (attacker.CSteamID.m_SteamID == vc.lastDamager)
+                                        {
+                                            Points.AwardXP(attacker, reward, Translation.Translate("xp_" + message, player));
+                                            Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
+                                        }
+                                        else if (responsibleness > 0.1F)
+                                            Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
+                                    }
+                                }
+                            }
+
+                            foreach (var key in vc.DamageTable)
+                            {
+
+                            }
+
+                            
+                            
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
                         }
@@ -210,7 +247,7 @@ namespace Uncreated.Warfare.Tickets
                             Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
 
                             if (message != string.Empty) message = "xp_friendly_" + message;
-                            Points.AwardXP(player.Player, -amount, Translation.Translate(message, player.Steam64));
+                            Points.AwardXP(player.Player, -fullXP, Translation.Translate(message, player.Steam64));
                             Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
 
@@ -243,7 +280,7 @@ namespace Uncreated.Warfare.Tickets
 
                                     var assetWaster = UCPlayer.FromID(entry.Key);
                                     if (assetWaster != null)
-                                        Points.AwardXP(assetWaster, penalty, "xp_wasting_assets");
+                                        Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
                                 }
                             }
                         }

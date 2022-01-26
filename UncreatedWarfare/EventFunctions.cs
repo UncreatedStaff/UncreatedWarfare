@@ -188,7 +188,6 @@ namespace Uncreated.Warfare
             var rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
             foreach (var rocket in rockets)
             {
-                L.Log("     rocket owner: " + rocket.killer);
                 rocket.killer = gun.player.channel.owner.playerID.steamID;
             }
 
@@ -329,6 +328,22 @@ namespace Uncreated.Warfare
                             c.item = c2.LastLandmineExploded.barricadeGUID;
                         }
                     }
+
+                    if (!c.DamageTable.TryGetValue(instigatorSteamID.m_SteamID, out var pair))
+                        c.DamageTable.Add(instigatorSteamID.m_SteamID, new KeyValuePair<ushort, DateTime>(pendingTotalDamage, DateTime.Now));
+                    else
+                        c.DamageTable[instigatorSteamID.m_SteamID] = new KeyValuePair<ushort, DateTime>((ushort)(pair.Key + pendingTotalDamage), DateTime.Now);
+
+                    var gunner = UCPlayer.FromCSteamID(instigatorSteamID);
+                    if (gunner is not null)
+                    {
+                        var attackerVehicle = gunner.Player.movement.getVehicle();
+                        if (attackerVehicle != null)
+                        {
+                            c.Quota += pendingTotalDamage * 0.015F;  
+                        }
+                    }
+
                 }
                 c.lastDamageOrigin = damageOrigin;
                 c.lastDamager = instigatorSteamID.m_SteamID;

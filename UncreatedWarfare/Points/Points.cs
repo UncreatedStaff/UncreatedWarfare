@@ -272,10 +272,10 @@ namespace Uncreated.Warfare.Point
                     AwardXP(driver.player, amount, Translation.Translate("xp_driver_assist", gunner));
                 }
 
-                if (vehicle.transform.TryGetComponent(out VehicleComponent component))
-                {
-                    component.Quota += quota;
-                }
+                //if (vehicle.transform.TryGetComponent(out VehicleComponent component))
+                //{
+                //    component.Quota += quota;
+                //}
             }
         }
         public static void TryAwardFOBCreatorXP(FOB fob, int amount, string translationKey)
@@ -353,15 +353,17 @@ namespace Uncreated.Warfare.Point
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
             {
-                {EVehicleType.HUMVEE, 40},
-                {EVehicleType.TRANSPORT, 30},
-                {EVehicleType.LOGISTICS, 50},
-                {EVehicleType.SCOUT_CAR, 60},
-                {EVehicleType.APC, 80},
-                {EVehicleType.IFV, 100},
-                {EVehicleType.MBT, 200},
-                {EVehicleType.HELI_TRANSPORT, 60},
-                {EVehicleType.EMPLACEMENT, 30},
+                {EVehicleType.HUMVEE, 25},
+                {EVehicleType.TRANSPORT, 20},
+                {EVehicleType.LOGISTICS, 25},
+                {EVehicleType.SCOUT_CAR, 30},
+                {EVehicleType.APC, 60},
+                {EVehicleType.IFV, 70},
+                {EVehicleType.MBT, 100},
+                {EVehicleType.HELI_TRANSPORT, 30},
+                {EVehicleType.EMPLACEMENT, 20},
+                {EVehicleType.HELI_ATTACK, 100},
+                {EVehicleType.JET, 200},
             };
 
             XPMultiplier = 1f;

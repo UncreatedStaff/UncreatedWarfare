@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -114,6 +115,11 @@ namespace Uncreated.Warfare.Commands
                         foreach (var entry in component.TransportTable)
                         {
                             L.Log($"        {entry.Key}'s starting position: {entry.Value}");
+                        }
+                        L.Log($"    Damage Table:");
+                        foreach (var entry in component.DamageTable)
+                        {
+                            L.Log($"        {entry.Key}'s damage so far: {entry.Value.Key} ({(DateTime.Now - entry.Value.Value).TotalSeconds} seconds ago)");
                         }
                     }
                     else

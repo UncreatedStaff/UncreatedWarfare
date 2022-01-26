@@ -137,8 +137,8 @@ namespace Uncreated.Warfare.Teams
 
             EffectManager.sendUIEffect(36036, joinUiKey, player.Player.connection, true);
 
-            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper().Colorize(TeamManager.Team1ColorHex));
-            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper().Colorize(TeamManager.Team2ColorHex));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper());
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper());
 
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
