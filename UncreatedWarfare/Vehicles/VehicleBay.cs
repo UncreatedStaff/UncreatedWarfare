@@ -167,6 +167,79 @@ namespace Uncreated.Warfare.Vehicles
                 DeleteVehicle(VehicleManager.vehicles[i]);
             }
         }
+        public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
+        {
+            for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
+            {
+                if (seat == 0 && excludeDriver)
+                    continue;
+
+                var passenger = vehicle.passengers[seat];
+
+                if (passenger.player == null)
+                {
+                    return true;
+                }
+            }
+            return true;
+        }
+        public static bool TryGetFirstNonCrewSeat(InteractableVehicle vehicle, VehicleData data, out byte seat)
+        {
+            for (seat = 0; seat < vehicle.passengers.Length; seat++)
+            {
+                var passenger = vehicle.passengers[seat];
+
+                if (passenger.player == null && !data.CrewSeats.Contains(seat))
+                {
+                    return true;
+                }
+            }
+            seat = 0;
+            return false;
+        }
+        public static bool TryGetFirstNonDriverSeat(InteractableVehicle vehicle, out byte seat)
+        {
+            for (seat = 0; seat < vehicle.passengers.Length; seat++)
+            {
+                var passenger = vehicle.passengers[seat];
+
+                if (seat != 0 && passenger.player == null)
+                {
+                    return true;
+                }
+            }
+            seat = 0;
+            return false;
+        }
+        public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
+        {
+            if (vehicle.lockedOwner == CSteamID.Nil || owner == null) return false;
+
+            foreach (var passenger in vehicle.passengers)
+            {
+                if (passenger.player != null && owner.CSteamID == passenger.player.playerID.steamID)
+                {
+                    return true;
+                }
+                
+            }
+
+            return false;
+        }
+        public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
+        {
+            int count = 0;
+            for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
+            {
+                var passenger = vehicle.passengers[seat];
+
+                if (data.CrewSeats.Contains(seat) && passenger.player != null)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
         private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
@@ -192,6 +265,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
                 {
+                    nelsonplayer.SendChat("gamemode is not active");
                     shouldAllow = false;
                     return;
                 }
@@ -225,100 +299,7 @@ namespace Uncreated.Warfare.Vehicles
                     shouldAllow = false;
                     return;
                 }
-
-                if (!VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
-                {
-                    EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
-                    return;
-                }
-
-                if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
-                {
-                    EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
-                    return;
-                }
                 
-                UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
-
-                bool IsPlayerOwner = vehicle.lockedOwner == player.CSteamID || vehicle.lockedOwner == CSteamID.Nil;
-
-                if (!IsPlayerOwner)
-                {
-                    bool isOwnerOnline = owner != null;
-
-                    if (isOwnerOnline)
-                    {
-                        bool IsInOwnerSquad = owner.Squad != null && owner.Squad.Members.Contains(player);
-
-                        if (!IsInOwnerSquad)
-                        {
-                            bool isOwnerInVehicle = false;
-
-                            foreach (Passenger passenger in vehicle.passengers)
-                            {
-                                if (passenger.player != null)
-                                {
-                                    if (passenger.player.playerID.steamID == vehicle.lockedOwner)
-                                    {
-                                        isOwnerInVehicle = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (!isOwnerInVehicle && isOwnerOnline)
-                            {
-                                float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
-
-                                if (vehicle.isLocked && OwnerDistanceFromVehicle < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
-                                {
-                                    Players.FPlayerName ownernames = F.GetPlayerOriginalNames(owner.SteamPlayer);
-
-                                    if (owner.Squad != null)
-                                        player.SendChat("vehicle_owner_not_in_vehicle_squad", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()), owner.Squad.Name);
-                                    else
-                                        player.SendChat("vehicle_owner_not_in_vehicle", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()));
-
-                                    shouldAllow = false;
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (vehicleData.RequiredClass != EClass.NONE && vehicleData.CrewSeats.Count > 0) // if the vehicle requires a CREWMAN kit
-                {
-                    if (kit.Class != vehicleData.RequiredClass)
-                    {
-                        int crewCount = 0;
-
-                        for (int i = 0; i < vehicleData.CrewSeats.Count; i++)
-                        {
-                            if (i < vehicle.passengers.Count() && vehicle.passengers[i] != null && vehicle.passengers[i].player != null)
-                            {
-                                if (UCPlayer.FromSteamPlayer(vehicle.passengers[i].player)?.KitClass == vehicleData.RequiredClass)
-                                {
-                                    crewCount++;
-                                }
-                            }
-                        }
-
-                        if (crewCount < vehicleData.CrewSeats.Count)
-                        {
-                            if (vehicle.lockedOwner == CSteamID.Nil)
-                            {
-                                player.SendChat("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
-                            }
-                            else
-                            {
-                                player.SendChat("vehicle_need_crew");
-                            }
-                            shouldAllow = false;
-                            return;
-                        }
-                    }
-                }
                 EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
             }
             catch (Exception ex)
@@ -337,122 +318,80 @@ namespace Uncreated.Warfare.Vehicles
                 if (!VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
                     return;
 
-                if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
+                UCPlayer enterer = UCPlayer.FromPlayer(nelsonplayer);
+                if (enterer == null)
                     return;
 
-                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
-                if (player == null)
-                    return;
-                if (!KitManager.HasKit(player, out Kit kit))
+                if (vehicleData.Type == EVehicleType.EMPLACEMENT && toSeatIndex == 0)
                 {
-                    player.SendChat("vehicle_no_kit");
                     shouldAllow = false;
-                    return;
                 }
-
-                UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
-
-                bool isOwnerOnline = owner != null;
-
-                bool IsInOwnerSquad = isOwnerOnline && owner.Squad != null && owner.Squad.Members.Contains(player);
-
-                if (!IsInOwnerSquad)
+                else
                 {
-                    bool isOwnerInVehicle = false;
-
-                    foreach (Passenger passenger in vehicle.passengers)
+                    if (!KitManager.HasKit(enterer, out Kit kit))
                     {
-                        if (passenger.player != null)
-                        {
-                            if (passenger.player.playerID.steamID == vehicle.lockedOwner)
-                            {
-                                isOwnerInVehicle = true;
-                                break;
-                            }
-                        }
+                        enterer.SendChat("vehicle_no_kit");
+                        shouldAllow = false;
+                        return;
                     }
 
-                    if (!isOwnerInVehicle && isOwnerOnline)
+                    UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+
+                    if (vehicleData.CrewSeats.Contains(toSeatIndex) && vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
                     {
-                        float OwnerDistanceFromVehicle = (owner.Position - vehicle.transform.position).sqrMagnitude;
-
-                        if (vehicle.isLocked && OwnerDistanceFromVehicle < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                        if (enterer.KitClass == vehicleData.RequiredClass)
                         {
-                            Players.FPlayerName ownernames = F.GetPlayerOriginalNames(owner.SteamPlayer);
-
-                            if (owner.Squad != null)
-                                player.SendChat("vehicle_owner_not_in_vehicle_squad", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()), owner.Squad.Name);
-                            else
-                                player.SendChat("vehicle_owner_not_in_vehicle", F.ColorizeName(ownernames.PlayerName, owner.GetTeam()));
-
-                            shouldAllow = false;
-                            return;
-                        }
-                    }
-                }
-
-                if (vehicleData.CrewSeats.Count > 0)
-                {
-                    if (vehicleData.RequiredClass != EClass.NONE) // if the vehicle requires a CREWMAN kit
-                    {
-                        if (vehicleData.CrewSeats.Contains(toSeatIndex))
-                        {
-                            if (kit.Class == vehicleData.RequiredClass)
+                            if (toSeatIndex == 0) // if a crewman is trying to enter the driver's seat
                             {
-                                if (toSeatIndex != 0)
+                                bool canEnterDriverSeat = owner is null || enterer == owner || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
+
+                                if (!canEnterDriverSeat)
                                 {
-                                    bool isThereAnotherCrewman = false;
-                                    foreach (Passenger passenger in vehicle.passengers)
-                                    {
-                                        if (passenger == null || passenger.player == null || passenger.player.playerID.steamID == player.CSteamID)
-                                            continue;
+                                    if (owner.Squad == null)
+                                        enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
+                                    else
+                                        enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
 
-                                        if (UCPlayer.FromSteamPlayer(passenger.player)?.KitClass == vehicleData.RequiredClass)
-                                        {
-                                            isThereAnotherCrewman = true;
-                                            break;
-                                        }
-                                    }
-
-                                    if (!isThereAnotherCrewman)
-                                    {
-                                        player.SendChat("vehicle_need_another_person_with_kit", vehicleData.RequiredClass.ToString().ToUpper());
-                                        shouldAllow = false;
-                                        return;
-                                    }
+                                    shouldAllow = false;
                                 }
                             }
-                            else
+                            else // if the player is trying to switch to a gunner's seat
                             {
-                                player.SendChat("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
-                                shouldAllow = false;
-                                return;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (fromSeatIndex == 0)
-                        {
-                            if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
-                            {
-
-                                player.SendChat("vehicle_cannot_switch");
-                                shouldAllow = false;
-                                return;
+                                if (!F.IsInMain(vehicle.transform.position)) // if player is trying to switch to a gunner's seat outside of main
+                                {
+                                    if (vehicle.passengers[0].player is null) // if they have no driver
+                                    {
+                                        enterer.Message("vehicle_need_driver");
+                                        shouldAllow = false;
+                                    }
+                                    else if (enterer.CSteamID == vehicle.passengers[0].player.playerID.steamID) // if they are the driver
+                                    {
+                                        enterer.Message("vehicle_cannot_abandon_driver");
+                                        shouldAllow = false;
+                                    }
+                                }
                             }
                         }
                         else
                         {
-                            if (toSeatIndex != 0 && vehicleData.CrewSeats.Contains(toSeatIndex))
-                            {
+                            enterer.Message("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                            shouldAllow = false;
+                        }
+                    }
+                    else
+                    {
+                        if (toSeatIndex == 0)
+                        {
+                            bool canEnterDriverSeat = owner is null || enterer == owner || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
 
-                                if (vehicle.passengers.Length > 0 && vehicle.passengers[0] == null || vehicle.passengers[0].player == null)
-                                {
-                                    player.SendChat("vehicle_need_driver");
-                                    shouldAllow = false;
-                                    return;
-                                }
+                            if (!canEnterDriverSeat)
+                            {
+                                if (owner.Squad == null)
+                                    enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
+                                else
+                                    enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+
+                                shouldAllow = false;
                             }
                         }
                     }

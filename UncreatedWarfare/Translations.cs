@@ -462,15 +462,14 @@ namespace Uncreated.Warfare
 
                 { "afk_warning", "<color=#f53b3b>You will be AFK-Kicked in {0} if you don't move.</color>" },
 
-                { "vehicle_owner_not_in_vehicle", "Wait for the owner {0} to get in." },
-                { "vehicle_owner_not_in_vehicle_squad", "Wait for the owner {0} to get in, or join the squad {1}." },
-                { "vehicle_no_kit", "You can not get in a vehicle without a kit." },
+                { "vehicle_wait_for_owner", "<color=#bda897>Only the owner (<color=#cedcde>{0}</color>) can enter the driver's seat right now.</color>" },
+                { "vehicle_wait_for_owner_or_squad", "<color=#bda897>Only the owner (<color=#cedcde>{0}</color>) and/or members of squad <color=#cedcde>{1}</color> can enter the driver's seat right now.</color>" },
+                { "vehicle_no_kit", "<color=#bda897>You cannot get in a vehicle without a kit.</color>" },
                 { "vehicle_too_high", "<color=#ff684a>Vehicle is too high off the ground!</color>" },
-                { "vehicle_not_valid_kit", "You need a <color=#cedcde>{0}</color> kit in order to main this vehicle." },
-                { "vehicle_need_another_person_with_kit", "You must have another <color=#cedcde>{0}</color> in this vehicle before you can enter the gunner's seat." },
-                { "vehicle_need_driver", "Your vehicle needs a DRIVER before you can switch to the gunner's seat." },
-                { "vehicle_need_crew", "Wait for this vehicle's CREW to get in first." },
-                { "vehicle_cannot_switch", "You cannot switch from driver's seat to gunner's seat in this vehicle." },
+                { "vehicle_not_valid_kit", "<color=#bda897>You need a <color=#cedcde>{0}</color> kit in order to man this vehicle.</color>" },
+                { "vehicle_need_driver", "<color=#bda897>Your vehicle needs a <color=#cedcde>DRIVER</color> before you can switch to the gunner's seat on the battlefield.</color>" },
+                { "vehicle_cannot_abandon_driver", "<color=#bda897>You cannot abandon the driver's seat on the battlefield.</color>" },
+                { "vehicle_no_passenger_seats", "<color=#bda897>There are no free passenger seats in this vehicle.</color>" },
                 
                 // other
                 { "friendly_mortar_incoming", "FRIENDLY MORTAR STRIKE INCOMING" },
@@ -758,6 +757,7 @@ namespace Uncreated.Warfare
                 { "xp_friendly_downed", "DOWNED FRIENDLY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_kill_assist", "ASSIST" },
+                { "xp_vehicle_assist", "VEHICLE ASSIST" },
                 { "xp_driver_assist", "DRIVER ASSIST" },
                 { "xp_wasting_assets", "WASTING ASSETS" },
                 { "xp_friendly_killed", "TEAMKILLED" },

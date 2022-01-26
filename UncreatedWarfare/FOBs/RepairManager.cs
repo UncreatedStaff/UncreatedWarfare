@@ -133,6 +133,10 @@ namespace Uncreated.Warfare.FOBs
             if (vehicle.health + amount >= vehicle.asset.health)
             {
                 newHealth = vehicle.asset.health;
+                if (vehicle.transform.TryGetComponent(out VehicleComponent c))
+                {
+                    c.DamageTable.Clear();
+                }
             }
 
             VehicleManager.sendVehicleHealth(vehicle, newHealth);

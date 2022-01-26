@@ -291,88 +291,106 @@ namespace Uncreated.Warfare.Kits
                         Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
-                    UCPlayer target;
-                    if (targetPlayer.Length != 17 || !ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64))
-                        target = UCPlayer.FromName(targetPlayer);
-                    else 
-                        target = UCPlayer.FromID(steam64);
 
-                    // error - no player found
-                    if (target == null)
+                    ulong steam64 = 0;
+
+                    UCPlayer target;
+                    if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64))
+                        target = UCPlayer.FromID(steam64);
+                    else
+                        target = UCPlayer.FromName(targetPlayer);
+
+                    bool hasPlayerJoined = true;
+
+                    if (target is null)
+                    {
+                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64);
+                    }
+
+                    // error - player is not online and has never joined the server
+                    if (!hasPlayerJoined)
                     {
                         Reply(ucplayer, "kit_e_noplayer", targetPlayer);
                         return;
                     }
+
+                    if (target is not null)
+                    {
+                        steam64 = target.Steam64;
+                        targetPlayer = target.CharacterName;
+                    }
+                    else
+                        targetPlayer = Data.DatabaseManager.GetUsernames(steam64).CharacterName;
+
                     // error - player already has access
-                    if (KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
+                    if (KitManager.HasAccess(steam64, kit.Name))
                     {
                         Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
                         return;
                     }
 
                     //success
-                    FPlayerName name = F.GetPlayerOriginalNames(target.Player);
-                    Reply(ucplayer, "kit_accessgiven", name.CharacterName, kitName);
-                    KitManager.GiveAccess(target.Steam64, kit.Name);
-                    RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                    Reply(ucplayer, "kit_accessgiven", targetPlayer, kitName);
+                    KitManager.GiveAccess(steam64, kit.Name);
+                    if (target != null)
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
                 }
                 // remove player access to kit
                 if (op == "removeaccess" || op == "removea")
                 {
-                    if (!KitManager.KitExists(kitName, out var kit))
+                    if (!KitManager.KitExists(kitName, out Kit kit))
                     {
                         Reply(ucplayer, "kit_e_noexist", kitName);
                         return;
                     }
 
-                    UCPlayer target = UCPlayer.FromName(targetPlayer);
+                    ulong steam64 = 0;
 
-                    // error - no player found
-                    if (target == null)
+                    UCPlayer target;
+                    if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64))
+                        target = UCPlayer.FromID(steam64);
+                    else
+                        target = UCPlayer.FromName(targetPlayer);
+
+                    bool hasPlayerJoined = true;
+
+                    if (target is null)
                     {
-                        if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steamid))
-                        {
-                            if (!KitManager.HasAccess(steamid, kit.Name))
-                            {
-                                Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
-                                return;
-                            }
-
-                            //success
-                            FPlayerName names = Data.DatabaseManager.GetUsernames(steamid);
-                            Reply(ucplayer, "kit_accessremoved", names.CharacterName, kitName);
-                            KitManager.RemoveAccess(steamid, kit.Name);
-
-                            target = UCPlayer.FromID(steamid);
-                            if (target == null)
-                            {
-                                RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
-                            }
-                            return;
-                        }
-                        else
-                        {
-                            Reply(ucplayer, "kit_e_noplayer", targetPlayer);
-                            return;
-                        }
+                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64);
                     }
-                    // error - player already has no access
-                    if (!KitManager.HasAccess(target.CSteamID.m_SteamID, kit.Name))
+
+                    // error - player is not online and has never joined the server
+                    if (!hasPlayerJoined)
                     {
-                        Reply(ucplayer, "kit_e_noaccess", target.CharacterName, kitName);
+                        Reply(ucplayer, "kit_e_noplayer", targetPlayer);
+                        return;
+                    }
+
+                    if (target is not null)
+                    {
+                        steam64 = target.Steam64;
+                        targetPlayer = target.CharacterName;
+                    }
+                    else
+                        targetPlayer = Data.DatabaseManager.GetUsernames(steam64).CharacterName;
+
+                    // error - player already does not have access
+                    if (!KitManager.HasAccess(steam64, kit.Name))
+                    {
+                        Reply(ucplayer, "kit_e_noaccess", targetPlayer, kitName);
                         return;
                     }
 
                     //success
-                    FPlayerName name = F.GetPlayerOriginalNames(target.Player);
-                    Reply(ucplayer, "kit_accessremoved", name.CharacterName, kitName);
-                    KitManager.RemoveAccess(target.Steam64, kit.Name);
-                    RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                    Reply(ucplayer, "kit_accessremoved", targetPlayer, kitName);
+                    KitManager.RemoveAccess(steam64, kit.Name);
+                    if (target != null)
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
                     return;
+
                 }
-                // copy new kit from existing kit
-                if (op == "copyfrom" || op == "cf")
+                if (op == "copyfrom" || op == "cf") // copy new kit from existing kit
                 {
                     string existingName = command[1].ToLower();
 
