@@ -9,7 +9,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {
-    public class Invasion : CTFBaseMode<InvasionLeaderboard, BaseCTFStats, InvasionTracker>
+    public class Invasion : CTFBaseMode<InvasionLeaderboard, BaseCTFStats, InvasionTracker>, IAttackDefense
     {
         public override string DisplayName => "Invasion";
 
@@ -410,6 +410,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
+            L.Log($"Invoking INVASION OnGroupChanged...");
             CTFUI.ClearFlagList(player);
             if (_onFlag.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out int id))
                 InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == id)

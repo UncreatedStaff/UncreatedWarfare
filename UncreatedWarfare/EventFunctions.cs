@@ -378,15 +378,18 @@ namespace Uncreated.Warfare
                 {
                     isNewPlayer = false;
 
-                    if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
+                    if (save.LastGame != Data.Gamemode.GameID/* || save.ShouldRespawnOnJoin*/)
                     {
                         isNewGame = true;
 
                         save.ShouldRespawnOnJoin = false;
 
-                        PlayerManager.ApplyToOnline();
+                        
                     }
                 }
+                
+                save.LastGame = Data.Gamemode.GameID;
+                PlayerManager.ApplyToOnline();
 
                 if (player.Player.life.isDead)
                     player.Player.life.ReceiveRespawnRequest(false);

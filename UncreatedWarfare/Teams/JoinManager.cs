@@ -71,8 +71,8 @@ namespace Uncreated.Warfare.Teams
             if (!isNewGame)
             {
                 LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
+                lobbyPlayer.IsInLobby = false;
                 LobbyPlayers.Add(lobbyPlayer);
-                ShowUI(lobbyPlayer, false);
                 foreach (LobbyPlayer p in LobbyPlayers)
                     UpdateUITeams(p, p.Team);
             }
@@ -126,9 +126,11 @@ namespace Uncreated.Warfare.Teams
 
             player.Player.quests.leaveGroup(true);
 
+            lobbyPlayer.IsInLobby = true;
+
             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
 
-            lobbyPlayer.IsInLobby = true;
+            
             ShowUI(lobbyPlayer, showX);
 
             foreach (LobbyPlayer p in LobbyPlayers)
@@ -439,8 +441,8 @@ namespace Uncreated.Warfare.Teams
         {
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "ConfirmText", "<color=#999999>JOINING...</color>");
             yield return new WaitForSeconds(1);
-            JoinTeam(player.Player, player.Team);
             player.IsInLobby = false;
+            JoinTeam(player.Player, player.Team);
             CloseUI(player);
         }
 

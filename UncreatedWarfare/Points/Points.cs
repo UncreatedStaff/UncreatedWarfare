@@ -191,8 +191,12 @@ namespace Uncreated.Warfare.Point
         public static void AwardTW(Player player, int amount, string message = "") => AwardTW(UCPlayer.FromPlayer(player), amount, message);
         public static void UpdateXPUI(UCPlayer player)
         {
-            if (Data.Is(out IEndScreen lb) && lb.isScreenUp || Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player))
+
+
+            if ((Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
+            {
                 return;
+            }
 
             short key = (short)XPConfig.RankUI;
             RankData current = player.CurrentRank;

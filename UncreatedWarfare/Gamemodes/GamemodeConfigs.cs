@@ -273,6 +273,31 @@ namespace Uncreated.Warfare.Gamemodes
                         new Flags.AdjacentFlagData(8, 1f)
                     };
                     break;
+                case "Gulf of Aqaba":
+                    T1ZoneBlocker = new Guid("57927806-0501-4735-ab01-2f1f7adaf714");
+                    T2ZoneBlocker = new Guid("b4c0a51b-7005-4ad5-b6fe-06aead982d94");
+                    CacheSpawns = NuijamaaDefaultCaches;
+                    Team1Adjacencies = new Flags.AdjacentFlagData[7]
+                    {
+                        new Flags.AdjacentFlagData(1, 1f),
+                        new Flags.AdjacentFlagData(2, 1f),
+                        new Flags.AdjacentFlagData(8, 0.8f),
+                        new Flags.AdjacentFlagData(3, 0.8f),
+                        new Flags.AdjacentFlagData(10, 0.4f),
+                        new Flags.AdjacentFlagData(4, 1f),
+                        new Flags.AdjacentFlagData(11, 0.2f)
+                    };
+                    Team2Adjacencies = new Flags.AdjacentFlagData[7]
+                    {
+                        new Flags.AdjacentFlagData(39, 1f),
+                        new Flags.AdjacentFlagData(42, 1f),
+                        new Flags.AdjacentFlagData(40, 1f),
+                        new Flags.AdjacentFlagData(41, 1f),
+                        new Flags.AdjacentFlagData(36, 1f),
+                        new Flags.AdjacentFlagData(37, 1f),
+                        new Flags.AdjacentFlagData(38, 1f),
+                    };
+                    break;
                 default:
                     T1ZoneBlocker = Guid.Empty;
                     T2ZoneBlocker = Guid.Empty;

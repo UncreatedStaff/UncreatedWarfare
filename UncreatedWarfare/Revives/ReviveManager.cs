@@ -218,7 +218,7 @@ namespace Uncreated.Warfare.Revives
             }
             else
             {
-                if ((DateTime.Now - p.start).TotalSeconds >= 0.3)
+                if ((DateTime.Now - p.start).TotalSeconds >= 0.4)
                 {
                     float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                     parameters = p.parameters;

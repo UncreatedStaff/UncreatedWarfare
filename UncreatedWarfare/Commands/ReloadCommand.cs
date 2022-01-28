@@ -13,6 +13,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -171,6 +172,15 @@ namespace Uncreated.Warfare.Commands
                 SquadManager.config.Reload();
                 TicketManager.config.Reload();
                 Points.ReloadConfig();
+                VehicleBay.Reload();
+                foreach (var data in VehicleBay.ActiveObjects)
+                {
+                    if (Assets.find(data.VehicleID) is VehicleAsset va)
+                    {
+                        data.Name = va.vehicleName;
+                    }
+                }
+                VehicleBay.Save();
 
                 // FIX: Invocations
                 //Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);

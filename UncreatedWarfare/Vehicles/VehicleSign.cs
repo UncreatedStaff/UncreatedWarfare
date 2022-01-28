@@ -41,7 +41,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-        public static IEnumerable<VehicleSign> GetLinkedSigns(VehicleSpawn spawn) => GetObjectsWhere(x => x.bay.SpawnPadInstanceID == spawn.SpawnPadInstanceID && x.bay.type == spawn.type);
+        public static IEnumerable<VehicleSign> GetLinkedSigns(VehicleSpawn spawn) => GetObjectsWhere(x => x.bay != null && x.bay.SpawnPadInstanceID == spawn.SpawnPadInstanceID && x.bay.type == spawn.type);
         protected override string LoadDefaults() => "[]";
         public static void UnlinkSign(InteractableSign sign)
         {

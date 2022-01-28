@@ -75,16 +75,33 @@ namespace Uncreated.Warfare.Vehicles
 
                     if (vehicleData.Metadata != null)
                     {
-                        foreach (VBarricade vb in vehicleData.Metadata.Barricades)
+                        if (vehicleData.Metadata.TrunkItems != null)
                         {
-                            if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
+                            foreach (KitItem k in vehicleData.Metadata.TrunkItems)
                             {
-                                L.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
-                                continue;
+                                if (Assets.find(k.id) is ItemAsset iasset)
+                                {
+                                    Item item = new Item(iasset.id, k.amount, 100)
+                                    { metadata = Convert.FromBase64String(k.metadata) };
+                                    if (!vehicle.trunkItems.tryAddItem(item))
+                                            ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
+                                }
                             }
-                            Barricade barricade = new Barricade(basset, asset.health, Convert.FromBase64String(vb.State));
-                            Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-                            BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
+                        }
+
+                        if (vehicleData.Metadata.Barricades != null)
+                        {
+                            foreach (VBarricade vb in vehicleData.Metadata.Barricades)
+                            {
+                                if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
+                                {
+                                    L.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString());
+                                    continue;
+                                }
+                                Barricade barricade = new Barricade(basset, asset.health, Convert.FromBase64String(vb.State));
+                                Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
+                                BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
+                            }
                         }
                     }
 
@@ -148,8 +165,10 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
+            vehicle.forceRemoveAllPlayers();
             BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
             if (reg != null)
+            {
                 for (int b = 0; b < reg.drops.Count; b++)
                 {
                     if (reg.drops[b].interactable is InteractableStorage storage)
@@ -157,6 +176,8 @@ namespace Uncreated.Warfare.Vehicles
                         storage.despawnWhenDestroyed = true;
                     }
                 }
+            }
+            vehicle.trunkItems.clear();
             VehicleManager.askVehicleDestroy(vehicle);
         }
         public static void DeleteAllVehiclesFromWorld()
@@ -430,6 +451,8 @@ namespace Uncreated.Warfare.Vehicles
     public class VehicleData
     {
         [JsonSettable]
+        public string Name;
+        [JsonSettable]
         public Guid VehicleID;
         [JsonSettable]
         public ulong Team;
@@ -454,8 +477,6 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public byte RearmCost;
         [JsonSettable]
-        public byte RepairCost;
-        [JsonSettable]
         public EVehicleType Type;
         [JsonSettable]
         public bool RequiresSL;
@@ -476,6 +497,7 @@ namespace Uncreated.Warfare.Vehicles
             UnlockBranch = EBranch.DEFAULT;
             if (Assets.find(vehicleID) is VehicleAsset va)
             {
+                Name = va.name;
                 if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
                     Branch = EBranch.AIRFORCE;
                 else if (va.engine == EEngine.BOAT)
@@ -486,7 +508,6 @@ namespace Uncreated.Warfare.Vehicles
             else Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
-            RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
             Items = new Guid[0];
@@ -496,6 +517,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public VehicleData()
         {
+            Name = "";
             VehicleID = Guid.Empty;
             Team = 0;
             RespawnTime = 600;
@@ -508,7 +530,6 @@ namespace Uncreated.Warfare.Vehicles
             Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
-            RepairCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
             Items = new Guid[0];
@@ -528,27 +549,55 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void SaveMetaData(InteractableVehicle vehicle)
         {
+            List<VBarricade> barricades = null;
+            List<KitItem> trunk = null;
+
+            if (vehicle.trunkItems.items.Count > 0)
+            {
+                trunk = new List<KitItem>();
+
+                foreach (var jar in vehicle.trunkItems.items)
+                {
+                    if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
+                    {
+                        trunk.Add(new KitItem(
+                            asset.GUID,
+                            jar.x,
+                            jar.y,
+                            jar.rot,
+                            Convert.ToBase64String(jar.item.metadata),
+                            jar.item.amount,
+                            0
+                        ));
+                    }
+                }
+            }
+
             VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
             if (vehicleRegion != null)
             {
-                List<VBarricade> barricades = new List<VBarricade>();
+                barricades = new List<VBarricade>();
                 for (int i = 0; i < vehicleRegion.drops.Count; i++)
                 {
                     SDG.Unturned.BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
                     barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
                         bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
                 }
-                if (barricades.Count > 0) Metadata = new MetaSave(barricades);
             }
+
+            if (barricades is not null || trunk is not null)
+                Metadata = new MetaSave(barricades, trunk);
         }
     }
 
     public class MetaSave
     {
         public List<VBarricade> Barricades;
-        public MetaSave(List<VBarricade> barricades)
+        public List<KitItem> TrunkItems;
+        public MetaSave(List<VBarricade> barricades, List<KitItem> trunkItems)
         {
             Barricades = barricades;
+            TrunkItems = trunkItems;
         }
     }
 

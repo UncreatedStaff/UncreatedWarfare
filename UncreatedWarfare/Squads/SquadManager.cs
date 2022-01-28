@@ -193,6 +193,14 @@ namespace Uncreated.Warfare.Squads
                 SendSquadList(player, team);
             }
         }
+        public static void SendSquadListToTeam(ulong team)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                if (PlayerManager.OnlinePlayers[i].GetTeam() == team && PlayerManager.OnlinePlayers[i].Squad == null)
+                    SendSquadList(PlayerManager.OnlinePlayers[i], team);
+            }
+        }
         public static void SendSquadList(UCPlayer player) => SendSquadList(player, player.GetTeam());
         public static void SendSquadList(UCPlayer player, ulong team)
         {
@@ -324,6 +332,10 @@ namespace Uncreated.Warfare.Squads
 
             ClearList(leader.Player);
             SendSquadMenu(leader, squad);
+
+            SendSquadListToTeam(team);
+            UpdateUIMemberCount(team);
+
             return squad;
         }
         private static void SortSquadListABC()
@@ -347,6 +359,9 @@ namespace Uncreated.Warfare.Squads
 
             ClearList(player.Player);
             SendSquadMenu(player, squad, holdMemberCountUpdate: true);
+
+            SendSquadListToTeam(squad.Team);
+            UpdateMemberList(squad);
             UpdateUIMemberCount(squad.Team);
 
             if (RallyManager.HasRally(squad, out RallyPoint rally))
@@ -440,6 +455,7 @@ namespace Uncreated.Warfare.Squads
                 ClearMenu(member.Player);
                 SendSquadList(member);
             }
+            SendSquadListToTeam(squad.Team);
             UpdateUIMemberCount(squad.Team);
 
             if (RallyManager.HasRally(squad, out RallyPoint rally))
@@ -470,7 +486,7 @@ namespace Uncreated.Warfare.Squads
             UpdateMemberList(squad);
             player.Squad = null;
             ClearMenu(player.Player);
-            SendSquadList(player);
+            SendSquadListToTeam(squad.Team);
             UpdateUIMemberCount(squad.Team);
 
             if (RallyManager.HasRally(squad, out RallyPoint rally))

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
@@ -128,6 +129,10 @@ namespace Uncreated.Warfare.Commands
                 else
                     player.Message($"You are not inside or looking at a vehicle.".Colorize("c7a29f"));
 
+            }
+            else if (command.Length == 1 && (command[0].ToLower() == "getpos" || command[0].ToLower() == "cvc"))
+            {
+                player.Message($"Your position: {player.Position} - Your rotation: {player.Player.transform.eulerAngles.y}".Colorize("ebd491"));
             }
             else
                 player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));

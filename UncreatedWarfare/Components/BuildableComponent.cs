@@ -200,12 +200,12 @@ namespace Uncreated.Warfare.Components
             }
 
             int logis = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, placer.Position).Count(l => l.lockedGroup.m_SteamID == placer.GetTeam());
-            //if (logis == 0)
-            //{
-            //    // no logis nearby
-            //    placer?.Message("fob_error_nologi");
-            //    return false;
-            //}
+            if (logis == 0)
+            {
+                // no logis nearby
+                placer?.Message("fob_error_nologi");
+                return false;
+            }
 
             FOB nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
             if (nearbyFOB != null)
@@ -255,8 +255,8 @@ namespace Uncreated.Warfare.Components
                     placer?.Message("build_error_structureexists", "a", "FOB Bunker");
                     return false;
                 }
-                var closeEnemyFOB = FOB.GetNearestFOB(point, EFOBRadius.ENEMY_BUNKER_CLAIM);
-                if (closeEnemyFOB is not null)
+                var closeEnemyFOB = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 5, point, false).FirstOrDefault();
+                if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
                 {
                     // buildable too close to enemy bunker
                     placer?.Message("build_error_tooclosetoenemybunker");

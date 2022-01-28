@@ -8,6 +8,7 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Structure = Uncreated.Warfare.Structures.Structure;
 using UnityEngine;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -145,7 +146,11 @@ namespace Uncreated.Warfare.Commands
                         }
                         if (hit.TryGetComponent(out InteractableVehicle veh))
                         {
-                            DestroyVehicle(veh, player.Player);
+                            VehicleBay.DeleteVehicle(veh);
+
+                            player.SendChat("structure_popped", veh.asset.vehicleName);
+                            if (Vehicles.VehicleSpawner.HasLinkedSpawn(veh.instanceID, out Vehicles.VehicleSpawn spawn))
+                                spawn.StartVehicleRespawnTimer();
                         }
                         else player.Player.SendChat("structure_pop_not_poppable");
                         return;
@@ -214,23 +219,6 @@ namespace Uncreated.Warfare.Commands
             {
                 player.SendChat("structure_pop_not_poppable");
             }
-        }
-        private void DestroyVehicle(InteractableVehicle vehicle, Player player)
-        {
-            vehicle.forceRemoveAllPlayers();
-            BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
-            if (reg != null)
-                for (int b = 0; b < reg.drops.Count; b++)
-                {
-                    if (reg.drops[b].interactable is InteractableStorage storage)
-                    {
-                        storage.despawnWhenDestroyed = true;
-                    }
-                }
-            VehicleManager.askVehicleDestroy(vehicle);
-            player.SendChat("structure_popped", vehicle.asset.vehicleName);
-            if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
-                spawn.StartVehicleRespawnTimer();
         }
         private void ExamineVehicle(InteractableVehicle vehicle, Player player, bool sendurl)
         {
