@@ -198,15 +198,15 @@ namespace Uncreated.Warfare.Commands
 
                     foreach (BarricadeDrop barricade in barricadesInMain)
                     {
-                        if (barricade.interactable is InteractableSign || barricade.interactable is InteractableStorage)
-                        {
-                            byte[] state = barricade.GetServersideData().barricade.state;
-                            byte[] newstate = new byte[state.Length];
-                            Buffer.BlockCopy(BitConverter.GetBytes(player.CSteamID.m_SteamID), 0, newstate, 0, sizeof(ulong));
-                            Buffer.BlockCopy(BitConverter.GetBytes(3ul), 0, newstate, sizeof(ulong), sizeof(ulong));
-                            Buffer.BlockCopy(state, sizeof(ulong) * 2, newstate, sizeof(ulong) * 2, state.Length - sizeof(ulong) * 2);
-                            BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
-                        }
+                        //if (barricade.interactable is InteractableSign || barricade.interactable is InteractableStorage)
+                        //{
+                        //    byte[] state = barricade.GetServersideData().barricade.state;
+                        //    byte[] newstate = new byte[state.Length];
+                        //    Buffer.BlockCopy(BitConverter.GetBytes(player.CSteamID.m_SteamID), 0, newstate, 0, sizeof(ulong));
+                        //    Buffer.BlockCopy(BitConverter.GetBytes(3ul), 0, newstate, sizeof(ulong), sizeof(ulong));
+                        //    Buffer.BlockCopy(state, sizeof(ulong) * 2, newstate, sizeof(ulong) * 2, state.Length - sizeof(ulong) * 2);
+                        //    BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
+                        //}
 
 
                         BarricadeManager.changeOwnerAndGroup(barricade.model, player.CSteamID.m_SteamID, 3ul);
