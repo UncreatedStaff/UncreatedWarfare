@@ -271,10 +271,10 @@ namespace Uncreated.Warfare
                 {
                     NonQuery(
                         "UPDATE `teamwork` SET " +
-                        "`Points` = `Points` - @1 " +
+                        "`Points` = 0 " +
                         "WHERE `Steam64` = @0;",
-                        new object[] { Steam64, Math.Abs(amount) });
-                    return oldBalance - amount;
+                        new object[] { Steam64});
+                    return 0;
                 }
             }
         }
@@ -331,7 +331,7 @@ namespace Uncreated.Warfare
                         "UPDATE `xp` SET " +
                         "`XP` = 0 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
-                        new object[] { Steam64, (int)branch, -amount });
+                        new object[] { Steam64, (int)branch});
                     return 0;
                 }
             }
