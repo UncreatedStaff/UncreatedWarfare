@@ -149,12 +149,22 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void OnLevelLoaded()
         {
-            L.Log($"level size: {Level.size}");
-            L.Log($"level border: {Level.border}");
             GridScalingFactor = Level.size / (Level.size - Level.border * 2);
             GridSquareWidth = (Level.size - Level.border * 2) / (float)GridSquareCount;
-            L.Log($"grid square width: {GridSquareWidth}");
             GridLetters = new char[12] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L' };
+
+            foreach (var b in config.data.Buildables)
+            {
+                if (!Whitelister.IsWhitelisted(b.foundationID, out _))
+                    Whitelister.AddItem(b.foundationID);
+
+                if (b.emplacementData != null)
+                {
+                    if (!Whitelister.IsWhitelisted(b.emplacementData.ammoID, out _))
+                        Whitelister.AddItem(b.emplacementData.ammoID);
+                    
+                }
+            }
         }
         public static void OnNewGameStarting()
         {
@@ -230,6 +240,7 @@ namespace Uncreated.Warfare.FOBs
             {
                 if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID))
                 {
+                    L.Log($"IsWipedByAuthority: {f.parent.IsWipedByAuthority}");
                     if (f.parent.IsWipedByAuthority)
                         f.parent.Destroy();
                     else

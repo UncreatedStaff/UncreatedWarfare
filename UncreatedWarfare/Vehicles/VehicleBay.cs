@@ -189,7 +189,7 @@ namespace Uncreated.Warfare.Vehicles
                     }
                 }
             }
-            vehicle.trunkItems.clear();
+            vehicle.trunkItems?.clear();
             VehicleManager.askVehicleDestroy(vehicle);
         }
         public static void DeleteAllVehiclesFromWorld()

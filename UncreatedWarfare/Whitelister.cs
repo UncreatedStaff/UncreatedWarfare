@@ -118,18 +118,16 @@ namespace Uncreated.Warfare
             if (!shouldAllow) return;
 
             UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
-            bool isFob = false;
-            if (player.OnDuty())
+
+            bool isFOB = barricade.model.TryGetComponent(out Components.FOBComponent f);
+
+            if (player.OnDuty() && isFOB)
             {
-                if (barricade.model.TryGetComponent(out Components.FOBComponent f))
-                {
-                    isFob = true;
-                    f.parent.IsWipedByAuthority = true;
-                }
+                f.parent.IsWipedByAuthority = true;
             }
             else
             {
-                if (!IsWhitelisted(barricade.asset.GUID, out _) || isFob)
+                if (!IsWhitelisted(barricade.asset.GUID, out _) || isFOB)
                 {
                     player.Message("whitelist_nosalvage");
                     shouldAllow = false;

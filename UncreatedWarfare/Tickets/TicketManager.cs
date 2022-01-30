@@ -37,8 +37,6 @@ namespace Uncreated.Warfare.Tickets
             _Team1previousTickets = config.data.StartingTickets;
             _Team2previousTickets = config.data.StartingTickets;
 
-            
-
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
         public static void OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
