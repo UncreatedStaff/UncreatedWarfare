@@ -23,7 +23,7 @@ namespace Uncreated.Warfare.Commands
         public string Name => "request";
         public string Help => "Request a kit by looking at a sign or request a vehicle by looking at the vehicle, then do /request.";
         public string Syntax => "/request";
-        public List<string> Aliases => new List<string>(0);
+        public List<string> Aliases => new List<string>(1) { "req" };
         public List<string> Permissions => new List<string>(1) { "uc.request" };
         public void Execute(IRocketPlayer caller, string[] command)
         {

@@ -363,7 +363,7 @@ namespace Uncreated.Warfare.Squads
             SendSquadListToTeam(squad.Team);
             UpdateMemberList(squad);
             UpdateUIMemberCount(squad.Team);
-
+            UpdateMemberList(squad);
             if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ShowUIForSquad();
 

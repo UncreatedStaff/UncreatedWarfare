@@ -62,7 +62,9 @@ namespace Uncreated
         }
         public void Save()
         {
-            using (FileStream stream = new FileStream(_dir, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+            if (!File.Exists(_dir))
+                File.Create(_dir)?.Close();
+            using (FileStream stream = new FileStream(_dir, FileMode.Truncate, FileAccess.Write, FileShare.None))
             {
                 if (useCustomSerializer)
                 {

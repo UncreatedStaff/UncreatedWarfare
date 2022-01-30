@@ -233,7 +233,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 Data.ExtraZones = JSONMethods.LoadExtraZones();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-                Teams.TeamManager.OnReloadFlags();
+                TeamManager.OnReloadFlags();
                 if (OnFlagsReloaded != null)
                     OnFlagsReloaded.Invoke();
             }
