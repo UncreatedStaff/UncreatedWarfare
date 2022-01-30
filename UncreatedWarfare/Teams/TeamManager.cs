@@ -306,7 +306,6 @@ namespace Uncreated.Warfare.Teams
         public static bool IsFriendly(UnturnedPlayer player, UnturnedPlayer player2) => player.Player.quests.groupID.m_SteamID == player2.Player.quests.groupID.m_SteamID;
         public static bool IsFriendly(SteamPlayer player, SteamPlayer player2) => player.player.quests.groupID.m_SteamID == player2.player.quests.groupID.m_SteamID;
         public static bool IsFriendly(Player player, Player player2) => player.quests.groupID.m_SteamID == player2.quests.groupID.m_SteamID;
-
         public static bool CanJoinTeam(ulong team)
         {
             if (UCWarfare.Config.TeamSettings.BalanceTeams)
@@ -506,10 +505,10 @@ namespace Uncreated.Warfare.Teams
             this.team2name = team2name ?? "MEC";
             this.adminname = adminname ?? "Admins";
             this.team1code = team1code ?? "us";
-            this.team2code = team2code ?? "ru";
+            this.team2code = team2code ?? "me";
             this.admincode = admincode ?? "ad";
             this.team1unarmedkit = team1unarmedkit ?? "usunarmed";
-            this.team2unarmedkit = team2unarmedkit ?? "ruunarmed";
+            this.team2unarmedkit = team2unarmedkit ?? "meunarmed";
             this.defaultkit = defaultkit ?? "default";
             this.team1spawnangle = team1spawnangle;
             this.team2spawnangle = team2spawnangle;
@@ -522,17 +521,17 @@ namespace Uncreated.Warfare.Teams
             team2id = 2;
             adminid = 3;
             team1name = "USA";
-            team2name = "Russia";
+            team2name = "MEC";
             adminname = "Admins";
             team1code = "us";
-            team2code = "ru";
+            team2code = "me";
             admincode = "ad";
             team1unarmedkit = "usunarmed";
-            team2unarmedkit = "ruunarmed";
+            team2unarmedkit = "meunarmed";
             defaultkit = "default";
             team1spawnangle = 0;
             team2spawnangle = 0;
-            lobbyspawnangle = -90;
+            lobbyspawnangle = 90;
             team_switch_cooldown = 1200;
         }
     }

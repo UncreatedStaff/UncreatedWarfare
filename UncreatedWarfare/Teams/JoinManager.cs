@@ -71,8 +71,8 @@ namespace Uncreated.Warfare.Teams
             if (!isNewGame)
             {
                 LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
+                lobbyPlayer.IsInLobby = false;
                 LobbyPlayers.Add(lobbyPlayer);
-                ShowUI(lobbyPlayer, false);
                 foreach (LobbyPlayer p in LobbyPlayers)
                     UpdateUITeams(p, p.Team);
             }
@@ -126,9 +126,11 @@ namespace Uncreated.Warfare.Teams
 
             player.Player.quests.leaveGroup(true);
 
+            lobbyPlayer.IsInLobby = true;
+
             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
 
-            lobbyPlayer.IsInLobby = true;
+            
             ShowUI(lobbyPlayer, showX);
 
             foreach (LobbyPlayer p in LobbyPlayers)
@@ -144,8 +146,8 @@ namespace Uncreated.Warfare.Teams
 
             EffectManager.sendUIEffect(JOIN_UI_ID, joinUiKey, player.Player.connection, true);
 
-            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper());
-            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper());
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", Translation.Translate("team_1_short", player.Player));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", Translation.Translate("team_2_short", player.Player));
 
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
@@ -405,7 +407,7 @@ namespace Uncreated.Warfare.Teams
                 {
                     return (float)(Team2Count) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
-                else // if player has not joined a team yet
+                else // if player has not joi   ned a team yet
                 {
                     return (Team2Count + 1f) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
@@ -439,8 +441,8 @@ namespace Uncreated.Warfare.Teams
         {
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "ConfirmText", "<color=#999999>JOINING...</color>");
             yield return new WaitForSeconds(1);
-            JoinTeam(player.Player, player.Team);
             player.IsInLobby = false;
+            JoinTeam(player.Player, player.Team);
             CloseUI(player);
         }
 

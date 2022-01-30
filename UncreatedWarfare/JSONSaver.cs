@@ -94,6 +94,7 @@ namespace Uncreated
                 {
                     if (!File.Exists(directory))
                         File.Create(directory)?.Close();
+
                     using (FileStream rs = new FileStream(directory, FileMode.Truncate, FileAccess.Write, FileShare.None))
                     {
                         Utf8JsonWriter writer = new Utf8JsonWriter(rs, JsonEx.writerOptions);

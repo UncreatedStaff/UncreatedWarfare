@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -115,21 +116,25 @@ namespace Uncreated.Warfare.Components
 
                 if (vehicle.asset.canBeLocked)
                 {
+                    CSteamID owner = new CSteamID(data.owner);
                     CSteamID group = new CSteamID(data.group);
-                    vehicle.tellLocked(new CSteamID(data.group), new CSteamID(data.group), true);
+                    vehicle.tellLocked(owner, group, true);
 
-                    VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, group, group, true);
+                    VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, owner, group, true);
                 }
 
                 if (Buildable.emplacementData.baseID != Guid.Empty)
                 {
                     if (!(Assets.find(Buildable.emplacementData.baseID) is ItemBarricadeAsset emplacementBase))
                     {
-                        L.LogError($"Emplacement base was not a valid barricade.");
-                        return;
+                        L.LogDebug($"Emplacement base was not a valid barricade.");
                     }
-                    Barricade barricade = new Barricade(emplacementBase);
-                    BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
+                    else
+                    {
+                        Barricade barricade = new Barricade(emplacementBase);
+                        BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
+                    }
+                    
                 }
             }
 
@@ -200,12 +205,12 @@ namespace Uncreated.Warfare.Components
             }
 
             int logis = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, placer.Position).Count(l => l.lockedGroup.m_SteamID == placer.GetTeam());
-            //if (logis == 0)
-            //{
-            //    // no logis nearby
-            //    placer?.Message("fob_error_nologi");
-            //    return false;
-            //}
+            if (logis == 0)
+            {
+                // no logis nearby
+                placer?.Message("fob_error_nologi");
+                return false;
+            }
 
             FOB nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
             if (nearbyFOB != null)
@@ -243,7 +248,6 @@ namespace Uncreated.Warfare.Components
                         return false;
                     }
                 }
-
                 if (fob == null || (fob.Position - point).sqrMagnitude > Math.Pow(30, 2))
                 {
                     // no radio nearby, radio must be within 30m
@@ -256,21 +260,33 @@ namespace Uncreated.Warfare.Components
                     placer?.Message("build_error_structureexists", "a", "FOB Bunker");
                     return false;
                 }
+                var closeEnemyFOB = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 5, point, false).FirstOrDefault();
+                if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
+                {
+                    // buildable too close to enemy bunker
+                    placer?.Message("build_error_tooclosetoenemybunker");
+                    return false;
+                }
             }
             else
             {
-                if (fob == null)
+                if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out var kit) && kit.Items.Exists(i => i.id == buildable.foundationID)))
                 {
-                    // no fob nearby
-                    placer?.Message("build_error_notinradius");
-                    return false;
+                    if (fob == null)
+                    {
+                        // no fob nearby
+                        placer?.Message("build_error_notinradius");
+                        return false;
+                    }
+                    else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
+                    {
+                        // radius is constrained because there is no bunker
+                        placer?.Message("build_error_radiustoosmall", "30");
+                        return false;
+                    }
                 }
-                else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
-                {
-                    // radius is constrained because there is no bunker
-                    placer?.Message("build_error_radiustoosmall", "30");
-                    return false;
-                }
+                if (fob is null)
+                    return true;
 
                 if (buildable.type == EBuildableType.REPAIR_STATION)
                 {

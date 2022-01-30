@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Structures;
@@ -14,7 +15,7 @@ namespace Uncreated.Warfare.Vehicles
 {
     public class VehicleSpawner : JSONSaver<VehicleSpawn>, IDisposable
     {
-        public const float VEHICLE_HEIGHT_OFFSET = 2f;
+        public const float VEHICLE_HEIGHT_OFFSET = 5f;
         public VehicleSpawner()
             : base(Data.VehicleStorage + "vehiclespawns.json")
         {

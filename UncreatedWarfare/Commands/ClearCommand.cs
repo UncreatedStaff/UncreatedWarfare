@@ -111,12 +111,13 @@ namespace Uncreated.Warfare.Commands
                     }
 
                 }
-                VehicleManager.askVehicleDestroyAll();
+                VehicleBay.DeleteAllVehiclesFromWorld();
                 for (int i = 0; i < spawnsToReset.Count; i++)
                     spawnsToReset[i].SpawnVehicle();
             } 
             else
             {
+                VehicleBay.DeleteAllVehiclesFromWorld();
                 VehicleManager.askVehicleDestroyAll();
             }
         }

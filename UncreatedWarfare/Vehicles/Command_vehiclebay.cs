@@ -457,7 +457,7 @@ namespace Uncreated.Warfare.Kits
                                 if (VehicleSpawner.IsRegistered(structureDrop.instanceID, out _, EStructType.STRUCTURE))
                                 {
                                     VehicleSpawner.DeleteSpawn(structureDrop.instanceID, EStructType.STRUCTURE);
-                                    player.SendChat("vehiclebay_spawn_remove");
+                                    player.SendChat("vehiclebay_spawn_deregistered");
                                 }
                                 else
                                     player.SendChat("vehiclebay_e_spawnnoexist");
@@ -470,7 +470,7 @@ namespace Uncreated.Warfare.Kits
                                     if (spawn.HasLinkedVehicle(out InteractableVehicle veh))
                                     {
                                         veh.forceRemoveAllPlayers();
-                                        VehicleManager.askVehicleDestroy(veh);
+                                        VehicleBay.DeleteVehicle(veh);
                                         asset = veh.asset;
                                     }
                                     else

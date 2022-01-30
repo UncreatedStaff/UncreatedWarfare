@@ -711,12 +711,11 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
 
-            if (Data.Is<Insurgency>(out _))
+            if (Data.Is<Insurgency>(out Insurgency ins) && team == ins.DefendingTeam)
             {
                 min = Math.Min(Caches.Count, config.data.FobLimit);
                 for (int i = 0; i < min; i++)
                 {
-                    //L.LogDebug($"    i: {i}");
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i22, true);
                     EffectManager.sendUIEffectText(fobListKey, connection, true, "N" + i22,
@@ -840,12 +839,15 @@ namespace Uncreated.Warfare.FOBs
             T1RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAAABQDGlQFkAAMFAMmVAWQABgUAyZUBZAAACACmZQFkAAMIAMCVAWQABggAwJUBZAAHAgDWlQFkAAoCANaVAWQABwMA1pUBZAAKAwDWlQFkAAcEANaVAWQACgQA1pUBZAAJBQDYlQFkAAkHANiVAWQACQkA2JUBZAAACwDOlQFkAAAMAM6VAWQAAA0AzpUBZAADCwDOlQFkAAcAAKyVAWQACgAA1pUBZAAKAQDWlQFkAAMMAM6VAWQAAw0AzpUBZAAGDQDQlQFkAAQCANqVAWQACQsA0JUBZAAJDADQlQFkAAkNANCVAWQABgsAzpUBZAAGDADOlQFkAA==";
             T2RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAAABQDGlQFkAAMFAMmVAWQABgUAyZUBZAAACACmZQFkAAMIAMCVAWQABggAwJUBZAAHAgDWlQFkAAoCANaVAWQABwMA1pUBZAAKAwDWlQFkAAcEANaVAWQACgQA1pUBZAAJBQDYlQFkAAkHANiVAWQACQkA2JUBZAAACwDOlQFkAAAMAM6VAWQAAA0AzpUBZAADCwDOlQFkAAcAAKyVAWQACgAA1pUBZAAKAQDWlQFkAAMMAM6VAWQAAw0AzpUBZAAGDQDQlQFkAAQCANqVAWQACQsA0JUBZAAJDADQlQFkAAkNANCVAWQABgsAzpUBZAAGDADOlQFkAA==";
 
-            LogiTruckIDs = new Guid[4]
+            LogiTruckIDs = new Guid[6]
             { 
                 new Guid("58d6410084f04e43ba4462a1c9a6b8c0"), // Logistics_Woodlands
                 new Guid("fe1a85aeb8e34c2fbeca3e485300a61c"), // Logistics_Forest
                 new Guid("6082d95b5fcb4805a7a2120e3e3c6f68"), // UH60_Blackhawk
-                new Guid("18a6b283dbd245d0a13e0daa09b84aed")  // Mi8
+                new Guid("18a6b283dbd245d0a13e0daa09b84aed"),  // Mi8
+                new Guid("855859643f3c49a088a85be7260a5226"),  // Mi8
+                new Guid("5613d32e8e194b3caf44aa16c2e19456")  // Mi8
+
             };
             AmmoBagMaxUses = 3;
 
@@ -859,7 +861,7 @@ namespace Uncreated.Warfare.FOBs
                     foundationID = new Guid("1bb17277dd8148df9f4c53d1a19b2503"),
                     type = EBuildableType.FOB_BUNKER,
                     requiredHits = 40,
-                    requiredBuild = 20,
+                    requiredBuild = 15,
                     team = 0,
                     emplacementData = null
                 },
@@ -879,7 +881,7 @@ namespace Uncreated.Warfare.FOBs
                     foundationID = new Guid("26a6b91cd1944730a0f28e5f299cebf9"),
                     type = EBuildableType.REPAIR_STATION,
                     requiredHits = 30,
-                    requiredBuild = 15,
+                    requiredBuild = 10,
                     team = 0,
                     emplacementData = null
                 },
@@ -944,8 +946,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("e1af3a3af31e4996bc5d6ffd9a0773ec"),
                     foundationID = new Guid("baf23a8b514441ee8db891a3ddf32ef4"),
                     type = EBuildableType.FORTIFICATION,
-                    requiredHits = 20,
-                    requiredBuild = 1,
+                    requiredHits = 30,
+                    requiredBuild = 2,
                     team = 0,
                     emplacementData = null
                 },
@@ -955,8 +957,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("857c85161f254964a921700a69e215a9"),
                     foundationID = new Guid("827d0ca8bfff43a39f750f191e16ea71"),
                     type = EBuildableType.FORTIFICATION,
-                    requiredHits = 20,
-                    requiredBuild = 1,
+                    requiredHits = 25,
+                    requiredBuild = 2,
                     team = 0,
                     emplacementData = null
                 },
@@ -966,8 +968,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("aa3c6af4911243b5b5c9dc95ca1263bf"),
                     foundationID = new Guid("80396c361d3040d7beb3921964ec2997"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 12,
-                    requiredBuild = 10,
+                    requiredHits = 20,
+                    requiredBuild = 7,
                     team = 1,
                     emplacementData = new EmplacementData
                     {
@@ -984,8 +986,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("86cfe1eb8be144aeae7659c9c74ff11a"),
                     foundationID = new Guid("e44ba62f763c432e882ddc7eabaa9c77"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 12,
-                    requiredBuild = 10,
+                    requiredHits = 20,
+                    requiredBuild = 7,
                     team = 2,
                     emplacementData = new EmplacementData
                     {
@@ -1002,8 +1004,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("9d305050a6a142349376d6c49fb38362"),
                     foundationID = new Guid("a68ae466fb804829a0eb0d4556071801"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 20,
-                    requiredBuild = 15,
+                    requiredHits = 25,
+                    requiredBuild = 12,
                     team = 1,
                     emplacementData = new EmplacementData
                     {
@@ -1020,8 +1022,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("677b1084dffa463384d29167a3fae25b"),
                     foundationID = new Guid("37811b1847744c958fcb30a0b759874b"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 20,
-                    requiredBuild = 15,
+                    requiredHits = 25,
+                    requiredBuild = 12,
                     team = 2,
                     emplacementData = new EmplacementData
                     {
@@ -1034,17 +1036,53 @@ namespace Uncreated.Warfare.FOBs
                 },
                 new BuildableData
                 {
+                    // Stinger
+                    structureID = new Guid("1883345cbdad40aa81e49c84e6c872ef"),
+                    foundationID = new Guid("3c2dd7febc854b7f8859852b8c736c8e"),
+                    type = EBuildableType.EMPLACEMENT,
+                    requiredHits = 25,
+                    requiredBuild = 12,
+                    team = 2,
+                    emplacementData = new EmplacementData
+                    {
+                        vehicleID = new Guid("1883345cbdad40aa81e49c84e6c872ef"),
+                        baseID = new Guid("3c0a94af5af24901a9e3207f3e9ed0ba"),
+                        ammoID = new Guid("37811b1847744c958fcb30a0b759874b"),
+                        ammoAmount = 1,
+                        allowedPerFob = 1
+                    }
+                },
+                new BuildableData
+                {
+                    // Igla
+                    structureID = new Guid("8add59a2e2b94f93ab0d6b727d310097"),
+                    foundationID = new Guid("b50cb548734946ffa5f88d6691a2c7ce"),
+                    type = EBuildableType.EMPLACEMENT,
+                    requiredHits = 25,
+                    requiredBuild = 12,
+                    team = 2,
+                    emplacementData = new EmplacementData
+                    {
+                        vehicleID = new Guid("8add59a2e2b94f93ab0d6b727d310097"),
+                        baseID = new Guid("b50cb548734946ffa5f88d6691a2c7ce"),
+                        ammoID = new Guid("a54d571983c2432a9624eec39d602997"),
+                        ammoAmount = 1,
+                        allowedPerFob = 1
+                    }
+                },
+                new BuildableData
+                {
                     // Mortar
                     structureID = new Guid("94bf8feb05bc4680ac26464bc175460c"),
                     foundationID = new Guid("6ff4826eaeb14c7cac1cf25a55d24bd3"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 20,
-                    requiredBuild = 10,
+                    requiredHits = 25,
+                    requiredBuild = 8,
                     team = 0,
                     emplacementData = new EmplacementData
                     {
                         vehicleID = new Guid("94bf8feb05bc4680ac26464bc175460c"),
-                        baseID = new Guid("c3eb4dd3fd1d463993ec69c4c3de50d7"), // Mortar
+                        baseID = new Guid("6ff4826eaeb14c7cac1cf25a55d24bd3"), // Mortar
                         ammoID = new Guid("66f4c76a119e4d6ca9d0b1a866c4d901"),
                         ammoAmount = 3,
                         allowedPerFob = 2

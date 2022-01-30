@@ -329,10 +329,10 @@ namespace Uncreated.Warfare
                 {
                     NonQuery(
                         "UPDATE `xp` SET " +
-                        "`XP` = `XP` - @2 " +
+                        "`XP` = 0 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
                         new object[] { Steam64, (int)branch, -amount });
-                    return oldBalance + amount;
+                    return 0;
                 }
             }
         }
