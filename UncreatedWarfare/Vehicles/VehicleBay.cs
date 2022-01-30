@@ -312,8 +312,7 @@ namespace Uncreated.Warfare.Vehicles
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
-                if (Data.Gamemode.State == Gamemodes.EState.STAGING &&
-                    Data.Is(out IStagingPhase invasion) && Data.Is(out IAttackDefense atk) && player.GetTeam() == atk.AttackingTeam)
+                if (Data.Gamemode.State == EState.STAGING && Data.Is(out IStagingPhase _) && (!Data.Is(out IAttackDefense atk) || player.GetTeam() == atk.AttackingTeam))
                 {
                     player.SendChat("vehicle_staging");
                     shouldAllow = false;

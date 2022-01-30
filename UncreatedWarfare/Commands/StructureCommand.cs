@@ -203,7 +203,7 @@ namespace Uncreated.Warfare.Commands
                         //    byte[] state = barricade.GetServersideData().barricade.state;
                         //    byte[] newstate = new byte[state.Length];
                         //    Buffer.BlockCopy(BitConverter.GetBytes(player.CSteamID.m_SteamID), 0, newstate, 0, sizeof(ulong));
-                        //    Buffer.BlockCopy(BitConverter.GetBytes(player.Player.quests.groupID.m_SteamID), 0, newstate, sizeof(ulong), sizeof(ulong));
+                        //    Buffer.BlockCopy(BitConverter.GetBytes(3ul), 0, newstate, sizeof(ulong), sizeof(ulong));
                         //    Buffer.BlockCopy(state, sizeof(ulong) * 2, newstate, sizeof(ulong) * 2, state.Length - sizeof(ulong) * 2);
                         //    BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
                         //}
