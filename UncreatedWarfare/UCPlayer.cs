@@ -114,6 +114,7 @@ namespace Uncreated.Warfare
                 data.Update(newXP);
             else
                 Ranks.Add(branch, new RankData(Steam64, newXP, branch, this.GetTeam()));
+                
         }
         public void UpdateRankTeam(ulong team)
         {

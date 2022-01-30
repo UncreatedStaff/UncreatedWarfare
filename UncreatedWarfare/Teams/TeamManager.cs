@@ -521,17 +521,17 @@ namespace Uncreated.Warfare.Teams
             team2id = 2;
             adminid = 3;
             team1name = "USA";
-            team2name = "Russia";
+            team2name = "MEC";
             adminname = "Admins";
-            team1code = "me";
-            team2code = "ru";
+            team1code = "us";
+            team2code = "me";
             admincode = "ad";
             team1unarmedkit = "usunarmed";
             team2unarmedkit = "meunarmed";
             defaultkit = "default";
             team1spawnangle = 0;
             team2spawnangle = 0;
-            lobbyspawnangle = -90;
+            lobbyspawnangle = 90;
             team_switch_cooldown = 1200;
         }
     }

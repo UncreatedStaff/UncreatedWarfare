@@ -9,6 +9,8 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Structure = Uncreated.Warfare.Structures.Structure;
 using UnityEngine;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Kits;
+using System;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -65,6 +67,10 @@ namespace Uncreated.Warfare.Commands
                                 if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure structureaded))
                                 {
                                     player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                    player.Player.SendChat($"Barricade: {barricade.model.position}");
+                                    player.Player.SendChat($"Barricade (Server): {barricade.GetServersideData().point}");
+                                    player.Player.SendChat($"Saved Structure{structureaded.transform.position}");
+
                                 }
                                 else
                                 {
@@ -185,6 +191,69 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
                     else player.Player.SendChat("no_permissions");
+                }
+                else if (action == "savemain" || action == "sm")
+                {
+                    var barricadesInMain = UCBarricadeManager.GetBarricadesWhere(b => F.IsInMain(b.model.position));
+
+                    foreach (var barricade in barricadesInMain)
+                    {
+                        if (barricade.interactable is InteractableSign || barricade.interactable is InteractableStorage)
+                        {
+                            byte[] state = barricade.GetServersideData().barricade.state;
+                            byte[] newstate = new byte[state.Length];
+                            Buffer.BlockCopy(BitConverter.GetBytes(player.CSteamID.m_SteamID), 0, newstate, 0, sizeof(ulong));
+                            Buffer.BlockCopy(BitConverter.GetBytes(player.Player.quests.groupID.m_SteamID), 0, newstate, sizeof(ulong), sizeof(ulong));
+                            Buffer.BlockCopy(state, sizeof(ulong) * 2, newstate, sizeof(ulong) * 2, state.Length - sizeof(ulong) * 2);
+                            BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
+                        }
+
+                        BarricadeManager.changeOwnerAndGroup(barricade.model, player.CSteamID.m_SteamID, 3);
+
+                        if (!(barricade.interactable is InteractableSign sign && RequestSigns.SignExists(sign, out var rs)))
+                        {
+                            if (StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure existing))
+                                StructureSaver.RemoveStructure(existing);
+                            StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure added);
+                        }
+                    }
+
+                    player.Player.Message($"Saved/Updated {barricadesInMain.Count} barricades in main.".Colorize("ebd0ab"));
+                }
+                else if (action == "removemain" || action == "rm")
+                {
+                    for (int i = RequestSigns.ActiveObjects.Count - 1; i >= 0; i--)
+                    {
+                        RequestSign sign = RequestSigns.ActiveObjects[i];
+                        if (!TeamManager.IsInAnyMain(sign.transform.position.Vector3))
+                        {
+                            RequestSigns.RemoveRequestSign(sign);
+                        }
+                    }
+                    for (int i = VehicleSpawner.ActiveObjects.Count - 1; i >= 0; i--)
+                    {
+                        Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
+                        if (!TeamManager.IsInAnyMain(spawn.SpawnpadLocation.position.Vector3))
+                        {
+                            VehicleSpawner.DeleteSpawn(spawn.SpawnPadInstanceID, spawn.type);
+                        }
+                    }
+                    for (int i = StructureSaver.ActiveObjects.Count - 1; i >= 0; i--)
+                    {
+                        Structures.Structure structure = StructureSaver.ActiveObjects[i];
+                        if (!TeamManager.IsInAnyMain(structure.transform.position.Vector3))
+                        {
+                            StructureSaver.RemoveStructure(structure);
+                        }
+                    }
+                    List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x => !TeamManager.IsInAnyMain(x.model.transform.position));
+                    for (int i = drops.Count - 1; i >= 0; --i)
+                    {
+                        if (Regions.tryGetCoordinate(drops[i].model.transform.position, out byte x, out byte y))
+                            BarricadeManager.destroyBarricade(drops[i], x, y, ushort.MaxValue);
+                    }
+
+                    player.Player.Message($"Unsaved any barricades outside of main.".Colorize("ebd0ab"));
                 }
             }
         }

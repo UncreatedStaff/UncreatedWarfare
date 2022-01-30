@@ -10,6 +10,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
@@ -176,7 +177,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
                     }
-                    else if (kit.Class == EClass.SQUADLEADER && !ucplayer.IsSquadLeader())
+                    else if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad is not null && !ucplayer.IsSquadLeader())
                     {
                         ucplayer.Message("request_kit_e_notsquadleader");
                     }
@@ -198,6 +199,20 @@ namespace Uncreated.Warfare.Commands
                         }
                         else
                         {
+                            if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad is null)
+                            {
+                                if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+                                {
+                                    var squad = SquadManager.CreateSquad(ucplayer, ucplayer.GetTeam(), ucplayer.Branch);
+                                    ucplayer.Message("squad_created", squad.Name);
+                                }
+                                else
+                                {
+                                    player.SendChat("squad_too_many");
+                                    return;
+                                }
+                            }
+
                             GiveKit(ucplayer, kit);
                         }
                     }
@@ -297,7 +312,7 @@ namespace Uncreated.Warfare.Commands
                 }
             }
 
-            double delay = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
+            double delay = (DateTime.Now - new DateTime(Data.Gamemode.GameID)).TotalSeconds;
             double timeleft = data.Delay - delay;
 
             if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)

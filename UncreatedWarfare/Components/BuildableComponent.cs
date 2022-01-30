@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -128,8 +129,12 @@ namespace Uncreated.Warfare.Components
                         L.LogError($"Emplacement base was not a valid barricade.");
                         return;
                     }
-                    Barricade barricade = new Barricade(emplacementBase);
-                    BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
+                    else
+                    {
+                        Barricade barricade = new Barricade(emplacementBase);
+                        BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
+                    }
+                    
                 }
             }
 
@@ -265,18 +270,23 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                if (fob == null)
+                if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out var kit) && kit.Items.Exists(i => i.id == buildable.foundationID)))
                 {
-                    // no fob nearby
-                    placer?.Message("build_error_notinradius");
-                    return false;
+                    if (fob == null)
+                    {
+                        // no fob nearby
+                        placer?.Message("build_error_notinradius");
+                        return false;
+                    }
+                    else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
+                    {
+                        // radius is constrained because there is no bunker
+                        placer?.Message("build_error_radiustoosmall", "30");
+                        return false;
+                    }
                 }
-                else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
-                {
-                    // radius is constrained because there is no bunker
-                    placer?.Message("build_error_radiustoosmall", "30");
-                    return false;
-                }
+                if (fob is null)
+                    return true;
 
                 if (buildable.type == EBuildableType.REPAIR_STATION)
                 {

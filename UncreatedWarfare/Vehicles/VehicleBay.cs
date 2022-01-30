@@ -18,6 +18,18 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             VehicleManager.onExitVehicleRequested += OnVehicleExitRequested;
+
+            foreach (var data in ActiveObjects)
+            {
+                if (data.Items != null)
+                {
+                    foreach ( var item in data.Items)
+                    {
+                        if (!Whitelister.IsWhitelisted(item, out _))
+                            Whitelister.AddItem(item);
+                    }
+                }
+            }
         }
 
         protected override string LoadDefaults() => "[]";

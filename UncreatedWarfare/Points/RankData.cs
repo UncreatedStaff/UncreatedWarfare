@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Point
 {
-    public struct RankData
+    public class RankData
     {
         public static readonly RankData Nil = new RankData(0, -1, EBranch.DEFAULT, 0);
         public readonly ulong Steam64;

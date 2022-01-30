@@ -50,7 +50,7 @@ namespace Uncreated.Warfare.Point
         }
         public static void OnBranchChanged(UCPlayer player, EBranch oldBranch, EBranch newBranch)
         {
-            string rank = "";
+            string rank;
             if (player.CurrentRank.Level > 0)
                 rank = Translation.Translate("branch_changed", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name, player.CurrentRank.Level.ToString(Data.Locale));
             else
@@ -74,9 +74,13 @@ namespace Uncreated.Warfare.Point
             RankData oldRank = player.CurrentRank;
 
             amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
+
+            
+
             int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
 
             player.UpdateRank(player.Branch, newBalance);
+
 
             if (!(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
             {
@@ -195,10 +199,24 @@ namespace Uncreated.Warfare.Point
 
             if ((Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
             {
+                if (UCWarfare.Config.Debug)
+                {
+                    L.Log("UpdateXPUI returned early");
+
+                    bool islb = Data.Is(out IEndScreen lb2);
+                    L.Log($"     Is IEndScreen: {islb}");
+                    if (islb)
+                        L.Log($"        Is screen up: {lb2.isScreenUp}");
+
+                    bool isteams = Data.Is(out ITeams t);
+                    L.Log($"     Is ITeams: {isteams}");
+                    if (isteams)
+                        L.Log($"        Is player in lobby: {t.JoinManager.IsInLobby(player)}");
+                }
                 return;
             }
 
-            short key = (short)XPConfig.RankUI;
+            short key = 26969;
             RankData current = player.CurrentRank;
 
             EffectManager.sendUIEffect(XPConfig.RankUI, key, player.connection, true);
@@ -226,7 +244,7 @@ namespace Uncreated.Warfare.Point
             if (Data.Is(out IEndScreen lb) && lb.isScreenUp || Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player))
                 return;
 
-            short key = (short)TWConfig.MedalsUI;
+            short key = 26970;
             EffectManager.sendUIEffect(TWConfig.MedalsUI, key, player.connection, true);
             
             if (player.Medals.NumberOfMedals <= 0)

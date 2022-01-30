@@ -263,7 +263,7 @@ namespace Uncreated.Warfare.Components
                 fob = structure as FOB;
             else if (isSpecialFOB)
                 special = structure as SpecialFOB;
-            else if (isFOB)
+            else if (isCache)
                 cache = structure as Cache;
 
 

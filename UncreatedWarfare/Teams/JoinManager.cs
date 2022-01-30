@@ -146,8 +146,8 @@ namespace Uncreated.Warfare.Teams
 
             EffectManager.sendUIEffect(JOIN_UI_ID, joinUiKey, player.Player.connection, true);
 
-            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", TeamManager.Team1Name.ToUpper());
-            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", TeamManager.Team2Name.ToUpper());
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1Name", Translation.Translate("team_1_short", player.Player));
+            EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2Name", Translation.Translate("team_2_short", player.Player));
 
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team1PlayerCount", LobbyPlayers.Count(x => x.Team == 1).ToString(Data.Locale));
             EffectManager.sendUIEffectText(joinUiKey, player.Player.connection, true, "Team2PlayerCount", LobbyPlayers.Count(x => x.Team == 2).ToString(Data.Locale));
@@ -407,7 +407,7 @@ namespace Uncreated.Warfare.Teams
                 {
                     return (float)(Team2Count) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
-                else // if player has not joined a team yet
+                else // if player has not joi   ned a team yet
                 {
                     return (Team2Count + 1f) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
                 }
