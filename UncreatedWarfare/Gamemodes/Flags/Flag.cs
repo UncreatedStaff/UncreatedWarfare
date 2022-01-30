@@ -10,18 +10,53 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
-    public class PlayerEventArgs : EventArgs { public Player player; }
-    public class DiscoveredEventArgs : EventArgs { public ulong Team; }
+    public delegate void DiscoveryDelegate(ulong team);
     public class Flag : IDisposable
     {
         public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
         public delegate bool IsContestedDelegate(Flag flag, out ulong winner);
         public int index = -1;
-        public const float MAX_POINTS = 64;
-        public Zone ZoneData { get; protected set; }
+        public const float MAX_POINTS = 64f;
         public AdjacentFlagData[] Adjacencies;
-        public FlagGamemode Manager { get; protected set; }
         public static float CaptureMultiplier = 1.0f;
+        private Vector3 _position;
+        private Vector2 _position2d;
+        private readonly int _id;
+        private readonly string _name;
+        private readonly string _shortName;
+        private float _x;
+        private float _y;
+        private float _z;
+        private string _color;
+        private ulong _owner = 0;
+        public List<Player> PlayersOnFlagTeam1;
+        public int Team1TotalPlayers;
+        public EvaluatePointsDelegate EvaluatePointsOverride = null;
+        public IsContestedDelegate IsContestedOverride = null;
+        public int Team1TotalCappers;
+        public List<Player> PlayersOnFlagTeam2;
+        public int Team2TotalPlayers;
+        public int Team2TotalCappers;
+        private float _points;
+        protected bool _discovered1;
+        protected bool _discovered2;
+        public bool HasBeenCapturedT1;
+        public bool HasBeenCapturedT2;
+
+        public event PlayerDelegate OnPlayerEntered;
+        public event PlayerDelegate OnPlayerLeft;
+        public delegate void PointsChangedDelegate(float NewPoints, float OldPoints, Flag flag);
+        public delegate void PlayerDelegate(Flag flag, Player player);
+        public event PointsChangedDelegate OnPointsChanged;
+        public delegate void OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
+        public event OwnerChangedDelegate OnOwnerChanged;
+        public event DiscoveryDelegate OnDiscovered;
+        public event DiscoveryDelegate OnHidden;
+        public event EventHandler OnDisposed;
+        public event EventHandler OnReset;
+
+        public Zone ZoneData { get; protected set; }
+        public FlagGamemode Manager { get; protected set; }
         public int ObjectivePlayerCount
         {
             get
@@ -52,7 +87,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 _position2d = new Vector2(_x, _z);
             }
         }
-        private Vector3 _position;
         public Vector2 Position2D
         {
             get => _position2d;
@@ -64,13 +98,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 _position = new Vector3(_x, _y, _z);
             }
         }
-        private Vector2 _position2d;
-        public int ID { get => _id; }
-        private readonly int _id;
-        public string Name { get => _name; }
-        public string ShortName { get => _shortName; }
-        private readonly string _name;
-        private readonly string _shortName;
+        public int ID => _id;
+        public string Name => _name;
+        public string ShortName => _shortName;
         public float X
         {
             get => _x;
@@ -100,32 +130,62 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 _position2d = new Vector2(_x, _z);
             }
         }
-        private float _x;
-        private float _y;
-        private float _z;
-        public string ColorString { get => _color; set => _color = value; }
-        private string _color;
-        public Color Color { get => _color.Hex(); }
-        public Color TeamSpecificColor
+        public string ColorHex { get => _color; set => _color = value; }
+        public Color Color => _color.Hex();
+        public string TeamSpecificHexColor => UCWarfare.GetColorHex(_owner switch
         {
-            get
+            1 => "team_1_color",
+            2 => "team_2_color",
+            _ => "neutral_color"
+        });
+        public Color TeamSpecificColor => UCWarfare.GetColor(_owner switch
+        {
+            1 => "team_1_color",
+            2 => "team_2_color",
+            _ => "neutral_color"
+        });
+        public ulong Owner => _owner;
+        public float LastDeltaPoints { get; protected set; }
+        public float Points => _points;
+        public bool T1Obj { get => Manager is IFlagTeamObjectiveGamemode ctf && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.ID == ID; }
+        public bool T2Obj { get => Manager is IFlagTeamObjectiveGamemode ctf && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.ID == ID; }
+        public bool IsAnObj { get => T1Obj || T2Obj; }
+        public bool DiscoveredT1
+        {
+            get => _discovered1;
+            protected set
             {
-                if (_owner == 1)
-                    return UCWarfare.GetColor("team_1_color");
-                else if (_owner == 2)
-                    return UCWarfare.GetColor("team_2_color");
-                else return UCWarfare.GetColor("neutral_color");
+                if (value == true && _discovered1 == false)
+                {
+                    OnDiscovered?.Invoke(1);
+                    _discovered1 = true;
+                    return;
+                }
+                if (value == false && _discovered1 == true)
+                {
+                    OnHidden?.Invoke(1);
+                    _discovered1 = false;
+                    return;
+                }
             }
         }
-        public string TeamSpecificHexColor
+        public bool DiscoveredT2
         {
-            get
+            get => _discovered2;
+            protected set
             {
-                if (_owner == 1)
-                    return UCWarfare.GetColorHex("team_1_color");
-                else if (_owner == 2)
-                    return UCWarfare.GetColorHex("team_2_color");
-                else return UCWarfare.GetColorHex("neutral_color");
+                if (value == true && _discovered2 == false)
+                {
+                    OnDiscovered?.Invoke(2);
+                    _discovered2 = true;
+                    return;
+                }
+                if (value == false && _discovered2 == true)
+                {
+                    OnHidden?.Invoke(2);
+                    _discovered2 = false;
+                    return;
+                }
             }
         }
         public void ResetFlag()
@@ -140,16 +200,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             Hide(2);
             if (OnReset != null)
                 OnReset.Invoke(this, EventArgs.Empty);
+            RecalcCappers();
         }
         public void Dispose()
         {
             OnDisposed?.Invoke(this, EventArgs.Empty);
             GC.SuppressFinalize(this);
-        }
-        private ulong _owner = 0;
-        public ulong Owner
-        {
-            get => _owner;
         }
         public void SetOwner(ulong value, bool invokeEvent = true)
         {
@@ -165,50 +221,66 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             _owner = newOwner;
         }
-        public float SizeX { get => _sizeX; set => _sizeX = value; }
-        public float SizeZ { get => _sizeZ; set => _sizeZ = value; }
-        private float _sizeX;
-        private float _sizeZ;
-        public List<Player> PlayersOnFlagTeam1;
-        public List<Player> PlayersOnVehicleTeam1;
-        public int Team1TotalPlayers;
-        public EvaluatePointsDelegate EvaluatePointsOverride = null;
-        public IsContestedDelegate IsContestedOverride = null;
-        public int Team1TotalCappers;
-        public List<Player> PlayersOnFlagTeam2;
-        public int Team2TotalPlayers;
-        public int Team2TotalCappers;
-        public void RecalcCappers(bool RecalcOnFlag = false) => RecalcCappers(Provider.clients, RecalcOnFlag);
-        public void RecalcCappers(List<SteamPlayer> OnlinePlayers, bool RecalcOnFlag = true)
+        public void RecalcCappers()
         {
-            if (RecalcOnFlag)
+            Team1TotalPlayers = 0;
+            Team1TotalCappers = 0;
+            Team2TotalPlayers = 0;
+            Team2TotalCappers = 0;
+            PlayersOnFlag.Clear();
+            PlayersOnFlagTeam1.Clear();
+            PlayersOnFlagTeam2.Clear();
+            for (int i = 0; i < Provider.clients.Count; i++)
             {
-                PlayersOnFlag.Clear();
-                foreach (SteamPlayer player in OnlinePlayers.Where(p => PlayerInRange(p)))
-                    PlayersOnFlag.Add(player.player);
+                SteamPlayer p = Provider.clients[i];
+                if (p.player.life.isDead) continue;
+                if (PlayerInRange(p.player.transform.position))
+                {
+                    PlayersOnFlag.Add(p.player);
+                    ulong team = p.GetTeam();
+                    if (team == 1)
+                    {
+                        PlayersOnFlagTeam1.Add(p.player);
+                        Team1TotalPlayers++;
+                        if (p.player.movement.getVehicle() == null)
+                            Team1TotalCappers++;
+                    }
+                    else if (team == 2)
+                    {
+                        PlayersOnFlagTeam2.Add(p.player);
+                        Team2TotalPlayers++;
+                        if (p.player.movement.getVehicle() == null)
+                            Team2TotalCappers++;
+                    }
+                }
             }
-            PlayersOnFlagTeam1 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team1ID && !player.life.isDead).ToList();
-            Team1TotalPlayers = PlayersOnFlagTeam1.Count;
-            Team1TotalCappers = PlayersOnFlagTeam1.Count(x => x.movement.getVehicle() == null);
-            PlayersOnFlagTeam2 = PlayersOnFlag.Where(player => player.quests.groupID.m_SteamID == TeamManager.Team2ID && !player.life.isDead).ToList();
-            Team2TotalPlayers = PlayersOnFlagTeam2.Count;
-            Team2TotalCappers = PlayersOnFlagTeam2.Count(x => x.movement.getVehicle() == null);
         }
-        /// <param name="NewPlayers">Players that have entered the flag since last check.</param>
-        /// <returns>Players that have left the flag since last check.</returns>
-        public List<Player> GetUpdatedPlayers(List<SteamPlayer> OnlinePlayers, out List<Player> NewPlayers)
+        /// <param name="newPlayers">Players that have entered the flag since last check.</param>
+        /// <param name="departedPlayers">Players that have left the flag since last check.</param>
+        public void GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departedPlayers)
         {
-            List<Player> OldPlayers = PlayersOnFlag.ToList();
-            RecalcCappers(OnlinePlayers, true);
-            // gets the players that aren't in oldplayers
-            NewPlayers = PlayersOnFlag.Where(p => !OldPlayers.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
-            return OldPlayers.Where(p => !PlayersOnFlag.Exists(p2 => p.channel.owner.playerID.steamID.m_SteamID == p2.channel.owner.playerID.steamID.m_SteamID)).ToList();
-        }
-        private float _points;
-        public float LastDeltaPoints { get; protected set; }
-        public float Points
-        {
-            get => _points;
+            Player[] OldPlayers = PlayersOnFlag.ToArray();
+            RecalcCappers();
+            newPlayers = new List<Player>(2);
+            departedPlayers = new List<Player>(2);
+            for (int i = 0; i < PlayersOnFlag.Count; i++)
+            {
+                Player player = PlayersOnFlag[i];
+                for (int j = 0; j < OldPlayers.Length; j++)
+                    if (player.channel.owner.playerID.steamID.m_SteamID == OldPlayers[j].channel.owner.playerID.steamID.m_SteamID)
+                        goto done;
+                newPlayers.Add(player);
+                done: ;
+            }
+            for (int i = 0; i < OldPlayers.Length; i++)
+            {
+                Player player = OldPlayers[i];
+                for (int j = 0; j < PlayersOnFlag.Count; j++)
+                    if (player.channel.owner.playerID.steamID.m_SteamID == PlayersOnFlag[j].channel.owner.playerID.steamID.m_SteamID)
+                        goto done;
+                departedPlayers.Add(player);
+                done: ;
+            }
         }
         public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
         {
@@ -221,17 +293,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (!skipEvent)
                 OnPointsChanged?.Invoke(_points, OldPoints, this);
         }
-        public event PlayerDelegate OnPlayerEntered;
-        public event PlayerDelegate OnPlayerLeft;
-        public delegate void PointsChangedDelegate(float NewPoints, float OldPoints, Flag flag);
-        public delegate void PlayerDelegate(Flag flag, Player player);
-        public event PointsChangedDelegate OnPointsChanged;
-        public delegate void OwnerChangedDelegate(ulong OldOwner, ulong NewOwner, Flag flag);
-        public event OwnerChangedDelegate OnOwnerChanged;
-        public event EventHandler<DiscoveredEventArgs> OnDiscovered;
-        public event EventHandler<DiscoveredEventArgs> OnHidden;
-        public event EventHandler OnDisposed;
-        public event EventHandler OnReset;
         public List<Player> PlayersOnFlag { get; private set; }
         public Flag(FlagData data, FlagGamemode manager)
         {
@@ -242,10 +303,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this._position2d = data.Position2D;
             this.LastDeltaPoints = 0;
             this._name = data.name;
-            this._shortName = data.short_name;
+            if (string.IsNullOrEmpty(data.short_name))
+                this._shortName = _name;
+            else
+                this._shortName = data.short_name;
             this._color = data.color;
             this._owner = 0;
-            PlayersOnFlag = new List<Player>();
+            PlayersOnFlag = new List<Player>(48);
+            PlayersOnFlagTeam1 = new List<Player>(24);
+            PlayersOnFlagTeam2 = new List<Player>(24);
             this.ZoneData = ComplexifyZone(data);
             this.Adjacencies = data.adjacencies;
         }
@@ -269,20 +335,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public bool IsFriendly(Player player) => IsFriendly(player.quests.groupID.m_SteamID);
         public bool IsFriendly(CSteamID groupID) => IsFriendly(groupID.m_SteamID);
         public bool IsFriendly(ulong groupID) => groupID == _owner;
-        public bool PlayerInRange(Vector3 PlayerPosition) => ZoneData.IsInside(PlayerPosition);
-        public bool PlayerInRange(Vector2 PlayerPosition) => ZoneData.IsInside(PlayerPosition);
+        public bool PlayerInRange(Vector3 position) => ZoneData.IsInside(position);
+        public bool PlayerInRange(Vector2 position) => ZoneData.IsInside(position);
         public bool PlayerInRange(UnturnedPlayer player) => PlayerInRange(player.Position);
         public bool PlayerInRange(SteamPlayer player) => PlayerInRange(player.player.transform.position);
         public bool PlayerInRange(Player player) => PlayerInRange(player.transform.position);
         public void EnterPlayer(Player player)
         {
             OnPlayerEntered?.Invoke(this, player);
-            if (!PlayersOnFlag.Exists(p => p.channel.owner.playerID.steamID.m_SteamID == player.channel.owner.playerID.steamID.m_SteamID)) PlayersOnFlag.Add(player);
         }
         public void ExitPlayer(Player player)
         {
             OnPlayerLeft?.Invoke(this, player);
-            PlayersOnFlag.Remove(player);
         }
         public bool IsNeutral() => _points == 0;
         public void CapT1(float amount)
@@ -338,8 +402,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             if (team == 1) CapT1();
             else if (team == 2) CapT2();
         }
-        public bool T1Obj { get => Manager is IFlagTeamObjectiveGamemode ctf && ctf.ObjectiveTeam1 != null && ctf.ObjectiveTeam1.ID == ID; }
-        public bool T2Obj { get => Manager is IFlagTeamObjectiveGamemode ctf && ctf.ObjectiveTeam2 != null && ctf.ObjectiveTeam2.ID == ID; }
         public bool IsObj(ulong team)
         {
             if (team == 1) return T1Obj;
@@ -348,55 +410,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public bool IsAttackable(ulong team) => (team == 1 && T1Obj) || (team == 2 && T2Obj);
         public bool IsDefendable(ulong team) => (team == 1 && team == 2 && Owner == 2) || (team == 2 && team == 1 && Owner == 1);
-        public bool IsAnObj { get => T1Obj || T2Obj; }
-        public bool HasBeenCapturedT1;
-        public bool HasBeenCapturedT2;
-        public bool DiscoveredT1
-        {
-            get => _discovered1;
-            protected set
-            {
-                if (value == true && _discovered1 == false)
-                {
-                    OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
-                    _discovered1 = true;
-                    return;
-                }
-                if (value == false && _discovered1 == true)
-                {
-                    OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 1 });
-                    _discovered1 = false;
-                    return;
-                }
-            }
-        }
-        public bool DiscoveredT2
-        {
-            get => _discovered2;
-            protected set
-            {
-                if (value == true && _discovered2 == false)
-                {
-                    OnDiscovered?.Invoke(this, new DiscoveredEventArgs { Team = 2 });
-                    _discovered2 = true;
-                    return;
-                }
-                if (value == false && _discovered2 == true)
-                {
-                    OnHidden?.Invoke(this, new DiscoveredEventArgs { Team = 2 });
-                    _discovered2 = false;
-                    return;
-                }
-            }
-        }
-        protected bool _discovered1;
-        protected bool _discovered2;
         public bool Discovered(ulong team)
         {
             if (!UCWarfare.Config.FlagSettings.HideUnknownFlags) return true;
-            if (team == 1) return _discovered1;
-            else if (team == 2) return _discovered2;
-            else return false;
+            return team switch
+            {
+                1 => _discovered1,
+                2 => _discovered2,
+                _ => false
+            };
         }
         public bool Hidden(ulong team) => !Discovered(team);
         public void Discover(ulong team)

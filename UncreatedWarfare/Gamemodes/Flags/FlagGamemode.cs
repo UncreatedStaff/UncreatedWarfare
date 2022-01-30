@@ -32,8 +32,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             for (int i = 0; i < _rotation.Count; i++)
             {
                 if (_rotation[i] == null) continue;
-                List<Player> playersGone = _rotation[i].GetUpdatedPlayers(Provider.clients, out List<Player> newPlayers);
-                foreach (Player player in playersGone)
+                _rotation[i].GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
+                foreach (Player player in departingPlayers)
                     RemovePlayerFromFlag(player, _rotation[i]);
                 foreach (Player player in newPlayers)
                     AddPlayerOnFlag(player, _rotation[i]);

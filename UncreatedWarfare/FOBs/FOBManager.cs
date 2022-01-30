@@ -36,14 +36,6 @@ namespace Uncreated.Warfare.FOBs
         public const short fobListKey = 12008;
         public static ushort nearbyResourceId;
         public const short nearbyResourceKey = 12009;
-
-        public static ushort GridSquareCount { get; private set; }
-        public static ushort GridBorder { get; private set; }
-        public static float GridSquareWidth { get; private set; }
-        public static float GridScalingFactor { get; private set; }
-
-        public static char[] GridLetters { get; private set; }
-
         public static void TempCacheEffectIDs()
         {
             if (Assets.find(Gamemode.Config.UI.FOBListGUID) is EffectAsset fobList)
@@ -55,89 +47,7 @@ namespace Uncreated.Warfare.FOBs
         public FOBManager()
         {
             config = new Config<FOBConfig>(Data.FOBStorage, "config.json");
-
-            if (Level.size == Level.MEDIUM_SIZE)
-            {
-                GridSquareCount = 12;
-                GridBorder = 64;
-            }
-            else
-            {
-                GridSquareCount = 12;
-                GridBorder = 64;
-            }
         }
-#if false
-        public static string GetGridCoordsFromTexture(float textureX, float textureY, bool includeSubKey = false)
-        {
-
-            int xKey;
-            int xSubIndex = 0;
-            float upper = GridBorder;
-            float lower = 0;
-
-            for (xKey = 0; xKey < GridSquareCount; xKey++)
-            {
-                upper += GridSquareWidth;
-                if (lower <= upper && textureX < upper)
-                {
-                    upper = upper - GridSquareWidth;
-                    lower = upper;
-                    for (xSubIndex = 0; xSubIndex < 3; xSubIndex++)
-                    {
-                        upper += GridSquareWidth / 3;
-                        if (lower <= upper && textureX < upper)
-                            break;
-                        lower = upper;
-                    }
-
-                    break;
-                }
-                lower = upper;
-            }
-
-            int yKey;
-            int ySubIndex = 0;
-            upper = GridBorder;
-            lower = 0;
-            for (yKey = 1; yKey < GridSquareCount; yKey++)
-            {
-                upper += GridSquareWidth;
-                if (lower <= upper && textureY < upper)
-                {
-                    upper = upper - GridSquareWidth;
-                    lower = upper;
-                    for (ySubIndex = 0; ySubIndex < 3; ySubIndex++)
-                    {
-                        upper += GridSquareWidth / 3;
-                        if (lower <= upper && textureY < upper)
-                            break;
-                        lower = upper;
-                    }
-
-                    break;
-                }
-                lower = upper;
-            }
-
-            int subKey = (3 - ySubIndex) * 3 + (xSubIndex - 2);
-
-            string gridCoord = GridLetters[xKey] + yKey.ToString();
-            if (includeSubKey && 
-                textureX >= GridBorder && 
-                textureX <= Level.size - GridBorder &&
-                textureY >= GridBorder &&
-                textureY <= Level.size - GridBorder)
-                gridCoord += "-" + subKey;
-
-            return gridCoord;
-        }
-
-        public static string GetGridCoords(float xPos, float yPos, bool includeSubKey = false)
-        {
-            return GetGridCoordsFromTexture(xPos * GridScalingFactor + Level.size / 2, yPos * -GridScalingFactor + Level.size / 2, includeSubKey);
-        }
-#endif
         public static void Reset()
         {
             Team1FOBs.Clear();
@@ -149,12 +59,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void OnLevelLoaded()
         {
-            L.Log($"level size: {Level.size}");
-            L.Log($"level border: {Level.border}");
-            GridScalingFactor = Level.size / (Level.size - Level.border * 2);
-            GridSquareWidth = (Level.size - Level.border * 2) / (float)GridSquareCount;
-            L.Log($"grid square width: {GridSquareWidth}");
-            GridLetters = new char[12] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L' };
+
         }
         public static void OnNewGameStarting()
         {
@@ -166,14 +71,6 @@ namespace Uncreated.Warfare.FOBs
             SendFOBListToTeam(1);
             SendFOBListToTeam(2);
         }
-        /*
-        public static void OnGameTick()
-        {
-            if (Data.Gamemode.EveryXSeconds(50f))
-            {
-
-            }
-        }*/
         public static void OnPlayerDisconnect(UCPlayer player)
         {
             foreach (FOB f in Team1FOBs)
@@ -601,10 +498,17 @@ namespace Uncreated.Warfare.FOBs
                 FOBList = Team2FOBs;
             else return;
 
-            int offset = SpecialFOBs.Count + Caches.Count;
-            int i = FOBList.IndexOf(fob) + offset;
+            int offset = 0;
+            for (int b = 0; b < SpecialFOBs.Count; b++)
+                if (SpecialFOBs[b].Team == team)
+                    offset++;
+            for (int b = 0; b < Caches.Count; b++)
+                if (Caches[b].Team == team)
+                    offset++;
+            int i = FOBList.IndexOf(fob);
             if (i == -1)
                 return;
+            i += offset;
 
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
             {
@@ -629,13 +533,20 @@ namespace Uncreated.Warfare.FOBs
             }
             else
             {
-                int offset = SpecialFOBs.Count + Caches.Count;
-                int i = FOBList.IndexOf(fob) + offset;
+                int offset = 0;
+                for (int b = 0; b < SpecialFOBs.Count; b++)
+                    if (SpecialFOBs[b].Team == team)
+                        offset++;
+                for (int b = 0; b < Caches.Count; b++)
+                    if (Caches[b].Team == team)
+                        offset++;
+                int i = FOBList.IndexOf(fob);
                 if (i == -1)
                 {
                     UpdateUIList(team, player.connection, FOBList, player);
                     return;
                 }
+                i += offset;
                 string ii = i.ToString();
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + ii,
                 Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates.Colorize("ebe8df"), FOBList[i].ClosestLocation));
@@ -683,13 +594,17 @@ namespace Uncreated.Warfare.FOBs
             }
             else
             {
-                int offset = SpecialFOBs.Count;
-                int i = Caches.IndexOf(cache) + offset;
+                int offset = 0;
+                for (int b = 0; b < SpecialFOBs.Count; b++)
+                    if (SpecialFOBs[b].Team == team)
+                        offset++;
+                int i = Caches.IndexOf(cache);
                 if (i == -1)
                 {
                     UpdateUIList(team, c, FOBList, player);
                     return;
                 }
+                i += offset;
                 EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
             }
         }
@@ -711,7 +626,7 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
 
-            if (Data.Is<Insurgency>(out Insurgency ins) && team == ins.DefendingTeam)
+            if (Data.Is(out Insurgency ins) && team == ins.DefendingTeam)
             {
                 min = Math.Min(Caches.Count, config.data.FobLimit);
                 for (int i = 0; i < min; i++)

@@ -365,7 +365,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
-            player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
+            player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
             SendUIParameters t1v = SendUIParameters.Nil;
@@ -402,7 +402,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             ITransportConnection channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-            player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
+            player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
             CTFUI.ClearCaptureUI(channel);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
@@ -625,8 +625,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void OnPlayerLeft(UCPlayer player)
         {
-            foreach (Flag flag in _rotation)
-                flag.RecalcCappers(true);
+            if (_onFlag.TryGetValue(player.Steam64, out int id))
+            {
+                for (int i = 0; i < _rotation.Count; i++)
+                {
+                    if (_rotation[i].ID == id)
+                    {
+                        _rotation[i].RecalcCappers();
+                        break;
+                    }
+                }
+            }
             StatsCoroutine.previousPositions.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             _reviveManager.OnPlayerDisconnected(player.Player.channel.owner);
             StatsManager.DeregisterPlayer(player.CSteamID.m_SteamID);

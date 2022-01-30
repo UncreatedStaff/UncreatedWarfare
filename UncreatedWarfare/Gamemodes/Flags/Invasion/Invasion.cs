@@ -205,7 +205,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
-            player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
+            player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
             SendUIParameters t1v = SendUIParameters.Nil;
@@ -243,7 +243,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             ITransportConnection Channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-            player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorString);
+            player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
             CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
             SendUIParameters t1 = SendUIParameters.Nil;
             SendUIParameters t2 = SendUIParameters.Nil;
