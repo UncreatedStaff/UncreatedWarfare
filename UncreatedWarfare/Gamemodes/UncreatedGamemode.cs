@@ -12,6 +12,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using System.Text;
 using Uncreated.Players;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Components;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -359,6 +360,7 @@ namespace Uncreated.Warfare.Gamemodes
                 }
                 RequestSigns.DropAllSigns();
                 StructureSaver.DropAllStructures();
+                IconManager.OnLevelLoaded();
             }
             catch (Exception ex)
             {

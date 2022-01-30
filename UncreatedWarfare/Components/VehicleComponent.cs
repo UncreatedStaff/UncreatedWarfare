@@ -33,8 +33,6 @@ namespace Uncreated.Warfare.Components
         private Coroutine quotaLoop;
         private Coroutine autoSupplyLoop;
         public Coroutine forceSupplyLoop { get; private set; }
-        
-
         public void Initialize(InteractableVehicle vehicle)
         {
             Vehicle = vehicle;

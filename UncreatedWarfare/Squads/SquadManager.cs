@@ -415,6 +415,8 @@ namespace Uncreated.Warfare.Squads
 
                 PlayerManager.ApplyToOnline();
 
+                SendSquadList(player);
+
                 return;
             }
             SortMembers(squad);
@@ -423,8 +425,6 @@ namespace Uncreated.Warfare.Squads
                 squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
                 squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
-
-
             for (int i = 0; i < squad.Members.Count; i++)
             {
                 UCPlayer p = squad.Members[i];

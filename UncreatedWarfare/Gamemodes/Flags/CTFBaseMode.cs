@@ -233,7 +233,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             ResetFlags();
             _onFlag.Clear();
-            _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
+
+            do
+            {
+                _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
+            }
+            while (_rotation.Count < 4 && _rotation.Count > Config.UI.FlagUICount);
         }
         public override void LoadRotation()
         {

@@ -374,7 +374,7 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             if (toSeatIndex == 0) // if a crewman is trying to enter the driver's seat
                             {
-                                bool canEnterDriverSeat = owner is null || enterer == owner || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
+                                bool canEnterDriverSeat = owner is null || enterer == owner || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner.Position - vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2));
 
                                 if (!canEnterDriverSeat)
                                 {

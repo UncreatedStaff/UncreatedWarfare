@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components
@@ -12,7 +14,42 @@ namespace Uncreated.Warfare.Components
     {
         private static List<IconRenderer> icons = new List<IconRenderer>();
         
+        public static void OnLevelLoaded()
+        {
+            foreach (var barricade in UCBarricadeManager.AllBarricades)
+                OnBarricadePlaced(barricade);
+        }
+        public static void OnBarricadePlaced(BarricadeDrop drop, bool isFOBRadio = false)
+        {
+            if (drop.model.TryGetComponent(out IconRenderer _))
+                return;
 
+            var data = drop.GetServersideData();
+
+            // FOB radio
+            if (isFOBRadio)
+                AttachIcon(Gamemode.Config.UI.MarkerRadio, drop.model, data.group, 3.5F);
+
+            // FOB radio damaged
+            if (Gamemode.Config.Barricades.FOBRadioDamagedGUID == data.barricade.asset.GUID)
+                AttachIcon(Gamemode.Config.UI.MarkerRadioDamaged, drop.model, data.group, 3.5F);
+
+            // FOB bunker
+            if (Gamemode.Config.Barricades.FOBGUID == data.barricade.asset.GUID)
+                AttachIcon(Gamemode.Config.UI.MarkerBunker, drop.model, data.group, 5.5F);
+
+            // ammo bag
+            if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
+                AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1);
+
+            // ammo crate
+            if (Gamemode.Config.Barricades.AmmoCrateGUID == data.barricade.asset.GUID)
+                AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1.75F);
+
+            // repair station
+            if (Gamemode.Config.Barricades.RepairStationGUID == data.barricade.asset.GUID)
+                AttachIcon(Gamemode.Config.UI.MarkerRepair, drop.model, data.group, 4.5F);
+        }
         public static void DrawNewMarkers(UCPlayer player, bool clearOld)
         {
             List<Guid> seenTypes = new List<Guid>();

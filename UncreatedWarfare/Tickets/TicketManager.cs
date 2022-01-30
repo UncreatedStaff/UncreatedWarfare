@@ -658,7 +658,7 @@ namespace Uncreated.Warfare.Tickets
 
         public override void SetDefaults()
         {
-            StartingTickets = 200;
+            StartingTickets = 300;
             TicketHandicapDifference = 40;
             FOBCost = 15;
             TicketsFlagCaptured = 20;

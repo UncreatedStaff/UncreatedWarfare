@@ -444,8 +444,8 @@ namespace Uncreated.Warfare.Gamemodes
             StagingTime = 150;
             DiscoveryForesight = 2;
             SpecialFOBName = "VCP";
-            TicketsFlagCaptured = 150;
-            AttackStartingTickets = 250;
+            TicketsFlagCaptured = 100;
+            AttackStartingTickets = 200;
             TicketXPInterval = 10;
         }
     }

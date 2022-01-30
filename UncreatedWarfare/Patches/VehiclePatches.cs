@@ -55,7 +55,7 @@ namespace Uncreated.Warfare
                                     {
                                         if (seat == 0)
                                         {
-                                            bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
+                                            bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
 
                                             if (!canEnterDriverSeat)
                                             {
@@ -85,7 +85,7 @@ namespace Uncreated.Warfare
                                 {
                                     if (seat == 0)
                                     {
-                                        bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer));
+                                        bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer)) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2);
 
                                         if (!canEnterDriverSeat)
                                         {

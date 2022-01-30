@@ -127,7 +127,7 @@ namespace Uncreated.Warfare
             }
             else
             {
-                if (!IsWhitelisted(barricade.asset.GUID, out _) || isFOB)
+                if (!player.OnDuty() && (!IsWhitelisted(barricade.asset.GUID, out _) || isFOB))
                 {
                     player.Message("whitelist_nosalvage");
                     shouldAllow = false;

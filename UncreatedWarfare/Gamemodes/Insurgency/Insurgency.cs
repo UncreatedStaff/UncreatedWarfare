@@ -408,10 +408,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             else return;
             if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
                 return;
-            if (cache.Structure.interactable is InteractableStorage storage)
-            {
-                while (storage.items.tryAddItem(new Item(ammo.id, true))) { }
-            }
             Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
             for (int i = 0; i < 15; i++)
