@@ -313,7 +313,7 @@ namespace Uncreated.Warfare
                 });
             if (entered) return;
             Data.DatabaseManager.NonQuery(
-                "INSERT INTO `anti_alt` (`Steam64`, `EntryID`, `HWIDs`, `IP`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `xp` = @2;",
+                "INSERT INTO `anti_alt` (`Steam64`, `EntryID`, `HWIDs`, `IP`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `HWIDs` = @2, `IP` = @3;",
                 new object[4]
                 {
                     player.playerID.steamID.m_SteamID, ct, hwidsList, ipv4

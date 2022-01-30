@@ -580,8 +580,8 @@ namespace Uncreated.Warfare
                 { "vehiclebay_check_notregistered", "<color=#a0ad8e>This spawn is not registered.</color>" },
 
                 { "VEHICLE_DESTROYED", "{0} took out a {1} with a {2}." },
-                { "VEHICLE_DESTROYED_UNKNOWN", "{0} took out a {2}." },
-                { "VEHICLE_TEAMKILLED", "{0} blew up a friendly {2}." },
+                { "VEHICLE_DESTROYED_UNKNOWN", "{0} took out a {1}." },
+                { "VEHICLE_TEAMKILLED", "{0} blew up a friendly {1}." },
                 
                 // Officers
                 { "officer_promoted", "<color=#9e9788>Congratulations, you have been <color=#e3b552>PROMOTED</color> to <color=#e05353>{0}</color> of <color=#baccca>{1}</color>!</color>" },

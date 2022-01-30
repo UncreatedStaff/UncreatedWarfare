@@ -23,6 +23,8 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -1166,6 +1168,18 @@ namespace Uncreated.Warfare.Commands
             }
 
             L.Log(F.ToGridPosition(player.transform.position));
+        }
+
+        private void removeoutsidestructs(string[] command, UCPlayer player)
+        {
+            BarricadeDrop barricade = null;
+            byte[] state = barricade.GetServersideData().barricade.state;
+            byte[] newstate = new byte[state.Length];
+            Buffer.BlockCopy(BitConverter.GetBytes(player.CSteamID.m_SteamID), 0, newstate, 0, sizeof(ulong));
+            Buffer.BlockCopy(BitConverter.GetBytes(player.Player.quests.groupID.m_SteamID), 0, newstate, sizeof(ulong), sizeof(ulong));
+            Buffer.BlockCopy(state, sizeof(ulong) * 2, newstate, sizeof(ulong) * 2, state.Length - sizeof(ulong) * 2);
+            BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
+            BarricadeManager.changeOwnerAndGroup(barricade.model, player.CSteamID.m_SteamID, 3);
         }
     }
 #pragma warning restore IDE0051

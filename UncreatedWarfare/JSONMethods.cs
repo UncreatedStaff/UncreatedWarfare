@@ -136,8 +136,8 @@ namespace Uncreated.Warfare
         public readonly void WriteJson(Utf8JsonWriter writer)
         {
             writer.WriteProperty(nameof(x), this.x);
-            writer.WriteProperty(nameof(y), this.x);
-            writer.WriteProperty(nameof(z), this.x);
+            writer.WriteProperty(nameof(y), this.y);
+            writer.WriteProperty(nameof(z), this.z);
         }
         public void ReadJson(ref Utf8JsonReader reader)
         {

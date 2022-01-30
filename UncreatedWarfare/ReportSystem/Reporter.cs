@@ -188,8 +188,12 @@ namespace Uncreated.Warfare.ReportSystem
                 else player.Value.onlineTime += dt;
                 for (int i = 0; i < player.Value.recentRequests.Count; i++)
                 {
-                    if (!player.Value.recentRequests[i].died)
-                        player.Value.recentRequests[i].addTime(dt);
+                    VehicleLifeData data = player.Value.recentRequests[i];
+                    if (!data.died)
+                    {
+                        data.lifeTime += dt;
+                        player.Value.recentRequests[i] = data;
+                    }
                 }
                 if (tickTime)
                 {
@@ -219,14 +223,6 @@ namespace Uncreated.Warfare.ReportSystem
         {
             if (data.TryGetValue(player, out PlayerData playerData))
             {
-                for (int i = 0; i < playerData.recentRequests.Count; i++)
-                {
-                    if (playerData.recentRequests[i].bayInstId == bayInstID && !playerData.recentRequests[i].died)
-                    {
-                        playerData.recentRequests[i].setDead(true);
-                        break;
-                    }
-                }
                 playerData.recentRequests.Add(new VehicleLifeData()
                 {
                     bayInstId = bayInstID,
@@ -243,9 +239,11 @@ namespace Uncreated.Warfare.ReportSystem
             {
                 for (int i = 0; i < playerData.recentRequests.Count; i++)
                 {
-                    if (playerData.recentRequests[i].bayInstId == bayInstId && !playerData.recentRequests[i].died)
+                    VehicleLifeData data = playerData.recentRequests[i];
+                    if (data.bayInstId == bayInstId && !data.died)
                     {
-                        playerData.recentRequests[i].setDead(true);
+                        data.died = true;
+                        playerData.recentRequests[i] = data;
                         break;
                     }
                 }
@@ -389,9 +387,11 @@ namespace Uncreated.Warfare.ReportSystem
             {
                 for (int i = 0; i < playerData.recentFriendlyDamages.Count; i++)
                 {
-                    if (playerData.recentFriendlyDamages[i].instId == instId)
+                    StructureDamageData data = playerData.recentFriendlyDamages[i];
+                    if (data.instId == instId)
                     {
-                        playerData.recentFriendlyDamages[i].setBroke(true);
+                        data.broke = true;
+                        playerData.recentFriendlyDamages[i] = data;
                     }
                 }
             }
@@ -617,8 +617,6 @@ namespace Uncreated.Warfare.ReportSystem
             public float requestTime;
             public float lifeTime;
             public bool died;
-            public void setDead(bool val) => died = val;
-            public void addTime(float time) => lifeTime += time;
         }
 
         private struct VehicleTeamkill
@@ -647,7 +645,6 @@ namespace Uncreated.Warfare.ReportSystem
             public float time;
             public Guid weapon;
             public EDamageOrigin origin;
-            public void setBroke(bool state) => this.broke = state;
         }
     }
 }

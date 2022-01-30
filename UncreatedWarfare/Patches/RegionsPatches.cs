@@ -241,7 +241,7 @@ namespace Uncreated.Warfare
                                             // size is not allowed in signs.
                                             newtext = newtext.Replace("<size=", "").Replace("</size>", "");
                                         }
-                                        byte[] state = region.drops[index].GetServersideData().barricade.state;
+                                        byte[] state = serversideData.barricade.state;
                                         byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);
                                         /*if (requiredClamping)
                                         {

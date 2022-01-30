@@ -348,7 +348,7 @@ namespace Uncreated.Warfare.Squads
             ClearList(player.Player);
             SendSquadMenu(player, squad, holdMemberCountUpdate: true);
             UpdateUIMemberCount(squad.Team);
-
+            UpdateMemberList(squad);
             if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ShowUIForSquad();
 
