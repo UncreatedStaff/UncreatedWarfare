@@ -222,9 +222,9 @@ namespace Uncreated.Warfare.Gamemodes
         public void SetDefaults()
         {
             T1Build = new Guid("a70978a0-b47e-4017-a026-1e676af57042");
-            T2Build = new Guid("6a8b8b3c-7960-4aee-a97f-53c235947a1f");
+            T2Build = new Guid("9c7122f7e70e4a4da26a49b871087f9f");
             T1Ammo = new Guid("51e1e372-bf53-41e1-b4b1-6a0eacce37eb");
-            T2Ammo = new Guid("8dd66da5-affa-480b-a324-e270e52a46d7");
+            T2Ammo = new Guid("bfc9aed75a3245acbfd01bc78fcfc875");
             EntrenchingTool = new Guid("6cee2662e8884d7bad3a5d743f8222da");
         }
     }

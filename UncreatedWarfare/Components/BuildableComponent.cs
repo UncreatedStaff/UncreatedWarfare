@@ -116,18 +116,18 @@ namespace Uncreated.Warfare.Components
 
                 if (vehicle.asset.canBeLocked)
                 {
+                    CSteamID owner = new CSteamID(data.owner);
                     CSteamID group = new CSteamID(data.group);
-                    vehicle.tellLocked(new CSteamID(data.group), new CSteamID(data.group), true);
+                    vehicle.tellLocked(owner, group, true);
 
-                    VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, group, group, true);
+                    VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, owner, group, true);
                 }
 
                 if (Buildable.emplacementData.baseID != Guid.Empty)
                 {
                     if (!(Assets.find(Buildable.emplacementData.baseID) is ItemBarricadeAsset emplacementBase))
                     {
-                        L.LogError($"Emplacement base was not a valid barricade.");
-                        return;
+                        L.LogDebug($"Emplacement base was not a valid barricade.");
                     }
                     else
                     {

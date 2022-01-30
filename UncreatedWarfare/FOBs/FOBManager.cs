@@ -711,12 +711,11 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
 
-            if (Data.Is<Insurgency>(out _))
+            if (Data.Is<Insurgency>(out Insurgency ins) && team == ins.DefendingTeam)
             {
                 min = Math.Min(Caches.Count, config.data.FobLimit);
                 for (int i = 0; i < min; i++)
                 {
-                    //L.LogDebug($"    i: {i}");
                     string i22 = i2.ToString();
                     EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i22, true);
                     EffectManager.sendUIEffectText(fobListKey, connection, true, "N" + i22,

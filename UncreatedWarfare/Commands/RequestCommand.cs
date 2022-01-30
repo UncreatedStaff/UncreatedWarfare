@@ -312,15 +312,15 @@ namespace Uncreated.Warfare.Commands
                 }
             }
 
-            double delay = (DateTime.Now - new DateTime(Data.Gamemode.GameID)).TotalSeconds;
-            double timeleft = data.Delay - delay;
+            double secondsSinceStart = (DateTime.Now - new DateTime(Data.Gamemode.GameID)).TotalSeconds;
+            double timeleft = data.Delay - secondsSinceStart;
 
             if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)
             {
                 ucplayer.Message("request_vehicle_e_staging", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
             }
-            if (delay < data.Delay)
+            if (secondsSinceStart < data.Delay)
             {
                 ucplayer.Message("request_vehicle_e_delay", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
                 return;
