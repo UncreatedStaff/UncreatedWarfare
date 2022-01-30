@@ -252,8 +252,8 @@ namespace Uncreated.Warfare.Squads
             }
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
-                if (squad.Team != PlayerManager.OnlinePlayers[i].GetTeam() || squad == PlayerManager.OnlinePlayers[i].Squad) continue;
                 UCPlayer player = PlayerManager.OnlinePlayers[i];
+                if (squad.Team != player.GetTeam() || squad == player.Squad) continue;
                 ITransportConnection c = player.Player.channel.owner.transportConnection;
                 if (player.Squad == null)
                 {
@@ -278,14 +278,16 @@ namespace Uncreated.Warfare.Squads
         {
             for (int m = 0; m < squad.Members.Count; m++)
             {
-                ITransportConnection c = squad.Members[m].Player.channel.owner.transportConnection;
+                UCPlayer player = squad.Members[m];
+                ITransportConnection c = player.Player.channel.owner.transportConnection;
+                EffectManager.sendUIEffectText(squadMenuKey, c, true, "Heading", Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
                 int i = 0;
                 for (; i < squad.Members.Count; i++)
                 {
                     string i2 = i.ToString();
                     EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
-                        Translation.Translate("squad_ui_player_name", squad.Members[m], F.GetPlayerOriginalNames(squad.Members[i]).NickName));
+                        Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
                     EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
                 }
                 for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
@@ -333,7 +335,6 @@ namespace Uncreated.Warfare.Squads
             ClearList(leader.Player);
             SendSquadMenu(leader, squad);
 
-            SendSquadListToTeam(team);
             UpdateUIMemberCount(team);
 
             return squad;

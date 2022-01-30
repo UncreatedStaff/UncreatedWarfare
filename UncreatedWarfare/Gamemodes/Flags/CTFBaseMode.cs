@@ -378,8 +378,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 t2 = CTFUI.RefreshStaticUI(2, flag, false);
             if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
                 t2v = CTFUI.RefreshStaticUI(2, flag, true);
-            foreach (Player capper in flag.PlayersOnFlag)
+            for (int i = 0; i < flag.PlayersOnFlag.Count; i++)
             {
+                Player capper = flag.PlayersOnFlag[i];
                 ulong t = capper.GetTeam();
                 if (t == 1)
                 {
@@ -521,9 +522,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     ulong team = player.GetTeam();
-                    player.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
-                        flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", player),
-                        flag.TeamSpecificHexColor);
+                    player.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"), flag.Name, flag.TeamSpecificHexColor);
                 }
             }
             else

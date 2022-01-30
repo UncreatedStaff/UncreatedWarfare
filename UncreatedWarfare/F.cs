@@ -679,9 +679,11 @@ namespace Uncreated.Warfare
                 new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders,
                 RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
         }
+
+        private static string emp = string.Empty;
         public static string GetClosestLocation(Vector3 point)
         {
-            string closest = null;
+            ref string closest = ref emp;
             float smallest = -1f;
             for (int i = 0; i < LevelNodes.nodes.Count; i++)
             {
@@ -690,7 +692,7 @@ namespace Uncreated.Warfare
                     float amt = (point - node.point).sqrMagnitude;
                     if (smallest == -1 || amt < smallest)
                     {
-                        closest = node.name;
+                        closest = ref node.name;
                         smallest = amt;
                     }
                 }

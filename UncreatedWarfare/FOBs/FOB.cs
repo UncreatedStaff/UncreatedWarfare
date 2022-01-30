@@ -115,6 +115,15 @@ namespace Uncreated.Warfare.Components
         public BarricadeDrop Bunker { get; private set; }
         public Vector3 Position { get => Radio.model.position; }
         public float Radius { get; private set; }
+
+        public float SqrRadius
+        {
+            get
+            {
+                float rad = Radius;
+                return rad * rad;
+            }
+        }
         public int Build { get; private set; }
         public int Ammo { get; private set; }
         public bool IsBleeding { get; private set; }
@@ -139,9 +148,9 @@ namespace Uncreated.Warfare.Components
             get
             {
                 if (IsBleeding)
-                    return "";
+                    return string.Empty;
                 else
-                    return Build.ToString().Colorize("d4c49d") + " " + Ammo.ToString().Colorize("b56e6e");
+                    return Build.ToString(Data.Locale).Colorize("d4c49d") + " " + Ammo.ToString(Data.Locale).Colorize("b56e6e");
             }
         }
         public BarricadeDrop RepairStation { get => UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, Radius, Position, Team, false).FirstOrDefault(); }
@@ -153,7 +162,7 @@ namespace Uncreated.Warfare.Components
             {
                 return UCBarricadeManager.GetBarricadesWhere(b =>
                     FOBManager.config.data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
-                    (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
+                    (Position - b.model.position).sqrMagnitude < SqrRadius &&
                     b.GetServersideData().group == Team
                     );
             }
@@ -164,7 +173,7 @@ namespace Uncreated.Warfare.Components
             {
                 return UCBarricadeManager.CountBarricadesWhere(b =>
                     FOBManager.config.data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
-                    (Position - b.model.position).sqrMagnitude < Math.Pow(Radius, 2) &&
+                    (Position - b.model.position).sqrMagnitude < SqrRadius &&
                     b.GetServersideData().group == Team
                     );
             }
@@ -177,14 +186,14 @@ namespace Uncreated.Warfare.Components
         public ulong Placer { get; private set; }
         public ulong Creator { get; private set; }
 
-        private Guid builtRadioGUID;
+        private readonly Guid builtRadioGUID;
         private byte[] builtState;
 
-        private Guid BuildID;
-        private Guid AmmoID;
+        private readonly Guid BuildID;
+        private readonly Guid AmmoID;
 
-        private ulong shortBuildID;
-        private ulong shortAmmoID;
+        private readonly ushort shortBuildID;
+        private readonly ushort shortAmmoID;
 
         public FOB(BarricadeDrop radio)
         {
@@ -200,19 +209,14 @@ namespace Uncreated.Warfare.Components
             Build = 0;
 
             GridCoordinates = F.ToGridPosition(Position);
-            ClosestLocation =
-                (LevelNodes.nodes
-                .Where(n => n.type == ENodeType.LOCATION)
-                .Aggregate((n1, n2) =>
-                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)
-                .name;
+            ClosestLocation = F.GetClosestLocation(Position);
 
             if (Data.Is(out IFlagRotation fg))
             {
-                Flag flag = fg.LoadedFlags.Find(f => f.Name == ClosestLocation);
+                Flag flag = fg.LoadedFlags.Find(f => f.Name.Equals(ClosestLocation, StringComparison.OrdinalIgnoreCase));
                 if (flag != null)
                 {
-                    if (flag.ShortName != "")
+                    if (!string.IsNullOrEmpty(flag.ShortName))
                         ClosestLocation = flag.ShortName;
                 }
             }
@@ -304,7 +308,7 @@ namespace Uncreated.Warfare.Components
                                     tw *= 2;
                                 }
 
-                                var vehicle = player.Player.movement.getVehicle();
+                                InteractableVehicle vehicle = player.Player.movement.getVehicle();
                                 if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
                                 {
                                     component.Quota += 0.33F;
@@ -537,32 +541,21 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetNearbyFOBs(Vector3 point, ulong team = 0, EFOBRadius radius = EFOBRadius.FULL)
         {
-            List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
+            float radius2 = GetRadius(radius);
+            List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(radius2, point, b =>
                 {
-                    bool isFOB = b.model.TryGetComponent<FOBComponent>(out var f);
-                    if (!isFOB)
-                        return false;
-
-                    bool isInrange = false;
+                    if (!b.model.TryGetComponent(out FOBComponent f)) return false;
                     if (radius == EFOBRadius.FULL_WITH_BUNKER_CHECK)
                     {
-                        if ((b.model.position - point).sqrMagnitude <= Math.Pow(30, 2))
-                            isInrange = true;
+                        if ((b.model.position - point).sqrMagnitude <= 30 * 30)
+                            return true;
                         else
-                        {
-                            isInrange = f.parent.Bunker != null && (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius, 2);
-                        }
+                            return f.parent.Bunker != null && (b.model.position - point).sqrMagnitude <= radius2;
                     }
-                    else if (radius == EFOBRadius.SHORT)
-                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(30, 2);
-                    else if (radius == EFOBRadius.FULL)
-                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius, 2);
-                    else if (radius == EFOBRadius.FOB_PLACEMENT)
-                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(FOBManager.config.data.FOBBuildPickupRadius * 2, 2);
-                    else if (radius == EFOBRadius.ENEMY_BUNKER_CLAIM)
-                        isInrange = (b.model.position - point).sqrMagnitude <= Math.Pow(5, 2);
+                    else if (radius2 > 0) 
+                        return (b.model.position - point).sqrMagnitude <= radius2;
 
-                    return isInrange;
+                    return false;
                 }
             );
 
@@ -570,7 +563,7 @@ namespace Uncreated.Warfare.Components
 
             foreach (BarricadeDrop barricade in barricades)
             {
-                if (team == 0 || (team != 0 && barricade.GetServersideData().group == team))
+                if (team == 0 || barricade.GetServersideData().group.GetTeam() == team)
                     fobs.Add(barricade.model.GetComponent<FOBComponent>().parent);
             }
 
@@ -585,7 +578,18 @@ namespace Uncreated.Warfare.Components
             fob = GetNearbyFOBs(player.Position, player.GetTeam()).Where(f => f.FriendliesOnFOB.Contains(player)).FirstOrDefault();
             return fob != null;
         }
-
+        /// <returns>Numeric radius corresponding to the value of <paramref name="radius"/>.
+        /// <para><see cref="EFOBRadius.ENEMY_BUNKER_CLAIM"/> will return the radius with a bunker,
+        /// additional checks should be done if this is the case.</para></returns>
+        public static float GetRadius(EFOBRadius radius) => radius switch
+        {
+            EFOBRadius.SHORT => 30 * 30,
+            EFOBRadius.FULL_WITH_BUNKER_CHECK or EFOBRadius.FULL =>
+                FOBManager.config.data.FOBBuildPickupRadius * FOBManager.config.data.FOBBuildPickupRadius,
+            EFOBRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.config.data.FOBBuildPickupRadius * 2, 2),
+            EFOBRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
+            _ => 0
+        };
     }
     public enum EFOBRadius
     {
