@@ -252,6 +252,7 @@ namespace Uncreated.Warfare.Components
             bool isSpecialFOB = structure is SpecialFOB;
             bool isCache = structure is Cache;
             bool isTransform = structure is SerializableTransform;
+            bool isMain = structure is Vector3;
 
             PendingFOB = structure;
 
@@ -273,7 +274,9 @@ namespace Uncreated.Warfare.Components
                 player.Message("deploy_fob_standby", special.UIColor, special.Name, delay.ToString());
             if (isCache)
                 player.Message("deploy_fob_standby", cache.UIColor, cache.Name, delay.ToString());
-                
+            if (isMain)
+                player.Message("deploy_fob_standby", "f0c28d", "MAIN", delay.ToString());
+
             int counter = 0;
 
             Vector3 originalPosition = player.Position;
@@ -399,6 +402,10 @@ namespace Uncreated.Warfare.Components
                 player.Message("deploy_s", special.UIColor, special.Name);
             if (isCache)
                 player.Message("deploy_s", cache.UIColor, cache.Name);
+            else if (structure is Vector3)
+            {
+                player.Message("deploy_s", "f0c28d", "MAIN");
+            }
 
             if (startCoolDown)
                 CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.config.data.DeployFOBCooldown);

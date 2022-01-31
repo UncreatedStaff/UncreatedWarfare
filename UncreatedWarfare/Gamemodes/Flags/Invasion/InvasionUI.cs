@@ -242,7 +242,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                             string objective = string.Empty;
                             if (flag.Owner == attack)
                             {
-                                objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UI.LockIcon}</color>";
+                                //objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UI.LockIcon}</color>";
                             }
                             else
                             {
@@ -327,7 +327,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     {
                         if (flag.Owner == attack)
                         {
-                            objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UI.LockIcon}</color>";
+                            //objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UI.LockIcon}</color>";
                         }
                         else
                         {

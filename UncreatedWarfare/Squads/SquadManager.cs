@@ -141,7 +141,7 @@ namespace Uncreated.Warfare.Squads
                 {
                     int s2 = 1;
                     EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S0", true);                                //  ... box
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "S0", Translation.Translate("squad_ui_expanded", player));  //  "     "
+                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN0", Translation.Translate("squad_ui_expanded", player));  //  "     "
                     for (int s = 0; s < Squads.Count; s++)
                     {
                         if (Squads[s] == player.Squad) continue;
@@ -271,7 +271,7 @@ namespace Uncreated.Warfare.Squads
         {
             for (int i = 0; i < player.Squad.Members.Count; i++)
             {
-                EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].Player.channel.owner.transportConnection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
+                EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].connection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
             }
         }
         public static void UpdateMemberList(Squad squad)
@@ -364,7 +364,7 @@ namespace Uncreated.Warfare.Squads
             SendSquadListToTeam(squad.Team);
             UpdateMemberList(squad);
             UpdateUIMemberCount(squad.Team);
-            UpdateMemberList(squad);
+
             if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ShowUIForSquad();
 
@@ -387,7 +387,6 @@ namespace Uncreated.Warfare.Squads
         {
             player.Message("squad_left");
 
-            squad.Members.Remove(player);
             bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
             player.Squad = null;
             ClearMenu(player.Player);
@@ -419,10 +418,12 @@ namespace Uncreated.Warfare.Squads
 
                 return;
             }
+            squad.Leader = null; // need to set leader to null before sorting, otherwise old leader will get added back
             SortMembers(squad);
             if (willNeedNewLeader)
             {
                 squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
+                L.Log($"who should become leader: {squad.Members[0].CharacterName}");
                 squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
             for (int i = 0; i < squad.Members.Count; i++)
@@ -454,7 +455,6 @@ namespace Uncreated.Warfare.Squads
 
                 member.Message("squad_disbanded");
                 ClearMenu(member.Player);
-                SendSquadList(member);
             }
             SendSquadListToTeam(squad.Team);
             UpdateUIMemberCount(squad.Team);

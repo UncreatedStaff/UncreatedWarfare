@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Gamemodes
         public void SetDefaults()
         {
             AMCKillTime = 10f;
-            LeaderboardDelay = 15f;
+            LeaderboardDelay = 8f;
             LeaderboardTime = 30f;
         }
     }
@@ -195,7 +195,7 @@ namespace Uncreated.Warfare.Gamemodes
             RepairStationBaseGUID = new Guid("26a6b91c-d194-4730-a0f2-8e5f299cebf9");
             AmmoBagGUID = new Guid("16f55b99-9e9b-4f15-8be1-2645e41dd753");
             T1RallyPointGUID = new Guid("5e1db525-1793-41d3-b0c7-576876212a81");
-            T2RallyPointGUID = new Guid("0d789536-0c80-440f-be4a-45eba28b2007");
+            T2RallyPointGUID = new Guid("c03352d9e6bb4e2993917924b604ee76");
             VehicleBayGUID = new Guid("c076f9e9-f35f-42a4-b8b5-711dfb230010");
             TimeLimitedStorages = new Guid[4]
             {

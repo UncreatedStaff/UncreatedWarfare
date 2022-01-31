@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare
@@ -85,7 +86,7 @@ namespace Uncreated.Warfare
                                 {
                                     if (seat == 0)
                                     {
-                                        bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer)) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2);
+                                        bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer)) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) || (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
 
                                         if (!canEnterDriverSeat)
                                         {

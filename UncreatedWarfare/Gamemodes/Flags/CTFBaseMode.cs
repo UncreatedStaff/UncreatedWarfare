@@ -299,7 +299,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(1);
-                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
+
+                            if (this is Invasion.Invasion)
+                                Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
+                            else
+                                CTFUI.ReplicateFlagUpdate(_rotation[i]);
                         }
                     }
                     else if (Team == 2)
@@ -308,7 +312,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(2);
-                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
+
+                            if (this is Invasion.Invasion)
+                                Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
+                            else
+                                CTFUI.ReplicateFlagUpdate(_rotation[i]);
                         }
                     }
                 }

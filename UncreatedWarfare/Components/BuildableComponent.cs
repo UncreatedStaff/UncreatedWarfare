@@ -96,16 +96,20 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                if (!(Assets.find(Buildable.emplacementData.ammoID) is ItemAsset ammoasset))
+                ItemAsset ammoasset = null;
+                if (Assets.find(Buildable.emplacementData.ammoID) is ItemAsset a)
                 {
+                    ammoasset = a;
+                }
+                else
                     L.LogDebug($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
-                    return;
-                }
-                if (!(Assets.find(Buildable.structureID) is VehicleAsset vehicleasset))
+
+                if (!(Assets.find(Buildable.emplacementData.vehicleID) is VehicleAsset vehicleasset))
                 {
-                    L.LogDebug($"Emplacement {Assets.find(Buildable.structureID)?.name?.Replace("_Base", "") ?? Buildable.structureID.ToString("N")}'s vehicle id is not a valid vehicle.");
+                    L.LogDebug($"Emplacement {Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N")}'s vehicle id is not a valid vehicle.");
                     return;
                 }
+
                 for (int i = 0; i < Buildable.emplacementData.ammoAmount; i++)
                     ItemManager.dropItem(new Item(ammoasset.id, true), data.point, true, true, true);
                 Quaternion rotation = Foundation.model.rotation;
@@ -142,11 +146,14 @@ namespace Uncreated.Warfare.Components
             foreach (var entry in PlayerHits)
             {
                 UCPlayer player = UCPlayer.FromID(entry.Key);
-                if ((float)entry.Value / Buildable.requiredHits >= 0.1F && player != null)
+
+                float contribution = (float)entry.Value / Buildable.requiredHits;
+
+                if (contribution >= 0.1F && player != null)
                 {
                     int amount = 0;
                     if (Buildable.type == EBuildableType.FOB_BUNKER)
-                        amount = entry.Value * Points.XPConfig.BuiltFOBXP;
+                        amount = Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP);
                     else
                         amount = entry.Value * Points.XPConfig.ShovelXP;
 
@@ -208,7 +215,7 @@ namespace Uncreated.Warfare.Components
                 VehicleManager.getVehiclesInRadius(point, Mathf.Pow(30, 2), vehicles);
                 int logis = vehicles.Where(v => v.lockedGroup.m_SteamID == team &&
                 VehicleBay.VehicleExists(v.asset.GUID, out var vehicleData) &&
-                vehicleData.Type == EVehicleType.LOGISTICS).Count();
+                (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT)).Count();
                 if (logis == 0)
                 {
                     // no logis nearby

@@ -301,7 +301,10 @@ namespace Uncreated.Warfare
             {
                 regionBuffer.Clear();
                 float sqrRange = range * range;
-                ulong group = TeamManager.GetGroupID(team);
+                //ulong group = TeamManager.GetGroupID(team);
+                ulong group = team;
+                L.Log($"Group: {group}");
+                L.Log($"Group from GetGroupID: {TeamManager.GetGroupID(team)}");
                 List<BarricadeDrop> list = new List<BarricadeDrop>();
                 Regions.getRegionsInRadius(origin, range, regionBuffer);
                 for (int r = 0; r < regionBuffer.Count; r++)

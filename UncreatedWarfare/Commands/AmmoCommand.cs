@@ -67,12 +67,19 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, 10, vehicle.transform.position, player.GetTeam(), false).FirstOrDefault();
-
-                if (repairStation == null)
+                if (vehicleData.Type != EVehicleType.EMPLACEMENT)
                 {
-                    player.SendChat("ammo_not_near_repair_station");
-                    return;
+                    var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
+                    10,
+                    vehicle.transform.position,
+                    player.GetTeam(),
+                    false).FirstOrDefault();
+
+                    if (repairStation == null)
+                    {
+                        player.SendChat("ammo_not_near_repair_station");
+                        return;
+                    }
                 }
 
                 var fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);

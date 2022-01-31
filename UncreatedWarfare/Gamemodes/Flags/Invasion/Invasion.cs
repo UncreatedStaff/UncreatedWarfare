@@ -65,13 +65,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             }
             if (_attackTeam == 1)
             {
-                _objectiveT1Index = _rotation.Count - 1;
+                _objectiveT1Index = 0;
                 _objectiveT2Index = -1;
             }
             else
             {
                 _objectiveT1Index = -1;
-                _objectiveT2Index = 0;
+                _objectiveT2Index = _rotation.Count - 1;
             }
             if (Config.Invasion.DiscoveryForesight < 1)
             {

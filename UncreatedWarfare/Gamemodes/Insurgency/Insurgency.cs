@@ -393,30 +393,37 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         void SpawnCacheItems(Cache cache)
         {
-            Guid ammoID;
-            Guid buildID;
-            if (DefendingTeam == 1)
+            try
             {
-                ammoID = Config.Items.T1Ammo;
-                buildID = Config.Items.T1Build;
-            }
-            else if (DefendingTeam == 2)
-            {
-                ammoID = Config.Items.T2Ammo;
-                buildID = Config.Items.T2Build;
-            }
-            else return;
-            if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
-                return;
-            Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
+                Guid ammoID;
+                Guid buildID;
+                if (DefendingTeam == 1)
+                {
+                    ammoID = Config.Items.T1Ammo;
+                    buildID = Config.Items.T1Build;
+                }
+                else if (DefendingTeam == 2)
+                {
+                    ammoID = Config.Items.T2Ammo;
+                    buildID = Config.Items.T2Build;
+                }
+                else return;
+                if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
+                    return;
+                Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
-            for (int i = 0; i < 15; i++)
-                ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
+                for (int i = 0; i < 15; i++)
+                    ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
 
-            foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
+                foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
+                {
+                    for (int i = 0; i < entry.Value; i++)
+                        ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
+                }
+            }
+            catch(Exception ex)
             {
-                for (int i = 0; i < entry.Value; i++)
-                    ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
+                L.LogError(ex.ToString());
             }
         }
         private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()

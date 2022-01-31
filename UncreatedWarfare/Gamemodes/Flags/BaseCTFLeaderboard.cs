@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                  */
                 for (int i = 0; i < Math.Min(15, statsT1.Count); i++)
                 {
-                    string n = i == 0 ? TeamManager.TranslateName(1, player.Steam64, true).ToUpper() : statsT1[i].Player.channel.owner.playerID.nickName;
+                    string n = i == 0 ? TeamManager.TranslateShortName(1, player.Steam64, true).ToUpper() : statsT1[i].Player.channel.owner.playerID.nickName;
                     string k = statsT1[i].kills.ToString(Data.Locale);
                     string d = statsT1[i].deaths.ToString(Data.Locale);
                     string x = statsT1[i].XPGained.ToString(Data.Locale);

@@ -36,7 +36,7 @@ namespace Uncreated.Warfare.Components
                 {
                     if (player.GetTeam() == parent.Team)
                     {
-                        if (Mathf.Abs(player.Position.y - parent.Position.y) < 4 && F.SqrDistance2D(player.Position, parent.Position) < parent.Radius * parent.Radius)
+                        if ((player.Position - parent.Position).sqrMagnitude < parent.SqrRadius)
                         {
                             if (!parent.FriendliesOnFOB.Contains(player))
                             {
@@ -54,7 +54,7 @@ namespace Uncreated.Warfare.Components
                     }
                     else if (parent.Bunker != null)
                     {
-                        if (Mathf.Abs(player.Position.y - parent.Position.y) < 4 && F.SqrDistance2D(player.Position, parent.Bunker.model.position) < 100)
+                        if (Mathf.Abs(player.Position.y - parent.Position.y) < 4 && F.SqrDistance2D(player.Position, parent.Bunker.model.position) < Math.Pow(7, 2))
                         {
                             if (!parent.NearbyEnemies.Contains(player))
                             {
@@ -378,11 +378,11 @@ namespace Uncreated.Warfare.Components
         }
         internal void OnEnemyEnteredFOB(UCPlayer player)
         {
-
+            FOBManager.UpdateFOBListForTeam(this.Team, this);
         }
         internal void OnEnemyLeftFOB(UCPlayer player)
         {
-
+            FOBManager.UpdateFOBListForTeam(this.Team, this);
         }
         public void ShowResourceUI(UCPlayer player)
         {

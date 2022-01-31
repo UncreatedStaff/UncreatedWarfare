@@ -30,9 +30,9 @@ namespace Uncreated.Warfare.Teams
                 L.LogError("The default kit, \"" + _data.data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
 
         }
-        public static ulong Team1ID { get => _data.data.team1id; }
-        public static ulong Team2ID { get => _data.data.team2id; }
-        public static ulong AdminID { get => _data.data.adminid; }
+        public static ulong Team1ID { get => 1; }
+        public static ulong Team2ID { get => 2; }
+        public static ulong AdminID { get => 3; }
         public static string Team1Name { get => _data.data.team1name; }
         public static string Team2Name { get => _data.data.team2name; }
         public static string AdminName { get => _data.data.adminname; }
@@ -215,6 +215,18 @@ namespace Uncreated.Warfare.Teams
             if (team == 1) uncolorized = Translation.Translate("team_1", player);
             else if (team == 2) uncolorized = Translation.Translate("team_2", player);
             else if (team == 3) uncolorized = Translation.Translate("team_3", player);
+            else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", player);
+            else if (team == 0) uncolorized = Translation.Translate("neutral", player);
+            else uncolorized = team.ToString(Data.Locale);
+            if (!colorize) return uncolorized;
+            return F.ColorizeName(uncolorized, team);
+        }
+        public static string TranslateShortName(ulong team, ulong player, bool colorize = false)
+        {
+            string uncolorized;
+            if (team == 1) uncolorized = Translation.Translate("team_1_short", player);
+            else if (team == 2) uncolorized = Translation.Translate("team_2_short", player);
+            else if (team == 3) uncolorized = Translation.Translate("team_3_short", player);
             else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", player);
             else if (team == 0) uncolorized = Translation.Translate("neutral", player);
             else uncolorized = team.ToString(Data.Locale);

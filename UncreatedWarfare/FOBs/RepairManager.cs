@@ -36,9 +36,12 @@ namespace Uncreated.Warfare.FOBs
 
             foreach (RBarricade barricade in barricades)
             {
-                RepairStation station = new RepairStation(barricade.data, UCBarricadeManager.GetDropFromBarricadeData(barricade.data));
-                stations.Add(station);
-                barricade.drop.model.gameObject.AddComponent<RepairStationComponent>().Initialize(station);
+                if (!barricade.drop.model.TryGetComponent(out RepairStationComponent _))
+                {
+                    RepairStation station = new RepairStation(barricade.data, UCBarricadeManager.GetDropFromBarricadeData(barricade.data));
+                    stations.Add(station);
+                    barricade.drop.model.gameObject.AddComponent<RepairStationComponent>().Initialize(station);
+                }
             }
         }
         public static void TryDeleteRepairStation(uint instanceID)
@@ -173,10 +176,13 @@ namespace Uncreated.Warfare.FOBs
             while (parent.IsActive)
             {
                 List<InteractableVehicle> nearby = new List<InteractableVehicle>();
-                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(10, 2), nearby);
+                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(15, 2), nearby);
 
                 for (int i = 0; i < nearby.Count; i++)
                 {
+                    if (nearby[i].lockedGroup.m_SteamID != parent.drop.GetServersideData().group)
+                        continue;
+
                     if (nearby[i].health >= nearby[i].asset.health && nearby[i].fuel >= nearby[i].asset.fuel)
                     {
                         if (parent.VehiclesRepairing.ContainsKey(nearby[i].instanceID))
