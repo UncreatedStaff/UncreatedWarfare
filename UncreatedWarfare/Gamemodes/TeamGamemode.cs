@@ -26,7 +26,14 @@ namespace Uncreated.Warfare.Gamemodes
         {
 
         }
-
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
+        {
+            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
+            if (UseJoinUI)
+            {
+                _joinManager.OnPlayerConnected(player, shouldRespawn);
+            }
+        }
         public override void Init()
         {
             if (UseJoinUI)

@@ -210,7 +210,7 @@ namespace Uncreated.Warfare
             {
                 Gamemode.Init();
                 for (int i = 0; i < Provider.clients.Count; i++)
-                    Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
+                    Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
                 L.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
                 L.Log("Initialized gamemode.", ConsoleColor.Magenta);
             } else

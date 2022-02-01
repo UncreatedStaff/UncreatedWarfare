@@ -17,6 +17,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Stats;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency
 {
@@ -246,7 +247,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             TeamManager.EvaluateBases();
             _counter++;
         }
-        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
@@ -297,7 +298,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-            base.OnPlayerJoined(player, wasAlreadyOnline);
+            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {

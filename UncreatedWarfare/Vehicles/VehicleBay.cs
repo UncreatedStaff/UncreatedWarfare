@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (data.Items != null)
                 {
-                    foreach ( var item in data.Items)
+                    foreach (var item in data.Items)
                     {
                         if (!Whitelister.IsWhitelisted(item, out _))
                             Whitelister.AddItem(item);

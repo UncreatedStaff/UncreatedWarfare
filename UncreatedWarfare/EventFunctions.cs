@@ -355,15 +355,13 @@ namespace Uncreated.Warfare
                 UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
                 bool g = Data.Is(out ITeams t);
-                bool isNewGame = false;
-                bool isNewPlayer = true;
-                if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
+                bool shouldRespawn = false;
+                bool isNewPlayer = !PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save);
+                if (!isNewPlayer)
                 {
-                    isNewPlayer = false;
-
                     if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
-                        isNewGame = true;
+                        shouldRespawn = true;
 
                         save.ShouldRespawnOnJoin = false;
                     }
@@ -373,12 +371,10 @@ namespace Uncreated.Warfare
 
                 if (player.Player.life.isDead)
                     player.Player.life.ReceiveRespawnRequest(false);
-                else
-                    player.Player.life.sendRevive();
-
-                if (g && t.UseJoinUI)
+                else if (shouldRespawn)
                 {
-                    t.JoinManager.OnPlayerConnected(ucplayer, isNewPlayer, isNewGame);
+                    player.Player.life.sendRevive();
+                    player.Player.teleportToLocation(F.GetBaseSpawn(player.Player, out ulong team), team.GetBaseAngle());
                 }
 
                 PlayerManager.ApplyToOnline();
@@ -392,12 +388,11 @@ namespace Uncreated.Warfare
                 PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 pt.StartTracking(player.Player);
                 Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                Points.OnPlayerJoined(ucplayer, isNewGame);
                 Data.DatabaseManager.CheckUpdateUsernames(names);
                 bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                 Data.DatabaseManager.RegisterLogin(player.Player);
 
-                Data.Gamemode.OnPlayerJoined(ucplayer, false);
+                Data.Gamemode.OnPlayerJoined(ucplayer, false, shouldRespawn);
                 for (int i = 0; i < Vehicles.VehicleSpawner.ActiveObjects.Count; i++)
                 {
                     Vehicles.VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
