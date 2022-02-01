@@ -236,8 +236,9 @@ namespace Uncreated.Warfare.Squads
 
             ShowUIForPlayer(player);
 
+            if (!player.IsSquadLeader())
             // TODO: fix and make only happen once for each player
-            Points.AwardTW(squad.Leader.Player, Points.TWConfig.RallyUsedPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
+                Points.AwardTW(squad.Leader.Player, Points.TWConfig.RallyUsedPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
         }
     }
 

@@ -133,14 +133,14 @@ namespace Uncreated.Warfare
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
 
-            IconManager.OnBarricadePlaced(drop, isFOBRadio);
-
             if (FOBManager.config.data.Buildables == null) return;
             BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
             if (buildable != null)
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
+
+            IconManager.OnBarricadePlaced(drop, isFOBRadio);
 
             BuildableData repairable = isFOBRadio ? null : FOBManager.config.data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || isFOBRadio)
@@ -361,18 +361,13 @@ namespace Uncreated.Warfare
                 {
                     isNewPlayer = false;
 
-                    if (save.LastGame != Data.Gamemode.GameID/* || save.ShouldRespawnOnJoin*/)
+                    if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
                         isNewGame = true;
-
-                        save.ShouldRespawnOnJoin = false;
-
-                        
                     }
                 }
                 
                 save.LastGame = Data.Gamemode.GameID;
-                PlayerManager.ApplyToOnline();
 
                 if (player.Player.life.isDead)
                     player.Player.life.ReceiveRespawnRequest(false);
@@ -383,6 +378,8 @@ namespace Uncreated.Warfare
                 {
                     t.JoinManager.OnPlayerConnected(ucplayer, isNewPlayer, isNewGame);
                 }
+
+                PlayerManager.ApplyToOnline();
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -770,7 +767,7 @@ namespace Uncreated.Warfare
             }
 
             overrideText = ucplayer.Squad.Name.ToUpper();
-            Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
+            //Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
             //PlaceMarker(ucplayer, effectposition, false, false);
         }
         internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
@@ -1101,7 +1098,9 @@ namespace Uncreated.Warfare
                 buildable.Destroy();
             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                 repairable.Destroy();
-            if (drop.model.TryGetComponent(out IconRenderer iconRenderer))
+
+            var iconrenderers = drop.model.GetComponents<IconRenderer>();
+            foreach (var iconRenderer in iconrenderers)
                 IconManager.DeleteIcon(iconRenderer);
 
             if (Data.Is<ISquads>(out _))

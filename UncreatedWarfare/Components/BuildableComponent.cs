@@ -33,6 +33,17 @@ namespace Uncreated.Warfare.Components
             Hits = 0;
             IsSalvaged = false;
             PlayerHits = new Dictionary<ulong, int>();
+
+            var data = foundation.GetServersideData();
+
+            UCPlayer placer = UCPlayer.FromID(data.owner);
+            if (placer is not null && !(buildable.type != EBuildableType.FORTIFICATION || buildable.type != EBuildableType.AMMO_CRATE))
+            {
+                foreach (var player in PlayerManager.OnlinePlayers.Where(p => p != placer && p.GetTeam() == data.group && (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
+                {
+                    Tips.TryGiveTip(player, ETip.HELP_BUILD, placer.CharacterName);
+                }
+            }
         }
 
         public void IncrementBuildPoints(UCPlayer builder)

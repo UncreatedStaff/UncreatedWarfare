@@ -2,6 +2,9 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -26,9 +29,47 @@ namespace Uncreated.Warfare.Commands
             {
                 if (Data.Is(out Insurgency insurgency))
                 {
-                    SerializableTransform transform = new SerializableTransform(player.Player.transform);
-                    Gamemode.Config.MapConfig.AddCacheSpawn(transform);
-                    player.Message("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
+                    var cache = BarricadeManager.FindBarricadeByRootTransform(UCBarricadeManager.GetBarricadeTransformFromLook(player.Player.look));
+                    if (cache != null && cache.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID)
+                    {
+                        SerializableTransform transform = new SerializableTransform(cache.model);
+                        Gamemode.Config.MapConfig.AddCacheSpawn(transform);
+                        player.Message("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
+                    }
+                    else
+                        player.Message("You must be looking at a CACHE barricade.".Colorize("c7a29f"));
+                }
+                else
+                    player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("c7a29f"));
+            }
+            else if (command.Length > 0 && command[0].ToLower() == "gencaches")
+            {
+                if (Data.Is(out Insurgency insurgency))
+                {
+                    var caches = UCBarricadeManager.AllBarricades.Where(b => b.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID).ToList();
+
+                    var writer = File.Create("C:\\Users\\USER\\Desktop\\cachespanws.json");
+
+                    string line = "";
+
+                    for (int i = 0; i < caches.Count; i++)
+                    {
+                        line += $"new SerializableTransform({caches[i].model.transform.position.x.ToString(Data.Locale)}f, " +
+                            $"{caches[i].model.transform.position.y.ToString(Data.Locale)}f, " +
+                            $"{caches[i].model.transform.position.z.ToString(Data.Locale)}f, " +
+                            $"{caches[i].model.transform.eulerAngles.x.ToString(Data.Locale)}f, " +
+                            $"{caches[i].model.transform.eulerAngles.y.ToString(Data.Locale)}f, " +
+                            $"{caches[i].model.transform.eulerAngles.z.ToString(Data.Locale)}f)";
+
+                        if (i < caches.Count - 1)
+                            line += ",\n";
+                    }
+                    byte[] bytes = Encoding.UTF8.GetBytes(line);
+                    writer.Write(bytes, 0, bytes.Length);
+                    writer.Close();
+                    writer.Dispose();
+
+                    player.Message($"Written {bytes.Length} bytes to file.");
                 }
                 else
                     player.Message("Gamemode must be Insurgency in order to use this command.".Colorize("c7a29f"));
@@ -133,6 +174,14 @@ namespace Uncreated.Warfare.Commands
             else if (command.Length == 1 && (command[0].ToLower() == "getpos" || command[0].ToLower() == "cvc"))
             {
                 player.Message($"Your position: {player.Position} - Your rotation: {player.Player.transform.eulerAngles.y}".Colorize("ebd491"));
+            }
+            else if (command.Length == 1 && command[0].ToLower() == "onfob")
+            {
+                FOB fob = FOB.GetNearestFOB(player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam());
+                if (fob is not null)
+                    player.Message($"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(player.Position - fob.Position).magnitude}m away)".Colorize("ebd491"));
+                else
+                    player.Message($"You are not near a FOB.".Colorize("ebd491"));
             }
             else
                 player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));

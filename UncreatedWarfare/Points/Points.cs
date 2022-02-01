@@ -75,8 +75,6 @@ namespace Uncreated.Warfare.Point
 
             amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
 
-            
-
             int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
 
             player.UpdateRank(player.Branch, newBalance);

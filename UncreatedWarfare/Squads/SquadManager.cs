@@ -418,7 +418,9 @@ namespace Uncreated.Warfare.Squads
 
                 return;
             }
-            squad.Leader = null; // need to set leader to null before sorting, otherwise old leader will get added back
+
+            if (willNeedNewLeader)
+                squad.Leader = null; // need to set leader to null before sorting, otherwise old leader will get added back
             SortMembers(squad);
             if (willNeedNewLeader)
             {

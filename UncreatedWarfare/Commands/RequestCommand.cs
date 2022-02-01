@@ -326,7 +326,7 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
 
-            RankData currentRank = ucplayer.Ranks[data.UnlockBranch];
+            RankData currentRank = ucplayer.Ranks[data.UnlockBranch == EBranch.DEFAULT ? EBranch.INFANTRY : data.UnlockBranch];
 
             if (currentRank.Level < data.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
             {

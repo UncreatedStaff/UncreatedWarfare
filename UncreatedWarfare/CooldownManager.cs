@@ -49,8 +49,8 @@ namespace Uncreated.Warfare
                 EnableCombatLogger = true;
                 CombatCooldown = 120;
                 DeployMainCooldown = 3;
-                DeployFOBCooldown = 90;
-                RequestKitCooldown = 300;
+                DeployFOBCooldown = 30;
+                RequestKitCooldown = 120;
             }
             public CooldownConfig() { }
         }

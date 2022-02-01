@@ -126,51 +126,55 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             if (_state == EState.ACTIVE)
             {
-                TicketManager.GetTeamBleed(1, out int Team1Bleed, out _);
-                TicketManager.GetTeamBleed(2, out int Team2Bleed, out _);
+                if (EveryMinute)
+                {
+                    int Team1Bleed = TicketManager.GetTeamBleed(1);
+                    int Team2Bleed = TicketManager.GetTeamBleed(2);
 
-                if (_ticks % 60 == 0)
-                {
-                    if (Team1Bleed == -1)
-                        TicketManager.Team1Tickets--;
-                    if (Team2Bleed == -1)
-                        TicketManager.Team2Tickets--;
+                    if (Team1Bleed < 0)
+                    {
+                        TicketManager.Team1Tickets += Team1Bleed;
+                        TicketManager.UpdateUITeam1(Team1Bleed);
+                    }
+                    if (Team2Bleed < 0)
+                    {
+                        TicketManager.Team2Tickets += Team2Bleed;
+                        TicketManager.UpdateUITeam2(Team2Bleed);
+                    }
                 }
-                if (_ticks % 30 == 0)
-                {
-                    if (Team1Bleed == -2)
-                        TicketManager.Team1Tickets--;
-                    if (Team2Bleed == -2)
-                        TicketManager.Team2Tickets--;
-                }
-                if (_ticks % 10 == 0)
-                {
-                    if (Team1Bleed == -3)
-                        TicketManager.Team1Tickets--;
-                    if (Team2Bleed == -3)
-                        TicketManager.Team2Tickets--;
-                }
-                if (_ticks % Config.TeamCTF.TicketXPInterval == 0)
-                {
-                    TicketManager.OnFlagTick();
-                }
-
-                if (Team1Bleed < 0)
-                    TicketManager.UpdateUITeam1();
-                if (Team2Bleed < 0)
-                    TicketManager.UpdateUITeam2();
             }
         }
         public override void DeclareWin(ulong winner)
         {
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
+            string Team1Tickets = TicketManager.Team1Tickets.ToString() + " Tickets";
+            if (TicketManager.Team1Tickets <= 0)
+                Team1Tickets = Team1Tickets.Colorize("969696");
+
+            string Team2Tickets = TicketManager.Team2Tickets.ToString() + " Tickets";
+            if (TicketManager.Team2Tickets <= 0)
+                Team2Tickets = Team2Tickets.Colorize("969696");
+
+            ushort winToastUI = 0;
+            if (Assets.find(Gamemode.Config.UI.WinToastGUID) is EffectAsset e)
+            {
+                winToastUI = e.id;
+            }
+            else
+                L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
+
             foreach (SteamPlayer client in Provider.clients)
             {
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
-                ToastMessage.QueueMessage(client.player, new ToastMessage("", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG));
+                //ToastMessage.QueueMessage(client.player, new ToastMessage("", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG));
+
+                EffectManager.sendUIEffect(winToastUI, 12345, client.transportConnection, true);
+                EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Header", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), "ffffff"));
+                EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Team1Tickets", Team1Tickets);
+                EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Team2Tickets", Team2Tickets);
             }
             StatsManager.ModifyTeam(winner, t => t.Wins++, false);
             StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);

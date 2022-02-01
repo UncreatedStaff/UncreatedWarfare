@@ -87,6 +87,7 @@ namespace Uncreated.Warfare.Components
             new ToastMessageInfo(EToastMessageSeverity.MEDIUM, new Guid("5f695955f0da4d19adacac39140da797"), 2, 4f), // xp
             new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 3, 5.5f), // big
             new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 4, 1.6f), // progress
+            new ToastMessageInfo(EToastMessageSeverity.TIP, new Guid("abbf74e86f1c4665925884c70b9433ba"), 5, 4f), // tip
         };
         private struct ToastChannel
         {
@@ -373,7 +374,7 @@ namespace Uncreated.Warfare.Components
             }
             else if (isCache)
             {
-                position = cache.Structure.model.TransformPoint(new Vector3(0, 4, 0));
+                position = cache.Structure.model.TransformPoint(new Vector3(3, 0, 0));
                 rotation = cache.Structure.model.eulerAngles.y;
             }
             else if (isSpecialFOB)

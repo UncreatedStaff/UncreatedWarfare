@@ -101,6 +101,15 @@ namespace Uncreated.Warfare.Components
             if (isInVehiclebay)
                 EvaluateUsage(nelsonplayer.channel.owner);
 
+            if (player.KitClass == EClass.SQUADLEADER &&
+                (Data.Type == EVehicleType.LOGISTICS || Data.Type == EVehicleType.HELI_TRANSPORT) &&
+                !F.IsInMain(player.Position) &&
+                FOB.GetNearestFOB(player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam()) == null
+                )
+            {
+                Tips.TryGiveTip(player, ETip.PLACE_RADIO);
+            }
+
             if (vehicle.passengers[0].player == null)
                 return;
 

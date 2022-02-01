@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -287,7 +288,14 @@ namespace Uncreated.Warfare.Revives
                     byte kteam = killer.GetTeamByte();
                     if (kteam != team)
                     {
-                        ToastMessage.QueueMessage(killer, new ToastMessage("", Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
+                        ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
+                        if (parameters.player.transform.TryGetComponent(out PlaytimeComponent p))
+                        {
+                            if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
+                            {
+                                ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_assist_enemy_downed", killer), EToastMessageSeverity.MINI));
+                            }
+                        }
 
                         Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
                         if (KitManager.HasKit(killer, out Kit kit))

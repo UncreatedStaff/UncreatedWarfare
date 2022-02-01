@@ -2,6 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -77,15 +80,22 @@ namespace Uncreated.Warfare.Components
         }
         internal void OnDefenderLeft(UCPlayer player)
         {
-
+            
         }
         internal void OnAttackerEntered(UCPlayer player)
         {
-
+            FOBManager.UpdateFOBListForTeam(Team, this);
         }
         internal void OnAttackerLeft(UCPlayer player)
         {
-
+            FOBManager.UpdateFOBListForTeam(Team, this);
+        }
+        public void SpawnAttackIcon()
+        {
+            if (Data.Is(out Insurgency ins))
+            {
+                IconManager.AttachIcon(Gamemode.Config.UI.MarkerCacheAttack, Structure.model, ins.AttackingTeam, 2.25F);
+            }
         }
 
         private IEnumerator<WaitForSeconds> Tick()

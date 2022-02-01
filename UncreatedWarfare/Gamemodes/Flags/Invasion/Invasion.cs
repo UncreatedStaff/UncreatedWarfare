@@ -297,10 +297,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                             fg.AddCapture();
                     }
                 }
+                else if (DefendingTeam == 1)
+                {
+                    InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                }
             }
             else if (NewOwner == 2)
             {
-                if (ObjectiveT2Index < 1) // if t2 just capped the last flag
+                if (_attackTeam == 2 && ObjectiveT2Index < 1) // if t2 just capped the last flag
                 {
                     DeclareWin(2);
                     _objectiveT2Index = _rotation.Count - 1;
@@ -317,30 +321,36 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                             fg.AddCapture();
                     }
                 }
+                else if (DefendingTeam == 2)
+                {
+                    InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
+                }
             }
             else
             {
-                if (OldOwner == _defenseTeam)
+                if (OldOwner == DefendingTeam)
                 {
                     if (OldOwner == 1)
                     {
-                        int oldindex = ObjectiveT1Index;
-                        _objectiveT1Index = flag.index;
-                        if (oldindex != flag.index)
-                        {
-                            //InvokeOnObjectiveChanged(flag, flag, 0, oldindex, flag.index);
-                            InvokeOnFlagNeutralized(flag, 2, 1);
-                        }
+                        //int oldindex = ObjectiveT1Index;
+                        //_objectiveT1Index = flag.index;
+                        //if (oldindex != flag.index)
+                        //{
+                        //    //InvokeOnObjectiveChanged(flag, flag, 0, oldindex, flag.index);
+                        //    InvokeOnFlagNeutralized(flag, 2, 1);
+                        //}
+                        InvokeOnFlagNeutralized(flag, 2, 1);
                     }
                     else if (OldOwner == 2)
                     {
-                        int oldindex = ObjectiveT2Index;
-                        _objectiveT2Index = flag.index;
-                        if (oldindex != flag.index)
-                        {
-                            //InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
-                            InvokeOnFlagNeutralized(flag, 1, 2);
-                        }
+                        //int oldindex = ObjectiveT2Index;
+                        //_objectiveT2Index = flag.index;
+                        //if (oldindex != flag.index)
+                        //{
+                        //    //InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                        //    InvokeOnFlagNeutralized(flag, 1, 2);
+                        //}
+                        InvokeOnFlagNeutralized(flag, 1, 2);
                     }
                 }
             }
@@ -408,9 +418,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(player.channel.owner);
             }
         }
+        protected override void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+        {
+            base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
+            InvasionUI.ReplicateFlagUpdate(flag, true);
+        }
+        protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
+        {
+            base.InvokeOnFlagNeutralized(flag, capturedTeam, lostTeam);
+            InvasionUI.ReplicateFlagUpdate(flag, true);
+        }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
-            L.Log($"Invoking INVASION OnGroupChanged...");
             CTFUI.ClearFlagList(player);
             if (_onFlag.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out int id))
                 InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == id)
@@ -435,11 +454,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void ShowStagingUI(UCPlayer player)
         {
+            Flag obj = null;
+            if (AttackingTeam == 1) obj = ObjectiveTeam1;
+            else if (AttackingTeam == 2) obj = ObjectiveTeam2;
+
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_attack", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
             else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_preparation", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
         }
         protected override void EndStagingPhase()
         {

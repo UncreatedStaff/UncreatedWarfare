@@ -371,6 +371,15 @@ namespace Uncreated.Warfare.Components
         internal void OnPlayerEnteredFOB(UCPlayer player)
         {
             ShowResourceUI(player);
+
+            var vehicle = player.Player.movement.getVehicle();
+            if (vehicle != null && 
+                VehicleBay.VehicleExists(vehicle.asset.GUID, out var data) && 
+                (data.Type == EVehicleType.LOGISTICS || 
+                data.Type == EVehicleType.HELI_TRANSPORT))
+            {
+                Tips.TryGiveTip(player, ETip.UNLOAD_SUPPLIES);
+            }
         }
         internal void OnPlayerLeftFOB(UCPlayer player)
         {

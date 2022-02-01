@@ -80,8 +80,6 @@ namespace Uncreated.Warfare.Tickets
                 Points.XPConfig.EnemyKilledXP,
                 Translation.Translate("xp_enemy_killed", parameters.killer));
 
-            L.Log("attempting to award assist...");
-
             if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent component))
             {
                 ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
@@ -131,8 +129,6 @@ namespace Uncreated.Warfare.Tickets
                             return;
                         else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
                             wasCrashed = true;
-
-                        L.Log("Last damage origin: " + vc.lastDamageOrigin.ToString());
 
                         ulong dteam = player.GetTeam();
                         bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
@@ -194,8 +190,6 @@ namespace Uncreated.Warfare.Tickets
                             string reason = "";
                             if (asset != null)
                             {
-                                L.Log("     Asset was not null");
-
                                 if (asset is ItemAsset item)
                                     reason = item.itemName;
                                 else if (asset is VehicleAsset v)
@@ -214,8 +208,6 @@ namespace Uncreated.Warfare.Tickets
                                     float responsibleness = (float)(entry.Value.Key / totalDamage);
                                     int reward = Mathf.RoundToInt(responsibleness * fullXP);
 
-                                    L.Log($"    {entry.Key} was responsible for {responsibleness * 100}% of the damage. Their gain: {reward} XP");
-
                                     var attacker = UCPlayer.FromID(entry.Key);
                                     if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
                                     {
@@ -228,14 +220,7 @@ namespace Uncreated.Warfare.Tickets
                                             Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
                                     }
                                 }
-                            }
-
-                            foreach (var key in vc.DamageTable)
-                            {
-
-                            }
-
-                            
+                            }                            
                             
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
@@ -273,8 +258,6 @@ namespace Uncreated.Warfare.Tickets
                                 {
                                     float responsibleness = (float)(entry.Value / totalTime);
                                     int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
-
-                                    L.Log($"    {entry.Key} was responsible for {responsibleness * 100}% of the damage. Their penalty: {penalty} XP");
 
                                     var assetWaster = UCPlayer.FromID(entry.Key);
                                     if (assetWaster != null)
@@ -367,8 +350,8 @@ namespace Uncreated.Warfare.Tickets
             }
             
 
-            UpdateUITeam1();
-            UpdateUITeam2();
+            UpdateUITeam1(GetTeamBleed(1));
+            UpdateUITeam2(GetTeamBleed(1));
 
             Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
 
@@ -456,15 +439,17 @@ namespace Uncreated.Warfare.Tickets
         public static void OnPlayerJoined(UCPlayer player)
         {
             ulong team = player.GetTeam();
-            GetTeamBleed(team, out int bleed, out string message);
-            UpdateUI(player.Player.channel.owner.transportConnection, team, bleed, Translation.Translate(message, player));
+            int bleed = GetTeamBleed(player.GetTeam());
+            GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out int tickets, out string message);
+            UpdateUI(player.connection, UIID, tickets, message);
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
             EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
             EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
-            GetTeamBleed(newGroup, out int bleed, out string message);
-            UpdateUI(player.transportConnection, newGroup, bleed, Translation.Translate(message, player));
+            int bleed = GetTeamBleed(player.GetTeam());
+            GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out int tickets, out string message);
+            UpdateUI(player.transportConnection, UIID, tickets, message);
         }
         public static void OnStagingPhaseEnded()
         {
@@ -510,8 +495,8 @@ namespace Uncreated.Warfare.Tickets
                 Team2Tickets = config.data.StartingTickets;
             }
 
-            UpdateUITeam1();
-            UpdateUITeam2();
+            UpdateUITeam1(GetTeamBleed(1));
+            UpdateUITeam2(GetTeamBleed(2));
         }
 
         public static void AddTeam1Tickets(int number)
@@ -525,7 +510,7 @@ namespace Uncreated.Warfare.Tickets
                 Team1Tickets = 0;
                 Data.Gamemode.DeclareWin(2);
             }
-            UpdateUITeam1();
+            UpdateUITeam1(GetTeamBleed(1));
         }
         public static void AddTeam2Tickets(int number)
         {
@@ -538,12 +523,14 @@ namespace Uncreated.Warfare.Tickets
                 Team2Tickets = 0;
                 Data.Gamemode.DeclareWin(1);
             }
-            UpdateUITeam2();
+            UpdateUITeam2(GetTeamBleed(2));
         }
-        public static void UpdateUI(ITransportConnection connection, ulong team, int bleed, string message)
+        public static void GetUIDisplayerInfo(ulong team, int bleed, out ushort UIID, out int tickets, out string message)
         {
-            ushort UIID = 0;
-            int tickets = 0;
+            UIID = 0;
+            tickets = 0;
+            message = "";
+
             if (TeamManager.IsTeam1(team))
             {
                 tickets = Team1Tickets;
@@ -556,44 +543,59 @@ namespace Uncreated.Warfare.Tickets
                 UIID = config.data.Team2TicketUIID;
             }
 
-            if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == team)
+            if (Data.Is(out Insurgency insurgency) && team == insurgency.DefendingTeam)
             {
-                EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
-                insurgency.CachesLeft.ToString(Data.Locale) + " Caches", "", "");
+                if (insurgency.DefendingTeam == team)
+                    message = "DEFEND THE WEAPONS CACHES";
+                else if (insurgency.AttackingTeam == team)
+                {
+                    if (insurgency.DiscoveredCaches.Count == 0)
+                        message = "FIND THE WEAPONS CACHES\n(kill enemies for intel)";
+                    else
+                        message = "DESTROY THE WEAPONS CACHES";
+                }
+                else
+                    message = "";
+
+                tickets = insurgency.CachesLeft;
             }
-            else
+            else if (bleed < 0)
             {
-                EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
+                message = $"{bleed} per minute".Colorize("eb9898");
+            }
+        }
+        public static void UpdateUI(ITransportConnection connection, ushort UIID, int tickets, string message)
+        {
+            EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
-                bleed < 0 ? bleed.ToString(Data.Locale) : string.Empty,
+                string.Empty,
                 message
                 );
-            }
-                
+
         }
-        public static void UpdateUITeam1()
+        public static void UpdateUITeam1(int bleed = 0)
         {
-            GetTeamBleed(TeamManager.Team1ID, out int bleed, out string message);
+            GetUIDisplayerInfo(1, bleed, out ushort UIID, out int tickets, out string message);
 
             var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam1()).ToList();
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team1ID, bleed, Translation.Translate(message, players[i]));
+                UpdateUI(players[i].connection, UIID, tickets, message);
             }
         }
-        public static void UpdateUITeam2()
+        public static void UpdateUITeam2(int bleed = 0)
         {
-            GetTeamBleed(TeamManager.Team2ID, out int bleed, out string message);
+            GetUIDisplayerInfo(2, bleed, out ushort UIID, out int tickets, out string message);
 
             var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam2()).ToList();
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].Player.channel.owner.transportConnection, TeamManager.Team2ID, bleed, Translation.Translate(message, players[i]));
+                UpdateUI(players[i].connection, UIID, tickets, message);
             }
         }
-        public static void GetTeamBleed(ulong team, out int bleed, out string message)
+        public static int GetTeamBleed(ulong team)
         {
             if (Data.Is(out IFlagRotation fg))
             {
@@ -603,14 +605,28 @@ namespace Uncreated.Warfare.Tickets
 
                     if (defenderFlags == fg.Rotation.Count)
                     {
-                        bleed = -1;
-                        message = bleed.ToString() + "BLEEDING TICKETS";
+                        return -1;
+                    }
+                }
+                else
+                {
+                    int friendly = fg.Rotation.Where(f => f.Owner == team).Count();
+                    int enemy = fg.Rotation.Where(f => f.Owner != team && f.Owner != 0).Count();
+                    int total = fg.Rotation.Count;
+
+                    float friendlyRatio = (float)friendly / total;
+                    float enemyRatio = (float)enemy / total;
+
+                    if (enemyRatio >= 0.6f)
+                    {
+                        if (enemyRatio > 0.75f)
+                            return -2;
+                        else
+                            return -1;
                     }
                 }
             }
-
-            bleed = 0;
-            message = "";
+            return 0;
         }
         //public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
         //{
