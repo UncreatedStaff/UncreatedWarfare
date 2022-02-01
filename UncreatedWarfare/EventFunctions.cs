@@ -383,8 +383,6 @@ namespace Uncreated.Warfare
                         isNewGame = true;
 
                         save.ShouldRespawnOnJoin = false;
-
-                        
                     }
                 }
                 

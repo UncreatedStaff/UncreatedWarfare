@@ -233,7 +233,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             ResetFlags();
             _onFlag.Clear();
-            _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
+            do
+            {
+                _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
+            }
+            while (_rotation.Count < 4 && _rotation.Count > Config.UI.FlagUICount);
         }
         public override void LoadRotation()
         {
@@ -294,7 +298,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(1);
-                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
+                            if (this is Invasion.Invasion)
+                                Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
+                            else
+                                CTFUI.ReplicateFlagUpdate(_rotation[i]);
                         }
                     }
                     else if (Team == 2)
@@ -303,7 +310,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(2);
-                            CTFUI.ReplicateFlagUpdate(_rotation[i]);
+                            if (this is Invasion.Invasion)
+                                Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
+                            else
+                                CTFUI.ReplicateFlagUpdate(_rotation[i]);
                         }
                     }
                 }

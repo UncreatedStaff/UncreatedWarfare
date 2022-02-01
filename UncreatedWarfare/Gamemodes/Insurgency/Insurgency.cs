@@ -406,9 +406,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 buildID = Config.Items.T2Build;
             }
             else return;
-            if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
+            if (Assets.find(ammoID) is not ItemAsset ammo || Assets.find(buildID) is not ItemAsset build)
                 return;
-            if (cache.Structure.interactable is InteractableStorage storage)
+            if (cache.Structure != null && cache.Structure.interactable is InteractableStorage storage)
             {
                 while (storage.items.tryAddItem(new Item(ammo.id, true))) { }
             }

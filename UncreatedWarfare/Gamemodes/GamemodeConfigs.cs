@@ -249,8 +249,8 @@ namespace Uncreated.Warfare.Gamemodes
                 CacheSpawns = new SerializableTransform[old.Length + 1];
                 Array.Copy(old, CacheSpawns, old.Length);
                 CacheSpawns[CacheSpawns.Length - 1] = t;
-                Gamemode.ConfigObj.Save();
             }
+            Gamemode.ConfigObj.Save();
         }
         public void SetDefaults()
         {
