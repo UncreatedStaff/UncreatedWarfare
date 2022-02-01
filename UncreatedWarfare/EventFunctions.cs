@@ -102,6 +102,8 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
+            // replacing barricade...
+
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
@@ -125,32 +127,11 @@ namespace Uncreated.Warfare
             {
                 if (!FOBManager.AllFOBs.Exists(f => f.Position == drop.model.position))
                     FOBManager.RegisterNewFOB(drop);
-
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerRadio, drop.model, data.group, 3.5F);
             }
-
-            // FOB radio damaged
-            if (Gamemode.Config.Barricades.FOBRadioDamagedGUID == data.barricade.asset.GUID)
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerRadioDamaged, drop.model, data.group, 3.5F);
-
-            // FOB bunker
-            if (Gamemode.Config.Barricades.FOBGUID == data.barricade.asset.GUID)
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerBunker, drop.model, data.group, 5.5F);
 
             // ammo bag
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
-            {
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1);
-            }
-
-            // ammo crate
-            if (Gamemode.Config.Barricades.AmmoCrateGUID == data.barricade.asset.GUID)
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1.75F);
-
-            // repair station
-            if (Gamemode.Config.Barricades.RepairStationGUID == data.barricade.asset.GUID)
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerRepair, drop.model, data.group, 4.5F);
 
             if (FOBManager.config.data.Buildables == null) return;
             BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
@@ -158,6 +139,8 @@ namespace Uncreated.Warfare
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
             }
+
+            IconManager.OnBarricadePlaced(drop, isFOBRadio);
 
             BuildableData repairable = isFOBRadio ? null : FOBManager.config.data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || isFOBRadio)
@@ -378,7 +361,7 @@ namespace Uncreated.Warfare
                 {
                     isNewPlayer = false;
 
-                    if (save.LastGame != Data.Gamemode.GameID/* || save.ShouldRespawnOnJoin*/)
+                    if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
                     {
                         isNewGame = true;
 
@@ -387,7 +370,6 @@ namespace Uncreated.Warfare
                 }
                 
                 save.LastGame = Data.Gamemode.GameID;
-                PlayerManager.ApplyToOnline();
 
                 if (player.Player.life.isDead)
                     player.Player.life.ReceiveRespawnRequest(false);
@@ -398,6 +380,8 @@ namespace Uncreated.Warfare
                 {
                     t.JoinManager.OnPlayerConnected(ucplayer, isNewPlayer, isNewGame);
                 }
+
+                PlayerManager.ApplyToOnline();
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -785,8 +769,8 @@ namespace Uncreated.Warfare
             }
 
             overrideText = ucplayer.Squad.Name.ToUpper();
-            Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
-            PlaceMarker(ucplayer, effectposition, false, false);
+            //Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
+            //PlaceMarker(ucplayer, effectposition, false, false);
         }
         internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
         {
@@ -1116,7 +1100,9 @@ namespace Uncreated.Warfare
                 buildable.Destroy();
             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                 repairable.Destroy();
-            if (drop.model.TryGetComponent(out IconRenderer iconRenderer))
+
+            var iconrenderers = drop.model.GetComponents<IconRenderer>();
+            foreach (var iconRenderer in iconrenderers)
                 IconManager.DeleteIcon(iconRenderer);
 
             if (Data.Is<ISquads>(out _))

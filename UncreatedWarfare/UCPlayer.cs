@@ -339,7 +339,7 @@ namespace Uncreated.Warfare
             if (Squad is null)
                 return false;
 
-            return Squad.Leader.Steam64 == Steam64;
+            return Squad.Leader?.Steam64 == Steam64;
         }
         public bool IsNearSquadLeader(float distance)
         {

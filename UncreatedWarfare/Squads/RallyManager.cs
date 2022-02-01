@@ -51,9 +51,9 @@ namespace Uncreated.Warfare.Squads
                         float sqrdst = SquadManager.config.data.RallyDespawnDistance *
                                        SquadManager.config.data.RallyDespawnDistance;
                         if (player.IsTeam1())
-                            nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == TeamManager.Team1ID && (p.Position - player.Position).sqrMagnitude < sqrdst);
+                            nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 1 && (p.Position - player.Position).sqrMagnitude < sqrdst);
                         if (player.IsTeam2())
-                            nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == TeamManager.Team2ID && (p.Position - player.Position).sqrMagnitude < sqrdst);
+                            nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 2 && (p.Position - player.Position).sqrMagnitude < sqrdst);
 
                         if (nearbyEnemiesCount > 0)
                         {
@@ -236,8 +236,9 @@ namespace Uncreated.Warfare.Squads
 
             ShowUIForPlayer(player);
 
+            if (!player.IsSquadLeader())
             // TODO: fix and make only happen once for each player
-            Points.AwardTW(squad.Leader.Player, Points.TWConfig.RallyUsedPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
+                Points.AwardTW(squad.Leader.Player, Points.TWConfig.RallyUsedPoints, Translation.Translate("ofp_rally_used", squad.Leader.Steam64));
         }
     }
 

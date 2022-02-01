@@ -47,7 +47,7 @@ namespace Uncreated.Warfare
                 { "ui_notowned", "TAKEN" },
                 { "ui_locked", "LOCKED" },
                 { "ui_in_vehicle", "IN VEHICLE" },
-                { "team_win", "<color=#{1}>{0}</color> won the game!" },
+                { "team_win", "<color=#{1}>{0}</color> has won the battle!" },
                 { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
                 { "player_connected", "<color=#e6e3d5><color=#ffff1a>{0}</color> joined the server!</color>" },
                 { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
@@ -762,6 +762,8 @@ namespace Uncreated.Warfare
                 { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
                 { "phases_briefing", "BRIEFING PHASE" },
                 { "phases_preparation", "PREPARATION PHASE" },
+                { "phases_invasion_attack", "Enemies are fortifying {0}.\nGET READY" },
+                { "phases_invasion_defense", "Enemies will attack soon.\nFORTIFY {0}" },
 
                 // xp toast messages
                 { "xp_built_emplacement", "BUILT EMPLACEMENT" },
@@ -772,7 +774,8 @@ namespace Uncreated.Warfare
                 { "xp_from_operator", "FROM OPERATOR" },
                 { "xp_from_player", "FROM {0}" },
                 { "xp_healed_teammate", "HEALED {0}" },
-                { "xp_enemy_downed", "DOWNED ENEMY" },
+                { "xp_enemy_downed", "DOWNED" },
+                { "xp_assist_enemy_downed", "ASSIST DOWNED" },
                 { "xp_friendly_downed", "DOWNED FRIENDLY" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_kill_assist", "ASSIST" },
@@ -882,6 +885,12 @@ namespace Uncreated.Warfare
                 { "report_console", "{0} ({1}) reported {2} ({3}) for \"{4}\" as a {5} report." },
                 { "report_console_record", "Report against {0} ({1}) record: \"{2}\"" },
                 { "report_console_record_failed", "Report against {0} ({1}) failed to send to UCDB." },
+
+                // Tips
+                { "tip_place_radio", "TIP:\nPlace a <color=#ababab>FOB RADIO</color>." },
+                { "tip_place_bunker", "Build a <color=#a5c3d9>FOB BUNKER</color> for your team to spawn on." },
+                { "tip_unload_supplies", "<color=#d9c69a>DROP SUPPLIES</color> onto the FOB." },
+                { "tip_help_build", "<color=#d9c69a>{0} needs help building!</color>" },
             };
         }
 

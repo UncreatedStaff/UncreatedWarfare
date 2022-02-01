@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Gamemodes
         public void SetDefaults()
         {
             AMCKillTime = 10f;
-            LeaderboardDelay = 15f;
+            LeaderboardDelay = 8f;
             LeaderboardTime = 30f;
         }
     }
@@ -123,7 +123,11 @@ namespace Uncreated.Warfare.Gamemodes
         public Guid MarkerRadio;
         public Guid MarkerRadioDamaged;
         public Guid MarkerBunker;
+        public Guid MarkerCacheAttack;
+        public Guid MarkerCacheDefend;
+        public Guid MarkerBuildable;
         public Guid JoinUIGUID;
+        public Guid WinToastGUID;
         public int FlagUICount;
         public int MaxSquadMembers;
         public int MaxSquads;
@@ -154,7 +158,11 @@ namespace Uncreated.Warfare.Gamemodes
             MarkerRadio = new Guid("bc6f0e7d5d9340f39ca4968bc3f7a132");
             MarkerRadioDamaged = new Guid("37d5c48597ea4b61a7a87ed85a4c9b39");
             MarkerBunker = new Guid("d7452e8671c14e93a5e9d69e077d999c");
+            MarkerCacheAttack = new Guid("26b60044bc1442eb9d0521bfea306517");
+            MarkerCacheDefend = new Guid("06efa2c2f9ec413aa417c717a7be3364");
+            MarkerBuildable = new Guid("35ab4b71bfb74755b318ce62935f58c9");
             JoinUIGUID = new Guid("0ce74ee0a7534851838e967ed4ea4c5e");
+            WinToastGUID = new Guid("8ffc84cb14ce482181405ad929ec8307");
             MaxSquadMembers = 6;
             MaxSquads = 8;
             FlagUICount = 10;
@@ -195,7 +203,7 @@ namespace Uncreated.Warfare.Gamemodes
             RepairStationBaseGUID = new Guid("26a6b91c-d194-4730-a0f2-8e5f299cebf9");
             AmmoBagGUID = new Guid("16f55b99-9e9b-4f15-8be1-2645e41dd753");
             T1RallyPointGUID = new Guid("5e1db525-1793-41d3-b0c7-576876212a81");
-            T2RallyPointGUID = new Guid("0d789536-0c80-440f-be4a-45eba28b2007");
+            T2RallyPointGUID = new Guid("c03352d9e6bb4e2993917924b604ee76");
             VehicleBayGUID = new Guid("c076f9e9-f35f-42a4-b8b5-711dfb230010");
             TimeLimitedStorages = new Guid[4]
             {
@@ -276,7 +284,7 @@ namespace Uncreated.Warfare.Gamemodes
                 case "Gulf of Aqaba":
                     T1ZoneBlocker = new Guid("57927806-0501-4735-ab01-2f1f7adaf714");
                     T2ZoneBlocker = new Guid("b4c0a51b-7005-4ad5-b6fe-06aead982d94");
-                    CacheSpawns = NuijamaaDefaultCaches;
+                    CacheSpawns = AqabaDefaultCaches;
                     Team1Adjacencies = new Flags.AdjacentFlagData[7]
                     {
                         new Flags.AdjacentFlagData(1, 1f),
@@ -404,8 +412,74 @@ namespace Uncreated.Warfare.Gamemodes
                 new SerializableTransform(265.075653f, 42.2353f, 389.17807f, 0f, 177.650055f, 0f),
                 new SerializableTransform(269.669922f, 42.2353f, 380.341553f, 0f, 268.8501f, 0f)
             };
+        private static SerializableTransform[] AqabaDefaultCaches =>
+            new SerializableTransform[62]
+            {
+                new SerializableTransform(-712.8696f, 36.70459f, -210.1968f, 270f, 2f, 0f),
+                new SerializableTransform(-694.0713f, 36.70459f, -210.6987f, 270f, 92f, 0f),
+                new SerializableTransform(-577.7798f, 37.50977f, -212.6816f, 270f, 0f, 0f),
+                new SerializableTransform(-579.4556f, 37.50977f, -223.1621f, 270f, 182f, 0f),
+                new SerializableTransform(-536.8232f, 53.57178f, 71.69824f, 270f, 90f, 0f),
+                new SerializableTransform(-600.1055f, 53.72705f, 424.458f, 270f, 238f, 0f),
+                new SerializableTransform(-432.7109f, 49.19336f, -28.54883f, 270f, 90f, 0f),
+                new SerializableTransform(-458.9492f, 49.19336f, -18.25195f, 270f, 90f, 0f),
+                new SerializableTransform(-468.1382f, 49.19336f, -86.24951f, 270f, 0f, 0f),
+                new SerializableTransform(-438.6714f, 49.19385f, -90.03613f, 270f, 92f, 0f),
+                new SerializableTransform(-438.4868f, 49.19385f, -96.64746f, 270f, 92f, 0f),
+                new SerializableTransform(-438.3354f, 49.19336f, 12.32617f, 270f, 268f, 0f),
+                new SerializableTransform(-425.6035f, 58.65918f, 159.1484f, 270f, 2f, 0f),
+                new SerializableTransform(-422.8228f, 53.6748f, 149.5879f, 270f, 92f, 0f),
+                new SerializableTransform(-426.624f, 53.65918f, 158.8276f, 270f, 2f, 0f),
+                new SerializableTransform(-463.3091f, 58.68213f, 280.5845f, 270f, 0f, 0f),
+                new SerializableTransform(-467.7466f, 58.65918f, 288.5288f, 270f, 2f, 0f),
+                new SerializableTransform(-470.3179f, 63.65918f, 279.7285f, 270f, 270f, 0f),
+                new SerializableTransform(-467.7896f, 63.65918f, 288.4824f, 270f, 2f, 0f),
+                new SerializableTransform(-344.417f, 49.10938f, -163.8447f, 270f, 2f, 0f),
+                new SerializableTransform(-287.5771f, 49.11035f, -170.5625f, 270f, 272f, 0f),
+                new SerializableTransform(-284.124f, 49.13281f, -193.8491f, 270f, 94f, 0f),
+                new SerializableTransform(-293.0879f, 49.58398f, -24.7417f, 270f, 178f, 0f),
+                new SerializableTransform(-294.0464f, 49.58398f, -14.65088f, 270f, 0f, 0f),
+                new SerializableTransform(-159.563f, 54.23438f, -197.3672f, 270f, 0f, 0f),
+                new SerializableTransform(-245.2979f, 49.5874f, -82.8999f, 270f, 180f, 0f),
+                new SerializableTransform(-242.9263f, 49.5874f, -73.04297f, 270f, 0f, 0f),
+                new SerializableTransform(-132.9321f, 49.10059f, -25.6626f, 270f, 178f, 0f),
+                new SerializableTransform(-204.5278f, 49.10205f, 61.25342f, 270f, 272f, 0f),
+                new SerializableTransform(-215.6221f, 49.10645f, 95.44922f, 270f, 272f, 0f),
+                new SerializableTransform(-248.7036f, 50.19238f, 225.0908f, 270f, 2f, 0f),
+                new SerializableTransform(-159.4409f, 53.98779f, 591.8545f, 270f, 2f, 0f),
+                new SerializableTransform(-161.9844f, 53.98779f, 575.2256f, 270f, 178f, 0f),
+                new SerializableTransform(-231.7827f, 54.64355f, 570.041f, 270f, 180f, 0f),
+                new SerializableTransform(-121.1885f, 30.45361f, -362.8164f, 270f, 178f, 0f),
+                new SerializableTransform(-94.32129f, 49.10156f, -51.04053f, 270f, 7.999999f, 0f),
+                new SerializableTransform(-56.03125f, 59.17578f, -38.66162f, 270f, 182f, 0f),
+                new SerializableTransform(-92.50928f, 49.10596f, -12.7583f, 270f, 4f, 0f),
+                new SerializableTransform(-81.52148f, 49.10742f, 57.07568f, 270f, 0f, 0f),
+                new SerializableTransform(-100.9458f, 49.10693f, 95.8667f, 270f, 272f, 0f),
+                new SerializableTransform(-69.03564f, 49.10742f, 90.67871f, 270f, 180f, 0f),
+                new SerializableTransform(-20.13477f, 108.2378f, 727.436f, 270f, 270f, 0f),
+                new SerializableTransform(62.29053f, 61.89844f, 281.3765f, 270f, 100f, 0f),
+                new SerializableTransform(61.77686f, 61.87891f, 256.5625f, 270f, 102f, 0f),
+                new SerializableTransform(197.7275f, 79.16895f, 840.4292f, 270f, 42f, 0f),
+                new SerializableTransform(161.835f, 79.0918f, 840.166f, 270f, 272f, 0f),
+                new SerializableTransform(185.6895f, 79.0918f, 862.3535f, 270f, 2f, 0f),
+                new SerializableTransform(288.7466f, 53.40723f, 499.1182f, 270f, 74f, 0f),
+                new SerializableTransform(325.5752f, 51.36133f, 385.2715f, 270f, 150f, 0f),
+                new SerializableTransform(369.0918f, 50.69238f, 423.3989f, 270f, 356f, 0f),
+                new SerializableTransform(488.3462f, 54.00684f, 19.62207f, 270f, 88f, 0f),
+                new SerializableTransform(614.6968f, 58.18555f, 609.1064f, 270f, 84f, 0f),
+                new SerializableTransform(576.9849f, 58.23877f, 594.8682f, 270f, 352f, 0f),
+                new SerializableTransform(553.2617f, 58.23877f, 598.7881f, 270f, 170f, 0f),
+                new SerializableTransform(760.7163f, 70.10547f, -88.41357f, 270f, 274f, 0f),
+                new SerializableTransform(760.3477f, 75.10547f, -88.74219f, 270f, 278f, 0f),
+                new SerializableTransform(760.5259f, 80.10547f, -88.76563f, 270f, 276f, 0f),
+                new SerializableTransform(769.166f, 70.10547f, -87.80225f, 270f, 288f, 0f),
+                new SerializableTransform(768.7002f, 75.10547f, -87.62695f, 270f, 308f, 0f),
+                new SerializableTransform(769.042f, 80.10938f, -84.94727f, 270f, 268f, 0f),
+                new SerializableTransform(820.5498f, 70.18408f, 278.3696f, 270f, 2f, 0f),
+                new SerializableTransform(810.2891f, 70.18408f, 277.5303f, 270f, 92f, 0f)
+            };
     }
-    public struct TEAM_CTF_CONFIG
+public struct TEAM_CTF_CONFIG
     {
         public int StagingTime;
         public float EvaluateTime;
@@ -444,8 +518,8 @@ namespace Uncreated.Warfare.Gamemodes
             StagingTime = 150;
             DiscoveryForesight = 2;
             SpecialFOBName = "VCP";
-            TicketsFlagCaptured = 150;
-            AttackStartingTickets = 250;
+            TicketsFlagCaptured = 100;
+            AttackStartingTickets = 200;
             TicketXPInterval = 10;
         }
     }
@@ -465,16 +539,16 @@ namespace Uncreated.Warfare.Gamemodes
         public Dictionary<ushort, int> CacheItems;
         public void SetDefaults()
         {
-            MinStartingCaches = 4;
-            MaxStartingCaches = 6;
+            MinStartingCaches = 3;
+            MaxStartingCaches = 3;
             StagingTime = 150;
-            AttackStartingTickets = 300;
+            AttackStartingTickets = 200;
             CacheDiscoverRange = 75;
-            IntelPointsToDiscovery = 30;
+            IntelPointsToDiscovery = 5;
             IntelPointsToSpawn = 15;
             XPCacheDestroyed = 800;
             XPCacheTeamkilled = -8000;
-            TicketsCache = 80;
+            TicketsCache = 70;
             CacheStartingBuild = 15;
             CacheItems = new Dictionary<ushort, int>();
         }

@@ -89,6 +89,15 @@ namespace Uncreated.Warfare.Teams
             {
                 if (LobbyPlayers[i].Steam64 == player.Steam64)
                 {
+                    if (LobbyPlayers[i].IsInLobby)
+                    {
+                        if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
+                            save.ShouldRespawnOnJoin = true;
+                        else
+                            save.ShouldRespawnOnJoin = false;
+                    }
+
+
                     if (LobbyPlayers[i].current != null)
                     {
                         StopCoroutine(LobbyPlayers[i].current);

@@ -67,10 +67,6 @@ namespace Uncreated.Warfare.Commands
                                 if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure structureaded))
                                 {
                                     player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
-                                    player.Player.SendChat($"Barricade: {barricade.model.position}");
-                                    player.Player.SendChat($"Barricade (Server): {barricade.GetServersideData().point}");
-                                    player.Player.SendChat($"Saved Structure{structureaded.transform.position}");
-
                                 }
                                 else
                                 {
@@ -208,8 +204,6 @@ namespace Uncreated.Warfare.Commands
                         //    BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
                         //}
 
-
-                        BarricadeManager.changeOwnerAndGroup(barricade.model, player.CSteamID.m_SteamID, 3ul);
 
                         if (!(barricade.interactable is InteractableSign sign && RequestSigns.SignExists(sign, out var rs)))
                         {

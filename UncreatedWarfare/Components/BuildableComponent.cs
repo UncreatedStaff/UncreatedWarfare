@@ -33,6 +33,17 @@ namespace Uncreated.Warfare.Components
             Hits = 0;
             IsSalvaged = false;
             PlayerHits = new Dictionary<ulong, int>();
+
+            var data = foundation.GetServersideData();
+
+            UCPlayer placer = UCPlayer.FromID(data.owner);
+            if (placer is not null && !(buildable.type != EBuildableType.FORTIFICATION || buildable.type != EBuildableType.AMMO_CRATE))
+            {
+                foreach (var player in PlayerManager.OnlinePlayers.Where(p => p != placer && p.GetTeam() == data.group && (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
+                {
+                    Tips.TryGiveTip(player, ETip.HELP_BUILD, placer.CharacterName);
+                }
+            }
         }
 
         public void IncrementBuildPoints(UCPlayer builder)
@@ -96,16 +107,20 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                if (!(Assets.find(Buildable.emplacementData.ammoID) is ItemAsset ammoasset))
+                ItemAsset ammoasset = null;
+                if (Assets.find(Buildable.emplacementData.ammoID) is ItemAsset a)
                 {
-                    L.LogError($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
+                    ammoasset = a;
+                }
+                else
+                    L.LogDebug($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
+
+                if (!(Assets.find(Buildable.emplacementData.vehicleID) is VehicleAsset vehicleasset))
+                {
+                    L.LogDebug($"Emplacement {Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N")}'s vehicle id is not a valid vehicle.");
                     return;
                 }
-                if (!(Assets.find(Buildable.structureID) is VehicleAsset vehicleasset))
-                {
-                    L.LogError($"Emplacement {Assets.find(Buildable.structureID)?.name?.Replace("_Base", "") ?? Buildable.structureID.ToString("N")}'s vehicle id is not a valid vehicle.");
-                    return;
-                }
+
                 for (int i = 0; i < Buildable.emplacementData.ammoAmount; i++)
                     ItemManager.dropItem(new Item(ammoasset.id, true), data.point, true, true, true);
                 Quaternion rotation = Foundation.model.rotation;
@@ -134,7 +149,6 @@ namespace Uncreated.Warfare.Components
                         Barricade barricade = new Barricade(emplacementBase);
                         BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
                     }
-                    
                 }
             }
 
@@ -143,11 +157,14 @@ namespace Uncreated.Warfare.Components
             foreach (var entry in PlayerHits)
             {
                 UCPlayer player = UCPlayer.FromID(entry.Key);
-                if ((float)entry.Value / Buildable.requiredHits >= 0.1F && player != null)
+
+                float contribution = (float)entry.Value / Buildable.requiredHits;
+
+                if (contribution >= 0.1F && player != null)
                 {
                     int amount = 0;
                     if (Buildable.type == EBuildableType.FOB_BUNKER)
-                        amount = entry.Value * Points.XPConfig.BuiltFOBXP;
+                        amount = Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP);
                     else
                         amount = entry.Value * Points.XPConfig.ShovelXP;
 
@@ -203,13 +220,19 @@ namespace Uncreated.Warfare.Components
                 placer?.Message("build_error_too_many_fobs");
                 return false;
             }
-
-            int logis = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, placer.Position).Count(l => l.lockedGroup.m_SteamID == placer.GetTeam());
-            if (logis == 0)
+            if (!placer.OnDuty())
             {
-                // no logis nearby
-                placer?.Message("fob_error_nologi");
-                return false;
+                List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+                VehicleManager.getVehiclesInRadius(point, Mathf.Pow(30, 2), vehicles);
+                int logis = vehicles.Where(v => v.lockedGroup.m_SteamID == team &&
+                VehicleBay.VehicleExists(v.asset.GUID, out var vehicleData) &&
+                (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT)).Count();
+                if (logis == 0)
+                {
+                    // no logis nearby
+                    placer?.Message("fob_error_nologi");
+                    return false;
+                }
             }
 
             FOB nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
@@ -260,6 +283,9 @@ namespace Uncreated.Warfare.Components
                     placer?.Message("build_error_structureexists", "a", "FOB Bunker");
                     return false;
                 }
+            }
+            else
+            {
                 var closeEnemyFOB = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 5, point, false).FirstOrDefault();
                 if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
                 {
@@ -267,9 +293,7 @@ namespace Uncreated.Warfare.Components
                     placer?.Message("build_error_tooclosetoenemybunker");
                     return false;
                 }
-            }
-            else
-            {
+
                 if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out var kit) && kit.Items.Exists(i => i.id == buildable.foundationID)))
                 {
                     if (fob == null)

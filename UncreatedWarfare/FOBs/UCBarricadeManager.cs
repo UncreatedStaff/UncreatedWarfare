@@ -147,6 +147,26 @@ namespace Uncreated.Warfare
 
             return list;
         }
+        public static IEnumerable<BarricadeDrop> AllBarricades
+        {
+            get
+            {
+                List<BarricadeDrop> list = new List<BarricadeDrop>();
+                for (int x = 0; x < Regions.WORLD_SIZE; x++)
+                {
+                    for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                    {
+                        BarricadeRegion region = BarricadeManager.regions[x, y];
+                        if (region == null) continue;
+                        for (int i = 0; i < region.drops.Count; i++)
+                        {
+                            list.Add(region.drops[i]);
+                        }
+                    }
+                }
+                return list;
+            }
+        }
         public static List<BarricadeDrop> GetBarricadesWhere(Predicate<BarricadeDrop> predicate)
         {
             List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -281,7 +301,10 @@ namespace Uncreated.Warfare
             {
                 regionBuffer.Clear();
                 float sqrRange = range * range;
-                ulong group = TeamManager.GetGroupID(team);
+                //ulong group = TeamManager.GetGroupID(team);
+                ulong group = team;
+                L.Log($"Group: {group}");
+                L.Log($"Group from GetGroupID: {TeamManager.GetGroupID(team)}");
                 List<BarricadeDrop> list = new List<BarricadeDrop>();
                 Regions.getRegionsInRadius(origin, range, regionBuffer);
                 for (int r = 0; r < regionBuffer.Count; r++)

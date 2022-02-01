@@ -119,6 +119,7 @@ namespace Uncreated.Players
         MINI = 3,
         MEDIUM = 4,
         BIG = 5,
-        PROGRESS = 6
+        PROGRESS = 6,
+        TIP = 7
     }
 }

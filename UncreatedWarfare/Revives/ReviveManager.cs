@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -287,7 +288,14 @@ namespace Uncreated.Warfare.Revives
                     byte kteam = killer.GetTeamByte();
                     if (kteam != team)
                     {
-                        ToastMessage.QueueMessage(killer, new ToastMessage("", Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
+                        ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
+                        if (parameters.player.transform.TryGetComponent(out PlaytimeComponent p))
+                        {
+                            if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
+                            {
+                                ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_assist_enemy_downed", killer), EToastMessageSeverity.MINI));
+                            }
+                        }
 
                         Stats.StatsManager.ModifyTeam(kteam, t => t.Downs++, false);
                         if (KitManager.HasKit(killer, out Kit kit))
@@ -402,7 +410,9 @@ namespace Uncreated.Warfare.Revives
                 .GetEnumerator();
             while (player.MoveNext())
             {
-                if ((player.Current.Position - Position).sqrMagnitude <= Squads.SquadManager.config.data.MedicRange * Squads.SquadManager.config.data.MedicRange)
+                var sqrDistance = (player.Current.Position - Position).sqrMagnitude;
+                var sqrmLimit = Math.Pow(Squads.SquadManager.config.data.MedicRange, 2);
+                if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
                     EffectManager.sendEffectReliable(Squads.SquadManager.config.data.InjuredMarker, player.Current.Player.channel.owner.transportConnection, Position);
             }
             player.Dispose();
@@ -422,8 +432,12 @@ namespace Uncreated.Warfare.Revives
                 if (clearAll)
                     EffectManager.askEffectClearByID(Squads.SquadManager.config.data.InjuredMarker, players.Current.Player.channel.owner.transportConnection);
                 for (int i = 0; i < positions.Length; i++)
-                    if ((players.Current.Position - positions[i]).sqrMagnitude <= Squads.SquadManager.config.data.MedicRange * Squads.SquadManager.config.data.MedicRange)
+                {
+                    var sqrDistance = (players.Current.Position - positions[i]).sqrMagnitude;
+                    var sqrmLimit = Math.Pow(Squads.SquadManager.config.data.MedicRange, 2);
+                    if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
                         EffectManager.sendEffectReliable(Squads.SquadManager.config.data.InjuredMarker, players.Current.Player.channel.owner.transportConnection, positions[i]);
+                }
             }
             if (dispose) players.Dispose();
         }
@@ -443,7 +457,7 @@ namespace Uncreated.Warfare.Revives
             if (clearAll)
                 EffectManager.askEffectClearByID(Squads.SquadManager.config.data.InjuredMarker, player);
             for (int i = 0; i < positions.Length; i++)
-                if ((center - positions[i]).sqrMagnitude <= Squads.SquadManager.config.data.MedicRange * Squads.SquadManager.config.data.MedicRange)
+                if ((center - positions[i]).sqrMagnitude <= Math.Pow(Squads.SquadManager.config.data.MedicRange, 2))
                     EffectManager.sendEffectReliable(Squads.SquadManager.config.data.InjuredMarker, player, positions[i]);
         }
         public void SpawnMedicMarkers(ITransportConnection player, Vector3[] positions, bool clearAll)
@@ -509,7 +523,8 @@ namespace Uncreated.Warfare.Revives
                 Vector3[] medics = Medics
                     .Where(x => x.GetTeam() == team &&
                         (x.Position - downed.Position).sqrMagnitude <
-                        Squads.SquadManager.config.data.MedicRange * Squads.SquadManager.config.data.MedicRange)
+                        Math.Pow(Squads.SquadManager.config.data.MedicRange, 2) &&
+                        x.connection != downed.connection)
                     .Select(x => x.Position)
                     .ToArray();
                 SpawnMedicMarkers(downed.Player.channel.owner.transportConnection, medics, true);
@@ -521,7 +536,8 @@ namespace Uncreated.Warfare.Revives
             Vector3[] medics = Medics
                 .Where(x => x.GetTeam() == team &&
                     (x.Position - origin).sqrMagnitude <
-                    Squads.SquadManager.config.data.MedicRange * Squads.SquadManager.config.data.MedicRange)
+                    Math.Pow(Squads.SquadManager.config.data.MedicRange, 2) &&
+                        x.connection != player)
                 .Select(x => x.Position)
                 .ToArray();
             SpawnMedicMarkers(player, medics, clearOld);

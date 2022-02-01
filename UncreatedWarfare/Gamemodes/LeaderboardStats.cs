@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes
@@ -60,7 +61,6 @@ namespace Uncreated.Warfare.Gamemodes
                 yield return new WaitForSeconds(1f);
                 UpdateLeaderboard();
             }
-            EffectManager.ClearEffectByID_AllPlayers(id);
             if (shuttingDown)
             {
                 Networking.Invocations.Shared.ShuttingDownAfterComplete.NetInvoke();
@@ -74,8 +74,18 @@ namespace Uncreated.Warfare.Gamemodes
                     player.player.movement.sendPluginSpeedMultiplier(1f);
                     player.player.movement.sendPluginJumpMultiplier(1f);
                 }
+                if (Data.Is(out ITeams t))
+                {
+                    foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+                    {
+                        t.JoinManager.JoinLobby(player, false);
+                    }
+                }
                 OnLeaderboardExpired?.Invoke();
             }
+
+            EffectManager.ClearEffectByID_AllPlayers(id);
+            
         }
         public virtual void UpdateLeaderboard()
         {

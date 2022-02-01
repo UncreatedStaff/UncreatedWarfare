@@ -63,6 +63,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public int CachesDestroyed { get; private set; }
         public List<CacheData> Caches;
         public List<CacheData> ActiveCaches { get => Caches.Where(c => c.IsActive && !c.IsDestroyed).ToList(); }
+        public List<CacheData> DiscoveredCaches { get => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList(); }
         public int ActiveCachesCount { get => Caches.Count(c => c.IsActive && !c.IsDestroyed); }
         private List<Vector3> SeenCaches;
 
@@ -144,12 +145,47 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         {
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
+            string Team1Tickets = "";
+            string Team2Tickets = "";
+            if (AttackingTeam == 1)
+            {
+                Team1Tickets = TicketManager.Team1Tickets.ToString() + " Tickets";
+                if (TicketManager.Team1Tickets <= 0)
+                    Team1Tickets = Team1Tickets.Colorize("969696");
+
+                Team2Tickets = CachesLeft.ToString() + " Caches left";
+                if (CachesLeft <= 0)
+                    Team2Tickets = Team2Tickets.Colorize("969696");
+            }
+            else
+            {
+                Team2Tickets = TicketManager.Team2Tickets.ToString() + " Tickets";
+                if (TicketManager.Team2Tickets <= 0)
+                    Team2Tickets = Team2Tickets.Colorize("969696");
+
+                Team1Tickets = CachesLeft.ToString() + " Caches left";
+                if (CachesLeft <= 0)
+                    Team1Tickets = Team1Tickets.Colorize("969696");
+            }
+
+            ushort winToastUI = 0;
+            if (Assets.find(Gamemode.Config.UI.WinToastGUID) is EffectAsset e)
+            {
+                winToastUI = e.id;
+            }
+            else
+                L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
+
             foreach (SteamPlayer client in Provider.clients)
             {
                 client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
                 client.player.movement.forceRemoveFromVehicle();
                 EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
-                ToastMessage.QueueMessage(client.player, new ToastMessage("", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG));
+
+                EffectManager.sendUIEffect(winToastUI, 12345, client.transportConnection, true);
+                EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Header", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), "ffffff"));
+                EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Team1Tickets", Team1Tickets);
+                EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Team2Tickets", Team2Tickets);
             }
             StatsManager.ModifyTeam(winner, t => t.Wins++, false);
             StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
@@ -255,7 +291,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 if (State == EState.STAGING)
                     this.ShowStagingUI(player);
                 InsurgencyUI.SendCacheList(player);
-                TicketManager.UpdateUI(player.connection, player.GetTeam(), 0, "");
+                int bleed = TicketManager.GetTeamBleed(player.GetTeam());
+                TicketManager.GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out int tickets, out string message);
+                TicketManager.UpdateUI(player.connection, UIID, tickets, message);
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
@@ -271,7 +309,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     ShowStagingUI(player);
             }
             InsurgencyUI.SendCacheList(player);
-            TicketManager.UpdateUI(player.connection, player.GetTeam(), 0, "");
+            int bleed = TicketManager.GetTeamBleed(newGroup);
+            TicketManager.GetUIDisplayerInfo(newGroup, bleed, out ushort UIID, out int tickets, out string message);
+            TicketManager.UpdateUI(player.connection, UIID, tickets, message);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public bool AddIntelligencePoints(int points)
@@ -341,6 +381,13 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     break;
                 }
             }
+
+            cache.SpawnAttackIcon();
+
+            if (AttackingTeam == 1)
+                Tickets.TicketManager.UpdateUITeam1();
+            else if (AttackingTeam == 2)
+                Tickets.TicketManager.UpdateUITeam2();
         }
         public void SpawnNewCache(bool message = false)
         {
@@ -360,7 +407,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             Barricade barricade = new Barricade(barricadeAsset);
             Quaternion rotation = transform.Rotation;
-            rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x - 90, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z + 180);
+            rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z);
             Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
             BarricadeDrop foundationDrop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
             if (foundationDrop == null)
@@ -393,35 +440,38 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         void SpawnCacheItems(Cache cache)
         {
-            Guid ammoID;
-            Guid buildID;
-            if (DefendingTeam == 1)
-            {
-                ammoID = Config.Items.T1Ammo;
-                buildID = Config.Items.T1Build;
-            }
-            else if (DefendingTeam == 2)
-            {
-                ammoID = Config.Items.T2Ammo;
-                buildID = Config.Items.T2Build;
-            }
-            else return;
-            if (Assets.find(ammoID) is not ItemAsset ammo || Assets.find(buildID) is not ItemAsset build)
-                return;
-            if (cache.Structure != null && cache.Structure.interactable is InteractableStorage storage)
-            {
-                while (storage.items.tryAddItem(new Item(ammo.id, true))) { }
-            }
-            Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
+            //try
+            //{
+            //    Guid ammoID;
+            //    Guid buildID;
+            //    if (DefendingTeam == 1)
+            //    {
+            //        ammoID = Config.Items.T1Ammo;
+            //        buildID = Config.Items.T1Build;
+            //    }
+            //    else if (DefendingTeam == 2)
+            //    {
+            //        ammoID = Config.Items.T2Ammo;
+            //        buildID = Config.Items.T2Build;
+            //    }
+            //    else return;
+            //    if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
+            //        return;
+            //    Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
-            for (int i = 0; i < 15; i++)
-                ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
+            //    for (int i = 0; i < 15; i++)
+            //        ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
 
-            foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
-            {
-                for (int i = 0; i < entry.Value; i++)
-                    ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
-            }
+            //    foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
+            //    {
+            //        for (int i = 0; i < entry.Value; i++)
+            //            ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
+            //    }
+            //}
+            //catch(Exception ex)
+            //{
+            //    L.LogError(ex.ToString());
+            //}
         }
         private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()
         {

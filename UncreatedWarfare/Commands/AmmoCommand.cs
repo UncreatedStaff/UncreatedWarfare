@@ -42,11 +42,11 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("ammo_vehicle_cant_rearm");
                     return;
                 }
-                if (FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
-                {
-                    player.SendChat("ammo_vehicle_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
-                    return;
-                }
+                //if (FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
+                //{
+                //    player.SendChat("ammo_vehicle_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
+                //    return;
+                //}
                 if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades.Count > 0)
                 {
                     if (!player.Player.IsInMain())
@@ -67,12 +67,19 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, 10, vehicle.transform.position, player.GetTeam(), false).FirstOrDefault();
-
-                if (repairStation == null)
+                if (vehicleData.Type != EVehicleType.EMPLACEMENT)
                 {
-                    player.SendChat("ammo_not_near_repair_station");
-                    return;
+                    var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
+                    10,
+                    vehicle.transform.position,
+                    player.GetTeam(),
+                    false).FirstOrDefault();
+
+                    if (repairStation == null)
+                    {
+                        player.SendChat("ammo_not_near_repair_station");
+                        return;
+                    }
                 }
 
                 var fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
@@ -103,9 +110,6 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
-
-                if (FOBManager.config.data.AmmoCommandCooldown > 0)
-                    CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.data.AmmoCommandCooldown);
 
                 foreach (Guid item in vehicleData.Items)
                     if (Assets.find(item) is ItemAsset a)

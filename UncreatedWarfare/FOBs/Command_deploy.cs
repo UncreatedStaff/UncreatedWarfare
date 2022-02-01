@@ -62,9 +62,9 @@ namespace Uncreated.Warfare.Commands
 
                 if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object deployable))
                 {
-                    if (command[0] == "main")
+                    if (command[0].ToLower() == "main")
                         c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
-                    else if (command[0] == "lobby")
+                    else if (command[0].ToLower() == "lobby")
                         player.SendChat("deploy_lobby_removed");
                     else
                         player.Message("deploy_e_fobnotfound", command[0]);

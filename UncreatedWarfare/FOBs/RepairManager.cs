@@ -32,13 +32,14 @@ namespace Uncreated.Warfare.FOBs
         public static void LoadRepairStations()
         {
             stations.Clear();
-            List<RBarricade> barricades = GetRepairStationBarricades();
-
-            foreach (RBarricade barricade in barricades)
+            foreach (var barricade in UCBarricadeManager.AllBarricades)
             {
-                RepairStation station = new RepairStation(barricade.data, UCBarricadeManager.GetDropFromBarricadeData(barricade.data));
-                stations.Add(station);
-                barricade.drop.model.gameObject.AddComponent<RepairStationComponent>().Initialize(station);
+                if (barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID && !barricade.model.TryGetComponent(out RepairStationComponent _))
+                {
+                    RepairStation station = new RepairStation(barricade.GetServersideData(), barricade);
+                    stations.Add(station);
+                    barricade.model.gameObject.AddComponent<RepairStationComponent>().Initialize(station);
+                }
             }
         }
         public static void TryDeleteRepairStation(uint instanceID)
@@ -67,37 +68,6 @@ namespace Uncreated.Warfare.FOBs
                         L.Log($"Repair station: Active: {s.IsActive}, Structure: {s.structure.instanceID}, Drop: {s.drop.instanceID}.", ConsoleColor.DarkGray);
             }
         }
-
-        public static List<RBarricade> GetRepairStationBarricades()
-        {
-            List<RBarricade> barricades = new List<RBarricade>();
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == default) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
-                        {
-                            barricades.Add(new RBarricade(region.drops[i].GetServersideData(), region.drops[i]));
-                        }
-                    }
-                }
-            }
-            return barricades;
-        }
-        public struct RBarricade
-        {
-            public SDG.Unturned.BarricadeData data;
-            public BarricadeDrop drop;
-            public RBarricade(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
-            {
-                this.data = data;
-                this.drop = drop;
-            }
-        }
     }
 
     public class RepairStation
@@ -116,12 +86,6 @@ namespace Uncreated.Warfare.FOBs
             VehiclesRepairing = new Dictionary<uint, int>();
 
             IsActive = true;
-
-            if (storage is null)
-            {
-                L.LogWarning("REPAIR STATION ERROR: Repair station was not a barricade with storage");
-                IsActive = false;
-            }
         }
         public void RepairVehicle(InteractableVehicle vehicle)
         {
@@ -173,10 +137,13 @@ namespace Uncreated.Warfare.FOBs
             while (parent.IsActive)
             {
                 List<InteractableVehicle> nearby = new List<InteractableVehicle>();
-                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(10, 2), nearby);
+                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(17, 2), nearby);
 
                 for (int i = 0; i < nearby.Count; i++)
                 {
+                    if (nearby[i].lockedGroup.m_SteamID != parent.drop.GetServersideData().group)
+                        continue;
+
                     if (nearby[i].health >= nearby[i].asset.health && nearby[i].fuel >= nearby[i].asset.fuel)
                     {
                         if (parent.VehiclesRepairing.ContainsKey(nearby[i].instanceID))

@@ -312,7 +312,7 @@ namespace Uncreated.Warfare.Commands
                 }
             }
 
-            double secondsSinceStart = (DateTime.Now - new DateTime(Data.Gamemode.GameID)).TotalSeconds;
+            double secondsSinceStart = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
             double timeleft = data.Delay - secondsSinceStart;
 
             if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)
@@ -326,7 +326,7 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
 
-            RankData currentRank = ucplayer.Ranks[data.UnlockBranch];
+            RankData currentRank = ucplayer.Ranks[data.UnlockBranch == EBranch.DEFAULT ? EBranch.INFANTRY : data.UnlockBranch];
 
             if (currentRank.Level < data.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
             {

@@ -297,12 +297,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                     }
                 }
             }
-            else
-            {
-                L.Log($"    Gamemode was not IflagRotation or IAttackDefense");
-                L.Log($"        Is IFlagRotation: {Data.Is(out IFlagRotation gg2)}");
-                L.Log($"        Is IAttackDefense: {Data.Is(out IAttackDefense gg3)}");
-            }
         }
         public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
         {

@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -374,7 +375,12 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             if (toSeatIndex == 0) // if a crewman is trying to enter the driver's seat
                             {
-                                bool canEnterDriverSeat = owner is null || enterer == owner || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
+                                bool canEnterDriverSeat = owner is null || 
+                                    enterer == owner || 
+                                    IsOwnerInVehicle(vehicle, owner) || 
+                                    (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || 
+                                    (owner.Position - vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
+                                    (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, vehicle.lockedGroup.m_SteamID) != null);
 
                                 if (!canEnterDriverSeat)
                                 {
