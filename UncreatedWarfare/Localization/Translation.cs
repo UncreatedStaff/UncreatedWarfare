@@ -972,6 +972,7 @@ namespace Uncreated.Warfare
         }
         public static string TranslateSign(string key, UCPlayer player, bool important = true)
         {
+            if (player == null) return string.Empty;
             if (!Data.Languages.TryGetValue(player.Steam64, out string lang))
                 lang = JSONMethods.DEFAULT_LANGUAGE;
             return TranslateSign(key, lang, player, important);
