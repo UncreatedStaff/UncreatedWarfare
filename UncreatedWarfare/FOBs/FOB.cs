@@ -541,7 +541,7 @@ namespace Uncreated.Warfare.Components
         public bool IsDestroyed { get; private set; }
         public void Destroy()
         {
-            if (IsDestroyed || Radio.GetServersideData().barricade.isDead)
+            if (IsDestroyed)
                 return;
 
             foreach (UCPlayer player in FriendliesOnFOB)

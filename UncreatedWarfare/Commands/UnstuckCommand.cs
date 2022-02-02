@@ -25,7 +25,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     t.JoinManager.CloseUI(ucplayer);
                     t.JoinManager.OnPlayerDisconnected(ucplayer);
-                    t.JoinManager.OnPlayerConnected(ucplayer, false, false);
+                    t.JoinManager.OnPlayerConnected(ucplayer, false);
                 }
             }
         }

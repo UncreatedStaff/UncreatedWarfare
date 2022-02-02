@@ -281,7 +281,7 @@ namespace Uncreated.Warfare
                 { "deploy_e_injured", "<color=#ffaa42>You can not deploy while injured, get a medic to revive you or give up.</color>" },
                 { "deploy_e_enemiesnearby", "<color=#ffa238>You cannot deploy to that FOB - there are enemies nearby.</color>" },
                 { "deploy_e_nobunker", "<color=#ffa238>That FOB has no bunker. Your team must build a FOB BUNKER before you can deploy to it.</color>" },
-                { "deploy_e_damaged", "<color=#ffa238>That FOB has no bunker. Your team must build a FOB BUNKER before you can deploy to it.</color>" },
+                { "deploy_e_damaged", "<color=#ffa238>That FOB radio is damaged. Repair it with your ENTRENCHING TOOL.</color>" },
                 { "deploy_standby", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. You will arrive in <color=#eeeeee>{1} seconds</color>.</color>" },
                 { "deploy_fob_standby", "<color=#fae69c>Now deploying to <color=#{0}>{1}</color>. You will arrive in <color=#eeeeee>{2} seconds</color>.</color>" },
                 { "deploy_standby_nomove", "<color=#fae69c>Now deploying to <color=#54e3ff>{0}</color>. Stand still for <color=#eeeeee>{1} seconds</color>.</color>" },

@@ -316,13 +316,13 @@ namespace Uncreated.Warfare.Tickets
 
                 if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
                 {
-                    if (capturedTeam == 1) Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
-                    if (capturedTeam == 2) Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+                    if (capturedTeam == 1) Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+                    if (capturedTeam == 2) Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
                 }
 
                 if (team2bleed < 0)
                 {
-                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
                 }
                 else if (team1bleed < 0)
                 {

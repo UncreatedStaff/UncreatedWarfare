@@ -141,7 +141,6 @@ namespace Uncreated.Warfare.FOBs
             {
                 if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == data.barricade.asset.GUID))
                 {
-                    L.Log($"IsWipedByAuthority: {f.parent.IsWipedByAuthority}");
                     if (f.parent.IsWipedByAuthority)
                         f.parent.Destroy();
                     else
