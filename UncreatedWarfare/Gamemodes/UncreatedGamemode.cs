@@ -41,6 +41,9 @@ namespace Uncreated.Warfare.Gamemodes
         public bool Every15Seconds => _ticks % Mathf.RoundToInt(15f / _eventLoopSpeed) == 0;
         public bool Every10Seconds => _ticks % Mathf.RoundToInt(10f / _eventLoopSpeed) == 0;
         public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
+        protected float _startTime = 0f;
+        public float StartTime => _startTime;
+        public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
         public PlayerManager LogoutSaver;
@@ -189,6 +192,7 @@ namespace Uncreated.Warfare.Gamemodes
             L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             _state = EState.ACTIVE;
             _gameID = DateTime.Now.Ticks;
+            _startTime = Time.realtimeSinceStartup;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();

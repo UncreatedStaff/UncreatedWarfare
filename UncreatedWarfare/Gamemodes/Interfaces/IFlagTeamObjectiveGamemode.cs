@@ -1,6 +1,6 @@
 ﻿namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
-    public interface IFlagTeamObjectiveGamemode : IGamemode
+    public interface IFlagTeamObjectiveGamemode : IFlagRotation
     {
         Flags.Flag ObjectiveTeam1 { get; }
         Flags.Flag ObjectiveTeam2 { get; }

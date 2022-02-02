@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Vehicles;
@@ -1183,11 +1184,51 @@ namespace Uncreated.Warfare
             }
             else
             {
-                double secondsSinceStart = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
-                if (data.Delay < secondsSinceStart)
+                if (data.IsDelayed(out Delay delay))
                 {
-                    double timeleft = data.Delay - secondsSinceStart;
-                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay", language, ((int)Math.Floor(timeleft / 60d)).ToString(), ((int)Math.Round(timeleft % 60)).ToString("D2"))}</color>";
+                    if (delay.type == EDelayType.OUT_OF_STAGING)
+                    {
+                        return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_staging", language)}</color>";
+                    }
+                    else if (delay.type == EDelayType.TIME)
+                    {
+                        float timeLeft = delay.value - Data.Gamemode.SecondsSinceStart;
+                        return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_time", language, Mathf.FloorToInt(timeLeft / 60f).ToString(), Mathf.RoundToInt(timeLeft % 60).ToString("D2"))}</color>";
+                    }
+                    else if (delay.type == EDelayType.FLAG && Data.Is(out IFlagTeamObjectiveGamemode flags))
+                    {
+                        int ct = Mathf.RoundToInt(delay.value);
+                        if (ct == 1 && flags.Rotation.Count > 0)
+                        {
+                            if (data.Team == 1)
+                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_1", language, flags.Rotation[0].Name)}</color>";
+                            else if (data.Team == 2)
+                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_1", language, flags.Rotation[flags.Rotation.Count - 1].Name)}</color>";
+                            else
+                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct.ToString(Data.Locale))}</color>";
+                        }
+                        else
+                        {
+                            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct.ToString(Data.Locale))}</color>";
+                        }
+                    }
+                    else if (delay.type == EDelayType.FLAG_PERCENT && Data.Is(out flags))
+                    {
+                        int ct = Mathf.FloorToInt(flags.Rotation.Count / delay.value / 100f);
+                        if (ct == 1 && flags.Rotation.Count > 0)
+                        {
+                            if (data.Team == 1)
+                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_1", language, flags.Rotation[0].Name)}</color>";
+                            else if (data.Team == 2)
+                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_1", language, flags.Rotation[flags.Rotation.Count - 1].Name)}</color>";
+                            else
+                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct.ToString(Data.Locale))}</color>";
+                        }
+                        else
+                        {
+                            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct.ToString(Data.Locale))}</color>";
+                        }
+                    }
                 }
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_ready")}>{Translate("vbs_state_ready", language)}</color>";
             }

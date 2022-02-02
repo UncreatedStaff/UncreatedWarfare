@@ -464,7 +464,28 @@ namespace Uncreated.Warfare.Vehicles
             REPAIRCOST
         }
     }
-
+    public enum EDelayType
+    {
+        NONE            = 0,
+        TIME            = 1,
+        FLAG            = 2,
+        FLAG_PERCENT    = 3,
+        OUT_OF_STAGING  = 4
+    }
+    public struct Delay
+    {
+        public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
+        public bool IsNil => value == float.NaN;
+        public EDelayType type;
+        public string gamemode;
+        public float value;
+        public Delay(EDelayType type, float value, string gamemode = null)
+        {
+            this.type = type;
+            this.value = value;
+            this.gamemode = gamemode;
+        }
+    }
     public class VehicleData
     {
         [JsonSettable]
@@ -475,8 +496,6 @@ namespace Uncreated.Warfare.Vehicles
         public ulong Team;
         [JsonSettable]
         public ushort RespawnTime;
-        [JsonSettable]
-        public ushort Delay;
         [JsonSettable]
         public ushort Cost;
         [JsonSettable]
@@ -498,6 +517,7 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public bool RequiresSL;
         public Guid[] Items;
+        public Delay[] Delays;
         public List<byte> CrewSeats;
         public MetaSave Metadata;
         public int RequestCount;
@@ -506,7 +526,6 @@ namespace Uncreated.Warfare.Vehicles
             VehicleID = vehicleID;
             Team = 0;
             RespawnTime = 600;
-            Delay = 0;
             Cost = 0;
             UnlockLevel = 0;
             TicketCost = 0;
@@ -531,6 +550,7 @@ namespace Uncreated.Warfare.Vehicles
             CrewSeats = new List<byte>();
             Metadata = null;
             RequestCount = 0;
+            Delays = new Delay[0];
         }
         public VehicleData()
         {
@@ -538,7 +558,6 @@ namespace Uncreated.Warfare.Vehicles
             VehicleID = Guid.Empty;
             Team = 0;
             RespawnTime = 600;
-            Delay = 0;
             Cost = 0;
             UnlockLevel = 0;
             TicketCost = 0;
@@ -553,6 +572,107 @@ namespace Uncreated.Warfare.Vehicles
             CrewSeats = new List<byte>();
             Metadata = null;
             RequestCount = 0;
+            Delays = new Delay[0];
+        }
+        public void AddDelay(EDelayType type, float value, string gamemode = null)
+        {
+            if (type == EDelayType.NONE || value <= 0f) return;
+            Delay del = new Delay(type, value, gamemode);
+            Delay[] old = Delays;
+            Delays = new Delay[old.Length];
+            if (old.Length > 0)
+            {
+                Array.Copy(old, 0, Delays, 0, old.Length);
+                old[old.Length - 1] = del;
+            }
+            else
+            {
+                old[0] = del;
+            }
+        }
+        public bool HasDelayType(EDelayType type)
+        {
+            string gm = Data.Gamemode.Name;
+            for (int i = 0; i < Delays.Length; i++)
+            {
+                ref Delay del = ref Delays[i];
+                if (!gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                if (del.type == type) return true;
+            }
+            return false;
+        }
+        public bool IsDelayed(out Delay delay)
+        {
+            delay = Delay.Nil;
+            if (Delays == null || Delays.Length == 0) return false;
+            string gm = Data.Gamemode.Name;
+            float secondsSinceStart = Data.Gamemode.SecondsSinceStart;
+            bool anyVal = false;
+            for (int i = Delays.Length - 1; i >= 0; i--)
+            {
+                ref Delay del = ref Delays[i];
+                bool isUni = string.IsNullOrEmpty(del.gamemode);
+                if (isUni && anyVal) continue;
+                if (!isUni && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                {
+                    switch (del.type)
+                    {
+                        case EDelayType.NONE:
+                            if (!isUni)
+                            {
+                                delay = Delay.Nil;
+                                return false;
+                            }
+                            break;
+                        case EDelayType.TIME:
+                            if (del.value > secondsSinceStart)
+                            {
+                                delay = del;
+                                if (!isUni) return true;
+                                anyVal = true;
+                            }
+                            break;
+                        case EDelayType.FLAG:
+                            if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+                            {
+                                if ((Team == 1 && fr.ObjectiveT1Index > del.value) || 
+                                    (Team == 2 && fr.Rotation.Count - fr.ObjectiveT2Index > del.value))
+                                {
+                                    delay = del;
+                                    if (!isUni) return true;
+                                    anyVal = true;
+                                }
+                            }
+                            break;
+                        case EDelayType.FLAG_PERCENT:
+                            if (Data.Is(out fr))
+                            {
+                                if ((Team == 1 && fr.ObjectiveT1Index / (float)fr.Rotation.Count > del.value / 100f) || 
+                                    (Team == 2 && (fr.Rotation.Count - fr.ObjectiveT2Index) / (float)fr.Rotation.Count > del.value / 100f))
+                                {
+                                    delay = del;
+                                    if (!isUni) return true;
+                                    anyVal = true;
+                                }
+                            }
+                            break;
+                        case EDelayType.OUT_OF_STAGING:
+                            if (Data.Is(out IStagingPhase stg))
+                            {
+                                if (stg.State == EState.STAGING)
+                                {
+                                    delay = del;
+                                    if (!isUni) return true;
+                                    anyVal = true;
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+            if (!delay.IsNil)
+                delay = Delay.Nil;
+            return anyVal;
         }
         public List<VehicleSpawn> GetSpawners()
         {
