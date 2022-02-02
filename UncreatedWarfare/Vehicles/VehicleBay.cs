@@ -596,11 +596,11 @@ namespace Uncreated.Warfare.Vehicles
                 if (old.Length > 0)
                 {
                     Array.Copy(old, 0, Delays, 0, old.Length);
-                    old[old.Length - 1] = del;
+                    Delays[Delays.Length - 1] = del;
                 }
                 else
                 {
-                    old[0] = del;
+                    Delays[0] = del;
                 }
             }
         }
@@ -645,7 +645,7 @@ namespace Uncreated.Warfare.Vehicles
             for (int i = 0; i < Delays.Length; i++)
             {
                 ref Delay del = ref Delays[i];
-                if (!gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
                 if (del.type == type)
                 {
                     switch (type)
@@ -654,9 +654,7 @@ namespace Uncreated.Warfare.Vehicles
                             return false;
                         case EDelayType.TIME:
                             if (del.value > secondsSinceStart)
-                            {
                                 return true;
-                            }
                             break;
                         case EDelayType.FLAG:
                             if (Data.Is(out IFlagTeamObjectiveGamemode fr) && Team != 0)
