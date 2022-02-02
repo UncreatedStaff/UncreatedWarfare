@@ -852,7 +852,7 @@ namespace Uncreated.Warfare
                 { "gain_xp", "+{0} XP" },
                 { "loss_xp", "-{0} XP" },
                 { "level_up_xp_1", "YOU HAVE REACHED" },
-                { "level_up_xp_2", "{1} - <color=#f7b88b>Level {2}</color>" },
+                { "level_up_xp_2", "{0} - <color=#f7b88b>Level {1}</color>" },
                 { "level_down_xp", "<color=#e08675>LEVEL LOST</color>" },
                 { "promoted_xp", "YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO" },
                 { "demoted_xp", "YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO" },

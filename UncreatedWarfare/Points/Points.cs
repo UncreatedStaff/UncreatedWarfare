@@ -78,10 +78,6 @@ namespace Uncreated.Warfare.Point
 
             int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
 
-            L.Log("amount to add: " + amount);
-            L.Log("new balance: " + newBalance);
-            
-
             player.UpdateRank(player.Branch, newBalance);
 
 
@@ -103,9 +99,6 @@ namespace Uncreated.Warfare.Point
             UpdateXPUI(player);
 
             RankData newRank = player.CurrentRank;
-
-            L.Log($"New Level: {newRank.Level}");
-            L.Log($"Old Level: {oldLevel}");
 
             if (newRank.Level > oldLevel)
             {

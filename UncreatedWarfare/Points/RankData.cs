@@ -47,8 +47,8 @@ namespace Uncreated.Warfare.Point
         }
 
         public bool IsNil => TotalXP == -1;
-        private const int A = 300;
-        private const int D = 60;
+        private const int A = 400;
+        private const int D = 100;
         public void Update(int newXP)
         {
             TotalXP = newXP;
