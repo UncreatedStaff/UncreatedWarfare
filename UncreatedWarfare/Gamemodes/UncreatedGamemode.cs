@@ -171,10 +171,10 @@ namespace Uncreated.Warfare.Gamemodes
             Type nextMode = GetNextGamemode();
             if (this.GetType() != nextMode)
             {
-                this.Dispose();
                 Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
                 if (gamemode != null)
                 {
+                    this.Dispose();
                     Data.Gamemode = gamemode;
                     gamemode.Init();
                     gamemode.OnLevelLoaded();

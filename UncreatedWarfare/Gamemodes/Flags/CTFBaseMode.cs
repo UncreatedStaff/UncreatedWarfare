@@ -70,9 +70,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
 
         object IGameStats.GameStats => _gameStats;
 
-        public CTFBaseMode() : base(nameof(TeamCTF), 1f)
+        public CTFBaseMode(string name, float timing) : base(name, timing)
         {
-            SetTiming(Config.TeamCTF.EvaluateTime);
+
         }
         public override void Init()
         {

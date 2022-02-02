@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
         protected SpecialFOB _vcp;
         public SpecialFOB FirstPointFOB { get => _vcp; }
-
+        public Invasion() : base(nameof(Invasion), Config.TeamCTF.EvaluateTime) { }
         public override void StartNextGame(bool onLoad = false)
         {
             PickTeams();
