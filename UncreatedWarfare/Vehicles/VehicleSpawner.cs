@@ -676,8 +676,10 @@ namespace Uncreated.Warfare.Vehicles
         {
             while (true)
             {
-                L.LogDebug(data.VehicleID.ToString("N") + " - tick");
-                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME)) break;
+                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME))
+                {
+                    break;
+                }
                 spawn?.UpdateSign();
                 yield return new WaitForSeconds(1f);
             }

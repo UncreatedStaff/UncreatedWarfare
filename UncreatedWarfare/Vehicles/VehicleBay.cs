@@ -645,7 +645,7 @@ namespace Uncreated.Warfare.Vehicles
             for (int i = 0; i < Delays.Length; i++)
             {
                 ref Delay del = ref Delays[i];
-                if (!gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
                 if (del.type == type)
                 {
                     switch (type)

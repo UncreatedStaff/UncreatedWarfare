@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Kits
                             gamemode += key;
                         }
                         gamemode += ">";
-                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " none " + gm);
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " none " + gamemode);
                         return;
                     }
                     if (!string.IsNullOrEmpty(gamemode))
