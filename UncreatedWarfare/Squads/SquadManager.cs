@@ -428,6 +428,7 @@ namespace Uncreated.Warfare.Squads
                 L.Log($"who should become leader: {squad.Members[0].CharacterName}");
                 squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
+            Squads.Remove(squad);
             for (int i = 0; i < squad.Members.Count; i++)
             {
                 UCPlayer p = squad.Members[i];

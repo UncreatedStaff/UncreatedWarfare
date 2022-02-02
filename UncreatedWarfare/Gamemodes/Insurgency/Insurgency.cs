@@ -51,8 +51,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         protected StructureSaver _structureSaver;
         public StructureSaver StructureSaver => _structureSaver;
 
-        private uint _counter;
-
         protected ulong _attackTeam;
         public ulong AttackingTeam { get => _attackTeam; }
         protected ulong _defendTeam;
@@ -85,7 +83,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public override void Init()
         {
             base.Init();
-            _counter = 0;
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
             _kitManager = new KitManager();
@@ -110,7 +107,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void StartNextGame(bool onLoad = false)
         {
-            base.StartNextGame(onLoad); // set game id
             _gameStats.Reset();
 
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
@@ -123,6 +119,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             Caches = new List<CacheData>();
             SeenCaches = new List<Vector3>();
 
+            CachesLeft = UnityEngine.Random.Range(Config.Insurgency.MinStartingCaches, Config.Insurgency.MaxStartingCaches + 1);
+            for (int i = 0; i < CachesLeft; i++)
+                Caches.Add(new CacheData());
+
+            base.StartNextGame(onLoad); // set game id
+
             TicketManager.OnNewGameStarting();
             if (!onLoad)
             {
@@ -130,10 +132,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             FOBManager.OnNewGameStarting();
             RallyManager.WipeAllRallies();
-
-            CachesLeft = UnityEngine.Random.Range(Config.Insurgency.MinStartingCaches, Config.Insurgency.MaxStartingCaches + 1);
-            for (int i = 0; i < CachesLeft; i++)
-                Caches.Add(new CacheData());
 
             SpawnNewCache();
             if (_attackTeam == 1)
@@ -260,10 +258,10 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         {
             CheckPlayersAMC();
             TeamManager.EvaluateBases();
-            _counter++;
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
+            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
                 if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
@@ -313,7 +311,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {

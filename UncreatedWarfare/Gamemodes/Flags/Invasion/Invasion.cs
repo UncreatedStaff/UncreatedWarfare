@@ -24,19 +24,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public override void StartNextGame(bool onLoad = false)
         {
             PickTeams();
+
             base.StartNextGame(onLoad);
-
-
-            if (_attackTeam == 1)
-                SpawnBlockerOnT1();
-            else 
-                SpawnBlockerOnT2();
 
             Flag firstFlag = null;
             if (DefendingTeam == 1)
                 firstFlag = Rotation.Last();
             else if (DefendingTeam == 2)
                 firstFlag = Rotation.First();
+
+            if (_attackTeam == 1)
+                SpawnBlockerOnT1();
+            else 
+                SpawnBlockerOnT2();
 
             _vcp = FOBManager.RegisterNewSpecialFOB(Config.Invasion.SpecialFOBName, firstFlag.ZoneData.Center3DAbove, _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
             StartStagingPhase(Config.Invasion.StagingTime);

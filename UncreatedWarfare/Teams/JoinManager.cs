@@ -68,6 +68,8 @@ namespace Uncreated.Warfare.Teams
         }
         public void OnPlayerConnected(UCPlayer player, bool isNewPlayer)
         {
+            L.Log($"JoinManager.OnPlayerConnected was run. isNewPlayer: {isNewPlayer}");
+
             if (!isNewPlayer)
             {
                 LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
@@ -121,7 +123,11 @@ namespace Uncreated.Warfare.Teams
                 lobbyPlayer = LobbyPlayer.CreateNew(player);
                 LobbyPlayers.Add(lobbyPlayer);
             }
-            else if (lobbyPlayer.IsInLobby) return;
+            //else if (lobbyPlayer.IsInLobby)
+            //{
+            //    EffectManager.askEffectClearByID(JOIN_UI_ID, player.connection);
+            //}
+
             showX = false;
 
             if (player.Player.life.isDead)
@@ -138,7 +144,6 @@ namespace Uncreated.Warfare.Teams
             lobbyPlayer.IsInLobby = true;
 
             EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
-
             
             ShowUI(lobbyPlayer, showX);
 
