@@ -41,6 +41,7 @@ namespace Uncreated.Warfare.Kits
                     // vb delay add flagpercent 50 [gamemode]
                     // vb delay add staging [gamemode]
                     // vb delay add none [gamemode]
+                    // vb delay remove all
                     bool adding;
                     if (command[1].Equals("add", StringComparison.OrdinalIgnoreCase))
                         adding = true;
@@ -50,6 +51,17 @@ namespace Uncreated.Warfare.Kits
                     {
                         player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats|delay>");
                         return;
+                    }
+                    if (!adding && command[2].Equals("all", StringComparison.OrdinalIgnoreCase) && command.Length == 3)
+                    {
+                        int rem = data.Delays.Length;
+                        if (rem > 0)
+                        {
+                            data.Delays = new Delay[0];
+                            VehicleSpawner.UpdateSigns(data.VehicleID);
+                            VehicleBay.Save();
+                        }
+                        player.SendChat("vehiclebay_delay_removed", rem.ToString(Data.Locale));
                     }
                     EDelayType type;
                     if (command[2].Equals("time", StringComparison.OrdinalIgnoreCase))

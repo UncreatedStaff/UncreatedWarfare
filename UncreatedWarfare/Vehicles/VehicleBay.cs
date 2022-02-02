@@ -23,16 +23,24 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             VehicleManager.onExitVehicleRequested += OnVehicleExitRequested;
 
-            foreach (var data in ActiveObjects)
+            if (Whitelister.ActiveObjects != null)
             {
-                if (data.Items != null)
+                for (int i = 0; i < ActiveObjects.Count; i++)
                 {
-                    foreach (var item in data.Items)
+                    VehicleData data = ActiveObjects[i];
+                    if (data.Items != null)
                     {
-                        if (!Whitelister.IsWhitelisted(item, out _))
-                            Whitelister.AddItem(item);
+                        for (int j = 0; j < data.Items.Length; j++)
+                        {
+                            if (!Whitelister.IsWhitelisted(data.Items[j], out _))
+                                Whitelister.AddItem(data.Items[j]);
+                        }
                     }
                 }
+            }
+            else
+            {
+                L.LogWarning("Failed to check all vehicle bay items for whitelisting, Whitelister hasn't been loaded yet.");
             }
         }
 
@@ -491,6 +499,10 @@ namespace Uncreated.Warfare.Vehicles
             this.value = value;
             this.gamemode = gamemode;
         }
+
+        public override string ToString() =>
+            $"{type} Delay, {(string.IsNullOrEmpty(gamemode) ? "any" : gamemode)} " +
+            $"gamemode{(type == EDelayType.NONE || type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {value}")}";
     }
     public class VehicleData
     {
@@ -645,11 +657,25 @@ namespace Uncreated.Warfare.Vehicles
         public bool IsDelayedType(EDelayType type)
         {
             string gm = Data.Gamemode.Name;
-            float secondsSinceStart = Data.Gamemode.SecondsSinceStart;
             for (int i = 0; i < Delays.Length; i++)
             {
                 ref Delay del = ref Delays[i];
-                if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.IsNullOrEmpty(del.gamemode))
+                {
+                    string gamemode = del.gamemode;
+                    bool blacklist = false;
+                    if (gamemode[0] == '!')
+                    {
+                        blacklist = true;
+                        gamemode = gamemode.Substring(1);
+                    }
+
+                    if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (blacklist) continue;
+                    }
+                    else if (!blacklist) continue;
+                }
                 if (del.type == type)
                 {
                     switch (type)
@@ -657,61 +683,140 @@ namespace Uncreated.Warfare.Vehicles
                         case EDelayType.NONE:
                             return false;
                         case EDelayType.TIME:
-                            if (del.value > secondsSinceStart)
+                            if (TimeDelayed(ref del))
                                 return true;
                             break;
                         case EDelayType.FLAG:
-                            if (Data.Is(out IFlagTeamObjectiveGamemode fr) && Team != 0)
-                            {
-                                int i2 = GetHighestObjectiveIndex(Team, fr);
-                                if ((Team == 1 && i2 > del.value) ||
-                                    (Team == 2 && fr.Rotation.Count - i2 - 1 > del.value))
-                                {
-                                    return true;
-                                }
-                            }
-                            else if (Data.Is(out Insurgency ins))
-                            {
-                                if ((Team == ins.AttackingTeam && ins.CachesDestroyed > del.value) ||
-                                    (Team == ins.DefendingTeam && ins.ActiveCachesCount > del.value))
-                                {
-                                    return true;
-                                }
-                            }
+                            if (FlagDelayed(ref del))
+                                return true;
                             break;
                         case EDelayType.FLAG_PERCENT:
-                            if (Data.Is(out fr) && Team != 0)
-                            {
-                                int i2 = GetHighestObjectiveIndex(Team, fr);
-                                if ((Team == 1 && i2 / (float)fr.Rotation.Count > del.value / 100f) ||
-                                    (Team == 2 && (fr.Rotation.Count - i2 - 1) / (float)fr.Rotation.Count > del.value / 100f))
-                                {
-                                    return true;
-                                }
-                            }
-                            else if (Data.Is(out Insurgency ins))
-                            {
-                                if ((Team == ins.AttackingTeam && ins.CachesDestroyed / (float)ins.Caches.Count > del.value / 100f) ||
-                                    (Team == ins.DefendingTeam && ins.ActiveCachesCount / (float)ins.Caches.Count > del.value / 100f))
-                                {
-                                    return true;
-                                }
-                            }
+                            if (FlagPercentDelayed(ref del))
+                                return true;
                             break;
                         case EDelayType.OUT_OF_STAGING:
-                            if (Data.Is(out IStagingPhase stg))
-                            {
-                                if (stg.State == EState.STAGING)
-                                {
-                                    return true;
-                                }
-                            }
+                            if (StagingDelayed(ref del))
+                                return true;
                             break;
                     }
                 }
             }
             return false;
         }
+
+        public bool IsDelayed(out Delay delay)
+        {
+            delay = Delay.Nil;
+            string gm = Data.Gamemode.Name;
+            if (Delays == null || Delays.Length == 0) return false;
+            bool anyVal = false;
+            bool isNoneYet = false;
+            for (int i = Delays.Length - 1; i >= 0; i--)
+            {
+                ref Delay del = ref Delays[i];
+                bool universal = string.IsNullOrEmpty(del.gamemode);
+                if (!universal)
+                {
+                    string gamemode = del.gamemode; // !TeamCTF
+                    bool blacklist = false;
+                    if (gamemode[0] == '!') // true
+                    {
+                        blacklist = true;
+                        gamemode = gamemode.Substring(1); // TeamCTF
+                    }
+
+                    if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
+                    {
+                        if (blacklist) continue;
+                    }
+                    else if (!blacklist) continue; // false
+                    universal = true;
+                }
+                if (universal && anyVal) continue;
+                switch (del.type)
+                {
+                    case EDelayType.NONE:
+                        if (!universal)
+                        {
+                            delay = del;
+                            isNoneYet = true;
+                        }
+                        break;
+                    case EDelayType.TIME:
+                        if ((!universal || !isNoneYet) && TimeDelayed(ref del))
+                        {
+                            delay = del;
+                            if (!universal) return true;
+                            anyVal = true;
+                        }
+                        break;
+                    case EDelayType.FLAG:
+                        if ((!universal || !isNoneYet) && FlagDelayed(ref del))
+                        {
+                            delay = del;
+                            if (!universal) return true;
+                            anyVal = true;
+                        }
+                        break;
+                    case EDelayType.FLAG_PERCENT:
+                        if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del))
+                        {
+                            delay = del;
+                            if (!universal) return true;
+                            anyVal = true;
+                        }
+                        break;
+                    case EDelayType.OUT_OF_STAGING:
+                        if ((!universal || !isNoneYet) && StagingDelayed(ref del))
+                        {
+                            delay = del;
+                            if (!universal) return true;
+                            anyVal = true;
+                        }
+                        break;
+                }
+            }
+            return anyVal;
+        }
+        private bool TimeDelayed(ref Delay delay) => delay.value > Data.Gamemode.SecondsSinceStart;
+        private bool FlagDelayed(ref Delay delay) => FlagDelayed(ref delay, false);
+        private bool FlagPercentDelayed(ref Delay delay) => FlagDelayed(ref delay, true);
+        private bool FlagDelayed(ref Delay delay, bool percent)
+        {
+            if (Data.Is(out Invasion inv))
+            {
+                int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+                if (Team == 1)
+                {
+                    if (inv.AttackingTeam == 1)
+                        return inv.ObjectiveT1Index < ct;
+                    else
+                        return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
+                }
+                else if (Team == 2)
+                {
+                    if (inv.AttackingTeam == 2)
+                        return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
+                    else
+                        return inv.ObjectiveT1Index < ct;
+                }
+                return false;
+            }
+            else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+            {
+                int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+                int i2 = GetHighestObjectiveIndex(Team, fr);
+                return (Team == 1 && i2 < ct) ||
+                       (Team == 2 && fr.Rotation.Count - i2 - 1 < ct);
+            }
+            else if (Data.Is(out Insurgency ins))
+            {
+                int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+                return ins.Caches != null && ins.CachesDestroyed < ct;
+            }
+            return false;
+        }
+        private bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
         private int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
         {
             if (team == 1)
@@ -733,102 +838,6 @@ namespace Uncreated.Warfare.Vehicles
                 return gm.Rotation.Count - 1;
             }
             return -1;
-        }
-        public bool IsDelayed(out Delay delay)
-        {
-            delay = Delay.Nil;
-            if (Delays == null || Delays.Length == 0) return false;
-            string gm = Data.Gamemode.Name;
-            float secondsSinceStart = Data.Gamemode.SecondsSinceStart;
-            bool anyVal = false;
-            for (int i = Delays.Length - 1; i >= 0; i--)
-            {
-                ref Delay del = ref Delays[i];
-                bool isUni = string.IsNullOrEmpty(del.gamemode);
-                if (isUni && anyVal) continue;
-                if (!isUni && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
-                {
-                    switch (del.type)
-                    {
-                        case EDelayType.NONE:
-                            if (!isUni)
-                            {
-                                delay = Delay.Nil;
-                                return false;
-                            }
-                            break;
-                        case EDelayType.TIME:
-                            if (del.value > secondsSinceStart)
-                            {
-                                delay = del;
-                                if (!isUni) return true;
-                                anyVal = true;
-                            }
-                            break;
-                        case EDelayType.FLAG:
-                            if (Data.Is(out IFlagTeamObjectiveGamemode fr1))
-                            {
-                                // TODO ^ invasion ^
-                                int i2 = GetHighestObjectiveIndex(Team, fr1);
-                                L.LogDebug($"{i2} / {del.value} (team {Team})");
-                                if ((Team == 1 && i2 < del.value) || 
-                                    (Team == 2 && fr1.Rotation.Count - i2 - 1 < del.value))
-                                {
-                                    delay = del;
-                                    if (!isUni) return true;
-                                    anyVal = true;
-                                }
-                            }
-                            else if (Data.Is(out Insurgency ins))
-                            {
-                                if ((Team == ins.AttackingTeam && ins.Caches != null && ins.CachesDestroyed < del.value) ||
-                                    (Team == ins.DefendingTeam && ins.Caches != null && ins.ActiveCachesCount < del.value))
-                                {
-                                    delay = del;
-                                    if (!isUni) return true;
-                                    anyVal = true;
-                                }
-                            }
-                            break;
-                        case EDelayType.FLAG_PERCENT:
-                            if (Data.Is(out IFlagTeamObjectiveGamemode fr2))
-                            {
-                                int i2 = GetHighestObjectiveIndex(Team, fr2);
-                                L.LogDebug($"{i2 / (float)fr2.Rotation.Count * 100f}% / {del.value}% (team {Team})");
-                                if ((Team == 1 && i2 / (float)fr2.Rotation.Count < del.value / 100f) || 
-                                    (Team == 2 && (fr2.Rotation.Count - i2 - 1) / (float)fr2.Rotation.Count < del.value / 100f))
-                                {
-                                    delay = del;
-                                    if (!isUni) return true;
-                                    anyVal = true;
-                                }
-                            }
-                            else if (Data.Is(out Insurgency ins))
-                            {
-                                if ((Team == ins.AttackingTeam && ins.Caches != null && ins.CachesDestroyed / (float)ins.Caches.Count < del.value / 100f) ||
-                                    (Team == ins.DefendingTeam && ins.Caches != null && ins.ActiveCachesCount / (float)ins.Caches.Count < del.value / 100f))
-                                {
-                                    delay = del;
-                                    if (!isUni) return true;
-                                    anyVal = true;
-                                }
-                            }
-                            break;
-                        case EDelayType.OUT_OF_STAGING:
-                            if (Data.Is(out IStagingPhase stg))
-                            {
-                                if (stg.State == EState.STAGING)
-                                {
-                                    delay = del;
-                                    if (!isUni) return true;
-                                    anyVal = true;
-                                }
-                            }
-                            break;
-                    }
-                }
-            }
-            return anyVal;
         }
         public List<VehicleSpawn> GetSpawners()
         {
