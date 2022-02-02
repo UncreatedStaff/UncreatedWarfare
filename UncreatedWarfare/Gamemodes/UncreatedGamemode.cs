@@ -209,6 +209,11 @@ namespace Uncreated.Warfare.Gamemodes
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
+            if (this is IVehicles && VehicleSpawner.ActiveObjects != null)
+            {
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                    VehicleSpawner.UpdateSigns(VehicleSpawner.ActiveObjects[i].VehicleID);
+            }
         }
         public void AnnounceMode()
         {
@@ -334,6 +339,14 @@ namespace Uncreated.Warfare.Gamemodes
             Unsubscribe();
             CancelCoroutine();
             Whitelister?.Dispose();
+            if (_state == EState.STAGING)
+            {
+                if (_stagingPhaseTimer != null)
+                    StopCoroutine(_stagingPhaseTimer);
+                _stagingSeconds = 0;
+                EndStagingPhase();
+                _stagingPhaseTimer = null;
+            }
         }
         public void ReplaceBarricadesAndStructures()
         {

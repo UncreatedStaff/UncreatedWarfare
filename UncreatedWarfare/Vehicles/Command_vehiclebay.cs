@@ -74,14 +74,18 @@ namespace Uncreated.Warfare.Kits
                     }
                     string gamemode = null;
                     if (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE)
-                        gamemode = command[3];
-                    else if (command.Length < 5)
+                    {
+                        if (command.Length > 3)
+                            gamemode = command[3];
+                    }
+                    else if (command.Length < 4)
                     {
                         player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value> [gamemode]");
                         return;
                     }
-                    else
+                    else if (command.Length > 4)
                         gamemode = command[4];
+
                     if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
                     {
                         gamemode = "<";
@@ -119,6 +123,7 @@ namespace Uncreated.Warfare.Kits
                         data.AddDelay(type, val, gamemode);
                         VehicleBay.Save();
                         VehicleSpawner.UpdateSigns(data.VehicleID);
+                        if (data.IsDelayedType(EDelayType.TIME) && vehicle.TryGetComponent(out SpawnedVehicleComponent svc)) svc.OnAddedTimeDelay();
                         player.SendChat("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), string.IsNullOrEmpty(gamemode) ? "any" : gamemode);
                     }
                     else

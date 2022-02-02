@@ -3,9 +3,12 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
@@ -477,6 +480,7 @@ namespace Uncreated.Warfare.Vehicles
     public struct Delay
     {
         public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
+        [JsonIgnore]
         public bool IsNil => value == float.NaN;
         public EDelayType type;
         public string gamemode;
@@ -633,7 +637,7 @@ namespace Uncreated.Warfare.Vehicles
             for (int i = 0; i < Delays.Length; i++)
             {
                 ref Delay del = ref Delays[i];
-                if (!gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
                 if (del.type == type) return true;
             }
             return false;
@@ -661,7 +665,15 @@ namespace Uncreated.Warfare.Vehicles
                             {
                                 int i2 = GetHighestObjectiveIndex(Team, fr);
                                 if ((Team == 1 && i2 > del.value) ||
-                                    (Team == 2 && fr.Rotation.Count - i2 > del.value))
+                                    (Team == 2 && fr.Rotation.Count - i2 - 1 > del.value))
+                                {
+                                    return true;
+                                }
+                            }
+                            else if (Data.Is(out Insurgency ins))
+                            {
+                                if ((Team == ins.AttackingTeam && ins.CachesDestroyed > del.value) ||
+                                    (Team == ins.DefendingTeam && ins.ActiveCachesCount > del.value))
                                 {
                                     return true;
                                 }
@@ -672,7 +684,15 @@ namespace Uncreated.Warfare.Vehicles
                             {
                                 int i2 = GetHighestObjectiveIndex(Team, fr);
                                 if ((Team == 1 && i2 / (float)fr.Rotation.Count > del.value / 100f) ||
-                                    (Team == 2 && (fr.Rotation.Count - i2) / (float)fr.Rotation.Count > del.value / 100f))
+                                    (Team == 2 && (fr.Rotation.Count - i2 - 1) / (float)fr.Rotation.Count > del.value / 100f))
+                                {
+                                    return true;
+                                }
+                            }
+                            else if (Data.Is(out Insurgency ins))
+                            {
+                                if ((Team == ins.AttackingTeam && ins.CachesDestroyed / (float)ins.Caches.Count > del.value / 100f) ||
+                                    (Team == ins.DefendingTeam && ins.ActiveCachesCount / (float)ins.Caches.Count > del.value / 100f))
                                 {
                                     return true;
                                 }
@@ -746,10 +766,33 @@ namespace Uncreated.Warfare.Vehicles
                             }
                             break;
                         case EDelayType.FLAG:
-                            if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+                            /*if (Data.Is(out Invasion inv))
                             {
-                                if ((Team == 1 && fr.ObjectiveT1Index > del.value) || 
-                                    (Team == 2 && fr.Rotation.Count - fr.ObjectiveT2Index > del.value))
+                                int ct = Mathf.RoundToInt(delay.value);
+                                bool isGood = false;
+                                if (Team == 1)
+                                {
+                                    if (inv.AttackingTeam == 1)
+                                        *
+                                }
+                            }
+                            else*/ if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+                            {
+                                // TODO ^ invasion ^
+                                int i2 = GetHighestObjectiveIndex(Team, fr);
+                                L.LogDebug($"{i2} / {del.value} (team {Team})");
+                                if ((Team == 1 && i2 < del.value) || 
+                                    (Team == 2 && fr.Rotation.Count - i2 - 1 < del.value))
+                                {
+                                    delay = del;
+                                    if (!isUni) return true;
+                                    anyVal = true;
+                                }
+                            }
+                            else if (Data.Is(out Insurgency ins))
+                            {
+                                if ((Team == ins.AttackingTeam && ins.Caches != null && ins.CachesDestroyed < del.value) ||
+                                    (Team == ins.DefendingTeam && ins.Caches != null && ins.ActiveCachesCount < del.value))
                                 {
                                     delay = del;
                                     if (!isUni) return true;
@@ -758,10 +801,22 @@ namespace Uncreated.Warfare.Vehicles
                             }
                             break;
                         case EDelayType.FLAG_PERCENT:
-                            if (Data.Is(out fr))
+                            if (Data.Is(out IFlagTeamObjectiveGamemode fr))
                             {
-                                if ((Team == 1 && fr.ObjectiveT1Index / (float)fr.Rotation.Count > del.value / 100f) || 
-                                    (Team == 2 && (fr.Rotation.Count - fr.ObjectiveT2Index) / (float)fr.Rotation.Count > del.value / 100f))
+                                int i2 = GetHighestObjectiveIndex(Team, fr);
+                                L.LogDebug($"{i2 / (float)fr.Rotation.Count * 100f}% / {del.value}% (team {Team})");
+                                if ((Team == 1 && i2 / (float)fr.Rotation.Count < del.value / 100f) || 
+                                    (Team == 2 && (fr.Rotation.Count - i2 - 1) / (float)fr.Rotation.Count < del.value / 100f))
+                                {
+                                    delay = del;
+                                    if (!isUni) return true;
+                                    anyVal = true;
+                                }
+                            }
+                            else if (Data.Is(out Insurgency ins))
+                            {
+                                if ((Team == ins.AttackingTeam && ins.Caches != null && ins.CachesDestroyed / (float)ins.Caches.Count < del.value / 100f) ||
+                                    (Team == ins.DefendingTeam && ins.Caches != null && ins.ActiveCachesCount / (float)ins.Caches.Count < del.value / 100f))
                                 {
                                     delay = del;
                                     if (!isUni) return true;

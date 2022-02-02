@@ -232,9 +232,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void StartNextGame(bool onLoad = false)
         {
+            LoadRotation();
             base.StartNextGame(onLoad);
             GameStats.Reset();
-            LoadRotation();
             CTFUI.ClearCaptureUI();
             InvokeOnNewGameStarting(onLoad);
         }
