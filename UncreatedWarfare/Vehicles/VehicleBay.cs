@@ -766,23 +766,13 @@ namespace Uncreated.Warfare.Vehicles
                             }
                             break;
                         case EDelayType.FLAG:
-                            /*if (Data.Is(out Invasion inv))
-                            {
-                                int ct = Mathf.RoundToInt(delay.value);
-                                bool isGood = false;
-                                if (Team == 1)
-                                {
-                                    if (inv.AttackingTeam == 1)
-                                        *
-                                }
-                            }
-                            else*/ if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+                            if (Data.Is(out IFlagTeamObjectiveGamemode fr1))
                             {
                                 // TODO ^ invasion ^
-                                int i2 = GetHighestObjectiveIndex(Team, fr);
+                                int i2 = GetHighestObjectiveIndex(Team, fr1);
                                 L.LogDebug($"{i2} / {del.value} (team {Team})");
                                 if ((Team == 1 && i2 < del.value) || 
-                                    (Team == 2 && fr.Rotation.Count - i2 - 1 < del.value))
+                                    (Team == 2 && fr1.Rotation.Count - i2 - 1 < del.value))
                                 {
                                     delay = del;
                                     if (!isUni) return true;
@@ -801,12 +791,12 @@ namespace Uncreated.Warfare.Vehicles
                             }
                             break;
                         case EDelayType.FLAG_PERCENT:
-                            if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+                            if (Data.Is(out IFlagTeamObjectiveGamemode fr2))
                             {
-                                int i2 = GetHighestObjectiveIndex(Team, fr);
-                                L.LogDebug($"{i2 / (float)fr.Rotation.Count * 100f}% / {del.value}% (team {Team})");
-                                if ((Team == 1 && i2 / (float)fr.Rotation.Count < del.value / 100f) || 
-                                    (Team == 2 && (fr.Rotation.Count - i2 - 1) / (float)fr.Rotation.Count < del.value / 100f))
+                                int i2 = GetHighestObjectiveIndex(Team, fr2);
+                                L.LogDebug($"{i2 / (float)fr2.Rotation.Count * 100f}% / {del.value}% (team {Team})");
+                                if ((Team == 1 && i2 / (float)fr2.Rotation.Count < del.value / 100f) || 
+                                    (Team == 2 && (fr2.Rotation.Count - i2 - 1) / (float)fr2.Rotation.Count < del.value / 100f))
                                 {
                                     delay = del;
                                     if (!isUni) return true;
