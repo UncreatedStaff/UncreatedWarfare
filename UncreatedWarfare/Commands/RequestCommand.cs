@@ -313,7 +313,7 @@ namespace Uncreated.Warfare.Commands
                 }
             }
             
-            if (data.IsDelayed(out Delay delay))
+            if (data.IsDelayed(out Delay delay) && delay.type != EDelayType.NONE)
             {
                 if (delay.type == EDelayType.OUT_OF_STAGING)
                 {

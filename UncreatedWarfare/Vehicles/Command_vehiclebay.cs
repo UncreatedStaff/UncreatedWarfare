@@ -29,7 +29,100 @@ namespace Uncreated.Warfare.Kits
                 string op = "";
                 string property = "";
                 string newValue = "";
+                if (command.Length > 2 && command[0].Equals("delay", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+                    {
+                        player.SendChat("vehiclebay_e_noexist");
+                        return;
+                    }
+                    // vb delay add time 30 [gamemode]
+                    // vb delay add flag 1 [gamemode]
+                    // vb delay add flagpercent 50 [gamemode]
+                    // vb delay add staging [gamemode]
+                    // vb delay add none [gamemode]
+                    bool adding;
+                    if (command[1].Equals("add", StringComparison.OrdinalIgnoreCase))
+                        adding = true;
+                    else if (command[1].Equals("remove", StringComparison.OrdinalIgnoreCase))
+                        adding = false;
+                    else
+                    {
+                        player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats|delay>");
+                        return;
+                    }
+                    EDelayType type;
+                    if (command[2].Equals("time", StringComparison.OrdinalIgnoreCase))
+                        type = EDelayType.TIME;
+                    else if (command[2].Equals("flag", StringComparison.OrdinalIgnoreCase))
+                        type = EDelayType.FLAG;
+                    else if (command[2].Equals("flagpercent", StringComparison.OrdinalIgnoreCase))
+                        type = EDelayType.FLAG_PERCENT;
+                    else if (command[2].Equals("staging", StringComparison.OrdinalIgnoreCase))
+                        type = EDelayType.OUT_OF_STAGING;
+                    else if (command[2].Equals("none", StringComparison.OrdinalIgnoreCase))
+                        type = EDelayType.NONE;
+                    else
+                    {
+                        player.SendChat("correct_usage", "/vehiclebay delay <add|remove> <time|flag|flagpercent|staging|none> [value] [gamemode]");
+                        return;
+                    }
+                    if (type == EDelayType.NONE && command.Length < 4)
+                    {
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " none <gamemode>");
+                        return;
+                    }
+                    string gamemode = null;
+                    if (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE)
+                        gamemode = command[3];
+                    else if (command.Length < 4)
+                    {
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value> [gamemode]");
+                        return;
+                    }
+                    else
+                        gamemode = command[4];
+                    string gm = null;
+                    foreach (string key in Gamemode.GAMEMODES.Keys)
+                    {
+                        if (key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            gm = key;
+                            break;
+                        }
+                    }
+                    if (gm == null)
+                    {
+                        gm = "<";
+                        foreach (string key in Gamemode.GAMEMODES.Keys)
+                        {
+                            if (gm.Length != 1) gm += "|";
+                            gm += key;
+                        }
+                        gm += ">";
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " " + (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE ? gm : command[3].ToLower() + " " + gm));
+                        return;
+                    }
 
+                    float val = 0;
+                    if (type != EDelayType.OUT_OF_STAGING && type != EDelayType.NONE && !float.TryParse(command[3], System.Globalization.NumberStyles.Any, Data.Locale, out val))
+                    {
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value (float)> " + command[4].ToLower());
+                        return;
+                    }
+
+                    if (adding)
+                    {
+                        data.AddDelay(type, val, gamemode);
+                        player.SendChat("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), gamemode ?? "any");
+                    }
+                    else
+                    {
+                        int rem = 0;
+                        while (data.RemoveDelay(type, val, gamemode)) rem++;
+                        player.SendChat("vehiclebay_delay_removed", rem.ToString(Data.Locale));
+                    }
+                }
                 if (command.Length == 1)
                 {
                     op = command[0].ToLower();
@@ -211,10 +304,10 @@ namespace Uncreated.Warfare.Kits
                         }
                     }
                     else
-                        player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
+                        player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats|delay>");
                 }
                 else
-                    player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats>");
+                    player.SendChat("correct_usage", "/vehiclebay <add|remove|set|crewseats|delay>");
                 return;
             }
             SDG.Unturned.BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop barricadeDrop);
