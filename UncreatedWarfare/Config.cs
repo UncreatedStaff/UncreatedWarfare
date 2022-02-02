@@ -50,7 +50,6 @@ namespace Uncreated.Warfare
         public bool EnableSquads;
         public float LoadoutCost;
         public float MaxVehicleAbandonmentDistance;
-        public bool UsePatchForPlayerCap;
         public float MaxVehicleHeightToLeave;
         public string GamemodeRotation;
         public bool DisableNameFilter;
@@ -93,7 +92,6 @@ namespace Uncreated.Warfare
             this.EnableSquads = true;
             this.LoadoutCost = 8;
             this.MaxVehicleAbandonmentDistance = 300f;
-            this.UsePatchForPlayerCap = true;
             this.MaxVehicleHeightToLeave = 50f;
             this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";
             this.DisableNameFilter = false;

@@ -70,23 +70,23 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            // SDG.Unturned.Provider
-            /// <summary>
-            /// Prefix of <see cref="Provider.verifyNextPlayerInQueue()"/> to override the max player count when accepting players.
-            /// </summary>
-            [HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
-            [HarmonyPrefix]
-            static bool OnPlayerEnteredQueuePre()
-            {
-                if (!UCWarfare.Config.UsePatchForPlayerCap) return true;
-                if (Provider.pending.Count < 1 || Provider.clients.Count >= UCWarfare.Config.MaxPlayerCount)
-                    return false;
-                SteamPending steamPending = Provider.pending[0];
-                if (steamPending.hasSentVerifyPacket)
-                    return false;
-                steamPending.sendVerifyPacket();
-                return false;
-            }
+            //// SDG.Unturned.Provider
+            ///// <summary>
+            ///// Prefix of <see cref="Provider.verifyNextPlayerInQueue()"/> to override the max player count when accepting players.
+            ///// </summary>
+            //[HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
+            //[HarmonyPrefix]
+            //static bool OnPlayerEnteredQueuePre()
+            //{
+            //    if (!UCWarfare.Config.UsePatchForPlayerCap) return true;
+            //    if (Provider.pending.Count < 1 || Provider.clients.Count >= UCWarfare.Config.MaxPlayerCount)
+            //        return false;
+            //    SteamPending steamPending = Provider.pending[0];
+            //    if (steamPending.hasSentVerifyPacket)
+            //        return false;
+            //    steamPending.sendVerifyPacket();
+            //    return false;
+            //}
             // SDG.Unturned.Provider
             /// <summary>
             /// Postfix of <see cref="Provider.verifyNextPlayerInQueue()"/> to check if the new player in the queue is an admin, then pass them.
