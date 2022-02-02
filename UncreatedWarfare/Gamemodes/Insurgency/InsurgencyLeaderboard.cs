@@ -252,9 +252,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         protected override void Update()
         {
             float rt = Time.realtimeSinceStartup;
-            for (int i = 0; i < Math.Min(15, statsT1.Count); i++)
+            for (int i = 1; i < Math.Min(15, statsT1.Count); i++)
             {
-                UCPlayer pl = UCPlayer.FromPlayer(statsT1[i].Player);
+                UCPlayer pl = statsT1[i].Player == null ? null : UCPlayer.FromPlayer(statsT1[i].Player);
                 if (states[0][i - 1])
                 {
                     if (pl == null || rt - pl.LastSpoken > 1f)
@@ -267,9 +267,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     UpdateStateT1(true, i);
                 }
             }
-            for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
+            for (int i = 1; i < Math.Min(15, statsT2.Count); i++)
             {
-                UCPlayer pl = UCPlayer.FromPlayer(statsT2[i].Player);
+                UCPlayer pl = statsT2[i].Player == null ? null : UCPlayer.FromPlayer(statsT2[i].Player);
                 if (states[1][i - 1])
                 {
                     if (pl == null || rt - pl.LastSpoken > 1f)

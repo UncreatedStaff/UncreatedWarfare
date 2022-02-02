@@ -272,8 +272,9 @@ namespace Uncreated.Warfare.Components
                         }
                     }
 
-                    foreach (var item in nearestLogi.trunkItems.items)
+                    for (int i = nearestLogi.trunkItems.getItemCount() - 1; i >= 0; i--)
                     {
+                        var item = nearestLogi.trunkItems.items[i];
                         ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
                         nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
                     }

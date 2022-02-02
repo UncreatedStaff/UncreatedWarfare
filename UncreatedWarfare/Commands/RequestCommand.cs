@@ -359,6 +359,10 @@ namespace Uncreated.Warfare.Commands
                         ucplayer.Message("request_vehicle_e_flag_delay_2+", ct.ToString(Data.Locale));
                     }
                 }
+
+                L.LogDebug($"{delay.gamemode ?? "any"} gamemode, {delay.type}: {delay.value}");
+                ucplayer.Message("request_vehicle_e_staging_delay");
+
                 return;
             }
 

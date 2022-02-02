@@ -68,8 +68,6 @@ namespace Uncreated.Warfare.Teams
         }
         public void OnPlayerConnected(UCPlayer player, bool isNewPlayer)
         {
-            L.Log($"JoinManager.OnPlayerConnected was run. isNewPlayer: {isNewPlayer}");
-
             if (!isNewPlayer)
             {
                 LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());

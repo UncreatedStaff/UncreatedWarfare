@@ -750,8 +750,6 @@ namespace Uncreated.Warfare.Vehicles
                     }
                 }
             }
-            if (!delay.IsNil)
-                delay = Delay.Nil;
             return anyVal;
         }
         public List<VehicleSpawn> GetSpawners()

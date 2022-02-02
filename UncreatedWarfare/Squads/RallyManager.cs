@@ -95,7 +95,7 @@ namespace Uncreated.Warfare.Squads
                 EffectManager.askEffectClearByID(SquadManager.rallyID, player.transportConnection);
             }
 
-            IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().GetEnumerator();
+            IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().ToList().GetEnumerator();
             while (barricades.MoveNext())
             {
                 if (Regions.tryGetCoordinate(barricades.Current.model.position, out byte x, out byte y))
