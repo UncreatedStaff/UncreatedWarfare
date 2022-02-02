@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.Commands
             }
             UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
             if (player == null || ucplayer == null) return;
-            if (ucplayer.Position == UnityEngine.Vector3.zero) return;
+            if (ucplayer.Position == Vector3.zero) return;
             ulong team = ucplayer.GetTeam();
             if (command.Length > 0)
             {
