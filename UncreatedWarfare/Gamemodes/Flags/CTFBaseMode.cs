@@ -150,6 +150,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void DeclareWin(ulong winner)
         {
+            if (this._state == EState.FINISHED) return;
+            this._state = EState.FINISHED;
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
             string Team1Tickets = TicketManager.Team1Tickets.ToString() + " Tickets";
@@ -200,7 +202,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
                 }
             }
-            this._state = EState.FINISHED;
             TicketManager.OnRoundWin(winner);
             StartCoroutine(EndGameCoroutine(winner));
         }
@@ -333,6 +334,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
             StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
             StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
+            VehicleSigns.OnFlagCaptured();
             List<string> kits = new List<string>();
             if (capturedTeam == 1)
             {

@@ -9,8 +9,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public override string DisplayName => "Advance and Secure";
         protected override void EndStagingPhase()
         {
-            DestroyBlockers();
             base.EndStagingPhase();
+            DestroyBlockers();
         }
         public override void StartNextGame(bool onLoad = false)
         {

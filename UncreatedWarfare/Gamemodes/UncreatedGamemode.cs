@@ -14,6 +14,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -103,6 +104,17 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (OnTeamWin != null)
                 OnTeamWin.Invoke(winner);
+        }
+        public static void OnStagingComplete()
+        {
+            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+            {
+                Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
+                if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING))
+                {
+                    spawn.UpdateSign();
+                }
+            }
         }
         protected abstract void EventLoopAction();
         private IEnumerator<WaitForSeconds> EventLoop()
@@ -312,6 +324,7 @@ namespace Uncreated.Warfare.Gamemodes
                 TicketManager.OnStagingPhaseEnded();
             EffectManager.ClearEffectByID_AllPlayers(CTFUI.headerID);
             _state = EState.ACTIVE;
+            OnStagingComplete();
         }
         public virtual void Dispose()
         {

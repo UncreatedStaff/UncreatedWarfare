@@ -47,7 +47,8 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
 
         public override void DeclareWin(ulong winner)
         {
-
+            if (this._state == EState.FINISHED) return;
+            this._state = EState.FINISHED;
         }
         public override void StartNextGame(bool onLoad = false)
         {

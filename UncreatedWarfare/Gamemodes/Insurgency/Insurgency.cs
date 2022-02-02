@@ -144,6 +144,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void DeclareWin(ulong winner)
         {
+            if (this._state == EState.FINISHED) return;
+            this._state = EState.FINISHED;
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
             string Team1Tickets = "";
@@ -212,7 +214,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
 
 
-            this._state = EState.FINISHED;
             TicketManager.OnRoundWin(winner);
             StartCoroutine(EndGameCoroutine(winner));
         }
@@ -569,7 +570,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 DestoryBlockerOnT1();
             else
                 DestoryBlockerOnT2();
-
             StartCoroutine(TryDiscoverFirstCache());
         }
         public override void Dispose()

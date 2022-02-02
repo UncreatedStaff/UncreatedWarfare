@@ -468,8 +468,10 @@ namespace Uncreated.Warfare.Vehicles
     {
         NONE            = 0,
         TIME            = 1,
+        /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
         FLAG            = 2,
-        FLAG_PERCENT    = 3,
+        /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
+        FLAG_PERCENT = 3,
         OUT_OF_STAGING  = 4
     }
     public struct Delay
@@ -600,6 +602,84 @@ namespace Uncreated.Warfare.Vehicles
                 if (del.type == type) return true;
             }
             return false;
+        }
+        public bool IsDelayedType(EDelayType type)
+        {
+            string gm = Data.Gamemode.Name;
+            float secondsSinceStart = Data.Gamemode.SecondsSinceStart;
+            for (int i = 0; i < Delays.Length; i++)
+            {
+                ref Delay del = ref Delays[i];
+                if (!gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+                if (del.type == type)
+                {
+                    switch (type)
+                    {
+                        case EDelayType.NONE:
+                            return false;
+                        case EDelayType.TIME:
+                            if (del.value > secondsSinceStart)
+                            {
+                                return true;
+                            }
+                            break;
+                        case EDelayType.FLAG:
+                            if (Data.Is(out IFlagTeamObjectiveGamemode fr) && Team != 0)
+                            {
+                                int i2 = GetHighestObjectiveIndex(Team, fr);
+                                if ((Team == 1 && i2 > del.value) ||
+                                    (Team == 2 && fr.Rotation.Count - i2 > del.value))
+                                {
+                                    return true;
+                                }
+                            }
+                            break;
+                        case EDelayType.FLAG_PERCENT:
+                            if (Data.Is(out fr) && Team != 0)
+                            {
+                                int i2 = GetHighestObjectiveIndex(Team, fr);
+                                if ((Team == 1 && i2 / (float)fr.Rotation.Count > del.value / 100f) ||
+                                    (Team == 2 && (fr.Rotation.Count - i2) / (float)fr.Rotation.Count > del.value / 100f))
+                                {
+                                    return true;
+                                }
+                            }
+                            break;
+                        case EDelayType.OUT_OF_STAGING:
+                            if (Data.Is(out IStagingPhase stg))
+                            {
+                                if (stg.State == EState.STAGING)
+                                {
+                                    return true;
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+            return false;
+        }
+        private int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
+        {
+            if (team == 1)
+            {
+                for (int i = 0; i < gm.Rotation.Count; i++)
+                {
+                    if (!gm.Rotation[i].HasBeenCapturedT1)
+                        return i;
+                }
+                return 0;
+            }
+            else if (team == 2)
+            {
+                for (int i = gm.Rotation.Count - 1; i >= 0; i--)
+                {
+                    if (!gm.Rotation[i].HasBeenCapturedT2)
+                        return i;
+                }
+                return gm.Rotation.Count - 1;
+            }
+            return -1;
         }
         public bool IsDelayed(out Delay delay)
         {
