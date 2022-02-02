@@ -47,21 +47,6 @@ namespace Uncreated.Warfare.Vehicles
             index = ushort.MaxValue;
             return null;
         }
-        [Obsolete]
-        public static IEnumerable<InteractableVehicle> GetNearbyVehicles(ushort id, float radius, Vector3 origin)
-        {
-            float sqrRadius = radius * radius;
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
-            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
-            for (int v = 0; v < vehicles.Count; v++)
-            {
-                if (vehicles[v].id == id)
-                    newvehicles.Add(vehicles[v]);
-            }
-            vehicles.Clear();
-            return newvehicles;
-        }
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
         {
             float sqrRadius = radius * radius;
@@ -71,21 +56,6 @@ namespace Uncreated.Warfare.Vehicles
             for (int v = 0; v < vehicles.Count; v++)
             {
                 if (vehicles[v].asset.GUID == id)
-                    newvehicles.Add(vehicles[v]);
-            }
-            vehicles.Clear();
-            return newvehicles;
-        }
-        [Obsolete]
-        public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<ushort> ids, float radius, Vector3 origin)
-        {
-            float sqrRadius = radius * radius;
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
-            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
-            for (int v = 0; v < vehicles.Count; v++)
-            {
-                if (ids.Contains(vehicles[v].id))
                     newvehicles.Add(vehicles[v]);
             }
             vehicles.Clear();
@@ -105,5 +75,13 @@ namespace Uncreated.Warfare.Vehicles
             vehicles.Clear();
             return newvehicles;
         }
-    }
+        public static InteractableVehicle GetNearestLogi(Vector3 point, float radius, ulong team = 0)
+        {
+            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+            VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
+            return vehicles.FirstOrDefault(v => v.lockedGroup.m_SteamID == team &&
+            VehicleBay.VehicleExists(v.asset.GUID, out var vehicleData) &&
+            (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT));
+        }
+}
 }

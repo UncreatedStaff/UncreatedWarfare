@@ -47,27 +47,30 @@ namespace Uncreated.Warfare.Commands
                 //    player.SendChat("ammo_vehicle_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
                 //    return;
                 //}
-                if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades.Count > 0)
+                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
                 {
-                    if (!player.Player.IsInMain())
-                    {
-                        player.SendChat("ammo_vehicle_out_of_main");
-                        return;
-                    }
-
-                    VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
-
-                    if (FOBManager.config.data.AmmoCommandCooldown > 0)
-                        CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.data.AmmoCommandCooldown);
-                    foreach (Guid item in vehicleData.Items)
-                        if (Assets.find(item) is ItemAsset a)
-                            ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
-
-                    player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
+                    player.SendChat("ammo_auto_resupply");
                     return;
+
+                    //if (vehicle.TryGetComponent(out VehicleComponent c))
+                    //{
+                    //    c.TryStartAutoLoadSupplies();
+                    //}
+
+                    ////VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
+
+                    ////if (FOBManager.config.data.AmmoCommandCooldown > 0)
+                    ////    CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.data.AmmoCommandCooldown);
+                    //foreach (Guid item in vehicleData.Items)
+                    //    if (Assets.find(item) is ItemAsset a)
+                    //        ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
+
+                    //player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
                 }
 
-                if (vehicleData.Type != EVehicleType.EMPLACEMENT)
+                bool isInMain = F.IsInMain(vehicle.transform.position);
+
+                if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
                 {
                     var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
                     10,
@@ -83,18 +86,15 @@ namespace Uncreated.Warfare.Commands
                 }
 
                 var fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
-                bool isInMain = false;
+                
 
                 if (fob == null)
                 {
-                    if (F.IsInMain(vehicle.transform.position))
-                        isInMain = true;
-                    else
+                    if (!isInMain)
                     {
                         player.SendChat("ammo_not_near_fob");
                         return;
-                    }
-                    
+                    }   
                 }
 
                 if (!isInMain && fob.Ammo < vehicleData.RearmCost)

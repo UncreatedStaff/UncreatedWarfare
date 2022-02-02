@@ -109,13 +109,16 @@ namespace Uncreated.Warfare.FOBs
             }
         }
         
-        public static void Tick(SpecialFOB special, int counter = -1)
+        public static void Tick()
         {
-            if (special.DisappearAroundEnemies && counter % 4 == 0)
+            foreach (var special in SpecialFOBs)
             {
-                if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(30, 2)) > 0)
+                if (special.DisappearAroundEnemies)
                 {
-                    DeleteSpecialFOB(special.Name, special.Team);
+                    if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(70, 2)) > 0)
+                    {
+                        DeleteSpecialFOB(special.Name, special.Team);
+                    }
                 }
             }
         }
@@ -946,9 +949,9 @@ namespace Uncreated.Warfare.FOBs
                     team = 1,
                     emplacementData = new EmplacementData
                     {
-                        vehicleID = Guid.Empty,
+                        vehicleID = new Guid("9d305050a6a142349376d6c49fb38362"),
                         baseID = Guid.Empty,
-                        ammoID = new Guid("9d305050a6a142349376d6c49fb38362"),
+                        ammoID = new Guid("3128a69d06ac4bbbbfddc992aa7185a6"),
                         ammoAmount = 1,
                         allowedPerFob = 1
                     }

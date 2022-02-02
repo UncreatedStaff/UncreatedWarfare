@@ -151,7 +151,7 @@ namespace Uncreated.Warfare.Gamemodes
             XPGUID = new Guid("d6de0a80-25de-44d2-9a99-a41937a58a59");
             OfficerGUID = new Guid("9fd31b77-6b74-4b72-847f-2dc00dba93a8");
             CTFLeaderboardGUID = new Guid("b83389df-1245-438d-b188-89af94f04960");
-            InsurgencyLeaderboardGUID = new Guid("c0bf4518-d941-4319-b67d-bb46ad88ba2f");
+            InsurgencyLeaderboardGUID = new Guid("fd44278117b14ce6939af354ce7f37b4");
             NearbyResourcesGUID = new Guid("3775a1e7-d84b-47e7-9cac-ecd5e6b2a224");
             MarkerAmmo = new Guid("827b0c00724b466d8d33633fe2a7743a");
             MarkerRepair = new Guid("bcfda6fb871f42cd88597c8ac5f7c424");
@@ -482,6 +482,7 @@ namespace Uncreated.Warfare.Gamemodes
 public struct TEAM_CTF_CONFIG
     {
         public int StagingTime;
+        public int StartingTickets;
         public float EvaluateTime;
         public int TicketXPInterval;
         public int RequiredPlayerDifferenceToCapture;
@@ -494,14 +495,15 @@ public struct TEAM_CTF_CONFIG
         public void SetDefaults()
         {
             StagingTime = 90;
+            StartingTickets = 150;
             EvaluateTime = 0.25f;
             TicketXPInterval = 10;
             OverrideContestDifference = 2;
             AllowVehicleCapture = false;
             DiscoveryForesight = 2;
             FlagTickInterval = 4;
-            TicketsFlagCaptured = 20;
-            TicketsFlagLost = -20;
+            TicketsFlagCaptured = 30;
+            TicketsFlagLost = -10;
             RequiredPlayerDifferenceToCapture = 2;
         }
     }
@@ -518,8 +520,8 @@ public struct TEAM_CTF_CONFIG
             StagingTime = 150;
             DiscoveryForesight = 2;
             SpecialFOBName = "VCP";
-            TicketsFlagCaptured = 100;
-            AttackStartingTickets = 200;
+            TicketsFlagCaptured = 50;
+            AttackStartingTickets = 120;
             TicketXPInterval = 10;
         }
     }
@@ -528,6 +530,7 @@ public struct TEAM_CTF_CONFIG
         public int MinStartingCaches;
         public int MaxStartingCaches;
         public int StagingTime;
+        public int FirstCacheSpawnTime;
         public int AttackStartingTickets;
         public int CacheDiscoverRange;
         public int IntelPointsToSpawn;
@@ -540,15 +543,16 @@ public struct TEAM_CTF_CONFIG
         public void SetDefaults()
         {
             MinStartingCaches = 3;
-            MaxStartingCaches = 3;
+            MaxStartingCaches = 4;
             StagingTime = 150;
-            AttackStartingTickets = 200;
+            FirstCacheSpawnTime = 240;
+            AttackStartingTickets = 100;
             CacheDiscoverRange = 75;
-            IntelPointsToDiscovery = 5;
+            IntelPointsToDiscovery = 15;
             IntelPointsToSpawn = 15;
             XPCacheDestroyed = 800;
             XPCacheTeamkilled = -8000;
-            TicketsCache = 70;
+            TicketsCache = 50;
             CacheStartingBuild = 15;
             CacheItems = new Dictionary<ushort, int>();
         }

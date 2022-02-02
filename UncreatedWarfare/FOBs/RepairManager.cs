@@ -137,11 +137,14 @@ namespace Uncreated.Warfare.FOBs
             while (parent.IsActive)
             {
                 List<InteractableVehicle> nearby = new List<InteractableVehicle>();
-                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(17, 2), nearby);
+                VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(25, 2), nearby);
 
                 for (int i = 0; i < nearby.Count; i++)
                 {
                     if (nearby[i].lockedGroup.m_SteamID != parent.drop.GetServersideData().group)
+                        continue;
+
+                    if (!(nearby[i].asset.engine == EEngine.PLANE || nearby[i].asset.engine == EEngine.HELICOPTER) && (parent.structure.point - nearby[i].transform.position).sqrMagnitude > Math.Pow(12, 2))
                         continue;
 
                     if (nearby[i].health >= nearby[i].asset.health && nearby[i].fuel >= nearby[i].asset.fuel)

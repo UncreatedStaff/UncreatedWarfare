@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
                 {
-                    UCPlayer target = UCPlayer.FromName(name);
+                    UCPlayer target = UCPlayer.FromName(name, true);
                     if (target != null)
                     {
                         if (target.Squad == player.Squad)

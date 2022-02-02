@@ -1,8 +1,6 @@
 ﻿using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Vehicles;
@@ -18,6 +16,7 @@ namespace Uncreated.Warfare.Components
         public bool isInVehiclebay { get; private set; }
         public EDamageOrigin lastDamageOrigin;
         public ulong lastDamager;
+        public ulong lastDriver;
         public Dictionary<ulong, Vector3> TransportTable { get; private set; }
         public Dictionary<ulong, double> UsageTable { get; private set; }
         private Dictionary<ulong, DateTime> TimeEnteredTable;
@@ -38,6 +37,7 @@ namespace Uncreated.Warfare.Components
             Vehicle = vehicle;
 
             lastDamager = 0;
+            lastDriver = 0;
             TransportTable = new Dictionary<ulong, Vector3>();
             UsageTable = new Dictionary<ulong, double>();
             TimeEnteredTable = new Dictionary<ulong, DateTime>();
@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.Components
 
                 if (quotaLoop is null)
                 {
-                    _requiredQuota = data.TicketCost;
+                    _requiredQuota = data.TicketCost * 0.5F;
                     quotaLoop = StartCoroutine(QuotaLoop());
                 }
             }
@@ -148,6 +148,9 @@ namespace Uncreated.Warfare.Components
             if (player == null)
                 return;
 
+            if (toSeatIndex == 0)
+                lastDriver = nelsonplayer.channel.owner.playerID.steamID.m_SteamID;
+
             if (isInVehiclebay)
             {
                 EvaluateUsage(nelsonplayer.channel.owner);
@@ -161,7 +164,6 @@ namespace Uncreated.Warfare.Components
                     TransportTable.Remove(player.Steam64);
             }
         }
-
         public void EvaluateUsage(SteamPlayer player)
         {
             byte currentSeat = player.player.movement.getSeat();
@@ -185,12 +187,13 @@ namespace Uncreated.Warfare.Components
         {
             forceSupplyLoop = StartCoroutine(ForceSupplyLoop(caller, type, amount));
         }
-        public void TryStartAutoLoadSupplies()
+        public bool TryStartAutoLoadSupplies()
         {
             if (IsResupplied || autoSupplyLoop != null || Data.Metadata is null || Data.Metadata.TrunkItems is null || Vehicle.trunkItems is null)
-                return;
+                return false;
 
             autoSupplyLoop = StartCoroutine(AutoSupplyLoop());
+            return true;
 
         }
         private IEnumerator<WaitForSeconds> ForceSupplyLoop(UCPlayer caller, ESupplyType type, int amount)
@@ -331,7 +334,11 @@ namespace Uncreated.Warfare.Components
             ItemAsset build = Assets.find(buildGUID) as ItemAsset;
             ItemAsset ammo = Assets.find(ammoGUID) as ItemAsset;
 
+            UCPlayer driver = UCPlayer.FromID(lastDriver);
+
             int loaderCount = 0;
+
+            bool shouldMessagePlayer = false;
 
             var trunk = Data.Metadata.TrunkItems;
             for (int i = 0; i < trunk.Count; i++)
@@ -355,6 +362,8 @@ namespace Uncreated.Warfare.Components
                         else
                             EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
 
+                        shouldMessagePlayer = true;
+
                         yield return new WaitForSeconds(1);
                         while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
                             yield return new WaitForSeconds(1);
@@ -363,6 +372,11 @@ namespace Uncreated.Warfare.Components
             }
             IsResupplied = true;
             autoSupplyLoop = null;
+
+            if (shouldMessagePlayer && driver is not null && driver.IsOnline && F.IsInMain(driver.Position))
+            {
+                Tips.TryGiveTip(driver, ETip.LOGI_RESUPPLIED, Vehicle.asset.vehicleName);
+            }
         }
         private IEnumerator<WaitForSeconds> QuotaLoop()
         {

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 
@@ -53,9 +55,13 @@ namespace Uncreated.Warfare.Commands
                         player.Message("deploy_e_incombat", combatlog.ToString());
                         return;
                     }
-                    if (!player.IsOnFOB(out _))
+                    if (!(player.IsOnFOB(out _) || UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, player.Position, false) != null))
                     {
-                        player.Message("deploy_e_notnearfob");
+                        if (Data.Is(out Insurgency ins))
+                            player.Message("deploy_e_notnearfob_ins");
+                        else
+                            player.Message("deploy_e_notnearfob");
+
                         return;
                     }
                 }

@@ -460,7 +460,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_attack", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_attack", player));
             else if (player.GetTeam() == DefendingTeam)
                 EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
         }

@@ -29,7 +29,7 @@ namespace Uncreated.Warfare
         }
         private static void GiveTip(UCPlayer player, Tip tip)
         {
-            ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(tip.TranslationKey, player), EToastMessageSeverity.TIP));
+            ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(tip.TranslationKey, player, tip.TranslationArgs), EToastMessageSeverity.TIP));
         }
     }
     public class Tip
@@ -49,10 +49,11 @@ namespace Uncreated.Warfare
             TranslationArgs = translationArgs;
             switch (Type)
             {
-                case ETip.PLACE_RADIO: Cooldown = 600; TranslationKey = "tip_place_radio";  break;
-                case ETip.PLACE_BUNKER: Cooldown = 600; TranslationKey = "tip_place_bunker";  break;
-                case ETip.UNLOAD_SUPPLIES: Cooldown = 300; TranslationKey = "tip_unload_supplies";  break;
-                case ETip.HELP_BUILD: Cooldown = 300; TranslationKey = "tip_help_build";  break;
+                case ETip.PLACE_RADIO: Cooldown = 300; TranslationKey = "tip_place_radio";  break;
+                case ETip.PLACE_BUNKER: Cooldown = 3; TranslationKey = "tip_place_bunker";  break;
+                case ETip.UNLOAD_SUPPLIES: Cooldown = 120; TranslationKey = "tip_unload_supplies";  break;
+                case ETip.HELP_BUILD: Cooldown = 120; TranslationKey = "tip_help_build";  break;
+                case ETip.LOGI_RESUPPLIED: Cooldown = 120; TranslationKey = "tip_logi_resupplied";  break;
             }
         }
     }
@@ -62,5 +63,6 @@ namespace Uncreated.Warfare
         PLACE_BUNKER,
         UNLOAD_SUPPLIES,
         HELP_BUILD,
+        LOGI_RESUPPLIED
     }
 }

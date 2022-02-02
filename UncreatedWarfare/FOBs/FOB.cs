@@ -229,12 +229,55 @@ namespace Uncreated.Warfare.Components
 
             Placer = radio.GetServersideData().owner;
 
-            InteractableVehicle nearestLogi = UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.LogiTruckIDs.AsEnumerable(), 30, Position).FirstOrDefault(l => l.lockedGroup.m_SteamID == Team);
+            InteractableVehicle nearestLogi = UCVehicleManager.GetNearestLogi(Position, 30, Team);
             if (nearestLogi != null)
             {
                 if (nearestLogi.transform.TryGetComponent(out VehicleComponent component))
-                    component.Quota += 3;
-                Creator = nearestLogi.lockedOwner.m_SteamID;
+                {
+                    component.Quota += 5;
+                    Creator = component.lastDriver;
+                }
+
+                if (!nearestLogi.isDriven)
+                {
+                    int supplyCount = nearestLogi.trunkItems.getItemCount();
+
+                    UCPlayer creator = UCPlayer.FromID(Creator);
+                    int groupsUnloaded = 0;
+                    if (creator != null)
+                    {
+                        creator.SuppliesUnloaded += supplyCount;
+                        while (creator.SuppliesUnloaded > 0)
+                        {
+                            creator.SuppliesUnloaded -= 6;
+                            if (creator.SuppliesUnloaded < 0)
+                                creator.SuppliesUnloaded = 0;
+                            else
+                                groupsUnloaded++;
+                        }
+
+                        if (groupsUnloaded > 0)
+                        {
+                            int tw = Points.TWConfig.UnloadSuppliesPoints;
+                            int xp = Points.XPConfig.UnloadSuppliesXP;
+
+                            if (creator.KitClass == EClass.PILOT)
+                            {
+                                xp *= 2;
+                                tw *= 2;
+                            }
+
+                            Points.AwardXP(creator, groupsUnloaded * xp, Translation.Translate("xp_supplies_unloaded", creator));
+                            Points.AwardTW(creator, groupsUnloaded * tw);
+                        }
+                    }
+
+                    foreach (var item in nearestLogi.trunkItems.items)
+                    {
+                        ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
+                    }
+                    nearestLogi.trunkItems.clear();
+                }
             }
 
             builtRadioGUID = radio.asset.GUID;

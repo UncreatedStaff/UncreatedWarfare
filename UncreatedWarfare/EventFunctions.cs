@@ -265,68 +265,81 @@ namespace Uncreated.Warfare
             }
             if (shouldAllow)
             {
+                if (damageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage && !(vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE))
+                {
+                    pendingTotalDamage = (ushort)Mathf.RoundToInt(pendingTotalDamage * 0.13f);
+                }
+
+                if (damageOrigin == EDamageOrigin.Useable_Gun && (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE))
+                {
+                    if (pendingTotalDamage > vehicle.health && pendingTotalDamage > 200)
+                    {
+                        canRepair = false;
+                    }
+                }
+
                 if (!vehicle.TryGetComponent(out VehicleComponent c))
                 {
                     c = vehicle.gameObject.AddComponent<VehicleComponent>();
                     c.Initialize(vehicle);
                 }
-                if (instigatorSteamID != CSteamID.Nil)
+
+                if (instigatorSteamID == CSteamID.Nil)
+                    instigatorSteamID = vehicle.lockedOwner;
+
+                c.item = Guid.Empty;
+                if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                 {
-                    c.item = Guid.Empty;
-                    if (damageOrigin == EDamageOrigin.Grenade_Explosion)
+                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                     {
-                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
-                        {
-                            ThrowableOwner a = c2.thrown.FirstOrDefault(x =>
-                                Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
-                            if (a != null)
-                                c.item = a.ThrowableID;
-                        }
+                        ThrowableOwner a = c2.thrown.FirstOrDefault(x =>
+                            Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
+                        if (a != null)
+                            c.item = a.ThrowableID;
                     }
-                    else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                }
+                else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+                {
+                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                     {
-                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
-                        {
-                            c.item = c2.lastProjected;
-                        }
+                        c.item = c2.lastProjected;
                     }
-                    else if (damageOrigin == EDamageOrigin.Vehicle_Explosion)
+                }
+                else if (damageOrigin == EDamageOrigin.Vehicle_Explosion)
+                {
+                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                     {
-                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
-                        {
-                            c.item = c2.lastExplodedVehicle;
-                        }
+                        c.item = c2.lastExplodedVehicle;
                     }
-                    else if (damageOrigin == EDamageOrigin.Useable_Gun || damageOrigin == EDamageOrigin.Bullet_Explosion)
+                }
+                else if (damageOrigin == EDamageOrigin.Useable_Gun || damageOrigin == EDamageOrigin.Bullet_Explosion)
+                {
+                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                     {
-                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
-                        {
-                            c.item = c2.lastShot;
-                        }
+                        c.item = c2.lastShot;
                     }
-                    else if (damageOrigin == EDamageOrigin.Trap_Explosion)
+                }
+                else if (damageOrigin == EDamageOrigin.Trap_Explosion)
+                {
+                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
                     {
-                        if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
-                        {
-                            c.item = c2.LastLandmineExploded.barricadeGUID;
-                        }
+                        c.item = c2.LastLandmineExploded.barricadeGUID;
                     }
+                }
 
-                    if (!c.DamageTable.TryGetValue(instigatorSteamID.m_SteamID, out var pair))
-                        c.DamageTable.Add(instigatorSteamID.m_SteamID, new KeyValuePair<ushort, DateTime>(pendingTotalDamage, DateTime.Now));
-                    else
-                        c.DamageTable[instigatorSteamID.m_SteamID] = new KeyValuePair<ushort, DateTime>((ushort)(pair.Key + pendingTotalDamage), DateTime.Now);
+                if (!c.DamageTable.TryGetValue(instigatorSteamID.m_SteamID, out var pair))
+                    c.DamageTable.Add(instigatorSteamID.m_SteamID, new KeyValuePair<ushort, DateTime>(pendingTotalDamage, DateTime.Now));
+                else
+                    c.DamageTable[instigatorSteamID.m_SteamID] = new KeyValuePair<ushort, DateTime>((ushort)(pair.Key + pendingTotalDamage), DateTime.Now);
 
-                    var gunner = UCPlayer.FromCSteamID(instigatorSteamID);
-                    if (gunner is not null)
+                var gunner = UCPlayer.FromCSteamID(instigatorSteamID);
+                if (gunner is not null)
+                {
+                    var attackerVehicle = gunner.Player.movement.getVehicle();
+                    if (attackerVehicle != null)
                     {
-                        var attackerVehicle = gunner.Player.movement.getVehicle();
-                        if (attackerVehicle != null)
-                        {
-                            c.Quota += pendingTotalDamage * 0.015F;  
-                        }
+                        c.Quota += pendingTotalDamage * 0.015F;  
                     }
-
                 }
                 c.lastDamageOrigin = damageOrigin;
                 c.lastDamager = instigatorSteamID.m_SteamID;

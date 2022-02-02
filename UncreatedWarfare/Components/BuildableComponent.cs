@@ -37,9 +37,13 @@ namespace Uncreated.Warfare.Components
             var data = foundation.GetServersideData();
 
             UCPlayer placer = UCPlayer.FromID(data.owner);
-            if (placer is not null && !(buildable.type != EBuildableType.FORTIFICATION || buildable.type != EBuildableType.AMMO_CRATE))
+            if (placer is not null && !(buildable.type == EBuildableType.FORTIFICATION || buildable.type == EBuildableType.AMMO_CRATE))
             {
-                foreach (var player in PlayerManager.OnlinePlayers.Where(p => p != placer && p.GetTeam() == data.group && (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
+                foreach (var player in PlayerManager.OnlinePlayers.Where(p => p != placer && 
+                p.GetTeam() == data.group && 
+                !F.IsInMain(p.Position) &&
+                p.Player.movement.getVehicle() is null &&
+                (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
                 {
                     Tips.TryGiveTip(player, ETip.HELP_BUILD, placer.CharacterName);
                 }

@@ -89,14 +89,10 @@ namespace Uncreated.Warfare.Point
                 else
                     number = number.Colorize("d69898");
 
-                ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
-
                 if (message != "")
-                {
-                    message = message.Colorize("adadad");
-
-                    ToastMessage.QueueMessage(player, new ToastMessage(message, EToastMessageSeverity.MINI));
-                }
+                    ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message.Colorize("adadad"), EToastMessageSeverity.MINI));
+                else
+                    ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
             }
 
             UpdateXPUI(player);
@@ -160,18 +156,18 @@ namespace Uncreated.Warfare.Point
                 if (amount > 0)
                     number = number.Colorize("ffe392");
                 else
-                    number = number.Colorize("e0b08d");
-
-                ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
+                    number = number.Colorize("e0a98d");
 
                 if (message != "")
                 {
                     if (!(message.StartsWith("<") && message.EndsWith(">")))
-                    {
-                        message = message.Colorize("adadad");
-                    }
-                    ToastMessage.QueueMessage(player, new ToastMessage(message, EToastMessageSeverity.MINI));
+                        message = message.Colorize("b8af95");
+
+                    ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message.Colorize("adadad"), EToastMessageSeverity.MINI));
                 }
+                else
+                    ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
+
             }
 
             UpdateTWUI(player);
@@ -413,7 +409,7 @@ namespace Uncreated.Warfare.Point
             RallyUsedPoints = 30;
             MemberFlagCapturePoints = 15;
             ResupplyFriendlyPoints = 20;
-            RepairVehiclePoints = 10;
+            RepairVehiclePoints = 5;
             ReviveFriendlyTW = 20;
             UnloadSuppliesPoints = 10;
         }

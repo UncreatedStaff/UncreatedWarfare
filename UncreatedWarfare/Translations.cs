@@ -274,6 +274,7 @@ namespace Uncreated.Warfare
                 { "deploy_c_dead", "<color=#ffa238>You died and can no longer deploy!</color>" },
                 { "deploy_e_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
                 { "deploy_e_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to deploy again.</color>" },
+                { "deploy_e_notnearfob_ins", "<color=#b5a591>You must be on an active friendly FOB, Cache, or at main in order to deploy again.</color>" },
                 { "deploy_e_cooldown", "<color=#b5a591>You can deploy again in: <color=#e3c27f>{0}</color>.</color>" },
                 { "deploy_e_alreadydeploying", "<color=#b5a591>You are already deploying somewhere.</color>" },
                 { "deploy_e_incombat", "<color=#ffaa42>You are in combat, soldier! You can deploy in another: <color=#e3987f>{0}</color>.</color>" },
@@ -293,7 +294,7 @@ namespace Uncreated.Warfare
                 { "ammo_success_main", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color></color>" },
                 { "ammo_success_vehicle_main", "<color=#d1bda7>Resupplied vehicle. Consumed: <color=#d97568>{0} AMMO</color></color>" },
                 { "ammo_vehicle_cant_rearm", "<color=#b3a6a2>This vehicle can't be resupplied.</color>" },
-                { "ammo_vehicle_out_of_main", "<color=#b3a6a2>This vehicle can only be resupplied at main base.</color>" },
+                { "ammo_auto_resupply", "<color=#b3a6a2>This vehicle will AUTO RESUPPLY when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.</color>" }, 
                 { "ammo_vehicle_full_already", "<color=#b3a6a2>This vehicle does not need to be resupplied.</color>" },
                 { "ammo_not_near_fob", "<color=#b3a6a2>This ammo crate is not built on a friendly FOB.</color>" },
                 { "ammo_not_near_repair_station", "<color=#b3a6a2>Your vehicle must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.</color>" },
@@ -762,8 +763,8 @@ namespace Uncreated.Warfare
                 { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
                 { "phases_briefing", "BRIEFING PHASE" },
                 { "phases_preparation", "PREPARATION PHASE" },
-                { "phases_invasion_attack", "Enemies are fortifying {0}.\nGET READY" },
-                { "phases_invasion_defense", "Enemies will attack soon.\nFORTIFY {0}" },
+                { "phases_invasion_attack", "BRIEFING PHASE" },
+                { "phases_invasion_defense", "PREPARATION PHASE\nFORTIFY {0}" },
 
                 // xp toast messages
                 { "xp_built_emplacement", "BUILT EMPLACEMENT" },
@@ -774,9 +775,9 @@ namespace Uncreated.Warfare
                 { "xp_from_operator", "FROM OPERATOR" },
                 { "xp_from_player", "FROM {0}" },
                 { "xp_healed_teammate", "HEALED {0}" },
-                { "xp_enemy_downed", "DOWNED" },
-                { "xp_assist_enemy_downed", "ASSIST DOWNED" },
-                { "xp_friendly_downed", "DOWNED FRIENDLY" },
+                { "xp_enemy_downed", "<color=#e3e3e3>DOWNED</color>" },
+                { "xp_assist_enemy_downed", "<color=#e3e3e3>ASSIST DOWNED</color>" },
+                { "xp_friendly_downed", "<color=#e3e3e3>DOWNED FRIENDLY</color>" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_kill_assist", "ASSIST" },
                 { "xp_vehicle_assist", "VEHICLE ASSIST" },
@@ -887,10 +888,11 @@ namespace Uncreated.Warfare
                 { "report_console_record_failed", "Report against {0} ({1}) failed to send to UCDB." },
 
                 // Tips
-                { "tip_place_radio", "TIP:\nPlace a <color=#ababab>FOB RADIO</color>." },
-                { "tip_place_bunker", "Build a <color=#a5c3d9>FOB BUNKER</color> for your team to spawn on." },
+                { "tip_place_radio", "Place a <color=#ababab>FOB RADIO</color>." },
+                { "tip_place_bunker", "Build a <color=#a5c3d9>FOB BUNKER</color> so that your team can spawn." },
                 { "tip_unload_supplies", "<color=#d9c69a>DROP SUPPLIES</color> onto the FOB." },
                 { "tip_help_build", "<color=#d9c69a>{0} needs help building!</color>" },
+                { "tip_logi_resupplied", "Your {0} has been auto resupplied." },
             };
         }
 

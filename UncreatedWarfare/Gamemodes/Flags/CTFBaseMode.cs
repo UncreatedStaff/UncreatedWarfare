@@ -143,6 +143,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     }
                 }
             }
+            if (EveryXSeconds(5))
+            {
+                FOBManager.Tick();
+            }
         }
         public override void DeclareWin(ulong winner)
         {

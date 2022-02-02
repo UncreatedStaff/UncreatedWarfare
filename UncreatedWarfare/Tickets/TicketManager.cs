@@ -26,16 +26,12 @@ namespace Uncreated.Warfare.Tickets
         public static int Team1Tickets;
         public static int Team2Tickets;
         public static DateTime TimeSinceMatchStart;
-        internal static int _Team1previousTickets;
-        internal static int _Team2previousTickets;
         public TicketManager()
         {
             TimeSinceMatchStart = DateTime.Now;
 
-            Team1Tickets = config.data.StartingTickets;
-            Team2Tickets = config.data.StartingTickets;
-            _Team1previousTickets = config.data.StartingTickets;
-            _Team2previousTickets = config.data.StartingTickets;
+            Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+            Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
 
             VehicleManager.OnVehicleExploded += OnVehicleExploded;
         }
@@ -120,11 +116,9 @@ namespace Uncreated.Warfare.Tickets
                 {
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        UCPlayer player = UCPlayer.FromID(vc.lastDamager);
+                        UCPlayer player = UCPlayer.FromID(vc.lastDriver);
                         bool wasCrashed = false;
 
-                        if (player == null)
-                            player = UCPlayer.FromSteamPlayer(vehicle.passengers[0].player);
                         if (player == null)
                             return;
                         else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
@@ -289,16 +283,19 @@ namespace Uncreated.Warfare.Tickets
                     if (exp.XPGained > 0)
                         Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
 
-                    if (player.IsSquadLeader())
-                    {
-                        if (exp.OFPGained > 0)
-                            Points.AwardTW(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), "");
-                    }
+                    //if (player.IsSquadLeader())
+                    //{
+                    //    if (exp.OFPGained > 0)
+                    //        Points.AwardTW(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), "");
+                    //}
                 }
             }
         }
         public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+            int team1bleed = GetTeamBleed(1);
+            int team2bleed = GetTeamBleed(2);
+
             if (Data.Is<Invasion>(out _))
             {
                 if (capturedTeam == 1)
@@ -312,46 +309,33 @@ namespace Uncreated.Warfare.Tickets
                     flag.HasBeenCapturedT2 = true;
                 }
             }
-            else if (Data.Is<TeamCTF>(out _))
+            else if (Data.Is(out IFlagRotation r))
             {
-                if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
+                if (capturedTeam == 1) flag.HasBeenCapturedT1 = true;
+                if (capturedTeam == 2) flag.HasBeenCapturedT2 = true;
+
+                if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
                 {
-                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-                    flag.HasBeenCapturedT1 = true;
+                    if (capturedTeam == 1) Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+                    if (capturedTeam == 2) Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
                 }
-                else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
+
+                if (team2bleed < 0)
+                {
+                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+                }
+                else if (team1bleed < 0)
                 {
                     Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-                    flag.HasBeenCapturedT2 = true;
                 }
 
-                if (lostTeam == 1)
-                    Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
-                if (lostTeam == 2)
-                    Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
-            }
-            else
-            {
-                if (capturedTeam == 1 && !flag.HasBeenCapturedT1)
-                {
-                    Team1Tickets += config.data.TicketsFlagCaptured;
-                    flag.HasBeenCapturedT1 = true;
-                }
-                else if (capturedTeam == 2 && !flag.HasBeenCapturedT2)
-                {
-                    Team2Tickets += config.data.TicketsFlagCaptured;
-                    flag.HasBeenCapturedT2 = true;
-                }
-
-                if (lostTeam == 1)
-                    Team1Tickets += config.data.TicketsFlagLost;
-                if (lostTeam == 2)
-                    Team2Tickets += config.data.TicketsFlagLost;
+                if (lostTeam == 1) Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+                if (lostTeam == 2) Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
             }
             
 
-            UpdateUITeam1(GetTeamBleed(1));
-            UpdateUITeam2(GetTeamBleed(1));
+            UpdateUITeam1(team1bleed);
+            UpdateUITeam2(team2bleed);
 
             Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
 
@@ -397,6 +381,9 @@ namespace Uncreated.Warfare.Tickets
                 Points.AwardXP(player, xp, Translation.Translate("xp_flag_neutralized", player.Steam64));
                 Points.AwardXP(player, player.NearbyMemberBonus(xp, 150) - xp, Translation.Translate("xp_squad_bonus", player.Steam64));
             }
+
+            UpdateUITeam1(GetTeamBleed(1));
+            UpdateUITeam2(GetTeamBleed(2));
         }
         public static void OnFlagTick()
         {
@@ -440,7 +427,7 @@ namespace Uncreated.Warfare.Tickets
         {
             ulong team = player.GetTeam();
             int bleed = GetTeamBleed(player.GetTeam());
-            GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out int tickets, out string message);
+            GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
             UpdateUI(player.connection, UIID, tickets, message);
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
@@ -448,7 +435,7 @@ namespace Uncreated.Warfare.Tickets
             EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
             EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
             int bleed = GetTeamBleed(player.GetTeam());
-            GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out int tickets, out string message);
+            GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
             UpdateUI(player.transportConnection, UIID, tickets, message);
         }
         public static void OnStagingPhaseEnded()
@@ -491,8 +478,8 @@ namespace Uncreated.Warfare.Tickets
             }
             else
             {
-                Team1Tickets = config.data.StartingTickets;
-                Team2Tickets = config.data.StartingTickets;
+                Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+                Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
             }
 
             UpdateUITeam1(GetTeamBleed(1));
@@ -525,28 +512,31 @@ namespace Uncreated.Warfare.Tickets
             }
             UpdateUITeam2(GetTeamBleed(2));
         }
-        public static void GetUIDisplayerInfo(ulong team, int bleed, out ushort UIID, out int tickets, out string message)
+        public static void GetUIDisplayerInfo(ulong team, int bleed, out ushort UIID, out string tickets, out string message)
         {
             UIID = 0;
-            tickets = 0;
+            tickets = "";
             message = "";
 
             if (TeamManager.IsTeam1(team))
             {
-                tickets = Team1Tickets;
+                tickets = Team1Tickets.ToString();
                 UIID = config.data.Team1TicketUIID;
             }
 
             else if (TeamManager.IsTeam2(team))
             {
-                tickets = Team2Tickets;
+                tickets = Team2Tickets.ToString();
                 UIID = config.data.Team2TicketUIID;
             }
 
-            if (Data.Is(out Insurgency insurgency) && team == insurgency.DefendingTeam)
+            if (Data.Is(out Insurgency insurgency))
             {
                 if (insurgency.DefendingTeam == team)
+                {
+                    tickets = insurgency.CachesLeft + " left";
                     message = "DEFEND THE WEAPONS CACHES";
+                }
                 else if (insurgency.AttackingTeam == team)
                 {
                     if (insurgency.DiscoveredCaches.Count == 0)
@@ -556,15 +546,13 @@ namespace Uncreated.Warfare.Tickets
                 }
                 else
                     message = "";
-
-                tickets = insurgency.CachesLeft;
             }
             else if (bleed < 0)
             {
                 message = $"{bleed} per minute".Colorize("eb9898");
             }
         }
-        public static void UpdateUI(ITransportConnection connection, ushort UIID, int tickets, string message)
+        public static void UpdateUI(ITransportConnection connection, ushort UIID, string tickets, string message)
         {
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
@@ -575,7 +563,7 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void UpdateUITeam1(int bleed = 0)
         {
-            GetUIDisplayerInfo(1, bleed, out ushort UIID, out int tickets, out string message);
+            GetUIDisplayerInfo(1, bleed, out ushort UIID, out string tickets, out string message);
 
             var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam1()).ToList();
 
@@ -586,7 +574,7 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void UpdateUITeam2(int bleed = 0)
         {
-            GetUIDisplayerInfo(2, bleed, out ushort UIID, out int tickets, out string message);
+            GetUIDisplayerInfo(2, bleed, out ushort UIID, out string tickets, out string message);
 
             var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam2()).ToList();
 
@@ -620,7 +608,12 @@ namespace Uncreated.Warfare.Tickets
                     if (enemyRatio >= 0.6f)
                     {
                         if (enemyRatio > 0.75f)
-                            return -2;
+                        {
+                            if (enemyRatio > 0.85f)
+                                return -3;
+                            else
+                                return -2;
+                        }
                         else
                             return -1;
                     }
@@ -664,21 +657,15 @@ namespace Uncreated.Warfare.Tickets
     }
     public class TicketData : ConfigData
     {
-        public int StartingTickets;
         public int TicketHandicapDifference;
         public int FOBCost;
-        public int TicketsFlagCaptured;
-        public int TicketsFlagLost;
         public ushort Team1TicketUIID;
         public ushort Team2TicketUIID;
 
         public override void SetDefaults()
         {
-            StartingTickets = 300;
             TicketHandicapDifference = 40;
             FOBCost = 15;
-            TicketsFlagCaptured = 20;
-            TicketsFlagLost = -20;
             Team1TicketUIID = 36035;
             Team2TicketUIID = 36058;
         }

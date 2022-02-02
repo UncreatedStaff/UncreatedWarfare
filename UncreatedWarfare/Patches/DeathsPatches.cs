@@ -288,7 +288,7 @@ namespace Uncreated.Warfare
                 Vector3 force = new Vector3(UnityEngine.Random.Range(__instance.asset.minExplosionForce.x, __instance.asset.maxExplosionForce.x), UnityEngine.Random.Range(__instance.asset.minExplosionForce.y, __instance.asset.maxExplosionForce.y), UnityEngine.Random.Range(__instance.asset.minExplosionForce.z, __instance.asset.maxExplosionForce.z));
                 __instance.GetComponent<Rigidbody>().AddForce(force);
                 __instance.GetComponent<Rigidbody>().AddTorque(16f, 0.0f, 0.0f);
-                __instance.dropTrunkItems();
+                //__instance.dropTrunkItems();
                 if (instigator.TryGetPlaytimeComponent(out PlaytimeComponent c))
                 {
                     c.lastExplodedVehicle = __instance.asset.GUID;

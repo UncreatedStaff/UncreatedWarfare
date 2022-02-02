@@ -167,7 +167,11 @@ namespace Uncreated.Warfare
         public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
         public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) =>
             player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
-        public static UCPlayer FromSteamPlayer(SteamPlayer player) => FromID(player.playerID.steamID.m_SteamID);
+        public static UCPlayer FromSteamPlayer(SteamPlayer player)
+        {
+            if (player == null) return null;
+            return FromID(player.playerID.steamID.m_SteamID);
+        }
         public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
         {
             if (caller is not UnturnedPlayer pl)

@@ -714,13 +714,6 @@ namespace Uncreated.Warfare.Commands
                         .Append(string.Join(",", fg.Rotation[f].PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
                         .Append("\nPoints: ").Append(fg.Rotation[f].Points).Append(" State: ").Append(fg.Rotation[f].LastDeltaPoints).Append('\n');
                 }
-                L.Log(
-                    $"Game {fg.GameID}: " +
-                    $"Tickets: 1: {Tickets.TicketManager.Team1Tickets}, 2: {Tickets.TicketManager.Team2Tickets}\n" +
-                    $"Starting Tickets: 1: {Tickets.TicketManager._Team1previousTickets}, 2: {Tickets.TicketManager._Team2previousTickets}\n" +
-                    $"{fg.Rotation.Count} Flags: {flags}Players:\n" +
-                    $"{string.Join("\n", Provider.clients.Select(x => F.GetPlayerOriginalNames(x) + " - " + (x.player.TryGetPlaytimeComponent(out PlaytimeComponent c) ? ((uint)Mathf.RoundToInt(c.CurrentTimeSeconds)).GetTimeFromSeconds(0) : "unknown pt")))}"// ends with \n
-                    );
             }
         }
         private void consolidateKits(string[] command, Player player)

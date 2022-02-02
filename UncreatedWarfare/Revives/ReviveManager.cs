@@ -231,13 +231,15 @@ namespace Uncreated.Warfare.Revives
                 {
                     shouldAllow = false;
 
-                    if (UCWarfare.Config.Debug)
-                        L.Log(parameters.player.name + " was damaged too soon after being downed.", ConsoleColor.DarkGray);
+                    L.Log(parameters.player.name + " was damaged too soon after being downed.", ConsoleColor.DarkGray);
+
                 }
             }
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
+            
+
             if (!shouldAllow)
                 return;
             if (parameters.player.movement.getVehicle() != null || parameters.cause == EDeathCause.VEHICLE)
@@ -264,6 +266,10 @@ namespace Uncreated.Warfare.Revives
             Guid item = Guid.Empty;
             if (killer != default)
             {
+                if (killer.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                {
+                    c.TryUpdateAttackers(killer.playerID.steamID.m_SteamID);
+                }
                 if (DeathInfo.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DeathInfo info))
                 {
                     UCWarfare.I.GetKillerInfo(out item, out info.distance, out info.killerName, out info.killerTeam, out info.kitName, out info.vehicle, parameters.cause, killer, parameters.player);

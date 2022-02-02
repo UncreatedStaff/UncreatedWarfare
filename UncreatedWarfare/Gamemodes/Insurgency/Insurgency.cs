@@ -169,12 +169,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
 
             ushort winToastUI = 0;
-            if (Assets.find(Gamemode.Config.UI.WinToastGUID) is EffectAsset e)
+            if (Assets.find(Config.UI.WinToastGUID) is EffectAsset e)
             {
                 winToastUI = e.id;
             }
             else
-                L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
+                L.LogWarning("WinToast UI not found. GUID: " + Config.UI.WinToastGUID);
 
             foreach (SteamPlayer client in Provider.clients)
             {
@@ -214,6 +214,21 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             this._state = EState.FINISHED;
             TicketManager.OnRoundWin(winner);
             StartCoroutine(EndGameCoroutine(winner));
+        }
+        private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
+        {
+            L.Log("Waiting to discover cache...");
+            yield return new WaitForSeconds(Config.Insurgency.FirstCacheSpawnTime);
+
+            L.Log("Attempting to discover cache...");
+            L.Log($"     First: {ActiveCaches.FirstOrDefault()?.Cache.Name}");
+            L.Log($"     IsDiscovered: {ActiveCaches.FirstOrDefault().IsDiscovered}");
+            if (ActiveCaches.Count > 0 && !ActiveCaches.First().IsDiscovered)
+            {
+                L.Log("Cache discvoered :)");
+                IntelligencePoints = 0;
+                OnCacheDiscovered(ActiveCaches.First().Cache);
+            }
         }
         private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
         {
@@ -292,7 +307,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     this.ShowStagingUI(player);
                 InsurgencyUI.SendCacheList(player);
                 int bleed = TicketManager.GetTeamBleed(player.GetTeam());
-                TicketManager.GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out int tickets, out string message);
+                TicketManager.GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
                 TicketManager.UpdateUI(player.connection, UIID, tickets, message);
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
@@ -310,7 +325,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             InsurgencyUI.SendCacheList(player);
             int bleed = TicketManager.GetTeamBleed(newGroup);
-            TicketManager.GetUIDisplayerInfo(newGroup, bleed, out ushort UIID, out int tickets, out string message);
+            TicketManager.GetUIDisplayerInfo(newGroup, bleed, out ushort UIID, out string tickets, out string message);
             TicketManager.UpdateUI(player.connection, UIID, tickets, message);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
@@ -385,9 +400,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             cache.SpawnAttackIcon();
 
             if (AttackingTeam == 1)
-                Tickets.TicketManager.UpdateUITeam1();
+                TicketManager.UpdateUITeam1();
             else if (AttackingTeam == 2)
-                Tickets.TicketManager.UpdateUITeam2();
+                TicketManager.UpdateUITeam2();
         }
         public void SpawnNewCache(bool message = false)
         {
@@ -535,6 +550,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     break;
                 }
             }
+            TicketManager.UpdateUITeam1();
+            TicketManager.UpdateUITeam2();
         }
         public override void ShowStagingUI(UCPlayer player)
         {
@@ -551,6 +568,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 DestoryBlockerOnT1();
             else
                 DestoryBlockerOnT2();
+
+            StartCoroutine(TryDiscoverFirstCache());
         }
         public override void Dispose()
         {
