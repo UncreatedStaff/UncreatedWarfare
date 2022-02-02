@@ -590,6 +590,8 @@ namespace Uncreated.Warfare
                 { "vehiclebay_e_invalidseat", "<color=#ff8c69>{0} isn't a valid value for vehicle property: {1}</color>" },
                 { "vehiclebay_e_seatexist", "<color=#ff8c69>This vehicle already has a crew seat with index: {0}</color>" },
                 { "vehiclebay_e_seatnoexist", "<color=#ff8c69>This vehicle does not have a crew seat with index: {0}</color>" },
+                { "vehiclebay_delay_added", "<color=#a0ad8e>Added delay of type {0}:{1} during {2} gamemode.</color>" },
+                { "vehiclebay_delay_removed", "<color=#a0ad8e>Removed {0} matching delays.</color>" },
 
                 // vehiclebay spawns
                 { "vehiclebay_spawn_registered", "<color=#a0ad8e>Successfully registered spawn. <color=#ffffff>{0}s</color> will spawn here.</color>" },

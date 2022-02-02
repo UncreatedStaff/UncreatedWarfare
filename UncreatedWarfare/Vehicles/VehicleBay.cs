@@ -578,20 +578,55 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void AddDelay(EDelayType type, float value, string gamemode = null)
         {
-            if (type == EDelayType.NONE || value <= 0f) return;
-            Delay del = new Delay(type, value, gamemode);
-            Delay[] old = Delays;
-            Delays = new Delay[old.Length];
-            if (old.Length > 0)
+            int index = -1;
+            for (int i = 0; i < Delays.Length; i++)
             {
-                Array.Copy(old, 0, Delays, 0, old.Length);
-                old[old.Length - 1] = del;
+                ref Delay del = ref Delays[i];
+                if (del.type == type && del.value == value && del.gamemode == gamemode)
+                {
+                    index = i;
+                    break;
+                }
             }
-            else
+            if (index == -1)
             {
-                old[0] = del;
+                Delay del = new Delay(type, value, gamemode);
+                Delay[] old = Delays;
+                Delays = new Delay[old.Length + 1];
+                if (old.Length > 0)
+                {
+                    Array.Copy(old, 0, Delays, 0, old.Length);
+                    old[old.Length - 1] = del;
+                }
+                else
+                {
+                    old[0] = del;
+                }
             }
         }
+        public bool RemoveDelay(EDelayType type, float value, string gamemode = null)
+        {
+            if (Delays.Length == 0) return false;
+            int index = -1;
+            for (int i = 0; i < Delays.Length; i++)
+            {
+                ref Delay del = ref Delays[i];
+                if (del.type == type && del.value == value && del.gamemode == gamemode)
+                {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == -1) return false;
+            Delay[] old = Delays;
+            Delays = new Delay[old.Length - 1];
+            if (old.Length == 1) return true;
+            if (index != 0)
+                Array.Copy(old, 0, Delays, 0, index);
+            Array.Copy(old, index + 1, Delays, index, old.Length - index - 1);
+            return true;
+        }
+        
         public bool HasDelayType(EDelayType type)
         {
             string gm = Data.Gamemode.Name;
