@@ -79,7 +79,6 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     if (team == insurgency.AttackingTeam)
                     {
                         return Translation.Translate("insurgency_ui_unknown_attack", player);
-
                     }
                     else
                     {
