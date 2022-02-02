@@ -107,23 +107,25 @@ namespace Uncreated.Warfare.Kits
                     float val = 0;
                     if (type != EDelayType.OUT_OF_STAGING && type != EDelayType.NONE && !float.TryParse(command[3], System.Globalization.NumberStyles.Any, Data.Locale, out val))
                     {
-                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value (float)> " + command[4].ToLower());
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value (float)>" + (gamemode == null ? string.Empty : " " + gamemode));
                         return;
                     }
 
                     if (adding)
                     {
                         data.AddDelay(type, val, gamemode);
+                        VehicleSpawner.UpdateSigns(data.VehicleID);
                         player.SendChat("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), gamemode ?? "any");
                     }
                     else
                     {
                         int rem = 0;
                         while (data.RemoveDelay(type, val, gamemode)) rem++;
+                        VehicleSpawner.UpdateSigns(data.VehicleID);
                         player.SendChat("vehiclebay_delay_removed", rem.ToString(Data.Locale));
                     }
                 }
-                if (command.Length == 1)
+                else if (command.Length == 1)
                 {
                     op = command[0].ToLower();
 
