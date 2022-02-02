@@ -25,6 +25,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -821,45 +822,60 @@ namespace Uncreated.Warfare.Commands
                 else player.SendChat("Syntax:  <i>/test gamemode <GamemodeName>.</i>");
                 return;
             }
-            Gamemode newGamemode = Gamemode.FindGamemode(command[1]);
-            try
+            if (Data.Is(out IStagingPhase gm))
             {
-                if (newGamemode != null)
+                if (player == null) L.Log("Skipped staging phase.");
+                else player.SendChat("Skipped staging phase.");
+                gm.SkipStagingPhase();
+            }
+
+            Task.Run(async () =>
+            {
+                if (gm?.State == EState.STAGING)
                 {
+                    await Task.Delay(3000);
+                    await UCWarfare.ToUpdate();
+                }
+                Gamemode newGamemode = Gamemode.FindGamemode(command[1]);
+                try
+                {
+                    if (newGamemode != null)
+                    {
+                        if (Data.Gamemode != null)
+                        {
+                            Data.Gamemode.Dispose();
+                            UnityEngine.Object.Destroy(Data.Gamemode);
+                        }
+                        Data.Gamemode = newGamemode;
+                        Data.Gamemode.Init();
+                        Data.Gamemode.OnLevelLoaded();
+                        Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
+                        for (int i = 0; i < Provider.clients.Count; i++)
+                        {
+                            Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
+                        }
+                    }
+                    else
+                    {
+                        if (player == null) L.LogWarning("Failed to find gamemode: \"" + command[1] + "\".");
+                        else player.SendChat("Failed to find gamemode: \"<i>" + command[1] + "</i>\".");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error loading gamemode, falling back to TeamCTF:");
+                    L.LogError(ex);
                     if (Data.Gamemode != null)
                     {
                         Data.Gamemode.Dispose();
                         UnityEngine.Object.Destroy(Data.Gamemode);
                     }
-                    Data.Gamemode = newGamemode;
+                    Data.Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
                     Data.Gamemode.Init();
                     Data.Gamemode.OnLevelLoaded();
-                    Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
-                    for (int i = 0; i < Provider.clients.Count; i++)
-                    {
-                        Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
-                    }
+                    throw;
                 }
-                else
-                {
-                    if (player == null) L.LogWarning("Failed to find gamemode: \"" + command[1] + "\".");
-                    else player.SendChat("Failed to find gamemode: \"<i>" + command[1] + "</i>\".");
-                }
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error loading gamemode, falling back to TeamCTF:");
-                L.LogError(ex);
-                if (Data.Gamemode != null)
-                {
-                    Data.Gamemode.Dispose();
-                    UnityEngine.Object.Destroy(Data.Gamemode);
-                }
-                Data.Gamemode = UCWarfare.I.gameObject.AddComponent<TeamCTF>();
-                Data.Gamemode.Init();
-                Data.Gamemode.OnLevelLoaded();
-                throw;
-            }
+            });
         }
         private void trackstats(string[] command, Player player)
         {

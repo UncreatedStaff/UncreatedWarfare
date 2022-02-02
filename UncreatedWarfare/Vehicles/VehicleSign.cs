@@ -71,6 +71,17 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
+        public static void OnFlagCaptured()
+        {
+            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+            {
+                VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
+                if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data) && (data.HasDelayType(EDelayType.FLAG) || data.HasDelayType(EDelayType.FLAG_PERCENT)))
+                {
+                    spawn.UpdateSign();
+                }
+            }
+        }
         public static bool SignExists(InteractableSign sign, out VehicleSign vbsign)
         {
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);

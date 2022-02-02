@@ -122,6 +122,7 @@ namespace Uncreated.Warfare
             RedownloadRanks();
         }
         public void UpdateMedals(int newTW) => _medals.Update(newTW);
+        public float LastSpoken = 0f;
 
         private bool _otherDonator;
         /// <summary>Slow, loops through all kits, only use once.</summary>

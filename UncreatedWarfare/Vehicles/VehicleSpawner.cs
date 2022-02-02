@@ -652,6 +652,7 @@ namespace Uncreated.Warfare.Vehicles
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 this.data = data;
+                StartCoroutine(TimeDelayCoroutine());
             }
         }
         public void StartIdleRespawnTimer()
@@ -670,6 +671,15 @@ namespace Uncreated.Warfare.Vehicles
                 StopCoroutine(timer);
             }
             isIdle = false;
+        }
+        private IEnumerator<WaitForSeconds> TimeDelayCoroutine()
+        {
+            while (true)
+            {
+                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME)) break;
+                spawn?.UpdateSign();
+                yield return new WaitForSeconds(1f);
+            }
         }
         private IEnumerator<WaitForSeconds> IdleRespawnVehicle(VehicleData data)
         {
@@ -692,16 +702,16 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 if (lastLoc != transform.position || lastIdleState != isIdle)
                 {
-                    spawn.UpdateSign();
+                    spawn?.UpdateSign();
                     lastLoc = transform.position;
                     lastIdleState = isIdle;
                 }
                 else if (isIdle)
                 {
-                    spawn.UpdateSign();
+                    spawn?.UpdateSign();
                 }
             }
-            spawn.SpawnVehicle();
+            spawn?.SpawnVehicle();
             VehicleBay.DeleteVehicle(Vehicle);
             isIdle = false;
         }

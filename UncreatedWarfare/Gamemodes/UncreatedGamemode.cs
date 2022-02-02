@@ -14,6 +14,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -41,6 +42,9 @@ namespace Uncreated.Warfare.Gamemodes
         public bool Every15Seconds => _ticks % Mathf.RoundToInt(15f / _eventLoopSpeed) == 0;
         public bool Every10Seconds => _ticks % Mathf.RoundToInt(10f / _eventLoopSpeed) == 0;
         public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
+        protected float _startTime = 0f;
+        public float StartTime => _startTime;
+        public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
         public PlayerManager LogoutSaver;
@@ -101,6 +105,17 @@ namespace Uncreated.Warfare.Gamemodes
             if (OnTeamWin != null)
                 OnTeamWin.Invoke(winner);
         }
+        public static void OnStagingComplete()
+        {
+            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+            {
+                Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
+                if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING))
+                {
+                    spawn.UpdateSign();
+                }
+            }
+        }
         protected abstract void EventLoopAction();
         private IEnumerator<WaitForSeconds> EventLoop()
         {
@@ -156,10 +171,10 @@ namespace Uncreated.Warfare.Gamemodes
             Type nextMode = GetNextGamemode();
             if (this.GetType() != nextMode)
             {
-                this.Dispose();
                 Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
                 if (gamemode != null)
                 {
+                    this.Dispose();
                     Data.Gamemode = gamemode;
                     gamemode.Init();
                     gamemode.OnLevelLoaded();
@@ -190,6 +205,7 @@ namespace Uncreated.Warfare.Gamemodes
             L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
             _state = EState.ACTIVE;
             _gameID = DateTime.Now.Ticks;
+            _startTime = Time.realtimeSinceStartup;
             for (int i = 0; i < Provider.clients.Count; i++)
                 if (PlayerManager.HasSave(Provider.clients[i].playerID.steamID.m_SteamID, out PlayerSave save)) save.LastGame = _gameID;
             PlayerManager.ApplyToOnline();
@@ -309,6 +325,7 @@ namespace Uncreated.Warfare.Gamemodes
                 TicketManager.OnStagingPhaseEnded();
             EffectManager.ClearEffectByID_AllPlayers(CTFUI.headerID);
             _state = EState.ACTIVE;
+            OnStagingComplete();
         }
         public virtual void Dispose()
         {

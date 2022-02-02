@@ -7,10 +7,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker>
     {
         public override string DisplayName => "Advance and Secure";
+        public TeamCTF() : base(nameof(TeamCTF), Config.TeamCTF.EvaluateTime) { }
         protected override void EndStagingPhase()
         {
-            DestroyBlockers();
             base.EndStagingPhase();
+            DestroyBlockers();
         }
         public override void StartNextGame(bool onLoad = false)
         {

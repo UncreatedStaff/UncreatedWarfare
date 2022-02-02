@@ -13,6 +13,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands
@@ -113,7 +114,7 @@ namespace Uncreated.Warfare.Commands
                     }
                             return;
                 }
-                if (!(Data.Gamemode is IKitRequests))
+                if (Data.Gamemode is not IKitRequests)
                 {
                     ucplayer.SendChat("command_e_gamemode");
                     return;
@@ -311,18 +312,53 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             }
-
-            double secondsSinceStart = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
-            double timeleft = data.Delay - secondsSinceStart;
-
-            if (data.Delay > 0 && Data.Gamemode.State == Gamemodes.EState.STAGING)
+            
+            if (data.IsDelayed(out Delay delay))
             {
-                ucplayer.Message("request_vehicle_e_staging", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
-                return;
-            }
-            if (secondsSinceStart < data.Delay)
-            {
-                ucplayer.Message("request_vehicle_e_delay", unchecked((uint)Math.Round(timeleft)).GetTimeFromSeconds(ucplayer.Steam64));
+                if (delay.type == EDelayType.OUT_OF_STAGING)
+                {
+                    ucplayer.Message("request_vehicle_e_staging_delay");
+                    return;
+                }
+                else if (delay.type == EDelayType.TIME)
+                {
+                    float timeLeft = delay.value - Data.Gamemode.SecondsSinceStart;
+                    ucplayer.Message("request_vehicle_e_time_delay", ((uint)Mathf.Round(timeLeft)).GetTimeFromSeconds(ucplayer.Steam64));
+                }
+                else if (delay.type == EDelayType.FLAG && Data.Is(out IFlagTeamObjectiveGamemode flags))
+                {
+                    int ct = Mathf.RoundToInt(delay.value);
+                    if (ct == 1 && flags.Rotation.Count > 0)
+                    {
+                        if (team == 1)
+                            ucplayer.Message("request_vehicle_e_flag_delay_1", flags.Rotation[0].Name);
+                        else if (team == 2)
+                            ucplayer.Message("request_vehicle_e_flag_delay_1", flags.Rotation[flags.Rotation.Count - 1].Name);
+                        else
+                            ucplayer.Message("request_vehicle_e_flag_delay_2+", ct.ToString(Data.Locale));
+                    }
+                    else
+                    {
+                        ucplayer.Message("request_vehicle_e_flag_delay_2+", ct.ToString(Data.Locale));
+                    }
+                }
+                else if (delay.type == EDelayType.FLAG_PERCENT && Data.Is(out flags))
+                {
+                    int ct = Mathf.FloorToInt(flags.Rotation.Count / delay.value / 100f);
+                    if (ct == 1 && flags.Rotation.Count > 0)
+                    {
+                        if (team == 1)
+                            ucplayer.Message("request_vehicle_e_flag_delay_1", flags.Rotation[0].Name);
+                        else if (team == 2)
+                            ucplayer.Message("request_vehicle_e_flag_delay_1", flags.Rotation[flags.Rotation.Count - 1].Name);
+                        else
+                            ucplayer.Message("request_vehicle_e_flag_delay_2+", ct.ToString(Data.Locale));
+                    }
+                    else
+                    {
+                        ucplayer.Message("request_vehicle_e_flag_delay_2+", ct.ToString(Data.Locale));
+                    }
+                }
                 return;
             }
 
