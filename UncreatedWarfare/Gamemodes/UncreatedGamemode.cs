@@ -160,17 +160,21 @@ namespace Uncreated.Warfare.Gamemodes
                 Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
                 if (gamemode != null)
                 {
+                    Data.Gamemode = gamemode;
                     gamemode.Init();
                     gamemode.OnLevelLoaded();
                     //Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
                     for (int i = 0; i < Provider.clients.Count; i++)
                         gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, true);
                     L.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
-                    Data.Gamemode = gamemode;
                     _state = EState.DISCARD;
                     Destroy(this);
                     return false;
                 }
+            }
+            for (int i = 0; i < Provider.clients.Count; i++)
+            {
+                Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
             }
             return true;
         }
