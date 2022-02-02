@@ -75,53 +75,61 @@ namespace Uncreated.Warfare.Kits
                     string gamemode = null;
                     if (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE)
                         gamemode = command[3];
-                    else if (command.Length < 4)
+                    else if (command.Length < 5)
                     {
                         player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value> [gamemode]");
                         return;
                     }
                     else
                         gamemode = command[4];
-                    string gm = null;
-                    foreach (string key in Gamemode.GAMEMODES.Keys)
+                    if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
                     {
-                        if (key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
-                        {
-                            gm = key;
-                            break;
-                        }
-                    }
-                    if (gm == null)
-                    {
-                        gm = "<";
+                        gamemode = "<";
                         foreach (string key in Gamemode.GAMEMODES.Keys)
                         {
-                            if (gm.Length != 1) gm += "|";
-                            gm += key;
+                            if (gamemode.Length != 1) gamemode += "|";
+                            gamemode += key;
                         }
-                        gm += ">";
-                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " " + (type == EDelayType.OUT_OF_STAGING || type == EDelayType.NONE ? gm : command[3].ToLower() + " " + gm));
+                        gamemode += ">";
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " none " + gm);
                         return;
+                    }
+                    if (!string.IsNullOrEmpty(gamemode))
+                    {
+                        string gm = null;
+                        foreach (string key in Gamemode.GAMEMODES.Keys)
+                        {
+                            if (key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                            {
+                                gm = key;
+                                break;
+                            }
+                        }
                     }
 
                     float val = 0;
                     if (type != EDelayType.OUT_OF_STAGING && type != EDelayType.NONE && !float.TryParse(command[3], System.Globalization.NumberStyles.Any, Data.Locale, out val))
                     {
-                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value (float)>" + (gamemode == null ? string.Empty : " " + gamemode));
+                        player.SendChat("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value (float)>" + (string.IsNullOrEmpty(gamemode) ? string.Empty : " " + gamemode));
                         return;
                     }
 
                     if (adding)
                     {
                         data.AddDelay(type, val, gamemode);
+                        VehicleBay.Save();
                         VehicleSpawner.UpdateSigns(data.VehicleID);
-                        player.SendChat("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), gamemode ?? "any");
+                        player.SendChat("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), string.IsNullOrEmpty(gamemode) ? "any" : gamemode);
                     }
                     else
                     {
                         int rem = 0;
                         while (data.RemoveDelay(type, val, gamemode)) rem++;
-                        VehicleSpawner.UpdateSigns(data.VehicleID);
+                        if (rem > 0)
+                        {
+                            VehicleSpawner.UpdateSigns(data.VehicleID);
+                            VehicleBay.Save();
+                        }
                         player.SendChat("vehiclebay_delay_removed", rem.ToString(Data.Locale));
                     }
                 }

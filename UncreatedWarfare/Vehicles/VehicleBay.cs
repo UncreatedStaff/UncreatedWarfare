@@ -582,7 +582,7 @@ namespace Uncreated.Warfare.Vehicles
             for (int i = 0; i < Delays.Length; i++)
             {
                 ref Delay del = ref Delays[i];
-                if (del.type == type && del.value == value && del.gamemode == gamemode)
+                if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
                 {
                     index = i;
                     break;
@@ -611,7 +611,7 @@ namespace Uncreated.Warfare.Vehicles
             for (int i = 0; i < Delays.Length; i++)
             {
                 ref Delay del = ref Delays[i];
-                if (del.type == type && del.value == value && del.gamemode == gamemode)
+                if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
                 {
                     index = i;
                     break;
