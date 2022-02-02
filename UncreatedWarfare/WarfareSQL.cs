@@ -274,7 +274,7 @@ namespace Uncreated.Warfare
                         "`Points` = 0 " +
                         "WHERE `Steam64` = @0;",
                         new object[] { Steam64});
-                    return 0;
+                    return amount - oldBalance;
                 }
             }
         }
@@ -332,7 +332,7 @@ namespace Uncreated.Warfare
                         "`XP` = 0 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
                         new object[] { Steam64, (int)branch});
-                    return 0;
+                    return amount - oldBalance;
                 }
             }
         }

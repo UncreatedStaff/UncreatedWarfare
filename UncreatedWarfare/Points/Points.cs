@@ -71,11 +71,16 @@ namespace Uncreated.Warfare.Point
         {
             if (!Data.TrackStats || amount == 0) return;
 
-            RankData oldRank = player.CurrentRank;
+            int oldLevel = player.CurrentRank.Level;
+            int oldTier = player.CurrentRank.RankTier;
 
             amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
 
             int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
+
+            L.Log("amount to add: " + amount);
+            L.Log("new balance: " + newBalance);
+            
 
             player.UpdateRank(player.Branch, newBalance);
 
@@ -99,13 +104,16 @@ namespace Uncreated.Warfare.Point
 
             RankData newRank = player.CurrentRank;
 
-            if (newRank.Level > oldRank.Level)
-            {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.MEDIUM));
+            L.Log($"New Level: {newRank.Level}");
+            L.Log($"Old Level: {oldLevel}");
 
-                if (newRank.RankTier > oldRank.RankTier)
+            if (newRank.Level > oldLevel)
+            {
+                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
+
+                if (newRank.RankTier > oldTier)
                 {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.MEDIUM));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
                     Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
                 }
 
@@ -114,13 +122,13 @@ namespace Uncreated.Warfare.Point
                 for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
                     Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
             }
-            else if (newRank.Level < oldRank.Level)
+            else if (newRank.Level < oldLevel)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.MEDIUM));
+                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
 
-                if (newRank.RankTier < oldRank.RankTier)
+                if (newRank.RankTier < oldTier)
                 {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.MEDIUM));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
                     Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
                 }
 
@@ -362,7 +370,7 @@ namespace Uncreated.Warfare.Point
             ResupplyFriendlyXP = 20;
             RepairVehicleXP = 20;
             OnDutyXP = 5;
-            UnloadSuppliesXP = 10;
+            UnloadSuppliesXP = 20;
 
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
