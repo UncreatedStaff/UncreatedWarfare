@@ -142,26 +142,6 @@ namespace Uncreated.Warfare.Commands
                     else
                         player.Player.SendChat("no_permissions");
                 }
-                else if (cmd == "slots")
-                {
-                    if (isConsole || player.HasPermission("uc.reload.slots") || player.HasPermission("uc.reload.all"))
-                    {
-                        if (!UCWarfare.Config.UsePatchForPlayerCap)
-                        {
-                            if (isConsole) L.Log(Translation.Translate("reload_reloaded_slots_not_enabled", 0, out _, nameof(Config.UsePatchForPlayerCap)));
-                            else player.SendChat("reload_reloaded_slots_not_enabled", nameof(Config.UsePatchForPlayerCap));
-                            return;
-                        }
-                        else if (Provider.clients.Count >= 24)
-                        {
-                            Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
-                        }
-                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_slots", 0, out _));
-                        else player.SendChat("reload_reloaded_slots");
-                    }
-                    else
-                        player.Player.SendChat("no_permissions");
-                }
             }
         }
         internal static void ReloadConfig()

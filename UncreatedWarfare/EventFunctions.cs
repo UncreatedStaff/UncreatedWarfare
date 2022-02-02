@@ -348,10 +348,6 @@ namespace Uncreated.Warfare
 
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
-            if (!UCWarfare.Config.UsePatchForPlayerCap && Provider.clients.Count >= 24)
-            {
-                Provider.maxPlayers = UCWarfare.Config.MaxPlayerCount;
-            }
             try
             {
                 PlayerManager.InvokePlayerConnected(player); // must always be first
@@ -941,10 +937,6 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
-            if (!UCWarfare.Config.UsePatchForPlayerCap && Provider.clients.Count - 1 < 24)
-            {
-                Provider.maxPlayers = 24;
-            }
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
