@@ -42,6 +42,9 @@ namespace Uncreated.Warfare.Vehicles
             if (HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn) && spawn.IsActive)
             {
                 spawn.StartVehicleRespawnTimer();
+
+                if (vehicle.TryGetComponent(out SpawnedVehicleComponent spawnedVehicle))
+                    spawnedVehicle.StopIdleRespawnTimer();
             }
         }
         internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
@@ -395,6 +398,12 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void SpawnVehicle()
         {
+
+            if (HasLinkedVehicle(out _))
+            {
+                L.LogDebug("Could not spawn vehicle because another is already linked");
+                return;
+            }
             try
             {
                 if (!initialized)
@@ -676,6 +685,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void StopIdleRespawnTimer()
         {
+            L.LogDebug($"stopping idle respawn timer for {Vehicle.asset.vehicleName} - {Vehicle.instanceID}...");
             if (timer != null)
             {
                 StopCoroutine(timer);

@@ -217,15 +217,10 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
         {
-            L.Log("Waiting to discover cache...");
             yield return new WaitForSeconds(Config.Insurgency.FirstCacheSpawnTime);
 
-            L.Log("Attempting to discover cache...");
-            L.Log($"     First: {ActiveCaches.FirstOrDefault()?.Cache.Name}");
-            L.Log($"     IsDiscovered: {ActiveCaches.FirstOrDefault().IsDiscovered}");
             if (ActiveCaches.Count > 0 && !ActiveCaches.First().IsDiscovered)
             {
-                L.Log("Cache discvoered :)");
                 IntelligencePoints = 0;
                 OnCacheDiscovered(ActiveCaches.First().Cache);
             }
