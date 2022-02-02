@@ -698,6 +698,7 @@ namespace Uncreated.Warfare
                 { "vbs_state_dead", "{0}:{1}" },
                 { "vbs_state_active", "{0}" },
                 { "vbs_state_idle", "Idle: {0}:{1}" },
+                { "vbs_state_delay", "Locked: {0}:{1}" },
                 { "vbs_level_prefix", "Lvl" },
                 { "vbs_branch_default", "" },
                 { "vbs_branch_infantry", "INFANTRY DIVISION" },
@@ -1080,6 +1081,7 @@ namespace Uncreated.Warfare
             { "vbs_ticket_label", "f0f0f0" },
             { "vbs_dead", "ff0000" },
             { "vbs_idle", "ffcc00" },
+            { "vbs_delay", "94cfff" },
             { "vbs_active", "ff9933" },
             { "vbs_ready", "33cc33" },
 

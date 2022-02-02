@@ -1183,6 +1183,12 @@ namespace Uncreated.Warfare
             }
             else
             {
+                double secondsSinceStart = (DateTime.Now - Tickets.TicketManager.TimeSinceMatchStart).TotalSeconds;
+                if (data.Delay < secondsSinceStart)
+                {
+                    double timeleft = data.Delay - secondsSinceStart;
+                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay", language, ((int)Math.Floor(timeleft / 60d)).ToString(), ((int)Math.Round(timeleft % 60)).ToString("D2"))}</color>";
+                }
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_ready")}>{Translate("vbs_state_ready", language)}</color>";
             }
         }

@@ -35,7 +35,8 @@ namespace Uncreated.Warfare.Gamemodes
         protected ushort id;
         private void Awake()
         {
-            if (GUID == Gamemode.Config.UI.CTFLeaderboardGUID) id = LeaderboardEx.ctfLeaderboardId;
+            if (Assets.find(GUID) is EffectAsset lbAsset)
+                id = lbAsset.id;
         }
         public void SetShutdownConfig(bool isShuttingDown, string reason = null)
         {
@@ -100,6 +101,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public abstract void Calculate();
         public abstract void SendLeaderboard();
+        protected virtual void Update() { }
     }
 
     public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where IndividualStats : BasePlayerStats

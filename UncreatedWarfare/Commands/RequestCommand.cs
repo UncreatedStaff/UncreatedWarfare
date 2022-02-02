@@ -113,7 +113,7 @@ namespace Uncreated.Warfare.Commands
                     }
                             return;
                 }
-                if (!(Data.Gamemode is IKitRequests))
+                if (Data.Gamemode is not IKitRequests)
                 {
                     ucplayer.SendChat("command_e_gamemode");
                     return;

@@ -463,7 +463,7 @@ namespace Uncreated.Warfare
                         return false;
                     }
                 }
-
+                ucplayer.LastSpoken = Time.realtimeSinceStartup;
                 return true;
             }
 

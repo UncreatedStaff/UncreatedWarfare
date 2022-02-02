@@ -8,6 +8,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
@@ -58,8 +59,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public override void SendLeaderboard()
         {
             string teamcolor = TeamManager.GetTeamHexColor(_winner);
-            if (!(Assets.find(GUID) is EffectAsset asset)) return;
+            if (Assets.find(GUID) is not EffectAsset asset) return;
             this.asset = asset;
+            states = new bool[2][] { new bool[Math.Min(14, statsT1.Count - 1)], new bool[Math.Min(14, statsT2.Count - 1)] };
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 SendLeaderboard(PlayerManager.OnlinePlayers[i], teamcolor);
@@ -145,7 +147,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
                 for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
                 {
-                    string n = i == 0 ? TeamManager.TranslateName(2, player.Steam64, true).ToUpper() : statsT2[i].Player.channel.owner.playerID.nickName;
+                    string n = i == 0 ? TeamManager.TranslateShortName(2, player.Steam64, true).ToUpper() : statsT2[i].Player.channel.owner.playerID.nickName;
                     string k = statsT2[i].kills.ToString(Data.Locale);
                     string d = statsT2[i].deaths.ToString(Data.Locale);
                     string x = statsT2[i].XPGained.ToString(Data.Locale);
@@ -244,6 +246,53 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 L.LogError($"Error sending end screen to {F.GetPlayerOriginalNames(player).PlayerName} ( {player.Steam64} ).");
                 L.LogError(ex);
             }
+        }
+        bool[][] states;
+        protected override void Update()
+        {
+            float rt = Time.realtimeSinceStartup;
+            for (int i = 0; i < Math.Min(15, statsT1.Count); i++)
+            {
+                UCPlayer pl = UCPlayer.FromPlayer(statsT1[i].Player);
+                if (states[0][i - 1])
+                {
+                    if (pl == null || rt - pl.LastSpoken > 1f)
+                    {
+                        UpdateStateT1(false, i);
+                    }
+                }
+                else if (pl != null && rt - pl.LastSpoken <= 1f)
+                {
+                    UpdateStateT1(true, i);
+                }
+            }
+            for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
+            {
+                UCPlayer pl = UCPlayer.FromPlayer(statsT2[i].Player);
+                if (states[1][i - 1])
+                {
+                    if (pl == null || rt - pl.LastSpoken > 1f)
+                    {
+                        UpdateStateT2(false, i);
+                    }
+                }
+                else if (pl != null && rt - pl.LastSpoken <= 1f)
+                {
+                    UpdateStateT2(true, i);
+                }
+            }
+        }
+        private void UpdateStateT1(bool newval, int index)
+        {
+            states[0][index - 1] = newval;
+            for (int i = 0; i < Provider.clients.Count; i++)
+                EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, Provider.clients[i].transportConnection, false, "1VC" + index.ToString(), newval);
+        }
+        private void UpdateStateT2(bool newval, int index)
+        {
+            states[1][index - 1] = newval;
+            for (int i = 0; i < Provider.clients.Count; i++)
+                EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, Provider.clients[i].transportConnection, false, "2VC" + index.ToString(), newval);
         }
     }
     public struct LongestShot
