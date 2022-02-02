@@ -25,10 +25,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
-        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
             TicketManager.OnPlayerJoined(player);
-            base.OnPlayerJoined(player, wasAlreadyOnline);
+            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
         }
         public override void Dispose()
         {

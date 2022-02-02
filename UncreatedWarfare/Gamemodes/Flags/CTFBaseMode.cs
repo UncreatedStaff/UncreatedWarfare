@@ -307,7 +307,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(1);
-
                             if (this is Invasion.Invasion)
                                 Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
                             else
@@ -320,7 +319,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (i >= _rotation.Count || i < 0) break;
                             _rotation[i].Discover(2);
-
                             if (this is Invasion.Invasion)
                                 Invasion.InvasionUI.ReplicateFlagUpdate(_rotation[i]);
                             else
@@ -593,7 +591,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
-        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
@@ -641,7 +639,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-            base.OnPlayerJoined(player, wasAlreadyOnline);
+            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
         }
         public override void OnPlayerLeft(UCPlayer player)
         {

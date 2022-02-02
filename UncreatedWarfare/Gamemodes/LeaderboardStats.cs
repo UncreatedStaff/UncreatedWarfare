@@ -115,7 +115,6 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (stats == null)
                 stats = new Dictionary<ulong, IndividualStats>();
-            StopTicking();
             coroutinect = 0;
 
             for (int i = 0; i < Provider.clients.Count; i++)
@@ -139,6 +138,7 @@ namespace Uncreated.Warfare.Gamemodes
                 SteamPlayer player = PlayerTool.getSteamPlayer(c.Key);
                 if (player == null) stats.Remove(c.Key);
             }
+            StartTracking();
             L.Log("Reset game stats, " + stats.Count + " trackers");
         }
         public void OnPlayerJoin(Player player)
@@ -161,6 +161,7 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void StartTracking()
         {
             start = DateTime.Now;
+            coroutinect = 0;
             StartTicking();
         }
         protected virtual void OnTick()

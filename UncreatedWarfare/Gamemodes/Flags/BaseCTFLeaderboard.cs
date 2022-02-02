@@ -72,11 +72,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 ulong team = player.GetTeam();
                 ITransportConnection channel = player.Player.channel.owner.transportConnection;
                 player.Player.movement.sendPluginSpeedMultiplier(0f);
-                player.Player.life.serverModifyHealth(100);
-                player.Player.life.serverModifyFood(100);
-                player.Player.life.serverModifyWater(100);
-                player.Player.life.serverModifyVirus(100);
-                player.Player.life.serverModifyStamina(100);
+                player.Player.life.sendRevive();
                 player.Player.movement.sendPluginJumpMultiplier(0f);
 
                 if (Data.Is(out IRevives r))

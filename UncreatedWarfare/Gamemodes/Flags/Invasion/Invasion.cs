@@ -438,9 +438,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             InvasionUI.SendFlagList(player);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
-        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
+        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
-            base.OnPlayerJoined(player, wasAlreadyOnline);
+            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
             if (isScreenUp && _endScreen != null)
             {
                 _endScreen.SendLeaderboard(player, TeamManager.GetTeamHexColor(player.GetTeam()));

@@ -13,6 +13,7 @@ using System.Text;
 using Uncreated.Players;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Point;
 
 namespace Uncreated.Warfare.Gamemodes
 {
@@ -163,7 +164,7 @@ namespace Uncreated.Warfare.Gamemodes
                     gamemode.OnLevelLoaded();
                     //Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
                     for (int i = 0; i < Provider.clients.Count; i++)
-                        gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true);
+                        gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, true);
                     L.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
                     Data.Gamemode = gamemode;
                     _state = EState.DISCARD;
@@ -191,19 +192,13 @@ namespace Uncreated.Warfare.Gamemodes
         public void AnnounceMode()
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                AnnounceMode(PlayerManager.OnlinePlayers[i]);
-            }
-        }
-        public void AnnounceMode(UCPlayer player)
-        {
-            ToastMessage.QueueMessage(player, new ToastMessage("", DisplayName, EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(PlayerManager.OnlinePlayers[i], new ToastMessage("", DisplayName, EToastMessageSeverity.BIG));
         }
         public virtual void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         { }
-        public virtual void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline = false)
+        public virtual void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
-
+            Points.OnPlayerJoined(player, wasAlreadyOnline);
         }
         public virtual void OnPlayerLeft(UCPlayer player)
         { }

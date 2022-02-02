@@ -66,9 +66,9 @@ namespace Uncreated.Warfare.Teams
             }
             return false;
         }
-        public void OnPlayerConnected(UCPlayer player, bool isNewPlayer, bool isNewGame)
+        public void OnPlayerConnected(UCPlayer player, bool isNewPlayer)
         {
-            if (!isNewGame)
+            if (!isNewPlayer)
             {
                 LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
                 lobbyPlayer.IsInLobby = false;

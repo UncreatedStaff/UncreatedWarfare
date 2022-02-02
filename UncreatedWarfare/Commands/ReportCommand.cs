@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 using Uncreated.Players;
+using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.ReportSystem;
 
 namespace Uncreated.Warfare.Commands
@@ -100,31 +101,16 @@ namespace Uncreated.Warfare.Commands
 
         Report:
             Report report;
-            switch (type)
+            report = type switch
             {
-                default:
-                case EReportType.CUSTOM:
-                    report = Data.Reporter.CreateReport(player.Steam64, target, message);
-                    break;
-                case EReportType.CHAT_ABUSE:
-                    report = Data.Reporter.CreateChatAbuseReport(player.Steam64, target, message);
-                    break;
-                case EReportType.VOICE_CHAT_ABUSE:
-                    report = Data.Reporter.CreateVoiceChatAbuseReport(player.Steam64, target, message);
-                    break;
-                case EReportType.SOLOING_VEHICLE:
-                    report = Data.Reporter.CreateSoloingReport(player.Steam64, target, message);
-                    break;
-                case EReportType.WASTEING_ASSETS:
-                    report = Data.Reporter.CreateWasteingAssetsReport(player.Steam64, target, message);
-                    break;
-                case EReportType.INTENTIONAL_TEAMKILL:
-                    report = Data.Reporter.CreateIntentionalTeamkillReport(player.Steam64, target, message);
-                    break;
-                case EReportType.GREIFING_FOBS:
-                    report = Data.Reporter.CreateGreifingFOBsReport(player.Steam64, target, message);
-                    break;
-            }
+                EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(player.Steam64, target, message),
+                EReportType.VOICE_CHAT_ABUSE => Data.Reporter.CreateVoiceChatAbuseReport(player.Steam64, target, message),
+                EReportType.SOLOING_VEHICLE => Data.Reporter.CreateSoloingReport(player.Steam64, target, message),
+                EReportType.WASTEING_ASSETS => Data.Reporter.CreateWasteingAssetsReport(player.Steam64, target, message),
+                EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(player.Steam64, target, message),
+                EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(player.Steam64, target, message),
+                _ => Data.Reporter.CreateReport(player.Steam64, target, message),
+            };
             if (report == null)
                 goto UnknownError;
             SteamPlayer targetPl = PlayerTool.getSteamPlayer(target);
@@ -146,10 +132,21 @@ namespace Uncreated.Warfare.Commands
             Task.Run(
             async () =>
             {
+                byte[] jsonData = targetPl == null || (type != EReportType.CUSTOM && type < EReportType.VOICE_CHAT_ABUSE) ? new byte[0] : await SpyTask.RequestScreenshot(targetPl);
                 NetTask.Response res = await Reporter.SendReportInvocation.Request(Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
                 if (targetPl == null)
                 {
-                    L.LogError("player null");
+                    if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success2 && success2 && res.Parameters[1] is string messageUrl2)
+                    {
+                        //await UCWarfare.ToUpdate();
+                        //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
+                        L.Log(Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl2), ConsoleColor.Cyan);
+                    }
+                    else
+                    {
+                        L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                    }
+
                     return;
                 }
                 if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success && success && res.Parameters[1] is string messageUrl)

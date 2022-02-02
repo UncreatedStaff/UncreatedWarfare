@@ -18,9 +18,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         private List<InsurgencyPlayerStats> statsT1;
         private List<InsurgencyPlayerStats> statsT2;
         private bool longestShotTaken = false;
-        private FPlayerName longestShotTaker = FPlayerName.Nil;
         private ulong longestShotTakerTeam = 0;
         private float longestShotDistance = 0;
+        private FPlayerName longestShotTaker;
         internal EffectAsset asset;
         private string longestShotWeapon = string.Empty;
 
@@ -61,7 +61,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public override void SendLeaderboard()
         {
             if (!Data.Is(out Insurgency gm)) return;
-            if (!(Assets.find(GUID) is EffectAsset asset)) return;
+            if (Assets.find(GUID) is not EffectAsset asset) return;
             this.asset = asset;
             string teamcolor = TeamManager.GetTeamHexColor(_winner);
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -76,15 +76,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 ulong team = player.GetTeam();
                 ITransportConnection channel = player.Player.channel.owner.transportConnection;
                 player.Player.movement.sendPluginSpeedMultiplier(0f);
-                player.Player.life.serverModifyHealth(100);
-                player.Player.life.serverModifyFood(100);
-                player.Player.life.serverModifyWater(100);
-                player.Player.life.serverModifyVirus(100);
-                player.Player.life.serverModifyStamina(100);
+                player.Player.life.sendRevive();
                 player.Player.movement.sendPluginJumpMultiplier(0f);
 
                 gm.ReviveManager.RevivePlayer(player.Player);
 
+                string language = Translation.DecideLanguage(player.Steam64, Data.Localization);
                 if (!player.Player.life.isDead)
                     player.Player.teleportToLocationUnsafe(team.GetBaseSpawnFromTeam(), team.GetBaseAngle());
                 else
@@ -102,20 +99,19 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 if (stats == null) stats = new InsurgencyPlayerStats(player.Player);
                 FPlayerName originalNames = F.GetPlayerOriginalNames(player);
                 EffectManager.sendUIEffect(this.asset.id, LeaderboardEx.leaderboardKey, channel, true);
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TitleWinner", Translation.Translate("winner", player, TeamManager.TranslateName(_winner, player.Player), teamcolor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TitleWinner", Translation.Translate("winner", language, TeamManager.TranslateName(_winner, player.Player), teamcolor));
                 if (shuttingDown)
-                    EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label_shutting_down", player, shuttingDownMessage));
+                    EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label_shutting_down", language, shuttingDownMessage));
                 else
-                    EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameSeconds", Translation.ObjectTranslate("next_game_starting_format", player.Steam64, TimeSpan.FromSeconds(Gamemode.Config.GeneralConfig.LeaderboardTime)));
+                    EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameSeconds", Translation.ObjectTranslate("next_game_starting_format", language, TimeSpan.FromSeconds(Gamemode.Config.GeneralConfig.LeaderboardTime)));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameCircleForeground", Gamemode.Config.UI.ProgressChars[0].ToString());
 
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "PlayerGameStatsHeader", Translation.ObjectTranslate("player_name_header", player.Steam64,
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "PlayerGameStatsHeader", Translation.ObjectTranslate("player_name_header", language,
                     originalNames.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()), (float)(stats.onlineCount1 + stats.onlineCount2) / tracker.coroutinect * 100f));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "WarHeader", Translation.Translate("war_name_header", player,
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "WarHeader", Translation.Translate("war_name_header", language,
                     TeamManager.TranslateName(1, player.Steam64), TeamManager.Team1ColorHex,
                     TeamManager.TranslateName(2, player.Steam64), TeamManager.Team2ColorHex));
-
                 /*
                  * LEADERBOARD
                  */
@@ -183,65 +179,65 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                  *  STATS
                  */
                 // titles
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblKills", Translation.Translate("lblKills", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblDeaths", Translation.Translate("lblDeaths", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblDamageDone", Translation.Translate("lblDamageDone", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblObjectiveKills", Translation.Translate("lblObjectiveKills", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblTimeDeployed", Translation.Translate("lblTimeDeployed", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblXpGained", Translation.Translate("lblXpGained", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblIntelligenceGathered", Translation.Translate("lblIntelligenceGathered", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCachesDiscovered", Translation.Translate("lblCachesDiscovered", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCachesDestroyed", Translation.Translate("lblCachesDestroyed", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblTeamkills", Translation.Translate("lblTeamkills", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblEnemyFOBsDestroyed", Translation.Translate("lblFOBsDestroyed", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblOfficerPointsGained", Translation.Translate("lblOfficerPointsGained", player));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblKills", Translation.Translate("lblKills", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblDeaths", Translation.Translate("lblDeaths", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblDamageDone", Translation.Translate("lblDamageDone", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblObjectiveKills", Translation.Translate("lblObjectiveKills", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblTimeDeployed", Translation.Translate("lblTimeDeployed", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblXpGained", Translation.Translate("lblXpGained", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblIntelligenceGathered", Translation.Translate("lblIntelligenceGathered", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCachesDiscovered", Translation.Translate("lblCachesDiscovered", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCachesDestroyed", Translation.Translate("lblCachesDestroyed", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblTeamkills", Translation.Translate("lblTeamkills", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblEnemyFOBsDestroyed", Translation.Translate("lblFOBsDestroyed", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblOfficerPointsGained", Translation.Translate("lblOfficerPointsGained", language));
 
                 string defaultColor = UCWarfare.GetColorHex("default");
                 // values
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "KillsValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.kills, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "DeathsValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.deaths, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "DamageDoneValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.DamageDone, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "ObjectiveKillsValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, team == gm.AttackingTeam ? stats.KillsAttack : stats.KillsDefense, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TimeDeployedValue", Translation.ObjectTranslate("stats_player_time_value", player.Steam64, TimeSpan.FromSeconds(stats.timedeployed), defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "XPGainedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.XPGained, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "IntelligenceGatheredValue", Translation.ObjectTranslate("stats_player_time_value", player.Steam64, TimeSpan.FromSeconds(stats.timeonpoint), defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDiscoveredValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats._cachesDiscovered, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDestroyedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats._cachesDestroyed, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillsValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.teamkills, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "EnemyFOBsDestroyedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.FOBsDestroyed, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "OfficerPointsGainedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.OFPGained, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "KillsValue", Translation.ObjectTranslate("stats_player_value", language, stats.kills, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "DeathsValue", Translation.ObjectTranslate("stats_player_value", language, stats.deaths, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "DamageDoneValue", Translation.ObjectTranslate("stats_player_value", language, stats.DamageDone, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "ObjectiveKillsValue", Translation.ObjectTranslate("stats_player_value", language, team == gm.AttackingTeam ? stats.KillsAttack : stats.KillsDefense, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TimeDeployedValue", Translation.ObjectTranslate("stats_player_time_value", language, TimeSpan.FromSeconds(stats.timedeployed), defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "XPGainedValue", Translation.ObjectTranslate("stats_player_value", language, stats.XPGained, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "IntelligenceGatheredValue", Translation.ObjectTranslate("stats_player_time_value", language, TimeSpan.FromSeconds(stats.timeonpoint), defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDiscoveredValue", Translation.ObjectTranslate("stats_player_value", language, stats._cachesDiscovered, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDestroyedValue", Translation.ObjectTranslate("stats_player_value", language, stats._cachesDestroyed, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillsValue", Translation.ObjectTranslate("stats_player_value", language, stats.teamkills, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "EnemyFOBsDestroyedValue", Translation.ObjectTranslate("stats_player_value", language, stats.FOBsDestroyed, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "OfficerPointsGainedValue", Translation.ObjectTranslate("stats_player_value", language, stats.OFPGained, defaultColor));
 
                 /*
                  *  WAR
                  */
                 // titles
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblDuration", Translation.Translate("lblDuration", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCasualtiesT1", Translation.Translate("lblDeathsT1", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCasualtiesT2", Translation.Translate("lblDeathsT2", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblIntelligenceGathered", Translation.Translate("lblOwnerChangeCount", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblAveragePlayerCountT1", Translation.Translate("lblAveragePlayerCountT1", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblAveragePlayerCountT2", Translation.Translate("lblAveragePlayerCountT2", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsPlacedT1", Translation.Translate("lblFOBsPlacedT1", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsPlacedT2", Translation.Translate("lblFOBsPlacedT2", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsDestroyedT1", Translation.Translate("lblFOBsDestroyedT1", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsDestroyedT2", Translation.Translate("lblFOBsDestroyedT2", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblTeamkillingCasualties", Translation.Translate("lblTeamkillingCasualties", player));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblLongestShot", Translation.Translate("lblTopRankingOfficer", player));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblDuration", Translation.Translate("lblDuration", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCasualtiesT1", Translation.Translate("lblDeathsT1", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblCasualtiesT2", Translation.Translate("lblDeathsT2", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblIntelligenceGathered", Translation.Translate("lblOwnerChangeCount", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblAveragePlayerCountT1", Translation.Translate("lblAveragePlayerCountT1", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblAveragePlayerCountT2", Translation.Translate("lblAveragePlayerCountT2", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsPlacedT1", Translation.Translate("lblFOBsPlacedT1", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsPlacedT2", Translation.Translate("lblFOBsPlacedT2", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsDestroyedT1", Translation.Translate("lblFOBsDestroyedT1", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblFOBsDestroyedT2", Translation.Translate("lblFOBsDestroyedT2", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblTeamkillingCasualties", Translation.Translate("lblTeamkillingCasualties", language));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "lblLongestShot", Translation.Translate("lblTopRankingOfficer", language));
 
                 // values
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "DurationValue", Translation.ObjectTranslate("stats_war_time_value", player.Steam64, tracker.Duration, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CasualtiesValueT1", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.casualtiesT1, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CasualtiesValueT2", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.casualtiesT2, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "IntelligenceGathered", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.intelligenceGathered, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "AveragePlayerCountsT1Value", Translation.ObjectTranslate("stats_war_float_value", player.Steam64, tracker.AverageTeam1Size, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "AveragePlayerCountsT2Value", Translation.ObjectTranslate("stats_war_float_value", player.Steam64, tracker.AverageTeam2Size, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsPlacedT1Value", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.fobsPlacedT1, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsPlacedT2Value", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.fobsPlacedT2, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsDestroyedT1Value", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.fobsDestroyedT1, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsDestroyedT2Value", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.fobsDestroyedT2, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillingCasualtiesValue", Translation.ObjectTranslate("stats_war_value", player.Steam64, tracker.teamkillsT1 + tracker.teamkillsT2, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "DurationValue", Translation.ObjectTranslate("stats_war_time_value", language, tracker.Duration, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CasualtiesValueT1", Translation.ObjectTranslate("stats_war_value", language, tracker.casualtiesT1, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CasualtiesValueT2", Translation.ObjectTranslate("stats_war_value", language, tracker.casualtiesT2, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "IntelligenceGathered", Translation.ObjectTranslate("stats_war_value", language, tracker.intelligenceGathered, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "AveragePlayerCountsT1Value", Translation.ObjectTranslate("stats_war_float_value", language, tracker.AverageTeam1Size, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "AveragePlayerCountsT2Value", Translation.ObjectTranslate("stats_war_float_value", language, tracker.AverageTeam2Size, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsPlacedT1Value", Translation.ObjectTranslate("stats_war_value", language, tracker.fobsPlacedT1, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsPlacedT2Value", Translation.ObjectTranslate("stats_war_value", language, tracker.fobsPlacedT2, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsDestroyedT1Value", Translation.ObjectTranslate("stats_war_value", language, tracker.fobsDestroyedT1, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "FOBsDestroyedT2Value", Translation.ObjectTranslate("stats_war_value", language, tracker.fobsDestroyedT2, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillingCasualtiesValue", Translation.ObjectTranslate("stats_war_value", language, tracker.teamkillsT1 + tracker.teamkillsT2, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "LongestShotValue", longestShotTaken ?
-                    Translation.Translate("longest_shot_format", player.Steam64, longestShotDistance.ToString("N1"), longestShotWeapon,
+                    Translation.Translate("longest_shot_format", language, longestShotDistance.ToString("N1"), longestShotWeapon,
                     F.ColorizeName(longestShotTaker.CharacterName, longestShotTakerTeam)) : NO_PLAYER_NAME_PLACEHOLDER);
             }
             catch (Exception ex)
