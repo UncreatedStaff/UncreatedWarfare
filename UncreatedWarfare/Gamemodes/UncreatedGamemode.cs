@@ -189,8 +189,9 @@ namespace Uncreated.Warfare.Gamemodes
             }
             for (int i = 0; i < Provider.clients.Count; i++)
             {
-                Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
+                Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, true);
             }
+
             return true;
         }
         protected virtual void EndGame()
@@ -450,6 +451,11 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static Type GetNextGamemode()
         {
+            L.Log($"GAMEMODES:");
+            foreach (var entry in GAMEMODE_ROTATION)
+            {
+                L.Log($"    {entry.Key.Name} - {entry.Value}");
+            }
             using (IEnumerator<KeyValuePair<Type, float>> iter = GAMEMODE_ROTATION.GetEnumerator())
             {
                 float total = 0f;
@@ -465,6 +471,7 @@ namespace Uncreated.Warfare.Gamemodes
                     total += iter.Current.Value;
                     if (sel < total)
                     {
+                        L.Log($"    Chosen: {iter.Current.Key.Name}");
                         return iter.Current.Key;
                     }
                 }

@@ -75,13 +75,6 @@ namespace Uncreated.Warfare.Gamemodes
                     player.player.movement.sendPluginSpeedMultiplier(1f);
                     player.player.movement.sendPluginJumpMultiplier(1f);
                 }
-                if (Data.Is(out ITeams t))
-                {
-                    foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                    {
-                        t.JoinManager.JoinLobby(player, false);
-                    }
-                }
                 OnLeaderboardExpired?.Invoke();
             }
 

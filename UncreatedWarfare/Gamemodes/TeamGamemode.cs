@@ -28,6 +28,8 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
+            L.Log("TeamGamemode OnPlayerJoined was run");
+            L.Log($"use JoinUI: {UseJoinUI}");
             base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
             if (UseJoinUI)
             {
@@ -242,8 +244,6 @@ namespace Uncreated.Warfare.Gamemodes
         public override void StartNextGame(bool onLoad = false)
         {
             base.StartNextGame(onLoad);
-            if (UseJoinUI && _joinManager != null)
-                _joinManager.OnNewGameStarting();
         }
     }
 }
