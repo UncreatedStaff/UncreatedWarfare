@@ -280,14 +280,11 @@ namespace Uncreated.Warfare.Tickets
 
                 if (player.CSteamID.TryGetPlaytimeComponent(out PlaytimeComponent component) && component.stats is IExperienceStats exp)
                 {
-                    if (exp.XPGained > 0)
-                        Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
+                    //if (exp.XPGained > 0)
+                    //    Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
 
-                    //if (player.IsSquadLeader())
-                    //{
-                    //    if (exp.OFPGained > 0)
-                    //        Points.AwardTW(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), "");
-                    //}
+                    if (exp.OFPGained > 0)
+                        Points.AwardTW(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
                 }
             }
         }
@@ -345,7 +342,7 @@ namespace Uncreated.Warfare.Tickets
 
                 int xp = Points.XPConfig.FlagCapturedXP;
 
-                Points.AwardXP(player, player.NearbyMemberBonus(xp, 50), Translation.Translate("xp_flag_captured", player.Steam64));
+                Points.AwardXP(player, player.NearbyMemberBonus(xp, 60), Translation.Translate("xp_flag_captured", player.Steam64));
 
                 if (player.IsNearSquadLeader(50))
                 {
@@ -379,13 +376,13 @@ namespace Uncreated.Warfare.Tickets
                 int xp = Points.XPConfig.FlagNeutralizedXP;
 
                 Points.AwardXP(player, xp, Translation.Translate("xp_flag_neutralized", player.Steam64));
-                Points.AwardXP(player, player.NearbyMemberBonus(xp, 150) - xp, Translation.Translate("xp_squad_bonus", player.Steam64));
+                Points.AwardXP(player, player.NearbyMemberBonus(xp, 60) - xp, Translation.Translate("xp_squad_bonus", player.Steam64));
             }
 
             UpdateUITeam1(GetTeamBleed(1));
             UpdateUITeam2(GetTeamBleed(2));
         }
-        public static void OnFlagTick()
+        public static void OnFlag10Seconds()
         {
             if (Data.Is(out IFlagRotation fg))
             {
@@ -419,6 +416,22 @@ namespace Uncreated.Warfare.Tickets
                             Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                                 Points.XPConfig.FlagDefendXP,
                                 Translation.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
+                    }
+                }
+            }
+        }
+        public static void OnCache10Seconds()
+        {
+            if (Data.Is(out Insurgency ins))
+            {
+                foreach (var cache in ins.ActiveCaches)
+                {
+                    if (cache.IsActive && !cache.IsDestroyed)
+                    {
+                        for (int j = 0; j < cache.Cache.NearbyDefenders.Count; j++)
+                            Points.AwardXP(cache.Cache.NearbyDefenders[j],
+                                Points.XPConfig.FlagDefendXP,
+                                Translation.Translate("xp_flag_defend", cache.Cache.NearbyDefenders[j]));
                     }
                 }
             }

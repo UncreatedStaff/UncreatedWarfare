@@ -105,6 +105,8 @@ namespace Uncreated.Warfare.Components
 
             while (true)
             {
+                time += tickFrequency;
+
                 if (IsDestroyed) yield break;
 
                 foreach (var player in PlayerManager.OnlinePlayers)
@@ -147,8 +149,12 @@ namespace Uncreated.Warfare.Components
                     }
                 }
 
-                time += tickFrequency;
-                if (time > 1)
+                if (time % 10 == 0)
+                {
+                    Tickets.TicketManager.OnCache10Seconds();
+                }
+
+                if (time >= 60)
                     time = 0;
                 yield return new WaitForSeconds(tickFrequency);
             }

@@ -47,8 +47,8 @@ namespace Uncreated.Warfare.Point
         }
 
         public bool IsNil => TotalXP == -1;
-        private const int A = 600;
-        private const int D = 200;
+        private const int A = 300;
+        private const int D = 60;
         public void Update(int newXP)
         {
             TotalXP = newXP;
@@ -93,16 +93,16 @@ namespace Uncreated.Warfare.Point
         }
         public static int GetRankTier(int level)
         {
-            if (level < 2) return 0;
-            else if (level < 5) return 1;
-            else if (level < 8) return 2;
-            else if (level < 12) return 3;
-            else if (level < 16) return 4;
-            else if (level < 22) return 5;
-            else if (level < 28) return 6;
-            else if (level < 32) return 7;
-            else if (level < 36) return 8;
-            else if (level < 40) return 9;
+            if (level < 1) return 0;
+            else if (level < 3) return 1;
+            else if (level < 5) return 2;
+            else if (level < 7) return 3;
+            else if (level < 9) return 4;
+            else if (level < 11) return 5;
+            else if (level < 14) return 6;
+            else if (level < 17) return 7;
+            else if (level < 20) return 8;
+            else if (level < 25) return 9;
             else return 10;
         }
         public static string GetRankName(int rankTier)

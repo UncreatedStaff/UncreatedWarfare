@@ -101,13 +101,13 @@ namespace Uncreated.Warfare.Point
 
             if (newRank.Level > oldRank.Level)
             {
+                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.MEDIUM));
+
                 if (newRank.RankTier > oldRank.RankTier)
                 {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.MEDIUM));
                     Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
                 }
-                else
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
 
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
@@ -116,13 +116,13 @@ namespace Uncreated.Warfare.Point
             }
             else if (newRank.Level < oldRank.Level)
             {
+                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.MEDIUM));
+
                 if (newRank.RankTier < oldRank.RankTier)
                 {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.MEDIUM));
                     Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
                 }
-                else
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
 
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
@@ -345,24 +345,24 @@ namespace Uncreated.Warfare.Point
             ProgressBlockCharacter = '█';
             EnemyKilledXP = 10;
             KillAssistXP = 5;
-            FriendlyKilledXP = -50;
+            FriendlyKilledXP = -30;
             FriendlyRevivedXP = 30;
             FOBKilledXP = 80;
-            FOBTeamkilledXP = -1500;
+            FOBTeamkilledXP = -1000;
             FOBBunkerKilledXP = 60;
-            FOBBunkerTeamkilledXP = -1000;
+            FOBBunkerTeamkilledXP = -800;
             FOBDeployedXP = 10;
-            FlagCapturedXP = 30;
-            FlagAttackXP = 5;
-            FlagDefendXP = 5;
-            FlagNeutralizedXP = 50;
+            FlagCapturedXP = 50;
+            FlagAttackXP = 7;
+            FlagDefendXP = 7;
+            FlagNeutralizedXP = 80;
             TransportPlayerXP = 10;
             ShovelXP = 2;
             BuiltFOBXP = 100;
             ResupplyFriendlyXP = 20;
             RepairVehicleXP = 20;
             OnDutyXP = 5;
-            UnloadSuppliesXP = 20;
+            UnloadSuppliesXP = 10;
 
 
             VehicleDestroyedXP = new Dictionary<EVehicleType, int>()
@@ -402,10 +402,10 @@ namespace Uncreated.Warfare.Point
         public override void SetDefaults()
         {
             MedalsUI = 36033;
-            FirstMedalPoints = 1000;
-            PointsIncreasePerMedal = 400;
+            FirstMedalPoints = 2000;
+            PointsIncreasePerMedal = 500;
             RallyUsedPoints = 30;
-            MemberFlagCapturePoints = 15;
+            MemberFlagCapturePoints = 10;
             ResupplyFriendlyPoints = 20;
             RepairVehiclePoints = 5;
             ReviveFriendlyTW = 20;

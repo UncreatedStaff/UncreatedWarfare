@@ -19,7 +19,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 EvaluateTickets();
             base.EventLoopAction();
         }
-        protected abstract void EvaluateTickets();
+        protected virtual void EvaluateTickets()
+        {
+            if (Every10Seconds)
+            {
+                TicketManager.OnFlag10Seconds();
+            }
+        }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
             TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);

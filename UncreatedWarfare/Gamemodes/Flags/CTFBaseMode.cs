@@ -147,6 +147,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 FOBManager.Tick();
             }
+            base.EvaluateTickets();
         }
         public override void DeclareWin(ulong winner)
         {

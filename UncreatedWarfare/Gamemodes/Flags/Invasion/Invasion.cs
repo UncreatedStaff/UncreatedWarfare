@@ -43,10 +43,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
 
         // SHOULD BE RECHECKED
-        protected override void EvaluateTickets()
-        {
-            base.EvaluateTickets();
-        }
         protected void PickTeams()
         {
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
