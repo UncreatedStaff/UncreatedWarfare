@@ -402,6 +402,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 TicketManager.UpdateUITeam1();
             else if (AttackingTeam == 2)
                 TicketManager.UpdateUITeam2();
+            VehicleSigns.OnFlagCaptured();
         }
         public void SpawnNewCache(bool message = false)
         {
@@ -551,6 +552,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             TicketManager.UpdateUITeam1();
             TicketManager.UpdateUITeam2();
+            VehicleSigns.OnFlagCaptured();
         }
         public override void ShowStagingUI(UCPlayer player)
         {

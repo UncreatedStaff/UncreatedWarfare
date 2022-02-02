@@ -635,6 +635,7 @@ namespace Uncreated.Warfare.Vehicles
     public class SpawnedVehicleComponent : MonoBehaviour
     {
         private Coroutine timer;
+        private Coroutine timer2;
         private InteractableVehicle Vehicle;
         public VehicleSpawn spawn;
         private VehicleData data;
@@ -652,7 +653,16 @@ namespace Uncreated.Warfare.Vehicles
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 this.data = data;
-                StartCoroutine(TimeDelayCoroutine());
+                OnAddedTimeDelay();
+            }
+        }
+        public void OnAddedTimeDelay()
+        {
+            if (this.data != null)
+            {
+                if (timer2 != null)
+                    StopCoroutine(timer2);
+                timer2 = StartCoroutine(TimeDelayCoroutine());
             }
         }
         public void StartIdleRespawnTimer()
@@ -676,10 +686,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             while (true)
             {
-                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME))
-                {
-                    break;
-                }
+                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME)) break;
                 spawn?.UpdateSign();
                 yield return new WaitForSeconds(1f);
             }

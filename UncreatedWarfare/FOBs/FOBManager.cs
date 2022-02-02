@@ -111,8 +111,9 @@ namespace Uncreated.Warfare.FOBs
         
         public static void Tick()
         {
-            foreach (var special in SpecialFOBs)
+            for (int i = SpecialFOBs.Count - 1; i >= 0; i--)
             {
+                SpecialFOB special = SpecialFOBs[i];
                 if (special.DisappearAroundEnemies)
                 {
                     if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(70, 2)) > 0)
