@@ -962,8 +962,8 @@ namespace Uncreated.Warfare
             { "undiscovered_flag", "696969" },
             { "team_count_ui_color_team_1", "ffffff" },
             { "team_count_ui_color_team_2", "ffffff" },
-            { "team_count_ui_color_team_1_icon", "4785ff" },
-            { "team_count_ui_color_team_2_icon", "f53b3b" },
+            { "team_count_ui_color_team_1_icon", "78b2ff " },
+            { "team_count_ui_color_team_2_icon", "ffcd8c" },
             { "default_fob_color", "54e3ff" },
             { "no_bunker_fob_color", "696969" },
             { "enemy_nearby_fob_color", "ff8754" },
@@ -973,15 +973,15 @@ namespace Uncreated.Warfare
             { "insurgency_cache_discovered_color", "555bcf" },
 
             // Team Colors
-            { "team_1_color", "4785ff" },
-            { "team_2_color", "f53b3b" },
+            { "team_1_color", "78b2ff " },
+            { "team_2_color", "ffcd8c" },
             { "team_3_color", "0099ff" },
             { "neutral_color", "c2c2c2" },
 
             // Team 1 Circle
-            { "capturing_team_1", "4785ff" },
-            { "losing_team_1", "f53b3b" },
-            { "clearing_team_1", "4785ff" },
+            { "capturing_team_1", "78b2ff " },
+            { "losing_team_1", "ffcd8c" },
+            { "clearing_team_1", "78b2ff " },
             { "contested_team_1", "ffff1a" },
             { "secured_team_1", "00ff00" },
             { "nocap_team_1", "ff8c69" },
@@ -991,7 +991,7 @@ namespace Uncreated.Warfare
 
             // Team 1 Background Circle
             { "capturing_team_1_bkgr", "002266" },
-            { "losing_team_1_bkgr", "610505" },
+            { "losing_team_1_bkgr", "994d00" },
             { "clearing_team_1_bkgr", "002266" },
             { "contested_team_1_bkgr", "666600" },
             { "secured_team_1_bkgr", "006600" },
@@ -1001,9 +1001,9 @@ namespace Uncreated.Warfare
             { "in_vehicle_team_1_bkgr", "660000" },
 
             // Team 1 Words
-            { "capturing_team_1_words", "4785ff" },
-            { "losing_team_1_words", "f53b3b" },
-            { "clearing_team_1_words", "4785ff" },
+            { "capturing_team_1_words", "78b2ff " },
+            { "losing_team_1_words", "ffcd8c" },
+            { "clearing_team_1_words", "78b2ff " },
             { "contested_team_1_words", "ffff1a" },
             { "secured_team_1_words", "00ff00" },
             { "nocap_team_1_words", "ff8c69" },
@@ -1012,9 +1012,9 @@ namespace Uncreated.Warfare
             { "in_vehicle_team_1_words", "ff8c69" },
 
             // Team 2 Circle
-            { "capturing_team_2", "f53b3b" },
-            { "losing_team_2", "4785ff" },
-            { "clearing_team_2", "f53b3b" },
+            { "capturing_team_2", "ffcd8c" },
+            { "losing_team_2", "78b2ff " },
+            { "clearing_team_2", "ffcd8c" },
             { "contested_team_2", "ffff1a" },
             { "secured_team_2", "00ff00" },
             { "nocap_team_2", "ff8c69" },
@@ -1023,9 +1023,9 @@ namespace Uncreated.Warfare
             { "in_vehicle_team_2", "ff8c69" },
 
             // Team 2 Background Circle
-            { "capturing_team_2_bkgr", "610505" },
+            { "capturing_team_2_bkgr", "994d00" },
             { "losing_team_2_bkgr", "002266" },
-            { "clearing_team_2_bkgr", "610505" },
+            { "clearing_team_2_bkgr", "994d00" },
             { "contested_team_2_bkgr", "666600" },
             { "secured_team_2_bkgr", "006600" },
             { "nocap_team_2_bkgr", "660000" },
@@ -1034,9 +1034,9 @@ namespace Uncreated.Warfare
             { "in_vehicle_team_2_bkgr", "660000" },
 
             // Team 2 Words
-            { "capturing_team_2_words", "f53b3b" },
-            { "losing_team_2_words", "4785ff" },
-            { "clearing_team_2_words", "f53b3b" },
+            { "capturing_team_2_words", "ffcd8c" },
+            { "losing_team_2_words", "78b2ff " },
+            { "clearing_team_2_words", "ffcd8c" },
             { "contested_team_2_words", "ffff1a" },
             { "secured_team_2_words", "00ff00" },
             { "nocap_team_2_words", "ff8c69" },

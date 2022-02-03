@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
@@ -28,7 +29,38 @@ namespace Uncreated.Warfare.Teams
                 L.LogError("Team 2's unarmed kit, \"" + _data.data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(_data.data.defaultkit, out _))
                 L.LogError("The default kit, \"" + _data.data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-
+            object val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic);
+            if (val is Dictionary<CSteamID, GroupInfo> val2)
+            {
+                foreach (KeyValuePair<CSteamID, GroupInfo> kv in val2)
+                {
+                    if (kv.Key.m_SteamID == _data.data.team1id)
+                    {
+                        if (kv.Value.name != Team1Name)
+                        {
+                            L.Log("Renamed T1 group " + kv.Value.name + " to " + Team1Name, System.ConsoleColor.Magenta);
+                            kv.Value.name = Team1Name;
+                        }
+                    }
+                    else if (kv.Key.m_SteamID == _data.data.team2id)
+                    {
+                        if (kv.Value.name != Team2Name)
+                        {
+                            L.Log("Renamed T2 group " + kv.Value.name + " to " + Team2Name, System.ConsoleColor.Magenta);
+                            kv.Value.name = Team2Name;
+                        }
+                    }
+                    else if (kv.Key.m_SteamID == _data.data.adminid)
+                    {
+                        if (kv.Value.name != AdminName)
+                        {
+                            L.Log("Renamed Admin group " + kv.Value.name + " to " + AdminName, System.ConsoleColor.Magenta);
+                            kv.Value.name = AdminName;
+                        }
+                    }
+                    GroupManager.save();
+                }
+            }
         }
         public static ulong Team1ID { get => 1; }
         public static ulong Team2ID { get => 2; }
