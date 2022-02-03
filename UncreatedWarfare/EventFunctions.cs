@@ -258,14 +258,6 @@ namespace Uncreated.Warfare
 
         internal static void OnPreVehicleDamage(CSteamID instigatorSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
-            L.Log($"{damageOrigin.ToString().ToUpper()} - {pendingTotalDamage} DAMAGE - {instigatorSteamID}");
-
-            UCPlayer damager = UCPlayer.FromCSteamID(instigatorSteamID);
-            if (damager is not null)
-                L.Log($"    damager: {damager.CharacterName}");
-            else
-                L.Log($"    no damager found");
-
             if (F.IsInMain(vehicle.transform.position))
             {
                 shouldAllow = false;
