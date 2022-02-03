@@ -10,21 +10,17 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Networking;
 
-public sealed class SpyTask : IDisposable
+public sealed class SpyTask
 {
+    internal const int DEFAULT_TIMEOUT_MS = 10000;
+    internal const int POLL_SPEED_MS = 25;
     public static Dictionary<ulong, SpyTask> awaiters = new Dictionary<ulong, SpyTask>(1);
     private readonly SpyTaskAwaiter _awaiter;
-    private readonly SemaphoreSlim semaphore;
     public SpyTask(SteamPlayer target)
     {
         _awaiter = new SpyTaskAwaiter(this);
-        semaphore = new SemaphoreSlim(1, 1);
         target.player.sendScreenshot(CSteamID.Nil, OnReceive);
-        semaphore.Wait();
-    }
-    ~SpyTask()
-    {
-        semaphore.Dispose();
+        L.Log("sent");
     }
     private void OnReceive(CSteamID player, byte[] jpg)
     {
@@ -36,11 +32,6 @@ public sealed class SpyTask : IDisposable
         return new SpyTask(target);
     }
     public SpyTaskAwaiter GetAwaiter() => _awaiter;
-    public void Dispose()
-    {
-        semaphore.Dispose();
-        GC.SuppressFinalize(this);
-    }
     public sealed class SpyTaskAwaiter : INotifyCompletion
     {
         public System.Action continuation;
@@ -56,8 +47,7 @@ public sealed class SpyTask : IDisposable
         {
             _isCompleted = true;
             continuation.Invoke();
-            _task.semaphore.Release();
-            _task.Dispose();
+            L.Log("received");
         }
         public void OnCompleted(System.Action continuation)
         {
@@ -65,9 +55,16 @@ public sealed class SpyTask : IDisposable
         }
         public byte[] GetResult()
         {
-            CancellationTokenSource token = new CancellationTokenSource(10000); // prevent blocking thread
-            _task.semaphore.Wait(token.Token);
-            _task.Dispose();
+            L.Log("getting result");
+            int counter = 0;
+            int maxloop = DEFAULT_TIMEOUT_MS / POLL_SPEED_MS;
+            while (!_isCompleted && counter < maxloop)
+            {
+                L.Log("awaiting " + UCWarfare.IsMainThread.ToString());
+                Thread.Sleep(POLL_SPEED_MS);
+                counter++;
+            }
+            L.Log("got result " + counter);
             return rtn ?? new byte[0];
         }
     }

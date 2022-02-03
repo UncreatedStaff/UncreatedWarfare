@@ -31,6 +31,8 @@ namespace Uncreated.Warfare.Commands
                 L.LogWarning("This command can't be called from console.");
                 return;
             }
+            player.SendChat("Reports are currently disabled.");
+            return;
             if (command.Length < 2)
             {
                 goto Help;
@@ -132,7 +134,9 @@ namespace Uncreated.Warfare.Commands
             Task.Run(
             async () =>
             {
-                byte[] jsonData = targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE) ? new byte[0] : await SpyTask.RequestScreenshot(targetPl);
+                byte[] jpgData = targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE) ? new byte[0] : await SpyTask.RequestScreenshot(targetPl);
+                L.Log(report.JpgData.Length.ToString());
+                report.JpgData = jpgData;
                 NetTask.Response res = await Reporter.SendReportInvocation.Request(Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
                 if (targetPl == null)
                 {
