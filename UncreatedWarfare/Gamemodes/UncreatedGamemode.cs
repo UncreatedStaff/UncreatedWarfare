@@ -142,7 +142,7 @@ namespace Uncreated.Warfare.Gamemodes
                         continue;
                     }
                     if (Data.Is(out ITeams t) && Teams.TeamManager.LobbyZone.IsInside(Provider.clients[i].player.transform.position) && 
-                        t.UseJoinUI && UCPlayer.FromSteamPlayer(Provider.clients[i]) is UCPlayer pl && t.JoinManager.IsInLobby(pl))
+                        t.UseJoinUI && UCPlayer.FromSteamPlayer(Provider.clients[i]) is UCPlayer pl && !t.JoinManager.IsInLobby(pl))
                     {
                         L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
                         t.JoinManager.OnPlayerDisconnected(pl);
