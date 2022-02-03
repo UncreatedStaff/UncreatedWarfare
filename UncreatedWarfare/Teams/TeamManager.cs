@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Teams
                 L.LogError("Team 2's unarmed kit, \"" + _data.data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(_data.data.defaultkit, out _))
                 L.LogError("The default kit, \"" + _data.data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            object val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Instance | BindingFlags.NonPublic);
+            object val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic);
             if (val is Dictionary<CSteamID, GroupInfo> val2)
             {
                 foreach (KeyValuePair<CSteamID, GroupInfo> kv in val2)

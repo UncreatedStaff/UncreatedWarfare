@@ -132,7 +132,7 @@ namespace Uncreated.Warfare.Commands
             Task.Run(
             async () =>
             {
-                byte[] jsonData = targetPl == null || (type != EReportType.CUSTOM && type < EReportType.VOICE_CHAT_ABUSE) ? new byte[0] : await SpyTask.RequestScreenshot(targetPl);
+                byte[] jsonData = targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE) ? new byte[0] : await SpyTask.RequestScreenshot(targetPl);
                 NetTask.Response res = await Reporter.SendReportInvocation.Request(Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
                 if (targetPl == null)
                 {
@@ -159,7 +159,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                 }
-            });
+            }).ConfigureAwait(false);
             return;
         PlayerNotFound:
             player.SendChat("report_player_not_found", player.Steam64.ToString(Data.Locale));

@@ -1188,8 +1188,6 @@ namespace Uncreated.Warfare
             {
                 if (data.IsDelayed(out Delay delay))
                 {
-                    if (delay.type != EDelayType.TIME)
-                        L.Log(delay.ToString());
                     if (delay.type == EDelayType.OUT_OF_STAGING)
                     {
                         return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_staging", language)}</color>";
@@ -1247,7 +1245,6 @@ namespace Uncreated.Warfare
                             else ct2 = ct;
                             int ind = ct - ct2;
                             if (data.Team == 2) ind = flags.Rotation.Count - ind - 1;
-                            L.Log($"flags: {ct}, {ct2}, {ind}");
                             if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
                             {
                                 if (data.Team == 1 || data.Team == 2)

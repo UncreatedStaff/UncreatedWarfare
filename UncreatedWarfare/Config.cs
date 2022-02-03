@@ -74,7 +74,7 @@ namespace Uncreated.Warfare
             this.AllowCosmetics = false;
             this.ModifySkillLevels = true;
             this.AllowBatteryStealing = false;
-            this.DiscordInviteCode = "KVVBu45"; // https://discord.gg/code
+            this.DiscordInviteCode = "ucn"; // https://discord.gg/code
             this.InjuredLifeTimeSeconds = 90f;
             this.InjuredDamageMultiplier = 0.1f;
             this.MaxPlayerCount = 48;
