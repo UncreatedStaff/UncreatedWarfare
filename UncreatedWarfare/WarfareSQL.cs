@@ -256,7 +256,7 @@ namespace Uncreated.Warfare
             }
             else
             {
-                if (amount >= oldBalance)
+                if (amount + oldBalance < 0)
                 {
                     NonQuery(
                         "INSERT INTO `teamwork` " +
@@ -271,10 +271,10 @@ namespace Uncreated.Warfare
                 {
                     NonQuery(
                         "UPDATE `teamwork` SET " +
-                        "`Points` = 0 " +
+                        "`Points` = @1 " +
                         "WHERE `Steam64` = @0;",
-                        new object[] { Steam64});
-                    return amount - oldBalance;
+                        new object[] { Steam64, amount + oldBalance });
+                    return amount + oldBalance;
                 }
             }
         }
@@ -314,7 +314,7 @@ namespace Uncreated.Warfare
             }
             else
             {
-                if (amount >= oldBalance)
+                if (amount + oldBalance < 0)
                 {
                     NonQuery(
                         "INSERT INTO `xp` " +
@@ -329,10 +329,10 @@ namespace Uncreated.Warfare
                 {
                     NonQuery(
                         "UPDATE `xp` SET " +
-                        "`XP` = 0 " +
+                        "`XP` = @2 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
-                        new object[] { Steam64, (int)branch});
-                    return amount - oldBalance;
+                        new object[] { Steam64, (int)branch, amount + oldBalance });
+                    return amount + oldBalance;
                 }
             }
         }

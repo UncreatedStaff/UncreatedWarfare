@@ -284,7 +284,7 @@ namespace Uncreated.Warfare.Tickets
                     //    Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
 
                     if (exp.OFPGained > 0)
-                        Points.AwardTW(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
+                        Points.AwardTW(player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
                 }
             }
         }

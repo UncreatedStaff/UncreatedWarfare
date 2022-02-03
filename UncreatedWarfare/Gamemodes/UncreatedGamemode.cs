@@ -132,12 +132,22 @@ namespace Uncreated.Warfare.Gamemodes
                         {
                             L.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
                             Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
+                            continue;
                         }
                     }
                     catch (NullReferenceException)
                     {
                         L.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
                         Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
+                        continue;
+                    }
+                    if (Data.Is(out ITeams t) && Teams.TeamManager.LobbyZone.IsInside(Provider.clients[i].player.transform.position) && 
+                        t.UseJoinUI && UCPlayer.FromSteamPlayer(Provider.clients[i]) is UCPlayer pl && t.JoinManager.IsInLobby(pl))
+                    {
+                        L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
+                        t.JoinManager.OnPlayerDisconnected(pl);
+                        t.JoinManager.CloseUI(pl);
+                        t.JoinManager.OnPlayerConnected(pl, true);
                     }
                 }
                 try
