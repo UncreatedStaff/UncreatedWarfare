@@ -141,6 +141,7 @@ namespace Uncreated.Warfare.Gamemodes
                         Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
                         continue;
                     }
+                    // TODO: Fix
                     if (Data.Is(out ITeams t) && Teams.TeamManager.LobbyZone.IsInside(Provider.clients[i].player.transform.position) && 
                         t.UseJoinUI && UCPlayer.FromSteamPlayer(Provider.clients[i]) is UCPlayer pl && !t.JoinManager.IsInLobby(pl))
                     {
@@ -474,11 +475,6 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static Type GetNextGamemode()
         {
-            L.Log($"GAMEMODES:");
-            foreach (var entry in GAMEMODE_ROTATION)
-            {
-                L.Log($"    {entry.Key.Name} - {entry.Value}");
-            }
             using (IEnumerator<KeyValuePair<Type, float>> iter = GAMEMODE_ROTATION.GetEnumerator())
             {
                 float total = 0f;

@@ -696,9 +696,9 @@ namespace Uncreated.Warfare.Vehicles
         {
             while (true)
             {
-                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME)) break;
-                spawn?.UpdateSign();
                 yield return new WaitForSeconds(1f);
+                spawn?.UpdateSign();
+                if (hasBeenRequested || !data.IsDelayedType(EDelayType.TIME)) break;
             }
         }
         private IEnumerator<WaitForSeconds> IdleRespawnVehicle(VehicleData data)
@@ -732,6 +732,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
             spawn?.SpawnVehicle();
+            spawn?.UpdateSign();
             VehicleBay.DeleteVehicle(Vehicle);
             isIdle = false;
         }

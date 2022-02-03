@@ -428,7 +428,6 @@ namespace Uncreated.Warfare.Squads
             {
                 squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
                 squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
-                L.Log($"who should become leader: {squad.Members[0].CharacterName}");
                 squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
             for (int i = 0; i < squad.Members.Count; i++)
