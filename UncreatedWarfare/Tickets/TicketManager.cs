@@ -116,9 +116,11 @@ namespace Uncreated.Warfare.Tickets
                 {
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        UCPlayer player = UCPlayer.FromID(vc.lastDriver);
+                        UCPlayer player = UCPlayer.FromID(vc.lastDamager);
                         bool wasCrashed = false;
 
+                        if (player == null)
+                            player = UCPlayer.FromID(vc.lastDriver);
                         if (player == null)
                             return;
                         else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
@@ -284,7 +286,7 @@ namespace Uncreated.Warfare.Tickets
                     //    Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
 
                     if (exp.OFPGained > 0)
-                        Points.AwardTW(player.Squad.Leader.Player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
+                        Points.AwardTW(player, Mathf.RoundToInt(exp.OFPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
                 }
             }
         }
