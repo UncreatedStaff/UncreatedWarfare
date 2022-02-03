@@ -495,7 +495,7 @@ public struct TEAM_CTF_CONFIG
         public void SetDefaults()
         {
             StagingTime = 90;
-            StartingTickets = 150;
+            StartingTickets = 200;
             EvaluateTime = 0.25f;
             TicketXPInterval = 10;
             OverrideContestDifference = 2;
@@ -520,8 +520,8 @@ public struct TEAM_CTF_CONFIG
             StagingTime = 150;
             DiscoveryForesight = 2;
             SpecialFOBName = "VCP";
-            TicketsFlagCaptured = 50;
-            AttackStartingTickets = 120;
+            TicketsFlagCaptured = 100;
+            AttackStartingTickets = 200;
             TicketXPInterval = 10;
         }
     }
@@ -546,13 +546,13 @@ public struct TEAM_CTF_CONFIG
             MaxStartingCaches = 4;
             StagingTime = 150;
             FirstCacheSpawnTime = 240;
-            AttackStartingTickets = 100;
+            AttackStartingTickets = 180;
             CacheDiscoverRange = 75;
-            IntelPointsToDiscovery = 15;
-            IntelPointsToSpawn = 15;
+            IntelPointsToDiscovery = 12;
+            IntelPointsToSpawn = 12;
             XPCacheDestroyed = 800;
             XPCacheTeamkilled = -8000;
-            TicketsCache = 50;
+            TicketsCache = 70;
             CacheStartingBuild = 15;
             CacheItems = new Dictionary<ushort, int>();
         }

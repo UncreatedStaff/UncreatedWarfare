@@ -897,8 +897,8 @@ namespace Uncreated.Warfare
                 { "insurgency_ui_destroyed_attack", "<color=#5a6e5c>Destroyed</color>" },
                 { "insurgency_ui_destroyed_defense", "<color=#6b5858>Lost</color>" },
                 { "insurgency_ui_cache_attack", "<color=#ffca61>{0}</color> <color=#c2c2c2>{1}</color>" },
-                { "insurgency_ui_cache_defense_undiscovered", "<color=#84d980>{0}</color> <color=#c2c2c2>{1}</color>" },
-                { "insurgency_ui_cache_defense_discovered", "<color=#c480d9>{0}</color> <color=#c2c2c2>{1}</color>" },
+                { "insurgency_ui_cache_defense_undiscovered", "<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>" },
+                { "insurgency_ui_cache_defense_discovered", "<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>" },
                 { "caches_header", "Caches" },
 
                 // Report Command
@@ -970,7 +970,7 @@ namespace Uncreated.Warfare
             { "bleeding_fob_color", "d45555" },
             { "invasion_special_fob", "5482ff" },
             { "insurgency_cache_undiscovered_color", "b780d9" },
-            { "insurgency_cache_discovered_color", "696ed1" },
+            { "insurgency_cache_discovered_color", "555bcf" },
 
             // Team Colors
             { "team_1_color", "78b2ff " },
