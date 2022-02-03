@@ -390,7 +390,7 @@ namespace Uncreated.Warfare.Revives
         }
         public void Dispose()
         {
-            foreach (DownedPlayerData downPlayer in DownedPlayers.Values)
+            foreach (DownedPlayerData downPlayer in DownedPlayers.Values.ToList())
             {
                 if (downPlayer.parameters.player.transform.TryGetComponent(out Reviver reviver))
                 {

@@ -106,7 +106,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label", player));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameSeconds", Translation.ObjectTranslate("next_game_starting_format", player.Steam64, TimeSpan.FromSeconds(Gamemode.Config.GeneralConfig.LeaderboardTime)));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameCircleForeground", Gamemode.Config.UI.ProgressChars[0].ToString());
-
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "PlayerGameStatsHeader", Translation.ObjectTranslate("player_name_header", player.Steam64,
                     originalNames.CharacterName, TeamManager.GetTeamHexColor(player.GetTeam()), (float)(stats.onlineCount1 + stats.onlineCount2) / tracker.coroutinect * 100f));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "WarHeader", Translation.Translate("war_name_header", player,
@@ -144,6 +143,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "1F" + i, f);
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "1C" + i, c);
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "1T" + i, t);
+                    if (i != 0)
+                        EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, channel, true, "1VC" + i, false);
+                    
                 }
                 for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
                 {
@@ -172,6 +174,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "2F" + i, f);
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "2C" + i, c);
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "2T" + i, t);
+                    if (i != 0)
+                        EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, channel, true, "2VC" + i, false);
                 }
 
                 //UCPlayer topOfficer = PlayerManager.OnlinePlayers.OrderByDescending(x => x.cachedOfp).FirstOrDefault();

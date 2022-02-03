@@ -31,8 +31,11 @@ namespace Uncreated.Warfare.Commands
                 L.LogWarning("This command can't be called from console.");
                 return;
             }
-            player.SendChat("Reports are currently disabled.");
-            return;
+            if (player.Steam64 != 76561198267927009)
+            {
+                player.SendChat("Reports are currently disabled.");
+                return;
+            }
             if (command.Length < 2)
             {
                 goto Help;

@@ -886,7 +886,7 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("e1af3a3af31e4996bc5d6ffd9a0773ec"),
                     foundationID = new Guid("baf23a8b514441ee8db891a3ddf32ef4"),
                     type = EBuildableType.FORTIFICATION,
-                    requiredHits = 30,
+                    requiredHits = 20,
                     requiredBuild = 1,
                     team = 0,
                     emplacementData = null
@@ -897,7 +897,7 @@ namespace Uncreated.Warfare.FOBs
                     structureID = new Guid("857c85161f254964a921700a69e215a9"),
                     foundationID = new Guid("827d0ca8bfff43a39f750f191e16ea71"),
                     type = EBuildableType.FORTIFICATION,
-                    requiredHits = 25,
+                    requiredHits = 15,
                     requiredBuild = 1,
                     team = 0,
                     emplacementData = null
@@ -908,7 +908,7 @@ namespace Uncreated.Warfare.FOBs
                     structureID = Guid.Empty,
                     foundationID = new Guid("80396c361d3040d7beb3921964ec2997"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 20,
+                    requiredHits = 10,
                     requiredBuild = 6,
                     team = 1,
                     emplacementData = new EmplacementData

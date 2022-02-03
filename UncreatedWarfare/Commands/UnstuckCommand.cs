@@ -23,9 +23,9 @@ namespace Uncreated.Warfare.Commands
 
                 if (Data.Is(out ITeams t) && TeamManager.LobbyZone.IsInside(ucplayer.Position))
                 {
-                    t.JoinManager.CloseUI(ucplayer);
                     t.JoinManager.OnPlayerDisconnected(ucplayer);
-                    t.JoinManager.OnPlayerConnected(ucplayer, false);
+                    t.JoinManager.CloseUI(ucplayer);
+                    t.JoinManager.OnPlayerConnected(ucplayer, true);
                 }
             }
         }
