@@ -1142,7 +1142,7 @@ namespace Uncreated.Warfare
             new LanguageAliasSet("ro-ro", "Romanian", new string[] { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
         };
         public static readonly Dictionary<string, string> DefaultDeathTranslations = new Dictionary<string, string> {
-            { "ACID", "{0} was burned by an acid zombie." },
+            { "ACID", "{0} tried to enter enemy main." },
             { "ANIMAL", "{0} was attacked by an animal." },
             { "ARENA", "{0} stepped outside the arena boundary." },
             { "BLEEDING", "{0} bled out from {1}." },
