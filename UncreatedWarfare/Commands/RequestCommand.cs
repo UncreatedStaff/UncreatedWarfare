@@ -30,6 +30,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.request" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             // dont allow requesting between game end and leaderboard
             if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
             {

@@ -13,19 +13,20 @@ namespace Uncreated.Warfare.Components
 {
     public static class IconManager
     {
-        private static List<IconRenderer> icons = new List<IconRenderer>();
+        private static readonly List<IconRenderer> icons = new List<IconRenderer>();
         
         public static void OnLevelLoaded()
         {
-            foreach (var barricade in UCBarricadeManager.AllBarricades)
+            foreach (BarricadeDrop barricade in UCBarricadeManager.AllBarricades)
                 OnBarricadePlaced(barricade);
         }
         public static void OnBarricadePlaced(BarricadeDrop drop, bool isFOBRadio = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (drop.model.TryGetComponent(out IconRenderer _))
                 return;
 
-            var data = drop.GetServersideData();
+            SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             // FOB radio
             if (isFOBRadio)
@@ -64,9 +65,10 @@ namespace Uncreated.Warfare.Components
         }
         public static void DrawNewMarkers(UCPlayer player, bool clearOld)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<Guid> seenTypes = new List<Guid>();
 
-            foreach (var icon in icons)
+            foreach (IconRenderer icon in icons)
             {
                 if (clearOld)
                 {
@@ -85,7 +87,8 @@ namespace Uncreated.Warfare.Components
         }
         public static void AttachIcon(Guid effectGUID, Transform transform, ulong team = 0, float yOffset = 0)
         {
-            var icon = transform.gameObject.AddComponent<IconRenderer>();
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
             icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
 
             foreach (var player in PlayerManager.OnlinePlayers)
@@ -98,11 +101,12 @@ namespace Uncreated.Warfare.Components
 
             icons.Add(icon);
 
-            var components = transform.gameObject.GetComponents<IconRenderer>();
+            //IconRenderer[] components = transform.gameObject.GetComponents<IconRenderer>();
         }
         public static void DeleteIcon(IconRenderer icon)
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
                 {
@@ -116,9 +120,10 @@ namespace Uncreated.Warfare.Components
         }
         private static void SpawnNewIconsOfType(Guid effectGUID)
         {
-            foreach (var player in PlayerManager.OnlinePlayers)
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
-                foreach (var icon in icons)
+                foreach (IconRenderer icon in icons)
                 {
                     if (icon.EffectGUID == effectGUID && icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
                     {

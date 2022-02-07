@@ -51,6 +51,7 @@ namespace Uncreated.Warfare.Point
         private const int D = 100;
         public void Update(int newXP)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             TotalXP = newXP;
 
             float x = D / 2f;

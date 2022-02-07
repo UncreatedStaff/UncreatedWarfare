@@ -1,5 +1,6 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
+using System;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency
@@ -8,6 +9,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
     {
         public static void SendCacheList(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!Data.Is(out Insurgency gm)) return;
             ITransportConnection c = player.Player.channel.owner.transportConnection;
             EffectManager.sendUIEffect(CTFUI.flagListID, CTFUI.flagListKey, c, true);
@@ -28,6 +30,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public static void ReplicateCacheUpdate(Insurgency.CacheData cache)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!Data.Is(out Insurgency gm)) return;
             int index = gm.Caches.IndexOf(cache);
             string i2 = "N" + index.ToString();
@@ -39,6 +42,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, ulong team, Insurgency insurgency)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!cache.IsActive)
             {
                 if (team == insurgency.AttackingTeam)

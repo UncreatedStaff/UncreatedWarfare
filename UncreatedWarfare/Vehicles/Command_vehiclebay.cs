@@ -20,6 +20,7 @@ namespace Uncreated.Warfare.Kits
         public List<string> Permissions => new List<string>() { "uc.vehiclebay" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             UnturnedPlayer player = (UnturnedPlayer)caller;
 
             InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);

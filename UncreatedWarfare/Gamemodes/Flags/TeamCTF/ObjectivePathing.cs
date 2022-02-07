@@ -1,4 +1,5 @@
 ﻿//#define NONADJACENCIES
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,12 +10,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     {
         public static List<Flag> PathWithAdjacents(List<Flag> Selection, AdjacentFlagData[] T1Adjacents, AdjacentFlagData[] T2Adjacents)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<Flag> path = new List<Flag>();
             StartAdjacentsLoop(path, Selection, T1Adjacents, T2Adjacents);
             return path;
         }
         private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, AdjacentFlagData[] t1adjacents, AdjacentFlagData[] t2adjacents)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Flag first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
             if (first == null)
             {
@@ -27,6 +30,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         private static void AdjacentsFlagLoop(List<Flag> flags, List<Flag> selection, AdjacentFlagData[] t2adjacents)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Flag lastFlag = flags.Last();
             if (lastFlag == null)
             {
@@ -66,6 +70,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static Dictionary<Flag, float> InstantiateFlags(AdjacentFlagData[] flags, List<Flag> selection, List<Flag> toNotRemove, Flag current)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Dictionary<Flag, float> rtn = new Dictionary<Flag, float>();
             for (int i = 0; i < flags.Length; i++)
             {
@@ -90,6 +95,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 
         private static Flag PickRandomFlagWithSpecifiedBias(Dictionary<Flag, float> biases)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (biases.Count < 1)
             {
                 L.LogError("Biases was empty.");
@@ -100,7 +106,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 total += flag.Value;
             }
-            float pick = Random.Range(0, total);
+            float pick = UnityEngine.Random.Range(0, total);
             float counter = 0;
             foreach (KeyValuePair<Flag, float> flag in biases)
             {
@@ -111,6 +117,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         private static bool PickRandomFlagOrMainWithSpecifiedBias(Dictionary<Flag, float> biases, float mainBias, out Flag output)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (biases.Count < 1)
             {
                 output = default;

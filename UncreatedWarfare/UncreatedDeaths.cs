@@ -28,6 +28,7 @@ namespace Uncreated.Warfare
         public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
         private void Teamkill(KillEventArgs parameters)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             L.Log(Translation.Translate("teamkilled_console_log", 0,
                 F.GetPlayerOriginalNames(parameters.killer).PlayerName,
                 parameters.killer.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale),
@@ -115,6 +116,7 @@ namespace Uncreated.Warfare
         }
         private void Kill(KillEventArgs parameters)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             //L.Log("[KILL] " + parameters.ToString(), ConsoleColor.Blue);
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
@@ -290,6 +292,7 @@ namespace Uncreated.Warfare
         }
         public void Suicide(SuicideEventArgs parameters)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             //L.Log("[SUICIDE] " + parameters.ToString(), ConsoleColor.Blue);
             DeathEventArgs args = new DeathEventArgs
             {
@@ -407,6 +410,7 @@ namespace Uncreated.Warfare
         }
         public void DeathNotSuicide(DeathEventArgs parameters)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             //L.Log("[DEATH] " + parameters.ToString(), ConsoleColor.Blue);
 
             byte team = parameters.dead.GetTeamByte();
@@ -460,6 +464,7 @@ namespace Uncreated.Warfare
         }
         private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(dead);
             if (ucplayer != null)
                 ucplayer.LifeCounter++;
@@ -1107,6 +1112,7 @@ namespace Uncreated.Warfare
         }
         internal void GetKillerInfo(out Guid item, out float distance, out FPlayerName killernames, out ulong KillerTeam, out string kitname, out ushort vehicle, EDeathCause cause, SteamPlayer killer, Player dead)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             vehicle = 0;
             if (killer == null || dead == null)
             {

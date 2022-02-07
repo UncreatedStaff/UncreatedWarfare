@@ -32,6 +32,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void LoadSpawns()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             foreach (VehicleSpawn spawn in ActiveObjects)
             {
                 spawn.Initialize();
@@ -39,6 +40,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn) && spawn.IsActive)
             {
                 spawn.StartVehicleRespawnTimer();
@@ -49,6 +51,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
@@ -60,6 +63,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         internal void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (data.structure.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
@@ -72,6 +76,7 @@ namespace Uncreated.Warfare.Vehicles
         public static void RespawnAllVehicles()
         {
             L.Log("Respawning vehicles...", ConsoleColor.Magenta);
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = VehicleManager.vehicles.Count - 1; i >= 0; i--)
             {
                 InteractableVehicle v = VehicleManager.vehicles[i];
@@ -94,6 +99,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void CreateSpawn(BarricadeDrop drop, SDG.Unturned.BarricadeData data, Guid vehicleID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.BARRICADE, new SerializableTransform(drop.model));
             spawn.Initialize();
             AddObjectToSave(spawn);
@@ -102,6 +108,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void CreateSpawn(StructureDrop drop, SDG.Unturned.StructureData data, Guid vehicleID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.STRUCTURE, new SerializableTransform(drop.model));
             spawn.Initialize();
             AddObjectToSave(spawn);
@@ -110,6 +117,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void DeleteSpawn(uint barricadeInstanceID, EStructType type)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             VehicleSpawn spawn = GetObject(s => s.SpawnPadInstanceID == barricadeInstanceID && s.type == type);
             if (spawn != null)
             {
@@ -121,6 +129,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsRegistered(uint barricadeInstanceID, out VehicleSpawn spawn, EStructType type)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (type == EStructType.BARRICADE)
                 return ObjectExists(s => barricadeInstanceID == s.SpawnPadInstanceID, out spawn);
             else if (type == EStructType.STRUCTURE)
@@ -133,6 +142,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsRegistered(SerializableTransform transform, out VehicleSpawn spawn, EStructType type)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (type == EStructType.BARRICADE)
                 return ObjectExists(s => transform == s.BarricadeDrop.model.transform, out spawn);
             else if (type == EStructType.STRUCTURE)
@@ -175,6 +185,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private static void OnPlayerEnterMain(SteamPlayer player, ulong team)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             player.SendChat("entered_main", TeamManager.TranslateName(team, player, true));
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
@@ -191,6 +202,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void UpdateSigns(Guid vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 VehicleSpawn spawn = ActiveObjects[i];
@@ -200,6 +212,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void UpdateSigns(uint vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 VehicleSpawn spawn = ActiveObjects[i];
@@ -254,6 +267,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void Initialize()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 if (type == EStructType.BARRICADE)
@@ -398,7 +412,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void SpawnVehicle()
         {
-
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (HasLinkedVehicle(out _))
             {
                 L.LogDebug("Could not spawn vehicle because another is already linked");
@@ -456,6 +470,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public bool HasLinkedVehicle(out InteractableVehicle vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (VehicleInstanceID == 0)
             {
                 vehicle = null;
@@ -474,6 +489,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void StartVehicleRespawnTimer()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if ((type == EStructType.BARRICADE && BarricadeDrop is null) || (type == EStructType.STRUCTURE && StructureDrop is null))
             {
                 L.LogWarning($"VEHICLE SPAWNER ERROR: could not start respawn timer, {(type == EStructType.BARRICADE ? "Barricade" : "Structure")}Drop was null");
@@ -491,6 +507,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void CancelVehicleRespawnTimer()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if ((type == EStructType.BARRICADE && BarricadeDrop is null) || (type == EStructType.STRUCTURE && StructureDrop is null))
             {
                 L.LogWarning($"VEHICLE SPAWNER ERROR: could not start respawn timer, {(type == EStructType.BARRICADE ? "Barricade" : "Structure")}Drop was null");
@@ -529,6 +546,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void UpdateSign()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (this.LinkedSign == null || this.LinkedSign.SignInteractable == null || this.LinkedSign.SignDrop == null) return;
             if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
             {
@@ -542,8 +560,8 @@ namespace Uncreated.Warfare.Vehicles
             }
             else if (Regions.tryGetCoordinate(LinkedSign.SignDrop.model.transform.position, out byte x, out byte y))
             {
-                IEnumerator<SteamPlayer> t2Main = F.EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
-                UpdateSignInternal(t2Main, this);
+                IEnumerator<SteamPlayer> everyoneElse = F.EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
+                UpdateSignInternal(everyoneElse, this);
             }
             else
             {
@@ -552,6 +570,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
@@ -575,6 +594,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void UpdateSignInternal(SteamPlayer player, VehicleSpawn spawn)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))

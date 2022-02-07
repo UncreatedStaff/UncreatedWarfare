@@ -26,6 +26,7 @@ namespace Uncreated.Warfare.Kits
         }
         private void PlayerLife_OnPreDeath(PlayerLife life)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (HasKit(life.player.channel.owner.playerID.steamID, out Kit kit))
             {
                 for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -68,6 +69,7 @@ namespace Uncreated.Warfare.Kits
         public static bool KitExists(string kitName, out Kit kit) => ObjectExists(i => i != default && kitName != default && i.Name.ToLower() == kitName.ToLower(), out kit);
         public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes, bool save = true)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (KitExists(kitName, out Kit kit))
             {
                 kit.Items = newItems ?? kit.Items;
@@ -79,6 +81,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static List<KitItem> ItemsFromInventory(UnturnedPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<KitItem> items = new List<KitItem>();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -105,6 +108,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static List<KitClothing> ClothesFromInventory(UnturnedPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             PlayerClothing playerClothes = player.Player.clothing;
 
             List<KitClothing> clothes = new List<KitClothing>(7);
@@ -128,6 +132,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static void GiveKit(UCPlayer player, Kit kit)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             //DateTime start = DateTime.Now;
 
             if (kit == null)
@@ -199,6 +204,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static void ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<ItemJar> nonKitItems = new List<ItemJar>();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -302,6 +308,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool TryGiveUnarmedKit(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             string unarmedKit = "";
             if (player.IsTeam1())
                 unarmedKit = TeamManager.Team1UnarmedKit;
@@ -317,6 +324,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool TryGiveRiflemanKit(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Kit rifleman = GetKitsWhere(k =>
                     k.Team == player.GetTeam() &&
                     k.Class == EClass.RIFLEMAN &&
@@ -335,6 +343,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             var player = UCPlayer.FromID(steamID);
 
             if (player is null)
@@ -350,6 +359,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(UCPlayer player, out Kit kit)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             kit = GetObject(k => k.Name == player.KitName);
             return kit != null;
         }
@@ -366,6 +376,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DEFAULT_LANGUAGE)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (KitExists(kitname, out Kit kit))
             {
                 IEnumerable<Kit> matches = GetObjectsWhere(k => k.Name == kit.Name);
@@ -382,6 +393,7 @@ namespace Uncreated.Warfare.Kits
         public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => GetObjectsWhere(k => k.AllowedUsers.Contains(playerID));
         public static void GiveAccess(ulong playerID, string kitName)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (KitExists(kitName, out Kit kit))
             {
                 if (!kit.AllowedUsers.Contains(playerID))
@@ -395,6 +407,7 @@ namespace Uncreated.Warfare.Kits
         }
         public static void RemoveAccess(ulong playerID, string kitName)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (KitExists(kitName, out Kit kit))
             {
                 kit.AllowedUsers.RemoveAll(i => i == playerID);
@@ -454,6 +467,7 @@ namespace Uncreated.Warfare.Kits
         public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.id == ID);
         public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ulong Team = team == 1 || team == 2 ? team : kit.Team;
             currentPlayers = 0;
             allowedPlayers = 24;
@@ -469,6 +483,7 @@ namespace Uncreated.Warfare.Kits
 
         public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ulong Team = team == 1 || team == 2 ? team : kit.Team;
             currentPlayers = 0;
             allowedPlayers = 24;

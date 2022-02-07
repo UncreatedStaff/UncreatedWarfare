@@ -17,6 +17,7 @@ namespace Uncreated.Warfare.Stats
         {
             while (true)
             {
+                IDisposable profiler = ProfilingUtils.StartTracking("Stats Coroutine");
                 try
                 {
                     /* PLAYTIME COUNTER */
@@ -105,6 +106,7 @@ namespace Uncreated.Warfare.Stats
                     L.LogError(ex);
                 }
 
+                profiler.Dispose();
                 // stats interval is in minutes here
                 yield return new WaitForSeconds(UCWarfare.Config.StatsInterval * 60f);
             }

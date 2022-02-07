@@ -151,6 +151,7 @@ namespace Uncreated.Warfare
         }
         public static void LoadVariables()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             // TODO: Make flags between 4 and 10;
             // TODO: Fix exceptions in OffenseManager
             // TODO: Rename teams
@@ -189,6 +190,8 @@ namespace Uncreated.Warfare
                 DuplicateKeyError(ex);
                 return;
             }
+
+            Quests.QuestManager.Init();
 
             Colors = JSONMethods.LoadColors(out ColorsHex);
             Localization = JSONMethods.LoadTranslations(out DeathLocalization, out LimbLocalization);

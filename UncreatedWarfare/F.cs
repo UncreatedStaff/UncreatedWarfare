@@ -85,6 +85,7 @@ namespace Uncreated.Warfare
         }
         public static bool PermissionCheck(this IRocketPlayer player, EAdminType type)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             for (int i = 0; i < groups.Count; i++)
             {
@@ -120,6 +121,7 @@ namespace Uncreated.Warfare
         }
         public static EAdminType GetPermissions(this IRocketPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             EAdminType perms = 0;
             for (int i = 0; i < groups.Count; i++)
@@ -300,6 +302,7 @@ namespace Uncreated.Warfare
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
         public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (text == null) return;
             if (text.StartsWith("sign_"))
             {
@@ -324,6 +327,7 @@ namespace Uncreated.Warfare
         }
         public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (text == default || client == default) return;
             string newtext;
             if (!changeText)
@@ -350,6 +354,7 @@ namespace Uncreated.Warfare
         }
         public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (source == null) return null;
             if (replaceIf == null || replaceWith == null || source.Length == 0 || replaceIf.Length == 0) return source;
             char[] chars = source.ToCharArray();
@@ -381,6 +386,7 @@ namespace Uncreated.Warfare
         }
         public static string RemoveMany(this string source, bool caseSensitive, params char[] replacables)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (source == null) return null;
             if (replacables.Length == 0) return source;
             char[] chars = source.ToCharArray();
@@ -450,6 +456,7 @@ namespace Uncreated.Warfare
         }
         public static PlaytimeComponent GetPlaytimeComponent(this Player player, out bool success)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.PlaytimeComponents.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
             {
                 success = Data.PlaytimeComponents[player.channel.owner.playerID.steamID.m_SteamID] != null;
@@ -473,6 +480,7 @@ namespace Uncreated.Warfare
         }
         public static PlaytimeComponent GetPlaytimeComponent(this CSteamID player, out bool success)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.PlaytimeComponents.ContainsKey(player.m_SteamID))
             {
                 success = Data.PlaytimeComponents[player.m_SteamID] != null;
@@ -505,6 +513,7 @@ namespace Uncreated.Warfare
         }
         public static PlaytimeComponent GetPlaytimeComponent(this ulong player, out bool success)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player == 0)
             {
                 success = false;
@@ -535,23 +544,19 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public static float GetCurrentPlaytime(this Player player)
-        {
-            if (player.TryGetPlaytimeComponent(out PlaytimeComponent playtimeObj))
-                return playtimeObj.CurrentTimeSeconds;
-            else return 0f;
-        }
         public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => GetPlayerOriginalNames(player.Player);
         public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
         public static FPlayerName GetPlayerOriginalNames(UnturnedPlayer player) => GetPlayerOriginalNames(player.Player);
         public static FPlayerName GetPlayerOriginalNames(Player player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.OriginalNames.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
                 return Data.OriginalNames[player.channel.owner.playerID.steamID.m_SteamID];
             else return new FPlayerName(player);
         }
         public static FPlayerName GetPlayerOriginalNames(ulong player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
                 return names;
             else
@@ -570,6 +575,7 @@ namespace Uncreated.Warfare
         }
         public static async Task<FPlayerName> GetPlayerOriginalNamesAsync(ulong player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
                 return names;
             else
@@ -588,6 +594,7 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(this Player player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!Data.Is<ITeams>(out _)) return false;
             ulong team = player.GetTeam();
             if (team == 1) return TeamManager.Team1Main.IsInside(player.transform.position);
@@ -596,12 +603,14 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(Vector3 point)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!Data.Is<ITeams>(out _)) return false;
             return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
         }
         public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
         public static bool IsOnFlag(this Player player, out Flag flag)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player != null && Data.Is(out IFlagRotation fg))
             {
                 if (fg.OnFlag == null)
@@ -656,6 +665,14 @@ namespace Uncreated.Warfare
                 }
             }
             else success = true;
+        }
+        public static void SaveProfilingData()
+        {
+            F.CheckDir(Data.DATA_DIRECTORY + "Profiling\\", out _);
+            string fi = Data.DATA_DIRECTORY + "Profiling\\" + DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv";
+            L.Log("Flushing profiling information to \"" + fi + "\"", ConsoleColor.Cyan);
+            ProfilingUtils.WriteAllDataToCSV(fi);
+            ProfilingUtils.Clear();
         }
         public static void SendSteamURL(this SteamPlayer player, string message, ulong SteamID) => player.SendURL(message, $"https://steamcommunity.com/profiles/{SteamID}/");
         public static void SendURL(this SteamPlayer player, string message, string url)
@@ -731,6 +748,7 @@ namespace Uncreated.Warfare
             call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
         public static bool FilterName(string original, out string final)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (UCWarfare.Config.DisableNameFilter || UCWarfare.Config.MinAlphanumericStringLength <= 0)
             {
                 final = original;
@@ -790,6 +808,7 @@ namespace Uncreated.Warfare
         public static string ToGridPosition(Vector3 pos)
         {
             if (!_setGridConstants) SetGridPositionConstants();
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float x = Level.size / 2 + _toMapCoordsMultiplier * pos.x;
             float y = Level.size / 2 - _toMapCoordsMultiplier * pos.z;
 

@@ -11,10 +11,12 @@ namespace Uncreated.Warfare.Squads
 {
     public static class RallyManager
     {
+        // TODO: Remove old rally and ammo bag when new one is placed.
         private static readonly List<RallyPoint> rallypoints = new List<RallyPoint>();
         public const float TELEPORT_HEIGHT_OFFSET = 2f;
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
@@ -40,6 +42,7 @@ namespace Uncreated.Warfare.Squads
             ref bool shouldAllow
             )
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
                 UCPlayer player = UCPlayer.FromID(owner);
@@ -81,6 +84,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
                 TryDeleteRallyPoint(instanceID);
@@ -89,6 +93,7 @@ namespace Uncreated.Warfare.Squads
 
         public static void WipeAllRallies()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             rallypoints.Clear();
             foreach (SteamPlayer player in Provider.clients)
             {
@@ -105,6 +110,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void TryDeleteRallyPoint(uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < rallypoints.Count; i++)
             {
                 if (rallypoints[i].structure.instanceID == instanceID)
@@ -119,6 +125,7 @@ namespace Uncreated.Warfare.Squads
         }
         public static void RegisterNewRallyPoint(SDG.Unturned.BarricadeData data, Squad squad)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!rallypoints.Exists(r => r.structure.instanceID == data.instanceID))
             {
                 RallyPoint existing = rallypoints.Find(r => r.squad.Name == squad.Name && r.squad.Team == squad.Team);
@@ -149,16 +156,19 @@ namespace Uncreated.Warfare.Squads
         }
         public static bool HasRally(UCPlayer player, out RallyPoint rallypoint)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             rallypoint = rallypoints.Find(r => r.squad.Name == player.Squad.Name && r.squad.Team == player.Squad.Team);
             return rallypoint != null;
         }
         public static bool HasRally(Squad squad, out RallyPoint rallypoint)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             rallypoint = rallypoints.Find(r => r.squad.Name == squad.Name && r.squad.Team == squad.Team);
             return rallypoint != null;
         }
         public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
             return barricadeDrops.Where(b =>
@@ -192,6 +202,7 @@ namespace Uncreated.Warfare.Squads
 
         public void UpdateUIForAwaitingPlayers()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!IsActive)
                 return;
             TimeSpan seconds = TimeSpan.FromSeconds(timer);
@@ -227,6 +238,7 @@ namespace Uncreated.Warfare.Squads
         }
         public void TeleportPlayer(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player.Player.life.isDead || player.Player.movement.getVehicle() != null)
                 return;
 
@@ -255,6 +267,7 @@ namespace Uncreated.Warfare.Squads
         {
             while (parent.IsActive)
             {
+                IDisposable profiler = ProfilingUtils.StartTracking();
                 parent.timer--;
                 if (parent.timer <= 0)
                 {
@@ -301,6 +314,7 @@ namespace Uncreated.Warfare.Squads
                     }
                 }
 
+                profiler.Dispose();
                 yield return new WaitForSeconds(1);
             }
         }

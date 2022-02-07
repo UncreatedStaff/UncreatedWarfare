@@ -60,6 +60,14 @@ namespace Uncreated.Warfare
             this.MinHeight = minHeight;
             Init();
         }
+        public bool IsInsideBounds(Vector2 location)
+        {
+            return location.x > BoundsTLPos.x && location.x < BoundsTLPos.x + BoundsSize.x && location.y > BoundsTLPos.y && location.y < BoundsTLPos.y + BoundsSize.y;
+        }
+        public bool IsInsideBounds(Vector3 location)
+        {
+            return location.x > BoundsTLPos.x && location.x < BoundsTLPos.x + BoundsSize.x && location.z > BoundsTLPos.y && location.z < BoundsTLPos.y + BoundsSize.y;
+        }
     }
     public class RectZone : Zone
     {
@@ -79,6 +87,7 @@ namespace Uncreated.Warfare
         /// <returns></returns>
         public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1f)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             corners = Corners;
             center = Center;
             if (this.spacing == spacing && this.perline == perline && _particleSpawnPoints != null) return _particleSpawnPoints;
@@ -102,6 +111,7 @@ namespace Uncreated.Warfare
         }
         public override void Init()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             string[] size = data.data.Split(',');
             if (size.Length != 2)
             {
@@ -141,9 +151,17 @@ namespace Uncreated.Warfare
             }
         }
 
-        public override bool IsInside(Vector2 location) => location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.y > Center.y - Size.y / 2 && location.y < Center.y + Size.y / 2;
-        public override bool IsInside(Vector3 location) => (MinHeight == -1 || location.y >= MinHeight) && (MaxHeight == -1 || location.y <= MaxHeight) &&
-            location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.z > Center.y - Size.y / 2 && location.z < Center.y + Size.y / 2;
+        public override bool IsInside(Vector2 location)
+        {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            return location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.y > Center.y - Size.y / 2 && location.y < Center.y + Size.y / 2;
+        }
+        public override bool IsInside(Vector3 location)
+        {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            return (MinHeight == -1 || location.y >= MinHeight) && (MaxHeight == -1 || location.y <= MaxHeight) &&
+                   location.x > Center.x - Size.x / 2 && location.x < Center.x + Size.x / 2 && location.z > Center.y - Size.y / 2 && location.z < Center.y + Size.y / 2;
+        }
         public override string Dump() => $"{base.Dump()}. Size: {Size.x}x{Size.y}";
     }
     public class CircleZone : Zone
@@ -159,6 +177,7 @@ namespace Uncreated.Warfare
 
         public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             corners = new Vector2[0];
             center = Center;
             if (this.spacing == spacing && this.perline == perline && _particleSpawnPoints != null) return _particleSpawnPoints;
@@ -190,6 +209,7 @@ namespace Uncreated.Warfare
         }
         public override void Init()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             string[] size = data.data.Split(',');
             if (size.Length != 1)
             {
@@ -217,6 +237,8 @@ namespace Uncreated.Warfare
 
         public override bool IsInside(Vector2 location)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            //if (!IsInsideBounds(location)) return false;
             float difX = location.x - Center.x;
             float difY = location.y - Center.y;
             float sqrDistance = (difX * difX) + (difY * difY);
@@ -224,7 +246,9 @@ namespace Uncreated.Warfare
         }
         public override bool IsInside(Vector3 location)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if ((MinHeight != -1 && location.y < MinHeight) || (MaxHeight != -1 && location.y > MaxHeight)) return false;
+            //if (!IsInsideBounds(location)) return false;
             float difX = location.x - Center.x;
             float difY = location.z - Center.y;
             float sqrDistance = (difX * difX) + (difY * difY);
@@ -249,6 +273,7 @@ namespace Uncreated.Warfare
         }
         public readonly float NormalizeSpacing(float baseSpacing)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             int canfit = F.DivideRemainder(length, baseSpacing, out int remainder);
             if (remainder == 0) return baseSpacing;
             if (remainder < baseSpacing / 2)     // extend all others
@@ -258,6 +283,7 @@ namespace Uncreated.Warfare
         }
         public readonly bool IsIntersecting(float playerY, float playerX)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (playerY < Mathf.Min(pt1.y, pt2.y) || playerY >= Mathf.Max(pt1.y, pt2.y)) return false; // if input value is out of vertical range of line
             if (pt1.x == pt2.x) return pt1.x >= playerX; // checks for undefined sloped (a completely vertical line)
             float x = GetX(playerY); // solve for y
@@ -267,6 +293,7 @@ namespace Uncreated.Warfare
         public readonly float GetY(float x) => m * x + b;   // slope function
         public static Vector2 AvgAllPoints(Vector2[] Points)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float xTotal = 0;
             float yTotal = 0;
             int i;
@@ -279,6 +306,7 @@ namespace Uncreated.Warfare
         }
         public readonly Vector2 GetPointFromPercentFromPt1(float percent0to1)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (pt1.x == pt2.x) return new Vector2(pt1.x, pt1.y + (pt2.y - pt1.y) * percent0to1);
             float x = pt1.x + ((pt2.x - pt1.x) * percent0to1);
             return new Vector2(x, GetY(x));
@@ -286,6 +314,7 @@ namespace Uncreated.Warfare
         public readonly Vector2 GetPointFromDistanceFromPt1(float distance) => GetPointFromPercentFromPt1(distance / length);
         public readonly Vector2 GetPointFromPercentFromPt2(float percent0to1)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (pt2.x == pt1.x) return new Vector2(pt2.x, pt2.y + (pt1.y - pt2.y) * percent0to1);
             float x = pt2.x + ((pt1.x - pt2.x) * percent0to1);
             return new Vector2(x, GetY(x));
@@ -302,6 +331,7 @@ namespace Uncreated.Warfare
         /// <returns>Top left corner of bounds rectangle</returns>
         public static Vector2 GetBounds(Vector2[] points, out Vector2 size)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float? maxX = null, maxY = null, minX = null, minY = null;
             if ((points ?? throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN")).Length == 0) throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
             if (points.Length == 1)
@@ -337,6 +367,7 @@ namespace Uncreated.Warfare
         /// <returns></returns>
         public override Vector2[] GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center, int perline = -1, float spacing = -1f)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             corners = Points;
             center = Center;
             if (this.spacing == spacing && this.perline == perline && _particleSpawnPoints != null) return _particleSpawnPoints;
@@ -360,6 +391,7 @@ namespace Uncreated.Warfare
 
         public override void Init()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             string[] size = data.data.Split(',');
             if (size.Length < 6 || size.Length % 2 == 1)
             {
@@ -399,11 +431,14 @@ namespace Uncreated.Warfare
 
         public override bool IsInside(Vector2 location)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!this.SucessfullyParsed)
             {
                 L.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
             }
+            // TODO: Bounds check
+            //if (!IsInsideBounds(location)) return false;
             int intersects = 0;
             for (int i = 0; i < Lines.Length; i++)
             {
@@ -414,12 +449,14 @@ namespace Uncreated.Warfare
         }
         public override bool IsInside(Vector3 location)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if ((MinHeight != -1 && location.y < MinHeight) || (MaxHeight != -1 && location.y > MaxHeight)) return false;
             if (!this.SucessfullyParsed)
             {
                 L.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
             }
+            //if (!IsInsideBounds(location)) return false;
             int intersects = 0;
             for (int i = 0; i < Lines.Length; i++)
             {

@@ -17,6 +17,7 @@ namespace Uncreated.Warfare.Squads
 
         public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Order order = squad.Leader.Player.gameObject.AddComponent<Order>();
             order.Initialize(squad, commander, type, marker, message);
             orders.Add(order);
@@ -34,21 +35,24 @@ namespace Uncreated.Warfare.Squads
         }
         public static bool HasOrder(Squad squad, out Order order)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             order = null;
             if (squad is null) return false;
             return (bool)(squad.Leader.Player.TryGetComponent(out order));
         }
         public static bool CancelOrder(Order order)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             bool success = orders.Remove(order);
             order.Cancel();
             return success;
         }
         public static void OnFOBBunkerBuilt(FOB fob, BuildableComponent buildable)
         {
-            foreach (var pair in buildable.PlayerHits)
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            foreach (KeyValuePair<ulong, int> pair in buildable.PlayerHits)
             {
-                var player = UCPlayer.FromID(pair.Key);
+                UCPlayer player = UCPlayer.FromID(pair.Key);
                 if (player != null &&
                     (float)pair.Value / buildable.Buildable.requiredHits >= 0.1F &&
                     HasOrder(player.Squad, out var order) &&
@@ -91,6 +95,7 @@ namespace Uncreated.Warfare.Squads
 
         public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag flag = null)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Squad = squad;
             Commander = commander;
             Type = type;
@@ -151,6 +156,7 @@ namespace Uncreated.Warfare.Squads
         }
         public void Fulfill()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!IsActive) return;
 
             switch (Type)
@@ -197,11 +203,12 @@ namespace Uncreated.Warfare.Squads
 
         public void Cancel()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!IsActive) return;
 
-            var toast = new ToastMessage("ORDER CANCELLED".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
+            ToastMessage toast = new ToastMessage("ORDER CANCELLED".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
 
-            foreach (var player in Squad.Members)
+            foreach (UCPlayer player in Squad.Members)
             {
                 HideUI(player);
                 ToastMessage.QueueMessage(player, toast);
@@ -214,11 +221,12 @@ namespace Uncreated.Warfare.Squads
         }
         public void TimeOut()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!IsActive) return;
 
-            var toast = new ToastMessage("ORDER TIMED OUT".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
+            ToastMessage toast = new ToastMessage("ORDER TIMED OUT".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
 
-            foreach (var player in Squad.Members)
+            foreach (UCPlayer player in Squad.Members)
             {
                 HideUI(player);
                 ToastMessage.QueueMessage(player, toast);
@@ -254,6 +262,7 @@ namespace Uncreated.Warfare.Squads
 
             while (true)
             {
+                IDisposable profiler = ProfilingUtils.StartTracking();
                 // every 1 second
 
                 TimeLeft--;
@@ -288,12 +297,14 @@ namespace Uncreated.Warfare.Squads
                 counter++;
                 if (counter >= 60 / tickFrequency)
                     counter = 0;
+                profiler.Dispose();
                 yield return new WaitForSeconds(tickFrequency);
             }
         }
         public IEnumerator<WaitForSeconds> Delete()
         {
             yield return new WaitForSeconds(20);
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             // TODO: Clear UI
             StopCoroutine(loop);
             Destroy(this);
@@ -318,6 +329,7 @@ namespace Uncreated.Warfare.Squads
         }
         public bool Check()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Type == EOrder.MOVE)
             {
                 return FullfilledPlayers.Count >= 0.75F * Squad.Members.Count;
@@ -326,6 +338,7 @@ namespace Uncreated.Warfare.Squads
         }
         public void UpdateData()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Type == EOrder.MOVE)
             {
                 foreach (UCPlayer player in Squad.Members)

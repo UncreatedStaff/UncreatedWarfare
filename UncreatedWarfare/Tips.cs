@@ -9,11 +9,12 @@ namespace Uncreated.Warfare
 {
     public static class Tips
     {
-        private static List<Tip> _tips = new List<Tip>();
+        private static readonly List<Tip> _tips = new List<Tip>();
 
         public static void TryGiveTip(UCPlayer player, ETip type, params string[] translationArgs)
         {
-            var tip = _tips.Find(t => t.Steam64 == player.Steam64 && t.Type == type);
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            Tip tip = _tips.Find(t => t.Steam64 == player.Steam64 && t.Type == type);
             if (tip is null)
             {
                 tip = new Tip(player.Steam64, type, translationArgs);

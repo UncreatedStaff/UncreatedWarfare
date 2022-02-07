@@ -1,4 +1,5 @@
 ﻿using Rocket.API;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -19,6 +20,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.deploy" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
             if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
@@ -55,13 +57,13 @@ namespace Uncreated.Warfare.Commands
                         player.Message("deploy_e_incombat", combatlog.ToString());
                         return;
                     }
-                    if (!(player.IsOnFOB(out _) || UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, player.Position, false) != null))
+                    if (!(player.IsOnFOB(out _) || 
+                          UCBarricadeManager.CountNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, player.Position, player.GetTeam()) != 0))
                     {
                         if (Data.Is(out Insurgency ins))
                             player.Message("deploy_e_notnearfob_ins");
                         else
                             player.Message("deploy_e_notnearfob");
-
                         return;
                     }
                 }

@@ -12,6 +12,7 @@ namespace Uncreated.Warfare.Vehicles
     {
         public static InteractableVehicle VehicleFromPlayerLook(UnturnedPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Transform look = player.Player.look.aim;
             Ray ray = new Ray
             {
@@ -30,6 +31,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static VehicleBarricadeRegion FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (vehicle == null)
             {
                 index = ushort.MaxValue;
@@ -49,6 +51,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float sqrRadius = radius * radius;
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
@@ -63,6 +66,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float sqrRadius = radius * radius;
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
@@ -77,10 +81,11 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static InteractableVehicle GetNearestLogi(Vector3 point, float radius, ulong team = 0)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
             return vehicles.FirstOrDefault(v => v.lockedGroup.m_SteamID == team &&
-            VehicleBay.VehicleExists(v.asset.GUID, out var vehicleData) &&
+            VehicleBay.VehicleExists(v.asset.GUID, out VehicleData vehicleData) &&
             (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT));
         }
 }

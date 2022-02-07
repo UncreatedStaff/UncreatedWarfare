@@ -32,6 +32,7 @@ namespace Uncreated.Warfare.Components
 
             while (true)
             {
+                IDisposable profiler = ProfilingUtils.StartTracking();
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == parent.Team)
@@ -93,6 +94,7 @@ namespace Uncreated.Warfare.Components
                 count ++;
                 if (count >= (2 / tickFrequency))
                     count = 0;
+                profiler.Dispose();
                 yield return new WaitForSeconds(tickFrequency);
             }
         }
@@ -197,6 +199,7 @@ namespace Uncreated.Warfare.Components
 
         public FOB(BarricadeDrop radio)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Radio = radio;
 
             if (Radio.interactable is InteractableStorage storage)
@@ -324,6 +327,7 @@ namespace Uncreated.Warfare.Components
         }
         public void ConsumeResources()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
             List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
 
@@ -467,6 +471,7 @@ namespace Uncreated.Warfare.Components
         }
         private void SwapRadioBarricade(BarricadeDrop newDrop)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!(Radio == null || Radio.GetServersideData().barricade.isDead))
             {
                 if (Regions.tryGetCoordinate(Radio.model.position, out byte x, out byte y))
@@ -484,6 +489,7 @@ namespace Uncreated.Warfare.Components
         }
         public void StartBleed()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             builtState = Radio.GetServersideData().barricade.state;
 
             if (Radio.model.TryGetComponent(out BarricadeComponent component))
@@ -504,6 +510,7 @@ namespace Uncreated.Warfare.Components
         }
         public void Reactivate()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             SDG.Unturned.BarricadeData data = Radio.GetServersideData();
             Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(builtRadioGUID));
             Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
@@ -524,6 +531,7 @@ namespace Uncreated.Warfare.Components
 
         public void Repair(UCPlayer builder)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float amount = 30;
 
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
@@ -542,6 +550,7 @@ namespace Uncreated.Warfare.Components
         public bool IsDestroyed { get; private set; }
         public void Destroy()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (IsDestroyed)
                 return;
 
@@ -577,6 +586,7 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetFOBs(ulong team)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
                 b.model.TryGetComponent<FOBComponent>(out _)
             );
@@ -594,6 +604,7 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetNearbyFOBs(Vector3 point, ulong team = 0, EFOBRadius radius = EFOBRadius.FULL)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float radius2 = GetRadius(radius);
             List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(radius2, point, b =>
                 {

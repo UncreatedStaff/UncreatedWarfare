@@ -20,6 +20,7 @@ namespace Uncreated.Warfare.Squads
         public List<string> Permissions => new List<string>() { "uc.order" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
             if (!Data.Is(out ISquads ctf))
             {

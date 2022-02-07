@@ -15,6 +15,7 @@ namespace Uncreated.Warfare.Vehicles
         { }
         public static void InitAllSigns()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 try
@@ -30,6 +31,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 if (ActiveObjects[i] != null && ActiveObjects[i].instance_id == instanceID)
@@ -45,6 +47,7 @@ namespace Uncreated.Warfare.Vehicles
         protected override string LoadDefaults() => "[]";
         public static void UnlinkSign(InteractableSign sign)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             if (drop != null)
             {
@@ -73,6 +76,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void OnFlagCaptured()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
             {
                 VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
@@ -84,6 +88,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool SignExists(InteractableSign sign, out VehicleSign vbsign)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             if (drop != null)
             {
@@ -94,6 +99,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool LinkSign(InteractableSign sign, VehicleSpawn spawn)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             if (drop != null)
             {
@@ -153,6 +159,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void InitVars()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!StructureSaver.StructureExists(this.instance_id, EStructType.BARRICADE, out save))
             {
                 BarricadeDrop drop = UCBarricadeManager.GetBarriadeBySerializedTransform(sign_transform);

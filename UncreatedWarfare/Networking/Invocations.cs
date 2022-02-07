@@ -102,13 +102,15 @@ namespace Uncreated.Warfare.Networking
             [NetCall(ENetCall.FROM_SERVER, 1024)]
             internal static void ReceiveSetQueueSkip(IConnection connection, ulong player, bool status)
             {
-                if (PlayerManager.HasSaveRead(player, out PlayerSave save))
+                if (PlayerSave.TryReadSaveFile(player, out PlayerSave save))
                 {
                     save.HasQueueSkip = status;
+                    PlayerSave.WriteToSaveFile(save);
                 }
                 else
                 {
-                    PlayerManager.AddSave(new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false));
+                    save = new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false);
+                    PlayerSave.WriteToSaveFile(save);
                 }
             }
 

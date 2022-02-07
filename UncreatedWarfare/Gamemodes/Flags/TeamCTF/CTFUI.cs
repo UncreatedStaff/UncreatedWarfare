@@ -30,6 +30,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UI.ProgressChars.Length - 1 : ((Gamemode.Config.UI.ProgressChars.Length - 1) / max) * Math.Abs(cap);
         public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (flag.LastDeltaPoints == 0)
             {
                 if (flag.IsContested(out _))
@@ -192,6 +193,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static void SendFlagList(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player == null) return;
             ulong team = player.GetTeam();
             if (team < 1 || team > 3) return;
@@ -277,6 +279,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Is(out IFlagRotation gm))
             {
                 List<Flag> rotation = gm.Rotation;
@@ -337,6 +340,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static SendUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (team != 1 && team != 2) return SendUIParameters.Nil;
             if (flag.IsAnObj)
             {

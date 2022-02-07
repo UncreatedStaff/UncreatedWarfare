@@ -46,6 +46,7 @@ namespace Uncreated.Warfare
         }
         public static BarricadeDrop GetSignFromInteractable(InteractableSign sign)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -79,6 +80,7 @@ namespace Uncreated.Warfare
         public static SDG.Unturned.BarricadeData GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
         public static SDG.Unturned.BarricadeData GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop drop)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Transform barricadeTransform = GetBarricadeTransformFromLook(look);
             if (barricadeTransform == null)
             {
@@ -127,6 +129,7 @@ namespace Uncreated.Warfare
         }
         public static IEnumerable<BarricadeDrop> GetBarricadesByGUID(Guid ID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<BarricadeDrop> list = new List<BarricadeDrop>();
 
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
@@ -151,7 +154,7 @@ namespace Uncreated.Warfare
         {
             get
             {
-                List<BarricadeDrop> list = new List<BarricadeDrop>();
+                //List<BarricadeDrop> list = new List<BarricadeDrop>();
                 for (int x = 0; x < Regions.WORLD_SIZE; x++)
                 {
                     for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -160,15 +163,16 @@ namespace Uncreated.Warfare
                         if (region == null) continue;
                         for (int i = 0; i < region.drops.Count; i++)
                         {
-                            list.Add(region.drops[i]);
+                            yield return region.drops[i];
+                            //list.Add(region.drops[i]);
                         }
                     }
                 }
-                return list;
             }
         }
         public static List<BarricadeDrop> GetBarricadesWhere(Predicate<BarricadeDrop> predicate)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<BarricadeDrop> list = new List<BarricadeDrop>();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -192,6 +196,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -215,6 +220,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 int rtn = 0;
@@ -236,6 +242,7 @@ namespace Uncreated.Warfare
         }
         public static int CountBarricadesWhere(Predicate<BarricadeDrop> predicate)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             int rtn = 0;
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
@@ -257,6 +264,7 @@ namespace Uncreated.Warfare
         }
         public static IEnumerable<BarricadeDrop> GetNearbyBarricades(IEnumerable<BarricadeDrop> selection, float range, Vector3 origin, bool sortClosest)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<BarricadeDrop> list = new List<BarricadeDrop>();
             if (range == 0) return list;
             IEnumerator<BarricadeDrop> drops = selection.GetEnumerator();
@@ -276,6 +284,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 List<BarricadeDrop> list = new List<BarricadeDrop>();
@@ -299,6 +308,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 //ulong group = TeamManager.GetGroupID(team);
@@ -324,6 +334,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 int rtn = 0;
@@ -344,10 +355,35 @@ namespace Uncreated.Warfare
                 return rtn;
             }
         }
+        public static int CountNearbyBarricades(Guid id, float range, Vector3 origin)
+        {
+            lock (regionBuffer)
+            {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+                regionBuffer.Clear();
+                float sqrRange = range * range;
+                int rtn = 0;
+                Regions.getRegionsInRadius(origin, range, regionBuffer);
+                for (int r = 0; r < regionBuffer.Count; r++)
+                {
+                    RegionCoordinate rc = regionBuffer[r];
+                    BarricadeRegion region = BarricadeManager.regions[rc.x, rc.y];
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].GetServersideData().barricade.asset.GUID == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
+                        {
+                            rtn++;
+                        }
+                    }
+                }
+                return rtn;
+            }
+        }
         public static bool BarricadeExists(Guid id, float range, Vector3 origin, ulong team, out BarricadeDrop drop)
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 ulong group = TeamManager.GetGroupID(team);
@@ -373,6 +409,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 Regions.getRegionsInRadius(origin, range, regionBuffer);
@@ -397,6 +434,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
@@ -430,6 +468,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 IEnumerable<BarricadeDrop>[] lists = new List<BarricadeDrop>[ids.Length];
                 if (ids.Length == 0) return lists;
@@ -470,6 +509,7 @@ namespace Uncreated.Warfare
         {
             lock (regionBuffer)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 regionBuffer.Clear();
                 float sqrRange = range * range;
                 List<SDG.Unturned.ItemData> list = new List<SDG.Unturned.ItemData>();
@@ -550,6 +590,7 @@ namespace Uncreated.Warfare
         }
         public static int RemoveNumberOfItemsFromStorage(InteractableStorage storage, Guid id, int amount)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Assets.find(id) is ItemAsset iasset)
             {
                 return RemoveNumberOfItemsFromStorage(storage, iasset.id, amount);
@@ -560,6 +601,7 @@ namespace Uncreated.Warfare
 
         public static BarricadeDrop GetDropFromBarricadeData(SDG.Unturned.BarricadeData data)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Regions.tryGetCoordinate(data.point, out byte x, out byte y))
             {
                 BarricadeRegion region = BarricadeManager.regions[x, y];
@@ -576,6 +618,7 @@ namespace Uncreated.Warfare
         }
         public static SDG.Unturned.BarricadeData GetBarricadeFromInstID(uint instanceID, out BarricadeDrop drop)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -609,6 +652,7 @@ namespace Uncreated.Warfare
         }
         public static BarricadeDrop GetBarricadeFromInstID(uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -639,6 +683,7 @@ namespace Uncreated.Warfare
         }
         public static SDG.Unturned.StructureData GetStructureFromInstID(uint instanceID, out StructureDrop drop)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -660,6 +705,7 @@ namespace Uncreated.Warfare
         }
         public static StructureDrop GetStructureFromInstID(uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (int y = 0; y < Regions.WORLD_SIZE; y++)
@@ -679,6 +725,7 @@ namespace Uncreated.Warfare
         }
         public static BarricadeDrop GetBarriadeBySerializedTransform(SerializableTransform t)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Regions.tryGetCoordinate(t.Position, out byte x, out byte y))
             {
                 BarricadeRegion region = BarricadeManager.regions[x, y];
@@ -695,6 +742,7 @@ namespace Uncreated.Warfare
         }
         public static StructureDrop GetStructureBySerializedTransform(SerializableTransform t)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Regions.tryGetCoordinate(t.Position, out byte x, out byte y))
             {
                 StructureRegion region = StructureManager.regions[x, y];
@@ -718,7 +766,8 @@ namespace Uncreated.Warfare
         }
         public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius, List<RegionCoordinate> search)
         {
-            if (!(Assets.find(id) is ItemAsset asset))
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            if (Assets.find(id) is not ItemAsset asset)
                 return false;
             float sqrRadius = radius * radius;
             if (ItemManager.regions == null || sqrRadius == 0 || sqrRadius < 0) return true;

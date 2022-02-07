@@ -19,6 +19,7 @@ namespace Uncreated.Warfare.Vehicles
     {
         public VehicleBay() : base(Data.VehicleStorage + "vehiclebay.json")
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             VehicleManager.onExitVehicleRequested += OnVehicleExitRequested;
@@ -47,6 +48,7 @@ namespace Uncreated.Warfare.Vehicles
         protected override string LoadDefaults() => "[]";
         public static void AddRequestableVehicle(InteractableVehicle vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             VehicleData data = new VehicleData(vehicle.asset.GUID);
             data.SaveMetaData(vehicle);
             AddObjectToSave(data);
@@ -54,6 +56,7 @@ namespace Uncreated.Warfare.Vehicles
         public static void RemoveRequestableVehicle(Guid vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static bool VehicleExists(Guid vehicleID, out VehicleData vehicleData)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 if (ActiveObjects[i].VehicleID == vehicleID)
@@ -67,6 +70,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void IncrementRequestCount(Guid vehicleID, bool save)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 if (ActiveObjects[i].VehicleID == vehicleID)
@@ -83,6 +87,7 @@ namespace Uncreated.Warfare.Vehicles
         /// <summary>Level must be loaded.</summary>
         public static InteractableVehicle SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 instanceID = 0;
@@ -156,6 +161,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             VehicleBarricadeRegion vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out ushort plant);
             if (plant < ushort.MaxValue)
             {
@@ -189,6 +195,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             vehicle.forceRemoveAllPlayers();
             BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
             if (reg != null)
@@ -213,12 +220,13 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
             {
                 if (seat == 0 && excludeDriver)
                     continue;
 
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (passenger.player == null)
                 {
@@ -229,9 +237,10 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool TryGetFirstNonCrewSeat(InteractableVehicle vehicle, VehicleData data, out byte seat)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (seat = 0; seat < vehicle.passengers.Length; seat++)
             {
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (passenger.player == null && !data.CrewSeats.Contains(seat))
                 {
@@ -243,9 +252,10 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool TryGetFirstNonDriverSeat(InteractableVehicle vehicle, out byte seat)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (seat = 0; seat < vehicle.passengers.Length; seat++)
             {
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (seat != 0 && passenger.player == null)
                 {
@@ -257,9 +267,10 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (vehicle.lockedOwner == CSteamID.Nil || owner == null) return false;
 
-            foreach (var passenger in vehicle.passengers)
+            foreach (Passenger passenger in vehicle.passengers)
             {
                 if (passenger.player != null && owner.CSteamID == passenger.player.playerID.steamID)
                 {
@@ -272,10 +283,11 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             int count = 0;
             for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
             {
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (data.CrewSeats.Contains(seat) && passenger.player != null)
                 {
@@ -286,6 +298,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
             if (pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
@@ -305,6 +318,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
@@ -355,6 +369,7 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 if (vehicle == null) return;

@@ -13,6 +13,7 @@ namespace Uncreated.Warfare.Structures
         protected override string LoadDefaults() => "[]";
         public static void DropAllStructures()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             foreach (Structure structure in ActiveObjects)
             {
                 structure.SpawnCheck();
@@ -167,6 +168,7 @@ namespace Uncreated.Warfare.Structures
         /// <summary>Spawns the structure if it is not already placed.</summary>
         public void SpawnCheck()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (type == EStructType.BARRICADE)
             {
                 SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop bdrop);
@@ -350,6 +352,7 @@ namespace Uncreated.Warfare.Structures
         }
         public void ReadJson(ref Utf8JsonReader reader)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)

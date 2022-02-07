@@ -52,6 +52,7 @@ namespace Uncreated.Warfare.Components
 
         public void IncrementBuildPoints(UCPlayer builder)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             int amount = 1;
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
                 amount = 2;
@@ -81,6 +82,7 @@ namespace Uncreated.Warfare.Components
         }
         public void Build()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             SDG.Unturned.BarricadeData data = Foundation.GetServersideData();
 
             string structureName = "";
@@ -184,6 +186,7 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (IsSalvaged)
             {
                 var fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
@@ -197,6 +200,7 @@ namespace Uncreated.Warfare.Components
         }
         public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ulong team = placer.GetTeam();
             float radius = FOBManager.config.data.FOBBuildPickupRadius;
 
@@ -251,6 +255,7 @@ namespace Uncreated.Warfare.Components
         }
         public static bool TryPlaceBuildable(Barricade foundation, BuildableData buildable, UCPlayer placer, Vector3 point)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ulong team = placer.GetTeam();
 
             FOB fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);

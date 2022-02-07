@@ -82,7 +82,6 @@ namespace Uncreated.Warfare
             this.z = z;
         }
     }
-
     public struct SerializableVector3 : IJsonReadWrite
     {
         public static readonly SerializableVector3 Zero = new SerializableVector3(0, 0, 0);
@@ -307,13 +306,13 @@ namespace Uncreated.Warfare
             writer.WriteEndArray();
         }
     }
-    
     public static partial class JSONMethods
     {
         public const string DEFAULT_LANGUAGE = "en-us";
 
         public static List<FlagData> LoadFlags()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             F.CheckDir(Data.FlagStorage, out bool dirExists);
             if (dirExists)
             {
@@ -388,6 +387,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             F.CheckDir(Data.DATA_DIRECTORY, out bool fileExists);
             if (fileExists)
             {
@@ -481,6 +481,7 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations(
             out Dictionary<string, Dictionary<string, string>> deathloc, out Dictionary<string, Dictionary<ELimb, string>> limbloc)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             string[] langDirs = Directory.GetDirectories(Data.LangStorage, "*", SearchOption.TopDirectoryOnly);
             Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
             deathloc = new Dictionary<string, Dictionary<string, string>>();
@@ -671,6 +672,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<int, Zone> LoadExtraZones()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             F.CheckDir(Data.FlagStorage, out bool dirExists);
             if (dirExists)
             {
@@ -758,6 +760,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, Vector3> LoadExtraPoints()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             F.CheckDir(Data.FlagStorage, out bool dirExists);
             if (dirExists)
             {
@@ -872,6 +875,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<ulong, string> LoadLanguagePreferences()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             F.CheckDir(Data.LangStorage, out bool dirExists);
             if (dirExists)
             {
@@ -940,6 +944,7 @@ namespace Uncreated.Warfare
         }
         public static void SaveLangs(Dictionary<ulong, string> languages)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (languages == null) return;
             using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
@@ -959,6 +964,7 @@ namespace Uncreated.Warfare
         }
         public static void SetLanguage(ulong player, string language)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Languages.ContainsKey(player))
             {
                 Data.Languages[player] = language;
@@ -972,6 +978,7 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, LanguageAliasSet> LoadLangAliases()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             F.CheckDir(Data.LangStorage, out bool dirExists);
             if (dirExists)
             {

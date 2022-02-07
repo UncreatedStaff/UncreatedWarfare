@@ -27,6 +27,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void EventLoopAction()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             bool ttc = TimeToCheck();
 
             for (int i = 0; i < _rotation.Count; i++)
@@ -49,6 +50,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected void ConvertFlags()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<FlagData> data = JSONMethods.LoadFlags();
             _allFlags.Clear();
             _allFlags.Capacity = data.Count;
@@ -100,6 +102,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected virtual void RemovePlayerFromFlag(Player player, Flag flag)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (_onFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID) && _onFlag[player.channel.owner.playerID.steamID.m_SteamID] == flag.ID)
             {
                 _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
@@ -108,6 +111,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public virtual void AddPlayerOnFlag(Player player, Flag flag)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (_onFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
             {
                 if (_onFlag[player.channel.owner.playerID.steamID.m_SteamID] != flag.ID)

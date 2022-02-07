@@ -1,6 +1,7 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -18,6 +19,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.clear" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == "Console";
             if (command.Length < 1)

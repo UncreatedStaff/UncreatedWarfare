@@ -62,6 +62,7 @@ namespace Uncreated
         }
         public void Save()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig Save -> " + _dir);
             if (!File.Exists(_dir))
                 File.Create(_dir)?.Close();
             using (FileStream stream = new FileStream(_dir, FileMode.Truncate, FileAccess.Write, FileShare.None))
@@ -96,6 +97,7 @@ namespace Uncreated
         }
         public void Reload()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig Reload -> " + _dir);
             using (FileStream stream = new FileStream(_dir, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read))
             {
                 long len = stream.Length;
@@ -168,6 +170,7 @@ namespace Uncreated
         }
         public void LoadDefaults()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig LoadDefaults -> " + _dir);
             data = new TData();
             data.SetDefaults();
             using (FileStream stream = new FileStream(_dir, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))

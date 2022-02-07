@@ -1,6 +1,7 @@
 ﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -378,6 +379,7 @@ namespace Uncreated.Warfare.Teams
 
         public static void EvaluateBases()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < Provider.clients.Count; i++)
             {
                 SteamPlayer pl = Provider.clients[i];

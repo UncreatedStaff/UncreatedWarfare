@@ -29,11 +29,12 @@ namespace Uncreated.Warfare
         internal static void OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => OnGroupChanged?.Invoke(player, oldGroup, newGroup);
         internal static void GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ulong oldteam = oldGroup.GetTeam();
             ulong newteam = newGroup.GetTeam();
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
             ucplayer.UpdateRankTeam(newteam);
-            PlayerManager.VerifyTeam(player.player);
+            PlayerManager.ApplyTo(ucplayer);
             Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
 
 
@@ -54,12 +55,14 @@ namespace Uncreated.Warfare
         internal static Dictionary<uint, ulong> droppeditemsInverse = new Dictionary<uint, ulong>();
         internal static void OnDropItemTry(PlayerInventory inv, Item item, ref bool allow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!itemstemp.ContainsKey(item))
                 itemstemp.Add(item, inv);
             else itemstemp[item] = inv;
         }
         internal static void OnDropItemFinal(Item item, ref Vector3 location, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (itemstemp.TryGetValue(item, out PlayerInventory inv))
             {
                 uint nextindex;
@@ -102,6 +105,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             // replacing barricade...
 
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
@@ -150,6 +154,7 @@ namespace Uncreated.Warfare
         }
         internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 ThrowableOwner t = throwable.AddComponent<ThrowableOwner>();
@@ -168,8 +173,9 @@ namespace Uncreated.Warfare
         }
         internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
         {
-            var rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
-            foreach (var rocket in rockets)
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            SDG.Unturned.Rocket[] rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
+            foreach (SDG.Unturned.Rocket rocket in rockets)
             {
                 rocket.killer = gun.player.channel.owner.playerID.steamID;
             }
@@ -182,6 +188,7 @@ namespace Uncreated.Warfare
         }
         internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             PlaytimeComponent c = gun.player.GetPlaytimeComponent(out bool success);
             if (success)
             {
@@ -190,12 +197,14 @@ namespace Uncreated.Warfare
         }
         internal static void ReloadCommand_onTranslationsReloaded()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             foreach (SteamPlayer player in Provider.clients)
                 UCWarfare.I.UpdateLangs(player);
         }
         internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x,
             ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 if (!shouldAllow) return;
@@ -258,6 +267,7 @@ namespace Uncreated.Warfare
 
         internal static void OnPreVehicleDamage(CSteamID instigatorSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (F.IsInMain(vehicle.transform.position))
             {
                 shouldAllow = false;
@@ -331,10 +341,10 @@ namespace Uncreated.Warfare
                     else
                         c.DamageTable[instigatorSteamID.m_SteamID] = new KeyValuePair<ushort, DateTime>((ushort)(pair.Key + pendingTotalDamage), DateTime.Now);
 
-                    var gunner = UCPlayer.FromCSteamID(instigatorSteamID);
+                    UCPlayer gunner = UCPlayer.FromCSteamID(instigatorSteamID);
                     if (gunner is not null)
                     {
-                        var attackerVehicle = gunner.Player.movement.getVehicle();
+                        InteractableVehicle attackerVehicle = gunner.Player.movement.getVehicle();
                         if (attackerVehicle != null)
                         {
                             c.Quota += pendingTotalDamage * 0.015F;
@@ -348,6 +358,7 @@ namespace Uncreated.Warfare
 
         internal static void OnPostPlayerConnected(UnturnedPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 PlayerManager.InvokePlayerConnected(player); // must always be first
@@ -443,6 +454,7 @@ namespace Uncreated.Warfare
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE || Data.Gamemode.State == EState.STAGING) return;
 
             UCPlayer ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
@@ -469,6 +481,7 @@ namespace Uncreated.Warfare
 
         internal static void OnBattleyeKicked(SteamPlayer client, string reason)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             FPlayerName names = F.GetPlayerOriginalNames(client.player);
             ulong team = client.GetTeam();
             Chat.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
@@ -484,6 +497,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (storage == null || !shouldAllow || Gamemode.Config.Barricades.TimeLimitedStorages == null || Gamemode.Config.Barricades.TimeLimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
             SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
             BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
@@ -497,12 +511,14 @@ namespace Uncreated.Warfare
         }
         private static IEnumerator<WaitForSeconds> WaitToCloseStorage(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             yield return new WaitForSeconds(UCWarfare.Config.MaxTimeInStorages);
             player.Player.inventory.closeStorageAndNotifyClient();
             player.StorageCoroutine = null;
         }
         internal static void OnBarricadeDamaged(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(barricadeTransform.position))
             {
                 shouldAllow = false;
@@ -599,6 +615,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(structureTransform.position))
             {
                 shouldAllow = false;
@@ -685,6 +702,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnEnterVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (shouldAllow)
             {
                 VehicleComponent component = null;
@@ -727,6 +745,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerDamageRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Gamemode is TeamGamemode gm && gm.EnableAMC && parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
             {
                 Player killer = PlayerTool.getPlayer(parameters.killer);
@@ -758,6 +777,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player == null) return;
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             if (!isBeingPlaced)
@@ -778,6 +798,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player == null) return;
             if (gesture == EPlayerGesture.POINT)
             {
@@ -789,6 +810,7 @@ namespace Uncreated.Warfare
         }
         private static void PlaceMarker(UCPlayer ucplayer, Vector3 Point, bool sendNoSquadChat, bool placeMarkerOnMap)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ThreadUtil.assertIsGameThread();
             if (placeMarkerOnMap)
                 ucplayer.Player.quests.ReceiveSetMarkerRequest(true, Point);
@@ -815,6 +837,7 @@ namespace Uncreated.Warfare
         public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer) => ClearPlayerMarkerForSquad(ucplayer, ucplayer.LastPingID == 0 ? ucplayer.GetMarkerID() : ucplayer.LastPingID);
         public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer, ushort markerid)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ThreadUtil.assertIsGameThread();
             if (markerid == 0) return;
             if (ucplayer.Squad == null)
@@ -831,6 +854,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!player.inventory.isStoring || player == null || jar == null || jar.item == null || allow == false) return;
             UCPlayer utplayer = UCPlayer.FromPlayer(player);
             if (utplayer.OnDuty())
@@ -844,6 +868,7 @@ namespace Uncreated.Warfare
         }
         internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure found))
             {
                 found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
@@ -863,6 +888,7 @@ namespace Uncreated.Warfare
         }
         internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.BARRICADE, out Structures.Structure found))
             {
                 found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
@@ -901,6 +927,7 @@ namespace Uncreated.Warfare
         {
             if (shouldAllow)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 if (vehicle.transform.TryGetComponent(out VehicleComponent component))
                 {
                     component.OnPlayerExitedVehicle(player, vehicle);
@@ -913,6 +940,7 @@ namespace Uncreated.Warfare
         {
             if (shouldAllow)
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 if (vehicle.transform.TryGetComponent(out VehicleComponent component))
                 {
                     component.OnPlayerSwapSeatRequested(player, vehicle, toSeatIndex);
@@ -931,16 +959,19 @@ namespace Uncreated.Warfare
         }
         internal static void OnCalculateSpawnDuringRevive(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ulong team = sender.player.GetTeam();
             position = team.GetBaseSpawnFromTeam();
             yaw = team.GetBaseAngle();
         }
         internal static void OnPlayerDisconnected(UnturnedPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
             string kit = string.Empty;
             if (ucplayer != null)
             {
@@ -1000,6 +1031,7 @@ namespace Uncreated.Warfare
             => UCWarfare.I.UpdateLangs(player.Player.channel.owner);
         internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
             if (player == null) return;
             try
@@ -1077,6 +1109,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Is(out IVehicles v))
                 v.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
             if (drop.model.TryGetComponent(out BarricadeComponent c))
@@ -1090,6 +1123,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Is<IFOBs>(out _))
             {
                 FOBManager.OnBarricadeDestroyed(data, drop, instanceID, plant);
@@ -1101,8 +1135,8 @@ namespace Uncreated.Warfare
             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                 repairable.Destroy();
 
-            var iconrenderers = drop.model.GetComponents<IconRenderer>();
-            foreach (var iconRenderer in iconrenderers)
+            IconRenderer[] iconrenderers = drop.model.GetComponents<IconRenderer>();
+            foreach (IconRenderer iconRenderer in iconrenderers)
                 IconManager.DeleteIcon(iconRenderer);
 
             if (Data.Is<ISquads>(out _))
@@ -1125,6 +1159,7 @@ namespace Uncreated.Warfare
         {
             if (Data.Is(out IRevives r))
             {
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
                 r.ReviveManager.OnPlayerHealed(instigator, target);
             }
@@ -1133,6 +1168,7 @@ namespace Uncreated.Warfare
         {
             if (state == false || key != 2 || player == null) return;
 
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Data.Is(out IRevives r))
                 r.ReviveManager.GiveUp(player);
         }

@@ -10,33 +10,39 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public TeamCTF() : base(nameof(TeamCTF), Config.TeamCTF.EvaluateTime) { }
         protected override void EndStagingPhase()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.EndStagingPhase();
             DestroyBlockers();
         }
         public override void StartNextGame(bool onLoad = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.StartNextGame(onLoad);
             SpawnBlockers();
             StartStagingPhase(Config.TeamCTF.StagingTime);
         }
         protected override void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.InvokeOnObjectiveChanged(OldFlagObj, NewFlagObj, Team, OldObj, NewObj);
             CTFUI.ReplicateFlagUpdate(OldFlagObj, false);
             CTFUI.ReplicateFlagUpdate(NewFlagObj, false);
         }
         protected override void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
             CTFUI.ReplicateFlagUpdate(flag, true);
         }
         protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.InvokeOnFlagNeutralized(flag, capturedTeam, lostTeam);
             CTFUI.ReplicateFlagUpdate(flag, true);
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             CTFUI.ClearFlagList(player);
             if (_onFlag.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out int id))
                 CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == id)
@@ -46,6 +52,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
             if (isScreenUp && _endScreen != null)
             {
@@ -60,6 +67,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public override void Dispose()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             foreach (SteamPlayer player in Provider.clients)
             {
                 CTFUI.ClearFlagList(player.transportConnection);

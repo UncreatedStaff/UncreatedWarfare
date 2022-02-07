@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -58,6 +59,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public static FlagData ReadFlagData(ref Utf8JsonReader reader)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             FlagData data = new FlagData();
             while (reader.Read())
             {
@@ -135,6 +137,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void WriteFlagData(Utf8JsonWriter writer)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             writer.WriteProperty(nameof(id), id);
             writer.WriteProperty(nameof(name), name);
             writer.WriteProperty(nameof(short_name), short_name);

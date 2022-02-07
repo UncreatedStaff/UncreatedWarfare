@@ -21,6 +21,7 @@ namespace Uncreated.Warfare.Components
 
         public void Repair(UCPlayer builder)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (Structure.GetServersideData().barricade.health >= Structure.asset.health)
                 return;
 
@@ -45,7 +46,8 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
-            var buildable = FOBManager.config.data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+            BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
 
             if (buildable != null)
             {

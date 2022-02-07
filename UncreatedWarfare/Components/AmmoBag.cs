@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -21,6 +22,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public void ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             Ammo -= ammoCost;
 
             KitManager.ResupplyKit(player, kit, true);

@@ -127,6 +127,7 @@ namespace Uncreated.Warfare.Components
         private ToastChannel[] channels;
         public void QueueMessage(ToastMessage message, bool priority = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             ToastMessageInfo info = ToastMessageInfo.Nil;
             for (int i = 0; i < TOASTS.Length; i++)
             {
@@ -205,6 +206,7 @@ namespace Uncreated.Warfare.Components
         }
         public void Update()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
             for (int i = 0; i < channels.Length; i++)
@@ -287,6 +289,7 @@ namespace Uncreated.Warfare.Components
             {
                 yield return new WaitForSeconds(0.25F);
 
+                using IDisposable profiler = ProfilingUtils.StartTracking();
                 try
                 {
                     if (player.Player.life.isDead)

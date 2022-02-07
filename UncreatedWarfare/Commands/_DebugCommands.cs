@@ -60,6 +60,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         try
                         {
+                            using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
                             info.Invoke(this, new object[2] { command, player });
                         }
                         catch (Exception ex)
@@ -1145,10 +1146,6 @@ namespace Uncreated.Warfare.Commands
             Reporter.SendReportInvocation.NetInvoke(report, false);
             L.Log("Sent chat abuse report.");
         }
-        private void speedtest(string[] command, Player player)
-        {
-            Kits.RequestSigns.RunTest();
-        }
         private void readtest(string[] command, Player player)
         {
             Kits.RequestSigns.Reload();
@@ -1171,6 +1168,10 @@ namespace Uncreated.Warfare.Commands
             L.Log(F.ToGridPosition(player.transform.position));
         }
 
+        private void saveall(string[] command, Player player)
+        {
+            F.SaveProfilingData();
+        }
         private void removeoutsidestructs(string[] command, UCPlayer player)
         {
             BarricadeDrop barricade = null;

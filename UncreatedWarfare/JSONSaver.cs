@@ -87,6 +87,7 @@ namespace Uncreated
         
         public static void Save()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Save -> " + directory);
             _threadLocker.Wait();
             if (useSerializer)
             {
@@ -136,6 +137,7 @@ namespace Uncreated
         }
         public static void Reload()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Reload -> " + directory);
             _threadLocker.Wait();
             if (!File.Exists(directory))
                 CreateFileIfNotExists(ActiveObjects.LoadDefaults());
@@ -644,6 +646,7 @@ namespace Uncreated
         }
         public void TryUpgrade()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver TryUpgrade -> " + directory);
             try
             {
                 bool needsSaving = false;
@@ -700,63 +703,6 @@ namespace Uncreated
                 : base(string.Format("Could not deserialize data from {0} because the data was corrupted.", directory), inner)
             {
             }
-        }
-        internal static void RunTest()
-        {
-            int amt = 10000;
-            Stopwatch stopwatch = new Stopwatch();
-            bool old = useDeserializer;
-            TimeSpan elapsed;
-            if (old)
-            {
-                stopwatch.Start();
-                for (int i = 0; i < amt; i++)
-                {
-                    Reload();
-                }
-                stopwatch.Stop();
-                elapsed = stopwatch.Elapsed;
-                L.Log("Test 1, custom read, " + elapsed.ToString());
-                L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-                stopwatch.Reset();
-                useDeserializer = false;
-            }
-            stopwatch.Start();
-            for (int i = 0; i < amt; i++)
-            {
-                Reload();
-            }
-            stopwatch.Stop();
-            elapsed = stopwatch.Elapsed;
-            stopwatch.Reset();
-            L.Log("Test 2, auto read, " + elapsed.ToString());
-            L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-            useDeserializer = old;
-            old = useSerializer;
-            if (old)
-            {
-                stopwatch.Start();
-                for (int i = 0; i < amt; i++)
-                {
-                    Save();
-                }
-                stopwatch.Stop();
-                elapsed = stopwatch.Elapsed;
-                L.Log("Test 3, custom write, " + elapsed.ToString());
-                L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-                stopwatch.Reset();
-                useDeserializer = false;
-            }
-            stopwatch.Start();
-            for (int i = 0; i < amt; i++)
-            {
-                Save();
-            }
-            stopwatch.Stop();
-            elapsed = stopwatch.Elapsed;
-            L.Log("Test 4, auto write, " + elapsed.ToString());
-            L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-            useDeserializer = old;
         }
     }
     public static class JsonEx

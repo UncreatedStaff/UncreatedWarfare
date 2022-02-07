@@ -25,6 +25,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         private string longestShotWeapon = string.Empty;
         public override void Calculate()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             tracker.GetTopStats(14, out statsT1, out statsT2);
 
             longestShotTaken = tracker.LongestShot.Player != 0;
@@ -58,6 +59,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void SendLeaderboard()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             string teamcolor = TeamManager.GetTeamHexColor(_winner);
             if (Assets.find(GUID) is not EffectAsset asset) return;
             this.asset = asset;
@@ -69,6 +71,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public virtual void SendLeaderboard(UCPlayer player, string teamcolor)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             try
             {
                 ulong team = player.GetTeam();
@@ -254,6 +257,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         bool[][] states;
         protected override void Update()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             float rt = Time.realtimeSinceStartup;
             for (int i = 1; i < Math.Min(15, statsT1.Count); i++)
             {
@@ -369,6 +373,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public virtual void GetTopStats(int count, out List<T> statsT1, out List<T> statsT2)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<T> stats = this.stats.Values.ToList();
 
             stats.RemoveAll(p =>

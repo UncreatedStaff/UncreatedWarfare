@@ -82,6 +82,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public Insurgency() : base("Insurgency", 0.25F) { }
         public override void Init()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.Init();
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
@@ -93,6 +94,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 
         public override void OnLevelLoaded()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             _structureSaver = new StructureSaver();
             _vehicleSpawner = new VehicleSpawner();
             _vehicleSigns = new VehicleSigns();
@@ -107,6 +109,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void StartNextGame(bool onLoad = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             _gameStats.Reset();
 
             _attackTeam = (ulong)UnityEngine.Random.Range(1, 3);
@@ -142,6 +145,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void DeclareWin(ulong winner)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (this._state == EState.FINISHED) return;
             this._state = EState.FINISHED;
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
@@ -219,6 +223,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         {
             yield return new WaitForSeconds(Config.Insurgency.FirstCacheSpawnTime);
 
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (ActiveCaches.Count > 0 && !ActiveCaches.First().IsDiscovered)
             {
                 IntelligencePoints = 0;
@@ -228,6 +233,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
         {
             yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             InvokeOnTeamWin(winner);
 
             ReplaceBarricadesAndStructures();
@@ -242,6 +248,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         private void OnShouldStartNewGame()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (_endScreen != null)
             {
                 _endScreen.OnLeaderboardExpired = null;
@@ -252,11 +259,13 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         protected override void EventLoopAction()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             CheckPlayersAMC();
             TeamManager.EvaluateBases();
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
@@ -310,6 +319,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (State == EState.STAGING)
             {
                 if (newteam != 1 && newteam != 2)
@@ -325,6 +335,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public bool AddIntelligencePoints(int points)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             List<CacheData> activeCaches = ActiveCaches;
             if (activeCaches.Count != 1 && activeCaches.Count != 2) return false;
             CacheData first = activeCaches[0];
@@ -372,6 +383,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public void OnCacheDiscovered(Cache cache)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             cache.IsDiscovered = true;
 
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
@@ -401,6 +413,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public void SpawnNewCache(bool message = false)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             IEnumerable<SerializableTransform> viableSpawns = Config.MapConfig.CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
 
             if (viableSpawns.Count() == 0)
@@ -490,6 +503,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public void OnCacheDestroyed(Cache cache, UCPlayer destroyer)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             CachesDestroyed++;
             CachesLeft--;
 
@@ -551,6 +565,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void ShowStagingUI(UCPlayer player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
                 EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
@@ -559,6 +574,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         protected override void EndStagingPhase()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             base.EndStagingPhase();
             if (_attackTeam == 1)
                 DestoryBlockerOnT1();
@@ -573,6 +589,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             _reviveManager?.Dispose();
             _kitManager?.Dispose();
             _vehicleBay?.Dispose();
+            _ticketManager?.Dispose();
             FOBManager.Reset();
             Destroy(_gameStats);
             base.Dispose();

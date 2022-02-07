@@ -14,6 +14,7 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
@@ -23,6 +24,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
             {
                 TryDeleteRepairStation(instanceID);
@@ -31,6 +33,7 @@ namespace Uncreated.Warfare.FOBs
 
         public static void LoadRepairStations()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             stations.Clear();
             foreach (var barricade in UCBarricadeManager.AllBarricades)
             {
@@ -44,6 +47,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void TryDeleteRepairStation(uint instanceID)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < stations.Count; i++)
             {
                 if (stations[i].structure.instanceID == instanceID)
@@ -57,6 +61,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void RegisterNewRepairStation(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!stations.Exists(r => r.structure.instanceID == data.instanceID))
             {
                 RepairStation station = new RepairStation(data, drop);
@@ -89,6 +94,7 @@ namespace Uncreated.Warfare.FOBs
         }
         public void RepairVehicle(InteractableVehicle vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (vehicle.health >= vehicle.asset.health)
                 return;
 
@@ -110,6 +116,7 @@ namespace Uncreated.Warfare.FOBs
 
         public void RefuelVehicle(InteractableVehicle vehicle)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (vehicle.fuel >= vehicle.asset.fuel)
                 return;
 
@@ -136,6 +143,7 @@ namespace Uncreated.Warfare.FOBs
         {
             while (parent.IsActive)
             {
+                IDisposable profiler = ProfilingUtils.StartTracking();
                 List<InteractableVehicle> nearby = new List<InteractableVehicle>();
                 VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(25, 2), nearby);
 
@@ -208,7 +216,7 @@ namespace Uncreated.Warfare.FOBs
 
                 if (counter >= 3)
                     counter = 0;
-
+                profiler.Dispose();
                 yield return new WaitForSeconds(1.5F);
             }
         }

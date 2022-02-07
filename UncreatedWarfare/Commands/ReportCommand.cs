@@ -23,6 +23,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.report" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             // /report john greifing keeps using the mortar on the fobs 
             // /report john teamkilling teamkilled 5 teammates
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);

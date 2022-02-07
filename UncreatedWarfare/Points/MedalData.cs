@@ -24,6 +24,7 @@ namespace Uncreated.Warfare.Point
         }
         public void Update(int totalPoints)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             TotalTW = totalPoints;
 
             int a = Points.TWConfig.FirstMedalPoints;

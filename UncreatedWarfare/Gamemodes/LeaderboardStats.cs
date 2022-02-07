@@ -47,6 +47,7 @@ namespace Uncreated.Warfare.Gamemodes
         protected abstract Guid GUID { get; }
         public void StartLeaderboard(ulong winner, StatTracker tracker)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             this._winner = winner;
             this.tracker = tracker;
             Calculate();
@@ -83,6 +84,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void UpdateLeaderboard()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             foreach (SteamPlayer player in Provider.clients)
             {
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, player.transportConnection, true, "NextGameSeconds", Translation.ObjectTranslate("next_game_starting_format",
@@ -108,6 +110,7 @@ namespace Uncreated.Warfare.Gamemodes
         public void Awake() => Reset();
         public virtual void Reset()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (stats == null)
                 stats = new Dictionary<ulong, IndividualStats>();
             coroutinect = 0;
@@ -138,6 +141,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void OnPlayerJoin(Player player)
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!stats.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out IndividualStats s))
             {
                 s = BasePlayerStats.New<IndividualStats>(player);
@@ -155,12 +159,14 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void StartTracking()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             start = DateTime.Now;
             coroutinect = 0;
             StartTicking();
         }
         protected virtual void OnTick()
         {
+            using IDisposable profiler = ProfilingUtils.StartTracking();
             coroutinect++;
         }
         protected void StopTicking()
