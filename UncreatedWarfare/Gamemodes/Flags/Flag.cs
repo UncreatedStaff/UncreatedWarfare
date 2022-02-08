@@ -303,8 +303,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this.Manager = manager;
             this._id = data.id;
             this._x = data.x;
-            this._y = data.y;
+            this._y = F.GetTerrainHeightAt2DPoint(data.x, data.y);
+            this._z = data.y;
             this._position2d = data.Position2D;
+            this._position = new Vector3(_x, _y, _z);
             this.LastDeltaPoints = 0;
             this._name = data.name;
             if (string.IsNullOrEmpty(data.short_name))
