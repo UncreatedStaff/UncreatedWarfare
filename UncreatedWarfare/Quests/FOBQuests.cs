@@ -66,10 +66,19 @@ public class BuildAnyBuildablesQuest : BaseQuestData<BuildAnyBuildablesQuest.Tra
         public FOBs.EBuildableType BuildableType;
         private int _buildablesBuilt;
         public override void ResetToDefaults() => _buildablesBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
             BuildCount = questState.BuildCount;
             BuildableType = questState.BuildableType;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("buildables_built", StringComparison.Ordinal))
+                _buildablesBuilt = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("buildables_built", _buildablesBuilt);
         }
         public void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
         {
@@ -144,10 +153,19 @@ public class BuildSpecificBuildablesQuest : BaseQuestData<BuildSpecificBuildable
         public Guid[] BaseIDs;
         private int _buildablesBuilt;
         public override void ResetToDefaults() => _buildablesBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
             BuildCount = questState.BuildCount;
             BaseIDs = questState.BaseIDs.GetSetValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("buildables_built", StringComparison.Ordinal))
+                _buildablesBuilt = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("buildables_built", _buildablesBuilt);
         }
         public void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
         {
@@ -207,9 +225,18 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         private readonly int BuildCount = 0;
         private int _fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
             BuildCount = questState.BuildCount;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("fobs_built", StringComparison.Ordinal))
+                _fobsBuilt = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("fobs_built", _fobsBuilt);
         }
         public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
         {
@@ -280,10 +307,19 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         private readonly float SqrBuildRange = 0f;
         private int _fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
             BuildCount = questState.BuildCount;
             SqrBuildRange = questState.BuildRange * questState.BuildRange;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("fobs_built", StringComparison.Ordinal))
+                _fobsBuilt = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("fobs_built", _fobsBuilt);
         }
         public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
         {
@@ -370,9 +406,18 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         private readonly int SupplyCount = 0;
         private int _suppliesDelivered;
         public override void ResetToDefaults() => _suppliesDelivered = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
             SupplyCount = questState.SupplyCount;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("supplies_delivered", StringComparison.Ordinal))
+                _suppliesDelivered = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("supplies_delivered", _suppliesDelivered);
         }
         public void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount)
         {
@@ -427,26 +472,35 @@ public class UseEntrenchingToolQuest : BaseQuestData<UseEntrenchingToolQuest.Tra
             writer.WriteProperty("successful_hits", HitCount);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifySuppliesConsumed
+    public class Tracker : BaseQuestTracker, INotifyEntrenchingToolUse
     {
-        private readonly int SupplyCount = 0;
-        private int _suppliesDelivered;
-        public override void ResetToDefaults() => _suppliesDelivered = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        private readonly int HitCount = 0;
+        private int _hits;
+        public override void ResetToDefaults() => _hits = 0;
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
-            SupplyCount = questState.HitCount;
+            HitCount = questState.HitCount;
         }
-        public void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount)
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
-            if (player == _player.Steam64)
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("hits", StringComparison.Ordinal))
+                _hits = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("hits", _hits);
+        }
+        public void OnEntrenchingToolUsed(UCPlayer player)
+        {
+            if (player.Steam64 == _player.Steam64)
             {
-                _suppliesDelivered += amount;
-                if (_suppliesDelivered >= SupplyCount)
+                _hits ++;
+                if (_hits >= HitCount)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _suppliesDelivered, SupplyCount);
+        public override string Translate() => QuestData.Translate(_player, _hits, HitCount);
     }
 }

@@ -53,6 +53,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
             writer.WriteProperty("kills", KillThreshold);
         }
     }
+    
     // one tracker is created per player working on the quest. Add the notify interfaces defined in QuestsMisc.cs and add cases for them in QuestManager under the events region
     public class Tracker : BaseQuestTracker, INotifyOnKill
     {
@@ -62,6 +63,15 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -137,7 +147,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         private readonly int KillThreshold = 0;
         private readonly Guid[] weapons;
         private int _kills;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             string[] weapons = questState.Weapons.GetSetValue();
@@ -147,6 +157,15 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
                 if (!Guid.TryParse(weapons[i].ToString(), out this.weapons[i]))
                     L.LogWarning("Failed to parse " + weapons[i] + " as a GUID in KILL_ENEMIES_WITH_WEAPON quest.");
             }
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(UCWarfare.KillEventArgs kill)
@@ -218,10 +237,19 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         private readonly int KillThreshold = 0;
         private readonly string Kit;
         private int _kills;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Kit = questState.Kit;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(UCWarfare.KillEventArgs kill)
@@ -300,10 +328,19 @@ public class KillEnemiesQuestKits : BaseQuestData<KillEnemiesQuestKits.Tracker, 
         private readonly int KillThreshold = 0;
         private readonly string[] Kits;
         private int _kills;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Kits = questState.Kits.GetSetValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(UCWarfare.KillEventArgs kill)
@@ -394,10 +431,19 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         private readonly int KillThreshold = 0;
         private readonly EClass Class;
         private int _kills;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Class = questState.Class;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
         public void OnKill(UCWarfare.KillEventArgs kill)
@@ -477,10 +523,19 @@ public class KillEnemiesQuestKitClasses : BaseQuestData<KillEnemiesQuestKitClass
         private readonly int KillThreshold = 0;
         private readonly EClass[] Classes;
         private int _kills;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Classes = questState.Class.GetSetValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
 
         public override void ResetToDefaults() => _kills = 0;
@@ -558,10 +613,19 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         private readonly EWeaponClass Class;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Class = questState.Class;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -637,10 +701,19 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         private readonly EBranch Branch;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Branch = questState.Branch;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -714,10 +787,19 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         private readonly ItemGunAsset Weapon;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
             Weapon = Assets.find(questState.Weapon) as ItemGunAsset;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -785,9 +867,18 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
         private readonly int KillThreshold = 0;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -846,9 +937,18 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
         private readonly int KillThreshold = 0;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -907,9 +1007,18 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
         private readonly int KillThreshold = 0;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target)
         {
             KillThreshold = questState.KillThreshold;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {
@@ -1011,9 +1120,18 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
         private readonly int KillThreshold = 0;
         private int _kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
         {
             KillThreshold = questState.KillThreshold;
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
         }
         public void OnKill(UCWarfare.KillEventArgs kill)
         {

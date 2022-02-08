@@ -1027,7 +1027,21 @@ public interface INotifyTracker
 {
     public UCPlayer Player { get; }
 }
+public enum EPresetType
+{
+    RANK_UNLOCK,
+    KIT_UNLOCK,
+    VEHICLE_UNLOCK
+}
+public interface IQuestPreset
+{
+    public Guid Key { get; }
+    public int RequiredLevel { get; }
+    public IQuestState State { get; }
+    public ulong Team { get; }
+}
 
+#region Notification Interfaces
 public interface INotifyOnKill : INotifyTracker
 {
     public void OnKill(UCWarfare.KillEventArgs kill);
@@ -1044,6 +1058,11 @@ public interface INotifySuppliesConsumed : INotifyTracker
 {
     public void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount);
 }
+public interface INotifyEntrenchingToolUse : INotifyTracker
+{
+    public void OnEntrenchingToolUsed(UCPlayer player);
+}
+#endregion
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>
 public interface IQuestState
 {

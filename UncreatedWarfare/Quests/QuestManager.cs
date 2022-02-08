@@ -24,16 +24,57 @@ public static class QuestManager
         InitTypesReflector();
         ReadQuestDatas();
     }
-    /// <summary>Register a tracker with the provided data to the player.</summary>
-    public static void CreateTracker(BaseQuestData data, UCPlayer player)
+    /// <summary>Generate and register a random tracker with the provided data to the player.</summary>
+    public static BaseQuestTracker CreateTracker(BaseQuestData data, UCPlayer player)
     {
-        RegisteredTrackers.Add(data.CreateTracker(player));
+        BaseQuestTracker tracker = data.CreateTracker(player);
+        RegisteredTrackers.Add(tracker);
+        return tracker;
     }
-    /// <summary>Register a tracker with the provided data to the player.</summary>
+    /// <summary>Find, generate, and register a tracker using a <paramref name="key"/> and a set <see cref="IQuestPreset"/>.</summary>
+    /// <returns>A tracker using a <see cref="IQuestPreset"/> that is matched by <see cref="IQuestPreset.Key"/> and <see cref="IQuestPreset.Team"/> (or 0).</returns>
+    public static BaseQuestTracker CreateTracker(UCPlayer player, Guid key)
+    {
+        ulong team = player.GetTeam();
+        // look for one that matches their team first.
+        for (int i = 0; i < Quests.Count; i++)
+        {
+            foreach (IQuestPreset preset in Quests[i].Presets)
+            {
+                if (preset.Key == key && preset.Team == team)
+                {
+                    IQuestState state = preset.State;
+                    BaseQuestTracker tr = Quests[i].GetTracker(player, ref state);
+                    RegisteredTrackers.Add(tr);
+                    return tr;
+                }
+            }
+        }
+        for (int i = 0; i < Quests.Count; i++)
+        {
+            foreach (IQuestPreset preset in Quests[i].Presets)
+            {
+                if (preset.Key == key && preset.Team == 0)
+                {
+                    IQuestState state = preset.State;
+                    BaseQuestTracker tr = Quests[i].GetTracker(player, ref state);
+                    RegisteredTrackers.Add(tr);
+                    return tr;
+                }
+            }
+        }
+        return null;
+    }
+    /// <summary>Deregister a tracker and call <see cref="BaseQuestTracker.Dispose"/> on it.</summary>
     public static void DeregisterTracker(BaseQuestTracker tracker)
     {
         tracker.Dispose();
         RegisteredTrackers.Remove(tracker);
+    }
+    /// <summary>Register a tracker.</summary>
+    public static void RegisterTracker(BaseQuestTracker tracker)
+    {
+        RegisteredTrackers.Add(tracker);
     }
     /// <summary>Run on disconnect.</summary>
     public static void DeregisterOwnedTrackers(UCPlayer player)
@@ -57,6 +98,25 @@ public static class QuestManager
                 tracker.Tick();
         }
     }
+    public static void OnQuestCompleted(BaseQuestTracker tracker)
+    {
+        if (tracker.IsDailyQuest)
+            DailyQuests.OnDailyQuestCompleted(tracker);
+        else
+        {
+            // TODO: Update a UI and check for giving levels, etc.
+        }
+    }
+    public static void OnQuestUpdated(BaseQuestTracker tracker)
+    {
+        if (tracker.IsDailyQuest)
+            DailyQuests.OnDailyQuestUpdated(tracker);
+        else
+        {
+            // TODO: Update a UI
+        }
+    }
+
     #region read/write
     public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>();
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
@@ -95,14 +155,6 @@ public static class QuestManager
         return null;
     }
 
-    public static void OnQuestCompleted(BaseQuestTracker tracker)
-    {
-        // TODO: Update a UI and check for giving levels, etc.
-    }
-    public static void OnQuestUpdated(BaseQuestTracker tracker)
-    {
-        // TODO: Update a UI
-    }
     /// <summary>Read function to parse a quest data with quest type <paramref name="type"/>.</summary>
     public static BaseQuestData ReadQuestData(ref Utf8JsonReader reader)
     {
@@ -131,7 +183,7 @@ public static class QuestManager
                 }
                 else if (quest != null)
                 {
-                    if (propertyName == "translations")
+                    if (propertyName.Equals("translations", StringComparison.OrdinalIgnoreCase))
                     {
                         quest.Translations = new Dictionary<string, string>();
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
@@ -146,6 +198,23 @@ public static class QuestManager
                                         quest.Translations.Add(key, value);
                                 }
                             }
+                        }
+                    }
+                    else if (propertyName.Equals("team", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                            quest.TeamFilter = reader.GetUInt64();
+                    }
+                    else if (propertyName.Equals("remove_from_daily_quests", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (reader.Read() && (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False))
+                            quest.CanBeDailyQuest = !reader.GetBoolean();
+                    }
+                    else if (propertyName.Equals("presets"))
+                    {
+                        if (reader.Read() && reader.TokenType == JsonTokenType.StartArray)
+                        {
+                            quest.ReadPresets(ref reader);
                         }
                     }
                     else if (reader.Read())
@@ -196,6 +265,60 @@ public static class QuestManager
             }
         }
     }
+    private static string GetSavePath(ulong steam64, Guid key, ulong team) => "\\Players\\" + steam64.ToString(Data.Locale) +
+                                                    "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\" + team + "_" + key.ToString("N") + ".json";
+    public static void SaveProgress(BaseQuestTracker t, ulong team)
+    {
+        if (t.PresetKey == default) return;
+        string savePath = GetSavePath(t.Player.Steam64, t.PresetKey, team);
+        using (FileStream stream = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+        {
+            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+            writer.WriteStartObject();
+            writer.WritePropertyName("key");
+            writer.WriteStringValue(t.PresetKey.ToString("N"));
+            writer.WritePropertyName("team");
+            writer.WriteNumberValue(team);
+            t.WriteQuestProgress(writer);
+            writer.WriteEndObject();
+            writer.Dispose();
+        }
+    }
+    public static void ReadProgress(BaseQuestTracker t, ulong team)
+    {
+        if (t.PresetKey == default) return;
+        string savePath = GetSavePath(t.Player.Steam64, t.PresetKey, team);
+        using (FileStream stream = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+        {
+            if (stream.Length > int.MaxValue)
+                return;
+            byte[] bytes = new byte[stream.Length];
+            stream.Read(bytes, 0, bytes.Length);
+            Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string prop = reader.GetString();
+                    if (prop.Equals("key", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!reader.TryGetGuid(out Guid guid) || guid != t.PresetKey)
+                        {
+                            L.LogWarning("Mis-match between key in file " + savePath);
+                        }
+                    }
+                    else if (prop.Equals("team", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!reader.TryGetUInt64(out ulong team2) || team2 != team)
+                        {
+                            L.LogWarning("Mis-match between team in file " + savePath);
+                        }
+                    }
+                    else if (reader.Read()) t.OnReadProgressSaveProperty(prop, ref reader);
+                }
+            }
+        }
+    }
     #endregion
     #region events
 
@@ -215,6 +338,16 @@ public static class QuestManager
     {
         foreach (INotifyFOBBuilt tracker in RegisteredTrackers.OfType<INotifyFOBBuilt>())
             tracker.OnFOBBuilt(constructor, fob);
+    }
+    public static void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount)
+    {
+        foreach (INotifySuppliesConsumed tracker in RegisteredTrackers.OfType<INotifySuppliesConsumed>())
+            tracker.OnSuppliesConsumed(fob, player, amount);
+    }
+    public static void OnEntrenchingToolUsed(UCPlayer player)
+    {
+        foreach (INotifyEntrenchingToolUse tracker in RegisteredTrackers.OfType<INotifyEntrenchingToolUse>())
+            tracker.OnEntrenchingToolUsed(player);
     }
     #endregion
 }
