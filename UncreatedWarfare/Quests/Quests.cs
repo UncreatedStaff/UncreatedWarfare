@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 
-namespace Uncreated.Warfare.Quests.Types;
+namespace Uncreated.Warfare.Quests;
 /// <summary>Stores information about a <see cref="EQuestType"/> of kit. Isn't necessarily constant, some can have ranges that are used for daily quests.
 /// Rank and kit quests should override with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
 public abstract class BaseQuestData
@@ -59,18 +59,21 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         public readonly Guid _key;
         public readonly int _reqLevel;
         public readonly ulong _team;
+        public readonly ushort _flag;
         public readonly TState _state;
-        public Preset(Guid key, int requiredLevel, TState state, ulong team)
+        public Preset(Guid key, int requiredLevel, TState state, ulong team, ushort flag)
         {
             this._key = key;
             this._reqLevel = requiredLevel;
             this._state = state;
             this._team = team;
+            this._flag = flag;
         }
         public Guid Key => _key;
         public int RequiredLevel => _reqLevel;
         public IQuestState State => _state;
         public ulong Team => _team;
+        public ushort Flag => _flag;
     }
     public override IQuestState GetState() => GetNewState();
     public TState GetNewState()
@@ -98,6 +101,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                 ulong varTeam = default;
                 int reqLvl = default;
                 TState state = default;
+                ushort flag = 0;
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
                 {
                     string prop = reader.GetString();
@@ -129,17 +133,49 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                                 L.LogWarning("Failed to parse 'varient_team' UInt64 from " + QuestType + " preset.");
                         }
                         else
-                            L.LogWarning("Failed to parse 'required_level' Int32 from " + QuestType + " preset.");
+                            L.LogWarning("Failed to parse 'varient_team' UInt64 from " + QuestType + " preset.");
+                    }
+                    else if (flag == 0 && prop.Equals("flag"))
+                    {
+                        if (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                        {
+                            if (!reader.TryGetUInt16(out flag))
+                            {
+                                L.LogWarning("Failed to parse 'flag' UInt16 from " + QuestType + " preset, defaulting to 0");
+                                flag = 0;
+                            }
+                        }
+                        else
+                            L.LogWarning("Failed to parse 'flag' UInt16 from " + QuestType + " preset, defaulting to 0");
                     }
                     else if (prop.Equals("state"))
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                         {
                             state = new TState();
-                            state.ReadQuestState(ref reader);
+                            while (reader.Read())
+                            {
+                                if (reader.TokenType == JsonTokenType.PropertyName)
+                                {
+                                    string prop2 = reader.GetString();
+                                    try
+                                    {
+                                        if (reader.Read())
+                                            state.OnPropertyRead(ref reader, prop2);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        L.LogWarning("Failed to parse 'state' IQuestState object property " + prop2 + " with key {" +
+                                                     key.ToString("N") + "} from " + QuestType + " presets.");
+                                        L.LogError(ex);
+                                    }
+                                }
+                            }
+                            if (reader.TokenType == JsonTokenType.EndObject)
+                                break;
                         }
                         else
-                            L.LogWarning("Failed to parse 'state' IQuestState object from " + QuestType + " preset.");
+                            L.LogWarning("Failed to parse 'state' IQuestState object with key {" + key.ToString("N") + "} from " + QuestType + " presets.");
                     }
                 }
                 for (int i = 0; i < presets.Count; i++)
@@ -148,7 +184,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     if (pr.Key == key && varTeam == pr.Team)
                         goto next;
                 }
-                presets.Add(new Preset(key, reqLvl, state, varTeam));
+                presets.Add(new Preset(key, reqLvl, state, varTeam, flag));
                 next:
                 while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
             }
@@ -168,12 +204,13 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     protected bool isDisposed;
     protected bool _isCompleted;
     public bool IsDailyQuest = false;
+    public ushort Flag = 0;
     public bool IsCompleted { get; }
-    public readonly Guid PresetKey;
-    public BaseQuestTracker(UCPlayer target, Guid presetKey = default)
+    public virtual short FlagValue => 0;
+    public Guid PresetKey;
+    public BaseQuestTracker(UCPlayer target)
     {
         this._player = target;
-        this.PresetKey = presetKey;
     }
     public virtual void Tick() { }
     protected virtual void Cleanup() { }
@@ -187,6 +224,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
         {
             _isCompleted = false;
             ResetToDefaults();
+            TellUpdated();
         }
     }
     public void TellCompleted()

@@ -45,7 +45,7 @@ public static class QuestManager
                 {
                     IQuestState state = preset.State;
                     BaseQuestTracker tr = Quests[i].GetTracker(player, ref state);
-                    RegisteredTrackers.Add(tr);
+                    RegisterTracker(tr);
                     return tr;
                 }
             }
@@ -58,7 +58,7 @@ public static class QuestManager
                 {
                     IQuestState state = preset.State;
                     BaseQuestTracker tr = Quests[i].GetTracker(player, ref state);
-                    RegisteredTrackers.Add(tr);
+                    RegisterTracker(tr);
                     return tr;
                 }
             }
@@ -74,6 +74,7 @@ public static class QuestManager
     /// <summary>Register a tracker.</summary>
     public static void RegisterTracker(BaseQuestTracker tracker)
     {
+        OnQuestStarted(tracker);
         RegisteredTrackers.Add(tracker);
     }
     /// <summary>Run on disconnect.</summary>
@@ -98,12 +99,22 @@ public static class QuestManager
                 tracker.Tick();
         }
     }
+    public static void OnQuestStarted(BaseQuestTracker tracker)
+    {
+        if (!tracker.IsDailyQuest && tracker.Flag != 0)
+        {
+            tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
+            L.LogDebug("Flag quest started: " + tracker.QuestData.QuestType);
+        }
+    }
     public static void OnQuestCompleted(BaseQuestTracker tracker)
     {
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestCompleted(tracker);
         else
         {
+            // LevelManager.OnQuestCompleted(tracker.key);  (we need something like this)
+            
             // TODO: Update a UI and check for giving levels, etc.
         }
     }
@@ -113,7 +124,11 @@ public static class QuestManager
             DailyQuests.OnDailyQuestUpdated(tracker);
         else
         {
-            // TODO: Update a UI
+            if (tracker.Flag != 0)
+            {
+                tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
+                L.LogDebug("Flag quest updated: " + tracker.FlagValue);
+            }
         }
     }
 
@@ -314,7 +329,19 @@ public static class QuestManager
                             L.LogWarning("Mis-match between team in file " + savePath);
                         }
                     }
-                    else if (reader.Read()) t.OnReadProgressSaveProperty(prop, ref reader);
+                    else if (reader.Read())
+                    {
+                        try
+                        {
+                            t.OnReadProgressSaveProperty(prop, ref reader);
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Failed to read property " + prop + " in progress save for preset " + t.PresetKey + 
+                                       " of kit type " + t.QuestData.QuestType + " for player " + t.Player.Steam64 + " in file \"" + savePath + "\".");
+                            L.LogError(ex);
+                        }
+                    }
                 }
             }
         }
@@ -344,10 +371,15 @@ public static class QuestManager
         foreach (INotifySuppliesConsumed tracker in RegisteredTrackers.OfType<INotifySuppliesConsumed>())
             tracker.OnSuppliesConsumed(fob, player, amount);
     }
-    public static void OnEntrenchingToolUsed(UCPlayer player)
+    public static void OnObjectiveCaptured(ulong[] participants)
     {
-        foreach (INotifyEntrenchingToolUse tracker in RegisteredTrackers.OfType<INotifyEntrenchingToolUse>())
-            tracker.OnEntrenchingToolUsed(player);
+        foreach (INotifyOnObjectiveCaptured tracker in RegisteredTrackers.OfType<INotifyOnObjectiveCaptured>())
+            tracker.OnObjectiveCaptured(participants);
+    }
+    public static void OnRevive(UCPlayer reviver, UCPlayer revived)
+    {
+        foreach (INotifyOnRevive tracker in RegisteredTrackers.OfType<INotifyOnRevive>())
+            tracker.OnPlayerRevived(reviver, revived);
     }
     #endregion
 }

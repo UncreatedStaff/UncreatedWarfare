@@ -5,183 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Quests.Types;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 
-namespace Uncreated.Warfare.Quests;
+namespace Uncreated.Warfare.Quests.Types;
 
-[QuestData(EQuestType.BUILD_BUILDABLES_ANY)]
-public class BuildAnyBuildablesQuest : BaseQuestData<BuildAnyBuildablesQuest.Tracker, BuildAnyBuildablesQuest.State, BuildAnyBuildablesQuest>
-{
-    public DynamicIntegerValue BuildCount;
-    public DynamicEnumValue<FOBs.EBuildableType> BuildableType;
-
-    public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
-    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
-    {
-        if (propertyname.Equals("buildables_required", StringComparison.Ordinal))
-        {
-            if (!reader.TryReadIntegralValue(out BuildCount))
-                BuildCount = new DynamicIntegerValue(10);
-        }
-        else if (propertyname.Equals("buildable_type", StringComparison.Ordinal))
-        {
-            if (!reader.TryReadEnumValue(out BuildableType))
-                BuildableType = new DynamicEnumValue<FOBs.EBuildableType>(FOBs.EBuildableType.FOB_BUNKER);
-        }
-    }
-    public struct State : IQuestState<Tracker, BuildAnyBuildablesQuest>
-    {
-        public int BuildCount;
-        public FOBs.EBuildableType BuildableType;
-        public void Init(BuildAnyBuildablesQuest data)
-        {
-            this.BuildCount = data.BuildCount.GetValue();
-            this.BuildableType = data.BuildableType.GetValue();
-        }
-        public void ReadQuestState(ref Utf8JsonReader reader)
-        {
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString();
-                if (reader.Read())
-                {
-                    if (prop.Equals("buildables_required", StringComparison.Ordinal))
-                        BuildCount = reader.GetInt32();
-                    else if (prop.Equals("buildable_type", StringComparison.Ordinal))
-                        reader.TryReadEnumValue(out BuildableType);
-                }
-            }
-        }
-        public void WriteQuestState(Utf8JsonWriter writer)
-        {
-            writer.WriteProperty("buildables_required", BuildCount);
-            writer.WriteProperty("buildable_type", BuildableType.ToString());
-        }
-    }
-    public class Tracker : BaseQuestTracker, INotifyBuildableBuilt
-    {
-        private readonly int BuildCount = 0;
-        public FOBs.EBuildableType BuildableType;
-        private int _buildablesBuilt;
-        public override void ResetToDefaults() => _buildablesBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
-        {
-            BuildCount = questState.BuildCount;
-            BuildableType = questState.BuildableType;
-        }
-        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
-        {
-            if (reader.TokenType == JsonTokenType.Number && prop.Equals("buildables_built", StringComparison.Ordinal))
-                _buildablesBuilt = reader.GetInt32();
-        }
-        public override void WriteQuestProgress(Utf8JsonWriter writer)
-        {
-            writer.WriteProperty("buildables_built", _buildablesBuilt);
-        }
-        public void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
-        {
-            if (buildable.type == BuildableType && constructor.Steam64 == _player.Steam64)
-            {
-                _buildablesBuilt++;
-                if (_buildablesBuilt >= BuildCount)
-                    TellCompleted();
-                else
-                    TellUpdated();
-            }
-        }
-        public override string Translate() => QuestData.Translate(_player, _buildablesBuilt, BuildCount, BuildableType.ToString());
-    }
-}
-[QuestData(EQuestType.BUILD_BUILDABLES_SPECIFIC)]
-public class BuildSpecificBuildablesQuest : BaseQuestData<BuildSpecificBuildablesQuest.Tracker, BuildSpecificBuildablesQuest.State, BuildSpecificBuildablesQuest>
-{
-    public DynamicIntegerValue BuildCount;
-    public DynamicAssetValue<ItemBarricadeAsset> BaseIDs;
-
-    public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
-    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
-    {
-        if (propertyname.Equals("buildables_required", StringComparison.Ordinal))
-        {
-            if (!reader.TryReadIntegralValue(out BuildCount))
-                BuildCount = new DynamicIntegerValue(10);
-        }
-        else if (propertyname.Equals("base_ids", StringComparison.Ordinal))
-        {
-            if (!reader.TryReadAssetValue(out BaseIDs))
-            {
-                BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>();
-                L.LogWarning("Failed to read asset from " + QuestType);
-            }
-        }
-    }
-    public struct State : IQuestState<Tracker, BuildSpecificBuildablesQuest>
-    {
-        public int BuildCount;
-        public DynamicAssetValue<ItemBarricadeAsset> BaseIDs;
-        public void Init(BuildSpecificBuildablesQuest data)
-        {
-            this.BuildCount = data.BuildCount.GetValue();
-            this.BaseIDs = data.BaseIDs;
-        }
-        public void ReadQuestState(ref Utf8JsonReader reader)
-        {
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString();
-                if (reader.Read())
-                {
-                    if (prop.Equals("buildables_required", StringComparison.Ordinal))
-                        BuildCount = reader.GetInt32();
-                    else if (prop.Equals("base_ids", StringComparison.Ordinal))
-                        reader.TryReadAssetValue(out BaseIDs);
-                }
-            }
-        }
-        public void WriteQuestState(Utf8JsonWriter writer)
-        {
-            writer.WriteProperty("buildables_required", BuildCount);
-            writer.WriteProperty("base_ids", BaseIDs.ToString());
-        }
-    }
-    public class Tracker : BaseQuestTracker, INotifyBuildableBuilt
-    {
-        private readonly int BuildCount = 0;
-        public Guid[] BaseIDs;
-        private int _buildablesBuilt;
-        public override void ResetToDefaults() => _buildablesBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
-        {
-            BuildCount = questState.BuildCount;
-            BaseIDs = questState.BaseIDs.GetSetValue();
-        }
-        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
-        {
-            if (reader.TokenType == JsonTokenType.Number && prop.Equals("buildables_built", StringComparison.Ordinal))
-                _buildablesBuilt = reader.GetInt32();
-        }
-        public override void WriteQuestProgress(Utf8JsonWriter writer)
-        {
-            writer.WriteProperty("buildables_built", _buildablesBuilt);
-        }
-        public void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
-        {
-            if (constructor.Steam64 == _player.Steam64 && BaseIDs.Contains(buildable.foundationID))
-            {
-                _buildablesBuilt++;
-                if (_buildablesBuilt >= BuildCount)
-                    TellCompleted();
-                else
-                    TellUpdated();
-            }
-        }
-        public override string Translate() => QuestData.Translate(_player, _buildablesBuilt, BuildCount, string.Join(", ",
-            BaseIDs.Select(x => Assets.find(x) is ItemBarricadeAsset asset ? asset.itemName : x.ToString("N"))));
-    }
-}
 [QuestData(EQuestType.BUILD_FOBS)]
 public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQuest.State, BuildFOBsQuest>
 {
@@ -198,22 +26,15 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
     }
     public struct State : IQuestState<Tracker, BuildFOBsQuest>
     {
-        public int BuildCount;
+        public IDynamicValue<int>.IChoice BuildCount;
         public void Init(BuildFOBsQuest data)
         {
             this.BuildCount = data.BuildCount.GetValue();
         }
-        public void ReadQuestState(ref Utf8JsonReader reader)
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString();
-                if (reader.Read())
-                {
-                    if (prop.Equals("fobs_required", StringComparison.Ordinal))
-                        BuildCount = reader.GetInt32();
-                }
-            }
+            if (prop.Equals("fobs_required", StringComparison.Ordinal))
+                BuildCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
@@ -225,9 +46,9 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         private readonly int BuildCount = 0;
         private int _fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
+        public Tracker(UCPlayer target, ref State questState) : base(target)
         {
-            BuildCount = questState.BuildCount;
+            BuildCount = questState.BuildCount.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -274,26 +95,19 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
     }
     public struct State : IQuestState<Tracker, BuildFOBsNearObjQuest>
     {
-        public int BuildCount;
-        public float BuildRange;
+        public IDynamicValue<int>.IChoice BuildCount;
+        public IDynamicValue<float>.IChoice BuildRange;
         public void Init(BuildFOBsNearObjQuest data)
         {
             this.BuildCount = data.BuildCount.GetValue();
             this.BuildRange = data.BuildRange.GetValue();
         }
-        public void ReadQuestState(ref Utf8JsonReader reader)
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString();
-                if (reader.Read())
-                {
-                    if (prop.Equals("fobs_required", StringComparison.Ordinal))
-                        BuildCount = reader.GetInt32();
-                    else if (prop.Equals("buildables_required", StringComparison.Ordinal))
-                        BuildRange = reader.GetSingle();
-                }
-            }
+            if (prop.Equals("fobs_required", StringComparison.Ordinal))
+                BuildCount = DynamicIntegerValue.ReadChoice(ref reader);
+            else if (prop.Equals("buildables_required", StringComparison.Ordinal))
+                BuildRange = DynamicFloatValue.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
@@ -307,10 +121,11 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         private readonly float SqrBuildRange = 0f;
         private int _fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
-        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
+        public Tracker(UCPlayer target, ref State questState) : base(target)
         {
-            BuildCount = questState.BuildCount;
-            SqrBuildRange = questState.BuildRange * questState.BuildRange;
+            BuildCount = questState.BuildCount.InsistValue();
+            SqrBuildRange = questState.BuildRange.InsistValue();
+            SqrBuildRange *= SqrBuildRange;
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -379,22 +194,15 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     }
     public struct State : IQuestState<Tracker, DeliverSuppliesQuest>
     {
-        public int SupplyCount;
+        public IDynamicValue<int>.IChoice SupplyCount;
         public void Init(DeliverSuppliesQuest data)
         {
             this.SupplyCount = data.SupplyCount.GetValue();
         }
-        public void ReadQuestState(ref Utf8JsonReader reader)
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString();
-                if (reader.Read())
-                {
-                    if (prop.Equals("supply_count", StringComparison.Ordinal))
-                        SupplyCount = reader.GetInt32();
-                }
-            }
+            if (prop.Equals("supply_count", StringComparison.Ordinal))
+                SupplyCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
@@ -406,9 +214,9 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         private readonly int SupplyCount = 0;
         private int _suppliesDelivered;
         public override void ResetToDefaults() => _suppliesDelivered = 0;
-        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
+        public Tracker(UCPlayer target, ref State questState) : base(target)
         {
-            SupplyCount = questState.SupplyCount;
+            SupplyCount = questState.SupplyCount.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -434,73 +242,86 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     }
     public enum ESupplyType : byte { AMMO, BUILD }
 }
-[QuestData(EQuestType.ENTRENCHING_TOOL_HITS)]
-public class UseEntrenchingToolQuest : BaseQuestData<UseEntrenchingToolQuest.Tracker, UseEntrenchingToolQuest.State, UseEntrenchingToolQuest>
+[QuestData(EQuestType.SHOVEL_BUILDABLES)]
+public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQuest.State, HelpBuildQuest>
 {
-    public DynamicIntegerValue HitCount;
+    public DynamicIntegerValue Amount;
+    public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY);
+    public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public override int TickFrequencySeconds => 0;
     public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
-        if (propertyname.Equals("successful_hits", StringComparison.Ordinal))
+        if (propertyname.Equals("buildables_required", StringComparison.Ordinal))
         {
-            if (!reader.TryReadIntegralValue(out HitCount))
-                HitCount = new DynamicIntegerValue(250);
+            if (!reader.TryReadIntegralValue(out Amount))
+                Amount = new DynamicIntegerValue(250);
+        }
+        else if (propertyname.Equals("buildable_type", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadEnumValue(out BuildableType))
+                BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+        }
+        else if (propertyname.Equals("base_ids", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadAssetValue(out BaseIDs))
+                BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
         }
     }
-    public struct State : IQuestState<Tracker, UseEntrenchingToolQuest>
+    public struct State : IQuestState<Tracker, HelpBuildQuest>
     {
-        public int HitCount;
-        public void Init(UseEntrenchingToolQuest data)
+        public IDynamicValue<int>.IChoice Amount;
+        public DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
+        public IDynamicValue<EBuildableType>.IChoice BuildableType;
+        public void Init(HelpBuildQuest data)
         {
-            this.HitCount = data.HitCount.GetValue();
+            this.Amount = data.Amount.GetValue();
+            this.BaseIDs = data.BaseIDs.GetValue();
+            this.BuildableType = data.BuildableType.GetValue();
         }
-        public void ReadQuestState(ref Utf8JsonReader reader)
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString();
-                if (reader.Read())
-                {
-                    if (prop.Equals("successful_hits", StringComparison.Ordinal))
-                        HitCount = reader.GetInt32();
-                }
-            }
+            if (prop.Equals("successful_hits", StringComparison.Ordinal))
+                Amount = DynamicIntegerValue.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("successful_hits", HitCount);
+            writer.WriteProperty("successful_hits", Amount);
         }
     }
-    public class Tracker : BaseQuestTracker, INotifyEntrenchingToolUse
+    public class Tracker : BaseQuestTracker, INotifyBuildableBuilt
     {
-        private readonly int HitCount = 0;
-        private int _hits;
-        public override void ResetToDefaults() => _hits = 0;
-        public Tracker(UCPlayer target, ref State questState, Guid presetKey = default) : base(target, presetKey)
+        private readonly int Amount = 0;
+        private readonly DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
+        private readonly IDynamicValue<EBuildableType>.IChoice BuildableType;
+        private int _built;
+        public override void ResetToDefaults() => _built = 0;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
         {
-            HitCount = questState.HitCount;
+            Amount = questState.Amount.InsistValue();
+            BaseIDs = questState.BaseIDs;
+            BuildableType = questState.BuildableType;
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
             if (reader.TokenType == JsonTokenType.Number && prop.Equals("hits", StringComparison.Ordinal))
-                _hits = reader.GetInt32();
+                _built = reader.GetInt32();
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("hits", _hits);
+            writer.WriteProperty("buildables_built", _built);
         }
-        public void OnEntrenchingToolUsed(UCPlayer player)
+        public void OnBuildableBuilt(UCPlayer player, BuildableData buildable)
         {
-            if (player.Steam64 == _player.Steam64)
+            if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.type) && BaseIDs.IsMatch(buildable.foundationID))
             {
-                _hits ++;
-                if (_hits >= HitCount)
+                _built ++;
+                if (_built >= Amount)
                     TellCompleted();
                 else
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _hits, HitCount);
+        public override string Translate() => QuestData.Translate(_player, _built, Amount);
     }
 }

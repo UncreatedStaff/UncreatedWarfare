@@ -152,10 +152,6 @@ namespace Uncreated.Warfare
         public static void LoadVariables()
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            // TODO: Make flags between 4 and 10;
-            // TODO: Fix exceptions in OffenseManager
-            // TODO: Rename teams
-
 
             /* INITIALIZE UNCREATED NETWORKING */
             Logging.OnLog += L.Log;

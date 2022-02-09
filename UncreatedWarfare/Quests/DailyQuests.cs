@@ -68,7 +68,7 @@ public static class DailyQuests
 
     public static void OnDailyQuestUpdated(BaseQuestTracker tracker)
     {
-        
+        L.Log("Daily quest updated: \"" + tracker.Translate() + "\"");
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()
@@ -156,7 +156,7 @@ public static class DailyQuests
                             int i = -1;
                             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                             {
-                                if (i == DAILY_QUEST_COUNT) return;
+                                if (i >= DAILY_QUEST_COUNT) return;
                                 if (reader.TokenType == JsonTokenType.StartObject)
                                 {
                                     i++;
@@ -166,7 +166,15 @@ public static class DailyQuests
                                     string prop = reader.GetString();
                                     if (reader.Read() && i != -1)
                                     {
-                                        tracker.Trackers[i].OnReadProgressSaveProperty(prop, ref reader);
+                                        try
+                                        {
+                                            tracker.Trackers[i].OnReadProgressSaveProperty(prop, ref reader);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            L.LogError("Error reading property " + prop + " in daily quest progress of " + tracker.Player.Steam64 + " in quest " + i);
+                                            L.LogError(ex);
+                                        }
                                     }
                                 }
                             }

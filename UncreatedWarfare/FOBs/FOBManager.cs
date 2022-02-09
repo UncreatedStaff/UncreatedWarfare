@@ -1091,6 +1091,7 @@ namespace Uncreated.Warfare.FOBs
         AMMO_CRATE,
         REPAIR_STATION,
         FORTIFICATION,
-        EMPLACEMENT
+        EMPLACEMENT,
+        RADIO
     }
 }
