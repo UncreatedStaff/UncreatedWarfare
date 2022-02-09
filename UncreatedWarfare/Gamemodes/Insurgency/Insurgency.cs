@@ -24,6 +24,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
     public class Insurgency : TeamGamemode, ITeams, IFOBs, IVehicles, IKitRequests, IRevives, ISquads, IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>, IStructureSaving, ITickets, IStagingPhase, IAttackDefense, IGameStats
     {
         public override string DisplayName => "Insurgency";
+        public override EGamemode GamemodeType => EGamemode.INVASION;
         public override bool EnableAMC => true;
         public override bool ShowOFPUI => true;
         public override bool ShowXPUI => true;

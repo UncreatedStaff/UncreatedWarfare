@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Quests.Types;
 
 namespace Uncreated.Warfare.Quests;
@@ -39,19 +40,17 @@ public enum EQuestType : byte
     SHOVEL_BUILDABLES,
     BUILD_FOBS,
     BUILD_FOBS_NEAR_OBJECTIVES,
-    BUILD_FOB_ON_ACTIVE_OBJECTIVE,  // todo
+    BUILD_FOB_ON_ACTIVE_OBJECTIVE,
     DELIVER_SUPPLIES,
     CAPTURE_OBJECTIVES,
-    DESTROY_CACHE,                  // todo
-    DESTROY_VEHICLES,               // todo
+    DESTROY_VEHICLES,
     DRIVE_DISTANCE,                 // todo
     TRANSPORT_PLAYERS,              // todo
     REVIVE_PLAYERS,
-    KING_SLAYER,                    // todo
-    KILL_VEHICLES,                  // todo
-    KILL_STREAK,                    // todo
-    XP_IN_GAMEMODE,                 // todo
-    KILL_FROM_RANGE,                // todo
+    KING_SLAYER,
+    KILL_STREAK,
+    XP_IN_GAMEMODE,
+    KILL_FROM_RANGE,
     KILL_FROM_RANGE_WITH_WEAPON,    // todo
     KILL_FROM_RANGE_WITH_CLASS,     // todo
     KILL_FROM_RANGE_WITH_KIT,       // todo
@@ -2527,9 +2526,21 @@ public interface INotifyOnKill : INotifyTracker
 {
     public void OnKill(UCWarfare.KillEventArgs kill);
 }
+public interface INotifyOnDeath : INotifyTracker
+{
+    public void OnDeath(UCWarfare.DeathEventArgs kill);
+}
 public interface INotifyOnObjectiveCaptured : INotifyTracker
 {
     public void OnObjectiveCaptured(ulong[] participants);
+}
+public interface INotifyGameOver : INotifyTracker
+{
+    public void OnGameOver(ulong winner);
+}
+public interface INotifyGainedXP : INotifyTracker
+{
+    public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch);
 }
 public interface INotifyFOBBuilt : INotifyTracker
 {
@@ -2546,6 +2557,10 @@ public interface INotifyOnRevive : INotifyTracker
 public interface INotifyBuildableBuilt : INotifyTracker
 {
     public void OnBuildableBuilt(UCPlayer player, FOBs.BuildableData buildable);
+}
+public interface INotifyVehicleDestroyed : INotifyTracker
+{
+    public void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, IEnumerable<KeyValuePair<ulong, float>> assisters, Vehicles.EVehicleType type);
 }
 #endregion
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>

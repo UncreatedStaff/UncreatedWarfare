@@ -118,13 +118,13 @@ public static class QuestManager
             // TODO: Update a UI and check for giving levels, etc.
         }
     }
-    public static void OnQuestUpdated(BaseQuestTracker tracker)
+    public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)
     {
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestUpdated(tracker);
         else
         {
-            if (tracker.Flag != 0)
+            if (tracker.Flag != 0 && !skipFlagUpdate)
             {
                 tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
                 L.LogDebug("Flag quest updated: " + tracker.FlagValue);
@@ -351,10 +351,15 @@ public static class QuestManager
 
     // put all interface events here
 
-    public static void OnPlayerKilled(UCWarfare.KillEventArgs kill)
+    public static void OnKill(UCWarfare.KillEventArgs kill)
     {
         foreach (INotifyOnKill tracker in RegisteredTrackers.OfType<INotifyOnKill>())
             tracker.OnKill(kill);
+    }
+    public static void OnDeath(UCWarfare.DeathEventArgs death)
+    {
+        foreach (INotifyOnDeath tracker in RegisteredTrackers.OfType<INotifyOnDeath>())
+            tracker.OnDeath(death);
     }
     public static void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
     {
@@ -380,6 +385,16 @@ public static class QuestManager
     {
         foreach (INotifyOnRevive tracker in RegisteredTrackers.OfType<INotifyOnRevive>())
             tracker.OnPlayerRevived(reviver, revived);
+    }
+    public static void OnGameOver(ulong winner)
+    {
+        foreach (INotifyGameOver tracker in RegisteredTrackers.OfType<INotifyGameOver>())
+            tracker.OnGameOver(winner);
+    }
+    public static void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch)
+    {
+        foreach (INotifyGainedXP tracker in RegisteredTrackers.OfType<INotifyGainedXP>())
+            tracker.OnGainedXP(player, amtGained, total, gameTotal, branch);
     }
     #endregion
 }

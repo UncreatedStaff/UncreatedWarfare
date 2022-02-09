@@ -12,6 +12,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
     public class Invasion : CTFBaseMode<InvasionLeaderboard, BaseCTFStats, InvasionTracker>, IAttackDefense
     {
         public override string DisplayName => "Invasion";
+        public override EGamemode GamemodeType => EGamemode.INVASION;
 
         protected ulong _attackTeam;
         protected ulong _defenseTeam;

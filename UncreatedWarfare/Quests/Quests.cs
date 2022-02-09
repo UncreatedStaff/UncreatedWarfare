@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Quests;
-/// <summary>Stores information about a <see cref="EQuestType"/> of kit. Isn't necessarily constant, some can have ranges that are used for daily quests.
-/// Rank and kit quests should override with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
+/// <summary>Stores information about a <see cref="EQuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
+/// Rank and kit quests should overridden with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
 public abstract class BaseQuestData
 {
     private EQuestType _type;
@@ -233,9 +233,9 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
         _isCompleted = true;
         QuestManager.OnQuestCompleted(this);
     }
-    public void TellUpdated()
+    public void TellUpdated(bool skipFlagUpdate = false)
     {
-        QuestManager.OnQuestUpdated(this);
+        QuestManager.OnQuestUpdated(this, skipFlagUpdate);
     }
     public void Dispose()
     {
