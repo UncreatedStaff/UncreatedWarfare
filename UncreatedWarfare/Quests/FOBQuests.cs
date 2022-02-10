@@ -15,7 +15,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
 {
     public DynamicIntegerValue BuildCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("fobs_required", StringComparison.Ordinal))
@@ -79,7 +79,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
     public DynamicIntegerValue BuildCount;
     public DynamicFloatValue BuildRange;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("fobs_required", StringComparison.Ordinal))
@@ -183,7 +183,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
 {
     public DynamicIntegerValue BuildCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("fobs_required", StringComparison.Ordinal))
@@ -274,7 +274,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
 {
     public DynamicIntegerValue SupplyCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("supply_count", StringComparison.Ordinal))
@@ -337,10 +337,10 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
 public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQuest.State, HelpBuildQuest>
 {
     public DynamicIntegerValue Amount;
-    public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY);
-    public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+    public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
+    public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("buildables_required", StringComparison.Ordinal))
@@ -372,12 +372,18 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            if (prop.Equals("successful_hits", StringComparison.Ordinal))
+            if (prop.Equals("buildables_required", StringComparison.Ordinal))
                 Amount = DynamicIntegerValue.ReadChoice(ref reader);
+            else if (prop.Equals("buildable_type", StringComparison.Ordinal))
+                BuildableType = DynamicEnumValue<EBuildableType>.ReadChoice(ref reader);
+            else if (prop.Equals("base_ids", StringComparison.Ordinal))
+                BaseIDs = DynamicAssetValue<ItemBarricadeAsset>.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("successful_hits", Amount);
+            writer.WriteProperty("buildables_required", Amount);
+            writer.WriteProperty("buildable_type", BaseIDs);
+            writer.WriteProperty("base_ids", BuildableType);
         }
     }
     public class Tracker : BaseQuestTracker, INotifyBuildableBuilt
@@ -413,6 +419,6 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _built, Amount);
+        public override string Translate() => QuestData.Translate(_player, _built, Amount, string.Join(", ", BaseIDs.GetAssetValueSet().Select(x => x.itemName)), BuildableType);
     }
 }

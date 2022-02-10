@@ -15,7 +15,6 @@ public abstract class BaseQuestData
 {
     private EQuestType _type;
     private Dictionary<string, string> _translations;
-    public ulong TeamFilter = 0;
     public bool CanBeDailyQuest = true;
     public abstract IEnumerable<IQuestPreset> Presets { get; }
     public virtual int XPReward { get => 1; } // remove ?
@@ -74,6 +73,9 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         public IQuestState State => _state;
         public ulong Team => _team;
         public ushort Flag => _flag;
+
+        public override string ToString() =>
+            $"Preset {_key}. Required level: {_reqLevel}, Team: {_team}, Flag: {_flag}, State: {_state}";
     }
     public override IQuestState GetState() => GetNewState();
     public TState GetNewState()
@@ -82,14 +84,29 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         state.Init((TDataParent)this);
         return state;
     }
-    public abstract TTracker CreateQuestTracker(UCPlayer player, ref TState state);
+    protected abstract TTracker CreateQuestTracker(UCPlayer player, ref TState state);
     public TTracker CreateQuestTracker(UCPlayer player)
     {
         TState state = GetNewState();
-        return CreateQuestTracker(player, ref state);
+        TTracker tracker = CreateQuestTracker(player, ref state);
+        tracker.QuestData = this;
+        return tracker;
     }
+
+    public override string ToString() =>
+        $"{QuestType} quest data: {_presets?.Length ?? -1} presets, daily quest: {CanBeDailyQuest}, translations: {Translations?.FirstOrDefault().Value ?? "null"}.\n" +
+        $"    Presets: {(_presets == null ? "null array" : string.Join(", ", _presets.Select(x => x.ToString())))}";
     public override BaseQuestTracker CreateTracker(UCPlayer player) => CreateQuestTracker(player);
-    public override BaseQuestTracker GetTracker(UCPlayer player, ref IQuestState state) => state is TState st2 ? CreateQuestTracker(player, ref st2) : null;
+    public override BaseQuestTracker GetTracker(UCPlayer player, ref IQuestState state)
+    {
+        if (state is TState st2)
+        {
+            TTracker tracker = CreateQuestTracker(player, ref st2);
+            tracker.QuestData = this;
+            return tracker;
+        }
+        return null;
+    }
     public override void ReadPresets(ref Utf8JsonReader reader)
     {
         List<Preset> presets = new List<Preset>(4);
@@ -105,9 +122,10 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
                 {
                     string prop = reader.GetString();
+                    if (!reader.Read()) break;
                     if (key == default && prop.Equals("key", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                        if (reader.TokenType == JsonTokenType.String)
                         {
                             if (!reader.TryGetGuid(out key))
                                 L.LogWarning("Failed to parse 'key' GUID from " + QuestType + " preset.");
@@ -117,7 +135,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     }
                     else if (reqLvl == default && prop.Equals("required_level"))
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                        if (reader.TokenType == JsonTokenType.Number)
                         {
                             if (!reader.TryGetInt32(out reqLvl))
                                 L.LogWarning("Failed to parse 'required_level' Int32 from " + QuestType + " preset.");
@@ -127,7 +145,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     }
                     else if (varTeam == default && prop.Equals("varient_team"))
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                        if (reader.TokenType == JsonTokenType.Number)
                         {
                             if (!reader.TryGetUInt64(out varTeam))
                                 L.LogWarning("Failed to parse 'varient_team' UInt64 from " + QuestType + " preset.");
@@ -137,7 +155,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     }
                     else if (flag == 0 && prop.Equals("flag"))
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.Number)
+                        if (reader.TokenType == JsonTokenType.Number)
                         {
                             if (!reader.TryGetUInt16(out flag))
                             {
@@ -150,7 +168,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     }
                     else if (prop.Equals("state"))
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                        if (reader.TokenType == JsonTokenType.StartObject)
                         {
                             state = new TState();
                             while (reader.Read())
@@ -170,8 +188,10 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                                         L.LogError(ex);
                                     }
                                 }
+                                else if (reader.TokenType == JsonTokenType.EndObject)
+                                    break;
                             }
-                            if (reader.TokenType == JsonTokenType.EndObject)
+                            if (reader.Read() && reader.TokenType == JsonTokenType.EndObject)
                                 break;
                         }
                         else

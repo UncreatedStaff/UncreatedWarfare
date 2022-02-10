@@ -7,6 +7,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -176,6 +177,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             else
                 L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
+
+            QuestManager.OnGameOver(winner);
 
             foreach (SteamPlayer client in Provider.clients)
             {

@@ -159,6 +159,9 @@ namespace Uncreated.Warfare.Vehicles
                 return null;
             }
         }
+
+        internal static void OnQuestCompleted(UCPlayer player, Guid presetKey) => throw new NotImplementedException();
+
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();

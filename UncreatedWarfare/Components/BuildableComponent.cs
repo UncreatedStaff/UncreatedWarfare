@@ -7,6 +7,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
@@ -121,7 +122,7 @@ namespace Uncreated.Warfare.Components
                 else
                     L.LogDebug($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
 
-                if (!(Assets.find(Buildable.emplacementData.vehicleID) is VehicleAsset vehicleasset))
+                if (Assets.find(Buildable.emplacementData.vehicleID) is not VehicleAsset vehicleasset)
                 {
                     L.LogDebug($"Emplacement {Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N")}'s vehicle id is not a valid vehicle.");
                     return;
@@ -160,7 +161,7 @@ namespace Uncreated.Warfare.Components
 
             EffectManager.sendEffect(29, EffectManager.MEDIUM, data.point);
 
-            foreach (var entry in PlayerHits)
+            foreach (KeyValuePair<ulong, int> entry in PlayerHits)
             {
                 UCPlayer player = UCPlayer.FromID(entry.Key);
 
@@ -175,9 +176,10 @@ namespace Uncreated.Warfare.Components
                         amount = entry.Value * Points.XPConfig.ShovelXP;
 
                     Points.AwardXP(player, amount, structureName.ToUpper() + " BUILT");
+                    if (contribution > 0.3333f)
+                        QuestManager.OnBuildableBuilt(player, Buildable);
                 }
             }
-
             if (Regions.tryGetCoordinate(Foundation.model.position, out byte x, out byte y))
             {
                 BarricadeManager.destroyBarricade(Foundation, x, y, ushort.MaxValue);

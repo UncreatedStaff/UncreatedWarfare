@@ -6,6 +6,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -238,7 +239,7 @@ namespace Uncreated.Warfare.Components
                 if (nearestLogi.transform.TryGetComponent(out VehicleComponent component))
                 {
                     component.Quota += 5;
-                    Creator = component.lastDriver;
+                    Creator = component.LastDriver;
                 }
 
                 if (!nearestLogi.isDriven)
@@ -277,7 +278,7 @@ namespace Uncreated.Warfare.Components
 
                     for (int i = nearestLogi.trunkItems.getItemCount() - 1; i >= 0; i--)
                     {
-                        var item = nearestLogi.trunkItems.items[i];
+                        ItemJar item = nearestLogi.trunkItems.items[i];
                         ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
                         nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
                     }
@@ -355,6 +356,8 @@ namespace Uncreated.Warfare.Components
                                     xp *= 2;
                                     tw *= 2;
                                 }
+
+                                QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
 
                                 InteractableVehicle vehicle = player.Player.movement.getVehicle();
                                 if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))

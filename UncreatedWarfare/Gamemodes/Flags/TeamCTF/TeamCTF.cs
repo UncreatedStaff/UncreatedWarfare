@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Linq;
+using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
 {
@@ -34,6 +35,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             using IDisposable profiler = ProfilingUtils.StartTracking();
             base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
             CTFUI.ReplicateFlagUpdate(flag, true);
+            QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
+                        .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
         }
         protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {

@@ -14,6 +14,7 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
@@ -130,6 +131,8 @@ namespace Uncreated.Warfare
                     if (c.stats is BaseCTFStats st && parameters.killer.IsOnFlag())
                         st.AddKillOnPoint();
                 }
+
+                QuestManager.OnKill(parameters);
                 bool atk = false;
                 bool def = false;
                 if (Data.Is(out IGameStats ws) && ws.GameStats is ILongestShotTracker ls)
@@ -314,6 +317,7 @@ namespace Uncreated.Warfare
                 TicketManager.OnPlayerSuicide(parameters);
                 Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
+                QuestManager.OnDeath(parameters);
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
                     kd.AddDeath();
                 if (KitManager.HasKit(parameters.dead, out Kit kit))
@@ -432,6 +436,7 @@ namespace Uncreated.Warfare
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
                     kd.AddDeath();
                 Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                QuestManager.OnDeath(parameters);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
                 if (KitManager.HasKit(parameters.dead, out Kit kit))
                 {

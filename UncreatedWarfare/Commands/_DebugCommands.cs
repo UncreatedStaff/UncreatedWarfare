@@ -27,6 +27,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Insurgency;
+using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -1167,7 +1168,10 @@ namespace Uncreated.Warfare.Commands
 
             L.Log(F.ToGridPosition(player.transform.position));
         }
-
+        private void questdump(string[] command, Player player)
+        {
+            QuestManager.PrintAllQuests(player == null ? null : UCPlayer.FromPlayer(player));
+        }
         private void saveall(string[] command, Player player)
         {
             F.SaveProfilingData();

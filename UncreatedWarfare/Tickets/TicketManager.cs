@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -120,13 +121,14 @@ namespace Uncreated.Warfare.Tickets
 
                 if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
+                    UCPlayer owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
                         UCPlayer player = UCPlayer.FromID(vc.lastDamager);
                         bool wasCrashed = false;
 
                         if (player == null)
-                            player = UCPlayer.FromID(vc.lastDriver);
+                            player = UCPlayer.FromID(vc.LastDriver);
                         if (player == null)
                             return;
                         else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
@@ -179,7 +181,7 @@ namespace Uncreated.Warfare.Tickets
                         }
 
 
-                        double totalDamage = 0;
+                        float totalDamage = 0;
                         foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
                         {
                             if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
@@ -203,14 +205,18 @@ namespace Uncreated.Warfare.Tickets
                             else
                                 Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
 
+                            QuestManager.OnVehicleDestroyed(owner, player, data, vc);
+
+                            float resMax = 0f;
+                            UCPlayer resMaxPl = null;
                             foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
                             {
                                 if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
                                 {
-                                    float responsibleness = (float)(entry.Value.Key / totalDamage);
+                                    float responsibleness = entry.Value.Key / totalDamage;
                                     int reward = Mathf.RoundToInt(responsibleness * fullXP);
 
-                                    var attacker = UCPlayer.FromID(entry.Key);
+                                    UCPlayer attacker = UCPlayer.FromID(entry.Key);
                                     if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
                                     {
                                         if (attacker.CSteamID.m_SteamID == vc.lastDamager)
@@ -220,9 +226,19 @@ namespace Uncreated.Warfare.Tickets
                                         }
                                         else if (responsibleness > 0.1F)
                                             Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
+                                        if (responsibleness > resMax)
+                                        {
+                                            resMax = responsibleness;
+                                            resMaxPl = attacker;
+                                        }
                                     }
                                 }
-                            }                            
+                            }
+
+                            if (resMax > 0 && player.Steam64 != resMaxPl?.Steam64)
+                            {
+                                QuestManager.OnVehicleDestroyed(owner, resMaxPl, data, vc);
+                            }
                             
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);

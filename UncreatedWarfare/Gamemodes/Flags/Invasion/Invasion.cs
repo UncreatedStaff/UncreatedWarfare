@@ -6,6 +6,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {
@@ -427,6 +428,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         {
             base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
             InvasionUI.ReplicateFlagUpdate(flag, true);
+            QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
+                .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
         }
         protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {

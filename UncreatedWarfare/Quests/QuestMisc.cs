@@ -6,8 +6,11 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Quests.Types;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -51,11 +54,10 @@ public enum EQuestType : byte
     KILL_STREAK,
     XP_IN_GAMEMODE,
     KILL_FROM_RANGE,
-    KILL_FROM_RANGE_WITH_WEAPON,    // todo
-    KILL_FROM_RANGE_WITH_CLASS,     // todo
-    KILL_FROM_RANGE_WITH_KIT,       // todo
-    DEFEND_OBJECTIVE_FOR_TIME,      // todo
-    TEAMMATES_DEPLOY_ON_RALLY       // todo
+    KILL_FROM_RANGE_WITH_WEAPON,
+    KILL_FROM_RANGE_WITH_CLASS,
+    KILL_FROM_RANGE_WITH_KIT,
+    TEAMMATES_DEPLOY_ON_RALLY
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
@@ -82,299 +84,243 @@ public static class QuestJsonEx
     }
     public static unsafe bool TryReadIntegralValue(this ref Utf8JsonReader reader, out DynamicIntegerValue value)
     {
-        if (reader.Read())
+        if (reader.TokenType == JsonTokenType.String)
         {
-            if (reader.TokenType == JsonTokenType.String)
+            string str = reader.GetString();
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
-                string str = reader.GetString();
-                if (string.IsNullOrEmpty(str) || str.Length < 3)
+                if (str == "$*" || str == "#*")
                 {
-                    if (str == "$*" || str == "#*")
-                    {
-                        value = new DynamicIntegerValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
-                    }
-                    else if (int.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out int v))
-                    {
-                        value = new DynamicIntegerValue(v);
-                    }
-                    else
-                    {
-                        value = new DynamicIntegerValue(0);
-                        return false;
-                    }
-                    return true;
-                }
-
-                bool isInclusive = str[0] == '#';
-
-                if (isInclusive || str[0] == '$')
-                {
-                    if (str[1] == '(' && str[str.Length - 1] == ')') // read range
-                    {
-                        int sep = str.IndexOf(':');
-                        if (sep != -1)
-                        {
-                            int v1 = 0;
-                            int v2 = 0;
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                for (int i = sep - 1; i > 1; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                for (int i = str.Length - 1; i > sep; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (v1 > v2)
-                            {
-                                (v2, v1) = (v1, v2);
-                            }
-                            value = new DynamicIntegerValue(new IntegralRange(v1, v2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                            return true;
-                        }
-                        else
-                        {
-                            value = new DynamicIntegerValue(0);
-                            return false;
-                        }
-                    }
-                    else if (str[1] == '[' && str[str.Length - 1] == ']')
-                    {
-                        int len = str.Length;
-                        int arrLen = 1;
-                        int[] res;
-                        fixed (char* p = str)
-                        {
-                            for (int i = 0; i < len; i++)
-                                if (str[i] == ',')
-                                    arrLen++;
-                            res = new int[arrLen];
-                            int ptrpos = str.Length - 1;
-                            int index = arrLen;
-                            while (ptrpos > 1)
-                            {
-                                ptrpos--;
-                                int num = 0;
-                                int m = 1;
-                                char c = *(p + ptrpos);
-                                if (c >= '0' && c <= '9')
-                                {
-                                    num += (c - 48) * m;
-                                    m *= 10;
-                                }
-                                else if (c == '-')
-                                {
-                                    num = -num;
-                                    break;
-                                }
-                                else if (c == ',' || c == '[')
-                                {
-                                    index--;
-                                    res[index] = num;
-                                }
-                            }
-                        }
-
-                        value = new DynamicIntegerValue(new IntegralSet(res), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                        return true;
-
-                    }
-                    else
-                    {
-                        value = new DynamicIntegerValue(0);
-                        return false;
-                    }
+                    value = new DynamicIntegerValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                 }
                 else if (int.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out int v))
                 {
                     value = new DynamicIntegerValue(v);
+                }
+                else
+                {
+                    value = new DynamicIntegerValue(0);
+                    return false;
+                }
+                return true;
+            }
+
+            bool isInclusive = str[0] == '#';
+
+            if (isInclusive || str[0] == '$')
+            {
+                if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                {
+                    int sep = str.IndexOf(':');
+                    if (sep != -1)
+                    {
+                        int v1 = 0;
+                        int v2 = 0;
+                        fixed (char* p = str)
+                        {
+                            int m = 1;
+                            for (int i = sep - 1; i > 1; i--)
+                            {
+                                char c = *(p + i);
+                                if (c >= '0' && c <= '9')
+                                {
+                                    v1 += (c - 48) * m;
+                                    m *= 10;
+                                }
+                                else if (c == '-')
+                                {
+                                    v1 = -v1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        fixed (char* p = str)
+                        {
+                            int m = 1;
+                            for (int i = str.Length - 1; i > sep; i--)
+                            {
+                                char c = *(p + i);
+                                if (c >= '0' && c <= '9')
+                                {
+                                    v1 += (c - 48) * m;
+                                    m *= 10;
+                                }
+                                else if (c == '-')
+                                {
+                                    v1 = -v1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (v1 > v2)
+                        {
+                            (v2, v1) = (v1, v2);
+                        }
+                        value = new DynamicIntegerValue(new IntegralRange(v1, v2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+                        return true;
+                    }
+                    else
+                    {
+                        value = new DynamicIntegerValue(0);
+                        return false;
+                    }
+                }
+                else if (str[1] == '[' && str[str.Length - 1] == ']')
+                {
+                    int len = str.Length;
+                    int arrLen = 1;
+                    int[] res;
+                    fixed (char* p = str)
+                    {
+                        for (int i = 0; i < len; i++)
+                            if (str[i] == ',')
+                                arrLen++;
+                        res = new int[arrLen];
+                        int ptrpos = str.Length - 1;
+                        int index = arrLen;
+                        while (ptrpos > 1)
+                        {
+                            ptrpos--;
+                            int num = 0;
+                            int m = 1;
+                            char c = *(p + ptrpos);
+                            if (c >= '0' && c <= '9')
+                            {
+                                num += (c - 48) * m;
+                                m *= 10;
+                            }
+                            else if (c == '-')
+                            {
+                                num = -num;
+                                break;
+                            }
+                            else if (c == ',' || c == '[')
+                            {
+                                index--;
+                                res[index] = num;
+                            }
+                        }
+                    }
+
+                    value = new DynamicIntegerValue(new IntegralSet(res), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                     return true;
+
+                }
+                else
+                {
+                    value = new DynamicIntegerValue(0);
+                    return false;
                 }
             }
-            else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int v))
+            else if (int.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out int v))
             {
                 value = new DynamicIntegerValue(v);
                 return true;
             }
+        }
+        else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int v))
+        {
+            value = new DynamicIntegerValue(v);
+            return true;
         }
         value = new DynamicIntegerValue(0);
         return false;
     }
     public static unsafe bool TryReadFloatValue(this ref Utf8JsonReader reader, out DynamicFloatValue value)
     {
-        if (reader.Read())
+        if (reader.TokenType == JsonTokenType.String)
         {
-            if (reader.TokenType == JsonTokenType.String)
+            string str = reader.GetString();
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
-                string str = reader.GetString();
-                if (string.IsNullOrEmpty(str) || str.Length < 3)
+                if (str == "$*" || str == "#*")
                 {
-                    if (str == "$*" || str == "#*")
-                    {
-                        value = new DynamicFloatValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
-                    }
-                    else if (float.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out float v))
-                    {
-                        value = new DynamicFloatValue(v);
-                    }
-                    else
-                    {
-                        value = new DynamicFloatValue(0);
-                        return false;
-                    }
-                    return true;
+                    value = new DynamicFloatValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                 }
-
-                bool isInclusive = str[0] == '#';
-
-                if (isInclusive || str[0] == '$')
+                else if (float.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out float v))
                 {
-                    if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                    value = new DynamicFloatValue(v);
+                }
+                else
+                {
+                    value = new DynamicFloatValue(0);
+                    return false;
+                }
+                return true;
+            }
+
+            bool isInclusive = str[0] == '#';
+
+            if (isInclusive || str[0] == '$')
+            {
+                if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                {
+                    int sep = str.IndexOf(':');
+                    if (sep != -1)
                     {
-                        int sep = str.IndexOf(':');
-                        if (sep != -1)
-                        {
-                            int v1 = 0;
-                            int v2 = 0;
-                            float v1f = 0;
-                            float v2f = 0;
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                int decPlace = 1;
-                                for (int i = sep - 1; i > 1; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                    else if (c == '.')
-                                    {
-                                        decPlace = m;
-                                    }
-                                }
-                                v1f = v1 / (float)decPlace;
-                            }
-
-                            fixed (char* p = str)
-                            {
-                                int m = 1;
-                                int decPlace = 1;
-                                for (int i = str.Length - 1; i > sep; i--)
-                                {
-                                    char c = *(p + i);
-                                    if (c >= '0' && c <= '9')
-                                    {
-                                        v1 += (c - 48) * m;
-                                        m *= 10;
-                                    }
-                                    else if (c == '-')
-                                    {
-                                        v1 = -v1;
-                                        break;
-                                    }
-                                    else if (c == '.')
-                                    {
-                                        decPlace = m;
-                                    }
-                                }
-                                v2f = v2 / (float)decPlace;
-                            }
-
-                            if (v1f > v2f)
-                            {
-                                (v2f, v1f) = (v1f, v2f);
-                            }
-
-                            value = new DynamicFloatValue(new FloatRange(v1f, v2f), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                            return true;
-                        }
-                        else
-                        {
-                            value = new DynamicFloatValue(0);
-                            return false;
-                        }
-                    }
-                    else if (str[1] == '[' && str[str.Length - 1] == ']')
-                    {
-                        int len = str.Length;
-                        int arrLen = 1;
-                        float[] res;
+                        int v1 = 0;
+                        int v2 = 0;
+                        float v1f = 0;
+                        float v2f = 0;
                         fixed (char* p = str)
                         {
-                            for (int i = 0; i < len; i++)
-                                if (str[i] == ',')
-                                    arrLen++;
-                            res = new float[arrLen];
-                            int ptrpos = str.Length - 1;
-                            int index = arrLen;
-                            while (ptrpos > 1)
+                            int m = 1;
+                            int decPlace = 1;
+                            for (int i = sep - 1; i > 1; i--)
                             {
-                                ptrpos--;
-                                int num = 0;
-                                int m = 1;
-                                int decPlace = 1;
-                                char c = *(p + ptrpos);
+                                char c = *(p + i);
                                 if (c >= '0' && c <= '9')
                                 {
-                                    num += (c - 48) * m;
+                                    v1 += (c - 48) * m;
                                     m *= 10;
                                 }
                                 else if (c == '-')
                                 {
-                                    num = -num;
+                                    v1 = -v1;
                                     break;
                                 }
                                 else if (c == '.')
                                 {
                                     decPlace = m;
                                 }
-                                else if (c == ',' || c == '[')
+                            }
+                            v1f = v1 / (float)decPlace;
+                        }
+
+                        fixed (char* p = str)
+                        {
+                            int m = 1;
+                            int decPlace = 1;
+                            for (int i = str.Length - 1; i > sep; i--)
+                            {
+                                char c = *(p + i);
+                                if (c >= '0' && c <= '9')
                                 {
-                                    index--;
-                                    res[index] = (float)num / decPlace;
+                                    v1 += (c - 48) * m;
+                                    m *= 10;
+                                }
+                                else if (c == '-')
+                                {
+                                    v1 = -v1;
+                                    break;
+                                }
+                                else if (c == '.')
+                                {
+                                    decPlace = m;
                                 }
                             }
+                            v2f = v2 / (float)decPlace;
                         }
-                        value = new DynamicFloatValue(new FloatSet(res), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                        return true;
 
+                        if (v1f > v2f)
+                        {
+                            (v2f, v1f) = (v1f, v2f);
+                        }
+
+                        value = new DynamicFloatValue(new FloatRange(v1f, v2f), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+                        return true;
                     }
                     else
                     {
@@ -382,88 +328,130 @@ public static class QuestJsonEx
                         return false;
                     }
                 }
-                else if (float.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out float v))
+                else if (str[1] == '[' && str[str.Length - 1] == ']')
                 {
-                    value = new DynamicFloatValue(v);
+                    int len = str.Length;
+                    int arrLen = 1;
+                    float[] res;
+                    fixed (char* p = str)
+                    {
+                        for (int i = 0; i < len; i++)
+                            if (str[i] == ',')
+                                arrLen++;
+                        res = new float[arrLen];
+                        int ptrpos = str.Length - 1;
+                        int index = arrLen;
+                        while (ptrpos > 1)
+                        {
+                            ptrpos--;
+                            int num = 0;
+                            int m = 1;
+                            int decPlace = 1;
+                            char c = *(p + ptrpos);
+                            if (c >= '0' && c <= '9')
+                            {
+                                num += (c - 48) * m;
+                                m *= 10;
+                            }
+                            else if (c == '-')
+                            {
+                                num = -num;
+                                break;
+                            }
+                            else if (c == '.')
+                            {
+                                decPlace = m;
+                            }
+                            else if (c == ',' || c == '[')
+                            {
+                                index--;
+                                res[index] = (float)num / decPlace;
+                            }
+                        }
+                    }
+                    value = new DynamicFloatValue(new FloatSet(res), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                     return true;
+
+                }
+                else
+                {
+                    value = new DynamicFloatValue(0);
+                    return false;
                 }
             }
-            else if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float v))
+            else if (float.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out float v))
             {
                 value = new DynamicFloatValue(v);
                 return true;
             }
+        }
+        else if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float v))
+        {
+            value = new DynamicFloatValue(v);
+            return true;
         }
         value = new DynamicFloatValue(0);
         return false;
     }
     public static unsafe bool TryReadStringValue(this ref Utf8JsonReader reader, out DynamicStringValue value, bool isKitselector)
     {
-        if (reader.Read())
+        if (reader.TokenType == JsonTokenType.String)
         {
-            if (reader.TokenType == JsonTokenType.String)
+            string str = reader.GetString();
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
-                string str = reader.GetString();
-                if (string.IsNullOrEmpty(str) || str.Length < 3)
+                if (str == "$*" || str == "#*")
                 {
-                    if (str == "$*" || str == "#*")
-                    {
-                        value = new DynamicStringValue(isKitselector, EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
-                        return true;
-                    }
-                    else
-                    {
-                        value = new DynamicStringValue(isKitselector, str);
-                        return false;
-                    }
+                    value = new DynamicStringValue(isKitselector, EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    return true;
                 }
-                bool isInclusive = str[0] == '#';
-
-                if (isInclusive || str[0] == '$')
+                else
                 {
-                    if (str[1] == '[' && str[str.Length - 1] == ']')
-                    {
-                        int len = str.Length;
-                        int arrLen = 1;
-                        string[] res;
-                        fixed (char* p = str)
-                        {
-                            for (int i = 0; i < len; i++)
-                                if (str[i] == ',')
-                                    arrLen++;
-                            res = new string[arrLen];
-                            int ptrpos = str.Length - 1;
-                            int index = arrLen;
-                            int endpos = ptrpos;
-                            while (*(p + endpos) != ',')
-                                endpos--;
-                            char[] current = new char[ptrpos - endpos];
-                            while (ptrpos > 1)
-                            {
-                                ptrpos--;
-                                char c = *(p + ptrpos);
-                                if (c == ',' || c == '[')
-                                {
-                                    index--;
-                                    res[index] = new string(current);
-                                    endpos = ptrpos - 1;
-                                    while (endpos > 2 && *(p + endpos) != ',')
-                                        endpos--;
-                                    current = new char[ptrpos - endpos];
-                                }
-                                else
-                                    current[ptrpos - endpos] = c;
-                            }
-                        }
-                        value = new DynamicStringValue(isKitselector, new StringSet(res), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                        return true;
+                    value = new DynamicStringValue(isKitselector, str);
+                    return false;
+                }
+            }
+            bool isInclusive = str[0] == '#';
 
-                    }
-                    else
+            if (isInclusive || str[0] == '$')
+            {
+                if (str[1] == '[' && str[str.Length - 1] == ']')
+                {
+                    int len = str.Length;
+                    int arrLen = 1;
+                    string[] res;
+                    fixed (char* p = str)
                     {
-                        value = new DynamicStringValue(isKitselector, str);
-                        return true;
+                        for (int i = 0; i < len; i++)
+                            if (str[i] == ',')
+                                arrLen++;
+                        res = new string[arrLen];
+                        int ptrpos = str.Length - 1;
+                        int index = arrLen;
+                        int endpos = ptrpos;
+                        while (endpos > 2 && *(p + endpos - 1) != ',')
+                            endpos--;
+                        char[] current = new char[ptrpos - endpos];
+                        while (ptrpos > 1)
+                        {
+                            ptrpos--;
+                            char c = *(p + ptrpos);
+                            if (c == ',' || c == '[')
+                            {
+                                index--;
+                                res[index] = new string(current);
+                                endpos = ptrpos - 1;
+                                while (endpos > 2 && *(p + endpos - 1) != ',')
+                                    endpos--;
+                                current = new char[ptrpos - endpos];
+                            }
+                            else
+                                current[ptrpos - endpos] = c;
+                        }
                     }
+                    value = new DynamicStringValue(isKitselector, new StringSet(res), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+                    return true;
+
                 }
                 else
                 {
@@ -471,22 +459,123 @@ public static class QuestJsonEx
                     return true;
                 }
             }
+            else
+            {
+                value = new DynamicStringValue(isKitselector, str);
+                return true;
+            }
         }
         value = new DynamicStringValue(isKitselector, null);
         return false;
     }
     public static unsafe bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out DynamicEnumValue<TEnum> value) where TEnum : struct, Enum
     {
-        if (reader.Read())
+        if (reader.TokenType == JsonTokenType.String)
         {
-            if (reader.TokenType == JsonTokenType.String)
+            string str = reader.GetString();
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
-                string str = reader.GetString();
-                if (string.IsNullOrEmpty(str) || str.Length < 3)
+                if (str == "$*" || str == "#*")
                 {
-                    if (str == "$*" || str == "#*")
+                    value = new DynamicEnumValue<TEnum>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    return true;
+                }
+                else
+                {
+                    value = new DynamicEnumValue<TEnum>(default);
+                    return false;
+                }
+            }
+            bool isInclusive = str[0] == '#';
+
+            if (isInclusive || str[0] == '$')
+            {
+                if (str[1] == '[' && str[str.Length - 1] == ']')
+                {
+                    int len = str.Length;
+                    int arrLen = 1;
+                    string[] res;
+                    fixed (char* p = str)
                     {
-                        value = new DynamicEnumValue<TEnum>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                        for (int i = 0; i < len; i++)
+                            if (str[i] == ',')
+                                arrLen++;
+                        res = new string[arrLen];
+                        int ptrpos = str.Length - 1;
+                        int index = arrLen;
+                        int endpos = ptrpos;
+                        while (endpos > 2 && *(p + endpos - 1) != ',')
+                            endpos--;
+                        char[] current = new char[ptrpos - endpos];
+                        while (ptrpos > 1)
+                        {
+                            ptrpos--;
+                            char c = *(p + ptrpos);
+                            if (c == ',' || c == '[')
+                            {
+                                index--;
+                                res[index] = new string(current);
+                                endpos = ptrpos - 1;
+                                while (endpos > 2 && *(p + endpos - 1) != ',')
+                                    endpos--;
+                                current = new char[ptrpos - endpos];
+                            }
+                            else
+                                current[ptrpos - endpos] = c;
+                        }
+                    }
+                    TEnum[] enums = new TEnum[arrLen];
+                    int i2 = 0;
+                    for (int i = 0; i < arrLen; i++)
+                    {
+                        if (Enum.TryParse(res[i], true, out TEnum te))
+                        {
+                            enums[i2] = te;
+                            i2++;
+                        }
+                        else
+                        {
+                            L.LogWarning("[QUEST PARSER] Couldn't interpret " + res[i] + " as an " + typeof(TEnum).Name);
+                        }
+                    }
+                    // get rid of ones that failed to parse
+                    if (i2 != arrLen)
+                    {
+                        TEnum[] old = enums;
+                        enums = new TEnum[i2];
+                        Array.Copy(old, 0, enums, 0, i2);
+                    }
+                    value = new DynamicEnumValue<TEnum>(new EnumSet<TEnum>(enums), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+                    return true;
+
+                }
+                else if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                {
+                    int sep = str.IndexOf(':');
+                    if (sep != -1)
+                    {
+                        string p1 = str.Substring(2, sep - 2);
+                        string p2 = str.Substring(sep + 1, str.Length - sep - 2);
+                        if (!Enum.TryParse(p1, true, out TEnum e1))
+                        {
+                            L.LogWarning("[QUEST PARSER] Couldn't interpret \"" + p1 + "\" (lower range) as an " + typeof(TEnum).Name);
+                            value = new DynamicEnumValue<TEnum>(default);
+                            return false;
+                        }
+                        if (!Enum.TryParse(p2, true, out TEnum e2))
+                        {
+                            L.LogWarning("[QUEST PARSER] Couldn't interpret \"" + p2 + "\" (higher range) as an " + typeof(TEnum).Name);
+                            value = new DynamicEnumValue<TEnum>(default);
+                            return false;
+                        }
+                        int n1 = (int)(object)e1;
+                        int n2 = (int)(object)e2;
+                        if (n1 > n2)
+                            (e2, e1) = (e1, e2);
+                        if (n1 == n2)
+                            value = new DynamicEnumValue<TEnum>(e1);
+                        else
+                            value = new DynamicEnumValue<TEnum>(new EnumRange<TEnum>(e1, e2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                         return true;
                     }
                     else
@@ -495,125 +584,28 @@ public static class QuestJsonEx
                         return false;
                     }
                 }
-                bool isInclusive = str[0] == '#';
-
-                if (isInclusive || str[0] == '$')
-                {
-                    if (str[1] == '[' && str[str.Length - 1] == ']')
-                    {
-                        int len = str.Length;
-                        int arrLen = 1;
-                        string[] res;
-                        fixed (char* p = str)
-                        {
-                            for (int i = 0; i < len; i++)
-                                if (str[i] == ',')
-                                    arrLen++;
-                            res = new string[arrLen];
-                            int ptrpos = str.Length - 1;
-                            int index = arrLen;
-                            int endpos = ptrpos;
-                            while (*(p + endpos) != ',')
-                                endpos--;
-                            char[] current = new char[ptrpos - endpos];
-                            while (ptrpos > 1)
-                            {
-                                ptrpos--;
-                                char c = *(p + ptrpos);
-                                if (c == ',' || c == '[')
-                                {
-                                    index--;
-                                    res[index] = new string(current);
-                                    endpos = ptrpos - 1;
-                                    while (endpos > 2 && *(p + endpos) != ',')
-                                        endpos--;
-                                    current = new char[ptrpos - endpos];
-                                }
-                                else
-                                    current[ptrpos - endpos] = c;
-                            }
-                        }
-                        TEnum[] enums = new TEnum[arrLen];
-                        int i2 = 0;
-                        for (int i = 0; i < arrLen; i++)
-                        {
-                            if (Enum.TryParse(res[i], true, out TEnum te))
-                            {
-                                enums[i2] = te;
-                                i2++;
-                            }
-                            else
-                            {
-                                L.LogWarning("[QUEST PARSER] Couldn't interpret " + res[i] + " as a " + typeof(TEnum).Name);
-                            }
-                        }
-                        // get rid of ones that failed to parse
-                        if (i2 != arrLen)
-                        {
-                            TEnum[] old = enums;
-                            enums = new TEnum[i2];
-                            Array.Copy(old, 0, enums, 0, i2);
-                        }
-                        value = new DynamicEnumValue<TEnum>(new EnumSet<TEnum>(enums), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                        return true;
-
-                    }
-                    else if (str[1] == '(' && str[str.Length - 1] == ')') // read range
-                    {
-                        int sep = str.IndexOf(':');
-                        if (sep != -1)
-                        {
-                            string p1 = str.Substring(2, sep - 2);
-                            string p2 = str.Substring(sep + 1, str.Length - sep - 2);
-                            if (!Enum.TryParse(p1, true, out TEnum e1))
-                            {
-                                value = new DynamicEnumValue<TEnum>(default);
-                                return false;
-                            }
-                            if (!Enum.TryParse(p2, true, out TEnum e2))
-                            {
-                                value = new DynamicEnumValue<TEnum>(default);
-                                return false;
-                            }
-                            int n1 = (int)(object)e1;
-                            int n2 = (int)(object)e2;
-                            if (n1 > n2)
-                                (e2, e1) = (e1, e2);
-                            if (n1 == n2)
-                                value = new DynamicEnumValue<TEnum>(e1);
-                            else
-                                value = new DynamicEnumValue<TEnum>(new EnumRange<TEnum>(e1, e2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                            return true;
-                        }
-                        else
-                        {
-                            value = new DynamicEnumValue<TEnum>(default);
-                            return false;
-                        }
-                    }
-                    else if (Enum.TryParse(str, out TEnum res))
-                    {
-                        value = new DynamicEnumValue<TEnum>(res);
-                        return true;
-                    }
-                }
                 else if (Enum.TryParse(str, out TEnum res))
                 {
                     value = new DynamicEnumValue<TEnum>(res);
                     return true;
                 }
             }
-            else if (reader.TokenType == JsonTokenType.Number)
+            else if (Enum.TryParse(str, out TEnum res))
             {
-                if (reader.TryGetInt64(out long v2))
+                value = new DynamicEnumValue<TEnum>(res);
+                return true;
+            }
+        }
+        else if (reader.TokenType == JsonTokenType.Number)
+        {
+            if (reader.TryGetInt64(out long v2))
+            {
+                try
                 {
-                    try
-                    {
-                        value = new DynamicEnumValue<TEnum>((TEnum)Convert.ChangeType(v2, typeof(TEnum)));
-                        return true;
-                    }
-                    catch { }
+                    value = new DynamicEnumValue<TEnum>((TEnum)Convert.ChangeType(v2, typeof(TEnum)));
+                    return true;
                 }
+                catch { }
             }
         }
         value = new DynamicEnumValue<TEnum>(default);
@@ -621,24 +613,21 @@ public static class QuestJsonEx
     }
     public static bool TryReadEnumValue<TEnum>(this ref Utf8JsonReader reader, out TEnum value) where TEnum : struct, Enum
     {
-        if (reader.Read())
+        if (reader.TokenType == JsonTokenType.String)
         {
-            if (reader.TokenType == JsonTokenType.String)
+            string str = reader.GetString();
+            return Enum.TryParse(str, true, out value);
+        }
+        else if (reader.TokenType == JsonTokenType.Number)
+        {
+            if (reader.TryGetInt64(out long v2))
             {
-                string str = reader.GetString();
-                return Enum.TryParse(str, true, out value);
-            }
-            else if (reader.TokenType == JsonTokenType.Number)
-            {
-                if (reader.TryGetInt64(out long v2))
+                try
                 {
-                    try
-                    {
-                        value = (TEnum)Convert.ChangeType(v2, typeof(TEnum));
-                        return true;
-                    }
-                    catch { }
+                    value = (TEnum)Convert.ChangeType(v2, typeof(TEnum));
+                    return true;
                 }
+                catch { }
             }
         }
         value = default;
@@ -646,104 +635,101 @@ public static class QuestJsonEx
     }
     public static unsafe bool TryReadAssetValue<TAsset>(this ref Utf8JsonReader reader, out DynamicAssetValue<TAsset> value) where TAsset : Asset
     {
-        if (reader.Read())
+        if (reader.TokenType == JsonTokenType.String)
         {
-            if (reader.TokenType == JsonTokenType.String)
+            string str = reader.GetString();
+            if (string.IsNullOrEmpty(str) || str.Length < 3)
             {
-                string str = reader.GetString();
-                if (string.IsNullOrEmpty(str) || str.Length < 3)
+                if (str == "$*" || str == "#*")
                 {
-                    if (str == "$*" || str == "#*")
-                    {
-                        value = new DynamicAssetValue<TAsset>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
-                        return true;
-                    }
-                    else
-                    {
-                        value = new DynamicAssetValue<TAsset>(default);
-                        return false;
-                    }
-                }
-                bool isInclusive = str[0] == '#';
-
-                if (isInclusive || str[0] == '$')
-                {
-                    if (str[1] == '[' && str[str.Length - 1] == ']')
-                    {
-                        int len = str.Length;
-                        int arrLen = 1;
-                        string[] res;
-                        fixed (char* p = str)
-                        {
-                            for (int i = 0; i < len; i++)
-                                if (str[i] == ',')
-                                    arrLen++;
-                            res = new string[arrLen];
-                            int ptrpos = str.Length - 1;
-                            int index = arrLen;
-                            int endpos = ptrpos;
-                            while (*(p + endpos) != ',')
-                                endpos--;
-                            char[] current = new char[ptrpos - endpos];
-                            while (ptrpos > 1)
-                            {
-                                ptrpos--;
-                                char c = *(p + ptrpos);
-                                if (c == ',' || c == '[')
-                                {
-                                    index--;
-                                    res[index] = new string(current);
-                                    endpos = ptrpos - 1;
-                                    while (endpos > 2 && *(p + endpos) != ',')
-                                        endpos--;
-                                    current = new char[ptrpos - endpos];
-                                }
-                                else
-                                    current[ptrpos - endpos] = c;
-                            }
-                        }
-                        Guid[] guids = new Guid[arrLen];
-                        int i2 = 0;
-                        for (int i = 0; i < arrLen; i++)
-                        {
-                            if (Guid.TryParse(res[i], out Guid te) && Assets.find(te) is TAsset)
-                            {
-                                guids[i2] = te;
-                                i2++;
-                            }
-                            else
-                            {
-                                L.LogWarning("[QUEST PARSER] Couldn't interpret " + res[i] + " as a " + typeof(TAsset).Name);
-                            }
-                        }
-                        // get rid of ones that failed to parse or aren't a valid asset
-                        if (i2 != arrLen)
-                        {
-                            Guid[] old = guids;
-                            guids = new Guid[i2];
-                            Array.Copy(old, 0, guids, 0, i2);
-                        }
-
-                        value = new DynamicAssetValue<TAsset>(new GuidSet(guids), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                        return true;
-                    }
-                    else
-                    {
-                        L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
-                        value = new DynamicAssetValue<TAsset>(default);
-                        return false;
-                    }
+                    value = new DynamicAssetValue<TAsset>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    return true;
                 }
                 else
                 {
-                    if (Guid.TryParse(str, out Guid guid))
-                    {
-                        value = new DynamicAssetValue<TAsset>(guid);
-                        return true;
-                    }
-                    else
-                        L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
+                    value = new DynamicAssetValue<TAsset>(default);
+                    return false;
                 }
+            }
+            bool isInclusive = str[0] == '#';
+
+            if (isInclusive || str[0] == '$')
+            {
+                if (str[1] == '[' && str[str.Length - 1] == ']')
+                {
+                    int len = str.Length;
+                    int arrLen = 1;
+                    string[] res;
+                    fixed (char* p = str)
+                    {
+                        for (int i = 0; i < len; i++)
+                            if (str[i] == ',')
+                                arrLen++;
+                        res = new string[arrLen];
+                        int ptrpos = str.Length - 1;
+                        int index = arrLen;
+                        int endpos = ptrpos;
+                        while (*(p + endpos) != ',')
+                            endpos--;
+                        char[] current = new char[ptrpos - endpos];
+                        while (ptrpos > 1)
+                        {
+                            ptrpos--;
+                            char c = *(p + ptrpos);
+                            if (c == ',' || c == '[')
+                            {
+                                index--;
+                                res[index] = new string(current);
+                                endpos = ptrpos - 1;
+                                while (endpos > 2 && *(p + endpos) != ',')
+                                    endpos--;
+                                current = new char[ptrpos - endpos];
+                            }
+                            else
+                                current[ptrpos - endpos] = c;
+                        }
+                    }
+                    Guid[] guids = new Guid[arrLen];
+                    int i2 = 0;
+                    for (int i = 0; i < arrLen; i++)
+                    {
+                        if (Guid.TryParse(res[i], out Guid te) && Assets.find(te) is TAsset)
+                        {
+                            guids[i2] = te;
+                            i2++;
+                        }
+                        else
+                        {
+                            L.LogWarning("[QUEST PARSER] Couldn't interpret " + res[i] + " as a " + typeof(TAsset).Name);
+                        }
+                    }
+                    // get rid of ones that failed to parse or aren't a valid asset
+                    if (i2 != arrLen)
+                    {
+                        Guid[] old = guids;
+                        guids = new Guid[i2];
+                        Array.Copy(old, 0, guids, 0, i2);
+                    }
+
+                    value = new DynamicAssetValue<TAsset>(new GuidSet(guids), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+                    return true;
+                }
+                else
+                {
+                    L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
+                    value = new DynamicAssetValue<TAsset>(default);
+                    return false;
+                }
+            }
+            else
+            {
+                if (Guid.TryParse(str, out Guid guid))
+                {
+                    value = new DynamicAssetValue<TAsset>(guid);
+                    return true;
+                }
+                else
+                    L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
             }
         }
         value = new DynamicAssetValue<TAsset>(default);
@@ -965,29 +951,35 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         }
         public bool Read(ref Utf8JsonReader reader)
         {
-            string str = reader.GetString();
-            if (str == "$*" || str == "#*")
+            if (reader.TokenType == JsonTokenType.String)
             {
-                if (str[0] == '#')
-                    _behavior = EChoiceBehavior.ALLOW_ALL;
-                else
-                    _behavior = EChoiceBehavior.ALLOW_ONE;
-                _type = EDynamicValueType.ANY;
-                return true;
-            }
-            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
-            {
-                return reader.TryGetInt32(out _value);
-            }
-            else
-            {
-                if (reader.TryReadIntegralValue(out DynamicIntegerValue v))
+                string str = reader.GetString();
+                if (str == "$*" || str == "#*")
                 {
-                    FromValue(ref v);
+                    if (str[0] == '#')
+                        _behavior = EChoiceBehavior.ALLOW_ALL;
+                    else
+                        _behavior = EChoiceBehavior.ALLOW_ONE;
+                    _type = EDynamicValueType.ANY;
                     return true;
                 }
-                return false;
+                goto backup;
             }
+            else if (reader.TokenType == JsonTokenType.Number)
+            {
+                if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
+                {
+                    return reader.TryGetInt32(out _value);
+                }
+                goto backup;
+            }
+        backup:
+            if (reader.TryReadIntegralValue(out DynamicIntegerValue v))
+            {
+                FromValue(ref v);
+                return true;
+            }
+            return false;
         }
         public void Write(Utf8JsonWriter writer)
         {
@@ -1255,29 +1247,35 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         }
         public bool Read(ref Utf8JsonReader reader)
         {
-            string str = reader.GetString();
-            if (str == "$*" || str == "#*")
+            if (reader.TokenType == JsonTokenType.String)
             {
-                if (str[0] == '#')
-                    _behavior = EChoiceBehavior.ALLOW_ALL;
-                else
-                    _behavior = EChoiceBehavior.ALLOW_ONE;
-                _type = EDynamicValueType.ANY;
-                return true;
-            }
-            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
-            {
-                return reader.TryGetSingle(out _value);
-            }
-            else
-            {
-                if (reader.TryReadFloatValue(out DynamicFloatValue v))
+                string str = reader.GetString();
+                if (str == "$*" || str == "#*")
                 {
-                    FromValue(ref v);
+                    if (str[0] == '#')
+                        _behavior = EChoiceBehavior.ALLOW_ALL;
+                    else
+                        _behavior = EChoiceBehavior.ALLOW_ONE;
+                    _type = EDynamicValueType.ANY;
                     return true;
                 }
-                return false;
+                goto backup;
             }
+            else if (reader.TokenType == JsonTokenType.Number)
+            {
+                if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
+                {
+                    return reader.TryGetSingle(out _value);
+                }
+                goto backup;
+            }
+            backup:
+            if (reader.TryReadFloatValue(out DynamicFloatValue v))
+            {
+                FromValue(ref v);
+                return true;
+            }
+            return false;
         }
         public void Write(Utf8JsonWriter writer)
         {
@@ -2528,7 +2526,8 @@ public interface INotifyOnKill : INotifyTracker
 }
 public interface INotifyOnDeath : INotifyTracker
 {
-    public void OnDeath(UCWarfare.DeathEventArgs kill);
+    public void OnDeath(UCWarfare.DeathEventArgs death);
+    public void OnSuicide(UCWarfare.SuicideEventArgs death);
 }
 public interface INotifyOnObjectiveCaptured : INotifyTracker
 {
@@ -2538,17 +2537,21 @@ public interface INotifyGameOver : INotifyTracker
 {
     public void OnGameOver(ulong winner);
 }
+public interface INotifyRallyActive : INotifyTracker
+{
+    public void OnRallyActivated(RallyPoint rally);
+}
 public interface INotifyGainedXP : INotifyTracker
 {
     public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch);
 }
 public interface INotifyFOBBuilt : INotifyTracker
 {
-    public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob);
+    public void OnFOBBuilt(UCPlayer constructor, FOB fob);
 }
 public interface INotifySuppliesConsumed : INotifyTracker
 {
-    public void OnSuppliesConsumed(Components.FOB fob, ulong player, int amount);
+    public void OnSuppliesConsumed(FOB fob, ulong player, int amount);
 }
 public interface INotifyOnRevive : INotifyTracker
 {
@@ -2560,7 +2563,11 @@ public interface INotifyBuildableBuilt : INotifyTracker
 }
 public interface INotifyVehicleDestroyed : INotifyTracker
 {
-    public void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, IEnumerable<KeyValuePair<ulong, float>> assisters, Vehicles.EVehicleType type);
+    public void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, VehicleData data, VehicleComponent component);
+}
+public interface INotifyVehicleDistanceUpdates : INotifyTracker
+{
+    public void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, VehicleComponent vehicle);
 }
 #endregion
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>

@@ -166,6 +166,7 @@ namespace Uncreated.Warfare
             F.CheckDir(DATA_DIRECTORY, out _, true);
             F.CheckDir(LangStorage, out _, true);
             F.CheckDir(KitsStorage, out _, true);
+            F.CheckDir(PointsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);

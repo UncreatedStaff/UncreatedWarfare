@@ -108,7 +108,7 @@ namespace Uncreated.Warfare
                     }
                     if (seat == 0 && __instance.transform.TryGetComponent(out VehicleComponent c))
                     {   
-                        c.lastDriver = player.channel.owner.playerID.steamID.m_SteamID;
+                        c.LastDriver = player.channel.owner.playerID.steamID.m_SteamID;
                     }
                 }
             }

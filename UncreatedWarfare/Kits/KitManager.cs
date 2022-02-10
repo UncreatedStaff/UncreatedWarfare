@@ -130,6 +130,12 @@ namespace Uncreated.Warfare.Kits
             
             return clothes;
         }
+
+        public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
+        {
+            return false;
+        }
+
         public static void GiveKit(UCPlayer player, Kit kit)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();

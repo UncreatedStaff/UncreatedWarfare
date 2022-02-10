@@ -18,6 +18,7 @@ using Uncreated.Warfare.Stats;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency
 {
@@ -181,6 +182,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             else
                 L.LogWarning("WinToast UI not found. GUID: " + Config.UI.WinToastGUID);
+
+            QuestManager.OnGameOver(winner);
 
             foreach (SteamPlayer client in Provider.clients)
             {
@@ -507,6 +510,10 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             using IDisposable profiler = ProfilingUtils.StartTracking();
             CachesDestroyed++;
             CachesLeft--;
+
+            QuestManager.OnObjectiveCaptured(Provider.clients
+                .Where(x => x.GetTeam() == _attackTeam && (x.player.transform.position - cache.Position).sqrMagnitude < 10000f)
+                .Select(x => x.playerID.steamID.m_SteamID).ToArray());
 
             if (CachesLeft == 0)
             {

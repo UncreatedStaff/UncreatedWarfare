@@ -8,6 +8,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -249,7 +250,7 @@ namespace Uncreated.Warfare.FOBs
                     ItemManager.dropItem(new Item(fobBase.id, true), placer.Position, true, true, true);
                 if (Assets.find(Gamemode.Config.Barricades.AmmoCrateBaseGUID) is ItemAsset ammoBase)
                     ItemManager.dropItem(new Item(ammoBase.id, true), placer.Position, true, true, true);
-
+                QuestManager.OnFOBBuilt(placer, fob);
                 Tips.TryGiveTip(placer, ETip.PLACE_BUNKER);
             }
             SendFOBListToTeam(fob.Team);

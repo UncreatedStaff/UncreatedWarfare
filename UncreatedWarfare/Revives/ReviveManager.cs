@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Revives
@@ -139,14 +140,18 @@ namespace Uncreated.Warfare.Revives
             {
                 r.RevivePlayer(null);
                 byte team = medic.GetTeamByte();
-                ulong tteam = target.GetTeam();
+                byte tteam = target.GetTeamByte();
                 if (team == tteam)
                 {
                     // TODO: better points calculations
-                    Points.AwardXP(UCPlayer.FromPlayer(medic), Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
-                    Points.AwardTW(UCPlayer.FromPlayer(medic), Points.TWConfig.ReviveFriendlyTW);
+                    UCPlayer ucmedic = UCPlayer.FromPlayer(medic);
+                    Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                    Points.AwardTW(ucmedic, Points.TWConfig.ReviveFriendlyTW);
 
-                    if (medic.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IRevivesStats r2)
+                    UCPlayer uctarget = UCPlayer.FromPlayer(target);
+                    QuestManager.OnRevive(ucmedic, uctarget);
+
+                    if (medic.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IRevivesStats r2)
                         r2.AddRevive();
 
                     Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);

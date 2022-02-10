@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Gamemodes
     {
         protected const float MATCH_PRESENT_THRESHOLD = 0.65f;
         public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
-        public virtual EGamemode GamemodeType { get => EGamemode.UNDEFINED };
+        public virtual EGamemode GamemodeType { get => EGamemode.UNDEFINED; }
         public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
         {
             { "TeamCTF", typeof(TeamCTF) },

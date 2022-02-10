@@ -36,6 +36,7 @@ namespace Uncreated.Warfare
         public string NickName;
         public ITransportConnection connection { get { return Player?.channel.owner.transportConnection; } }
         public Coroutine StorageCoroutine;
+        public Ranks.RankStatus[] RankData;
         public FPlayerName Name 
         { 
             get

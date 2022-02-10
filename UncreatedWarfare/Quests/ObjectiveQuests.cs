@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -15,7 +16,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
 {
     public DynamicIntegerValue ObjectiveCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("objective_count", StringComparison.Ordinal))
@@ -84,7 +85,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public DynamicIntegerValue XPCount;
     public DynamicEnumValue<EGamemode> Gamemode;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("xp_required", StringComparison.Ordinal))
@@ -154,5 +155,62 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
             }
         }
         public override string Translate() => QuestData.Translate(_player, _currentXp, ObjectiveCount);
+    }
+}
+[QuestData(EQuestType.TEAMMATES_DEPLOY_ON_RALLY)]
+public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.State, RallyUseQuest>
+{
+    public DynamicIntegerValue UseCount;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("rally_uses", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out UseCount))
+                UseCount = new DynamicIntegerValue(10);
+        }
+    }
+    public struct State : IQuestState<Tracker, RallyUseQuest>
+    {
+        public IDynamicValue<int>.IChoice UseCount;
+        public void Init(RallyUseQuest data)
+        {
+            this.UseCount = data.UseCount.GetValue();
+        }
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("rally_uses", StringComparison.Ordinal))
+                UseCount = DynamicIntegerValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("rally_uses", UseCount);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyRallyActive
+    {
+        private readonly int UseCount = 0;
+        public IDynamicValue<EGamemode>.IChoice Gamemode;
+        private int _rallyUses;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            UseCount = questState.UseCount.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader) { }
+        public override void WriteQuestProgress(Utf8JsonWriter writer) { }
+        public override void ResetToDefaults() => _rallyUses = 0;
+        public void OnRallyActivated(RallyPoint rally)
+        {
+            if (rally.squad.Leader?.Steam64 == _player.Steam64)
+            {
+                _rallyUses += rally.AwaitingPlayers.Count;
+                if (_rallyUses >= UseCount)
+                    TellCompleted();
+                else
+                    TellUpdated();
+            }
+        }
+        public override string Translate() => QuestData.Translate(_player, _rallyUses, UseCount);
     }
 }

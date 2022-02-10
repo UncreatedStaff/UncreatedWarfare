@@ -436,7 +436,8 @@ namespace Uncreated.Warfare
                     Steam64 = ucplayer.Steam64,
                     Team = player.GetTeamByte()
                 });
-
+                Ranks.RankManager.OnPlayerJoin(ucplayer);
+                Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
                 IconManager.DrawNewMarkers(ucplayer, false);
             }
             catch (Exception ex)

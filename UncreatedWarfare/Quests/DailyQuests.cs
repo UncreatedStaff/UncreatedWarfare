@@ -22,6 +22,7 @@ public static class DailyQuests
         DateTime now = DateTime.Now;
         if ((now - LastRefresh).TotalDays > 1d)
         {
+            L.Log("Generating new Daily Quests.", ConsoleColor.Magenta);
             LastRefresh = now;
             foreach (KeyValuePair<ulong, DailyQuestTracker> tracker in DailyTrackers)
             {
@@ -43,11 +44,21 @@ public static class DailyQuests
         for (int i = 0; i < DAILY_QUEST_COUNT; i++)
         {
             BaseQuestTracker tracker = DailyQuestDatas[i].GetTracker(player, ref States[i]);
-            QuestManager.RegisterTracker(tracker);
-            tracker.IsDailyQuest = true;
-            trackers[i] = tracker;
+            if (tracker != null)
+            {
+                QuestManager.RegisterTracker(tracker);
+                tracker.IsDailyQuest = true;
+                trackers[i] = tracker;
+            }
+            else
+            {
+                L.LogWarning("Failed to create tracker for daily quest " + DailyQuestDatas[i].QuestType);
+            }
         }
-        DailyTrackers.Add(player.Steam64, new DailyQuestTracker(player, trackers));
+
+        DailyQuestTracker tr = new DailyQuestTracker(player, trackers);
+        LoadSave(tr);
+        DailyTrackers.Add(player.Steam64, tr);
     }
     /// <summary>Should run on player disconnected.</summary>
     public static void DeregisterDailyTrackers(UCPlayer player)
@@ -63,12 +74,17 @@ public static class DailyQuests
     }
     public static void OnDailyQuestCompleted(BaseQuestTracker tracker)
     {
-
+        L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.Translate() + "\"", ConsoleColor.Cyan);
+        // todo UI or something, xp reward?
     }
 
     public static void OnDailyQuestUpdated(BaseQuestTracker tracker)
     {
-        L.Log("Daily quest updated: \"" + tracker.Translate() + "\"");
+        if (DailyTrackers.TryGetValue(tracker.Player.Steam64, out DailyQuestTracker t2))
+        {
+            SaveProgress(t2);
+        }
+        L.Log("Daily quest " + tracker.QuestData.QuestType + " updated: \"" + tracker.Translate() + "\"");
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()
@@ -101,11 +117,12 @@ public static class DailyQuests
             States[i] = DailyQuestDatas[i].GetState();
         }
     }
-    private static string GetDailySavePath(ulong steam64) => "\\Players\\" + steam64.ToString(Data.Locale) +
-                                                             "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\daily_quest_progress.json";
+    private static string GetDailySavePath(ulong steam64) => Path.GetFullPath("\\Players\\" + steam64.ToString(Data.Locale) +
+                                                             "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\daily_quest_progress.json");
     public static void SaveProgress(DailyQuestTracker tracker)
     {
         string path = GetDailySavePath(tracker.Player.Steam64);
+        
         using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
         {
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
@@ -181,6 +198,13 @@ public static class DailyQuests
                         }
                     }
                 }
+            }
+        }
+        for (int i = 0; i < DAILY_QUEST_COUNT; i++)
+        {
+            if (tracker.Trackers[i].Flag != 0)
+            {
+                tracker.Trackers[i].Player.Player.quests.sendSetFlag(tracker.Trackers[i].Flag, tracker.Trackers[i].FlagValue);
             }
         }
         return;

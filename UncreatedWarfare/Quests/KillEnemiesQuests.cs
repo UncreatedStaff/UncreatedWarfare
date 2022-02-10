@@ -17,7 +17,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
     // > 0 will run the Tick function in trackers
     public override int TickFrequencySeconds => 0;
     // just copy paste this couldn't do it with generics.
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     // used to read from JSON, add a case for each property.
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
@@ -89,7 +89,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
     public DynamicIntegerValue KillCount;
     public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -171,7 +171,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
     public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -264,7 +264,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
     public DynamicIntegerValue KillCount;
     public DynamicStringValue Kits;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -338,13 +338,106 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         }
     }
 }
+[QuestData(EQuestType.KILL_FROM_RANGE_WITH_KIT)]
+public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.Tracker, KillEnemiesQuestKitRange.State, KillEnemiesQuestKitRange>
+{
+    public DynamicIntegerValue KillCount;
+    public DynamicStringValue Kits;
+    public DynamicFloatValue Range;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("kills", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out KillCount))
+                KillCount = new DynamicIntegerValue(20);
+        }
+        else if (propertyname.Equals("kit", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadStringValue(out Kits, true))
+                Kits = new DynamicStringValue(true, EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
+        }
+        else if (propertyname.Equals("range", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadFloatValue(out Range))
+                Range = new DynamicFloatValue(200f);
+        }
+    }
+    public struct State : IQuestState<Tracker, KillEnemiesQuestKitRange>
+    {
+        public IDynamicValue<int>.IChoice KillThreshold;
+        public IDynamicValue<string>.IChoice Kit;
+        public IDynamicValue<float>.IChoice Range;
+        public void Init(KillEnemiesQuestKitRange data)
+        {
+            this.KillThreshold = data.KillCount.GetValue();
+            this.Kit = data.Kits.GetValue();
+            this.Range = data.Range.GetValue();
+        }
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("kills", StringComparison.Ordinal))
+                KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
+            else if (prop.Equals("kit", StringComparison.Ordinal))
+                Kit = DynamicStringValue.ReadChoice(ref reader);
+            else if (prop.Equals("range", StringComparison.Ordinal))
+                Range = DynamicFloatValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", KillThreshold);
+            writer.WriteProperty("kit", Kit);
+            writer.WriteProperty("range", Range);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyOnKill
+    {
+        private readonly int KillThreshold = 0;
+        private readonly IDynamicValue<string>.IChoice Kit;
+        private readonly float Range;
+        private int _kills;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            KillThreshold = questState.KillThreshold.InsistValue();
+            Kit = questState.Kit;
+            Range = questState.Range.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
+        }
+        public override void ResetToDefaults() => _kills = 0;
+        public void OnKill(UCWarfare.KillEventArgs kill)
+        {
+            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance <= Range &&
+                KitManager.HasKit(kill.killer, out Kit kit) && Kit.IsMatch(kit.Name))
+            {
+                _kills++;
+                if (_kills >= KillThreshold)
+                    TellCompleted();
+                else
+                    TellUpdated();
+            }
+        }
+        public override string Translate()
+        {
+            return QuestData.Translate(_player, _kills, KillThreshold, Kit.ToString());
+        }
+    }
+}
 [QuestData(EQuestType.KILL_ENEMIES_WITH_KIT_CLASS)]
 public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.Tracker, KillEnemiesQuestKitClass.State, KillEnemiesQuestKitClass>
 {
     public DynamicIntegerValue KillCount;
     public DynamicEnumValue<EClass> Class;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -419,13 +512,107 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         public override string Translate() => QuestData.Translate(_player, _kills, KillThreshold, Class.ToString());
     }
 }
+[QuestData(EQuestType.KILL_FROM_RANGE_WITH_CLASS)]
+public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitClassRange.Tracker, KillEnemiesQuestKitClassRange.State, KillEnemiesQuestKitClassRange>
+{
+    public DynamicIntegerValue KillCount;
+    public DynamicEnumValue<EClass> Class;
+    public DynamicFloatValue Range;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("kills", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out KillCount))
+                KillCount = new DynamicIntegerValue(20);
+        }
+        else if (propertyname.Equals("class", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadEnumValue(out Class))
+            {
+                Class = new DynamicEnumValue<EClass>(EClass.NONE);
+                L.LogWarning("Invalid class in quest " + QuestType);
+            }
+        }
+        else if (propertyname.Equals("range", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadFloatValue(out Range))
+                Range = new DynamicFloatValue(200f);
+        }
+    }
+    public struct State : IQuestState<Tracker, KillEnemiesQuestKitClassRange>
+    {
+        public IDynamicValue<int>.IChoice KillThreshold;
+        public IDynamicValue<EClass>.IChoice Class;
+        public IDynamicValue<float>.IChoice Range;
+        public void Init(KillEnemiesQuestKitClassRange data)
+        {
+            this.KillThreshold = data.KillCount.GetValue();
+            this.Class = data.Class.GetValue();
+            this.Range = data.Range.GetValue();
+        }
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("kills", StringComparison.Ordinal))
+                KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
+            else if (prop.Equals("class", StringComparison.Ordinal))
+                Class = DynamicEnumValue<EClass>.ReadChoice(ref reader);
+            else if (prop.Equals("range", StringComparison.Ordinal))
+                Range = DynamicFloatValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", KillThreshold);
+            writer.WriteProperty("class", Class);
+            writer.WriteProperty("range", Range);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyOnKill
+    {
+        private readonly int KillThreshold = 0;
+        private readonly IDynamicValue<EClass>.IChoice Class;
+        private readonly float Range;
+        private int _kills;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            KillThreshold = questState.KillThreshold.InsistValue();
+            Class = questState.Class;
+            Range = questState.Range.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
+        }
+        public override void ResetToDefaults() => _kills = 0;
+        public void OnKill(UCWarfare.KillEventArgs kill)
+        {
+            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance >= Range &&
+                KitManager.HasKit(kill.killer, out Kit kit) && Class.IsMatch(kit.Class))
+            {
+                _kills++;
+                if (_kills >= KillThreshold)
+                    TellCompleted();
+                else
+                    TellUpdated();
+                return;
+            }
+        }
+        public override string Translate() => QuestData.Translate(_player, _kills, KillThreshold, Class.ToString());
+    }
+}
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON_CLASS)]
 public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponClass.Tracker, KillEnemiesQuestWeaponClass.State, KillEnemiesQuestWeaponClass>
 {
     public DynamicIntegerValue KillCount;
     public DynamicEnumValue<EWeaponClass> Class;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -506,7 +693,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
     public DynamicIntegerValue KillCount;
     public DynamicEnumValue<EBranch> Branch;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -586,7 +773,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
     public DynamicIntegerValue KillCount;
     public DynamicAssetValue<ItemGunAsset> Turrets;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -675,7 +862,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -738,7 +925,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -801,7 +988,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -907,7 +1094,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1013,7 +1200,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1101,7 +1288,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
     public DynamicIntegerValue StreakCount;
     public DynamicIntegerValue StreakLength;
     public override int TickFrequencySeconds => 0;
-    public override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("num_streaks", StringComparison.Ordinal))
@@ -1183,6 +1370,14 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
             }
         }
         public void OnDeath(UCWarfare.DeathEventArgs death)
+        {
+            if (death.dead.channel.owner.playerID.steamID.m_SteamID == _player.Steam64)
+            {
+                _streakProgress = 0;
+                TellUpdated();
+            }
+        }
+        public void OnSuicide(UCWarfare.SuicideEventArgs death)
         {
             if (death.dead.channel.owner.playerID.steamID.m_SteamID == _player.Steam64)
             {

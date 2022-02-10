@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -277,6 +278,8 @@ namespace Uncreated.Warfare.Squads
                     {
                         parent.TeleportPlayer(player);
                     }
+
+                    QuestManager.OnRallyActivated(parent);
                     parent.AwaitingPlayers.Clear();
 
                     parent.timer = SquadManager.config.data.RallyTimer;
