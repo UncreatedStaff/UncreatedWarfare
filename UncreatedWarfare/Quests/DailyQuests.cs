@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -58,7 +59,14 @@ public static class DailyQuests
 
         DailyQuestTracker tr = new DailyQuestTracker(player, trackers);
         LoadSave(tr);
-        DailyTrackers.Add(player.Steam64, tr);
+        if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
+        {
+            for (int i = 0; i < DAILY_QUEST_COUNT; i++)
+                QuestManager.DeregisterTracker(tr2.Trackers[i]);
+            DailyTrackers[player.Steam64] = tr;
+        }
+        else
+            DailyTrackers.Add(player.Steam64, tr);
     }
     /// <summary>Should run on player disconnected.</summary>
     public static void DeregisterDailyTrackers(UCPlayer player)
@@ -117,8 +125,8 @@ public static class DailyQuests
             States[i] = DailyQuestDatas[i].GetState();
         }
     }
-    private static string GetDailySavePath(ulong steam64) => Path.GetFullPath("\\Players\\" + steam64.ToString(Data.Locale) +
-                                                             "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\daily_quest_progress.json");
+    private static string GetDailySavePath(ulong steam64) => ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + steam64.ToString(Data.Locale) +
+                                                             "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\daily_quest_progress.json";
     public static void SaveProgress(DailyQuestTracker tracker)
     {
         string path = GetDailySavePath(tracker.Player.Steam64);

@@ -45,6 +45,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
     {
         private readonly int BuildCount = 0;
         private int _fobsBuilt;
+        public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -120,6 +121,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         private readonly int BuildCount = 0;
         private readonly float SqrBuildRange = 0f;
         private int _fobsBuilt;
+        public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -213,6 +215,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
     {
         private readonly int BuildCount = 0;
         private int _fobsBuilt;
+        public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -304,6 +307,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     {
         private readonly int SupplyCount = 0;
         private int _suppliesDelivered;
+        public override short FlagValue => (short)_suppliesDelivered;
         public override void ResetToDefaults() => _suppliesDelivered = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -392,6 +396,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         private readonly DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
         private readonly IDynamicValue<EBuildableType>.IChoice BuildableType;
         private int _built;
+        public override short FlagValue => (short)_built;
         public override void ResetToDefaults() => _built = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -401,7 +406,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
-            if (reader.TokenType == JsonTokenType.Number && prop.Equals("hits", StringComparison.Ordinal))
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("buildables_built", StringComparison.Ordinal))
                 _built = reader.GetInt32();
         }
         public override void WriteQuestProgress(Utf8JsonWriter writer)
@@ -419,6 +424,6 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _built, Amount, string.Join(", ", BaseIDs.GetAssetValueSet().Select(x => x.itemName)), BuildableType);
+        public override string Translate() => QuestData.Translate(_player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
     }
 }

@@ -49,14 +49,13 @@ public static class QuestManager
             {
                 if (preset.Key == key && preset.Team == team)
                 {
-                    IQuestState state = preset.State;
-                    BaseQuestTracker tr = Quests[i].GetTracker(player, ref state);
+                    BaseQuestTracker tr = Quests[i].GetTracker(player, preset);
                     if (tr == null)
                     {
                         L.LogWarning("Failed to get a tracker from key " + key.ToString("N"));
                         return null;
                     }
-                    ReadProgress(tr, team);
+                    ReadProgress(tr, preset.Team);
                     RegisterTracker(tr);
                     return tr;
                 }
@@ -69,13 +68,13 @@ public static class QuestManager
                 if (preset.Key == key && preset.Team == 0)
                 {
                     IQuestState state = preset.State;
-                    BaseQuestTracker tr = Quests[i].GetTracker(player, ref state);
+                    BaseQuestTracker tr = Quests[i].GetTracker(player, preset);
                     if (tr == null)
                     {
                         L.LogWarning("Failed to get a tracker from key " + key.ToString("N"));
                         return null;
                     }
-                    ReadProgress(tr, team);
+                    ReadProgress(tr, preset.Team);
                     RegisterTracker(tr);
                     return tr;
                 }
@@ -186,7 +185,7 @@ public static class QuestManager
             DailyQuests.OnDailyQuestUpdated(tracker);
         else
         {
-            SaveProgress(tracker, tracker.Player.GetTeam());
+            SaveProgress(tracker, tracker.Preset.Team);
             if (tracker.Flag != 0 && !skipFlagUpdate)
             {
                 tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
@@ -354,8 +353,8 @@ public static class QuestManager
             }
         }
     }
-    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.GetFullPath("\\Players\\" + steam64.ToString(Data.Locale) +
-                                                    "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\" + team + "_" + key.ToString("N") + ".json");
+    private static string GetSavePath(ulong steam64, Guid key, ulong team) => ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + steam64.ToString(Data.Locale) +
+                                                                              "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\" + team + "_" + key.ToString("N") + ".json";
     public static void SaveProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
@@ -366,10 +365,6 @@ public static class QuestManager
         {
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
             writer.WriteStartObject();
-            writer.WritePropertyName("key");
-            writer.WriteStringValue(t.PresetKey.ToString("N"));
-            writer.WritePropertyName("team");
-            writer.WriteNumberValue(team);
             t.WriteQuestProgress(writer);
             writer.WriteEndObject();
             writer.Dispose();
@@ -392,29 +387,16 @@ public static class QuestManager
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
                     string prop = reader.GetString();
-                    if (prop.Equals("key", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!reader.TryGetGuid(out Guid guid) || guid != t.PresetKey)
-                        {
-                            L.LogWarning("Mis-match between key in file " + savePath);
-                        }
-                    }
-                    else if (prop.Equals("team", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!reader.TryGetUInt64(out ulong team2) || team2 != team)
-                        {
-                            L.LogWarning("Mis-match between team in file " + savePath);
-                        }
-                    }
-                    else if (reader.Read())
+                    if (reader.Read())
                     {
                         try
                         {
+                            L.LogDebug("Reading property " + prop);
                             t.OnReadProgressSaveProperty(prop, ref reader);
                         }
                         catch (Exception ex)
                         {
-                            L.LogError("Failed to read property " + prop + " in progress save for preset " + t.PresetKey + 
+                            L.LogError("Failed to read property " + prop + " in progress save for preset " + t.PresetKey +
                                        " of kit type " + t.QuestData.QuestType + " for player " + t.Player.Steam64 + " in file \"" + savePath + "\".");
                             L.LogError(ex);
                         }

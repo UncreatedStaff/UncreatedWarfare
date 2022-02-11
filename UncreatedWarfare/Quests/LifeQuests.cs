@@ -42,6 +42,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
     {
         private readonly int ReviveCount = 0;
         private int _revives;
+        public override short FlagValue => (short)_revives;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             ReviveCount = questState.ReviveCount.InsistValue();

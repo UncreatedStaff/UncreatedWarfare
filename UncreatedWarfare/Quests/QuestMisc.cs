@@ -29,34 +29,63 @@ public enum EWeaponClass : byte
 public enum EQuestType : byte
 {
     INVALID,
-    KILL_ENEMIES, 
+    /// <summary><see cref="KillEnemiesQuest"/></summary>
+    KILL_ENEMIES,
+    /// <summary><see cref="KillEnemiesQuestWeapon"/></summary>
     KILL_ENEMIES_WITH_WEAPON,
+    /// <summary><see cref="KillEnemiesQuestKit"/></summary>
     KILL_ENEMIES_WITH_KIT,
+    /// <summary><see cref="KillEnemiesQuestKitClass"/></summary>
     KILL_ENEMIES_WITH_KIT_CLASS,
+    /// <summary><see cref="KillEnemiesQuestWeaponClass"/></summary>
     KILL_ENEMIES_WITH_WEAPON_CLASS,
+    /// <summary><see cref="KillEnemiesQuestBranch"/></summary>
     KILL_ENEMIES_WITH_BRANCH,
+    /// <summary><see cref="KillEnemiesQuestTurret"/></summary>
     KILL_ENEMIES_WITH_TURRET,
+    /// <summary><see cref="KillEnemiesQuestSquad"/></summary>
     KILL_ENEMIES_IN_SQUAD,
+    /// <summary><see cref="KillEnemiesQuestFullSquad"/></summary>
     KILL_ENEMIES_IN_FULL_SQUAD,
+    /// <summary><see cref="KillEnemiesQuestDefense"/></summary>
     KILL_ENEMIES_ON_POINT_DEFENSE,
+    /// <summary><see cref="KillEnemiesQuestAttack"/></summary>
     KILL_ENEMIES_ON_POINT_ATTACK,
+    /// <summary><see cref="HelpBuildQuest"/></summary>
     SHOVEL_BUILDABLES,
+    /// <summary><see cref="BuildFOBsQuest"/></summary>
     BUILD_FOBS,
+    /// <summary><see cref="BuildFOBsNearObjQuest"/></summary>
     BUILD_FOBS_NEAR_OBJECTIVES,
+    /// <summary><see cref="BuildFOBsOnObjQuest"/></summary>
     BUILD_FOB_ON_ACTIVE_OBJECTIVE,
+    /// <summary><see cref="DeliverSuppliesQuest"/></summary>
     DELIVER_SUPPLIES,
+    /// <summary><see cref="CaptureObjectivesQuest"/></summary>
     CAPTURE_OBJECTIVES,
+    /// <summary><see cref="DestroyVehiclesQuest"/></summary>
     DESTROY_VEHICLES,
-    DRIVE_DISTANCE,                 // todo
+    /// <summary><see cref="DriveDistanceQuest"/></summary>
+    DRIVE_DISTANCE,
+    /// <summary><see cref="TransportPlayersQuest"/></summary>
     TRANSPORT_PLAYERS,              // todo
+    /// <summary><see cref="RevivePlayersQuest"/></summary>
     REVIVE_PLAYERS,
+    /// <summary><see cref="KingSlayerQuest"/></summary>
     KING_SLAYER,
+    /// <summary><see cref="KillStreakQuest"/></summary>
     KILL_STREAK,
+    /// <summary><see cref="XPInGamemodeQuest"/></summary>
     XP_IN_GAMEMODE,
+    /// <summary><see cref="KillEnemiesRangeQuest"/></summary>
     KILL_FROM_RANGE,
+    /// <summary><see cref="KillEnemiesRangeQuestWeapon"/></summary>
     KILL_FROM_RANGE_WITH_WEAPON,
+    /// <summary><see cref="KillEnemiesQuestKitClassRange"/></summary>
     KILL_FROM_RANGE_WITH_CLASS,
+    /// <summary><see cref="KillEnemiesQuestKitRange"/></summary>
     KILL_FROM_RANGE_WITH_KIT,
+    /// <summary><see cref="RallyUseQuest"/></summary>
     TEAMMATES_DEPLOY_ON_RALLY
 }
 
@@ -1755,6 +1784,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             _type = value.type;
             _behavior = value._choiceBehavior;
             _assetType = value.assetType;
+            _areValuesCached = false;
             if (value.type == EDynamicValueType.CONSTANT)
             {
                 _value = value.constant;
@@ -1810,9 +1840,46 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 _areValuesCached = true;
                 return values;
             }
-            _valuesCache = new TAsset[1] { _valueCache };
+            if (_valueCache != null)
+                _valuesCache = new TAsset[1] { _valueCache };
+            else 
+                _valuesCache = new TAsset[0];
             _areValuesCached = true;
             return _valuesCache;
+        }
+        public string GetCommaList()
+        {
+            if (_valueCache != null)
+                return GetName(_valueCache, _assetType);
+            if (_type == EDynamicValueType.ANY && _behavior == EChoiceBehavior.ALLOW_ALL)
+            {
+                if (typeof(TAsset) == typeof(ItemAsset))
+                    return "any item";
+                else if (typeof(TAsset) == typeof(VehicleAsset))
+                    return "any vehicle";
+                else if (typeof(TAsset) == typeof(Asset))
+                    return "any asset";
+                if (_assetType == EAssetType.ITEM)
+                    return " any " + typeof(TAsset).Name.Replace("Item", string.Empty).Replace("Asset", string.Empty).ToLower();
+                else
+                    return " any " + typeof(TAsset).Name.Replace("Asset", string.Empty).ToLower();
+            }
+            if (!_areValuesCached) GetAssetValueSet();
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < _valuesCache.Length; i++)
+            {
+                if (i != 0)
+                {
+                    if (i != _valuesCache.Length - 1)
+                        builder.Append(", ");
+                    if (_valuesCache.Length > 2)
+                        builder.Append(", and ");
+                    else
+                        builder.Append(" and ");
+                }
+                builder.Append(GetName(_valuesCache[i], _assetType));
+            }
+            return builder.ToString();
         }
         public bool IsMatch(Guid value)
         {

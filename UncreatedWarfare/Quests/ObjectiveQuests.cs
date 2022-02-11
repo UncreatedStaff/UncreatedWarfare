@@ -46,6 +46,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
     {
         private readonly int ObjectiveCount = 0;
         private int _captures;
+        public override short FlagValue => (short)_captures;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             ObjectiveCount = questState.ObjectiveCount.InsistValue();
@@ -126,6 +127,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         private readonly int ObjectiveCount = 0;
         public IDynamicValue<EGamemode>.IChoice Gamemode;
         private int _currentXp;
+        public override short FlagValue => (short)_currentXp;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             ObjectiveCount = questState.XPCount.InsistValue();
@@ -193,6 +195,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         private readonly int UseCount = 0;
         public IDynamicValue<EGamemode>.IChoice Gamemode;
         private int _rallyUses;
+        public override short FlagValue => (short)_rallyUses;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             UseCount = questState.UseCount.InsistValue();

@@ -54,6 +54,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
     {
         private readonly int KillThreshold;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         // loads a tracker from a state instead of randomly picking values each time.
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -131,11 +132,12 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         private readonly DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
         private string translationCache1;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
-            translationCache1 = ((KillEnemiesQuestWeapon)QuestData).Weapon.ToString(); // TODO: Look better
+            translationCache1 = Weapon.GetCommaList(); // TODO: Look better
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -224,11 +226,12 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         private readonly float Range;
         private string translationCache1;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
-            translationCache1 = ((KillEnemiesQuestWeapon)QuestData).Weapon.ToString(); // TODO: Look better
+            translationCache1 = Weapon.GetCommaList();
             Range = questState.Range.InsistValue();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
@@ -305,6 +308,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         private readonly int KillThreshold = 0;
         private readonly IDynamicValue<string>.IChoice Kit;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
@@ -397,6 +401,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         private readonly IDynamicValue<string>.IChoice Kit;
         private readonly float Range;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
@@ -481,6 +486,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         private readonly int KillThreshold = 0;
         private readonly IDynamicValue<EClass>.IChoice Class;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
@@ -574,6 +580,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         private readonly IDynamicValue<EClass>.IChoice Class;
         private readonly float Range;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
@@ -656,6 +663,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         private readonly int KillThreshold = 0;
         private readonly IDynamicValue<EWeaponClass>.IChoice Class;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -737,6 +745,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         private readonly int KillThreshold = 0;
         private readonly IDynamicValue<EBranch>.IChoice Branch;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -816,13 +825,14 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         private readonly int KillThreshold = 0;
         private readonly DynamicAssetValue<ItemGunAsset>.Choice Weapon;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         private string translationCache1;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
-            translationCache1 = Weapon.ToStringAssetNames();
+            translationCache1 = Weapon.GetCommaList();
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -892,6 +902,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
     {
         private readonly int KillThreshold = 0;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -955,6 +966,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
     {
         private readonly int KillThreshold = 0;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -1018,6 +1030,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
     {
         private readonly int KillThreshold = 0;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -1124,6 +1137,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
     {
         private readonly int KillThreshold = 0;
         private int _kills;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -1231,6 +1245,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
         private readonly int KillThreshold = 0;
         private int _kills;
         private UCPlayer _kingSlayer;
+        public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
@@ -1330,6 +1345,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
         private readonly int StreakLength = 0;
         private int _streakProgress;
         private int _streaks;
+        public override short FlagValue => (short)_streaks;
         public override void ResetToDefaults()
         {
             _streaks = 0;

@@ -44,6 +44,7 @@ public abstract class BaseQuestData
     public abstract BaseQuestTracker CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
     public abstract BaseQuestTracker GetTracker(UCPlayer player, ref IQuestState state);
+    public abstract BaseQuestTracker GetTracker(UCPlayer player, IQuestPreset preset);
     public abstract void ReadPresets(ref Utf8JsonReader reader);
 }
 
@@ -103,6 +104,19 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         {
             TTracker tracker = CreateQuestTracker(player, ref st2);
             tracker.QuestData = this;
+            return tracker;
+        }
+        return null;
+    }
+    public override BaseQuestTracker GetTracker(UCPlayer player, IQuestPreset preset)
+    {
+        if (preset.State is TState st2)
+        {
+            TTracker tracker = CreateQuestTracker(player, ref st2);
+            tracker.QuestData = this;
+            tracker.PresetKey = preset.Key;
+            tracker.Flag = preset.Flag;
+            tracker.Preset = preset;
             return tracker;
         }
         return null;
@@ -221,6 +235,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     protected readonly UCPlayer _player;
     public UCPlayer Player => _player;
     public BaseQuestData QuestData;
+    public IQuestPreset Preset;
     protected bool isDisposed;
     protected bool _isCompleted;
     public bool IsDailyQuest = false;
@@ -267,5 +282,5 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
         GC.SuppressFinalize(this);
     }
 
-    public void SaveProgresss() => QuestManager.SaveProgress(this, Player.GetTeam());
+    public void SaveProgresss() => QuestManager.SaveProgress(this, Preset.Team);
 }

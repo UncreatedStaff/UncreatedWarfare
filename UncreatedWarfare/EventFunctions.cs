@@ -972,6 +972,7 @@ namespace Uncreated.Warfare
             TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
             Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
             string kit = string.Empty;
             if (ucplayer != null)
