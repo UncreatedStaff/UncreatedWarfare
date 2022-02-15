@@ -43,6 +43,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             using IDisposable profiler = ProfilingUtils.StartTracking();
             base.InvokeOnFlagNeutralized(flag, capturedTeam, lostTeam);
             CTFUI.ReplicateFlagUpdate(flag, true);
+            if (capturedTeam == 1)
+                QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+            else if (capturedTeam == 2)
+                QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {

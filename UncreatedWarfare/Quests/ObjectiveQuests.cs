@@ -28,6 +28,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
     public struct State : IQuestState<Tracker, CaptureObjectivesQuest>
     {
         public IDynamicValue<int>.IChoice ObjectiveCount;
+        public bool IsEligable(UCPlayer player) => true;
         public void Init(CaptureObjectivesQuest data)
         {
             this.ObjectiveCount = data.ObjectiveCount.GetValue();
@@ -47,6 +48,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
         private readonly int ObjectiveCount = 0;
         private int _captures;
         public override short FlagValue => (short)_captures;
+        protected override bool CompletedCheck => _captures >= ObjectiveCount;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             ObjectiveCount = questState.ObjectiveCount.InsistValue();
@@ -76,7 +78,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
                 }
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _captures, ObjectiveCount);
+        public override string Translate() => QuestData!.Translate(_player, _captures, ObjectiveCount);
     }
 }
 
@@ -85,11 +87,12 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
 {
     public DynamicIntegerValue XPCount;
     public DynamicEnumValue<EGamemode> Gamemode;
+    public DynamicIntegerValue NumberOfGames;
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
-        if (propertyname.Equals("xp_required", StringComparison.Ordinal))
+        if (propertyname.Equals("xp_goal", StringComparison.Ordinal))
         {
             if (!reader.TryReadIntegralValue(out XPCount))
                 XPCount = new DynamicIntegerValue(10);
@@ -99,53 +102,84 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
             if (!reader.TryReadEnumValue(out Gamemode))
                 Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ONE);
         }
+        else if (propertyname.Equals("game_count", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out XPCount))
+                XPCount = new DynamicIntegerValue(1);
+        }
     }
     public struct State : IQuestState<Tracker, XPInGamemodeQuest>
     {
         public IDynamicValue<int>.IChoice XPCount;
         public IDynamicValue<EGamemode>.IChoice Gamemode;
+        public IDynamicValue<int>.IChoice GameCount;
+        public bool IsEligable(UCPlayer player) => true;
         public void Init(XPInGamemodeQuest data)
         {
             this.XPCount = data.XPCount.GetValue();
             this.Gamemode = data.Gamemode.GetValue();
+            this.GameCount = data.NumberOfGames.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            if (prop.Equals("xp_required", StringComparison.Ordinal))
+            if (prop.Equals("xp_goal", StringComparison.Ordinal))
                 XPCount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("gamemode", StringComparison.Ordinal))
                 Gamemode = DynamicEnumValue<EGamemode>.ReadChoice(ref reader);
+            else if (prop.Equals("game_count", StringComparison.Ordinal))
+                GameCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("xp_required", XPCount);
+            writer.WriteProperty("xp_goal", XPCount);
             writer.WriteProperty("gamemode", Gamemode);
+            writer.WriteProperty("game_count", GameCount);
         }
     }
     public class Tracker : BaseQuestTracker, INotifyGameOver, INotifyGainedXP
     {
-        private readonly int ObjectiveCount = 0;
+        private readonly int XPCount = 0;
         public IDynamicValue<EGamemode>.IChoice Gamemode;
+        private readonly int GameCount = 0;
         private int _currentXp;
-        public override short FlagValue => (short)_currentXp;
+        private int _gamesCompleted;
+        public override short FlagValue => (short)_gamesCompleted;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
-            ObjectiveCount = questState.XPCount.InsistValue();
+            XPCount = questState.XPCount.InsistValue();
             Gamemode = questState.Gamemode;
+            GameCount = questState.GameCount.InsistValue();
         }
-        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader) { }
-        public override void WriteQuestProgress(Utf8JsonWriter writer) { }
-        public override void ResetToDefaults() => _currentXp = 0;
+        protected override bool CompletedCheck => _gamesCompleted >= GameCount;
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("games_met_goal", StringComparison.Ordinal))
+                _gamesCompleted = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("games_met_goal", _gamesCompleted);
+        }
+        public override void ResetToDefaults()
+        {
+            _currentXp = 0;
+            _gamesCompleted = 0;
+        }
         public void OnGameOver(ulong winner)
         {
             if (Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 && st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is IExperienceStats exp4)
+                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 && 
+                    st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is IExperienceStats exp4)
                     _currentXp = exp4.XPGained;
-                if (_currentXp >= ObjectiveCount)
-                    TellCompleted();
-                else
-                    TellUpdated();
+                if (_currentXp >= XPCount)
+                {
+                    _gamesCompleted++;
+                    if (_gamesCompleted >= GameCount)
+                        TellCompleted();
+                    else
+                        TellUpdated();
+                }
             }
         }
         public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch)
@@ -156,7 +190,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
                     _currentXp = gameTotal;
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _currentXp, ObjectiveCount);
+        public override string Translate() => QuestData!.Translate(_player, _currentXp, XPCount);
     }
 }
 [QuestData(EQuestType.TEAMMATES_DEPLOY_ON_RALLY)]
@@ -167,7 +201,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
     protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
-        if (propertyname.Equals("rally_uses", StringComparison.Ordinal))
+        if (propertyname.Equals("deployments", StringComparison.Ordinal))
         {
             if (!reader.TryReadIntegralValue(out UseCount))
                 UseCount = new DynamicIntegerValue(10);
@@ -180,28 +214,37 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         {
             this.UseCount = data.UseCount.GetValue();
         }
+        public bool IsEligable(UCPlayer player) => true;
+
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
         {
-            if (prop.Equals("rally_uses", StringComparison.Ordinal))
+            if (prop.Equals("deployments", StringComparison.Ordinal))
                 UseCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
         public void WriteQuestState(Utf8JsonWriter writer)
         {
-            writer.WriteProperty("rally_uses", UseCount);
+            writer.WriteProperty("deployments", UseCount);
         }
     }
     public class Tracker : BaseQuestTracker, INotifyRallyActive
     {
         private readonly int UseCount = 0;
-        public IDynamicValue<EGamemode>.IChoice Gamemode;
         private int _rallyUses;
+        protected override bool CompletedCheck => _rallyUses >= UseCount;
         public override short FlagValue => (short)_rallyUses;
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             UseCount = questState.UseCount.InsistValue();
         }
-        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader) { }
-        public override void WriteQuestProgress(Utf8JsonWriter writer) { }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("deployments", StringComparison.Ordinal))
+                _rallyUses = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("deployments", _rallyUses);
+        }
         public override void ResetToDefaults() => _rallyUses = 0;
         public void OnRallyActivated(RallyPoint rally)
         {
@@ -214,6 +257,167 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData.Translate(_player, _rallyUses, UseCount);
+        public override string Translate() => QuestData!.Translate(_player, _rallyUses, UseCount);
+    }
+}
+
+[QuestData(EQuestType.WIN_GAMEMODE)]
+public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamemodeQuest.State, WinGamemodeQuest>
+{
+    public DynamicIntegerValue WinCount;
+    public DynamicEnumValue<EGamemode> Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ALL);
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("gamemode", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadEnumValue(out Gamemode))
+                Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ALL);
+        }
+        else if (propertyname.Equals("wins", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out WinCount))
+                WinCount = new DynamicIntegerValue(10);
+        }
+    }
+    public struct State : IQuestState<Tracker, WinGamemodeQuest>
+    {
+        public IDynamicValue<int>.IChoice Wins;
+        public IDynamicValue<EGamemode>.IChoice Gamemode;
+        public void Init(WinGamemodeQuest data)
+        {
+            this.Gamemode = data.Gamemode.GetValue();
+            this.Wins = data.WinCount.GetValue();
+        }
+        public bool IsEligable(UCPlayer player) => true;
+
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("gamemode", StringComparison.Ordinal))
+                Gamemode = DynamicEnumValue<EGamemode>.ReadChoice(ref reader);
+            else if (prop.Equals("wins", StringComparison.Ordinal))
+                Wins = DynamicIntegerValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("gamemode", Gamemode);
+            writer.WriteProperty("wins", Wins);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyGameOver
+    {
+        public readonly IDynamicValue<EGamemode>.IChoice Gamemode;
+        public readonly int WinCount;
+        private int _wins;
+        protected override bool CompletedCheck => _wins >= WinCount;
+        public override short FlagValue => (short)_wins;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            Gamemode = questState.Gamemode;
+            WinCount = questState.Wins.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("wins", StringComparison.Ordinal))
+                _wins = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("wins", _wins);
+        }
+
+        public override void ResetToDefaults() => _wins = 0;
+        // TODO:
+        [Obsolete("add presence checking", error: true)]
+        public void OnGameOver(ulong winner)
+        {
+            ulong team = _player.GetTeam();
+            if (winner == team && Gamemode.IsMatch(Data.Gamemode.GamemodeType))
+            {
+                _wins++;
+                if (_wins >= WinCount)
+                    TellCompleted();
+                else
+                    TellUpdated();
+            }
+        }
+        public override string Translate() => QuestData!.Translate(_player, Gamemode.ToString());
+    }
+}
+
+[QuestData(EQuestType.NEUTRALIZE_FLAGS)]
+public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, NeutralizeFlagsQuest.State, NeutralizeFlagsQuest>
+{
+    public DynamicIntegerValue Neutralizations;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("neutralizations", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out Neutralizations))
+                Neutralizations = new DynamicIntegerValue(10);
+        }
+    }
+    public struct State : IQuestState<Tracker, NeutralizeFlagsQuest>
+    {
+        public IDynamicValue<int>.IChoice Neutralizations;
+        public void Init(NeutralizeFlagsQuest data)
+        {
+            this.Neutralizations = data.Neutralizations.GetValue();
+        }
+        public bool IsEligable(UCPlayer player) => true;
+
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("neutralizations", StringComparison.Ordinal))
+                Neutralizations = DynamicIntegerValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("neutralizations", Neutralizations);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyOnFlagNeutralized
+    {
+        public readonly int Neutralizations;
+        private int _neutralizations;
+        protected override bool CompletedCheck => _neutralizations >= Neutralizations;
+        public override short FlagValue => (short)_neutralizations;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            Neutralizations = questState.Neutralizations.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("neutralizations", StringComparison.Ordinal))
+                _neutralizations = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("neutralizations", _neutralizations);
+        }
+
+        public override void ResetToDefaults() => _neutralizations = 0;
+        public void OnFlagNeutralized(ulong[] participants, ulong neutralizer)
+        {
+            if (_player.GetTeam() == neutralizer)
+            {
+                for (int i = 0; i < participants.Length; i++)
+                {
+                    if (participants[i] == _player.Steam64)
+                    {
+                        _neutralizations++;
+                        if (_neutralizations >= Neutralizations)
+                            TellCompleted();
+                        else
+                            TellUpdated();
+                        return;
+                    }
+                }
+            }
+        }
+        public override string Translate() => QuestData!.Translate(_player, _neutralizations, Neutralizations);
     }
 }

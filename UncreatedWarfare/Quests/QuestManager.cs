@@ -39,7 +39,7 @@ public static class QuestManager
     }
     /// <summary>Find, generate, and register a tracker using a <paramref name="key"/> and a set <see cref="IQuestPreset"/>.</summary>
     /// <returns>A tracker using a <see cref="IQuestPreset"/> that is matched by <see cref="IQuestPreset.Key"/> and <see cref="IQuestPreset.Team"/> (or 0), or <see langword="null"/> if no preset is found.</returns>
-    public static BaseQuestTracker CreateTracker(UCPlayer player, Guid key)
+    public static BaseQuestTracker? CreateTracker(UCPlayer player, Guid key)
     {
         ulong team = player.GetTeam();
         // look for one that matches their team first.
@@ -131,10 +131,13 @@ public static class QuestManager
         }
         if (player == null) return;
         L.Log("Player Quests: " + player.Steam64.ToString());
-        L.Log("  Rank progress:");
-        for (int i = 0; i < player.RankData.Length; i++)
+        if (player.RankData != null)
         {
-            L.Log("    " + player.RankData[i].ToString());
+            L.Log("  Rank progress:");
+            for (int i = 0; i < player.RankData.Length; i++)
+            {
+                L.Log("    " + player.RankData[i].ToString());
+            }
         }
         L.Log("  All trackers:");
         for (int i = 0; i < RegisteredTrackers.Count; i++)
@@ -170,12 +173,12 @@ public static class QuestManager
         {
             if (tracker.PresetKey != default)
             {
+                if (tracker.Player._completedQuests == null) GetCompletedQuests(tracker.Player);
+                tracker.Player._completedQuests!.Add(tracker.PresetKey);
                 if (!RankManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
                     if (!KitManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
                         VehicleBay.OnQuestCompleted(tracker.Player, tracker.PresetKey);
             }
-            // LevelManager.OnQuestCompleted(tracker.key);  (we need something like this)
-            
             // TODO: Update a UI and check for giving levels, etc.
         }
     }
@@ -195,6 +198,12 @@ public static class QuestManager
         L.LogDebug("Quest updated: " + tracker.Translate());
     }
 
+    public static bool QuestComplete(this UCPlayer player, Guid key)
+    {
+        if (player._completedQuests == null) GetCompletedQuests(player);
+        return player._completedQuests!.Contains(key);
+    }
+
     #region read/write
     public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>();
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
@@ -210,7 +219,7 @@ public static class QuestManager
         }
     }
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
-    public static BaseQuestData GetQuestData(EQuestType type)
+    public static BaseQuestData? GetQuestData(EQuestType type)
     {
         if (QuestTypes.TryGetValue(type, out Type result))
         {
@@ -234,9 +243,9 @@ public static class QuestManager
     }
 
     /// <summary>Read function to parse a quest data with quest type <paramref name="type"/>.</summary>
-    public static BaseQuestData ReadQuestData(ref Utf8JsonReader reader)
+    public static BaseQuestData? ReadQuestData(ref Utf8JsonReader reader)
     {
-        BaseQuestData quest = null;
+        BaseQuestData? quest = null;
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.EndObject)
@@ -245,12 +254,13 @@ public static class QuestManager
             }
             else if (reader.TokenType == JsonTokenType.PropertyName)
             {
-                string propertyName = reader.GetString();
-                if (propertyName.Equals("quest_type", StringComparison.OrdinalIgnoreCase) && quest == null)
+                string? propertyName = reader.GetString();
+                if (propertyName == null) reader.Read();
+                else if (propertyName.Equals("quest_type", StringComparison.OrdinalIgnoreCase) && quest == null)
                 {
                     if (!reader.Read()) return quest;
-                    string typeValue = reader.GetString();
-                    if (Enum.TryParse(typeValue, true, out EQuestType type))
+                    string? typeValue = reader.GetString();
+                    if (typeValue != null && Enum.TryParse(typeValue, true, out EQuestType type))
                     {
                         quest = GetQuestData(type);
                     }
@@ -270,11 +280,11 @@ public static class QuestManager
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                                 {
-                                    string key = reader.GetString();
-                                    if (reader.Read() && reader.TokenType == JsonTokenType.String)
+                                    string? key = reader.GetString();
+                                    if (reader.Read() && key != null && reader.TokenType == JsonTokenType.String)
                                     {
-                                        string value = reader.GetString();
-                                        if (!quest.Translations.ContainsKey(key))
+                                        string? value = reader.GetString();
+                                        if (value != null && !quest.Translations.ContainsKey(key))
                                             quest.Translations.Add(key, value);
                                     }
                                 }
@@ -340,7 +350,7 @@ public static class QuestManager
                 {
                     try
                     {
-                        BaseQuestData data = ReadQuestData(ref reader);
+                        BaseQuestData? data = ReadQuestData(ref reader);
                         if (data != null)
                             Quests.Add(data);
                     }
@@ -359,6 +369,16 @@ public static class QuestManager
     {
         if (t.PresetKey == default) return;
         string savePath = GetSavePath(t.Player.Steam64, t.PresetKey, team);
+        SaveProgress(t, savePath);
+    }
+    internal static void SaveProgress(ulong playerS64Override, BaseQuestTracker t, ulong team)
+    {
+        if (t.PresetKey == default) return;
+        string savePath = GetSavePath(playerS64Override, t.PresetKey, team);
+        SaveProgress(t, savePath);
+    }
+    private static void SaveProgress(BaseQuestTracker t, string savePath)
+    {
         string dir = Path.GetDirectoryName(savePath);
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
         using (FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
@@ -374,6 +394,16 @@ public static class QuestManager
     {
         if (t.PresetKey == default) return;
         string savePath = GetSavePath(t.Player.Steam64, t.PresetKey, team);
+        ReadProgress(t, savePath);
+    }
+    public static void ReadProgress(ulong playerS64Override, BaseQuestTracker t, ulong team)
+    {
+        if (t.PresetKey == default) return;
+        string savePath = GetSavePath(playerS64Override, t.PresetKey, team);
+        ReadProgress(t, savePath);
+    }
+    private static void ReadProgress(BaseQuestTracker t, string savePath)
+    {
         if (!File.Exists(savePath)) return;
         using (FileStream stream = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
         {
@@ -386,27 +416,72 @@ public static class QuestManager
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string prop = reader.GetString();
+                    string? prop = reader.GetString();
                     if (reader.Read())
                     {
                         try
                         {
                             L.LogDebug("Reading property " + prop);
-                            t.OnReadProgressSaveProperty(prop, ref reader);
+                            if (prop != null)
+                                t.OnReadProgressSaveProperty(prop, ref reader);
                         }
                         catch (Exception ex)
                         {
-                            L.LogError("Failed to read property " + prop + " in progress save for preset " + t.PresetKey +
-                                       " of kit type " + t.QuestData.QuestType + " for player " + t.Player.Steam64 + " in file \"" + savePath + "\".");
+                            L.LogError("Failed to read property " + (prop ?? "null") + " in progress save for preset " + t.PresetKey +
+                                       " of kit type " + (t.QuestData?.QuestType.ToString() ?? "*NO QUEST DATA*") + " for file \"" + savePath + "\".");
                             L.LogError(ex);
                         }
                     }
                 }
             }
         }
-        if (t.Flag != 0)
+        if (t.Flag != 0 && t.Player != null)
         {
             t.Player.Player.quests.sendSetFlag(t.Flag, t.FlagValue);
+        }
+    }
+    private static void GetCompletedQuests(UCPlayer player)
+    {
+        string folder = ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + player.Steam64.ToString(Data.Locale) +
+                        "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\";
+        string[] files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
+        player._completedQuests = new List<Guid>(16);
+        for (int fi = 0; fi < files.Length; fi++)
+        {
+            FileInfo file = new FileInfo(files[fi]);
+            string name = Path.GetFileNameWithoutExtension(file.FullName);
+            if (name.Length > 12)
+            {
+                if (file.Exists && name[0] > 47 && name[0] < 59)
+                {
+                    ulong team = (ulong)(name[0] - 48);
+                    string key = name.Substring(2, name.Length - 2);
+                    if (Guid.TryParse(key, out Guid guid))
+                    {
+                        for (int i = 0; i < Quests.Count; i++)
+                        {
+                            foreach (IQuestPreset preset in Quests[i].Presets)
+                            {
+                                if (preset.Key == guid && preset.Team == team)
+                                {
+                                    BaseQuestTracker tr = Quests[i].GetTracker(player, preset);
+                                    if (tr == null)
+                                    {
+                                        goto nextFile;
+                                    }
+                                    ReadProgress(tr, preset.Team);
+                                    if (tr.IsCompleted)
+                                    {
+                                        if (!player._completedQuests.Contains(guid))
+                                            player._completedQuests.Add(guid);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            nextFile: ;
         }
     }
     #endregion
@@ -448,6 +523,11 @@ public static class QuestManager
     {
         foreach (INotifyOnObjectiveCaptured tracker in RegisteredTrackers.OfType<INotifyOnObjectiveCaptured>())
             tracker.OnObjectiveCaptured(participants);
+    }
+    public static void OnFlagNeutralized(ulong[] participants, ulong neutralizer)
+    {
+        foreach (INotifyOnFlagNeutralized tracker in RegisteredTrackers.OfType<INotifyOnFlagNeutralized>())
+            tracker.OnFlagNeutralized(participants, neutralizer);
     }
     public static void OnRevive(UCPlayer reviver, UCPlayer revived)
     {

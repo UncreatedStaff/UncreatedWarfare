@@ -234,13 +234,14 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
 {
     protected readonly UCPlayer _player;
     public UCPlayer Player => _player;
-    public BaseQuestData QuestData;
-    public IQuestPreset Preset;
+    public BaseQuestData? QuestData;
+    public IQuestPreset? Preset;
     protected bool isDisposed;
-    protected bool _isCompleted;
+    private bool _isComplete;
+    protected abstract bool CompletedCheck { get; }
     public bool IsDailyQuest = false;
     public ushort Flag = 0;
-    public bool IsCompleted { get; }
+    public bool IsCompleted { get => _isComplete || CompletedCheck; }
     public virtual short FlagValue => 0;
     public Guid PresetKey;
     public BaseQuestTracker(UCPlayer target)
@@ -255,9 +256,8 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public abstract void OnReadProgressSaveProperty(string property, ref Utf8JsonReader reader);
     public void OnGameEnd()
     {
-        if (QuestData.ResetOnGameEnd)
+        if (QuestData != null && QuestData.ResetOnGameEnd)
         {
-            _isCompleted = false;
             ResetToDefaults();
             TellUpdated();
         }
@@ -265,7 +265,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public void TellCompleted()
     {
         TellUpdated();
-        _isCompleted = true;
         QuestManager.OnQuestCompleted(this);
     }
     public void TellUpdated(bool skipFlagUpdate = false)

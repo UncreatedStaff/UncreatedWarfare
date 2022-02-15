@@ -31,19 +31,19 @@ namespace Uncreated.Warfare.Gamemodes
         private Coroutine endGameUpdateTimer;
         private float secondsLeft;
         protected bool shuttingDown;
-        protected string shuttingDownMessage = null;
+        protected string? shuttingDownMessage = null;
         protected ushort id;
         private void Awake()
         {
             if (Assets.find(GUID) is EffectAsset lbAsset)
                 id = lbAsset.id;
         }
-        public void SetShutdownConfig(bool isShuttingDown, string reason = null)
+        public void SetShutdownConfig(bool isShuttingDown, string? reason = null)
         {
             shuttingDown = isShuttingDown;
             shuttingDownMessage = reason;
         }
-        public VoidDelegate OnLeaderboardExpired;
+        public VoidDelegate? OnLeaderboardExpired;
         protected abstract Guid GUID { get; }
         public void StartLeaderboard(ulong winner, StatTracker tracker)
         {

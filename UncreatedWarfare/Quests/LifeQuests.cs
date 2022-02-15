@@ -23,6 +23,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
     }
     public struct State : IQuestState<Tracker, RevivePlayersQuest>
     {
+        public bool IsEligable(UCPlayer player) => true;
         public IDynamicValue<int>.IChoice ReviveCount;
         public void Init(RevivePlayersQuest data)
         {
@@ -43,6 +44,8 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
         private readonly int ReviveCount = 0;
         private int _revives;
         public override short FlagValue => (short)_revives;
+        protected override bool CompletedCheck => _revives >= ReviveCount;
+
         public Tracker(UCPlayer target, ref State questState) : base(target)
         {
             ReviveCount = questState.ReviveCount.InsistValue();

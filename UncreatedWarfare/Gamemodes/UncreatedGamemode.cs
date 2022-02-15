@@ -56,7 +56,6 @@ namespace Uncreated.Warfare.Gamemodes
         public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
-        public PlayerManager LogoutSaver;
         public Whitelister Whitelister;
         public CooldownManager Cooldowns;
         public virtual bool UseWhitelist { get => true; }
@@ -101,7 +100,6 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual void Init()
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            LogoutSaver = new PlayerManager();
             for (int i = 0; i < Provider.clients.Count; i++)
                 PlayerManager.InvokePlayerConnected(UnturnedPlayer.FromSteamPlayer(Provider.clients[i]));
             Cooldowns = new CooldownManager();

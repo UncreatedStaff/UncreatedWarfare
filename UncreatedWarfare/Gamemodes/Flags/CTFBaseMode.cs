@@ -32,8 +32,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected int _objectiveT2Index;
         public int ObjectiveT1Index => _objectiveT1Index;
         public int ObjectiveT2Index => _objectiveT2Index;
-        public Flag ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < _rotation.Count ? _rotation[_objectiveT1Index] : null;
-        public Flag ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < _rotation.Count ? _rotation[_objectiveT2Index] : null;
+        public Flag? ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < _rotation.Count ? _rotation[_objectiveT1Index] : null;
+        public Flag? ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < _rotation.Count ? _rotation[_objectiveT2Index] : null;
         public override bool EnableAMC => true;
         public override bool ShowOFPUI => true;
         public override bool ShowXPUI => true;
@@ -62,8 +62,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         // leaderboard
         protected Leaderboard _endScreen;
         Leaderboard<Stats, StatTracker> IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
-        protected Transform _blockerBarricadeT1 = null;
-        protected Transform _blockerBarricadeT2 = null;
+        protected Transform? _blockerBarricadeT1 = null;
+        protected Transform? _blockerBarricadeT2 = null;
         private bool _isScreenUp = false;
         public bool isScreenUp => _isScreenUp;
         private StatTracker _gameStats;

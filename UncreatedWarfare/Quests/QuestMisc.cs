@@ -68,7 +68,7 @@ public enum EQuestType : byte
     /// <summary><see cref="DriveDistanceQuest"/></summary>
     DRIVE_DISTANCE,
     /// <summary><see cref="TransportPlayersQuest"/></summary>
-    TRANSPORT_PLAYERS,              // todo
+    TRANSPORT_PLAYERS,
     /// <summary><see cref="RevivePlayersQuest"/></summary>
     REVIVE_PLAYERS,
     /// <summary><see cref="KingSlayerQuest"/></summary>
@@ -86,7 +86,17 @@ public enum EQuestType : byte
     /// <summary><see cref="KillEnemiesQuestKitRange"/></summary>
     KILL_FROM_RANGE_WITH_KIT,
     /// <summary><see cref="RallyUseQuest"/></summary>
-    TEAMMATES_DEPLOY_ON_RALLY
+    TEAMMATES_DEPLOY_ON_RALLY,
+    /// <summary><see cref="FOBUseQuest"/></summary>
+    TEAMMATES_DEPLOY_ON_FOB,
+    /// <summary><see cref="NeutralizeFlagsQuest"/></summary>
+    NEUTRALIZE_FLAGS,
+    /// <summary><see cref="WinGamemodeQuest"/></summary>
+    WIN_GAMEMODE,
+    /// <summary><see cref="DiscordKeySetQuest"/></summary>
+    DISCORD_KEY_SET_BOOL,
+    /// <summary><see cref="PlaceholderQuest"/></summary>
+    PLACEHOLDER
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
@@ -2600,6 +2610,10 @@ public interface INotifyOnObjectiveCaptured : INotifyTracker
 {
     public void OnObjectiveCaptured(ulong[] participants);
 }
+public interface INotifyOnFlagNeutralized : INotifyTracker
+{
+    public void OnFlagNeutralized(ulong[] participants, ulong neutralizer);
+}
 public interface INotifyGameOver : INotifyTracker
 {
     public void OnGameOver(ulong winner);
@@ -2649,4 +2663,5 @@ public interface IQuestState
 public interface IQuestState<TTracker, TDataNew> : IQuestState where TTracker : BaseQuestTracker where TDataNew : BaseQuestData
 {
     public void Init(TDataNew data);
+    public bool IsEligable(UCPlayer player);
 }

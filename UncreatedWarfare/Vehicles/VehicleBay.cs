@@ -160,7 +160,7 @@ namespace Uncreated.Warfare.Vehicles
             }
         }
 
-        internal static void OnQuestCompleted(UCPlayer player, Guid presetKey) => throw new NotImplementedException();
+        internal static bool OnQuestCompleted(UCPlayer player, Guid presetKey) => false;
 
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
         {

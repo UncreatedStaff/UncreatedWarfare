@@ -117,6 +117,7 @@ public static class DailyQuests
                     if (ints[p] == rndPick)
                         goto exists;
                 }
+                if (!QuestManager.Quests[rndPick].CanBeDailyQuest) goto exists;
                 break;
             }
 

@@ -471,8 +471,8 @@ namespace Uncreated.Warfare
                         VoiceMutedUseTick();
                         return false;
                     }
+                    ucplayer.LastSpoken = Time.realtimeSinceStartup;
                 }
-                ucplayer.LastSpoken = Time.realtimeSinceStartup;
                 return true;
             }
 
@@ -504,7 +504,7 @@ namespace Uncreated.Warfare
             BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
             if (player == null || storagedrop == null ||
                 !Gamemode.Config.Barricades.TimeLimitedStorages.Contains(storagedrop.asset.GUID)) return;
-            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+            UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
             if (ucplayer == null) return;
             if (ucplayer.StorageCoroutine != null)
                 player.player.StopCoroutine(ucplayer.StorageCoroutine);
@@ -706,8 +706,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
             if (shouldAllow)
             {
-                VehicleComponent component = null;
-                if (!vehicle.transform.TryGetComponent(out component))
+                if (!vehicle.transform.TryGetComponent(out VehicleComponent component))
                 {
                     component = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
                     component.Initialize(vehicle);
@@ -780,7 +779,12 @@ namespace Uncreated.Warfare
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
             if (player == null) return;
-            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+            UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
+            if (ucplayer == null || ucplayer.Squad == null)
+            {
+                allowed = false;
+                return;
+            }
             if (!isBeingPlaced)
             {
                 ClearPlayerMarkerForSquad(ucplayer);
@@ -792,7 +796,6 @@ namespace Uncreated.Warfare
                 ucplayer.Message("range_notsquadleader");
                 return;
             }
-
             overrideText = ucplayer.Squad.Name.ToUpper();
             //Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
             //PlaceMarker(ucplayer, effectposition, false, false);
@@ -803,7 +806,7 @@ namespace Uncreated.Warfare
             if (player == null) return;
             if (gesture == EPlayerGesture.POINT)
             {
-                UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+                UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
                 if (ucplayer == null) return;
                 if (!Physics.Raycast(new Ray(player.look.aim.transform.position, player.look.aim.transform.forward), out RaycastHit hit, 8192f, RayMasks.BLOCK_COLLISION)) return;
                 PlaceMarker(ucplayer, hit.point, true, true);
@@ -857,10 +860,10 @@ namespace Uncreated.Warfare
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
             if (!player.inventory.isStoring || player == null || jar == null || jar.item == null || allow == false) return;
-            UCPlayer utplayer = UCPlayer.FromPlayer(player);
-            if (utplayer.OnDuty())
+            UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
+            if (ucplayer != null && ucplayer.OnDuty())
                 return;
-            if (!(Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)) return;
+            if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) return;
             if (!Whitelister.IsWhitelisted(asset.GUID, out _))
             {
                 allow = false;
@@ -971,20 +974,28 @@ namespace Uncreated.Warfare
             droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
-            Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
-            Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
+            UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = string.Empty;
             if (ucplayer != null)
             {
+                Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
+                Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
                 if (Data.Is(out ITeams gm) && gm.UseJoinUI)
                     gm.JoinManager.OnPlayerDisconnected(ucplayer);
                 if (Data.Is<IFOBs>(out _)) FOBManager.OnPlayerDisconnect(ucplayer);
                 kit = ucplayer.KitName;
+                try
+                {
+                    Data.Gamemode.OnPlayerLeft(ucplayer);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
+                    L.LogError(ex);
+                }
             }
             try
             {
-                Data.Gamemode.OnPlayerLeft(ucplayer);
                 FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
                 if (player.OnDuty())
                 {
@@ -1049,8 +1060,8 @@ namespace Uncreated.Warfare
                 FPlayerName names = new FPlayerName(player.playerID);
 
                 bool kick = false;
-                string cn = null;
-                string nn = null;
+                string? cn = null;
+                string? nn = null;
                 if (player.playerID.characterName.Length == 0)
                 {
                     player.playerID.characterName = player.playerID.steamID.m_SteamID.ToString(Data.Locale);

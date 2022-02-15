@@ -57,6 +57,7 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
+
         protected override string LoadDefaults()
         {
             return "[]";
@@ -350,11 +351,17 @@ namespace Uncreated.Warfare.Kits
         public static bool HasKit(ulong steamID, out Kit kit)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            var player = UCPlayer.FromID(steamID);
+            UCPlayer? player = UCPlayer.FromID(steamID);
 
-            if (player is null)
+            if (player == null)
             {
-                kit = GetObject(k => k.Name == PlayerManager.GetSave(steamID).KitName);
+                PlayerSave? save = PlayerManager.GetSave(steamID);
+                if (save == null)
+                {
+                    kit = null!;
+                    return false;
+                }
+                kit = GetObject(k => k.Name == save.KitName);
                 return kit != null;
             }
             else
@@ -438,7 +445,7 @@ namespace Uncreated.Warfare.Kits
         }
 
         public static void WriteKitJson(Kit kit, Utf8JsonWriter writer) => kit.WriteJson(writer);
-        public static Kit Construct(string name, List<KitItem> items, List<KitClothing> clothes, Action<Kit> modifiers = null)
+        public static Kit Construct(string name, List<KitItem> items, List<KitClothing> clothes, Action<Kit>? modifiers = null)
         {
             Kit kit = new Kit(true)
             {

@@ -29,14 +29,14 @@ namespace Uncreated.Warfare
         public EClass KitClass;
         public EBranch Branch;
         public string KitName;
-        public Squad Squad;
+        public Squad? Squad;
         public Player Player { get; internal set; }
         public CSteamID CSteamID { get; internal set; }
         public string CharacterName;
         public string NickName;
-        public ITransportConnection connection { get { return Player?.channel.owner.transportConnection; } }
-        public Coroutine StorageCoroutine;
-        public Ranks.RankStatus[] RankData;
+        public ITransportConnection connection => Player.channel.owner.transportConnection;
+        public Coroutine? StorageCoroutine;
+        public Ranks.RankStatus[]? RankData;
         public FPlayerName Name 
         { 
             get
@@ -47,12 +47,12 @@ namespace Uncreated.Warfare
             } 
         }
         public DateTime TimeUnmuted;
-        public string MuteReason;
+        public string? MuteReason;
         public EMuteType MuteType;
         private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
         private MedalData _medals = MedalData.Nil;
-        private Dictionary<EBranch, RankData> _ranks;
+        private Dictionary<EBranch, RankData>? _ranks;
         public Dictionary<EBranch, RankData> Ranks
         {
             get
@@ -98,7 +98,9 @@ namespace Uncreated.Warfare
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
             Dictionary<EBranch, int> xplevels = Data.DatabaseManager.GetAllXP(Steam64);
-            _ranks.Clear();
+            if (_ranks != null)
+                _ranks.Clear();
+            else _ranks = new Dictionary<EBranch, RankData>(6);
             foreach (KeyValuePair<EBranch, int> entry in xplevels)
             {
                 if (_ranks.ContainsKey(entry.Key))
@@ -106,6 +108,7 @@ namespace Uncreated.Warfare
                 _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
         }
+        internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -171,22 +174,22 @@ namespace Uncreated.Warfare
             }
         }
        
-        public static UCPlayer FromID(ulong steamID)
+        public static UCPlayer? FromID(ulong steamID)
         {
             return PlayerManager.FromID(steamID);
             //return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
         }
-        public static UCPlayer FromCSteamID(CSteamID steamID) =>
+        public static UCPlayer? FromCSteamID(CSteamID steamID) =>
             steamID == default ? null : FromID(steamID.m_SteamID);
-        public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
-        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) =>
+        public static UCPlayer? FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
+        public static UCPlayer? FromUnturnedPlayer(UnturnedPlayer player) =>
             player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
-        public static UCPlayer FromSteamPlayer(SteamPlayer player)
+        public static UCPlayer? FromSteamPlayer(SteamPlayer player)
         {
             if (player == null) return null;
             return FromID(player.playerID.steamID.m_SteamID);
         }
-        public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
+        public static UCPlayer? FromIRocketPlayer(IRocketPlayer caller)
         {
             if (caller is not UnturnedPlayer pl)
                 if (caller is UCPlayer uc) return uc;
@@ -194,7 +197,7 @@ namespace Uncreated.Warfare
             else return FromUnturnedPlayer(pl);
         }
 
-        public static UCPlayer FromName(string name, bool includeContains = false)
+        public static UCPlayer? FromName(string name, bool includeContains = false)
         {
             if (name == null) return null;
             UCPlayer player = PlayerManager.OnlinePlayers.Find(
@@ -213,7 +216,7 @@ namespace Uncreated.Warfare
             return player;
         }
         /// <summary>Slow, use rarely.</summary>
-        public static UCPlayer FromName(string name, ENameSearchType type)
+        public static UCPlayer? FromName(string name, ENameSearchType type)
         {
             if (type == ENameSearchType.CHARACTER_NAME)
             {
@@ -430,7 +433,7 @@ namespace Uncreated.Warfare
         public static void Refresh(ulong Steam64)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            UCPlayer pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
+            UCPlayer? pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
             if (pl == null) return;
             else if (PlayerManager.HasSave(Steam64, out PlayerSave save))
             {
@@ -522,7 +525,7 @@ namespace Uncreated.Warfare
             ServerSavedata.writeBlock(GetPath(save.Steam64), block);
         }
         public static bool HasPlayerSave(ulong player) => ServerSavedata.fileExists(GetPath(player));
-        public static bool TryReadSaveFile(ulong player, out PlayerSave save)
+        public static bool TryReadSaveFile(ulong player, out PlayerSave? save)
         {
             string path = GetPath(player);
             if (!ServerSavedata.fileExists(path))

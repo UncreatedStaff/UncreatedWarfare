@@ -15,27 +15,27 @@ using UnityEngine;
 
 namespace Uncreated.Warfare
 {
-    public class PlayerManager
+    public static class PlayerManager
     {
         public static List<UCPlayer> OnlinePlayers;
         private static Dictionary<ulong, UCPlayer> _dict;
         public static readonly Type Type = typeof(PlayerSave);
         private static readonly FieldInfo[] fields = Type.GetFields();
-        public PlayerManager()
+        static PlayerManager()
         {
             OnlinePlayers = new List<UCPlayer>(50);
             _dict = new Dictionary<ulong, UCPlayer>(50);
         }
-        public static UCPlayer FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
-        public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save);
-        public static PlayerSave GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave save) ? save : null;
+        public static UCPlayer? FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
+        public static bool HasSave(ulong playerID, out PlayerSave? save) => PlayerSave.TryReadSaveFile(playerID, out save);
+        public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
         public static void ApplyToOnline()
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
             for (int i = 0; i < OnlinePlayers.Count; i++)
             {
                 UCPlayer player = OnlinePlayers[i];
-                if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
+                if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
                     save = new PlayerSave(player.Steam64);
                 save.Team = player.GetTeam();
                 save.KitName = player.KitName;
@@ -47,7 +47,7 @@ namespace Uncreated.Warfare
         public static void ApplyTo(UCPlayer player)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
+            if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
                 save = new PlayerSave(player.Steam64);
             save.Team = player.GetTeam();
             save.KitName = player.KitName;
@@ -58,7 +58,7 @@ namespace Uncreated.Warfare
         public static FPlayerList[] GetPlayerList()
         {
             FPlayerList[] rtn = new FPlayerList[OnlinePlayers.Count];
-            for (int i = 0; i < OnlinePlayers.Count; i++)
+            for (int i = 0; i < OnlinePlayers!.Count; i++)
             {
                 if (OnlinePlayers == null) continue;
                 rtn[i] = new FPlayerList
@@ -77,7 +77,7 @@ namespace Uncreated.Warfare
         private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            if (!PlayerSave.TryReadSaveFile(rocketplayer.CSteamID.m_SteamID, out PlayerSave save))
+            if (!PlayerSave.TryReadSaveFile(rocketplayer.CSteamID.m_SteamID, out PlayerSave? save) || save == null)
             {
                 save = new PlayerSave(rocketplayer.CSteamID.m_SteamID);
                 PlayerSave.WriteToSaveFile(save);
@@ -102,7 +102,8 @@ namespace Uncreated.Warfare
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {
             using IDisposable profiler = ProfilingUtils.StartTracking();
-            UCPlayer player = UCPlayer.FromUnturnedPlayer(rocketplayer);
+            UCPlayer? player = UCPlayer.FromUnturnedPlayer(rocketplayer);
+            if (player == null) return;
             player.IsOnline = false;
 
             OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
@@ -166,7 +167,7 @@ namespace Uncreated.Warfare
         }
 
         /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-        private static FieldInfo GetField(string property, out byte reason)
+        private static FieldInfo? GetField(string property, out byte reason)
         {
             for (int i = 0; i < fields.Length; i++)
             {
@@ -191,7 +192,7 @@ namespace Uncreated.Warfare
             reason = 1;
             return default;
         }
-        private static object ParseInput(string input, Type type, out bool parsed)
+        private static object? ParseInput(string input, Type type, out bool parsed)
         {
             if (input == default || type == default)
             {
@@ -360,7 +361,7 @@ namespace Uncreated.Warfare
         /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static PlayerSave SetProperty(PlayerSave obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
@@ -382,39 +383,39 @@ namespace Uncreated.Warfare
             }
             found = true;
             allowedToChange = true;
-            object parsedValue = ParseInput(value, field.FieldType, out parsed);
+            if (field == null)
+            {
+                found = false;
+                allowedToChange = false;
+                set = false;
+                parsed = false;
+                return obj;
+            }
+            object? parsedValue = ParseInput(value, field.FieldType, out parsed);
             if (parsed)
             {
-                if (field != default)
+                try
                 {
-                    try
-                    {
-                        field.SetValue(obj, parsedValue);
-                        set = true;
-                        PlayerSave.WriteToSaveFile(obj);
-                        return obj;
-                    }
-                    catch (FieldAccessException ex)
-                    {
-                        L.LogError(ex);
-                        set = false;
-                        return obj;
-                    }
-                    catch (TargetException ex)
-                    {
-                        L.LogError(ex);
-                        set = false;
-                        return obj;
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        L.LogError(ex);
-                        set = false;
-                        return obj;
-                    }
+                    field.SetValue(obj, parsedValue);
+                    set = true;
+                    PlayerSave.WriteToSaveFile(obj);
+                    return obj;
                 }
-                else
+                catch (FieldAccessException ex)
                 {
+                    L.LogError(ex);
+                    set = false;
+                    return obj;
+                }
+                catch (TargetException ex)
+                {
+                    L.LogError(ex);
+                    set = false;
+                    return obj;
+                }
+                catch (ArgumentException ex)
+                {
+                    L.LogError(ex);
                     set = false;
                     return obj;
                 }
@@ -468,7 +469,7 @@ namespace Uncreated.Warfare
         }
         public static PlayerSave SetProperty<V>(PlayerSave obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
